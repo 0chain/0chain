@@ -1,13 +1,14 @@
 package zcnsc_test
 
 import (
+	"math/rand"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"go.uber.org/zap"
-	"math/rand"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +49,7 @@ func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	ctx := MakeMockStateContext()
 
 	payload.Nonce = 1
-	node, err := GetUserNode(clientId, ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	node.Nonce = payload.Nonce - 1
@@ -68,7 +69,7 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 	payload.Nonce = 1
 
 	// case 1
-	node, err := GetUserNode(clientId, ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	node.Nonce = payload.Nonce
@@ -80,7 +81,7 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 	require.Empty(t, burn)
 
 	// case 2
-	node, err = GetUserNode(clientId, ctx)
+	node, err = GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	node.Nonce = payload.Nonce + 1
@@ -123,10 +124,11 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 }
 
 func Test_UserNodeNonceShouldIncrement(t *testing.T) {
+	ctx := MakeMockStateContext()
+
 	payload := createBurnPayload()
 	contract := CreateZCNSmartContract()
-	ctx := MakeMockStateContext()
-	tr := CreateTransactionToZcnsc(authorizers[0], 10)
+	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 10)
 
 	node, err := GetUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)
@@ -148,7 +150,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 
 func Test_UpdateUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
-	node, err := GetUserNode(clientId, ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -156,7 +158,7 @@ func Test_UpdateUserNode(t *testing.T) {
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
-	node2, err := GetUserNode(clientId, ctx)
+	node2, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -164,7 +166,7 @@ func Test_UpdateUserNode(t *testing.T) {
 }
 
 func Test_UserNodeEncode_Decode(t *testing.T) {
-	node := createUserNode(clientId, 10)
+	node := createUserNode(defaultClient, 10)
 	actual := UserNode{}
 	err := actual.Decode(node.Encode())
 	require.NoError(t, err)

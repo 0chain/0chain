@@ -1,12 +1,13 @@
-name: build-&-publish-docker-image
+name: "Build & Publish Docker Image"
 
 concurrency:
-  group: "${{ github.ref }}"
+  group: "publish-${{ github.ref }}"
   cancel-in-progress: true
 
 on:
   push:
-    branches: [ staging ]
+    branches: [ master,staging ]
+    tags: [ "v*.*.*" ]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -22,95 +23,106 @@ env:
   MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
 
 jobs:
-  dockerize_miner:
+  miner:
     runs-on: [self-hosted, build]
     steps:
+    
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2
 
     - name: Build base images
       run: |
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-    - name: Get info
-      id: get_info
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Build & Push Miner Docker Image
+    - name: Build & Push
       run: |
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $MINER_REGISTRY:$TAG -f "$DOCKERFILE_MINER" .
-        docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:latest
-        docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:staging
-        docker push $MINER_REGISTRY:$TAG
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+        
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker push ${MINER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+
       env:
-        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-    - name: Push Miner Docker Image With latest Tag
+    - name: Push latest 
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
       run: |
-        if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $MINER_REGISTRY:latest
-         elif [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "staging" ]]; then
-           docker push $MINER_REGISTRY:staging
-        fi
-      env:
-        PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
-        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
-  dockerize_sharder:
+
+  sharder:
     runs-on: [self-hosted, build]
     steps:
+
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
     - uses: actions/checkout@v1
 
     - name: Build base images
       run: |
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-    - name: Get info
-      id: get_info
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Build & Push Sharder Docker Image
+    - name: Build & Push
       run: |
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $SHARDER_REGISTRY:$TAG -f docker.local/build.sharder/Dockerfile .
-        docker tag $SHARDER_REGISTRY:$TAG $SHARDER_REGISTRY:latest
-        docker tag $SHARDER_REGISTRY:$TAG $SHARDER_REGISTRY:staging
-        docker push $SHARDER_REGISTRY:$TAG
-      env:
-        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
-    - name: Push Sharder Docker Image With latest Tag
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker push ${SHARDER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA  
+
+
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
       run: |
-        if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $SHARDER_REGISTRY:latest
-        elif [[ "$BRANCH" == "staging" ]]; then
-          docker push $SHARDER_REGISTRY:staging
-        fi
-      env:
-        PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
-        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
 
   system-tests:
     if: github.event_name != 'workflow_dispatch'
-    needs: [dockerize_miner, dockerize_sharder]
+    needs: [miner, sharder]
     runs-on: [ tests-suite ]
     steps:
       - name: "Get current PR"
@@ -119,7 +131,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      - name: "Set PR Status Pending"
+      - name: "Set PR status as pending"
         uses: niteoweb/pull_request_status_action@v1.0.0
         if: steps.findPr.outputs.number
         with:
@@ -134,9 +146,16 @@ jobs:
 
       - name: "Setup"
         run: |
-          echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-          echo "SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)" >> $GITHUB_ENV
-          echo "TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+          if [[ "${{github.ref}}" == refs/pull/* ]]; then
+            tag=${GITHUB_REF/\/merge/}
+            echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+          else
+            echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+          fi
+
+          echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+          echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
+        
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
@@ -171,25 +190,12 @@ jobs:
           run_flaky_tests: false
           retry_failures: true
 
-      - name: "Set PR Status Success"
-        if: ${{ success() && steps.findPr.outputs.number }}
+      - name: "Set PR status as ${{ job.status }}"
+        if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
         uses: niteoweb/pull_request_status_action@v1.0.0
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
-          description: "System tests with default config completed successfully"
-          state: ${{ job.status }}
-          repository: ${{ github.repository }}
-          context: "0Chain System Tests"
-          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: "Set PR Status Failed"
-        if: ${{ failure() && steps.findPr.outputs.number }}
-        uses: niteoweb/pull_request_status_action@v1.0.0
-        with:
-          pr_number: ${{ steps.findPr.outputs.pr }}
-          description: "System tests with default config failed. Try running manually with more specific config"
+          description: "System tests with default config"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
           context: "0Chain System Tests"

@@ -1,9 +1,7 @@
 package node
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -13,9 +11,7 @@ import (
 	"time"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"github.com/vmihailenco/msgpack/v5"
-	"go.uber.org/zap"
 )
 
 //ErrNodeNotFound - to indicate that a node is not present in the pool
@@ -39,112 +35,25 @@ type Pool struct {
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
-	medianNetworkTime uint64                     // float64
-	getNodesC         chan []*Node               `json:"-"`
-	updateNodesC      chan *updateNodesWithReply `json:"-"`
-	startOnce         *sync.Once                 `json:"-"`
-	id                int32                      `json:"-"`
+	medianNetworkTime uint64 // float64
 }
 
 /*NewPool - create a new node pool of given type */
 func NewPool(Type int8) *Pool {
 	p := &Pool{
-		Type:      Type,
-		NodesMap:  make(map[string]*Node),
-		startOnce: &sync.Once{},
+		Type:     Type,
+		NodesMap: make(map[string]*Node),
+		Nodes:    []*Node{},
 	}
-
-	p.initGetNodesC()
-
-	p.start()
 
 	return p
 }
 
-func (np *Pool) initGetNodesC() {
-	if np.updateNodesC == nil {
-		np.updateNodesC = make(chan *updateNodesWithReply, 100)
-	}
-
-	if np.getNodesC == nil {
-		np.getNodesC = make(chan []*Node)
-	}
-}
-
-var poolID int32
-
-func (np *Pool) start() {
-	np.startOnce.Do(func() {
-		go func() {
-			np.id = atomic.AddInt32(&poolID, 1)
-
-			var nds []*Node
-
-			// return if there's no request to get nodes from this pool in one minutes
-			const expireTime = time.Minute
-			cleanTimer := time.NewTimer(expireTime)
-
-			for {
-				select {
-				case np.getNodesC <- nds:
-					cleanTimer = time.NewTimer(expireTime)
-				case v := <-np.updateNodesC:
-					nds = v.nodes
-					v.reply <- struct{}{}
-					cleanTimer = time.NewTimer(expireTime)
-				case <-cleanTimer.C:
-					np.startOnce = &sync.Once{}
-					return
-				}
-			}
-		}()
-	})
-}
-
-func (np *Pool) getNodesFromC() (nds []*Node) {
-	i := 0
-	for {
-		np.start()
-		select {
-		case nds = <-np.getNodesC:
-			return
-		case <-time.After(500 * time.Millisecond):
-			logging.Logger.Warn("get nodes timeout",
-				zap.Int32("ID", np.id),
-				zap.Int("retry", i))
-			i++
-			continue
-		}
-	}
-}
-
-type updateNodesWithReply struct {
-	nodes []*Node
-	reply chan struct{} `json:"-"`
-}
-
-func (np *Pool) updateNodesToC(nds []*Node) {
-	np.start()
-
-	ndsWithReply := &updateNodesWithReply{
-		nodes: nds,
-		reply: make(chan struct{}, 1),
-	}
-
-	select {
-	case np.updateNodesC <- ndsWithReply:
-		<-ndsWithReply.reply
-	case <-time.After(500 * time.Millisecond):
-		logging.Logger.Warn("update nodes to channel timeout")
-	}
-	return
-}
-
 /*Size - size of the pool regardless node status */
 func (np *Pool) Size() int {
-	nds := np.getNodesFromC()
-
-	return len(nds)
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+	return len(np.NodesMap)
 }
 
 // AddNode - add a node to the pool
@@ -172,7 +81,6 @@ func (np *Pool) AddNode(node *Node) {
 
 	np.NodesMap[node.GetKey()] = node
 	np.computeNodePositions()
-	np.updateNodesToC(np.Nodes)
 	np.mmx.Unlock()
 }
 
@@ -190,9 +98,10 @@ func (np *Pool) GetNode(id string) *Node {
 
 // GetActiveCount returns the active count
 func (np *Pool) GetActiveCount() (count int) {
-	nds := np.getNodesFromC()
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
 
-	for _, node := range nds {
+	for _, node := range np.NodesMap {
 		if node.IsActive() {
 			count++
 		}
@@ -203,7 +112,12 @@ func (np *Pool) GetActiveCount() (count int) {
 // GetNodesByLargeMessageTime - get the nodes in the node pool sorted by the
 // time to send a large message
 func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
-	sorted = np.getNodesFromC()
+	np.mmx.RLock()
+	for _, v := range np.NodesMap {
+		sorted = append(sorted, v)
+	}
+	np.mmx.RUnlock()
+
 	sort.SliceStable(sorted, func(i, j int) bool {
 		return sorted[i].getOptimalLargeMessageSendTime() <
 			sorted[j].getOptimalLargeMessageSendTime()
@@ -212,16 +126,13 @@ func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
 	return
 }
 
-func (np *Pool) shuffleNodes(preferPrevMBNodes bool) []*Node {
-	ts := time.Now()
-	defer func() {
-		du := time.Since(ts)
-		if du > time.Second {
-			logging.Logger.Debug("shuffleNodes takes too long", zap.Any("duration", du))
-		}
-	}()
+func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
+	np.mmx.RLock()
+	for _, v := range np.NodesMap {
+		shuffled = append(shuffled, v)
+	}
+	defer np.mmx.RUnlock()
 
-	shuffled := np.getNodesFromC()
 	rand.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
@@ -245,43 +156,8 @@ func (np *Pool) Print(w io.Writer) {
 	}
 }
 
-/*ReadNodes - read the pool information */
-func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		node, err := Read(line)
-		if err != nil {
-			panic(err)
-		}
-		switch node.Type {
-		case NodeTypeMiner:
-			minerPool.AddNode(node)
-		case NodeTypeSharder:
-			sharderPool.AddNode(node)
-		default:
-			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetKey(), node.Type))
-		}
-	}
-}
-
-/*AddNodes - add nodes to the node pool */
-func (np *Pool) AddNodes(nodes []interface{}) {
-	for _, nci := range nodes {
-		nc, ok := nci.(map[interface{}]interface{})
-		if !ok {
-			continue
-		}
-		nc["type"] = np.Type
-		nd, err := NewNode(nc)
-		if err != nil {
-			panic(err)
-		}
-		np.AddNode(nd)
-	}
-}
-
 func (np *Pool) computeNodePositions() {
+
 	sort.SliceStable(np.Nodes, func(i, j int) bool {
 		return np.Nodes[i].GetKey() < np.Nodes[j].GetKey()
 	})
@@ -325,9 +201,9 @@ func (np *Pool) GetMedianNetworkTime() float64 {
 
 // N2NURLs returns the urls of all nodes in the pool
 func (np *Pool) N2NURLs() (n2n []string) {
-	nds := np.getNodesFromC()
-	n2n = make([]string, 0, len(nds))
-	for _, node := range nds {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+	for _, node := range np.NodesMap {
 		n2n = append(n2n, node.GetN2NURLBase())
 	}
 	return
@@ -335,22 +211,25 @@ func (np *Pool) N2NURLs() (n2n []string) {
 
 // CopyNodes list.
 func (np *Pool) CopyNodes() (list []*Node) {
-	nds := np.getNodesFromC()
-	if len(nds) == 0 {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+	if len(np.Nodes) == 0 {
 		return
 	}
 
-	list = make([]*Node, len(nds))
+	list = make([]*Node, len(np.Nodes))
 	copy(list, np.Nodes)
 	return
 }
 
 // CopyNodesMap returns copy of underlying map.
 func (np *Pool) CopyNodesMap() (nodesMap map[string]*Node) {
-	nds := np.getNodesFromC()
-	nodesMap = make(map[string]*Node, len(nds))
-	for i, n := range nds {
-		nodesMap[n.GetKey()] = nds[i]
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+
+	nodesMap = make(map[string]*Node, len(np.NodesMap))
+	for i, n := range np.NodesMap {
+		nodesMap[n.GetKey()] = np.NodesMap[i]
 	}
 
 	return
@@ -366,29 +245,12 @@ func (np *Pool) HasNode(key string) (ok bool) {
 
 // Keys of all nods of the pool's map.
 func (np *Pool) Keys() (keys []string) {
-	nds := np.getNodesFromC()
-	keys = make([]string, 0, len(nds))
-	for _, n := range nds {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+
+	for _, n := range np.NodesMap {
 		keys = append(keys, n.GetKey())
 	}
-	return
-}
-
-// NewNodes returns list of nodes exist in
-// given Pool, but don't exist in this pool.
-func (np *Pool) NewNodes(newPool *Pool) (newNodes []*Node) {
-
-	var (
-		nps      = np.CopyNodesMap()
-		newPools = newPool.CopyNodesMap()
-	)
-
-	for id, node := range newPools {
-		if _, ok := nps[id]; !ok {
-			newNodes = append(newNodes, node)
-		}
-	}
-
 	return
 }
 
@@ -430,10 +292,7 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 		np.Nodes = append(np.Nodes, n)
 	}
 
-	np.initGetNodesC()
 	np.computeNodePositions()
-	np.startOnce = &sync.Once{}
-	np.updateNodesToC(np.Nodes)
 
 	return nil
 }
@@ -463,9 +322,6 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 		np.Nodes = append(np.Nodes, n)
 	}
 
-	np.initGetNodesC()
 	np.computeNodePositions()
-	np.startOnce = &sync.Once{}
-	np.updateNodesToC(np.Nodes)
 	return nil
 }

@@ -251,7 +251,6 @@ func main() {
 			MaxHeaderBytes: 1 << 20,
 		}
 	}
-	common.HandleShutdown(server)
 	// setupBlockStorageProvider()
 	sc.SetupHealthyRound()
 
@@ -278,7 +277,7 @@ func main() {
 	}
 
 	initServer()
-	initHandlers()
+	initHandlers(sc)
 
 	go sc.RegisterClient()
 	if config.DevConfiguration.IsFeeEnabled {
@@ -291,15 +290,14 @@ func main() {
 	// Do a proximity scan from finalized block till ProximityWindow
 	go sc.HealthCheckWorker(ctx, sharder.ProximityScan) // 4) progressively checks the health for each round
 
-	defer done(ctx)
-
+	shutdown := common.HandleShutdown(server, []func(){done, chain.CloseStateDB})
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	Listen(server)
-	defer server.Shutdown(ctx)
 
-	// wait for SIGINT to exit
-	common.WaitSigInt()
+	<-shutdown
+	time.Sleep(2 * time.Second)
+	logging.Logger.Info("0chain miner shut down gracefully")
 }
 
 func Listen(server *http.Server) {
@@ -310,7 +308,7 @@ func Listen(server *http.Server) {
 	// (best effort) graceful shutdown
 }
 
-func done(ctx context.Context) {
+func done() {
 	sc := sharder.GetSharderChain()
 	sc.Stop()
 }
@@ -320,6 +318,10 @@ func startBlocksInfoLogs(sc *sharder.Chain) {
 		lfb  = sc.GetLatestFinalizedBlock()
 		lfmb = sc.GetLatestFinalizedMagicBlockBrief()
 	)
+	if lfmb == nil {
+		Logger.Error("can't get flmb brief")
+		return
+	}
 
 	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
@@ -382,14 +384,14 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	return h, n2nh, p, path, description, nil
 }
 
-func initHandlers() {
+func initHandlers(c chain.Chainer) {
 	if config.Development() {
 		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
 		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers()
+	chain.SetupHandlers(c)
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()

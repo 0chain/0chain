@@ -166,6 +166,15 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
+			name:     "storage_rest.getWriteMarkers",
+			endpoint: ssc.GetWriteMarkersHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("allocation_id", getMockAllocationId(0))
+				return values
+			}(),
+		},
+		{
 			name:     "storage_rest.getWritePoolStat",
 			endpoint: ssc.getWritePoolStatHandler,
 			params: func() url.Values {
