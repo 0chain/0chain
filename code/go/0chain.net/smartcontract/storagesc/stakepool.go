@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"sort"
 
-	"0chain.net/smartcontract"
-
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -18,6 +16,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract"
 )
 
 // A userStakePools collects stake pools references for a user.
@@ -255,10 +254,12 @@ func (sp *stakePool) dig(t *transaction.Transaction,
 }
 
 // empty a delegate pool if possible, call update before the empty
-func (sp *stakePool) empty(sscID, poolID, clientID string,
-	info *stakePoolUpdateInfo, balances chainstate.StateContextI) (
-	resp string, unstake common.Timestamp, err error) {
-
+func (sp *stakePool) empty(
+	sscID,
+	poolID,
+	clientID string,
+	balances chainstate.StateContextI,
+) (resp string, unstake common.Timestamp, err error) {
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
 		return "", 0, fmt.Errorf("no such delegate pool: %q", poolID)
@@ -271,7 +272,7 @@ func (sp *stakePool) empty(sscID, poolID, clientID string,
 	// If insufficient funds in stake pool left after unlock,
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
-	if info.stake-info.offers-dp.Balance < 0 {
+	if sp.stake()-sp.TotalOffers-dp.Balance < 0 {
 		sp.TotalUnStake += dp.Balance
 		dp.UnStake = true
 		return // no errors here, handle in caller
@@ -743,8 +744,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
 	var (
-		sp   *stakePool
-		info *stakePoolUpdateInfo
+		sp *stakePool
 	)
 
 	var spr stakePoolRequest
@@ -766,8 +766,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	}
 
 	var unstake common.Timestamp
-	resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, info,
-		balances)
+	resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
