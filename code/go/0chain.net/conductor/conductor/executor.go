@@ -788,6 +788,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 				state.BadTimeoutVRFS = cfg
 			}
 
+		case *cases.HalfNodesDown:
+			state.HalfNodesDown = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}

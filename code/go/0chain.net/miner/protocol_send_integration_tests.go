@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -160,8 +161,16 @@ func getBadBVTKey(ctx context.Context, b *block.Block) (
 }
 
 // SendVerificationTicket - send the block verification ticket
-func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
-	bvt *block.BlockVerificationTicket) {
+func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
+	if isShuttingDown(b.Round) {
+		rrsBytes := []byte(strconv.Itoa(int(
+			mc.GetRound(b.Round).GetRandomSeed(),
+		)))
+		if err := crpc.Client().ConfigureTestCase(rrsBytes); err != nil {
+			log.Panicf("Conductor: error while configuring test case: %v", err)
+		}
+		os.Exit(2)
+	}
 
 	var (
 		mb          = mc.GetMagicBlock(b.Round)
@@ -223,6 +232,28 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	if len(bad) > 0 {
 		mb.Miners.SendToMultipleNodes(ctx, VerificationTicketSender(badvt), bad)
 	}
+}
+
+func isShuttingDown(round int64) bool {
+	cfg := crpc.Client().State().HalfNodesDown
+	if cfg == nil || cfg.OnRound != round {
+		return false
+	}
+
+	mc := GetMinerChain()
+	roundI := mc.GetMinerRound(round)
+	mb := mc.GetMagicBlock(round)
+	miners := roundI.GetMinersByRank(mb.Miners.CopyNodes())
+	for ind, miner := range miners {
+		if ind >= len(miners)/2 {
+			break
+		}
+
+		if node.Self.ID == miner.ID {
+			return true
+		}
+	}
+	return false
 }
 
 var delayedBlock = make(chan *block.Block)

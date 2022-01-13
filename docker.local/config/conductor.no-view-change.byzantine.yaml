@@ -19,6 +19,7 @@ sets:
   - name: "restart"
     tests:
       - "bad timeout VRF share"
+      - "half nodes down"
 
 tests:
   - name: "not notarised block extension"
@@ -153,5 +154,16 @@ tests:
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 50
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "half nodes down"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: { }
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - configure_half_nodes_down_test_case:
+          test_report:
+            round: 30
       - make_test_case_check:
           wait_time: 5m

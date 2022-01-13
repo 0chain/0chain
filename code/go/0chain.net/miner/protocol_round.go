@@ -1374,8 +1374,8 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 	return tick
 }
 
-// HandleRoundTimeout handle timeouts appropriately.
-func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
+// handleRoundTimeout handle timeouts appropriately.
+func (mc *Chain) handleRoundTimeout(ctx context.Context, round int64) {
 	// 	mmb = mc.GetMagicBlock(rn + chain.ViewChangeOffset + 1)
 	// 	cmb = mc.GetMagicBlock(rn)
 

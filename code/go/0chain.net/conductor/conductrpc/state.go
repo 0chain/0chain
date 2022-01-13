@@ -58,6 +58,7 @@ type State struct {
 	ResendProposedBlock                   *cases.ResendProposedBlock
 	ResendNotarisation                    *cases.ResendNotarisation
 	BadTimeoutVRFS                        *cases.BadTimeoutVRFS
+	HalfNodesDown                         *cases.HalfNodesDown
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

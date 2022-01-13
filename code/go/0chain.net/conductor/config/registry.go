@@ -474,6 +474,16 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("configure_half_nodes_down_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewHalfNodesDown(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {
