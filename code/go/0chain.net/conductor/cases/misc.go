@@ -15,6 +15,7 @@ type (
 		ProposedBlocks     []*BlockInfo `json:"proposed_blocks"`
 		NotarisedBlocks    []*BlockInfo `json:"notarised_blocks"`
 		TimeoutCount       int          `json:"timeout_count"`
+		RoundRandomSeed    int64        `json:"round_random_seed"`
 		IsFinalised        bool         `json:"is_finalised"`
 	}
 

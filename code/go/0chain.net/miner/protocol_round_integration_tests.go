@@ -122,3 +122,23 @@ func getBadBVTWithCustomHash(round int64) *block.BlockVerificationTicket {
 		BlockID: mockedHash,
 	}
 }
+
+// HandleRoundTimeout handle timeouts appropriately.
+func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
+	mc.handleRoundTimeout(ctx, round)
+
+	minerRound := mc.GetMinerRound(round)
+	if isTestingHalfNodesDown(minerRound) {
+		if err := addRoundInfoResult("", minerRound); err != nil {
+			log.Panicf("Conductor: error while adding test case result: %v", err)
+		}
+	}
+}
+
+func isTestingHalfNodesDown(minerRound *Round) bool {
+	hndCfg := crpc.Client().State().HalfNodesDown
+	return hndCfg != nil &&
+		hndCfg.OnRound == minerRound.Number &&
+		minerRound.GetTimeoutCount() == 1 &&
+		minerRound.GetSoftTimeoutCount() == 0
+}

@@ -408,6 +408,7 @@ func roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
 		ProposedBlocks:     propBlocksInfo,
 		NotarisedBlocks:    notBlocksInfo,
 		TimeoutCount:       roundI.GetTimeoutCount(),
+		RoundRandomSeed:    roundI.GetRandomSeed(),
 		IsFinalised:        roundI.IsFinalized(),
 	}
 }
