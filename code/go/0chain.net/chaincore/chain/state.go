@@ -34,7 +34,6 @@ func init() {
 }
 
 var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
-var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
@@ -117,15 +116,17 @@ func (c *Chain) ExecuteSmartContract(
 	var err error
 	ts := time.Now()
 	done := make(chan bool, 1)
-	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
-	defer cancelf()
+
+	sct := time.NewTimer(c.SmartContractTimeout())
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
 		done <- true
 	}()
 	select {
-	case <-cctx.Done():
-		return "", ErrSmartContractContext
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case <-sct.C:
+		return "", transaction.ErrSmartContractContext
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
@@ -198,7 +199,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		t := time.Now()
 		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
 		switch err {
-		case ErrSmartContractContext:
+		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext:
 			sctx.EmitError(err)
 			logging.Logger.Error("Error executing the SC, context error",
 				zap.Error(err),
@@ -207,7 +208,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("prev block", b.PrevBlock.Hash),
 				zap.Any("txn", txn))
 			//return original error, to handle upwards
-			return events, context.DeadlineExceeded
+			return events, err
 		default:
 			if err != nil {
 				sctx.EmitError(err)
