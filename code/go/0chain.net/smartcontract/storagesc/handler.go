@@ -267,6 +267,9 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 func (ssc *StorageSmartContract) GetActiveAllocationsCountHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db is not initialized")
+	}
 	count, err := balances.GetEventDB().GetActiveAllocationsCount()
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true,
@@ -282,6 +285,10 @@ func (ssc *StorageSmartContract) GetActiveAllocationsCountHandler(ctx context.Co
 
 func (ssc *StorageSmartContract) GetBlobberAllocationsCountHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db is not initialized")
+	}
 
 	count, err := balances.GetEventDB().GetBlobberAllocationCount()
 	if err != nil {
