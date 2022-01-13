@@ -256,7 +256,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
 	}
 
-	allocations, err := getClientAllocationsFromDb(clientID, balances)
+	allocations, err := getClientAllocationsFromDb(clientID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations")
 	}
@@ -365,7 +365,7 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
 	}
 
-	allocation, err := getStorageAllocationFromDb(allocationID, balances)
+	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}

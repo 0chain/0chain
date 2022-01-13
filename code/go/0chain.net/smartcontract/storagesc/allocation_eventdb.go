@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate.StateContextI) (*StorageAllocation, error) {
+func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
 
 	var (
 		storageNodes         []*StorageNode
@@ -46,7 +46,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate
 			}}
 	}
 
-	blobbers, err := balances.GetEventDB().GetBlobbersFromIDs(blobberIDs)
+	blobbers, err := eventDb.GetBlobbersFromIDs(blobberIDs)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
@@ -202,14 +202,14 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 	return nil
 }
 
-func getStorageAllocationFromDb(id string, balances cstate.StateContextI) (*StorageAllocation, error) {
+func getStorageAllocationFromDb(id string, eventDb *event.EventDb) (*StorageAllocation, error) {
 
-	alloc, err := balances.GetEventDB().GetAllocation(id)
+	alloc, err := eventDb.GetAllocation(id)
 	if err != nil {
 		return nil, err
 	}
 
-	sa, err := allocationTableToStorageAllocation(alloc, balances)
+	sa, err := allocationTableToStorageAllocation(alloc, eventDb)
 	if err != nil {
 		return nil, err
 	}
@@ -217,17 +217,17 @@ func getStorageAllocationFromDb(id string, balances cstate.StateContextI) (*Stor
 	return sa, nil
 }
 
-func getClientAllocationsFromDb(clientID string, balances cstate.StateContextI) ([]*StorageAllocation, error) {
+func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocation, error) {
 
 	var sas []*StorageAllocation
 
-	allocs, err := balances.GetEventDB().GetClientsAllocation(clientID)
+	allocs, err := eventDb.GetClientsAllocation(clientID)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, alloc := range allocs {
-		sa, err := allocationTableToStorageAllocation(&alloc, balances)
+		sa, err := allocationTableToStorageAllocation(&alloc, eventDb)
 		if err != nil {
 			return nil, err
 		}
