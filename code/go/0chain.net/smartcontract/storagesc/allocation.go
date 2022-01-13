@@ -1622,6 +1622,12 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"saving new allocation: %v", err)
 	}
 
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("curator_transfer_allocation_failed",
+			"saving new allocation to db: %v", err)
+	}
+
 	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil
 }
