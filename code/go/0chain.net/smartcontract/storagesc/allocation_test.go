@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -660,6 +661,11 @@ func TestTransferAllocation(t *testing.T) {
 				return ca.ClientID == p.info.NewOwnerId &&
 					len(ca.Allocations.List) == 1 && ok
 			})).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
