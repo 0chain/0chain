@@ -195,6 +195,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("name", getFunctionName(phaseFunc)))
 
 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+		if lfmb == nil {
+			logging.Logger.Error("can't get lfmb")
+			return
+		}
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
@@ -908,6 +912,9 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // previous MB and corresponding DKG. The previous MB can be useless in
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
 
 	logging.Logger.Info("setup latest and previous fmbs")
 	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
@@ -922,7 +929,11 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return // no previous MB is expected
 	}
 
-	var pfmb = mc.GetLatestFinalizedMagicBlockRound(lfmb.StartingRound - 1)
+	pfmb := mc.GetLatestFinalizedMagicBlockRound(lfmb.StartingRound - 1)
+	if pfmb == nil {
+		logging.Logger.Error("can't get lfmb")
+		return
+	}
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
 		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)

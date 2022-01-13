@@ -219,7 +219,7 @@ func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
 			}
 		} else if wr.Shift != 0 {
 			// shift without a name means shift from current round
-			wr.Round = r.lastRound + wr.Shift
+			wr.Round = r.lastAcceptedRound.Round + wr.Shift
 		}
 	}
 

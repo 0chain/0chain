@@ -3,7 +3,10 @@ package event
 import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"time"
 )
+
+const DefaultQueryTimeout = 5 * time.Second
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
@@ -25,7 +28,7 @@ type EventDb struct {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}); err != nil {
+	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}, &WriteMarker{}, &Transaction{}); err != nil {
 		return err
 	}
 	return nil

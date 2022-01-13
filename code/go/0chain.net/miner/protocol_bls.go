@@ -294,9 +294,13 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		return false
 	}
 
+	//can't return false here even if at threshold, add_my_vrf_share might be at threshold and still should trigger starts
 	mr.AddVRFShare(vrfs, blsThreshold)
 
-	mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
+	if mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold) {
+		mc.TryProposeBlock(common.GetRootContext(), mr)
+		mc.StartVerification(common.GetRootContext(), mr)
+	}
 
 	return true
 }
@@ -372,14 +376,17 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 }
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
-func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) {
-
+func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) bool {
+	//since we checks RRS is set and set it in the same func this func should be executed atomically to avoid race conditions
+	mr.vrfThresholdGuard.Lock()
+	defer mr.vrfThresholdGuard.Unlock()
+	//we can have threshold shares but still not have RRS
 	if mr.IsVRFComplete() {
 		// BLS has completed already for this round.
 		// But, received a BLS message from a node now
 		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.",
 			zap.Int64("round", mr.GetRoundNumber()))
-		return
+		return false
 	}
 
 	var shares = mr.GetVRFShares()
@@ -389,7 +396,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 			zap.Int("vrfShares_num", len(shares)),
 			zap.Int("threshold", blsThreshold),
 			zap.Int64("round", mr.GetRoundNumber()))
-		return
+		return false
 	}
 
 	Logger.Debug("VRF Hurray we've threshold BLS shares",
@@ -400,9 +407,14 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		// even though DKG is not enabled.
 
 		var rbOutput string // rboutput will ignored anyway
-		mc.computeRBO(ctx, mr, rbOutput)
+		if err := mc.computeRBO(ctx, mr, rbOutput); err != nil {
+			Logger.Error("computeRBO failed",
+				zap.Error(err),
+				zap.Int64("round", mr.GetRoundNumber()))
+			return false
+		}
 
-		return
+		return true
 	}
 
 	var (
@@ -421,18 +433,19 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		zap.String("rboOutput", rbOutput))
 
 	mc.computeRBO(ctx, mr, rbOutput)
+
+	return true
 }
 
-func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
-	Logger.Debug("DKG computeRBO")
+func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) error {
+	Logger.Debug("DKG computeRBO", zap.Int64("round", mr.GetRoundNumber()))
 	if mr.IsVRFComplete() {
 		Logger.Info("DKG computeRBO RBO is already completed")
-		return
+		return nil
 	}
 
 	pr := mc.GetRound(mr.GetRoundNumber() - 1)
-	mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
-
+	return mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
 }
 
 func getVRFShareInfo(mr *Round) ([]string, []string) {
@@ -449,7 +462,7 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 	return recSig, recFrom
 }
 
-func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
+func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) error {
 
 	var seed int64
 	if config.DevConfiguration.IsDkgEnabled {
@@ -464,8 +477,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 				seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 			}
 		} else {
-			Logger.Error("pr is null! Let go this round...")
-			return
+			return fmt.Errorf("pr is null")
 		}
 	}
 	r.Round.SetVRFOutput(rbo)
@@ -483,6 +495,8 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 	} else {
 		Logger.Info("VrfStartTime is zero", zap.Int64("round", r.GetRoundNumber()))
 	}
-	mc.StartRound(ctx, r, seed)
-
+	if !mc.SetRandomSeed(r.Round, seed) {
+		return fmt.Errorf("can't set round random seed for round")
+	}
+	return nil
 }

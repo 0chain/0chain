@@ -45,7 +45,7 @@ func init() {
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
-func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, clients map[string]*client.Client) error {
+func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
 	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 		if err != nil {
@@ -53,7 +53,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	events, err := mc.UpdateState(ctx, b, txn)
+	events, err := mc.UpdateState(ctx, b, bState, txn)
 	b.Events = append(b.Events, events...)
 	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
@@ -151,6 +151,10 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 		nextVCRound = mc.NextViewChange()
 	)
 
+	if lfmbr == nil {
+		return common.NewError("verify_block_mb_reference", "can't get lfmbr")
+	}
+
 	if nextVCRound > 0 && offsetRound >= nextVCRound && lfmbr.StartingRound < nextVCRound {
 		// TODO: offsetRound could >= nextVCRound on start when the nextVCRound was not updated correctly.
 		logging.Logger.Warn("verify_block_mb_reference - required MB missing or still not finalized")
@@ -246,6 +250,7 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 // VerifyBlock - given a set of transaction ids within a block, validate the block.
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	bvt *block.BlockVerificationTicket, err error) {
+	//ctx = common.GetRootContext()
 
 	var start = time.Now()
 	if err = b.Validate(ctx); err != nil {
@@ -308,14 +313,14 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	return mc.validateTxnsWithContext.Run(ctx, func() error {
 		var roundMismatch bool
 		var cancel bool
-		numWorkers := len(b.Txns) / mc.ValidationBatchSize
-		if numWorkers*mc.ValidationBatchSize < len(b.Txns) {
+		numWorkers := len(b.Txns) / mc.ValidationBatchSize()
+		if numWorkers*mc.ValidationBatchSize() < len(b.Txns) {
 			numWorkers++
 		}
 		aggregate := true
 		var aggregateSignatureScheme encryption.AggregateSignatureScheme
 		if aggregate {
-			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme, len(b.Txns), mc.ValidationBatchSize)
+			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme(), len(b.Txns), mc.ValidationBatchSize())
 		}
 		if aggregateSignatureScheme == nil {
 			aggregate = false
@@ -382,8 +387,8 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			validChannel <- true
 		}
 		ts := time.Now()
-		for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
-			end := start + mc.ValidationBatchSize
+		for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize() {
+			end := start + mc.ValidationBatchSize()
 			if end > len(b.Txns) {
 				end = len(b.Txns)
 			}
@@ -393,7 +398,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		for result := range validChannel {
 			if roundMismatch {
 				logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
-				return common.NewError(RoundMismatch, "current round different from generation round")
+				return ErrRoundMismatch
 			}
 			if !result {
 				return common.NewError("txn_validation_failed", "Transaction validation failed")

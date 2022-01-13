@@ -27,6 +27,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
 	github.com/selvatico/go-mocket v1.0.7
@@ -43,7 +44,6 @@ require (
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/datatypes v1.0.3
 	gorm.io/driver/postgres v1.2.1
 	gorm.io/gorm v1.22.2
 )

@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -1061,6 +1062,63 @@ func TestCloneMPT(t *testing.T) {
 
 			if got := CloneMPT(tt.args.mpt); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CloneMPT() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+type User struct {
+	Name        string `json:"full_name"`
+	Age         int    `json:"age,omitempty"`
+	Active      bool   `json:"-"`
+	lastLoginAt string
+}
+
+func (u *User) Encode() []byte {
+	marshal, _ := json.Marshal(u)
+	return marshal
+}
+
+func (u *User) Decode(bytes []byte) error {
+	return json.Unmarshal(bytes, u)
+}
+
+func TestCloneMPT2(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
+
+	if _, err := mpt.Insert([]byte("aaa"), &User{}); err != nil {
+		t.Error(err)
+	}
+
+	mpt1 := NewMerklePatriciaTrie(mndb, Sequence(1), mpt.root)
+
+	type args struct {
+		mpt MerklePatriciaTrieI
+	}
+	tests := []struct {
+		name string
+		args args
+		want *MerklePatriciaTrie
+	}{
+		{
+			name: "Test_CloneMPT_OK",
+			args: args{mpt: mpt1},
+			want: mpt,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := CloneMPT(tt.args.mpt)
+			if _, err := mpt1.Insert([]byte("bbb"), &User{Age: 1}); err != nil {
+				t.Error(err)
+			}
+			mpt2 := NewMerklePatriciaTrie(mndb, Sequence(1), mpt.root)
+
+			if !reflect.DeepEqual(got, mpt2) {
+				t.Errorf("CloneMPT() = %v, want %v", got, mpt2)
 			}
 		})
 	}

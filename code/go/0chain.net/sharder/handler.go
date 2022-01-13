@@ -86,7 +86,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
 	Anything older than that, there is a cost to query the database and get the round information anyway.
 	*/
-	for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+	for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange() {
 		b, err = sc.GetBlockFromStore(hash, roundEntity)
 		if err != nil {
 			return nil, err
@@ -106,7 +106,7 @@ func MagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error
 	b, err := chain.GetServerChain().GetBlock(ctx, mbm.Hash)
 	if err != nil {
 		lfb := sc.GetLatestFinalizedBlock()
-		for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+		for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange() {
 			b, err = sc.GetBlockFromStore(mbm.Hash, roundEntity)
 			if err != nil {
 				return nil, err

@@ -3,6 +3,7 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -27,7 +28,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 )
 
@@ -80,6 +80,7 @@ type BlockStateHandler interface {
 
 type updateLFMBWithReply struct {
 	block *block.Block
+	clone *block.Block
 	reply chan struct{}
 }
 
@@ -92,14 +93,16 @@ type Chain struct {
 	mutexViewChangeMB sync.RWMutex
 
 	//Chain config goes into this object
-	*Config
+	Config
+	BlocksToSharder int
 
 	MagicBlockStorage round.RoundStorage `json:"-"`
 
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	getLFMB                      chan *block.Block         `json:"-"`
+	getLFMB                      chan *block.Block `json:"-"`
+	getLFMBClone                 chan *block.Block
 	updateLFMB                   chan *updateLFMBWithReply `json:"-"`
 	lfmbMutex                    sync.RWMutex
 	latestOwnFinalizedBlockRound int64 // finalized by this node
@@ -168,8 +171,8 @@ type Chain struct {
 
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
-	EventDb *event.EventDb
-
+	EventDb    *event.EventDb
+	eventMutex *sync.RWMutex
 	// LFB tickets channels
 	getLFBTicket          chan *LFBTicket          // check out (any time)
 	updateLFBTicket       chan *LFBTicket          // receive
@@ -205,18 +208,20 @@ type SyncBlockReq struct {
 }
 
 func (c *Chain) SetupEventDatabase() error {
+	c.eventMutex.Lock()
+	defer c.eventMutex.Unlock()
 	if c.EventDb != nil {
 		c.EventDb.Close()
 		c.EventDb = nil
 	}
-	if !c.DbsEvents.Enabled {
+	if !c.DbsEvents().Enabled {
 		return nil
 	}
 
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents)
+	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents())
 	if err != nil {
 		return err
 	}
@@ -224,6 +229,8 @@ func (c *Chain) SetupEventDatabase() error {
 }
 
 func (c *Chain) GetEventDb() *event.EventDb {
+	c.eventMutex.RLock()
+	defer c.eventMutex.RUnlock()
 	return c.EventDb
 }
 
@@ -300,7 +307,6 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	round = mbRoundOffset(round)
 
 	c.mbMutex.RLock()
-	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
 		entity = c.MagicBlockStorage.GetLatest()
@@ -308,6 +314,7 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
+	c.mbMutex.RUnlock()
 	return entity.(*block.MagicBlock)
 }
 
@@ -370,7 +377,7 @@ func (c *Chain) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("chain id is required")
 	}
-	if datastore.IsEmpty(c.OwnerID) {
+	if datastore.IsEmpty(c.OwnerID()) {
 		return common.InvalidRequest("owner id is required")
 	}
 	return nil
@@ -399,90 +406,18 @@ func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration.ChainID)
 	//chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	chain.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
-	chain.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
-	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
-	chain.MinGenerators = viper.GetInt("server_chain.block.min_generators")
-	chain.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
-	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators+1)
-	chain.NumReplicators = viper.GetInt("server_chain.block.replicators")
-	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
-	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
-	chain.OwnerID = viper.GetString("server_chain.owner")
-	chain.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
-	chain.RoundRange = viper.GetInt64("server_chain.round_range")
-	chain.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
-	chain.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
-	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
-	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
-		chain.VerificationTicketsTo = AllMiners
-	} else {
-		chain.VerificationTicketsTo = Generator
-	}
+	chain.Config = NewConfigImpl(&ConfigData{})
+	chain.Config.FromViper()
 
-	// Health Check related counters
-	// Work on deep scan
-	conf := &chain.HCCycleScan[DeepScan]
-
-	conf.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
-	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
-	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
-
-	conf.Settle = viper.GetDuration("server_chain.health_check.deep_scan.settle_secs")
-	conf.RepeatInterval = viper.GetDuration("server_chain.health_check.deep_scan.repeat_interval_mins")
-	conf.ReportStatus = viper.GetDuration("server_chain.health_check.deep_scan.report_status_mins")
-
-	// Work on proximity scan
-	conf = &chain.HCCycleScan[ProximityScan]
-
-	conf.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
-	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
-	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
-
-	conf.Settle = viper.GetDuration("server_chain.health_check.proximity_scan.settle_secs")
-	conf.RepeatInterval = viper.GetDuration("server_chain.health_check.proximity_scan.repeat_interval_mins")
-	conf.ReportStatus = viper.GetDuration("server_chain.health_check.proximity_scan.report_status_mins")
-
-	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
-
-	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time")
-	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
-	if waitMode == "static" {
-		chain.BlockProposalWaitMode = BlockProposalWaitStatic
-	} else if waitMode == "dynamic" {
-		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
-	}
-	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
-	chain.SetSignatureScheme(viper.GetString("server_chain.client.signature_scheme"))
-
-	chain.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
-	chain.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
-	chain.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout")
-	if chain.SmartContractTimeout == 0 {
-		chain.SmartContractTimeout = DefaultSmartContractTimeout
-	}
-	chain.SmartContractSettingUpdatePeriod = viper.GetInt64("server_chain.smart_contract.setting_update_period")
-	chain.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
-	chain.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
-	chain.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
-
-	chain.DbsEvents.Enabled = viper.GetBool("server_chain.dbs.events.enabled")
-	chain.DbsEvents.Name = viper.GetString("server_chain.dbs.events.name")
-	chain.DbsEvents.User = viper.GetString("server_chain.dbs.events.user")
-	chain.DbsEvents.Password = viper.GetString("server_chain.dbs.events.password")
-	chain.DbsEvents.Host = viper.GetString("server_chain.dbs.events.host")
-	chain.DbsEvents.Port = viper.GetString("server_chain.dbs.events.port")
-	chain.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
-	chain.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
-	chain.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
-
+	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators()+1)
+	client.SetClientSignatureScheme(chain.ClientSignatureScheme())
 	return chain
 }
 
 /*Provider - entity provider for chain object */
 func Provider() datastore.Entity {
 	c := &Chain{}
-	c.Config = &Config{}
+	c.Config = NewConfigImpl(&ConfigData{})
 	c.Initialize()
 	c.Version = "1.0"
 
@@ -491,6 +426,7 @@ func Provider() datastore.Entity {
 
 	c.rounds = make(map[int64]round.RoundI)
 	c.roundsMutex = &sync.RWMutex{}
+	c.eventMutex = &sync.RWMutex{}
 
 	c.retry_wait_mutex = &sync.Mutex{}
 	c.genTimeoutMutex = &sync.Mutex{}
@@ -508,6 +444,7 @@ func Provider() datastore.Entity {
 
 	c.getLFBTicket = make(chan *LFBTicket) // should be unbuffered
 	c.getLFMB = make(chan *block.Block)
+	c.getLFMBClone = make(chan *block.Block)
 	c.updateLFMB = make(chan *updateLFMBWithReply, 100)
 	c.updateLFBTicket = make(chan *LFBTicket, 100)      //
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
@@ -536,8 +473,8 @@ func (c *Chain) Initialize() {
 	c.setCurrentRound(0)
 	c.SetLatestFinalizedBlock(nil)
 	c.BlocksToSharder = 1
-	c.VerificationTicketsTo = AllMiners
-	c.ValidationBatchSize = 2000
+	//c.VerificationTicketsTo = AllMiners
+	//c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
@@ -573,7 +510,9 @@ func SetupStateDB() {
 
 // CloseStateDB closes the state db (rocksdb)
 func CloseStateDB() {
+	logging.Logger.Info("Closing StateDB")
 	stateDB.Close()
+	logging.Logger.Info("StateDB closed")
 }
 
 func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
@@ -688,7 +627,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
 		r.GetTimeoutCount() < b.RoundTimeoutCount {
 
-		logging.Logger.Info("AddNotarizedBlockToRound round and block random seed different",
+		logging.Logger.Debug("AddNotarizedBlockToRound round and block random seed different",
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
@@ -698,6 +637,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 	}
 
+	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
@@ -720,6 +660,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	if b2 != b {
 		return b2
 	}
+	//TODO very dangerous code, we can break block hash with changing it!!! sort it out
 	b.SetRoundRandomSeed(r.GetRandomSeed())
 	b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)
@@ -833,7 +774,11 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
-	var mb = c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
+	mb := c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
+	if mb == nil {
+		logging.Logger.Error("can't get lfmb`")
+		return false
+	}
 	return b.LatestFinalizedMagicBlockHash == mb.Hash
 }
 
@@ -841,7 +786,7 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
 	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
-	genNum := getGeneratorsNum(len(miners), c.MinGenerators, c.GeneratorsPercent)
+	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
 			zap.Any("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
@@ -854,28 +799,28 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 // GetGeneratorsNumOfMagicBlock returns the number of generators of given magic block
 func (c *Chain) GetGeneratorsNumOfMagicBlock(mb *block.MagicBlock) int {
 	if mb == nil {
-		return c.MinGenerators
+		return c.MinGenerators()
 	}
 
-	return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
+	return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators(), c.GeneratorsPercent())
 }
 
 // GetGeneratorsNumOfRound returns the number of generators of a given round
 func (c *Chain) GetGeneratorsNumOfRound(r int64) int {
 	if mb := c.GetMagicBlock(r); mb != nil {
-		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
+		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators(), c.GeneratorsPercent())
 	}
 
-	return c.MinGenerators
+	return c.MinGenerators()
 }
 
 // GetGeneratorsNum returns the number of generators that calculated base on current magic block
 func (c *Chain) GetGeneratorsNum() int {
 	if mb := c.GetCurrentMagicBlock(); mb != nil {
-		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
+		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators(), c.GeneratorsPercent())
 	}
 
-	return c.MinGenerators
+	return c.MinGenerators()
 }
 
 // getGeneratorsNum calculates the number of generators
@@ -890,28 +835,28 @@ func (c *Chain) GetMiners(round int64) *node.Pool {
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
 func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
-	if c.NumReplicators <= 0 {
+	if c.NumReplicators() <= 0 {
 		return true
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(b.Round).Sharders, b.Hash)
-	return sharder.IsInTop(scores, c.NumReplicators)
+	return sharder.IsInTop(scores, c.NumReplicators())
 }
 
 func (c *Chain) IsBlockSharderFromHash(nRound int64, bHash string, sharder *node.Node) bool {
-	if c.NumReplicators <= 0 {
+	if c.NumReplicators() <= 0 {
 		return true
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, bHash)
-	return sharder.IsInTop(scores, c.NumReplicators)
+	return sharder.IsInTop(scores, c.NumReplicators())
 }
 
 /*CanShardBlockWithReplicators - checks if the sharder can store the block with nodes that store this block*/
 func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder *node.Node) (bool, []*node.Node) {
-	if c.NumReplicators <= 0 {
+	if c.NumReplicators() <= 0 {
 		return true, c.GetMagicBlock(nRound).Sharders.CopyNodes()
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, hash)
-	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
+	return sharder.IsInTopWithNodes(scores, c.NumReplicators())
 }
 
 // GetBlockSharders - get the list of sharders who would be replicating the block.
@@ -921,9 +866,9 @@ func (c *Chain) GetBlockSharders(b *block.Block) (sharders []string) {
 		sharderPool  = c.GetMagicBlock(b.Round).Sharders
 		sharderNodes = sharderPool.CopyNodes()
 	)
-	if c.NumReplicators > 0 {
+	if c.NumReplicators() > 0 {
 		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
-		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators)
+		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators())
 	}
 	for _, sharder := range sharderNodes {
 		sharders = append(sharders, sharder.GetKey())
@@ -954,24 +899,9 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
 func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
-	notarizedPercent := float64(c.ThresholdByCount) / 100
+	notarizedPercent := float64(c.ThresholdByCount()) / 100
 	thresholdCount := float64(minersNumber) * notarizedPercent
 	return int(math.Ceil(thresholdCount))
-}
-
-/*ReadNodePools - read the node pools from configuration */
-func (c *Chain) ReadNodePools(configFile string) {
-	nodeConfig := config.ReadConfig(configFile)
-	conf := nodeConfig.Get("miners")
-	mb := c.GetCurrentMagicBlock()
-	if miners, ok := conf.([]interface{}); ok {
-		mb.Miners.AddNodes(miners)
-		c.InitializeMinerPool(mb)
-	}
-	conf = nodeConfig.Get("sharders")
-	if sharders, ok := conf.([]interface{}); ok {
-		mb.Sharders.AddNodes(sharders)
-	}
 }
 
 /*ChainHasTransaction - indicates if this chain has the transaction */
@@ -1076,10 +1006,6 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 		return false
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
-	roundNumber := r.GetRoundNumber()
-	if roundNumber > c.getCurrentRound() {
-		c.setCurrentRound(roundNumber)
-	}
 	return true
 }
 
@@ -1094,7 +1020,17 @@ func (c *Chain) GetCurrentRound() int64 {
 func (c *Chain) SetCurrentRound(r int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
-	c.setCurrentRound(r)
+	current := c.getCurrentRound()
+	if current > r {
+		logging.Logger.Error("set_current_round trying to set previous round as current, skipping",
+			zap.Int64("current_round", current), zap.Int64("to_set_round", r))
+		return
+	}
+	if current < r {
+		logging.Logger.Info("Moving to the next round", zap.Int64("next_round", r))
+		c.setCurrentRound(r)
+		return
+	}
 }
 
 func (c *Chain) setCurrentRound(r int64) {
@@ -1128,8 +1064,6 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 		return
 	}
 	b.RoundRank = r.GetMinerRank(bNode)
-	//TODO: Remove this log
-	logging.Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), b.RoundRank))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
@@ -1196,15 +1130,9 @@ func (c *Chain) GetRoundTimeoutCount() int64 {
 	return c.crtCount
 }
 
-//SetSignatureScheme - set the client signature scheme to be used by this chain
-func (c *Chain) SetSignatureScheme(sigScheme string) {
-	c.ClientSignatureScheme = sigScheme
-	client.SetClientSignatureScheme(c.ClientSignatureScheme)
-}
-
 //GetSignatureScheme - get the signature scheme used by this chain
 func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
-	return encryption.GetSignatureScheme(c.ClientSignatureScheme)
+	return encryption.GetSignatureScheme(c.ClientSignatureScheme())
 }
 
 // CanShardBlocks - is the network able to effectively shard the blocks?
@@ -1213,13 +1141,13 @@ func (c *Chain) CanShardBlocks(nRound int64) bool {
 	activeShardersNum := mb.Sharders.GetActiveCount()
 	mbShardersNum := mb.Sharders.Size()
 
-	if activeShardersNum*100 < mbShardersNum*c.MinActiveSharders {
+	if activeShardersNum*100 < mbShardersNum*c.MinActiveSharders() {
 		logging.Logger.Error("CanShardBlocks - can not shard blocks",
 			zap.Int("active sharders", activeShardersNum),
 			zap.Int("sharders size", mbShardersNum),
-			zap.Int("min active sharders", c.MinActiveSharders),
+			zap.Int("min active sharders", c.MinActiveSharders()),
 			zap.Int("left", activeShardersNum*100),
-			zap.Int("right", mbShardersNum*c.MinActiveSharders))
+			zap.Int("right", mbShardersNum*c.MinActiveSharders()))
 		return false
 	}
 
@@ -1228,13 +1156,13 @@ func (c *Chain) CanShardBlocks(nRound int64) bool {
 
 // CanShardBlocksSharders - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocksSharders(sharders *node.Pool) bool {
-	return sharders.GetActiveCount()*100 >= sharders.Size()*c.MinActiveSharders
+	return sharders.GetActiveCount()*100 >= sharders.Size()*c.MinActiveSharders()
 }
 
 // CanReplicateBlock - can the given block be effectively replicated?
 func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 
-	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
+	if c.NumReplicators() <= 0 || c.MinActiveReplicators() == 0 {
 		return c.CanShardBlocks(b.Round)
 	}
 
@@ -1258,7 +1186,7 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 		}
 		if scores[i].Node.IsActive() {
 			arCount++
-			if arCount*100 >= c.NumReplicators*c.MinActiveReplicators {
+			if arCount*100 >= c.NumReplicators()*c.MinActiveReplicators() {
 				return true
 			}
 		}
@@ -1352,6 +1280,8 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 	c.lfbMutex.Unlock()
 
+	c.updateConfig(b)
+
 	// add LFB to blocks cache
 	if b != nil {
 		c.blocksMutex.Lock()
@@ -1365,6 +1295,66 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 			}
 		}
 	}
+}
+
+func (mc *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
+	if pb == nil || pb.ClientState == nil {
+		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", pb)
+	}
+	return pb.ClientState, nil
+}
+
+func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings, error) {
+	if clientState == nil {
+		return nil, errors.New("client state is nil")
+	}
+
+	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
+	if err != nil {
+		return nil, err
+	}
+
+	gl := &minersc.GlobalSettings{
+		Fields: make(map[string]string),
+	}
+	err = gl.Decode(val.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	return gl, nil
+}
+
+func (mc *Chain) updateConfig(pb *block.Block) {
+	clientState, err := mc.getClientState(pb)
+	if err != nil {
+		// This might happen after stopping and starting the miners
+		// and the MPT has not been setup yet.
+		logging.Logger.Error("cannot get the client state from last block",
+			zap.Error(err),
+		)
+		return
+	}
+
+	configMap, err := getConfigMap(clientState)
+	if err != nil {
+		logging.Logger.Info("cannot get global settings",
+			zap.Int64("start of round", pb.Round),
+			zap.Error(err),
+		)
+		return
+	}
+
+	err = mc.Config.Update(configMap)
+	if err != nil {
+		logging.Logger.Error("cannot update global settings",
+			zap.Int64("start of round", pb.Round),
+			zap.Error(err),
+		)
+	}
+	logging.Logger.Info("config has been updated successfully",
+		zap.Int64("start of round", pb.Round))
+
 }
 
 // GetLatestFinalizedBlock - get the latest finalized block.
@@ -1400,8 +1390,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlock(context.Background())
 	)
+	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 
 	if lfmb != nil && newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) &&
 		lfmb.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
@@ -1415,7 +1405,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	// there's no new magic block
-	if lfmb != nil && newMagicBlock.StartingRound == lfmb.StartingRound {
+	if lfmb != nil && newMagicBlock.StartingRound <= lfmb.StartingRound {
 		return nil
 	}
 
@@ -1501,13 +1491,14 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 }
 
 // SetLatestFinalizedBlock - set the latest finalized block.
+// TODO: this should be called when UpdateMagicBlock is called successfully
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if b == nil || b.MagicBlock == nil {
 		return
 	}
 
-	var latest = c.GetLatestFinalizedMagicBlock(context.Background())
+	latest := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
 		latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
@@ -1531,14 +1522,24 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
 	c.lfmbMutex.Unlock()
 
-	c.updateLatestFinalizedMagicBlock(context.Background(), b)
+	if latest == nil || b.StartingRound >= latest.StartingRound {
+		c.updateLatestFinalizedMagicBlock(context.Background(), b)
+	}
 }
 
-// GetLatestFinalizedMagicBlock will returns a copy of the latest finalized magic block
-// note: the block will be deep copied, used this carefully.
+// GetLatestFinalizedMagicBlock returns a the latest finalized magic block
 func (c *Chain) GetLatestFinalizedMagicBlock(ctx context.Context) (lfb *block.Block) {
 	select {
 	case lfb = <-c.getLFMB:
+	case <-ctx.Done():
+	}
+	return
+}
+
+// GetLatestFinalizedMagicBlockClone returns a deep cloned latest finalized magic block
+func (c *Chain) GetLatestFinalizedMagicBlockClone(ctx context.Context) (lfb *block.Block) {
+	select {
+	case lfb = <-c.getLFMBClone:
 	case <-ctx.Done():
 	}
 	return
@@ -1676,7 +1677,7 @@ type AfterFetcher interface {
 }
 
 func (c *Chain) LoadMinersPublicKeys() error {
-	mb := c.GetLatestFinalizedMagicBlock(context.Background())
+	mb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	if mb == nil {
 		return nil
 	}

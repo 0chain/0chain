@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -98,6 +99,13 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+		case Settings[OwnerId]:
+			_, err := hex.DecodeString(value)
+			if err != nil {
+				return fmt.Errorf("key %s, %v should be valid hex string", key, value)
+			}
+			gn.OwnerId = value
+
 		default:
 			return fmt.Errorf("key %s not recognised as setting", key)
 		}
