@@ -609,7 +609,7 @@ func (c *Chain) GetNotarizedBlockForce(ctx context.Context, hash string, rn int6
 	for true {
 		select {
 		case <-ctx.Done():
-			return nil, context.DeadlineExceeded
+			return nil, ctx.Err()
 		default:
 		}
 

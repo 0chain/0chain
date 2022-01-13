@@ -1172,7 +1172,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		if err := mc.ComputeState(ctx, b); err != nil {
+		if err := mc.ComputeOrSyncState(ctx, b); err != nil {
 			logging.Logger.Info("can't compute state for notarized block", zap.Error(err),
 				zap.Int64("block_round", b.Round),
 				zap.Int64("round", r.GetRoundNumber()),

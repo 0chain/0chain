@@ -1,5 +1,7 @@
 package transaction
 
+import "0chain.net/core/common"
+
 const (
 	TxnTypeSend = 0 // A transaction to send tokens to another account, state is maintained by account
 
@@ -13,3 +15,5 @@ const (
 
 	TxnTypeSmartContract = 1000 // A smart contract transaction type
 )
+
+var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")
