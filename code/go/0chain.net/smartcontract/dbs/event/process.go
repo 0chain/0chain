@@ -3,12 +3,14 @@ package event
 import (
 	"encoding/json"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 )
 
 type (
@@ -28,7 +30,8 @@ const (
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddTransaction
-  TagAddOrOverwriteWriteMarker
+	TagAddOrOverwriteWriteMarker
+	TagAddBlock
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -86,6 +89,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addTransaction(transaction)
+	case TagAddBlock:
+		var block Block
+		err := json.Unmarshal([]byte(event.Data), &block)
+		if err!= nil {
+			return err
+		}
+		return edb.addBlock(block)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

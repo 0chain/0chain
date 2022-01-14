@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"0chain.net/chaincore/client"
@@ -24,8 +26,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 const (
@@ -1006,6 +1006,11 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 				return common.NewError("state_update_error", err.Error())
 			}
 		}
+	}
+
+	err := emitBlockEvent(b)
+	if err != nil {
+		return err
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
