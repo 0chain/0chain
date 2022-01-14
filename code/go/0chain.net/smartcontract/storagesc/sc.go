@@ -7,12 +7,13 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 
+	metrics "github.com/rcrowley/go-metrics"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -111,7 +112,8 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 	// events db
 	ssc.SmartContractExecutionStats["/get_transaction"] = ssc.GetTransactionByHashHandler
-
+	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
+	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
 }
 
 func (ssc *StorageSmartContract) GetName() string {

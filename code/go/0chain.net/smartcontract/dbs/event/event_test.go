@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
 )
 
 func init() {
@@ -53,11 +54,16 @@ func (edb *EventDb) drop() error {
 	if err != nil {
 		return err
 	}
-  
-  err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
+
+	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
 	if err != nil {
 		return err
 	}
-  
+
+	err = edb.Store.Get().Migrator().DropTable(&Block{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

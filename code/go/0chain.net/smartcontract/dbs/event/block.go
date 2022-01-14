@@ -29,29 +29,19 @@ type Block struct {
 	CreatedAt             time.Time `json:"created_at"`
 }
 
-//func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {
-//	result := edb.Store.Get().
-//		Model(&WriteMarker{}).
-//		Where(&WriteMarker{TransactionID: wm.TransactionID}).
-//		Updates(&wm)
-//	return result.Error
-//}
-//
+func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
+	block := Block{}
+	res := edb.Store.Get().Table("blocks").Where("hash = ?", hash).First(&block)
+	return block, res.Error
+}
+
+func (edb *EventDb) GetBlocks() ([]Block, error) {
+	var blocks []Block
+	res := edb.Store.Get().Table("blocks").Find(&blocks)
+	return blocks, res.Error
+}
+
 func (edb *EventDb) addBlock(block Block) error {
 	result := edb.Store.Get().Create(&block)
 	return result.Error
 }
-
-//
-//func (wm *WriteMarker) exists(edb *EventDb) (bool, error) {
-//	var count int64
-//	result := edb.Get().
-//		Model(&WriteMarker{}).
-//		Where(&WriteMarker{TransactionID: wm.TransactionID}).
-//		Count(&count)
-//	if result.Error != nil {
-//		return false, fmt.Errorf("error searching for write marker txn: %v, error %v",
-//			wm.TransactionID, result.Error)
-//	}
-//	return count > 0, nil
-//
