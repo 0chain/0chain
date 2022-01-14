@@ -452,6 +452,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
+		err = emitAddOrOverwriteAllocation(alloc, balances)
+		if err != nil {
+			return "", common.NewErrorf("verify_challenge",
+				"saving allocation in db: %v", err)
+		}
+
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
 		}
@@ -493,6 +499,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
+		}
+
+		err = emitAddOrOverwriteAllocation(alloc, balances)
+		if err != nil {
+			return "", common.NewErrorf("challenge_reward_error",
+				"saving allocation in db: %v", err)
 		}
 
 		if pass && !fresh {
@@ -765,6 +777,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
 	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	emitAddOrOverwriteAllocation(alloc, balances)
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	sc.newChallenge(balances, storageChallenge.Created)

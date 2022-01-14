@@ -588,6 +588,12 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't save allocation: "+err.Error())
 	}
 
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_closing_failed",
+			"saving allocation in db: %v", err)
+	}
+
 	return string(alloc.Encode()), nil // closing
 }
 
