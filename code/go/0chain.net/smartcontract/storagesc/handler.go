@@ -254,6 +254,10 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 		return nil, common.NewErrInternal("allocation id is empty")
 	}
 
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
 	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
 	if err != nil {
 		return nil, common.NewErrInternal("can't get write markers", err.Error())
