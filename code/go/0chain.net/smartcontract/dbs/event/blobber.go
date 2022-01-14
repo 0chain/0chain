@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"fmt"
 
 	"0chain.net/smartcontract/dbs"
@@ -124,14 +125,14 @@ func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 }
 
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {
-	var count int64
-	result := edb.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: bl.BlobberID}).
-		Count(&count)
-	if result.Error != nil {
-		return false, fmt.Errorf("error searching for blobber %v, error %v",
-			bl.BlobberID, result.Error)
+	var blobber Blobber
+	result := edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: bl.BlobberID}).Take(&blobber)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, nil
 	}
-	return count > 0, nil
+	if result.Error != nil {
+		return false, fmt.Errorf("failed to check Blobber existence %v, error %v",
+			bl, result.Error)
+	}
+	return true, nil
 }
