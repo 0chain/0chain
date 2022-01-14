@@ -777,7 +777,11 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
 	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	emitAddOrOverwriteAllocation(alloc, balances)
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("blobber_challenge_decode_error",
+			"saving allocation in db: %v", err)
+	}
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	sc.newChallenge(balances, storageChallenge.Created)
