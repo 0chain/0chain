@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/logging"
 
@@ -110,14 +111,22 @@ func (msc *StorageSmartContract) GetTransactionByHashHandler(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	var transactionHash = params.Get("transaction_hash")
-	if len(transactionHash) == 0 {
-		return nil, fmt.Errorf("cannot find valid transaction_hash: %v", transactionHash)
+	var clientID = params.Get("client_id")
+	if len(transactionHash) == 0 && len(clientID) == 0 {
+		return nil, fmt.Errorf("cannot find valid transaction: transaction_hash:%v client_id:%v", transactionHash, clientID)
 	}
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
 	}
-	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
-	return &transaction, err
+	if len(transactionHash) > 0 {
+		transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
+		return []event.Transaction{transaction}, err
+	}
+	if len(clientID) > 0 {
+		transactions, err := balances.GetEventDB().GetTransactionByClientId(clientID)
+		return transactions, err
+	}
+	return nil, nil
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,

@@ -110,7 +110,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 	// events db
-	ssc.SmartContractExecutionStats["/get_transaction"] = ssc.GetTransactionByHashHandler
+	ssc.SmartContract.RestHandlers["/get_transaction"] = ssc.GetTransactionByHashHandler
 
 }
 
