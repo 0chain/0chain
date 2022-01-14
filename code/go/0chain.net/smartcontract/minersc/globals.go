@@ -1,10 +1,11 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
@@ -184,7 +185,12 @@ var GlobalSettingName = []string{
 // GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
 var GlobalSettingInfo = map[string]struct {
 	settingType smartcontract.ConfigType
-	mutable     bool
+
+	// Indicates that the settings cannot be changed by a transaction
+	// This includes both true immutable settings and settings that are local
+	// and are changed by restarting editing 0chain.yaml and restarting the module
+	// todo we need to split up immutable and stored in MPT and local so can't be changed in transaction
+	mutable bool
 }{
 	GlobalSettingName[State]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Dkg]:                               {smartcontract.Boolean, false},
@@ -236,15 +242,15 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {smartcontract.Int, false},
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {smartcontract.Int, false},
 
-	GlobalSettingName[DbsEventsEnabled]:         {smartcontract.Boolean, true},
-	GlobalSettingName[DbsEventsName]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsUser]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsPassword]:        {smartcontract.String, true},
-	GlobalSettingName[DbsEventsHost]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsPort]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, true},
-	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, true},
-	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, true},
+	GlobalSettingName[DbsEventsEnabled]:         {smartcontract.Boolean, false},
+	GlobalSettingName[DbsEventsName]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsUser]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsPassword]:        {smartcontract.String, false},
+	GlobalSettingName[DbsEventsHost]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsPort]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, false},
+	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, false},
+	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, false},
 
 	GlobalSettingName[HealthCheckDeepScanEnabled]:                 {smartcontract.Boolean, false},
 	GlobalSettingName[HealthCheckDeepScanBatchSize]:               {smartcontract.Int64, false},
@@ -306,7 +312,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 			return fmt.Errorf("'%s' is not a valid global setting", key)
 		}
 		if !info.mutable {
-			return fmt.Errorf("%s is an immutable setting", key)
+			return fmt.Errorf("%s cannot be modified via a transaction", key)
 		}
 		_, err = smartcontract.StringToInterface(value, info.settingType)
 		if err != nil {
