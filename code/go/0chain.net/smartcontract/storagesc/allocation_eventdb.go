@@ -24,6 +24,11 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		blobberMap = make(map[string]*BlobberAllocation)
 	)
 
+	var curators []string
+	if alloc.Curators != "" {
+		curators = strings.Split(alloc.Curators, ",")
+	}
+
 	var allocTerms []event.AllocationTerm
 	err := json.Unmarshal([]byte(alloc.Terms), &allocTerms)
 	if err != nil {
@@ -118,7 +123,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		MovedBack:               alloc.MovedBack,
 		MovedToValidators:       alloc.MovedToValidators,
 		TimeUnit:                time.Duration(alloc.TimeUnit),
-		Curators:                strings.Split(alloc.Curators, ","),
+		Curators:                curators,
 	}
 
 	return sa, nil
