@@ -14,6 +14,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/blang/semver/v4"
 	"go.uber.org/zap"
 )
 
@@ -22,6 +23,8 @@ func (c *Chain) SetupNodeHandlers() {
 	http.HandleFunc("/_nh/list/m", common.Recover(c.GetMinersHandler))
 	http.HandleFunc("/_nh/list/s", common.Recover(c.GetShardersHandler))
 }
+
+const VersionsSenderURI = "/v1/_x2x/versions"
 
 var (
 	// MinerNotarizedBlockRequestor - reuqest a notarized block from a node.
@@ -44,6 +47,9 @@ var (
 
 	// FBRequestor represents FB from sharders reqeustor.
 	FBRequestor node.EntityRequestor
+
+	// VersionsSender is used for sending versions info of the node
+	VersionsSender node.EntitySendHandler
 )
 
 /*SetupX2MRequestors - setup requestors */
@@ -54,15 +60,10 @@ func SetupX2MRequestors() {
 	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized_block/get", options, blockEntityMetadata)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_JSON, Compress: true}
-	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
-	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
-	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
 
 	partialStateEntityMetadata := datastore.GetEntityMetadata("partial_state")
 	PartialStateRequestor = node.RequestEntityHandler("/v1/_x2m/state/get", options, partialStateEntityMetadata)
 
-	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
-	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
 }
 
 func SetupX2SRequestors() {
@@ -79,9 +80,29 @@ func SetupX2SRequestors() {
 		datastore.GetEntityMetadata("block"))
 }
 
+func SetupX2XRequestors() {
+	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_JSON, Compress: true}
+	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
+	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
+
+	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
+	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
+	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
+}
+
 func SetupX2XResponders(c *Chain) {
 	http.HandleFunc("/v1/_x2x/state/get_nodes", common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
 	http.HandleFunc("/v1/_x2x/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(c.BlockStateChangeHandler)))
+}
+
+func SetupX2XSenders() {
+	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, CODEC: node.CODEC_MSGPACK, Compress: false}
+	VersionsSender = node.SendEntityHandler(VersionsSenderURI, options)
+}
+
+func SetupX2XReceivers() {
+	http.HandleFunc(VersionsSenderURI,
+		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VersionsHandler, nil)))
 }
 
 //StateNodesHandler - return a list of state nodes
@@ -194,4 +215,29 @@ func (c *Chain) getNotarizedBlock(ctx context.Context, req *http.Request) (*bloc
 	}
 
 	return b, nil
+}
+
+func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	ve, ok := entity.(*VersionsEntity)
+	if !ok {
+		logging.Logger.Info("Versions handler: returning invalid Entity")
+		return nil, common.InvalidRequest("Invalid Entity")
+	}
+
+	c := GetServerChain()
+
+	sender := node.GetSender(ctx)
+	v, err := semver.New(ve.SCVersion)
+	if err != nil {
+		logging.Logger.Error("versions handler: invalid sc version",
+			zap.Error(err),
+			zap.String("sc version", ve.SCVersion))
+		return nil, nil
+	}
+
+	if err := c.SetLatestSupportedSCVersion(sender.GetKey(), v); err != nil {
+		logging.Logger.Error("versions handler: add sc version failed", zap.Error(err))
+	}
+
+	return nil, nil
 }

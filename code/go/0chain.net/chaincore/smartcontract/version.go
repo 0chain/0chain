@@ -4,10 +4,12 @@ import (
 	"errors"
 	"sync"
 
-	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/blang/semver/v4"
 )
+
+// LatestSupportedSCVersion latest supported SC version
+const LatestSupportedSCVersion = "1.0.0"
 
 var (
 	// ErrSmartContractVersionRegistered is returned when a smart contract version already exists
@@ -71,32 +73,6 @@ func GetSCVersion() semver.Version {
 // SetSCVersion sets the sc version
 func SetSCVersion(v semver.Version) {
 	scVersion.Set(v)
-}
-
-// CanUpdateSCVersion checks if we can update the smart contract version
-// return the allowed version
-func CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
-	// TODO: implement this
-	v2, err := semver.New("2.0.0")
-	if err != nil {
-		panic(err)
-	}
-
-	if v2.LE(scVersion.Get()) {
-		return nil, false, nil
-	}
-
-	return v2, true, nil
-}
-
-// GetLatestSupportedSCVersion returns the latest supported sc version
-func GetLatestSupportedSCVersion() *semver.Version {
-	v2, err := semver.New("2.0.0")
-	if err != nil {
-		panic(err)
-	}
-
-	return v2
 }
 
 // RegisterSmartContracts register the smart contracts with version

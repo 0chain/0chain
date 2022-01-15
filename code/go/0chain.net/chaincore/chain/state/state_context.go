@@ -68,9 +68,6 @@ type StateContextI interface {
 type SCVersionManager interface {
 	// CanSCVersionUpdate checks if smart contract version can be updated now
 	CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter)
-	// GetLatestSupportedSCVersion returns the latest supported SC version,
-	// this could be new SC version that is not being used
-	GetLatestSupportedSCVersion() *semver.Version
 
 	SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error
 }
@@ -96,7 +93,6 @@ type StateContext struct {
 	getChainCurrentMagicBlock    func() *block.MagicBlock
 	getSignature                 func() encryption.SignatureScheme
 	canSCVersionUpdate           func() (*semver.Version, bool, SwitchAdapter)
-	getLatestSupportedSCVersion  func() *semver.Version
 	setLatestSupportedSCVersion  func(minerID datastore.Key, v *semver.Version) error
 }
 
@@ -167,14 +163,6 @@ func CanUpdateSCVersionFunc(f func() (*semver.Version, bool, SwitchAdapter)) Opt
 func EventDB(edb *event.EventDb) Option {
 	return func(s *StateContext) {
 		s.eventDb = edb
-	}
-}
-
-// GetLatestSupportedSCVersion option to set function for StateContext to get latest
-// supported SC version
-func GetLatestSupportedSCVersion(f func() *semver.Version) Option {
-	return func(s *StateContext) {
-		s.getLatestSupportedSCVersion = f
 	}
 }
 
@@ -389,10 +377,6 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 // CanSCVersionUpdate checks if we can update the smart contract
 func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter) {
 	return sc.canSCVersionUpdate()
-}
-
-func (sc *StateContext) GetLatestSupportedSCVersion() *semver.Version {
-	return sc.getLatestSupportedSCVersion()
 }
 
 func (sc *StateContext) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error {

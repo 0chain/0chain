@@ -135,8 +135,7 @@ func (c *Chain) NewStateContext(
 		bcstate.GetLatestFinalizedMagicBlockFunc(c.GetLatestFinalizedMagicBlock),
 		bcstate.GetCurrentMagicBlockFunc(c.GetCurrentMagicBlock),
 		bcstate.GetSignatureSchemeFunc(c.GetSignatureScheme),
-		bcstate.CanUpdateSCVersionFunc(smartcontract.CanUpdateSCVersion),
-		bcstate.GetLatestSupportedSCVersion(smartcontract.GetLatestSupportedSCVersion),
+		bcstate.CanUpdateSCVersionFunc(CanUpdateSCVersion(c.scVersions, nil)), // TODO: write adapter when necessary
 		bcstate.SetLatestSupportedSCVersion(c.SetLatestSupportedSCVersion),
 	)
 }

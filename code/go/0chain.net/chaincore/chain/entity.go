@@ -471,8 +471,20 @@ func Provider() datastore.Entity {
 	c.bscMutex = &sync.Mutex{}
 
 	c.computeBlockStateC = make(chan struct{}, 1)
-	c.scVersions = newSCVersionsManager(mb, 80) // 80 percent to consensus
+	c.scVersions = newSCVersionsManager(getNodeIDs(mb), 80) // 80 percent to consensus
 	return c
+}
+
+func getNodeIDs(mb *block.MagicBlock) map[datastore.Key]struct{} {
+	mbs := mb.Miners.CopyNodes()
+	sbs := mb.Sharders.CopyNodes()
+	logging.Logger.Debug("getNodeIDs", zap.Int("num", len(mbs)+len(sbs)))
+	nodes := make(map[datastore.Key]struct{}, len(mbs)+len(sbs))
+	for _, nd := range append(mbs, sbs...) {
+		nodes[nd.GetKey()] = struct{}{}
+	}
+
+	return nodes
 }
 
 /*Initialize - intializes internal datastructures to start again */
@@ -1150,6 +1162,20 @@ func (c *Chain) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Ver
 	return c.scVersions.Set(minerID, *v)
 }
 
+// UpdateSCVersionCheckFunc function signature for checking if SC version could be updated
+type UpdateSCVersionCheckFunc func() (*semver.Version, bool, cstate.SwitchAdapter)
+
+func CanUpdateSCVersion(scv scVersionsManager, adapter cstate.SwitchAdapter) UpdateSCVersionCheckFunc {
+	return func() (*semver.Version, bool, cstate.SwitchAdapter) {
+		v := scv.GetConsensusVersion()
+		if v != nil && v.GT(smartcontract.GetSCVersion()) {
+			return v, true, adapter
+		}
+
+		return nil, false, nil
+	}
+}
+
 // CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
@@ -1567,6 +1593,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if latest == nil || b.StartingRound >= latest.StartingRound {
 		c.updateLatestFinalizedMagicBlock(context.Background(), b)
+		c.scVersions.UpdateNodesList(getNodeIDs(b.MagicBlock))
 	}
 }
 

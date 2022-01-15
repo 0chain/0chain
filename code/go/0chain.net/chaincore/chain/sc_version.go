@@ -3,7 +3,6 @@ package chain
 import (
 	"sync"
 
-	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
@@ -14,25 +13,24 @@ import (
 type scVersionsManager interface {
 	Set(minerID datastore.Key, v semver.Version) error
 	GetConsensusVersion() *semver.Version
-	UpdateMinersList(mb *block.MagicBlock)
+	UpdateNodesList(nodes map[datastore.Key]struct{})
 }
 
 type scVersions struct {
-	mutex  sync.RWMutex
-	miners map[datastore.Key]struct{}
+	mutex sync.RWMutex
+	nodes map[datastore.Key]struct{}
 
 	versions         map[datastore.Key]semver.Version
 	thresholdPercent int
 }
 
-func newSCVersionsManager(mb *block.MagicBlock, thresholdPercent int) *scVersions {
+func newSCVersionsManager(nodes map[datastore.Key]struct{}, thresholdPercent int) *scVersions {
 	scv := &scVersions{
-		miners:           make(map[datastore.Key]struct{}),
+		nodes:            nodes,
 		versions:         make(map[datastore.Key]semver.Version),
 		thresholdPercent: thresholdPercent,
 	}
 
-	scv.UpdateMinersList(mb)
 	return scv
 }
 
@@ -40,15 +38,10 @@ func (scv *scVersions) Set(minerID datastore.Key, v semver.Version) error {
 	scv.mutex.Lock()
 	defer scv.mutex.Unlock()
 	// check if the minerID exist in magic block
-	if _, ok := scv.miners[minerID]; !ok {
-		return common.NewErrorf("miner_not exist in mb",
-			"miner does not exist in magic block, id: %v", minerID)
+	if _, ok := scv.nodes[minerID]; !ok {
+		return common.NewErrorf("miner_not_exist_in_mb",
+			"miner does not exist in magic block, id: %v, miners num: %d", minerID, len(scv.nodes))
 	}
-
-	if ev, ok := scv.versions[minerID]; ok && ev.EQ(v) {
-		return nil
-	}
-
 	scv.versions[minerID] = v
 
 	return nil
@@ -58,9 +51,12 @@ func (scv *scVersions) GetConsensusVersion() *semver.Version {
 	scv.mutex.RLock()
 	defer scv.mutex.RUnlock()
 	// TODO: make sure the threshold is correct
-	threshold := scv.thresholdPercent * len(scv.miners) / 100
+	threshold := scv.thresholdPercent * len(scv.nodes) / 100
 
 	if len(scv.versions) < threshold {
+		logging.Logger.Debug("sc_versions - versions num not reached threshold",
+			zap.Int("num", len(scv.versions)),
+			zap.Int("threshold", threshold))
 		return nil
 	}
 
@@ -99,26 +95,26 @@ func (scv *scVersions) GetConsensusVersion() *semver.Version {
 	return nil
 }
 
-func (scv *scVersions) UpdateMinersList(mb *block.MagicBlock) {
-	mbs := mb.Miners.CopyNodesMap()
+func (scv *scVersions) UpdateNodesList(nodes map[datastore.Key]struct{}) {
+	logging.Logger.Debug("sc versions update magic block nodes list", zap.Int("num", len(nodes)))
 	scv.mutex.Lock()
 	defer scv.mutex.Unlock()
-	// add new miners if any
-	for id := range mbs {
-		if _, ok := scv.miners[id]; !ok {
-			scv.miners[id] = struct{}{}
+	// add new nodes if any
+	for id := range nodes {
+		if _, ok := scv.nodes[id]; !ok {
+			scv.nodes[id] = struct{}{}
 		}
 	}
 
-	// remove none exist miners
-	for id := range scv.miners {
-		if _, ok := mbs[id]; !ok {
+	// remove nodes that do not exist in nodes list anymore
+	for id := range scv.nodes {
+		if _, ok := nodes[id]; !ok {
 			scv.remove(id)
 		}
 	}
 }
 
-func (scv *scVersions) remove(minerID string) {
-	delete(scv.miners, minerID)
-	delete(scv.versions, minerID)
+func (scv *scVersions) remove(id string) {
+	delete(scv.nodes, id)
+	delete(scv.versions, id)
 }

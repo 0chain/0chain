@@ -324,6 +324,7 @@ type Chainer interface {
 		fb *block.Block, err error)
 	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
+	SendVersions(ctx context.Context, v *VersionsEntity)
 }
 
 //

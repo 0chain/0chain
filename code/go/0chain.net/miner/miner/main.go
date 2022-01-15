@@ -418,9 +418,13 @@ func initN2NHandlers(c *miner.Chain) {
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
+
+	chain.SetupX2XRequestors()
 	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
+	chain.SetupX2XSenders()
+	chain.SetupX2XReceivers()
 }
 
 func initWorkers(ctx context.Context) {

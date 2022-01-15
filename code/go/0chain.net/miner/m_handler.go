@@ -2,6 +2,12 @@ package miner
 
 /*This file contains the Miner To Miner send/receive messages */
 import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strconv"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -9,12 +15,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"context"
-	"encoding/hex"
-	"fmt"
 	"go.uber.org/zap"
-	"net/http"
-	"strconv"
 )
 
 var (

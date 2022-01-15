@@ -31,6 +31,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.SyncLFBStateWorker(ctx)
 	go c.blockFetcher.StartBlockFetchWorker(ctx, c)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
+	go StartVersionsWorker(ctx, c)
 	go node.Self.Underlying().MemoryUsage()
 }
 

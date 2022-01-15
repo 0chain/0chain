@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -187,6 +188,12 @@ func (tb *testBalances) GetSCVersion() semver.Version {
 	return smartcontract.GetSCVersion()
 }
 
-func (tb *testBalances) CanUpdateSCVersion() (*semver.Version, bool) {
-	return nil, false
+func (tb *testBalances) CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
+	return nil, false, nil
+}
+
+func (tb *testBalances) GetLatestSupportedSCVersion() *semver.Version { return nil }
+
+func (tb *testBalances) SetLatestSupportedSCVersion(datastore.Key, *semver.Version) error {
+	return nil
 }
