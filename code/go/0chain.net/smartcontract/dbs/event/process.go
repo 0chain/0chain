@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -29,7 +30,8 @@ const (
 	TagDeleteBlobber
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
-	TagAddOrOverwriteReadMarker
+	TagAddOrOverwriteValidator
+  TagAddOrOverwriteReadMarker
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -96,6 +98,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addTransaction(transaction)
+	case TagAddOrOverwriteValidator:
+		var vn Validator
+		err := json.Unmarshal([]byte(event.Data), &vn)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteValidator(vn)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

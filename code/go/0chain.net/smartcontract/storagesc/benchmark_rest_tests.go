@@ -239,6 +239,15 @@ func BenchmarkRestTests(
 				return values
 			}(),
 		},
+		{
+			name:     "storage_rest.GetValidator",
+			endpoint: ssc.GetValidatorHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("validator_id", getMockValidatorId(0))
+				return values
+			}(),
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
