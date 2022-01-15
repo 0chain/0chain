@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
+	"github.com/blang/semver/v4"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -31,6 +35,37 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 	doneC := make(chan struct{})
 	tk := time.NewTicker(time.Minute)
 
+	latestSCVersion, err := semver.Make(smartcontract.LatestSupportedSCVersion)
+	if err != nil {
+		logging.Logger.Panic(fmt.Sprintf("start_versions_worker, invalid latest supported sc version: %v", err))
+		return
+	}
+
+	currentSCVersion := smartcontract.GetSCVersion()
+
+	if latestSCVersion.LE(currentSCVersion) {
+		logging.Logger.Debug("start_versions_worker exit, no new sc version detected",
+			zap.String("current sc version", currentSCVersion.String()),
+			zap.String("latest sc version", latestSCVersion.String()))
+		return
+	}
+
+	// sign the version
+	self := node.Self
+
+	versions := &VersionsEntity{
+		SCVersion: latestSCVersion.String(),
+	}
+
+	sign, err := self.Sign(versions.Hash())
+	if err != nil {
+		logging.Logger.Error("start_versions_worker, failed to sign versions",
+			zap.Error(err))
+		return
+	}
+
+	versions.Sign = sign
+
 	go func() {
 		defer close(doneC)
 		for {
@@ -39,9 +74,7 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 				return
 			case <-tk.C:
 				// broadcast sc version report message
-				c.SendVersions(context.Background(), &VersionsEntity{
-					SCVersion: smartcontract.LatestSupportedSCVersion,
-				})
+				c.SendVersions(context.Background(), versions)
 			}
 		}
 	}()
@@ -55,8 +88,7 @@ var versionsEntityMetaData *datastore.EntityMetadataImpl
 type VersionsEntity struct {
 	datastore.NOIDField
 	SCVersion string `json:"sc_version"`
-	//
-	Share string `json:"share"`
+	Sign      string `json:"sign"`
 }
 
 func (v *VersionsEntity) GetEntityMetadata() datastore.EntityMetadata {
@@ -77,4 +109,8 @@ func SetupVersionsEntity() {
 	versionsEntityMetaData.Provider = VersionsEntityProvider
 
 	datastore.RegisterEntityMetadata("versions", versionsEntityMetaData)
+}
+
+func (v *VersionsEntity) Hash() string {
+	return encryption.Hash(v.SCVersion)
 }

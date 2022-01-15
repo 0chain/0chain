@@ -1399,6 +1399,9 @@ func (mc *Chain) updateConfig(b *block.Block) {
 
 }
 
+// TODO: optimize this to do not read out version from MPT
+// each time when there's a block finalized. Should be notified
+// when the version is changed.
 func (mc *Chain) updateSCVersion(b *block.Block) {
 	clientState, err := getClientState(b)
 	if err != nil {

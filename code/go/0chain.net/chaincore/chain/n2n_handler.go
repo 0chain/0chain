@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -226,13 +227,26 @@ func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{},
 
 	c := GetServerChain()
 
-	sender := node.GetSender(ctx)
 	v, err := semver.New(ve.SCVersion)
 	if err != nil {
 		logging.Logger.Error("versions handler: invalid sc version",
 			zap.Error(err),
 			zap.String("sc version", ve.SCVersion))
 		return nil, nil
+	}
+
+	if err := node.ValidateSenderSignature(ctx); err != nil {
+		return nil, err
+	}
+
+	sender := node.GetSender(ctx)
+	if ok, err := sender.Verify(ve.Sign, ve.Hash()); !ok || err != nil {
+		logging.Logger.Error("versions handler: failed to verify signature",
+			zap.Error(err),
+			zap.String("signature", ve.Sign),
+			zap.String("hash", ve.Hash()))
+
+		return nil, errors.New("failed to verify signature")
 	}
 
 	if err := c.SetLatestSupportedSCVersion(sender.GetKey(), v); err != nil {
