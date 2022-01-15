@@ -276,6 +276,27 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 
 }
 
+func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		validatorID = params.Get("validator_id")
+	)
+
+	if validatorID == "" {
+		return nil, common.NewErrInternal("validator id is empty")
+	}
+
+	validator, err := balances.GetEventDB().GetValidatorByValidatorID(validatorID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get validator", err.Error())
+	}
+
+	return validator, nil
+
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 

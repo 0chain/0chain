@@ -2,9 +2,11 @@ package event
 
 import (
 	"encoding/json"
-	"golang.org/x/net/context"
+	"os"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -218,4 +220,49 @@ func TestBlobbers(t *testing.T) {
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.Error(t, err)
+}
+
+func TestBlobberExists(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+	bl := Blobber{
+		BlobberID: "something",
+	}
+	res := eventDb.Store.Get().Create(&bl)
+	if res.Error != nil {
+		t.Errorf("Error while inserting blobber %v", bl)
+		return
+	}
+	gotExists, err := bl.exists(eventDb)
+
+	if !gotExists || err != nil {
+		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
+	}
+	b2 := Blobber{
+		BlobberID: "somethingNew",
+	}
+	gotExists, err = b2.exists(eventDb)
+	if gotExists || err != nil {
+		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
+	}
+	err = eventDb.drop()
+	require.NoError(t, err)
 }
