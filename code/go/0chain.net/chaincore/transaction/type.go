@@ -17,3 +17,4 @@ const (
 )
 
 var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")
+var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")

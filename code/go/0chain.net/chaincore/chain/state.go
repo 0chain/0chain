@@ -33,8 +33,6 @@ func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
-var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
-
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
@@ -182,6 +180,11 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	)
 	defer func() { events = sctx.GetEvents() }()
 
+	//we should check that client hash enough funds to pay for transaction before heavy computations are executed
+	if err = sctx.Validate(); err != nil {
+		return
+	}
+
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
@@ -199,9 +202,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		t := time.Now()
 		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
 		switch err {
-		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext:
+		//internal errors
+		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
 			sctx.EmitError(err)
-			logging.Logger.Error("Error executing the SC, context error",
+			logging.Logger.Error("Error executing the SC, internal error",
 				zap.Error(err),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
@@ -212,13 +216,16 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		default:
 			if err != nil {
 				sctx.EmitError(err)
-				logging.Logger.Error("Error executing the SC",
+				logging.Logger.Debug("Error executing the SC, chargeable error",
 					zap.Error(err),
 					zap.String("block", b.Hash),
 					zap.String("begin client state", util.ToHex(startRoot)),
 					zap.String("prev block", b.PrevBlock.Hash),
 					zap.Any("txn", txn))
-				return
+
+				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
+				clientState = CreateTxnMPT(bState) // begin transaction
+				sctx = c.NewStateContext(b, clientState, txn, nil)
 			}
 		}
 		txn.TransactionOutput = output
@@ -262,10 +269,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("state_Balance", state.Balance(txn.Fee)))
 			return
 		}
-	}
-
-	if err = sctx.Validate(); err != nil {
-		return
 	}
 
 	for _, transfer := range sctx.GetTransfers() {
@@ -371,7 +374,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	if fs.Balance < amount {
-		return ErrInsufficientBalance
+		return transaction.ErrInsufficientBalance
 	}
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
