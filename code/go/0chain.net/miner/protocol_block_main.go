@@ -118,7 +118,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 
 		// Setting the score lower so the next time blocks are generated
 		// these transactions don't show up at the top.
-		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
+		//txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		tii.txnMap[txn.GetKey()] = struct{}{}
 		b.Txns = append(b.Txns, txn)
 		if debugTxn {
