@@ -48,19 +48,21 @@ type EventDb struct {
 func (edb EventDb) channelBufferIntermediate() {
 	buf := make([]eventCtx, 0)
 	for {
-		events := <-edb.eBufferChannel
+		events, ok := <-edb.eBufferChannel
 		for _, e := range buf {
 			select {
 			case edb.eChannel <- e:
 			default:
 				break
 			}
-			buf = buf[1:len(buf)]
+			buf = buf[1:]
 		}
-		select {
-		case edb.eChannel <- events:
-		default:
-			buf = append(buf, events)
+		if ok {
+			select {
+			case edb.eChannel <- events:
+			default:
+				buf = append(buf, events)
+			}
 		}
 	}
 }
