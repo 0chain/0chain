@@ -242,6 +242,52 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 }
 
+func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation id is empty")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get write markers", err.Error())
+	}
+
+	return writeMarkers, nil
+
+}
+
+func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		validatorID = params.Get("validator_id")
+	)
+
+	if validatorID == "" {
+		return nil, common.NewErrInternal("validator id is empty")
+	}
+
+	validator, err := balances.GetEventDB().GetValidatorByValidatorID(validatorID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get validator", err.Error())
+	}
+
+	return validator, nil
+
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 

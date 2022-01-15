@@ -98,7 +98,7 @@ func (edb EventDb) addEventWorker() {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}, &Transaction{}); err != nil {
+	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}, &WriteMarker{}, &Transaction{}, &Validator{}); err != nil {
 		return err
 	}
 	return nil
