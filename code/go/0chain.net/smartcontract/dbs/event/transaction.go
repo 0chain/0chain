@@ -7,7 +7,7 @@ import (
 // Transaction model to save the transaction data
 type Transaction struct {
 	gorm.Model
-	Hash              string
+	Hash              string `gorm:"uniqueIndex"`
 	BlockHash         string
 	Version           string
 	ClientId          string

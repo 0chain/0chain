@@ -11,7 +11,8 @@ import (
 )
 
 func readMarkerToReadMarkerTable(rm *ReadMarker) *event.ReadMarker {
-	return &event.ReadMarker{
+
+	readMarker := &event.ReadMarker{
 		Model:        gorm.Model{},
 		ClientID:     rm.ClientID,
 		BlobberID:    rm.BlobberID,
@@ -22,8 +23,13 @@ func readMarkerToReadMarkerTable(rm *ReadMarker) *event.ReadMarker {
 		ReadSize:     rm.ReadSize,
 		Signature:    rm.Signature,
 		PayerID:      rm.PayerID,
-		AuthTicket:   encryption.Hash(rm.AuthTicket.getHashData()),
 	}
+
+	if rm.AuthTicket != nil {
+		readMarker.AuthTicket = encryption.Hash(rm.AuthTicket.getHashData())
+	}
+
+	return readMarker
 }
 
 func emitAddOrOverwriteReadMarker(rm *ReadMarker, balances cstate.StateContextI, t *transaction.Transaction) error {

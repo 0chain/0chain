@@ -31,7 +31,7 @@ const (
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
 	TagAddOrOverwriteValidator
-  TagAddOrOverwriteReadMarker
+	TagAddOrOverwriteReadMarker
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -90,7 +90,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		rm.TransactionID = event.TxHash
 		rm.BlockNumber = event.BlockNumber
-		return edb.overwriteReadMarker(rm)
+		return edb.addOrOverwriteReadMarker(rm)
 	case TagAddTransaction:
 		var transaction Transaction
 		err := json.Unmarshal([]byte(event.Data), &transaction)
