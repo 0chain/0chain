@@ -100,13 +100,16 @@ func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
 	params url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
-	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberId()
 	if err != nil {
 		return nil, err
 	}
 	var total int64
-	for _, b := range blobbers {
-		sp, err := ssc.getStakePool(b.BlobberID, balances)
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(blobber, balances)
 		if err != nil {
 			return nil, err
 		}
@@ -123,20 +126,14 @@ func (ssc *StorageSmartContract) GetBlobberLatitudeLongitudeHandler(
 	params url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
-
-	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberLatLong()
 	if err != nil {
 		return nil, err
 	}
-	latLong := make([]struct {
-		Latitude  float64 `json:"latitude"`
-		Longitude float64 `json:"longitude"`
-	}, len(blobbers))
-	for i, blobber := range blobbers {
-		latLong[i].Latitude = blobber.Latitude
-		latLong[i].Longitude = blobber.Longitude
-	}
-	return latLong, nil
+	return blobbers, nil
 }
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding

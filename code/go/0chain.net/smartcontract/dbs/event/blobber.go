@@ -39,6 +39,12 @@ type Blobber struct {
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
+type BlobberLatLong struct {
+	// geolocation
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	result := edb.Store.Get().
@@ -58,6 +64,18 @@ func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Find(&blobbers)
+	return blobbers, result.Error
+}
+
+func (edb *EventDb) GetAllBlobberId() ([]string, error) {
+	blobberIDs := []string{}
+	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
+	return blobberIDs, result.Error
+}
+
+func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
+	blobbers := []BlobberLatLong{}
+	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
 	return blobbers, result.Error
 }
 
