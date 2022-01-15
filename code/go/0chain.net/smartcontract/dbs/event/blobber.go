@@ -86,6 +86,12 @@ func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 	return result.Error
 }
 
+func (edb *EventDb) GetBlobberCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Blobber{}).Count(&count)
+	return count, res.Error
+}
+
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 	result := edb.Store.Get().
 		Model(&Blobber{}).

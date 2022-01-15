@@ -2,6 +2,7 @@ package event
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -225,7 +226,7 @@ func TestBlobbers(t *testing.T) {
 func TestBlobberExists(t *testing.T) {
 	access := dbs.DbAccess{
 		Enabled:         true,
-		Name:            "events_db",
+		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
 		Password:        os.Getenv("POSTGRES_PASSWORD"),
 		Host:            os.Getenv("POSTGRES_HOST"),
@@ -265,4 +266,45 @@ func TestBlobberExists(t *testing.T) {
 	}
 	err = eventDb.drop()
 	require.NoError(t, err)
+}
+
+func TestBlobberGetCount(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+
+	gotCount, err := eventDb.GetBlobberCount()
+	require.NoError(t, err, "Error should not be present")
+	require.Equal(t, int64(0), gotCount, "Blobber count not working")
+
+	for i := 0; i < 10; i++ {
+		res := eventDb.Store.Get().Create(Blobber{
+			BlobberID: fmt.Sprintf("somethingNew_%v", i),
+		})
+		if res.Error != nil {
+			t.Errorf("Error while inserting blobber %v", i)
+			return
+		}
+	}
+
+	gotCount, err = eventDb.GetBlobberCount()
+	require.NoError(t, err, "Error should not be present")
+	require.Equal(t, int64(10), gotCount, "Blobber Count should be 10")
 }
