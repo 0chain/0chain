@@ -94,6 +94,28 @@ func (ssc *StorageSmartContract) GetBlobberCountHandler(
 	}, nil
 }
 
+func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if err != nil {
+		return nil, err
+	}
+	var total int64
+	for _, b := range blobbers {
+		sp, err := ssc.getStakePool(b.BlobberID, balances)
+		if err != nil {
+			return nil, err
+		}
+		total += int64(sp.stake())
+	}
+	return map[string]int64{
+		"total": total,
+	}, nil
+}
+
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
 // blobbers with zero capacity).
 func (ssc *StorageSmartContract) GetBlobbersHandler(
