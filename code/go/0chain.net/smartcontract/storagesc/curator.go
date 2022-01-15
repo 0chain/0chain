@@ -2,10 +2,15 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 type curatorInput struct {
@@ -65,6 +70,11 @@ func (sc *StorageSmartContract) removeCurator(
 			"cannot save allocation"+err.Error())
 	}
 
+	err = emitCuratorEvent(&rci, balances, txn, event.TagRemoveCurator)
+	if err != nil {
+		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
+	}
+
 	return "", nil
 }
 
@@ -104,6 +114,11 @@ func (sc *StorageSmartContract) addCurator(
 			"cannot save allocation"+err.Error())
 	}
 
+	err = emitCuratorEvent(&aci, balances, txn, event.TagAddCurator)
+	if err != nil {
+		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
+	}
+
 	return "", nil
 }
 
@@ -114,4 +129,20 @@ func (sa StorageAllocation) isCurator(id string) bool {
 		}
 	}
 	return false
+}
+
+func curatorToCuratorEvent(ci *curatorInput) *event.Curator {
+	return &event.Curator{
+		AllocationID: ci.AllocationId,
+		CuratorID:    ci.CuratorId,
+	}
+}
+
+func emitCuratorEvent(ci *curatorInput, balances chainstate.StateContextI, txn *transaction.Transaction, eventTag event.EventTag) error {
+	data, err := json.Marshal(curatorToCuratorEvent(ci))
+	if err != nil {
+		return fmt.Errorf("failed to marshal curator: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, eventTag, txn.Hash, string(data))
+	return nil
 }

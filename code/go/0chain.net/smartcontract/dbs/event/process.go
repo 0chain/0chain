@@ -33,6 +33,8 @@ const (
 	TagAddOrOverwriteWriteMarker
 	TagAddBlock
 	TagAddOrOverwriteValidator
+	TagAddCurator
+	TagRemoveCurator
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -104,6 +106,20 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addOrOverwriteValidator(vn)
+	case TagAddCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err!= nil {
+			return err
+		}
+		return edb.addCurator(c)
+	case TagRemoveCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err!= nil {
+			return err
+		}
+		return edb.removeCurator(c)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
