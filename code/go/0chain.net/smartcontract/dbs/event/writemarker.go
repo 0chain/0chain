@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 )
@@ -69,14 +70,19 @@ func (edb *EventDb) addOrOverwriteWriteMarker(wm WriteMarker) error {
 }
 
 func (wm *WriteMarker) exists(edb *EventDb) (bool, error) {
-	var count int64
+
+	var writeMarker WriteMarker
+
 	result := edb.Get().
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{TransactionID: wm.TransactionID}).
-		Count(&count)
-	if result.Error != nil {
+		Take(&writeMarker)
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, nil
+	} else if result.Error != nil {
 		return false, fmt.Errorf("error searching for write marker txn: %v, error %v",
 			wm.TransactionID, result.Error)
 	}
-	return count > 0, nil
+	return true, nil
 }
