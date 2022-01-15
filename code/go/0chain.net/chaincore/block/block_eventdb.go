@@ -31,22 +31,17 @@ func blockToBlockEvent(block *Block) *event.Block {
 }
 
 func emitBlockEvent(block *Block) error {
-	if len(block.Txns) == 0 {
-		return fmt.Errorf("no transaction for the block")
-	}
-
 	data, err := json.Marshal(blockToBlockEvent(block))
 	if err != nil {
 		return fmt.Errorf("error marshalling block: %v", err)
 	}
 
-	t := block.Txns[len(block.Txns)-1]
 	block.Events = append(block.Events, event.Event{
 		BlockNumber: block.Round,
-		TxHash:      t.Hash,
+		TxHash:      "",
 		Type:        int(event.TypeStats),
 		Tag:         int(event.TagAddBlock),
-		Index:       t.Hash,
+		Index:       block.Hash,
 		Data:        string(data),
 	})
 
