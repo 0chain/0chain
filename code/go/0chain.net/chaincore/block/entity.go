@@ -965,8 +965,6 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
 		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.GetHash()))
 		if err != nil {
 			return fmt.Errorf("marshalling transactions in block: %v", err)
@@ -979,6 +977,10 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			Index:       txn.Hash,
 			Data:        string(data),
 		})
+
+		events, err := c.UpdateState(ctx, b, bState, txn)
+		b.Events = append(b.Events, events...)
+
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
