@@ -21,6 +21,8 @@ type Transaction struct {
 	TransactionOutput string
 	OutputHash        string
 	Status            int
+
+	ReadMarkers []ReadMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransaction(transaction Transaction) error {
