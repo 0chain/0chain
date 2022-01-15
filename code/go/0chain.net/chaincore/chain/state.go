@@ -226,6 +226,12 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
 				clientState = CreateTxnMPT(bState) // begin transaction
 				sctx = c.NewStateContext(b, clientState, txn, nil)
+
+				if e, ok := err.(*common.Error); ok {
+					output = e.Code + ":" + e.Msg
+				} else {
+					output = err.Error()
+				}
 			}
 		}
 		txn.TransactionOutput = output
