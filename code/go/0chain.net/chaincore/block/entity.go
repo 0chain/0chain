@@ -1010,7 +1010,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 
 	err := emitBlockEvent(b.PrevBlock)
 	if err != nil {
-		return err
+		logging.Logger.Error("emit block event error", zap.Error(err))
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
