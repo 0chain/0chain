@@ -13,7 +13,7 @@ func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator {
 	return &event.Validator{
 		ValidatorID: vn.ID,
 		BaseUrl:     vn.BaseURL,
-		// TO-DO
+		// TO-DO: Update stake in eventDB
 		Stake: 0,
 
 		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
