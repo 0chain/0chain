@@ -94,6 +94,7 @@ func (ssc *StorageSmartContract) GetBlobberCountHandler(
 	}, nil
 }
 
+// GetBlobberTotalStakesHandler returns blobber total stake
 func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
 	ctx context.Context,
 	params url.Values,
@@ -114,6 +115,28 @@ func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
 	return map[string]int64{
 		"total": total,
 	}, nil
+}
+
+// GetBlobberLatitudeLongitudeHandler returns blobber latitude and longitude
+func (ssc *StorageSmartContract) GetBlobberLatitudeLongitudeHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+
+	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if err != nil {
+		return nil, err
+	}
+	latLong := make([]struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}, len(blobbers))
+	for i, blobber := range blobbers {
+		latLong[i].Latitude = blobber.Latitude
+		latLong[i].Longitude = blobber.Longitude
+	}
+	return latLong, nil
 }
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
