@@ -68,8 +68,6 @@ type StateContextI interface {
 type SCVersionManager interface {
 	// CanSCVersionUpdate checks if smart contract version can be updated now
 	CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter)
-
-	SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error
 }
 
 // SwitchAdapter represents the adapter function signature
@@ -93,7 +91,6 @@ type StateContext struct {
 	getChainCurrentMagicBlock    func() *block.MagicBlock
 	getSignature                 func() encryption.SignatureScheme
 	canSCVersionUpdate           func() (*semver.Version, bool, SwitchAdapter)
-	setLatestSupportedSCVersion  func(minerID datastore.Key, v *semver.Version) error
 }
 
 // Option is the option type used when creating the StateContext instance
@@ -163,12 +160,6 @@ func CanUpdateSCVersionFunc(f func() (*semver.Version, bool, SwitchAdapter)) Opt
 func EventDB(edb *event.EventDb) Option {
 	return func(s *StateContext) {
 		s.eventDb = edb
-	}
-}
-
-func SetLatestSupportedSCVersion(f func(datastore.Key, *semver.Version) error) Option {
-	return func(s *StateContext) {
-		s.setLatestSupportedSCVersion = f
 	}
 }
 
@@ -377,10 +368,6 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 // CanSCVersionUpdate checks if we can update the smart contract
 func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter) {
 	return sc.canSCVersionUpdate()
-}
-
-func (sc *StateContext) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error {
-	return sc.setLatestSupportedSCVersion(minerID, v)
 }
 
 // InsertTrieNode inserts a node into MPT

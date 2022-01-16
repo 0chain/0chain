@@ -2,11 +2,12 @@ package chain
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"time"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/versions"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
@@ -35,26 +36,14 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 	doneC := make(chan struct{})
 	tk := time.NewTicker(time.Minute)
 
-	latestSCVersion, err := semver.Make(smartcontract.LatestSupportedSCVersion)
-	if err != nil {
-		logging.Logger.Panic(fmt.Sprintf("start_versions_worker, invalid latest supported sc version: %v", err))
-		return
-	}
-
-	currentSCVersion := smartcontract.GetSCVersion()
-
-	if latestSCVersion.LE(currentSCVersion) {
-		logging.Logger.Debug("start_versions_worker exit, no new sc version detected",
-			zap.String("current sc version", currentSCVersion.String()),
-			zap.String("latest sc version", latestSCVersion.String()))
-		return
-	}
+	newSCVersion := smartcontract.GetNewVersion(versions.GetSCVersion())
 
 	// sign the version
 	self := node.Self
 
-	versions := &VersionsEntity{
-		SCVersion: latestSCVersion.String(),
+	versions := NewVersionsEntity()
+	if newSCVersion != nil {
+		versions.Add("sc_version", *newSCVersion)
 	}
 
 	sign, err := self.Sign(versions.Hash())
@@ -74,6 +63,7 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 				return
 			case <-tk.C:
 				// broadcast sc version report message
+				logging.Logger.Debug("report versions", zap.Any("versions", versions.Versions))
 				c.SendVersions(context.Background(), versions)
 			}
 		}
@@ -87,8 +77,8 @@ var versionsEntityMetaData *datastore.EntityMetadataImpl
 
 type VersionsEntity struct {
 	datastore.NOIDField
-	SCVersion string `json:"sc_version"`
-	Sign      string `json:"sign"`
+	Versions map[string]string `json:"versions"`
+	Sign     string            `json:"sign"`
 }
 
 func (v *VersionsEntity) GetEntityMetadata() datastore.EntityMetadata {
@@ -96,7 +86,7 @@ func (v *VersionsEntity) GetEntityMetadata() datastore.EntityMetadata {
 }
 
 func (v *VersionsEntity) GetKey() datastore.Key {
-	return datastore.ToKey(fmt.Sprintf("%v", v.SCVersion))
+	return datastore.ToKey(v.Sign)
 }
 
 func VersionsEntityProvider() datastore.Entity {
@@ -112,5 +102,35 @@ func SetupVersionsEntity() {
 }
 
 func (v *VersionsEntity) Hash() string {
-	return encryption.Hash(v.SCVersion)
+	if v.Versions == nil {
+		return ""
+	}
+
+	d, err := json.Marshal(v.Versions)
+	if err != nil {
+		panic(err)
+	}
+
+	return encryption.Hash(string(d))
+}
+
+func NewVersionsEntity() *VersionsEntity {
+	return &VersionsEntity{
+		Versions: make(map[string]string),
+	}
+}
+
+func (v *VersionsEntity) Add(name string, version semver.Version) {
+	v.Versions[name] = version.String()
+}
+
+func (v *VersionsEntity) Get(name string) (*semver.Version, error) {
+	s, ok := v.Versions[name]
+	if !ok {
+		logging.Logger.Debug("version not exist", zap.String("name", name),
+			zap.Any("versions", v.Versions))
+		return nil, nil
+	}
+
+	return semver.New(s)
 }

@@ -69,7 +69,11 @@ func SetupSmartContracts() {
 	}
 
 	// register the current smart contract as version 1.0.0
-	if err := smartcontract.RegisterSmartContracts("1.0.0", scs); err != nil {
+	v1, err := semver.Make("1.0.0")
+	if err != nil {
+		panic(err)
+	}
+	if err := smartcontract.RegisterSmartContracts(v1, scs); err != nil {
 		logging.Logger.Panic("register smart contracts failed",
 			zap.String("version", "1.0.0"),
 			zap.Error(err))

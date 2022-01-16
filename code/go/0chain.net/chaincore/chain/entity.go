@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/versions"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/blang/semver/v4"
 	"github.com/herumi/bls/ffi/go/bls"
@@ -201,7 +201,10 @@ type Chain struct {
 	// compute state
 	computeBlockStateC chan struct{}
 
-	scVersions scVersionsManager
+	// smart contract verions upgrader
+	scVersions versionUpgrader
+	// protocol versions upgrader
+	protocolVersions versionUpgrader
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -471,7 +474,8 @@ func Provider() datastore.Entity {
 	c.bscMutex = &sync.Mutex{}
 
 	c.computeBlockStateC = make(chan struct{}, 1)
-	c.scVersions = newSCVersionsManager(getNodeIDs(mb), 80) // 80 percent to consensus
+	c.scVersions = newVersionsConsensus(getNodeIDs(mb), 80) // 80 percent to consensus
+	c.protocolVersions = newVersionsConsensus(getNodeIDs(mb), 80)
 	return c
 }
 
@@ -568,8 +572,11 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
 
-	scVersion := minersc.SCVersionNode("1.0.0")
+	scVersion := minersc.VersionNode("1.0.0")
 	cstate.InsertTrieNode(pmt, minersc.SCVersionKey, &scVersion)
+
+	protoVersion := minersc.VersionNode("1.0.0")
+	cstate.InsertTrieNode(pmt, minersc.ProtoVersionKey, &protoVersion)
 
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
@@ -1159,16 +1166,16 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (c *Chain) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error {
-	return c.scVersions.Set(minerID, *v)
+	return c.scVersions.Add(minerID, *v)
 }
 
 // UpdateSCVersionCheckFunc function signature for checking if SC version could be updated
 type UpdateSCVersionCheckFunc func() (*semver.Version, bool, cstate.SwitchAdapter)
 
-func CanUpdateSCVersion(scv scVersionsManager, adapter cstate.SwitchAdapter) UpdateSCVersionCheckFunc {
+func CanUpdateSCVersion(scv versionUpgrader, adapter cstate.SwitchAdapter) UpdateSCVersionCheckFunc {
 	return func() (*semver.Version, bool, cstate.SwitchAdapter) {
 		v := scv.GetConsensusVersion()
-		if v != nil && v.GT(smartcontract.GetSCVersion()) {
+		if v != nil && v.GT(versions.GetSCVersion()) {
 			return v, true, adapter
 		}
 
@@ -1413,16 +1420,16 @@ func (mc *Chain) updateSCVersion(b *block.Block) {
 		return
 	}
 
-	v, err := getSCVersion(clientState)
+	v, err := versions.GetSCVersionFromState(clientState)
 	if err != nil {
 		logging.Logger.Error("cannot get sc version from lfb state", zap.Error(err))
 		return
 	}
 
-	cv := smartcontract.GetSCVersion()
+	cv := versions.GetSCVersion()
 	if v.GT(cv) {
 		// new version detected
-		smartcontract.SetSCVersion(*v)
+		versions.SetSCVersion(v)
 		logging.Logger.Debug("update sc version on LFB",
 			zap.String("old version", cv.String()),
 			zap.String("new version", v.String()))

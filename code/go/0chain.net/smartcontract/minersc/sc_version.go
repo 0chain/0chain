@@ -12,30 +12,30 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// SCVersionNode represents the smart contract version node stores in MPT
-type SCVersionNode string
+// VersionNode represents the smart contract version node stores in MPT
+type VersionNode string
 
-func (v SCVersionNode) Encode() []byte {
+func (v VersionNode) Encode() []byte {
 	return []byte(v)
 }
 
-func (v *SCVersionNode) Decode(b []byte) error {
-	*v = SCVersionNode(b)
+func (v *VersionNode) Decode(b []byte) error {
+	*v = VersionNode(b)
 	return nil
 }
 
-func (v *SCVersionNode) String() string {
+func (v *VersionNode) String() string {
 	return string(*v)
 }
 
 // GetSCVersion gets the sc_version from MPT
-func GetSCVersion(balances cstate.StateContextI) (*SCVersionNode, error) {
+func GetSCVersion(balances cstate.StateContextI) (*VersionNode, error) {
 	nodesBytes, err := balances.GetTrieNode(SCVersionKey)
 	if err != nil {
 		return nil, err
 	}
 
-	var sv SCVersionNode
+	var sv VersionNode
 	if err = sv.Decode(nodesBytes.Encode()); err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func GetSCVersion(balances cstate.StateContextI) (*SCVersionNode, error) {
 
 // updateSCVersion updates the sc_version
 func updateSCVersion(state cstate.StateContextI, version string) error {
-	vn := SCVersionNode(version)
+	vn := VersionNode(version)
 	if _, err := state.InsertTrieNode(SCVersionKey, &vn); err != nil {
 		return common.NewError("update_sc_version", err.Error())
 	}

@@ -27,7 +27,7 @@ func (s *mockStateContextI) InsertTrieNode(key datastore.Key, node util.Serializ
 		return "", s.err
 	}
 
-	vn := node.(*SCVersionNode)
+	vn := node.(*VersionNode)
 	s.scVersion = vn.String()
 	return "", nil
 }

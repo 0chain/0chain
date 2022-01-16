@@ -90,6 +90,7 @@ var (
 	ShardersKeepKey      = globalKeyHash("sharders_keep")
 	PhaseKey             = globalKeyHash("phase")
 	SCVersionKey         = globalKeyHash("sc_version")
+	ProtoVersionKey      = globalKeyHash("proto_version")
 
 	lockAllMiners sync.Mutex
 )

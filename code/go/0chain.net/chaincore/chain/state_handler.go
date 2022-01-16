@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/chaincore/versions"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
@@ -66,7 +67,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
-	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
+	resp, err := smartcontract.ExecuteRestAPI(ctx, versions.GetSCVersion(), scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {
 		return nil, err
@@ -129,7 +130,7 @@ func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	PrintCSS(w)
-	smartcontract.ExecuteStats(ctx, scAddress, r.URL.Query(), w)
+	smartcontract.ExecuteStats(ctx, versions.GetSCVersion(), scAddress, r.URL.Query(), w)
 }
 
 func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +138,7 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td><td>RestAPIs</td></tr>")
 	re := regexp.MustCompile(`\*.*\.`)
-	scs, err := smartcontract.GetSmartContractsMap()
+	scs, err := smartcontract.GetSmartContractsMap(versions.GetSCVersion())
 	if err != nil {
 		logging.Logger.Error("failed to get smart contracts", zap.Error(err))
 		fmt.Fprintf(w, "failed to get smart contracts")
@@ -164,7 +165,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := pathParams[1]
-	scs, err := smartcontract.GetSmartContractsMap()
+	scs, err := smartcontract.GetSmartContractsMap(versions.GetSCVersion())
 	if err != nil {
 		logging.Logger.Error("failed to get smart contracts", zap.Error(err))
 		fmt.Fprint(w, "failed to get smart contracts")

@@ -12,6 +12,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
+	"github.com/blang/semver/v4"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -20,8 +21,8 @@ import (
 //var ContractMap = map[string]sci.SmartContractInterface{}
 
 //ExecuteRestAPI - executes the rest api on the smart contract
-func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	scI, err := GetSmartContract(scAdress)
+func ExecuteRestAPI(ctx context.Context, version semver.Version, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	scI, err := GetSmartContract(version, scAdress)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +35,8 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 	return handler(ctx, params, balances)
 }
 
-func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
-	scI, err := GetSmartContract(scAdress)
+func ExecuteStats(ctx context.Context, version semver.Version, scAdress string, params url.Values, w http.ResponseWriter) {
+	scI, err := GetSmartContract(version, scAdress)
 	if err != nil {
 		logging.Logger.Error("execute stats failed in getting smart contract", zap.Error(err))
 
@@ -68,8 +69,8 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 }
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
-	contractObj, err := GetSmartContract(t.ToClientID)
+func ExecuteSmartContract(version semver.Version, t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
+	contractObj, err := GetSmartContract(version, t.ToClientID)
 	if err != nil {
 		return "", common.NewError("invalid_smart_contract_address", err.Error())
 	}

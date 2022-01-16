@@ -153,7 +153,7 @@ func Test_scVersions_GetConsensusVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scv := &scVersions{
+			scv := &versionsConsensus{
 				nodes:            tt.fields.miners,
 				versions:         tt.fields.versions,
 				thresholdPercent: tt.fields.thresholdPercent,
@@ -164,14 +164,14 @@ func Test_scVersions_GetConsensusVersion(t *testing.T) {
 }
 
 func Test_scVersions_Set(t *testing.T) {
-	scv := scVersions{
+	scv := versionsConsensus{
 		nodes:    genMiners(5),
 		versions: map[datastore.Key]semver.Version{},
 	}
 
 	v1, err := semver.Make("1.0.0")
 	require.NoError(t, err)
-	err = scv.Set("1", v1)
+	err = scv.Add("1", v1)
 	require.NoError(t, err)
 
 	v, ok := scv.versions["1"]
@@ -179,12 +179,12 @@ func Test_scVersions_Set(t *testing.T) {
 	require.Equal(t, v1, v)
 
 	// expect miner deos not exist error
-	err = scv.Set("11", v1)
+	err = scv.Add("11", v1)
 	require.EqualError(t, err, "miner_not_exist_in_mb: miner does not exist in magic block, id: 11")
 }
 
 func Test_scVersions_UpdateMinersList(t *testing.T) {
-	versions := makeVersions(t, 10)
+	scVersions := makeVersions(t, 10)
 
 	type want struct {
 		miners   map[datastore.Key]struct{}
@@ -193,16 +193,16 @@ func Test_scVersions_UpdateMinersList(t *testing.T) {
 
 	tt := []struct {
 		name            string
-		scVersionCreate func(t *testing.T) *scVersions
+		scVersionCreate func(t *testing.T) *versionsConsensus
 		miners          map[datastore.Key]struct{}
 		want            want
 	}{
 		{
 			name: "no changes - different versions",
-			scVersionCreate: func(t *testing.T) *scVersions {
-				scv := newSCVersionsManager(genMiners(3), 80)
+			scVersionCreate: func(t *testing.T) *versionsConsensus {
+				scv := newVersionsConsensus(genMiners(3), 80)
 				for i := 0; i < 3; i++ {
-					err := scv.Set(strconv.Itoa(i), versions[i])
+					err := scv.Add(strconv.Itoa(i), scVersions[i])
 					require.NoError(t, err)
 				}
 
@@ -212,18 +212,18 @@ func Test_scVersions_UpdateMinersList(t *testing.T) {
 			want: want{
 				miners: genMiners(3),
 				versions: map[datastore.Key]semver.Version{
-					"0": versions[0],
-					"1": versions[1],
-					"2": versions[2],
+					"0": scVersions[0],
+					"1": scVersions[1],
+					"2": scVersions[2],
 				},
 			},
 		},
 		{
 			name: "no changes - same versions",
-			scVersionCreate: func(t *testing.T) *scVersions {
-				scv := newSCVersionsManager(genMiners(3), 80)
+			scVersionCreate: func(t *testing.T) *versionsConsensus {
+				scv := newVersionsConsensus(genMiners(3), 80)
 				for i := 0; i < 3; i++ {
-					err := scv.Set(strconv.Itoa(i), versions[0])
+					err := scv.Add(strconv.Itoa(i), scVersions[0])
 					require.NoError(t, err)
 				}
 
@@ -233,18 +233,18 @@ func Test_scVersions_UpdateMinersList(t *testing.T) {
 			want: want{
 				miners: genMiners(3),
 				versions: map[datastore.Key]semver.Version{
-					"0": versions[0],
-					"1": versions[0],
-					"2": versions[0],
+					"0": scVersions[0],
+					"1": scVersions[0],
+					"2": scVersions[0],
 				},
 			},
 		},
 		{
 			name: "add new miners",
-			scVersionCreate: func(t *testing.T) *scVersions {
-				scv := newSCVersionsManager(genMiners(3), 80)
+			scVersionCreate: func(t *testing.T) *versionsConsensus {
+				scv := newVersionsConsensus(genMiners(3), 80)
 				for i := 0; i < 3; i++ {
-					err := scv.Set(strconv.Itoa(i), versions[0])
+					err := scv.Add(strconv.Itoa(i), scVersions[0])
 					require.NoError(t, err)
 				}
 
@@ -254,18 +254,18 @@ func Test_scVersions_UpdateMinersList(t *testing.T) {
 			want: want{
 				miners: genMiners(6),
 				versions: map[datastore.Key]semver.Version{
-					"0": versions[0],
-					"1": versions[0],
-					"2": versions[0],
+					"0": scVersions[0],
+					"1": scVersions[0],
+					"2": scVersions[0],
 				},
 			},
 		},
 		{
 			name: "remove miners",
-			scVersionCreate: func(t *testing.T) *scVersions {
-				scv := newSCVersionsManager(genMiners(3), 80)
+			scVersionCreate: func(t *testing.T) *versionsConsensus {
+				scv := newVersionsConsensus(genMiners(3), 80)
 				for i := 0; i < 3; i++ {
-					err := scv.Set(strconv.Itoa(i), versions[0])
+					err := scv.Add(strconv.Itoa(i), scVersions[0])
 					require.NoError(t, err)
 				}
 
@@ -275,17 +275,17 @@ func Test_scVersions_UpdateMinersList(t *testing.T) {
 			want: want{
 				miners: genMiners(2),
 				versions: map[datastore.Key]semver.Version{
-					"0": versions[0],
-					"1": versions[0],
+					"0": scVersions[0],
+					"1": scVersions[0],
 				},
 			},
 		},
 		{
 			name: "both add and remove miners",
-			scVersionCreate: func(t *testing.T) *scVersions {
-				scv := newSCVersionsManager(genMiners(3), 80)
+			scVersionCreate: func(t *testing.T) *versionsConsensus {
+				scv := newVersionsConsensus(genMiners(3), 80)
 				for i := 0; i < 3; i++ {
-					err := scv.Set(strconv.Itoa(i), versions[0])
+					err := scv.Add(strconv.Itoa(i), scVersions[0])
 					require.NoError(t, err)
 				}
 
@@ -307,7 +307,7 @@ func Test_scVersions_UpdateMinersList(t *testing.T) {
 					"5": struct{}{},
 				},
 				versions: map[datastore.Key]semver.Version{
-					"2": versions[0],
+					"2": scVersions[0],
 				},
 			},
 		},

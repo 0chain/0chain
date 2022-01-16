@@ -7,8 +7,8 @@ import (
 	"time"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/versions"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/blang/semver/v4"
 
 	"errors"
 
@@ -95,7 +95,7 @@ func (c *Chain) ExecuteSmartContract(
 	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
 	defer cancelf()
 	go func() {
-		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
+		output, err = smartcontract.ExecuteSmartContract(versions.GetSCVersion(), t, scData, balances)
 		done <- true
 	}()
 	select {
@@ -136,11 +136,10 @@ func (c *Chain) NewStateContext(
 		bcstate.GetCurrentMagicBlockFunc(c.GetCurrentMagicBlock),
 		bcstate.GetSignatureSchemeFunc(c.GetSignatureScheme),
 		bcstate.CanUpdateSCVersionFunc(CanUpdateSCVersion(c.scVersions, nil)), // TODO: write adapter when necessary
-		bcstate.SetLatestSupportedSCVersion(c.SetLatestSupportedSCVersion),
 	)
 }
 
-func (c *Chain) initSCVersion(round int64) error {
+func (c *Chain) initVersions(round int64) error {
 	lfb := c.GetLatestFinalizedBlock()
 
 	if lfb == nil {
@@ -156,33 +155,7 @@ func (c *Chain) initSCVersion(round int64) error {
 			"lfb is too far away from current round, lfb round: %d, round: %d", lfb.Round, round)
 	}
 
-	v, err := getSCVersion(lfb.ClientState)
-	if err != nil {
-		return err
-	}
-
-	logging.Logger.Debug("init sc version",
-		zap.String("version", v.String()),
-		zap.Int64("lfb round", lfb.Round),
-		zap.Int64("round", round))
-
-	smartcontract.InitSCVersionOnce(v)
-
-	return nil
-}
-
-func getSCVersion(state util.MerklePatriciaTrieI) (*semver.Version, error) {
-	vn, err := bcstate.GetTrieNode(state, minersc.SCVersionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	var vnode minersc.SCVersionNode
-	if err := vnode.Decode(vn.Encode()); err != nil {
-		return nil, err
-	}
-
-	return semver.New(vnode.String())
+	return versions.InitVersionsOnce(lfb.ClientState)
 }
 
 func (c *Chain) updateState(ctx context.Context,
@@ -204,8 +177,8 @@ func (c *Chain) updateState(ctx context.Context,
 	)
 	defer func() { events = sctx.GetEvents() }()
 
-	if !smartcontract.IsSCVersionReady() {
-		if err := c.initSCVersion(b.Round); err != nil {
+	if versions.IsVersionsEmpty() {
+		if err := c.initVersions(b.Round); err != nil {
 			logging.Logger.Error("could not init sc version",
 				zap.Int64("round", b.Round),
 				zap.Error(err))

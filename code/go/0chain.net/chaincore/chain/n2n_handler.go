@@ -15,7 +15,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"github.com/blang/semver/v4"
 	"go.uber.org/zap"
 )
 
@@ -221,21 +220,29 @@ func (c *Chain) getNotarizedBlock(ctx context.Context, req *http.Request) (*bloc
 func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	ve, ok := entity.(*VersionsEntity)
 	if !ok {
-		logging.Logger.Info("Versions handler: returning invalid Entity")
+		logging.Logger.Info("versions handler: returning invalid Entity")
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 
+	logging.Logger.Debug("versions handler", zap.Any("versions", ve.Versions))
 	c := GetServerChain()
 
-	v, err := semver.New(ve.SCVersion)
+	scV, err := ve.Get("sc_version")
 	if err != nil {
 		logging.Logger.Error("versions handler: invalid sc version",
-			zap.Error(err),
-			zap.String("sc version", ve.SCVersion))
+			zap.Error(err))
+		return nil, nil
+	}
+
+	protoV, err := ve.Get("proto_version")
+	if err != nil {
+		logging.Logger.Error("versions handler: invalid protocol version",
+			zap.Error(err))
 		return nil, nil
 	}
 
 	if err := node.ValidateSenderSignature(ctx); err != nil {
+		logging.Logger.Error("versions handler: failed to validate sender signature", zap.Error(err))
 		return nil, err
 	}
 
@@ -249,8 +256,17 @@ func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{},
 		return nil, errors.New("failed to verify signature")
 	}
 
-	if err := c.SetLatestSupportedSCVersion(sender.GetKey(), v); err != nil {
-		logging.Logger.Error("versions handler: add sc version failed", zap.Error(err))
+	// add smart contract version
+	if scV != nil {
+		if err := c.scVersions.Add(sender.GetKey(), *scV); err != nil {
+			logging.Logger.Error("versions handler: add sc version failed", zap.Error(err))
+		}
+	}
+
+	if protoV != nil {
+		if err := c.scVersions.Add(sender.GetKey(), *protoV); err != nil {
+			logging.Logger.Error("versions handler: add protocol version failed", zap.Error(err))
+		}
 	}
 
 	return nil, nil
