@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"fmt"
