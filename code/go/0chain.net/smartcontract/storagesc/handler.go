@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"fmt"
@@ -296,6 +297,75 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	}
 
 	return commitRead.ReadMarker, nil // ok
+
+}
+
+func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+		authTicket   = params.Get("auth_ticket")
+	)
+
+	if allocationID == "" && authTicket == "" {
+		return nil, common.NewErrInternal("Expecting params: allocation_id OR auth_ticket")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	query := new(event.ReadMarker)
+	if allocationID != "" {
+		query.AllocationID = allocationID
+	}
+
+	if authTicket != "" {
+		query.AuthTicket = authTicket
+	}
+
+	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQuery(query)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get read markers", err.Error())
+	}
+
+	return readMarkers, nil
+
+}
+
+func (ssc *StorageSmartContract) GetReadMarkersCount(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("Expecting params: allocation_id")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	query := new(event.ReadMarker)
+	if allocationID != "" {
+		query.AllocationID = allocationID
+	}
+
+	count, err := balances.GetEventDB().CountReadMarkersFromQuery(query)
+	if err != nil {
+		return nil, common.NewErrInternal("can't count read markers", err.Error())
+	}
+
+	return struct {
+		ReadMarkersCount int64 `json:"read_markers_count"`
+	}{
+		ReadMarkersCount: count,
+	}, nil
 
 }
 
