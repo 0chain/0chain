@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"gorm.io/gorm"
+
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -905,9 +907,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(b.Events)
 		b.Events = nil
 	}
 
@@ -965,6 +967,18 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		}
 		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.GetHash()))
+		if err != nil {
+			return fmt.Errorf("marshalling transactions in block: %v", err)
+		}
+		b.Events = append(b.Events, event.Event{
+			BlockNumber: b.Round,
+			TxHash:      txn.Hash,
+			Type:        int(event.TypeStats),
+			Tag:         int(event.TagAddTransaction),
+			Index:       txn.Hash,
+			Data:        string(data),
+		})
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
@@ -995,9 +1009,9 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(b.Events)
 		b.Events = nil
 	}
 
@@ -1031,6 +1045,26 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
 	return nil
+}
+
+func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string) event.Transaction {
+	return event.Transaction{
+		Hash:              tr.Hash,
+		BlockHash:         blockHash,
+		Version:           tr.Version,
+		ClientId:          tr.ClientID,
+		ToClientId:        tr.ToClientID,
+		TransactionData:   tr.TransactionData,
+		Value:             tr.Value,
+		Signature:         tr.Signature,
+		CreationDate:      int64(tr.CreationDate.Duration()),
+		Fee:               tr.Fee,
+		TransactionType:   tr.TransactionType,
+		TransactionOutput: tr.TransactionOutput,
+		OutputHash:        tr.OutputHash,
+		Status:            tr.Status,
+		Model:             gorm.Model{CreatedAt: time.Unix(int64(tr.CreationDate.Duration()), 0)},
+	}
 }
 
 // ApplyBlockStateChange apply and merge the state changes

@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -101,6 +102,22 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		sns.Nodes.add(&sn)
 	}
 	return sns, nil
+}
+
+func (msc *StorageSmartContract) GetTransactionByHashHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var transactionHash = params.Get("transaction_hash")
+	if len(transactionHash) == 0 {
+		return nil, fmt.Errorf("cannot find valid transaction_hash: %v", transactionHash)
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
+	return &transaction, err
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
@@ -222,6 +239,52 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	}
 
 	return commitRead.ReadMarker, nil // ok
+
+}
+
+func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation id is empty")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get write markers", err.Error())
+	}
+
+	return writeMarkers, nil
+
+}
+
+func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		validatorID = params.Get("validator_id")
+	)
+
+	if validatorID == "" {
+		return nil, common.NewErrInternal("validator id is empty")
+	}
+
+	validator, err := balances.GetEventDB().GetValidatorByValidatorID(validatorID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get validator", err.Error())
+	}
+
+	return validator, nil
 
 }
 

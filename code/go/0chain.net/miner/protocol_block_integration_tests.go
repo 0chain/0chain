@@ -107,6 +107,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		selfKey       = node.Self.GetKey()
 		isDoubleSpend bool
 		dstxn         *transaction.Transaction
+
+		bState = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 	)
 
 	isDoubleSpend = state.DoubleSpendTransaction.IsBy(state, selfKey) &&
@@ -117,7 +119,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		dstxn = pb.Txns[rand.Intn(len(pb.Txns))] // a random one
 	}
 
-	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
+	var txnProcessor = func(ctx context.Context, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) bool {
 		if _, ok := txnMap[txn.GetKey()]; ok {
 			return false
 		}
@@ -140,7 +142,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				return false
 			}
 		}
-		events, err := mc.UpdateState(ctx, b, txn)
+		events, err := mc.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		if err != nil {
 			if debugTxn {
@@ -183,7 +185,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
-		if txnProcessor(ctx, txn) {
+		if txnProcessor(ctx, bState, txn) {
 			if idx >= mc.BlockSize() || byteSize >= mc.MaxByteSize() {
 				return false
 			}
@@ -236,7 +238,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 						continue
 					}
 				}
-				if txnProcessor(ctx, rtxn) {
+				if txnProcessor(ctx, bState, rtxn) {
 					if idx == mc.BlockSize() || byteSize >= mc.MaxByteSize() {
 						break
 					}
@@ -266,13 +268,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		etxns = etxns[:blockSize]
 	}
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
+		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, bState, clients)
 		if err != nil {
 			return err
 		}
 	}
 	if config.DevConfiguration.IsBlockRewards {
-		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, clients)
+		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, bState, clients)
 		if err != nil {
 			return err
 		}
