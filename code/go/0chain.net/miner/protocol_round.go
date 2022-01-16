@@ -535,6 +535,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, err
 		}
 
+		//todo actually it is not a problem, since RRS can be changed only during timeout and this block can be reused
 		if r.GetRandomSeed() != b.GetRoundRandomSeed() {
 			logging.Logger.Error("round random seed mismatch",
 				zap.Int64("round", b.Round),
