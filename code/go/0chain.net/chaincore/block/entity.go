@@ -14,8 +14,6 @@ import (
 
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
-
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
