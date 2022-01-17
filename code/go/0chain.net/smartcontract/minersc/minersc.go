@@ -58,4 +58,5 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
 
 	msc.smartContractFunctions["update_sc_version"] = msc.updateSCVersion
+	msc.smartContractFunctions["update_proto_version"] = msc.updateProtoVersion
 }
