@@ -73,6 +73,24 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
+			name:     "storage_rest.readmarkers",
+			endpoint: ssc.GetReadMarkersHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("allocation_id", getMockAllocationId(0))
+				return values
+			}(),
+		},
+		{
+			name:     "storage_rest.countreadmarkers",
+			endpoint: ssc.GetReadMarkersCount,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("allocation_id", getMockAllocationId(0))
+				return values
+			}(),
+		},
+		{
 			name:     "storage_rest.allocation",
 			endpoint: ssc.AllocationStatsHandler,
 			params: func() url.Values {
@@ -218,6 +236,15 @@ func BenchmarkRestTests(
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
 				values.Set("allocation_id", getMockAllocationId(0))
+				return values
+			}(),
+		},
+		{
+			name:     "storage_rest.GetValidator",
+			endpoint: ssc.GetValidatorHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("validator_id", getMockValidatorId(0))
 				return values
 			}(),
 		},

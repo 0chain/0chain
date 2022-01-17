@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"os"
 	"testing"
 	"time"
 )
@@ -48,10 +49,10 @@ func TestWriteMarkers(t *testing.T) {
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
-		Port:            "5432",
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
@@ -90,25 +91,6 @@ func TestWriteMarkers(t *testing.T) {
 	eventDb.AddEvents(context.TODO(), events)
 
 	wm, err := eventDb.GetWriteMarker(eWriteMarker.TransactionID)
-	require.NoError(t, err)
-	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
-
-	eWriteMarker.BlockNumber = 10
-
-	data, err = json.Marshal(&eWriteMarker)
-	require.NoError(t, err)
-
-	eventAddOrOverwriteWm = Event{
-		BlockNumber: eWriteMarker.BlockNumber,
-		TxHash:      eWriteMarker.TransactionID,
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteWriteMarker),
-		Data:        string(data),
-	}
-	events = []Event{eventAddOrOverwriteWm}
-	eventDb.AddEvents(context.TODO(), events)
-
-	wm, err = eventDb.GetWriteMarker(eWriteMarker.TransactionID)
 	require.NoError(t, err)
 	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
 
