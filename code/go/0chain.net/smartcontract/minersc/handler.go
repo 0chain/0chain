@@ -298,7 +298,7 @@ func (vr *versionsResponse) add(name string, version string, upgrade *versionUpg
 	}
 }
 
-func (msc *MinerSmartContract) scVersionHandler(
+func (msc *MinerSmartContract) versionsHandler(
 	_ context.Context,
 	_ url.Values,
 	balances cstate.StateContextI,

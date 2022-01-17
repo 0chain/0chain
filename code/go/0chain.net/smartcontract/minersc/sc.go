@@ -108,7 +108,7 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
 	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
 
-	msc.SmartContract.RestHandlers["/scVersion"] = msc.scVersionHandler
+	msc.SmartContract.RestHandlers["/versions"] = msc.versionsHandler
 
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
