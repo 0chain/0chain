@@ -7,15 +7,30 @@ import (
 	"github.com/blang/semver/v4"
 )
 
+type (
+	isStateReadyCheckFunc      func(util.MerklePatriciaTrieI) (initVersionFunc, error)
+	updateVersionWithStateFunc func(*Version, util.MerklePatriciaTrieI) error
+	initVersionFunc            func()
+)
+
 var (
 	emptyVersion semver.Version
 
 	// registered versions
-	versions               []*Version
-	isStateReadyCheckFuncs []isStateReadyCheckFunc
+	versions []Versioner
 
 	initOnce sync.Once
 )
+
+type Versioner interface {
+	IsEmpty() bool
+	Set(version semver.Version)
+	Get() semver.Version
+	String() string
+
+	isStateReady(util.MerklePatriciaTrieI) (initVersionFunc, error)
+	updateVersionWithState(util.MerklePatriciaTrieI) error
+}
 
 // IsVersionsEmpty checks if any version is empty
 func IsVersionsEmpty() bool {
@@ -35,8 +50,8 @@ func IsVersionsEmpty() bool {
 // InitVersionsOnce initialize version once
 func InitVersionsOnce(state util.MerklePatriciaTrieI) error {
 	var initFuncs []initVersionFunc
-	for _, f := range isStateReadyCheckFuncs {
-		initFunc, err := f(state)
+	for _, v := range versions {
+		initFunc, err := v.isStateReady(state)
 		if err != nil {
 			return err
 		}
@@ -53,24 +68,27 @@ func InitVersionsOnce(state util.MerklePatriciaTrieI) error {
 	return nil
 }
 
-type isStateReadyCheckFunc func(util.MerklePatriciaTrieI) (initVersionFunc, error)
+// UpdateVersionsWithState updates versions
+func UpdateVersionsWithState(state util.MerklePatriciaTrieI) error {
+	for _, v := range versions {
+		if err := v.updateVersionWithState(state); err != nil {
+			return err
+		}
+	}
 
-type initVersionFunc func()
-
-func newVersion(f isStateReadyCheckFunc) *Version {
-	v := &Version{lock: &sync.RWMutex{}}
-	register(v, f)
-	return v
+	return nil
 }
 
-func register(v *Version, f isStateReadyCheckFunc) {
+func register(v *Version) {
 	versions = append(versions, v)
-	isStateReadyCheckFuncs = append(isStateReadyCheckFuncs, f)
 }
 
 type Version struct {
 	v    semver.Version
 	lock *sync.RWMutex
+
+	isStateReadyFunc  isStateReadyCheckFunc
+	updateVersionFunc updateVersionWithStateFunc
 }
 
 // IsEmpty checks if the version is empty
@@ -96,4 +114,12 @@ func (scv *Version) String() string {
 	s := scv.v.String()
 	scv.lock.RUnlock()
 	return s
+}
+
+func (scv *Version) isStateReady(state util.MerklePatriciaTrieI) (initVersionFunc, error) {
+	return scv.isStateReadyFunc(state)
+}
+
+func (scv *Version) updateVersionWithState(state util.MerklePatriciaTrieI) error {
+	return scv.updateVersionFunc(scv, state)
 }

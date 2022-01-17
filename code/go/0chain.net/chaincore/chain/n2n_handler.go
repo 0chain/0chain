@@ -264,7 +264,7 @@ func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	}
 
 	if protoV != nil {
-		if err := c.scVersions.Add(sender.GetKey(), *protoV); err != nil {
+		if err := c.protoVersions.Add(sender.GetKey(), *protoV); err != nil {
 			logging.Logger.Error("versions handler: add protocol version failed", zap.Error(err))
 		}
 	}

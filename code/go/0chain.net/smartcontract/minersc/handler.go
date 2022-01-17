@@ -272,31 +272,62 @@ func (msc *MinerSmartContract) configHandler(
 	return gn.getConfigMap()
 }
 
+type versionStatus struct {
+	Version string         `json:"version"`
+	Upgrade versionUpgrade `json:"upgrade"`
+}
+
+type versionUpgrade struct {
+	Allow   bool   `json:"allow"`
+	Version string `json:"version,omitempty"`
+}
+
+type versionsResponse struct {
+	Versions map[string]*versionStatus `json:"versions"`
+}
+
+func newVersionsResponse() *versionsResponse {
+	return &versionsResponse{Versions: make(map[string]*versionStatus)}
+}
+
+func (vr *versionsResponse) add(name string, version string, upgrade *versionUpgrade) {
+	vs := &versionStatus{Version: version}
+	vr.Versions[name] = vs
+	if upgrade != nil {
+		vs.Upgrade = *upgrade
+	}
+}
+
 func (msc *MinerSmartContract) scVersionHandler(
 	_ context.Context,
 	_ url.Values,
 	balances cstate.StateContextI,
 ) (interface{}, error) {
-	scv, err := GetSCVersion(balances)
-	if err != nil {
-		return nil, common.NewErrInternal(err.Error())
-	}
+	rsp := newVersionsResponse()
 
-	rsp := struct {
-		Version string `json:"version"`
-		Upgrade struct {
-			Allow   bool   `json:"allow"`
-			Version string `json:"version,omitempty"`
-		} `json:"upgrade"`
-	}{
-		Version: scv.String(),
-	}
-
+	scv := balances.GetSCVersion()
+	var scUpgrade *versionUpgrade
 	v, allow, _ := balances.CanUpdateSCVersion()
 	if allow {
-		rsp.Upgrade.Allow = true
-		rsp.Upgrade.Version = v.String()
+		scUpgrade = &versionUpgrade{
+			Allow:   true,
+			Version: v.String(),
+		}
 	}
+
+	rsp.add("smartcontract", scv.String(), scUpgrade)
+
+	protoV := balances.GetProtoVersion()
+
+	var protoUpgrade *versionUpgrade
+	v, allow, _ = balances.CanUpdateProtoVersion()
+	if allow {
+		protoUpgrade = &versionUpgrade{
+			Allow:   true,
+			Version: v.String(),
+		}
+	}
+	rsp.add("protocol", protoV.String(), protoUpgrade)
 
 	return rsp, nil
 }

@@ -135,7 +135,10 @@ func (c *Chain) NewStateContext(
 		bcstate.GetLatestFinalizedMagicBlockFunc(c.GetLatestFinalizedMagicBlock),
 		bcstate.GetCurrentMagicBlockFunc(c.GetCurrentMagicBlock),
 		bcstate.GetSignatureSchemeFunc(c.GetSignatureScheme),
-		bcstate.CanUpdateSCVersionFunc(CanUpdateSCVersion(c.scVersions, nil)), // TODO: write adapter when necessary
+		bcstate.GetSCVersion(versions.GetSCVersion),
+		bcstate.GetProtoVersion(versions.GetProtoVersion),
+		bcstate.CanUpdateSCVersionFunc(CanUpdateSCVersion(c.scVersions, nil)),          // TODO: write adapter when necessary
+		bcstate.CanUpdateProtoVersionFunc(CanUpdateProtoVersion(c.protoVersions, nil)), // TODO: write adapter when necessary
 	)
 }
 

@@ -12,14 +12,17 @@ import (
 	"go.uber.org/zap"
 )
 
-const LatestSupportedProtoVersion = "2.0.0"
-
-// TODO: comment out this to register protocol version
 var protoVersion = newProtoVersion()
 
 func newProtoVersion() *Version {
-	v := &Version{lock: &sync.RWMutex{}}
-	register(v, checkProtoVersionOrInit(v))
+	v := &Version{
+		lock:              &sync.RWMutex{},
+		updateVersionFunc: updateProtoVersionWithState,
+	}
+
+	v.isStateReadyFunc = checkProtoVersionOrInit(v)
+
+	register(v)
 	return v
 }
 
@@ -38,6 +41,21 @@ func checkProtoVersionOrInit(pv *Version) isStateReadyCheckFunc {
 			logging.Logger.Debug("init protocol version", zap.String("version", v.String()))
 		}, nil
 	}
+}
+
+func updateProtoVersionWithState(cv *Version, state util.MerklePatriciaTrieI) error {
+	v, err := GetProtoVersionFromState(state)
+	if err != nil {
+		return err
+	}
+
+	if v.GT(cv.Get()) {
+		cv.Set(*v)
+		logging.Logger.Debug("updated protocol version",
+			zap.String("previous version", cv.String()),
+			zap.String("new version", v.String()))
+	}
+	return nil
 }
 
 // GetProtoVersion returns protocol version

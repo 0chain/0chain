@@ -62,12 +62,16 @@ type StateContextI interface {
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 
-	SCVersionManager
+	VersionManager
 }
 
-type SCVersionManager interface {
-	// CanSCVersionUpdate checks if smart contract version can be updated now
+type VersionManager interface {
+	GetSCVersion() semver.Version
+	GetProtoVersion() semver.Version
+	// CanSCVersionUpdate checks if smart contract version can be updated
 	CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter)
+	// CanProtoVersionUpdate checks if protocol version can be updated
+	CanUpdateProtoVersion() (*semver.Version, bool, SwitchAdapter)
 }
 
 // SwitchAdapter represents the adapter function signature
@@ -90,7 +94,11 @@ type StateContext struct {
 	getLatestFinalizedMagicBlock func(context.Context) *block.Block
 	getChainCurrentMagicBlock    func() *block.MagicBlock
 	getSignature                 func() encryption.SignatureScheme
-	canSCVersionUpdate           func() (*semver.Version, bool, SwitchAdapter)
+
+	getSCVersion          func() semver.Version
+	getProtoVersion       func() semver.Version
+	canSCVersionUpdate    func() (*semver.Version, bool, SwitchAdapter)
+	canProtoVersionUpdate func() (*semver.Version, bool, SwitchAdapter)
 }
 
 // Option is the option type used when creating the StateContext instance
@@ -148,11 +156,31 @@ func GetSignatureSchemeFunc(f func() encryption.SignatureScheme) Option {
 	}
 }
 
+func GetSCVersion(f func() semver.Version) Option {
+	return func(s *StateContext) {
+		s.getSCVersion = f
+	}
+}
+
+func GetProtoVersion(f func() semver.Version) Option {
+	return func(s *StateContext) {
+		s.getProtoVersion = f
+	}
+}
+
 // CanUpdateSCVersionFunc option to set function for StateContext to check
 // whether SC version can be updated
 func CanUpdateSCVersionFunc(f func() (*semver.Version, bool, SwitchAdapter)) Option {
 	return func(s *StateContext) {
 		s.canSCVersionUpdate = f
+	}
+}
+
+// CanUpdateProtoVersionFunc option to set function for StateContext to check
+// whether protocol version can be updated
+func CanUpdateProtoVersionFunc(f func() (*semver.Version, bool, SwitchAdapter)) Option {
+	return func(s *StateContext) {
+		s.canProtoVersionUpdate = f
 	}
 }
 
@@ -365,9 +393,22 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 	return s.SetTxnHash(sc.txn.Hash)
 }
 
+func (sc *StateContext) GetSCVersion() semver.Version {
+	return sc.getSCVersion()
+}
+
+func (sc *StateContext) GetProtoVersion() semver.Version {
+	return sc.getProtoVersion()
+}
+
 // CanSCVersionUpdate checks if we can update the smart contract
 func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter) {
 	return sc.canSCVersionUpdate()
+}
+
+// CanSCVersionUpdate checks if we can update the protocol version
+func (sc *StateContext) CanUpdateProtoVersion() (*semver.Version, bool, SwitchAdapter) {
+	return sc.canProtoVersionUpdate()
 }
 
 // InsertTrieNode inserts a node into MPT

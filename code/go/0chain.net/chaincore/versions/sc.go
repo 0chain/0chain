@@ -16,8 +16,14 @@ import (
 var scVersion = newSCVersion()
 
 func newSCVersion() *Version {
-	v := &Version{lock: &sync.RWMutex{}}
-	register(v, checkSCVersionOrInit(v))
+	v := &Version{
+		lock: &sync.RWMutex{},
+	}
+
+	v.isStateReadyFunc = checkSCVersionOrInit(v)
+	v.updateVersionFunc = updateSCVersionWithState
+
+	register(v)
 	return v
 }
 
@@ -35,6 +41,21 @@ func checkSCVersionOrInit(scv *Version) isStateReadyCheckFunc {
 			logging.Logger.Debug("init sc version", zap.String("version", v.String()))
 		}, nil
 	}
+}
+
+func updateSCVersionWithState(cv *Version, state util.MerklePatriciaTrieI) error {
+	v, err := GetSCVersionFromState(state)
+	if err != nil {
+		return err
+	}
+
+	if v.GT(cv.Get()) {
+		cv.Set(*v)
+		logging.Logger.Debug("updated sc version",
+			zap.String("previous version", cv.String()),
+			zap.String("new version", v.String()))
+	}
+	return nil
 }
 
 // GetSCVersion returns smart contract version

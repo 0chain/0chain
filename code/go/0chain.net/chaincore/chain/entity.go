@@ -204,7 +204,7 @@ type Chain struct {
 	// smart contract verions upgrader
 	scVersions versionUpgrader
 	// protocol versions upgrader
-	protocolVersions versionUpgrader
+	protoVersions versionUpgrader
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -475,7 +475,7 @@ func Provider() datastore.Entity {
 
 	c.computeBlockStateC = make(chan struct{}, 1)
 	c.scVersions = newVersionsConsensus(getNodeIDs(mb), 80) // 80 percent to consensus
-	c.protocolVersions = newVersionsConsensus(getNodeIDs(mb), 80)
+	c.protoVersions = newVersionsConsensus(getNodeIDs(mb), 80)
 	return c
 }
 
@@ -1165,17 +1165,32 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme())
 }
 
-func (c *Chain) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error {
-	return c.scVersions.Add(minerID, *v)
+func (c *Chain) SetLatestSupportedSCVersion(id datastore.Key, v *semver.Version) error {
+	return c.scVersions.Add(id, *v)
 }
 
-// UpdateSCVersionCheckFunc function signature for checking if SC version could be updated
-type UpdateSCVersionCheckFunc func() (*semver.Version, bool, cstate.SwitchAdapter)
+func (c *Chain) SetLatestSupportedProtoVersion(id datastore.Key, v *semver.Version) error {
+	return c.protoVersions.Add(id, *v)
+}
 
-func CanUpdateSCVersion(scv versionUpgrader, adapter cstate.SwitchAdapter) UpdateSCVersionCheckFunc {
+// UpdateVersionCheckFunc function signature for checking if SC version could be updated
+type UpdateVersionCheckFunc func() (*semver.Version, bool, cstate.SwitchAdapter)
+
+func CanUpdateSCVersion(vu versionUpgrader, adapter cstate.SwitchAdapter) UpdateVersionCheckFunc {
 	return func() (*semver.Version, bool, cstate.SwitchAdapter) {
-		v := scv.GetConsensusVersion()
+		v := vu.GetConsensusVersion()
 		if v != nil && v.GT(versions.GetSCVersion()) {
+			return v, true, adapter
+		}
+
+		return nil, false, nil
+	}
+}
+
+func CanUpdateProtoVersion(vu versionUpgrader, adapter cstate.SwitchAdapter) UpdateVersionCheckFunc {
+	return func() (*semver.Version, bool, cstate.SwitchAdapter) {
+		v := vu.GetConsensusVersion()
+		if v != nil && v.GT(versions.GetProtoVersion()) {
 			return v, true, adapter
 		}
 
@@ -1420,19 +1435,9 @@ func (mc *Chain) updateSCVersion(b *block.Block) {
 		return
 	}
 
-	v, err := versions.GetSCVersionFromState(clientState)
-	if err != nil {
-		logging.Logger.Error("cannot get sc version from lfb state", zap.Error(err))
+	if err := versions.UpdateVersionsWithState(clientState); err != nil {
+		logging.Logger.Error("update versions on lfb failed", zap.Error(err))
 		return
-	}
-
-	cv := versions.GetSCVersion()
-	if v.GT(cv) {
-		// new version detected
-		versions.SetSCVersion(v)
-		logging.Logger.Debug("update sc version on LFB",
-			zap.String("old version", cv.String()),
-			zap.String("new version", v.String()))
 	}
 }
 
@@ -1603,7 +1608,9 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if latest == nil || b.StartingRound >= latest.StartingRound {
 		c.updateLatestFinalizedMagicBlock(context.Background(), b)
-		c.scVersions.UpdateNodesList(getNodeIDs(b.MagicBlock))
+		nds := getNodeIDs(b.MagicBlock)
+		c.scVersions.UpdateNodesList(nds)
+		c.protoVersions.UpdateNodesList(nds)
 	}
 }
 

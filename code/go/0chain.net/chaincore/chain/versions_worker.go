@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/protocol"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/versions"
 	"0chain.net/core/datastore"
@@ -18,6 +19,11 @@ import (
 func init() {
 	SetupVersionsEntity()
 }
+
+var (
+	VersionEntitySCKey    = "sc_version"
+	VersionEntityProtoKey = "proto_version"
+)
 
 func (c *Chain) SendVersions(ctx context.Context, v *VersionsEntity) {
 	mb := c.GetMagicBlock(c.GetCurrentRound())
@@ -36,24 +42,26 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 	doneC := make(chan struct{})
 	tk := time.NewTicker(time.Minute)
 
-	newSCVersion := smartcontract.GetNewVersion(versions.GetSCVersion())
+	ve := NewVersionsEntity()
 
-	// sign the version
-	self := node.Self
-
-	versions := NewVersionsEntity()
+	newSCVersion := getNewVersion(versions.GetSCVersion(), smartcontract.LatestSupportSCVersion)
 	if newSCVersion != nil {
-		versions.Add("sc_version", *newSCVersion)
+		ve.Add(VersionEntitySCKey, *newSCVersion)
 	}
 
-	sign, err := self.Sign(versions.Hash())
+	newProtoVersion := getNewVersion(versions.GetProtoVersion(), protocol.LatestSupportProtoVersion)
+	if newProtoVersion != nil {
+		ve.Add(VersionEntityProtoKey, *newProtoVersion)
+	}
+
+	sign, err := node.Self.Sign(ve.Hash())
 	if err != nil {
 		logging.Logger.Error("start_versions_worker, failed to sign versions",
 			zap.Error(err))
 		return
 	}
 
-	versions.Sign = sign
+	ve.Sign = sign
 
 	go func() {
 		defer close(doneC)
@@ -63,8 +71,8 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 				return
 			case <-tk.C:
 				// broadcast sc version report message
-				logging.Logger.Debug("report versions", zap.Any("versions", versions.Versions))
-				c.SendVersions(context.Background(), versions)
+				logging.Logger.Debug("report versions", zap.Any("versions", ve.Versions))
+				c.SendVersions(context.Background(), ve)
 			}
 		}
 	}()
@@ -133,4 +141,18 @@ func (v *VersionsEntity) Get(name string) (*semver.Version, error) {
 	}
 
 	return semver.New(s)
+}
+
+// getNewVersion returns the new version if the latest support version is
+// greater than the current running version, otherwise return nil to indicate
+// no new version detected.
+func getNewVersion(currentVersion semver.Version, latestSupportVersion semver.Version) *semver.Version {
+	if latestSupportVersion.LE(currentVersion) {
+		logging.Logger.Debug("start_versions_worker exit, no new sc version detected",
+			zap.String("current version", currentVersion.String()),
+			zap.String("latest support version", latestSupportVersion.String()))
+		return nil
+	}
+
+	return &latestSupportVersion
 }

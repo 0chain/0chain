@@ -2,16 +2,13 @@ package smartcontract
 
 import (
 	"errors"
-	"fmt"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/core/logging"
 	"github.com/blang/semver/v4"
-	"go.uber.org/zap"
 )
 
-// LatestSupportedSCVersion latest supported SC version
-const LatestSupportedSCVersion = "1.0.0"
+// LatestSupportSCVersion latest supported SC version
+var LatestSupportSCVersion = semver.MustParse("1.0.0")
 
 var (
 	// ErrSmartContractVersionRegistered is returned when a smart contract version already exists
@@ -56,23 +53,4 @@ func GetSmartContractsMap(version semver.Version) (map[string]sci.SmartContractI
 	}
 
 	return scs.GetAll(), nil
-}
-
-// GetNewVersion returns the new smart contract version if
-// the latest version is greater than the current running version
-func GetNewVersion(version semver.Version) *semver.Version {
-	latestVersion, err := semver.Make(LatestSupportedSCVersion)
-	if err != nil {
-		logging.Logger.Panic(fmt.Sprintf("start_versions_worker, invalid latest supported sc version: %v", err))
-		return nil
-	}
-
-	if latestVersion.LE(version) {
-		logging.Logger.Debug("start_versions_worker exit, no new sc version detected",
-			zap.String("current sc version", version.String()),
-			zap.String("latest sc version", latestVersion.String()))
-		return nil
-	}
-
-	return &latestVersion
 }

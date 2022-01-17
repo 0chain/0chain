@@ -14,6 +14,7 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
+	"github.com/blang/semver/v4"
 	"go.uber.org/zap"
 )
 
