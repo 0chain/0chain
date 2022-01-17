@@ -80,6 +80,63 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	return sn, err
 }
 
+// GetBlobberCountHandler returns Blobber count from its individual stored value.
+func (ssc *StorageSmartContract) GetBlobberCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	blobberCount, err := balances.GetEventDB().GetBlobberCount()
+	if err != nil {
+		return nil, fmt.Errorf("Error while geting the blobber count")
+	}
+	return map[string]int64{
+		"count": blobberCount,
+	}, nil
+}
+
+// GetBlobberTotalStakesHandler returns blobber total stake
+func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberId()
+	if err != nil {
+		return nil, err
+	}
+	var total int64
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(blobber, balances)
+		if err != nil {
+			return nil, err
+		}
+		total += int64(sp.stake())
+	}
+	return map[string]int64{
+		"total": total,
+	}, nil
+}
+
+// GetBlobberLatitudeLongitudeHandler returns blobber latitude and longitude
+func (ssc *StorageSmartContract) GetBlobberLatitudeLongitudeHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberLatLong()
+	if err != nil {
+		return nil, err
+	}
+	return blobbers, nil
+}
+
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
 // blobbers with zero capacity).
 func (ssc *StorageSmartContract) GetBlobbersHandler(
@@ -421,4 +478,24 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	}
 
 	return blobberChallengeObj.ChallengeMap[challengeID], nil
+}
+
+func (ssc *StorageSmartContract) GetBlockByHashHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	hash := params.Get("block_hash")
+	if len(hash) == 0 {
+		return nil, fmt.Errorf("cannot find valid block hash: %v", hash)
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	block, err := balances.GetEventDB().GetBlocksByHash(hash)
+	return &block, err
+}
+
+func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	block, err := balances.GetEventDB().GetBlocks()
+	return &block, err
 }

@@ -40,6 +40,12 @@ type Blobber struct {
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
+type BlobberLatLong struct {
+	// geolocation
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	result := edb.Store.Get().
@@ -59,6 +65,18 @@ func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Find(&blobbers)
+	return blobbers, result.Error
+}
+
+func (edb *EventDb) GetAllBlobberId() ([]string, error) {
+	blobberIDs := []string{}
+	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
+	return blobberIDs, result.Error
+}
+
+func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
+	blobbers := []BlobberLatLong{}
+	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -85,6 +103,12 @@ func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 		Where(&Blobber{BlobberID: blobber.BlobberID}).
 		Updates(updates.Updates)
 	return result.Error
+}
+
+func (edb *EventDb) GetBlobberCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Blobber{}).Count(&count)
+	return count, res.Error
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
