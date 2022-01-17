@@ -1174,6 +1174,7 @@ type ReadMarker struct {
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
+	ReadSize        float64          `json:"read_size"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"fmt"
@@ -77,6 +78,63 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
 	}
 	return sn, err
+}
+
+// GetBlobberCountHandler returns Blobber count from its individual stored value.
+func (ssc *StorageSmartContract) GetBlobberCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	blobberCount, err := balances.GetEventDB().GetBlobberCount()
+	if err != nil {
+		return nil, fmt.Errorf("Error while geting the blobber count")
+	}
+	return map[string]int64{
+		"count": blobberCount,
+	}, nil
+}
+
+// GetBlobberTotalStakesHandler returns blobber total stake
+func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberId()
+	if err != nil {
+		return nil, err
+	}
+	var total int64
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(blobber, balances)
+		if err != nil {
+			return nil, err
+		}
+		total += int64(sp.stake())
+	}
+	return map[string]int64{
+		"total": total,
+	}, nil
+}
+
+// GetBlobberLatitudeLongitudeHandler returns blobber latitude and longitude
+func (ssc *StorageSmartContract) GetBlobberLatitudeLongitudeHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberLatLong()
+	if err != nil {
+		return nil, err
+	}
+	return blobbers, nil
 }
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
@@ -239,6 +297,75 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	}
 
 	return commitRead.ReadMarker, nil // ok
+
+}
+
+func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+		authTicket   = params.Get("auth_ticket")
+	)
+
+	if allocationID == "" && authTicket == "" {
+		return nil, common.NewErrInternal("Expecting params: allocation_id OR auth_ticket")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	query := new(event.ReadMarker)
+	if allocationID != "" {
+		query.AllocationID = allocationID
+	}
+
+	if authTicket != "" {
+		query.AuthTicket = authTicket
+	}
+
+	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQuery(query)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get read markers", err.Error())
+	}
+
+	return readMarkers, nil
+
+}
+
+func (ssc *StorageSmartContract) GetReadMarkersCount(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("Expecting params: allocation_id")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	query := new(event.ReadMarker)
+	if allocationID != "" {
+		query.AllocationID = allocationID
+	}
+
+	count, err := balances.GetEventDB().CountReadMarkersFromQuery(query)
+	if err != nil {
+		return nil, common.NewErrInternal("can't count read markers", err.Error())
+	}
+
+	return struct {
+		ReadMarkersCount int64 `json:"read_markers_count"`
+	}{
+		ReadMarkersCount: count,
+	}, nil
 
 }
 
