@@ -22,9 +22,11 @@ type (
 	//		(T0 + 4*timeout) Replica_i: get up, send VRFShare(timeout), 0<=i<1/2f
 	//		(T0 + 4*timeout + δ): Leader0_1: send Proposal0_1
 	HalfNodesDown struct {
-		results []*RoundInfo
+		resultsMu sync.Mutex
+		results   []*RoundInfo
 
-		roundRandomSeedFromStart int
+		roundRandomSeedFromStartMu sync.Mutex
+		roundRandomSeedFromStart   int
 
 		minersNum int
 
@@ -86,7 +88,9 @@ func (n *HalfNodesDown) check() (bool, error) {
 // Configure implements TestCase interface.
 func (n *HalfNodesDown) Configure(blob []byte) (err error) {
 	defer n.wg.Done()
+	n.roundRandomSeedFromStartMu.Lock()
 	n.roundRandomSeedFromStart, err = strconv.Atoi(string(blob))
+	n.roundRandomSeedFromStartMu.Unlock()
 	return err
 }
 
@@ -97,6 +101,8 @@ func (n *HalfNodesDown) AddResult(blob []byte) error {
 	if err := res.Decode(blob); err != nil {
 		return err
 	}
+	n.resultsMu.Lock()
 	n.results = append(n.results, res)
+	n.resultsMu.Unlock()
 	return nil
 }

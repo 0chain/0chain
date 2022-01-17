@@ -14,8 +14,8 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 	return mc.getBlockToExtend(ctx, r)
 }
 
-func (mc *Chain) StartRound(ctx context.Context, r *Round, seed int64) {
-	mc.startRound(ctx, r, seed)
+func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
+	return mc.startNextRound(ctx, r)
 }
 
 // HandleRoundTimeout handle timeouts appropriately.

@@ -16,7 +16,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
@@ -56,13 +55,6 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		good, bad = crpcutils.Split(state, state.RoundTimeout,
 			mb.Miners.CopyNodes())
 
-	case isTestingSendDifferentBlocks(vrfs.Round, vrfs.RoundTimeoutCount):
-		if err := addSendDifferentBlocksResult(vrfs.RoundTimeoutCount); err != nil {
-			log.Panicf("Conductor: error while adding test result: %v", err)
-		}
-		mc.sendVRFShare(ctx, vrfs)
-		return
-
 	case isSendingBadTimeoutVRFS(vrfs.Round):
 		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1)
 		bad = getMinersByRatio(mb, 0.33)
@@ -77,29 +69,6 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	if len(bad) > 0 {
 		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(badVRFS), bad)
 	}
-}
-
-func isTestingSendDifferentBlocks(round int64, timeoutCount int) bool {
-	var (
-		cfgFromFirstGen        = crpc.Client().State().SendDifferentBlocksFromFirstGenerator
-		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.OnRound == round
-
-		cfgFromAllGen        = crpc.Client().State().SendDifferentBlocksFromAllGenerators
-		shouldTestFromAllGen = cfgFromAllGen != nil && cfgFromAllGen.OnRound == round
-	)
-	return (shouldTestFromAllGen || shouldTestFromFirstGen) && timeoutCount == 1
-}
-
-func addSendDifferentBlocksResult(roundTimeOutCount int) error {
-	res := &cases.SendDiffBlocksResult{
-		MinerID:      node.Self.ID,
-		TimeoutCount: roundTimeOutCount,
-	}
-	blob, err := res.Encode()
-	if err != nil {
-		return err
-	}
-	return crpc.Client().AddTestCaseResult(blob)
 }
 
 func isSendingBadTimeoutVRFS(round int64) bool {

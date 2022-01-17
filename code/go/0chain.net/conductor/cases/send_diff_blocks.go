@@ -2,9 +2,8 @@ package cases
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"strconv"
+	"fmt"
 	"sync"
 )
 
@@ -36,13 +35,8 @@ type (
 
 		wg *sync.WaitGroup
 
-		timeoutCountMu sync.Mutex
-		timeoutCount   map[string]int // key - miner ID; value - round's timeout count
-	}
-
-	SendDiffBlocksResult struct {
-		MinerID      string `json:"miner_id"`
-		TimeoutCount int    `json:"timeout_count"`
+		resultsMu sync.Mutex
+		results   []*RoundInfo
 	}
 )
 
@@ -72,9 +66,8 @@ func newSendDiffBlocksBase(minersNum int) *sendDiffBlocksBase {
 	wg := new(sync.WaitGroup)
 	wg.Add(minersNum)
 	return &sendDiffBlocksBase{
-		timeoutCount: make(map[string]int),
-		minersNum:    minersNum,
-		wg:           wg,
+		minersNum: minersNum,
+		wg:        wg,
 	}
 }
 
@@ -86,13 +79,13 @@ func (s *sendDiffBlocksBase) Configure(_ []byte) error {
 // AddResult implements TestCase interface.
 func (s *sendDiffBlocksBase) AddResult(blob []byte) error {
 	defer s.wg.Done()
-	res := new(SendDiffBlocksResult)
+	res := new(RoundInfo)
 	if err := res.Decode(blob); err != nil {
 		return err
 	}
-	s.timeoutCountMu.Lock()
-	s.timeoutCount[res.MinerID] = res.TimeoutCount
-	s.timeoutCountMu.Unlock()
+	s.resultsMu.Lock()
+	s.results = append(s.results, res)
+	s.resultsMu.Unlock()
 	return nil
 }
 
@@ -108,8 +101,8 @@ func (s *sendDiffBlocksBase) Check(ctx context.Context) (success bool, err error
 	case <-ctx.Done():
 		// miners should send only first round restart reports, so if there no reports
 		// it means that round has not restarted.
-		if len(s.timeoutCount) == 0 {
-			return false, errors.New("no reports about first round timeout, test is failed")
+		if len(s.results) != s.minersNum {
+			return false, fmt.Errorf("unexpected number of reports: %d, expected %d", len(s.results), s.minersNum)
 		}
 
 		return false, ctx.Err()
@@ -120,24 +113,14 @@ func (s *sendDiffBlocksBase) Check(ctx context.Context) (success bool, err error
 }
 
 func (s *sendDiffBlocksBase) check() (success bool, err error) {
-	if len(s.timeoutCount) != s.minersNum {
+	if len(s.results) != s.minersNum {
 		return false, errors.New("unexpected reports count")
 	}
 
-	for _, tCount := range s.timeoutCount {
-		if tCount != 1 {
-			return false, errors.New("found unexpected timeout count: " + strconv.Itoa(tCount))
+	for _, roundInfo := range s.results {
+		if roundInfo.TimeoutCount != 1 {
+			return false, fmt.Errorf("found unexpected timeout count: %d", roundInfo.TimeoutCount)
 		}
 	}
 	return true, nil
-}
-
-// Encode encodes SendDiffBlocksResult to bytes.
-func (r *SendDiffBlocksResult) Encode() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-// Decode decodes SendDiffBlocksResult from bytes.
-func (r *SendDiffBlocksResult) Decode(blob []byte) error {
-	return json.Unmarshal(blob, r)
 }

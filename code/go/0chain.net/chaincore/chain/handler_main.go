@@ -34,6 +34,6 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 }
 
 // SetupHandlers sets up the necessary API end points.
-func SetupHandlers() {
-	setupHandlers(handlersMap())
+func SetupHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
 }

@@ -66,29 +66,27 @@ func getNotNotarisedBlock(r round.RoundI) *block.Block {
 	return bl
 }
 
-func (mc *Chain) StartRound(ctx context.Context, r *Round, seed int64) {
-	mc.startRound(ctx, r, seed)
+func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
+	nextRound := mc.startNextRound(ctx, r)
 
-	rNum := r.GetRoundNumber()
+	rNum, vneb := nextRound.GetRoundNumber(), crpc.Client().State().VerifyingNonExistentBlock
+	vneb.Lock()
 	if isSendingBadVerificationTicket(rNum) {
 		sendBadVerificationTicket(ctx, rNum, mc.GetMagicBlock(rNum))
 		// just notifying conductor that bad verification tickets is sent
 		if err := crpc.Client().ConfigureTestCase(nil); err != nil {
 			log.Panicf("Conductor: error while configuring test case: %v", err)
 		}
+		vneb.Sent = true
 	}
+	vneb.Unlock()
+
+	return nextRound
 }
 
 func isSendingBadVerificationTicket(round int64) bool {
 	cfg := crpc.Client().State().VerifyingNonExistentBlock
-	isConfigured := cfg != nil && round == cfg.OnRound
-	if !isConfigured {
-		return false
-	}
-
-	// we need to ignore msg by the first ranked replica
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
-	return nodeType == replica && typeRank == 0
+	return cfg != nil && round == cfg.OnRound && !cfg.Sent
 }
 
 func sendBadVerificationTicket(ctx context.Context, round int64, magicBlock *block.MagicBlock) {
@@ -128,7 +126,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 	mc.handleRoundTimeout(ctx, round)
 
 	minerRound := mc.GetMinerRound(round)
-	if isTestingHalfNodesDown(minerRound) {
+	if isTestingHalfNodesDown(minerRound) || isTestingSendDifferentBlocks(minerRound) {
 		if err := addRoundInfoResult("", minerRound); err != nil {
 			log.Panicf("Conductor: error while adding test case result: %v", err)
 		}
@@ -139,6 +137,19 @@ func isTestingHalfNodesDown(minerRound *Round) bool {
 	hndCfg := crpc.Client().State().HalfNodesDown
 	return hndCfg != nil &&
 		hndCfg.OnRound == minerRound.Number &&
+		minerRound.GetTimeoutCount() == 1 &&
+		minerRound.GetSoftTimeoutCount() == 0
+}
+
+func isTestingSendDifferentBlocks(minerRound *Round) bool {
+	var (
+		cfgFromFirstGen        = crpc.Client().State().SendDifferentBlocksFromFirstGenerator
+		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.OnRound == minerRound.Number
+
+		cfgFromAllGen        = crpc.Client().State().SendDifferentBlocksFromAllGenerators
+		shouldTestFromAllGen = cfgFromAllGen != nil && cfgFromAllGen.OnRound == minerRound.Number
+	)
+	return (shouldTestFromAllGen || shouldTestFromFirstGen) &&
 		minerRound.GetTimeoutCount() == 1 &&
 		minerRound.GetSoftTimeoutCount() == 0
 }

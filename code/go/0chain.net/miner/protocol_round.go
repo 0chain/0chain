@@ -19,12 +19,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/minersc"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -176,7 +174,7 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 
 //Creates the next round, if next round exists and has RRS returns existent.
 //If RRS is not present, starts VRF phase for this round
-func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
+func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	var (
 		rn = r.GetRoundNumber()

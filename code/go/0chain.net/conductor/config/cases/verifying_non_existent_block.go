@@ -1,6 +1,8 @@
 package cases
 
 import (
+	"sync"
+
 	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
 	"github.com/mitchellh/mapstructure"
@@ -14,7 +16,11 @@ type (
 
 		IgnoredVerificationTicketsNum int
 
+		Sent bool
+
 		statsCollector *stats.NodesServerStats
+
+		mutex sync.Mutex
 	}
 )
 
@@ -47,4 +53,18 @@ func (n *VerifyingNonExistentBlock) Name() string {
 // Decode implements MapDecoder interface.
 func (n *VerifyingNonExistentBlock) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
+}
+
+func (n *VerifyingNonExistentBlock) Lock() {
+	if n == nil {
+		return
+	}
+	n.mutex.Lock()
+}
+
+func (n *VerifyingNonExistentBlock) Unlock() {
+	if n == nil {
+		return
+	}
+	n.mutex.Unlock()
 }

@@ -4,7 +4,6 @@
 package chain
 
 import (
-	"0chain.net/core/common"
 	"context"
 	"errors"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"0chain.net/chaincore/node"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/conductrpc/stats/middleware"
+	"0chain.net/core/common"
 )
 
 func revertString(s string) string {
@@ -55,8 +55,8 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 }
 
 /*SetupHandlers sets up the necessary API end points */
-func SetupHandlers() {
-	hMap := handlersMap()
+func SetupHandlers(c Chainer) {
+	hMap := handlersMap(c)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		hMap[getBlockV1Pattern] = middleware.BlockStats(
