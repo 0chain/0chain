@@ -471,3 +471,23 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 
 	return blobberChallengeObj.ChallengeMap[challengeID], nil
 }
+
+func (ssc *StorageSmartContract) GetBlockByHashHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	hash := params.Get("block_hash")
+	if len(hash) == 0 {
+		return nil, fmt.Errorf("cannot find valid block hash: %v", hash)
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	block, err := balances.GetEventDB().GetBlocksByHash(hash)
+	return &block, err
+}
+
+func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	block, err := balances.GetEventDB().GetBlocks()
+	return &block, err
+}

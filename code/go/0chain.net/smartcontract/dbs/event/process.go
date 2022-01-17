@@ -8,8 +8,9 @@ import (
 
 	"0chain.net/smartcontract/dbs"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 )
 
 type (
@@ -30,6 +31,7 @@ const (
 	TagDeleteBlobber
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
+	TagAddBlock
 	TagAddOrOverwriteValidator
 	TagAddOrOverwriteReadMarker
 )
@@ -98,6 +100,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addTransaction(transaction)
+	case TagAddBlock:
+		var block Block
+		err := json.Unmarshal([]byte(event.Data), &block)
+		if err!= nil {
+			return err
+		}
+		return edb.addBlock(block)
 	case TagAddOrOverwriteValidator:
 		var vn Validator
 		err := json.Unmarshal([]byte(event.Data), &vn)
