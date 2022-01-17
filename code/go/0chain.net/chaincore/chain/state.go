@@ -232,6 +232,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				} else {
 					output = err.Error()
 				}
+				txn.Status = transaction.TxnError
 			}
 		}
 		txn.TransactionOutput = output
@@ -344,7 +345,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
-	txn.Status = transaction.TxnSuccess
+	//if status is not set
+	if txn.Status == 0 {
+		txn.Status = transaction.TxnSuccess
+	}
 	return
 }
 
