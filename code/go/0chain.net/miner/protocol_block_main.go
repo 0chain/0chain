@@ -289,14 +289,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if config.DevConfiguration.IsFeeEnabled {
 		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
-			return err
+			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 
 	if config.DevConfiguration.IsBlockRewards {
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
-			return err
+			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 
@@ -304,7 +304,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
 		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, blockState, iterInfo.clients)
 		if err != nil {
-			return err
+			logging.Logger.Error("generate block (commit settings)", zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 
