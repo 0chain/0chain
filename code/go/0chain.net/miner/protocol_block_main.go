@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 )
 
@@ -25,14 +24,6 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 	return
-}
-
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
-	bsh chain.BlockStateHandler, waitOver bool) error {
-
-	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
-	})
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */

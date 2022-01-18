@@ -7,7 +7,7 @@ import (
 // Transaction model to save the transaction data
 type Transaction struct {
 	gorm.Model
-	Hash              string
+	Hash              string `gorm:"uniqueIndex"`
 	BlockHash         string
 	Version           string
 	ClientId          string
@@ -21,6 +21,8 @@ type Transaction struct {
 	TransactionOutput string
 	OutputHash        string
 	Status            int
+
+	ReadMarkers []ReadMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransaction(transaction Transaction) error {

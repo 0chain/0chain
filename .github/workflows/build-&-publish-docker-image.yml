@@ -168,6 +168,7 @@ jobs:
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           blobber_image: staging
           validator_image: staging
+          authorizer_image: staging
           zbox_image: staging
           zblock_image: staging
           zdns_image: staging

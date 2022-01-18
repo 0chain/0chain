@@ -9,7 +9,6 @@ import (
 	"log"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
@@ -72,12 +71,6 @@ func hasDST(pb, b []*transaction.Transaction) (has bool) {
 		}
 	}
 	return false // has not
-}
-
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error {
-	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
-	})
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
