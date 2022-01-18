@@ -23,38 +23,9 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 			"decoding request: %v", err)
 	}
 
-	if update.ServiceCharge < 0 {
-		return "", common.NewErrorf("update_sharder_settings",
-			"invalid negative service charge: %v", update.ServiceCharge)
-	}
-
-	if update.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("update_sharder_settings",
-			"max_charge is greater than allowed by SC: %v > %v",
-			update.ServiceCharge, gn.MaxCharge)
-	}
-
-	if update.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("update_sharder_settings",
-			"invalid negative number_of_delegates: %v", update.ServiceCharge)
-	}
-
-	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("update_sharder_settings",
-			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			update.ServiceCharge, gn.MaxDelegates)
-	}
-
-	if update.MinStake < gn.MinStake {
-		return "", common.NewErrorf("update_sharder_settings",
-			"min_stake is less than allowed by SC: %v > %v",
-			update.MinStake, gn.MinStake)
-	}
-
-	if update.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("update_sharder_settings",
-			"max_stake is greater than allowed by SC: %v > %v",
-			update.MaxStake, gn.MaxStake)
+	err = validateNodeSettings(update, gn, "update_sharder_settings")
+	if err != nil {
+		return "", err
 	}
 
 	var sn *MinerNode
@@ -134,23 +105,7 @@ func (msc *MinerSmartContract) AddSharder(
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
-	if newSharder.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("add_sharder",
-			"invalid negative number_of_delegates: %v",
-			newSharder.ServiceCharge)
-	}
-
-	if newSharder.MinStake < gn.MinStake {
-		return "", common.NewErrorf("add_sharder",
-			"min_stake is less than allowed by SC: %v > %v",
-			newSharder.MinStake, gn.MinStake)
-	}
-
-	if newSharder.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("add_sharder",
-			"max_stake is greater than allowed by SC: %v > %v",
-			newSharder.MaxStake, gn.MaxStake)
-	}
+	err = validateNodeSettings(newSharder, gn, "add_sharder")
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {

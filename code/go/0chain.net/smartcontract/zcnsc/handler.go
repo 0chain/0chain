@@ -1,21 +1,25 @@
 package zcnsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
+	"errors"
 	"net/url"
+
+	"0chain.net/smartcontract"
 
 	cState "0chain.net/chaincore/chain/state"
 )
 
-func (zcn *ZCNSmartContract) getAuthorizerNodes(
-	_ context.Context,
-	_ url.Values,
-	balances cState.StateContextI,
-) (interface{}, error) {
-	an, err := GetAuthorizerNodes(balances)
+func (zcn *ZCNSmartContract) getAuthorizerNode(_ context.Context, params url.Values, ctx cState.StateContextI) (interface{}, error) {
+	authorizerID := params.Get("id")
+	if authorizerID == "" {
+		return nil, errors.New("authorizerID is empty")
+	}
+
+	node, err := GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list")
 	}
-	return an, err
+
+	return node, err
 }

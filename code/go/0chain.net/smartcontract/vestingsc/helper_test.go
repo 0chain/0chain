@@ -33,8 +33,8 @@ func toks(val state.Balance) string {
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+	data := &chain.ConfigData{ClientSignatureScheme: "bls0chain"}
+	chain.ServerChain.Config = chain.NewConfigImpl(data)
 
 	logging.Logger = zap.NewNop()
 

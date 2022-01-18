@@ -37,7 +37,8 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 	_ = cc
 
 	// Get health check config
-	config := &sc.HCCycleScan[scan]
+	cycleScan := sc.HCCycleScan()
+	config := &cycleScan[scan]
 
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Tunables</td></tr>")

@@ -3,6 +3,7 @@ package sharder
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"0chain.net/core/cache"
@@ -32,7 +33,7 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
-	transactionCacheSize := int(c.BlockSize) * blockCacheSize
+	transactionCacheSize := int(c.BlockSize()) * blockCacheSize
 	if transactionCacheSize > 5000 {
 		transactionCacheSize = 5000
 	}
@@ -43,6 +44,7 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
+	sharderChain.processingBlocks = cache.NewLRUCache(1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -67,6 +69,9 @@ type Chain struct {
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
 	TieringStats   *MinioStats
+
+	processingBlocks *cache.LRU
+	pbMutex          sync.RWMutex
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */

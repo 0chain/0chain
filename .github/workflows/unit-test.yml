@@ -1,4 +1,4 @@
-name: Unit tests
+name: Unit test & Lint
 
 on:
   push:
@@ -17,3 +17,14 @@ jobs:
 
       - name: unit tests
         run: ./docker.local/bin/unit_test_build.sh
+
+  lint:
+    runs-on: [ self-hosted, build ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build Base
+        run: ./docker.local/bin/build.base.sh
+
+      - name: Run Linter
+        run: ./docker.local/bin/linter.sh

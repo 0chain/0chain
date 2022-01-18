@@ -2,8 +2,12 @@ package event
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -133,7 +137,7 @@ func TestBlobbers(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(events)
+	eventDb.AddEvents(context.TODO(), events)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -159,7 +163,7 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventUpdateSn})
+	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn})
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -201,7 +205,7 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagAddOrOverwriteBlobber),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventOverwrite})
+	eventDb.AddEvents(context.TODO(), []Event{eventOverwrite})
 	overWrittenBlobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, sn2.BaseURL, overWrittenBlobber.BaseURL)
@@ -213,8 +217,161 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagDeleteBlobber),
 		Data:        blobber.BlobberID,
 	}
-	eventDb.AddEvents([]Event{deleteEvent})
+	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.Error(t, err)
+}
+
+func TestBlobberExists(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+	bl := Blobber{
+		BlobberID: "something",
+	}
+	res := eventDb.Store.Get().Create(&bl)
+	if res.Error != nil {
+		t.Errorf("Error while inserting blobber %v", bl)
+		return
+	}
+	gotExists, err := bl.exists(eventDb)
+
+	if !gotExists || err != nil {
+		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
+	}
+	b2 := Blobber{
+		BlobberID: "somethingNew",
+	}
+	gotExists, err = b2.exists(eventDb)
+	if gotExists || err != nil {
+		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
+	}
+	err = eventDb.drop()
+	require.NoError(t, err)
+}
+
+func TestBlobberIds(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+	defer eventDb.drop()
+
+	setUpBlobbers(t, eventDb)
+
+	blobberIDs, err := eventDb.GetAllBlobberId()
+	require.NoError(t, err)
+	require.Equal(t, 10, len(blobberIDs), "All blobber id's were not found")
+
+}
+
+func TestBlobberLatLong(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+	defer eventDb.drop()
+
+	setUpBlobbers(t, eventDb)
+
+	blobbers, err := eventDb.GetAllBlobberLatLong()
+	require.NoError(t, err, "There should be no error")
+	require.Equal(t, 10, len(blobbers), "Not all lat long were returned")
+}
+
+func TestBlobberGetCount(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+	defer eventDb.drop()
+
+	gotCount, err := eventDb.GetBlobberCount()
+	require.NoError(t, err, "Error should not be present")
+	require.Equal(t, int64(0), gotCount, "Blobber count not working")
+
+	setUpBlobbers(t, eventDb)
+
+	gotCount, err = eventDb.GetBlobberCount()
+	require.NoError(t, err, "Error should not be present")
+	require.Equal(t, int64(10), gotCount, "Blobber Count should be 10")
+}
+
+func setUpBlobbers(t *testing.T, eventDb *EventDb) {
+	for i := 0; i < 10; i++ {
+		res := eventDb.Store.Get().Create(&Blobber{
+			BlobberID: fmt.Sprintf("somethingNew_%v", i),
+		})
+		if res.Error != nil {
+			t.Errorf("Error while inserting blobber %v", i)
+			t.FailNow()
+			return
+		}
+	}
 }

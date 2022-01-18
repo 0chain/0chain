@@ -110,8 +110,9 @@ func makeTestChain(t *testing.T) *sharder.Chain {
 	if !ok {
 		t.Fatal("types missmatching")
 	}
+	conf := chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
+	ch.Config = conf
 	ch.Initialize()
-	ch.BlockSize = 1024
 	sharder.SetupSharderChain(ch)
 	chain.SetServerChain(ch)
 	return sharder.GetSharderChain()
@@ -225,7 +226,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.HashBlock()
-
+	makeTestChain(t)
 	sharder.GetSharderChain().AddBlock(b)
 
 	type fields struct {

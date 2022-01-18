@@ -1,5 +1,6 @@
 smart_contracts:
   faucetsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     pour_amount: 1
     max_pour_amount: 10
     periodic_limit: 1000
@@ -7,11 +8,13 @@ smart_contracts:
     individual_reset: 3h
     global_reset: 48h
   interestpoolsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 10
     apr: 0.1
     min_lock_period: 1m
     max_mint: 1500000.0
   minersc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # miners
     max_n: 7 # 100
     min_n: 3 # 3
@@ -55,6 +58,7 @@ smart_contracts:
     reward_round_frequency: 250
 
   storagesc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # the time_unit is a duration used as divider for a write price; a write
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
@@ -159,6 +163,7 @@ smart_contracts:
       blobber_capacity_ratio: 10
       blobber_usage_ratio: 40
   vestingsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 0.01
     min_duration: "2m"
     max_duration: "2h"

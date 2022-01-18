@@ -31,12 +31,12 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return
 	}
 
-	if lfb.Round <= int64(c.PruneStateBelowCount) {
+	if lfb.Round <= int64(c.PruneStateBelowCount()) {
 		return
 	}
 
 	var bc = c.BlockChain
-	bc = bc.Move(-c.PruneStateBelowCount)
+	bc = bc.Move(-c.PruneStateBelowCount())
 
 	for i := 0; i < 10 && bc.Value == nil; i++ {
 		bc = bc.Prev()
@@ -148,7 +148,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			zap.Any("prune_stats", ps))
 	}
 
-	if lfb.Round-int64(c.PruneStateBelowCount) < bs.Round {
+	if lfb.Round-int64(c.PruneStateBelowCount()) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
 		return
 	}

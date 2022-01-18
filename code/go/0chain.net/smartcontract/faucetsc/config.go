@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/core/datastore"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -16,6 +17,7 @@ const (
 	GlobalLimit
 	IndividualReset
 	GlobalReset
+	OwnerId
 )
 
 var (
@@ -26,6 +28,7 @@ var (
 		"global_limit",
 		"individual_reset",
 		"global_rest",
+		"owner_id",
 	}
 )
 
@@ -36,6 +39,7 @@ type FaucetConfig struct {
 	GlobalLimit     state.Balance `json:"global_limit"`
 	IndividualReset time.Duration `json:"individual_reset"`
 	GlobalReset     time.Duration `json:"global_rest"`
+	OwnerId         datastore.Key `json:"owner_id"`
 }
 
 // configurations from sc.yaml
@@ -47,5 +51,6 @@ func getConfig() (conf *FaucetConfig) {
 	conf.GlobalLimit = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.global_limit") * 1e10)
 	conf.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
 	conf.GlobalReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
+	conf.OwnerId = config.SmartContractConfig.GetString("smart_contracts.faucetsc.owner_id")
 	return
 }

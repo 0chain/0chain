@@ -2,7 +2,6 @@ package smartcontract
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -73,18 +72,10 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 }
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj != nil {
-		var smartContractData sci.SmartContractTransactionData
-		dataBytes := []byte(t.TransactionData)
-		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
-			return "", err
-		}
-		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
-		transactionOutput, err := ExecuteWithStats(contractObj, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, t, scData.FunctionName, scData.InputData, balances)
 		if err != nil {
 			return "", err
 		}

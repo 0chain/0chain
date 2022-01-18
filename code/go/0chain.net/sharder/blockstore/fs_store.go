@@ -53,7 +53,7 @@ func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) strin
 	}()
 
 	var file strings.Builder
-	var dirRoundRange = chain.GetServerChain().RoundRange
+	var dirRoundRange = chain.GetServerChain().RoundRange()
 
 	file.WriteString(fbs.RootDirectory)
 	file.WriteString(string(os.PathSeparator))

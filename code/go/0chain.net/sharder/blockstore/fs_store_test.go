@@ -23,7 +23,8 @@ import (
 
 func init() {
 	serverChain := chain.NewChainFromConfig()
-	serverChain.RoundRange = 1
+	conf := serverChain.Config.(*chain.ConfigImpl)
+	conf.ConfDataForTest().RoundRange = 1
 	chain.SetServerChain(serverChain)
 
 	memoryStorage := memorystore.GetStorageProvider()

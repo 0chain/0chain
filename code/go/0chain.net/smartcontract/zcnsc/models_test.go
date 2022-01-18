@@ -1,25 +1,25 @@
 package zcnsc_test
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"math/rand"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
 
 	logging.Logger = zap.NewNop()
 }
@@ -77,21 +77,18 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	require.Equal(t, ok, true)
 }
 
-func Test_ShouldVerifySignature(t *testing.T) {
-	mp, pk, err := CreateMintPayload("client0", []string{"p1", "p2"})
-	require.NoError(t, err)
-
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	err = signatureScheme.SetPublicKey(pk)
-	require.NoError(t, err)
-
-	toSign := mp.GetStringToSign()
-	for _, v := range mp.Signatures {
-		ok, err := signatureScheme.Verify(v.Signature, toSign)
-		require.NoError(t, err)
-		require.Equal(t, true, ok)
-	}
-}
+//func Test_ShouldVerifySignature(t *testing.T) {
+//	mp, err := CreateMintPayload(defaultClient)
+//	require.NoError(t, err)
+//
+//	toSign := mp.GetStringToSign()
+//	for _, sig := range mp.Signatures {
+//		auth := authorizers[sig.ID]
+//		ok, err := auth.Verify(sig.Signature, toSign)
+//		require.NoError(t, err)
+//		require.Equal(t, true, ok)
+//	}
+//}
 
 func Test_ShouldSaveGlobalNode(t *testing.T) {
 	_, _, err := createStateAndNodeAndAddNodeToState()
@@ -124,27 +121,6 @@ func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 	expected.BurnAddress = "11"
 	expected.MinMintAmount = 12
 	expected.MinBurnAmount = 13
-}
-
-func Test_EmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
-	balances := MakeMockStateContext()
-	nodes, err := GetAuthorizerNodes(balances)
-	require.NoError(t, err)
-	require.NotNil(t, nodes)
-	require.Equal(t, 3, len(nodes.NodeMap))
-}
-
-func Test_Authorizers_Should_Add_And_Return_And_UpdateAuthorizers(t *testing.T) {
-	authorizer := GetNewAuthorizer("public key", "id", "https://localhost:9876")
-	balances := MakeMockStateContext()
-
-	nodes, err := GetAuthorizerNodes(balances)
-	require.NoError(t, err)
-	err = nodes.AddAuthorizer(authorizer)
-	require.NoError(t, err, "must add authorizer")
-
-	err = nodes.DeleteAuthorizer(authorizer.ID)
-	require.NoError(t, err, "must delete authorizer")
 }
 
 func Test_PublicKey(t *testing.T) {
@@ -197,7 +173,7 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
+	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 	node.Staking.ID = "11"
 
@@ -208,58 +184,6 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, target.Staking.ID, "11")
 	require.Equal(t, int64(target.Staking.Balance), tr.Value)
-}
-
-// This will test authorizer node serialization
-func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
-	// Create authorizer node
-	tr := CreateDefaultTransactionToZcnsc()
-	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
-	node.Staking.ID = "11"
-	node.Staking.Balance = 100
-
-	require.NotNil(t, node)
-	require.NotNil(t, node.Staking.TokenPool)
-
-	// Create authorizers nodes tree
-	balances := MakeMockStateContext()
-	tree, err := GetAuthorizerNodes(balances)
-	require.NoError(t, err)
-	require.NotNil(t, tree)
-	require.NotNil(t, tree.NodeMap)
-
-	// Save authorizer node in the dictionary (nodes tree)
-	tree.NodeMap[node.ID] = node
-
-	// Serialize and deserialize nodes tree
-	target := &AuthorizerNodes{}
-	err = target.Decode(tree.Encode())
-	require.NoError(t, err)
-	require.NotNil(t, target)
-
-	targetNode := target.NodeMap[node.ID]
-	require.NotNil(t, targetNode)
-	require.Equal(t, targetNode.ID, node.ID)
-	require.Equal(t, targetNode.URL, node.URL)
-	require.Equal(t, targetNode.PublicKey, node.PublicKey)
-	require.Equal(t, targetNode.Staking.ID, node.Staking.ID)
-	require.Equal(t, targetNode.Staking.Balance, node.Staking.Balance)
-}
-
-func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.T) {
-	// Create authorizers nodes tree
-	balances := MakeMockStateContext()
-	tree, err := GetAuthorizerNodes(balances)
-	require.NoError(t, err)
-	require.NotNil(t, tree)
-	require.NotNil(t, tree.NodeMap)
-
-	// Serialize and deserialize nodes tree
-	target := &AuthorizerNodes{}
-	err = target.Decode(tree.Encode())
-	require.NoError(t, err)
-	require.NotNil(t, target)
-	require.NotNil(t, target.NodeMap)
 }
 
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, error) {
