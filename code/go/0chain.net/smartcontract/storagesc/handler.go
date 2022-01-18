@@ -279,6 +279,10 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 		return nil, common.NewErrInternal("validator id is empty")
 	}
 
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("Event db not initialized")
+	}
+
 	validator, err := balances.GetEventDB().GetValidatorByValidatorID(validatorID)
 	if err != nil {
 		return nil, common.NewErrInternal("can't get validator", err.Error())
