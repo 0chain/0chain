@@ -88,6 +88,35 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	return allMinersList, nil
 }
 
+func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get miners. no db connection")
+	}
+
+	activeQuery := &event.Miner{
+		Active: true,
+	}
+	active, err := balances.GetEventDB().CountMinersFromQuery(activeQuery)
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	inactiveQuery := &event.Miner{
+		Active: false,
+	}
+	inactive, err := balances.GetEventDB().CountMinersFromQuery(inactiveQuery)
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	return map[string]int64{
+		"active_miners":   active,
+		"inactive_miners": inactive,
+	}, nil
+
+}
+
 const cantGetShardersListMsg = "can't get sharders list"
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -96,6 +125,35 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
 	}
 	return allShardersList, nil
+}
+
+func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get sharders. no db connection")
+	}
+
+	activeQuery := &event.Sharder{
+		Active: true,
+	}
+	active, err := balances.GetEventDB().CountShardersFromQuery(activeQuery)
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	inactiveQuery := &event.Sharder{
+		Active: false,
+	}
+	inactive, err := balances.GetEventDB().CountShardersFromQuery(inactiveQuery)
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	return map[string]int64{
+		"active_sharders":   active,
+		"inactive_sharders": inactive,
+	}, nil
+
 }
 
 func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {

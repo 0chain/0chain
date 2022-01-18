@@ -64,6 +64,18 @@ func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
 	return miners, result.Error
 }
 
+func (edb *EventDb) CountMinersFromQuery(query interface{}) (int64, error) {
+
+	var count int64
+
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(query).
+		Count(&count)
+
+	return count, result.Error
+}
+
 func (edb *EventDb) GetMiners() ([]Miner, error) {
 
 	var miners []Miner

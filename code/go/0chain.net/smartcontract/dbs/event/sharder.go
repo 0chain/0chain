@@ -75,6 +75,18 @@ func (edb *EventDb) GetSharders() ([]Sharder, error) {
 	return sharders, result.Error
 }
 
+func (edb *EventDb) CountShardersFromQuery(query interface{}) (int64, error) {
+
+	var count int64
+
+	result := edb.Store.Get().
+		Model(&Sharder{}).
+		Where(query).
+		Count(&count)
+
+	return count, result.Error
+}
+
 func (edb *EventDb) addSharder(sharder Sharder) error {
 
 	result := edb.Store.Get().Create(&sharder)
