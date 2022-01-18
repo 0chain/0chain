@@ -43,3 +43,9 @@ func (edb *EventDb) GetTransactionByClientId(clientID string) ([]Transaction, er
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Scan(&tr)
 	return tr, res.Error
 }
+
+func (edb *EventDb) GetTransactionByBlockHash(blockHash string) ([]Transaction, error) {
+	tr := []Transaction{}
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Scan(&tr)
+	return tr, res.Error
+}

@@ -169,7 +169,7 @@ func (msc *StorageSmartContract) GetTransactionByHashHandler(
 ) (interface{}, error) {
 	var transactionHash = params.Get("transaction_hash")
 	if len(transactionHash) == 0 {
-		return nil, fmt.Errorf("cannot find valid transaction: transaction_hash is empty", transactionHash)
+		return nil, errors.New("cannot find valid transaction: transaction_hash is empty")
 	}
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
@@ -185,7 +185,7 @@ func (msc *StorageSmartContract) GetTransactionByClientHandler(
 ) (interface{}, error) {
 	var client_id = params.Get("client_id")
 	if len(client_id) == 0 {
-		return nil, fmt.Errorf("cannot find valid transaction: client_id is empty", client_id)
+		return nil, errors.New("cannot find valid transaction: client_id is empty")
 	}
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
