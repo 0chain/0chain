@@ -76,6 +76,13 @@ func (edb *EventDb) CountMinersFromQuery(query interface{}) (int64, error) {
 	return count, result.Error
 }
 
+func (edb *EventDb) GetMinersTotalStake() (int64, error) {
+	var count int64
+
+	err := edb.Store.Get().Table("miners").Select("sum(total_staked)").Row().Scan(&count)
+	return count, err
+}
+
 func (edb *EventDb) GetMiners() ([]Miner, error) {
 
 	var miners []Miner

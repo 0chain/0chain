@@ -87,6 +87,13 @@ func (edb *EventDb) CountShardersFromQuery(query interface{}) (int64, error) {
 	return count, result.Error
 }
 
+func (edb *EventDb) GetShardersTotalStake() (int64, error) {
+	var count int64
+
+	err := edb.Store.Get().Table("sharders").Select("sum(total_staked)").Row().Scan(&count)
+	return count, err
+}
+
 func (edb *EventDb) addSharder(sharder Sharder) error {
 
 	result := edb.Store.Get().Create(&sharder)
