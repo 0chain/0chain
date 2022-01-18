@@ -2,6 +2,7 @@ package interestpoolsc
 
 import (
 	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
@@ -14,6 +15,7 @@ const (
 	Apr
 	MinLockPeriod
 	MaxMint
+	OwnerId
 )
 
 var (
@@ -22,6 +24,7 @@ var (
 		"apr",
 		"min_lock_period",
 		"max_mint",
+		"owner_id",
 	}
 )
 
@@ -31,9 +34,10 @@ func (ip *InterestPoolSmartContract) updateVariables(
 	inputData []byte,
 	balances c_state.StateContextI,
 ) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("failed to update variables",
-			"unauthorized access - only the owner can update the variables")
+	if err := smartcontractinterface.AuthorizeWithOwner("update_variables", func() bool {
+		return gn.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	changes := &smartcontract.StringMap{}

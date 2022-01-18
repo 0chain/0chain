@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/datastore"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/encryption"
@@ -19,12 +21,12 @@ import (
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
 	return c.verifyTicketsWithContext.Run(ctx, func() error {
-		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme,
+		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
 			len(bvts), len(bvts))
 		if aggScheme == nil {
 			// TODO: do ticket verification one by one when aggregate signature
 			// does not exist
-			panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme))
+			panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme()))
 		}
 
 		doneC := make(chan struct{})
@@ -69,7 +71,11 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 }
 
 func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) error {
-	if err := c.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round); err != nil {
+	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round); err != nil {
+		return err
+	}
+
+	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
 		return err
 	}
 
@@ -78,7 +84,7 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 }
 
 // VerifyNotarization - verify that the notarization is correct.
-func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
+func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 	bvt []*block.VerificationTicket, round int64) (err error) {
 
 	if bvt == nil {
@@ -86,15 +92,11 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 			"No verification tickets for this block")
 	}
 
-	if err = c.VerifyRelatedMagicBlockPresence(b); err != nil {
-		return
-	}
-
 	var ticketsMap = make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
 		if vt == nil {
 			logging.Logger.Error("verify notarization - null ticket",
-				zap.String("block", b.Hash))
+				zap.String("block", hash))
 			return common.NewError("null_ticket", "Verification ticket is null")
 		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
@@ -104,25 +106,20 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	if !c.reachedNotarization(round, b.Hash, bvt) {
+	if !c.reachedNotarization(round, hash, bvt) {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
 
-	if err := c.VerifyTickets(ctx, b.Hash, bvt, round); err != nil {
+	if err := c.VerifyTickets(ctx, hash, bvt, round); err != nil {
 		return err
 	}
 
 	logging.Logger.Info("reached notarization - verify notarization",
 		zap.Int64("round", round),
 		zap.Int64("current_round", c.GetCurrentRound()),
-		zap.String("block", b.Hash),
+		zap.String("block", hash),
 		zap.Int("tickets_num", len(bvt)))
-
-	// TODO: tps, question about this
-	if b.Round > c.GetCurrentRound() {
-		c.SetCurrentRound(b.Round)
-	}
 
 	return nil
 }
@@ -185,7 +182,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
-	if c.ThresholdByCount > 0 {
+	if c.ThresholdByCount() > 0 {
 		var numSignatures = len(bvt)
 		if numSignatures < threshold {
 			logging.Logger.Info("not reached notarization",
@@ -198,16 +195,16 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 			return false
 		}
 	}
-	if c.ThresholdByStake > 0 {
+	if c.ThresholdByStake() > 0 {
 		verifiersStake := 0
 		for _, ticket := range bvt {
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
-		if verifiersStake < c.ThresholdByStake {
+		if verifiersStake < c.ThresholdByStake() {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
 				zap.Int("verify stake", verifiersStake),
-				zap.Int("threshold", c.ThresholdByStake),
+				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),
 				zap.Int("signature threshold", threshold),
@@ -270,18 +267,15 @@ func (c *Chain) AddVerificationTicket(b *block.Block, bvt *block.VerificationTic
 	return false
 }
 
-/*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
+// MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
 func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.VerificationTicket) {
-	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
-	if b.VerificationTicketsSize() != vtlen {
-		if c.UpdateBlockNotarization(b) {
-			logging.Logger.Info("reached notarization - merging tickets",
-				zap.Int64("round", b.Round),
-				zap.Int64("current_round", c.GetCurrentRound()),
-				zap.String("block", b.Hash),
-				zap.Int("tickets_num", len(b.GetVerificationTickets())))
-		}
+	if c.UpdateBlockNotarization(b) {
+		logging.Logger.Info("reached notarization - merging tickets",
+			zap.Int64("round", b.Round),
+			zap.Int64("current_round", c.GetCurrentRound()),
+			zap.String("block", b.Hash),
+			zap.Int("tickets_num", len(b.GetVerificationTickets())))
 	}
 }
 
@@ -405,7 +399,7 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount {
+	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount() {
 		return true
 	}
 	return false
@@ -423,7 +417,7 @@ func (c *Chain) GetLocalPreviousBlock(ctx context.Context, b *block.Block) (
 	return
 }
 
-// GetPreviousBlock gets or sync the previous block from the network and compute its state.
+// GetPreviousBlock gets or sync the previous block from the network and fetches partial state change from the network.
 func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
 	// check if the previous block points to itself
 	if b.PrevBlock == b || b.PrevHash == b.Hash {
@@ -446,6 +440,10 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil && lfb.Round == b.Round-1 && lfb.IsStateComputed() {
 		// previous round is latest finalized round
+		if b.PrevHash != lfb.Hash {
+			logging.Logger.Error("get_previous_block - can't set lfb as previous block, hash mismatch")
+			return nil
+		}
 		b.SetPreviousBlock(lfb)
 		logging.Logger.Info("get_previous_block - previous block is lfb",
 			zap.Int64("round", b.Round),
@@ -472,6 +470,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	// of one block previous
 	if syncNum <= 0 {
 		//blocks := c.SyncPreviousBlocks(ctx, b, 1, false)
+		//will load partial state here
 		pb = c.SyncPreviousBlocks(ctx, b, 1)
 		if pb == nil {
 			logging.Logger.Error("get_previous_block - could not fetch block",
@@ -641,7 +640,8 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 
 	logging.Logger.Debug("sync_block - previous block not computed",
 		zap.Int64("round", pb.Round),
-		zap.String("block", pb.Hash))
+		zap.String("block", pb.Hash),
+		zap.Int8("state_status", pb.GetStateStatus()))
 
 	var ppb *block.Block
 	if opt.Num-1 > 0 {
@@ -660,7 +660,7 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 
 	if ppb != nil {
 		pb.SetPreviousBlock(ppb)
-		pb.SetStateDB(ppb, c.GetStateDB())
+		//pb.SetStateDB(ppb, c.GetStateDB())
 	}
 
 	if err := c.GetBlockStateChange(pb); err != nil {

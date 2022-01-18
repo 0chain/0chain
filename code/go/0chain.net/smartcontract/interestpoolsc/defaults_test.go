@@ -40,13 +40,14 @@ func testPoolRequest(d time.Duration) []byte {
 
 // TEST FUNCTION
 // testGlobalNode function creates global node instance using incoming parameters
-func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr float64, minLockP time.Duration) *GlobalNode {
+func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr float64, minLockP time.Duration, ownerId datastore.Key) *GlobalNode {
 	var gn = &GlobalNode{ID: id}
 	gn.SimpleGlobalNode = &SimpleGlobalNode{
 		MaxMint:     maxMint,
 		TotalMinted: totalMint,
 		MinLock:     minLock,
 		APR:         apr,
+		OwnerId:     ownerId,
 	}
 	if minLockP != 0 {
 		gn.MinLockPeriod = minLockP
@@ -54,13 +55,14 @@ func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr fl
 	return gn
 }
 
-func testGlobalNodeStringTime(id string, maxMint, totalMint, minLock, apr float64, minLockP string) *GlobalNode {
+func testGlobalNodeStringTime(id string, maxMint, totalMint, minLock, apr float64, minLockP string, ownerId string) *GlobalNode {
 	var gn = &GlobalNode{ID: id}
 	gn.SimpleGlobalNode = &SimpleGlobalNode{
 		MaxMint:     state.Balance(maxMint * 1e10),
 		TotalMinted: state.Balance(totalMint * 1e10),
 		MinLock:     state.Balance(minLock * 1e10),
 		APR:         apr,
+		OwnerId:     ownerId,
 	}
 	var err error
 	gn.MinLockPeriod, err = time.ParseDuration(minLockP)

@@ -37,7 +37,7 @@ import (
 )
 
 /*SetupHandlers sets up the necessary API end points */
-func SetupHandlers() {
+func SetupHandlers(c Chainer) {
 	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
 	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
 
@@ -47,7 +47,7 @@ func SetupHandlers() {
 	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
 	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
-	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler)))
+	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler(c))))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
 	http.HandleFunc("/v1/block/get/fee_stats", common.UserRateLimit(common.ToJSONResponse(LatestBlockFeeStatsHandler)))
 
@@ -176,7 +176,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	notarizations := 0
 	proposals := 0
 	rrs := int64(0)
-
+	phase := "N/A"
 	var mb = c.GetMagicBlock(rn)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
@@ -188,6 +188,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 			notarizations = len(cr.GetNotarizedBlocks())
 			proposals = len(cr.GetProposedBlocks())
 			rrs = cr.GetRandomSeed()
+			phase = round.GetPhaseName(cr.GetPhase())
 		}
 
 		vrfThreshold := mb.T
@@ -240,6 +241,15 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", notarizations)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Phase")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", phase)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -326,16 +336,20 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 
 	var (
-		mb  = c.GetMagicBlock(rn)
-		fmb = c.GetLatestFinalizedMagicBlockRound(rn)
+		mb            = c.GetMagicBlock(rn)
+		fmb           = c.GetLatestFinalizedMagicBlockRound(rn)
+		startingRound int64
 	)
+	if fmb != nil {
+		startingRound = fmb.StartingRound
+	}
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Related MB / finalized MB")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v / %v", mb.StartingRound, fmb.StartingRound)
+	fmt.Fprintf(w, "%v / %v", mb.StartingRound, startingRound)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -1209,9 +1223,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	sc := GetServerChain()
-	if sc.TxnMaxPayload > 0 {
-		if len(txn.TransactionData) > sc.TxnMaxPayload {
-			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
+	if sc.TxnMaxPayload() > 0 {
+		if len(txn.TransactionData) > sc.TxnMaxPayload() {
+			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload())
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
 	}
@@ -1653,7 +1667,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 // LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
 func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlock(ctx); lfmb != nil {
+	if lfmb := c.GetLatestFinalizedMagicBlockClone(ctx); lfmb != nil {
 		return lfmb.GetSummary(), nil
 	}
 

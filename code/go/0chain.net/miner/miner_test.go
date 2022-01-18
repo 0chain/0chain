@@ -57,7 +57,10 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 		mc.AddGenesisBlock(gb)
 	}
 	b.ChainID = prevBlock.ChainID
-	mc.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{BlockSize: 1024}
+	mc.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -138,7 +141,11 @@ func makeTestMinioClient() (blockstore.MinioClient, error) {
 
 func setupMinerChain() (*Chain, func()) {
 	mc := GetMinerChain()
-	mc.Chain = chain.Provider().(*chain.Chain)
+	if mc.Chain == nil {
+		mc.Chain = chain.Provider().(*chain.Chain)
+	}
+
+	minerChain.Config = chain.NewConfigImpl(&chain.ConfigData{})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -200,13 +207,20 @@ func TestBlockVerification(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
 	mc, stopAndClean := setupMinerChain()
+
 	defer stopAndClean()
 	ctx, clean := getContext()
 	defer clean()
+	mb := mc.GetMagicBlock(0)
 	mr := CreateRound(1)
-	mr.RandomSeed = time.Now().UnixNano()
+	nano := int64(16408760407010)
+	mr.SetRandomSeed(nano, len(mb.Miners.Nodes))
 
 	b, err := generateSingleBlock(ctx, mc, nil, mr)
+	if err != nil {
+		t.Errorf("Block generation failed")
+	}
+
 	if b != nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, b)
 	}
@@ -231,8 +245,9 @@ func TestTwoCorrectBlocks(t *testing.T) {
 	require.NotNil(t, rd)
 	if b0 != nil {
 		var b1 *block.Block
+		mb := mc.GetMagicBlock(0)
 		mr2 := CreateMockRound(1)
-		mr2.RandomSeed = time.Now().UnixNano()
+		mr2.SetRandomSeed(int64(16408760407010), len(mb.Miners.Nodes))
 		b1, err = generateSingleBlock(ctx, mc, b0, mr2.Round)
 		require.NoError(t, err)
 		_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
@@ -353,13 +368,20 @@ func setupSelfNodeKeys() {
 
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
-	mc.BlockSize = int32(numOfTransactions)
-	mp := node.NewPool(node.NodeTypeMiner)
-	mb := block.NewMagicBlock()
-	mb.Miners = mp
-	sp := node.NewPool(node.NodeTypeSharder)
-	mb.Sharders = sp
-	mc.SetMagicBlock(mb)
+	data := &chain.ConfigData{BlockSize: 1024}
+	mc.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
+	mb := mc.GetMagicBlock(0)
+	if mb == nil {
+		mb = block.NewMagicBlock()
+		mp := node.NewPool(node.NodeTypeMiner)
+		mb.Miners = mp
+		sp := node.NewPool(node.NodeTypeSharder)
+		mb.Sharders = sp
+		mc.SetMagicBlock(mb)
+	}
+
 	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, state.NewInitStates())
 	mr := mc.CreateRound(gr.(*round.Round))
 	mc.AddRoundBlock(gr, gb)
@@ -392,35 +414,44 @@ func SetUpSingleSelf() func() {
 		},
 	})
 
+	m := make(map[datastore.Key]encryption.SignatureScheme)
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
 	s1 := encryption.NewED25519Scheme()
 	s1.GenerateKeys()
 	n1.SetSignatureScheme(s1)
+	m[n1.Client.ID] = s1
 	//n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
+	n2.ID = "2"
 	s2 := encryption.NewED25519Scheme()
 	s2.GenerateKeys()
 	n2.SetSignatureScheme(s2)
+	m[n2.Client.ID] = s2
 	//n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
 	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
+	n3.ID = "3"
 	s3 := encryption.NewED25519Scheme()
 	s3.GenerateKeys()
 	n3.SetSignatureScheme(s3)
+	m[n3.Client.ID] = s3
 	//n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
-
-	node.Self = &node.SelfNode{}
-	node.Self.Node = n1
-	node.Self.SetSignatureScheme(s1)
-
-	//setupSelfNodeKeys()
 
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
 	np.AddNode(n2)
 	np.AddNode(n3)
 
+	node.Self = &node.SelfNode{}
+	node.Self.Node = np.Nodes[0]
+	node.Self.SetSignatureScheme(m[node.Self.Node.ID])
+
+	//setupSelfNodeKeys()
+
 	mb := block.NewMagicBlock()
 	mb.Miners = np
+
+	sp := node.NewPool(node.NodeTypeSharder)
+	mb.Sharders = sp
 
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
@@ -436,10 +467,15 @@ func SetUpSingleSelf() func() {
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	c.MinGenerators = 1
-	c.RoundRange = 10000000
-	c.MinBlockSize = 1
-	c.MaxByteSize = 1638400
+	data := &chain.ConfigData{BlockSize: 1024}
+	c.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
+	data.MinGenerators = 1
+	data.RoundRange = 10000000
+	data.MinBlockSize = 1
+	data.MaxByteSize = 1638400
+
 	c.SetGenerationTimeout(15)
 	chain.SetServerChain(c)
 	SetupMinerChain(c)

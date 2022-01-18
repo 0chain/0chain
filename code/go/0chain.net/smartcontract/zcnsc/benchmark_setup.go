@@ -2,9 +2,9 @@ package zcnsc
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
@@ -12,13 +12,12 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
-	"0chain.net/core/viper"
 	"0chain.net/smartcontract/benchmark"
 )
 
 const (
-	addingAuthorizer    = 0
-	removableAuthorizer = 1
+	authRangeStart = 0
+	authRangeEnd   = 200
 )
 
 var (
@@ -28,22 +27,10 @@ var (
 )
 
 func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
-	chainSetup()
+	fmt.Printf("Setting up benchmarks with %d clients\n", len(clients))
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
-	addAuthorizersNode(balances)
-	addCommonAuthorizers(clients, publicKeys, balances)
-}
-
-func chainSetup() {
-	// settings are irrelevant here, it needs only schema
-	ch := chain.NewChainFromConfig()
-	ch.SetSignatureScheme(viper.GetString(benchmark.InternalSignatureScheme))
-	chain.SetServerChain(ch)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	if signatureScheme == nil {
-		panic(signatureScheme)
-	}
+	addMockAuthorizers(clients, publicKeys, balances, authRangeStart, authRangeEnd)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -60,43 +47,20 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
 
-func addAuthorizersNode(balances cstate.StateContextI) {
-	ans, err := GetAuthorizerNodes(balances)
-	if err != nil {
-		panic(err)
-	}
-	err = ans.Save(balances)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func addCommonAuthorizers(clients, publicKeys []string, balances cstate.StateContextI) {
-	ans, err := GetAuthorizerNodes(balances)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 1; i < len(clients); i++ {
+func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start, end int) {
+	for i := start; i < end; i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
 
-		authorizer := &AuthorizerNode{
-			ID:        id,
-			PublicKey: publicKey,
-			URL:       "http://localhost:303" + strconv.Itoa(i),
-			Staking:   createTokenPool(id),
-		}
+		authorizer := CreateAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
+		authorizer.Staking = createTokenPool(id)
 
-		authorizers = append(authorizers, authorizer)
-		err = ans.AddAuthorizer(authorizer)
+		err := authorizer.Save(ctx)
 		if err != nil {
 			panic(err)
 		}
-	}
-	err = ans.Save(balances)
-	if err != nil {
-		panic(err)
+
+		authorizers = append(authorizers, authorizer)
 	}
 }
 
@@ -121,7 +85,7 @@ func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 		un := &UserNode{
 			ID: client,
 		}
-		_, _ = balances.InsertTrieNode(un.GetKey(ADDRESS), un)
+		_, _ = balances.InsertTrieNode(un.GetKey(), un)
 	}
 }
 

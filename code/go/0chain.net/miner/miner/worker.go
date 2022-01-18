@@ -52,7 +52,7 @@ func TransactionGenerator(c *chain.Chain) {
 
 	GenerateClients(c, numClients)
 
-	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize)
+	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize())
 	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
 	if blockSize <= 0 {
 		return
@@ -191,7 +191,7 @@ func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 /*GetOwnerWallet - get the owner wallet. Used to get the initial state get going */
 func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
 	var keysFile string
-	if c.ClientSignatureScheme == "ed25519" {
+	if c.ClientSignatureScheme() == "ed25519" {
 		keysFile = "config/owner_keys.txt"
 	} else {
 		keysFile = "config/b0owner_keys.txt"
@@ -240,7 +240,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
-		w.Initialize(c.ClientSignatureScheme)
+		w.Initialize(c.ClientSignatureScheme())
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed

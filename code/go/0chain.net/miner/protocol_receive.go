@@ -16,7 +16,7 @@ import (
 // HandleVRFShare - handles the vrf share.
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 
-	var mr = mc.getOrStartRoundNotAhead(ctx, msg.VRFShare.Round)
+	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
 		return
 	}
@@ -27,6 +27,14 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 		zap.Int("vrf_timeout_count", msg.VRFShare.GetRoundTimeoutCount()),
 		zap.Int("sender_index", msg.Sender.SetIndex),
 	)
+
+	if msg.VRFShare.Round > mc.GetCurrentRound() {
+		logging.Logger.Debug("received VRF share for the future round, caching it",
+			zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("vrf_share_round", msg.VRFShare.Round))
+		mr.vrfSharesCache.add(msg.VRFShare)
+		return
+	}
+
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
 
@@ -178,17 +186,13 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 
 	// get previous block notarization tickets, and update local prev block if exist
 	if b.Round > 1 {
-		// TODO: run in gorountine for debug and test purpose
-		// do not run this in goroutine
-		//
-		// put into a goroutine so that tickets verification would not affect the
-		// new round RRS generation
 		go func() {
 			// TODO: check if the block's prev notarized block reached the notarization threshold
 			pr := mc.GetMinerRound(b.Round - 1)
 			cctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 			if err := mc.updatePreviousBlockNotarization(cctx, b, pr); err != nil {
+				logging.Logger.Error("error during previous block notarization verification", zap.Error(err))
 				return
 			}
 		}()
@@ -196,18 +200,18 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 
 	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
-		logging.Logger.Error("verify block - got block proposal before starting round",
+		logging.Logger.Info("verify block - got block proposal before starting round",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
-		mr = mc.getOrStartRoundNotAhead(ctx, b.Round)
+		mr = mc.getOrCreateRound(ctx, b.Round)
 		if mr == nil {
 			logging.Logger.Error("verify block - can't start new round",
 				zap.Int64("round", b.Round))
 			return nil
 		}
 
-		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+		//mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 
 		mc.AddToRoundVerification(ctx, mr, b)
 		return nil
@@ -232,7 +236,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 				zap.Int64("round", b.Round),
 				zap.Int64("block RRS", b.GetRoundRandomSeed()),
 				zap.Int64("round RRS", mr.GetRandomSeed()))
-			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+			//mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 	}
 
@@ -415,18 +419,35 @@ func (mc *Chain) NotarizationProcessWorker(ctx context.Context) {
 
 func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) error {
 	var (
-		r    = mc.GetMinerRound(not.Round)
+		r    = mc.getOrCreateRound(ctx, not.Round)
 		b, _ = mc.GetBlock(ctx, not.BlockID)
 	)
 
 	if b == nil {
+		logging.Logger.Debug("Block we received notarization for is not found locally, fetching it")
 		// fetch from remote
 		var err error
-		b, err = mc.GetNotarizedBlock(ctx, not.BlockID, not.Round)
+		b, err = mc.GetNotarizedBlockForce(ctx, not.BlockID, not.Round)
 		if err != nil {
 			return fmt.Errorf("fetch notarized block failed, err: %v", err)
 		}
-		r = mc.GetMinerRound(not.Round)
+		//err = mc.ComputeOrSyncState(ctx, b)
+		prevBlock, err := mc.GetBlock(ctx, b.PrevHash)
+		if err != nil {
+			logging.Logger.Debug("No previous block for notarization is found locally, fetching it", zap.Error(err))
+			prevBlock = mc.GetPreviousBlock(ctx, b)
+			if prevBlock == nil {
+				return fmt.Errorf("can't fetch previous block of notarization")
+			}
+		}
+		b.SetPreviousBlock(prevBlock)
+	}
+
+	if !b.IsStateComputed() {
+		logging.Logger.Debug("Computing state for block we received notarization for")
+		if err := mc.GetBlockStateChangeForce(ctx, b); err != nil {
+			return fmt.Errorf("can't get block state change for notarization, err: %v", err)
+		}
 	}
 
 	if !b.IsBlockNotarized() {
@@ -449,6 +470,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.Int("unknown tickets num", len(vts)),
+					zap.Int("notarized tickets num", len(not.VerificationTickets)),
 					zap.Int("block tickets", len(b.GetVerificationTickets())))
 				return fmt.Errorf("block is not notarized after merging tickets, "+
 					"block tickets num: %v, unknown tickets num: %v", len(b.GetVerificationTickets()), len(vts))
@@ -456,18 +478,11 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if mc.GetCurrentRound() <= not.Round && !mc.isAheadOfSharders(ctx, not.Round) {
-		logging.Logger.Info("process notarization - start next round",
-			zap.Int64("new round", not.Round+1))
-
-		go mc.StartNextRound(ctx, r)
+	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
+		logging.Logger.Error("process notarization - not added to round")
+		return fmt.Errorf("can't add already notarized block to round: %v", err)
 	}
-
-	if !b.IsStateComputed() {
-		if err := mc.GetBlockStateChange(b); err != nil {
-			return fmt.Errorf("process notarization - sync state changes failed, round: %d, err: %v", b.Round, err)
-		}
-	}
+	mc.ProgressOnNotarization(r)
 
 	// update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
 	lfb := mc.GetLatestFinalizedBlock()
@@ -475,7 +490,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		return nil
 	}
 
-	if lfbTK := mc.GetLatestLFBTicket(ctx); lfbTK != nil && lfbTK.Round-lfb.Round >= int64(mc.PruneStateBelowCount/3) {
+	if lfbTK := mc.GetLatestLFBTicket(ctx); lfbTK != nil && lfbTK.Round-lfb.Round >= int64(mc.PruneStateBelowCount()/3) {
 		if b.Round >= lfbTK.Round {
 			// try to get LFB ticket block from local
 			lfb, err := mc.GetBlock(ctx, lfbTK.LFBHash)
@@ -509,6 +524,17 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	return nil
 }
 
+func (mc *Chain) ProgressOnNotarization(notRound *Round) {
+	if mc.GetCurrentRound() <= notRound.Number {
+		logging.Logger.Info("process notarization - start next round",
+			zap.Int64("new round", notRound.Number+1))
+		//notRound.CancelVerification()
+		//notRound.TryCancelBlockGeneration()
+		//TODO implement round centric context, that is cancelled when transition to the next happens
+		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
+	}
+}
+
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
 	mc.processNotarization(ctx, msg.Notarization)
@@ -520,9 +546,9 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 
 	nb := msg.Block
 
-	var mr = mc.getOrStartRoundNotAhead(ctx, nb.Round)
+	var mr = mc.getOrCreateRound(ctx, nb.Round)
 	if mr == nil {
-		logging.Logger.Debug("notarized block handler -- is ahead or no pr",
+		logging.Logger.Debug("can't create round",
 			zap.String("block", nb.Hash), zap.Any("round", nb.Round),
 			zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
 		return // can't handle yet
@@ -536,6 +562,11 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	cctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
+	isNotarizing, finish := mc.getOrSetBlockNotarizing(nb.Hash)
+	if isNotarizing {
+		return
+	}
+
 	if err := mc.verifyBlockNotarizationWorker.Run(cctx, func() error {
 		return mc.VerifyBlockNotarization(ctx, nb)
 	}); err != nil {
@@ -543,25 +574,16 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 			zap.Error(err),
 			zap.Int64("round", nb.Round),
 			zap.Int64("lfb_round", lfb.Round))
+		finish(false)
 		return
 	}
 
-	if !mr.IsVRFComplete() {
-		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
-	}
-
+	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
+		finish(false)
 		return
 	}
-
-	if mc.isAheadOfSharders(ctx, nb.Round+1) {
-		logging.Logger.Error("handle notarized block",
-			zap.Error(errors.New("next round ahead of sharders")),
-			zap.Int64("round", nb.Round),
-			zap.Int64("lfb_round", lfb.Round))
-		return
-	}
-
-	mc.StartNextRound(ctx, mr) // start next or skip
+	finish(true)
+	mc.ProgressOnNotarization(mr)
 }
