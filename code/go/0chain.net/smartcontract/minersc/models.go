@@ -849,7 +849,7 @@ type SimpleNode struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
-	Status int `json:"status"`
+	Status int `json:"-"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

@@ -5,6 +5,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -157,7 +158,7 @@ func TestMiners(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddMn}
-	eventDb.AddEvents(events)
+	eventDb.AddEvents(context.TODO(), events)
 
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -177,7 +178,7 @@ func TestMiners(t *testing.T) {
 		Tag:         int(TagAddOrOverwriteMiner),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventAddOrOverwriteMn})
+	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteMn})
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -201,7 +202,7 @@ func TestMiners(t *testing.T) {
 		Tag:         int(TagUpdateMiner),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventUpdateMn})
+	eventDb.AddEvents(context.TODO(), []Event{eventUpdateMn})
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -216,7 +217,7 @@ func TestMiners(t *testing.T) {
 		Tag:         int(TagDeleteMiner),
 		Data:        mn.ID,
 	}
-	eventDb.AddEvents([]Event{deleteEvent})
+	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.Error(t, err)
