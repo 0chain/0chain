@@ -168,22 +168,30 @@ func (msc *StorageSmartContract) GetTransactionByHashHandler(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	var transactionHash = params.Get("transaction_hash")
-	var clientID = params.Get("client_id")
-	if len(transactionHash) == 0 && len(clientID) == 0 {
-		return nil, fmt.Errorf("cannot find valid transaction: transaction_hash:%v client_id:%v", transactionHash, clientID)
+	if len(transactionHash) == 0 {
+		return nil, fmt.Errorf("cannot find valid transaction: transaction_hash is empty", transactionHash)
 	}
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
 	}
-	if len(transactionHash) > 0 {
-		transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
-		return []event.Transaction{transaction}, err
+	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
+	return transaction, err
+}
+
+func (msc *StorageSmartContract) GetTransactionByClientHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var client_id = params.Get("client_id")
+	if len(client_id) == 0 {
+		return nil, fmt.Errorf("cannot find valid transaction: client_id is empty", client_id)
 	}
-	if len(clientID) > 0 {
-		transactions, err := balances.GetEventDB().GetTransactionByClientId(clientID)
-		return transactions, err
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
 	}
-	return nil, nil
+	transaction, err := balances.GetEventDB().GetTransactionByClientId(client_id)
+	return transaction, err
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
