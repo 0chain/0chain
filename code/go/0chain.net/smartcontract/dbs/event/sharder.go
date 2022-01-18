@@ -75,13 +75,25 @@ func (edb *EventDb) GetSharders() ([]Sharder, error) {
 	return sharders, result.Error
 }
 
-func (edb *EventDb) CountShardersFromQuery(query interface{}) (int64, error) {
+func (edb *EventDb) CountActiveSharders() (int64, error) {
 
 	var count int64
 
 	result := edb.Store.Get().
 		Model(&Sharder{}).
-		Where(query).
+		Where("active = ?", true).
+		Count(&count)
+
+	return count, result.Error
+}
+
+func (edb *EventDb) CountInactiveSharders() (int64, error) {
+
+	var count int64
+
+	result := edb.Store.Get().
+		Model(&Sharder{}).
+		Where("active = ?", false).
 		Count(&count)
 
 	return count, result.Error

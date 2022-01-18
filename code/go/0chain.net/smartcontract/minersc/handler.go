@@ -94,18 +94,12 @@ func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params
 		return nil, common.NewErrInternal("can't get miners. no db connection")
 	}
 
-	activeQuery := &event.Miner{
-		Active: true,
-	}
-	active, err := balances.GetEventDB().CountMinersFromQuery(activeQuery)
+	active, err := balances.GetEventDB().CountActiveMiners()
 	if err != nil {
 		return nil, common.NewErrNoResource("db error", err.Error())
 	}
 
-	inactiveQuery := &event.Miner{
-		Active: false,
-	}
-	inactive, err := balances.GetEventDB().CountMinersFromQuery(inactiveQuery)
+	inactive, err := balances.GetEventDB().CountInactiveMiners()
 	if err != nil {
 		return nil, common.NewErrNoResource("db error", err.Error())
 	}
@@ -150,18 +144,12 @@ func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, para
 		return nil, common.NewErrInternal("can't get sharders. no db connection")
 	}
 
-	activeQuery := &event.Sharder{
-		Active: true,
-	}
-	active, err := balances.GetEventDB().CountShardersFromQuery(activeQuery)
+	active, err := balances.GetEventDB().CountActiveSharders()
 	if err != nil {
 		return nil, common.NewErrNoResource("db error", err.Error())
 	}
 
-	inactiveQuery := &event.Sharder{
-		Active: false,
-	}
-	inactive, err := balances.GetEventDB().CountShardersFromQuery(inactiveQuery)
+	inactive, err := balances.GetEventDB().CountInactiveSharders()
 	if err != nil {
 		return nil, common.NewErrNoResource("db error", err.Error())
 	}
