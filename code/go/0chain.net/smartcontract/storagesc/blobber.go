@@ -421,6 +421,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
+	commitRead.ReadMarker.ReadSize = sizeRead
+
 	// if 3rd party pays
 	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
 	if err != nil {
@@ -474,6 +476,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("saving read marker", err.Error())
 	}
+
+	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
+	if err != nil {
+		return "", common.NewError("saving read marker in db:", err.Error())
+	}
+
 	sc.newRead(balances, numReads)
 
 	return // ok, the response and nil
