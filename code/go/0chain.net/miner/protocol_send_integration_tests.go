@@ -146,7 +146,7 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 		good, bad []*node.Node
 	)
 
-	if mc.VerificationTicketsTo == chain.Generator && b.MinerID != selfNodeKey {
+	if mc.VerificationTicketsTo() == chain.Generator && b.MinerID != selfNodeKey {
 		switch {
 		case state.WrongVerificationTicketHash != nil:
 			// (wrong hash)

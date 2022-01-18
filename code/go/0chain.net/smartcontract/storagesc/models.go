@@ -1129,7 +1129,7 @@ func (at *AuthTicket) verify(
 			"Invalid auth ticket. Client ID mismatch")
 	}
 
-	if at.Expiration < at.Timestamp || at.Expiration < now {
+	if at.Expiration > 0 && (at.Expiration < at.Timestamp || at.Expiration < now) {
 		return common.NewError("invalid_read_marker",
 			"Invalid auth ticket. Expired ticket")
 	}
@@ -1174,6 +1174,7 @@ type ReadMarker struct {
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
+	ReadSize        float64          `json:"read_size"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {

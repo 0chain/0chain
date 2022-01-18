@@ -3,7 +3,9 @@
 package chain
 
 import (
+	"0chain.net/core/common"
 	"context"
+	"errors"
 	"net/http"
 
 	crpc "0chain.net/conductor/conductrpc"
@@ -33,15 +35,18 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (
 }
 
 /*LatestFinalizedMagicBlockHandler - provide the latest finalized magic block by this miner */
-func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (
-	interface{}, error) {
+func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
+	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+		nodeLFMBHash := r.FormValue("node-lfmb-hash")
+		lfmb := c.GetLatestFinalizedMagicBlockClone(ctx)
+		if lfmb == nil {
+			return nil, errors.New("could not find latest finalized magic block")
+		}
 
-	var state = crpc.Client().State()
-	if state.MagicBlock != nil {
-		var lfmb = GetServerChain().GetLatestFinalizedMagicBlock(ctx)
-		lfmb.Hash = revertString(lfmb.Hash)
+		if lfmb.Hash == nodeLFMBHash {
+			return nil, common.ErrNotModified
+		}
+
 		return lfmb, nil
 	}
-
-	return GetServerChain().GetLatestFinalizedMagicBlock(ctx), nil
 }

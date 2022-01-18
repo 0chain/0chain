@@ -1,7 +1,9 @@
 package vestingsc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +30,7 @@ const (
 	MaxDuration
 	MaxDestinations
 	MaxDescriptionLength
+	OwnerId
 )
 
 var (
@@ -37,6 +40,7 @@ var (
 		"max_duration",
 		"max_destinations",
 		"max_description_length",
+		"owner_id",
 	}
 )
 
@@ -50,6 +54,7 @@ type config struct {
 	MaxDuration          time.Duration `json:"max_duration"`
 	MaxDestinations      int           `json:"max_destinations"`
 	MaxDescriptionLength int           `json:"max_description_length"`
+	OwnerId              datastore.Key `json:"owner_id"`
 }
 
 func (c *config) validate() (err error) {
@@ -64,6 +69,8 @@ func (c *config) validate() (err error) {
 		return errors.New("invalid max_destinations (< 1)")
 	case c.MaxDescriptionLength < 1:
 		return errors.New("invalid max_description_length (< 1)")
+	case c.OwnerId == "":
+		return errors.New("owner_id is not set or empty")
 	}
 	return
 }
@@ -118,6 +125,13 @@ func (conf *config) update(changes *smartcontract.StringMap) error {
 			} else {
 				conf.MaxDescriptionLength = iValue
 			}
+		case Settings[OwnerId]:
+			if _, err := hex.DecodeString(value); err != nil {
+				return fmt.Errorf("value %v cannot be converted to int with 16 base, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.OwnerId = value
+			}
 		default:
 			return fmt.Errorf("config setting %s not found", key)
 		}
@@ -134,6 +148,7 @@ func (conf *config) getConfigMap() smartcontract.StringMap {
 	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", conf.MaxDuration)
 	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", conf.MaxDestinations)
 	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", conf.MaxDescriptionLength)
+	sMap.Fields[Settings[OwnerId]] = fmt.Sprintf("%v", conf.OwnerId)
 	return sMap
 }
 
@@ -142,15 +157,16 @@ func (vsc *VestingSmartContract) updateConfig(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	if txn.ClientID != owner {
-		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
-	}
-
 	var conf *config
 	if conf, err = vsc.getConfig(balances); err != nil {
 		return "", common.NewError("update_config",
 			"can't get config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("update_config", func() bool {
+		return conf.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	update := &smartcontract.StringMap{}
@@ -198,6 +214,7 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
+	conf.OwnerId = scconf.GetString(prefix + "owner_id")
 
 	err = conf.validate()
 	if err != nil {

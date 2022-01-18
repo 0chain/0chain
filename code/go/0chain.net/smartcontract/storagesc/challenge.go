@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -583,15 +585,10 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	// select allocations for the challenges
 
-	var validators *ValidatorNodes
-	if validators, err = sc.getValidatorsList(balances); err != nil {
+	validators, err := getValidatorsList(balances)
+	if err != nil {
 		return common.NewErrorf("adding_challenge_error",
 			"error getting the validators list: %v", err)
-	}
-
-	if len(validators.Nodes) == 0 {
-		return common.NewError("no_validators",
-			"not enough validators for the challenge")
 	}
 
 	var all *Allocations
@@ -681,7 +678,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 }
 
 func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
-	validators *ValidatorNodes, challengeID string,
+	validators partitions.RandPartition, challengeID string,
 	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
 	balances c_state.StateContextI) (resp string, err error) {
 
@@ -717,11 +714,16 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	selectedValidators := make([]*ValidationNode, 0)
-	perm := r.Perm(len(validators.Nodes))
-	for i := 0; i < minInt(len(validators.Nodes), alloc.DataShards+1); i++ {
-		if validators.Nodes[perm[i]].ID != selectedBlobberObj.ID {
+	randSlice, err := validators.GetRandomSlice(r, balances)
+
+	perm := r.Perm(len(randSlice))
+	for i := 0; i < minInt(len(randSlice), alloc.DataShards+1); i++ {
+		if randSlice[perm[i]].Name() != selectedBlobberObj.ID {
 			selectedValidators = append(selectedValidators,
-				validators.Nodes[perm[i]])
+				&ValidationNode{
+					ID:      randSlice[perm[i]].Name(),
+					BaseURL: randSlice[perm[i]].Data(),
+				})
 		}
 		if len(selectedValidators) >= alloc.DataShards {
 			break

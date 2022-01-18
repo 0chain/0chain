@@ -1,13 +1,14 @@
 package zcnsc
 
 import (
+	"context"
+	"net/url"
+	"testing"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/benchmark"
-	"context"
-	"net/url"
-	"testing"
 )
 
 type restBenchTest struct {
@@ -29,14 +30,21 @@ func (bt restBenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	return err
 }
 
-func BenchmarkRestTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
+func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
+
+	auth := authorizers[randomIndex(len(authorizers))]
 
 	return createRestTestSuite(
 		[]restBenchTest{
 			{
-				name:     "zcnsc_rest.getAuthorizerNodes",
-				endpoint: sc.getAuthorizerNodes,
+				name:     "zcnsc_rest.getAuthorizerNode",
+				endpoint: sc.getAuthorizerNode,
+				params: func() url.Values {
+					var values url.Values = make(map[string][]string)
+					values.Set("id", auth.ID)
+					return values
+				}(),
 			},
 		},
 	)

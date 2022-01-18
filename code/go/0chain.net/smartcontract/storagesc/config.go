@@ -160,7 +160,8 @@ type scConfig struct {
 	BlockReward *blockReward `json:"block_reward"`
 
 	// Allow direct access to MPT
-	ExposeMpt bool `json:"expose_mpt"`
+	ExposeMpt bool          `json:"expose_mpt"`
+	OwnerId   datastore.Key `json:"owner_id"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -320,6 +321,9 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
 			sc.BlockReward.BlobberUsageWeight)
 	}
+	if len(sc.OwnerId) == 0 {
+		return fmt.Errorf("owner_id does not set or empty")
+	}
 	return
 }
 
@@ -465,6 +469,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
 	)
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
+	conf.OwnerId = scc.GetString(pfx + "owner_id")
 
 	err = conf.validate()
 	return

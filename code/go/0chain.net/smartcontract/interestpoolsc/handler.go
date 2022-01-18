@@ -22,6 +22,7 @@ func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, 
 			Settings[MaxMint]:       fmt.Sprintf("%0v", gn.MaxMint),
 			Settings[MinLockPeriod]: fmt.Sprintf("%0v", gn.MinLockPeriod),
 			Settings[Apr]:           fmt.Sprintf("%0v", gn.APR),
+			Settings[OwnerId]:       fmt.Sprintf("%v", gn.OwnerId),
 		},
 	}, nil
 }

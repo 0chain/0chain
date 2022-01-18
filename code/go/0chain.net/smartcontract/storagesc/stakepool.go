@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"sort"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -993,6 +994,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
+	// TO-DO: Update stake in eventDB
+
 	return
 }
 
@@ -1078,6 +1081,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
+
+	// TO-DO: Update stake in eventDB
 
 	return
 }

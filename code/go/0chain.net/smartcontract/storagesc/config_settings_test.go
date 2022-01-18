@@ -46,6 +46,7 @@ func TestUpdateSettings(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -84,10 +85,15 @@ func TestUpdateSettings(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
+		var conf = &scConfig{
+			OwnerId: owner,
+		}
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}
@@ -208,7 +214,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(&scConfig{}, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(&scConfig{OwnerId: owner}, nil).Once()
 		balances.On("GetTrieNode", settingChangesKey).Return(&smartcontract.StringMap{
 			Fields: p.inputMap,
 		}, nil).Once()
