@@ -231,6 +231,7 @@ func (r *Round) CancelVerification() {
 	r.verificationCancelf = nil
 	f()
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
+	r.SetPhase(round.Notarize)
 }
 
 /*Clear - clear any pending state before deleting this round */
