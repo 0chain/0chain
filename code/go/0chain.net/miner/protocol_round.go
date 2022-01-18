@@ -811,6 +811,7 @@ func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
 		} else {
 			mr.delta = waitTime - minerNT
 		}
+		mr.SetPhase(round.Verify)
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
 }
@@ -943,12 +944,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		sendVerification = true
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
-	r.SetPhase(round.Verify)
 	var verifiedBlocks []*block.Block
 	for {
 		select {
 		case <-ctx.Done():
-			r.SetPhase(round.Notarize)
 			logging.Logger.Info("verification_complete", zap.Int64("round", r.Number),
 				zap.Int("verified_blocks", len(verifiedBlocks)))
 			bRank := -1
