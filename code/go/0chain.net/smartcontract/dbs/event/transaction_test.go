@@ -62,10 +62,9 @@ func TestFindTransactionByHash(t *testing.T) {
 	require.NoError(t, err)
 
 	tr := Transaction{
-		Model:     gorm.Model{ID: 1},
-		Hash:      "something_0",
-		ClientId:  "someClientID",
-		BlockHash: "blockHash",
+		Model:    gorm.Model{ID: 1},
+		Hash:     "something_0",
+		ClientId: "someClientID",
 	}
 	SetUpTransactionData(t, eventDb)
 	t.Run("GetTransactionByHash", func(t *testing.T) {
@@ -90,25 +89,14 @@ func TestFindTransactionByHash(t *testing.T) {
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 	})
 
-	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash")
-		require.NoError(t, err)
-		compareTransactions(t, gotTrs)
-
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash")
-		require.NoError(t, err)
-		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
-	})
-
 }
 
 func compareTransactions(t *testing.T, gotTr []Transaction) {
 	i := 0
 	for i = 0; i < 10; i++ {
 		tr := Transaction{
-			Hash:      fmt.Sprintf("something_%d", i),
-			ClientId:  "someClientID",
-			BlockHash: "blockHash",
+			Hash:     fmt.Sprintf("something_%d", i),
+			ClientId: "someClientID",
 		}
 		tr.Model.ID = gotTr[i].ID
 		tr.CreatedAt = gotTr[i].CreatedAt
@@ -121,9 +109,8 @@ func compareTransactions(t *testing.T, gotTr []Transaction) {
 func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
 	for i := 0; i < 10; i++ {
 		tr := Transaction{
-			Hash:      fmt.Sprintf("something_%d", i),
-			ClientId:  "someClientID",
-			BlockHash: "blockHash",
+			Hash:     fmt.Sprintf("something_%d", i),
+			ClientId: "someClientID",
 		}
 		err := eventDb.addTransaction(tr)
 		require.NoError(t, err, "Error while inserting Transaction to event Database")
