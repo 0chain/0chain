@@ -4,6 +4,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 )
@@ -129,18 +130,21 @@ func (edb *EventDb) addOrOverwriteMiner(miner Miner) error {
 
 func (mn *Miner) exists(edb *EventDb) (bool, error) {
 
-	var count int64
+	var miner Miner
 
 	result := edb.Get().
 		Model(&Miner{}).
 		Where(&Miner{MinerID: mn.MinerID}).
-		Count(&count)
-	if result.Error != nil {
+		Take(&miner)
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, nil
+	} else if result.Error != nil {
 		return false, fmt.Errorf("error searching for miner %v, error %v",
 			mn.MinerID, result.Error)
 	}
 
-	return count > 0, nil
+	return true, nil
 }
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {

@@ -4,6 +4,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 )
@@ -129,18 +130,21 @@ func (edb *EventDb) addOrOverwriteSharder(sharder Sharder) error {
 
 func (sh *Sharder) exists(edb *EventDb) (bool, error) {
 
-	var count int64
+	var sharder Sharder
 
 	result := edb.Get().
 		Model(&Sharder{}).
 		Where(&Sharder{SharderID: sh.SharderID}).
-		Count(&count)
-	if result.Error != nil {
+		Take(&sharder)
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, nil
+	} else if result.Error != nil {
 		return false, fmt.Errorf("error searching for sharder %v, error %v",
 			sh.SharderID, result.Error)
 	}
 
-	return count > 0, nil
+	return true, nil
 }
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
