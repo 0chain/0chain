@@ -148,7 +148,7 @@ func TestUpdateGlobals(t *testing.T) {
 			},
 			want: want{
 				error: true,
-				msg:   "update_globals: validation: server_chain.health_check.deep_scan.enabled is an immutable setting",
+				msg:   "update_globals: validation: server_chain.health_check.deep_scan.enabled cannot be modified via a transaction",
 			},
 		},
 	}
