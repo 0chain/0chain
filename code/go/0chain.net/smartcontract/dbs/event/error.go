@@ -1,6 +1,9 @@
 package event
 
+import "gorm.io/gorm"
+
 type Error struct {
+	gorm.Model
 	TransactionID string
 	Error         string
 }

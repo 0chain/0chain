@@ -47,8 +47,8 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 			err = edb.addStat(event)
 		case TypeError:
 			err = edb.addError(Error{
-				event.TxHash,
-				event.Data,
+				TransactionID: event.TxHash,
+				Error:         event.Data,
 			})
 		default:
 		}
@@ -108,7 +108,7 @@ func (edb *EventDb) addStat(event Event) error {
 	case TagAddBlock:
 		var block Block
 		err := json.Unmarshal([]byte(event.Data), &block)
-		if err!= nil {
+		if err != nil {
 			return err
 		}
 		return edb.addBlock(block)
