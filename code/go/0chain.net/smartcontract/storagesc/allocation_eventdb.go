@@ -7,7 +7,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -24,10 +23,10 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		blobberMap = make(map[string]*BlobberAllocation)
 	)
 
-	var curators []string
-	if alloc.Curators != "" {
-		curators = strings.Split(alloc.Curators, ",")
-	}
+	/* curators will be fetched from curators table
+	SELECT curator_id from curators where allocation_id=?
+	*/
+	//var curators []string
 
 	var allocTerms []event.AllocationTerm
 	err := json.Unmarshal([]byte(alloc.Terms), &allocTerms)
@@ -78,9 +77,10 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		})
 
 		tempBlobberAllocation := &BlobberAllocation{
-			BlobberID:    b.BlobberID,
-			AllocationID: blobberIDTermMapping[b.BlobberID].AllocationID,
-			Terms:        blobberIDTermMapping[b.BlobberID].Terms,
+			BlobberID:     b.BlobberID,
+			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
+			Terms:         blobberIDTermMapping[b.BlobberID].Terms,
+			MinLockDemand: state.Balance(b.MinLockDemand),
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation
@@ -123,7 +123,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		MovedBack:               alloc.MovedBack,
 		MovedToValidators:       alloc.MovedToValidators,
 		TimeUnit:                time.Duration(alloc.TimeUnit),
-		Curators:                curators,
+		//Curators:                curators,
 	}
 
 	return sa, nil
@@ -173,7 +173,6 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		MovedToChallenge:           sa.MovedToChallenge,
 		MovedBack:                  sa.MovedBack,
 		MovedToValidators:          sa.MovedToValidators,
-		Curators:                   strings.Join(sa.Curators, ","),
 		TimeUnit:                   int64(sa.TimeUnit),
 	}
 

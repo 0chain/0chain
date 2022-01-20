@@ -33,7 +33,6 @@ type Allocation struct {
 	MovedToChallenge           state.Balance `json:"moved_to_challenge"`
 	MovedBack                  state.Balance `json:"moved_back"`
 	MovedToValidators          state.Balance `json:"moved_to_validators"`
-	Curators                   string        `json:"curators"`
 	TimeUnit                   int64         `json:"time_unit"`
 	NumWrites                  int64         `json:"num_writes"`
 	NumReads                   int64         `json:"num_reads"`
