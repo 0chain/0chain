@@ -8,7 +8,12 @@ type (
 	}
 )
 
-// IsTesting implements TestCaseConfigurator interface.
-func (b *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int) bool {
-	return b.OnRound == round && b.ByGenerator == generator && nodeTypeRank == b.ByNodeWithTypeRank
+// IsTesting implements TestReporter interface.
+func (r *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int) bool {
+	return r.OnRound == round && r.ByGenerator == generator && nodeTypeRank == r.ByNodeWithTypeRank
+}
+
+// IsOnRound implements TestReporter interface.
+func (r *TestReport) IsOnRound(round int64) bool {
+	return r.OnRound == round
 }

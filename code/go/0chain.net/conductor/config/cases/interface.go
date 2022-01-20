@@ -16,4 +16,10 @@ type (
 	MapDecoder interface {
 		Decode(val interface{}) error
 	}
+
+	// TestReporter represents interface for test case configuration.
+	TestReporter interface {
+		IsTesting(round int64, generator bool, nodeTypeRank int) bool
+		IsOnRound(round int64) bool
+	}
 )

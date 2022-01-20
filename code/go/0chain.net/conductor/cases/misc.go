@@ -94,3 +94,23 @@ func (r *RoundInfo) Encode() ([]byte, error) {
 func (r *RoundInfo) Decode(blob []byte) error {
 	return json.Unmarshal(blob, r)
 }
+
+type (
+	// NotarisationInfo represents simple struct for reports containing notarisation's information
+	// needed for making tests checks.
+	NotarisationInfo struct {
+		VerificationTickets []*VerificationTicketInfo `json:"verification_tickets"`
+		BlockID             string                    `json:"block_id"`
+		Round               int64                     `json:"round"`
+	}
+)
+
+// Encode encodes NotarisationInfo to bytes.
+func (n *NotarisationInfo) Encode() ([]byte, error) {
+	return json.Marshal(n)
+}
+
+// Decode decodes NotarisationInfo from bytes.
+func (n *NotarisationInfo) Decode(blob []byte) error {
+	return json.Unmarshal(blob, n)
+}

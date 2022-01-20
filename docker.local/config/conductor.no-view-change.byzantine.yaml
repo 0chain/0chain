@@ -2,6 +2,7 @@ enable:
   - "attack round transfer"
   - "resend past messages"
   - "restart"
+  - "attack fetching"
 sets:
   - name: "attack round transfer"
     tests:
@@ -20,6 +21,9 @@ sets:
     tests:
       - "bad timeout VRF share"
       - "half nodes down"
+  - name: "attack fetching"
+    tests:
+      - "attack BlockStateChangeRequestor: neither node reply"
 
 tests:
   - name: "not notarised block extension"
@@ -70,11 +74,7 @@ tests:
   - name: "send insufficient proposals"
     flow:
       - cleanup_bc: { }
-      - env:
-          CONFIG_SUBPATH: "/test.generators_failure"
-          CLI_ARGS: "--magic_block_file config/test.generators_failure/b0magicBlock_7_miners_1_sharder.json"
-          DKG_AFFIX: "7_miners_1_sharder_"
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6",  "miner-7", "sharder-1"]
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_insufficient_proposals_test_case:
           test_report:
             round: 30
@@ -165,5 +165,21 @@ tests:
       - configure_half_nodes_down_test_case:
           test_report:
             round: 30
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "attack BlockStateChangeRequestor: neither node reply"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - configure_block_state_change_requestor_test_case:
+          test_report:
+            round: 30
+            by_generator: true
+            by_node_with_type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - wait_round:
+          round: 50
       - make_test_case_check:
           wait_time: 5m

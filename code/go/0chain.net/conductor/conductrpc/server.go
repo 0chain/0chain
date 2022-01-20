@@ -127,6 +127,7 @@ type Server struct {
 	names map[NodeID]NodeName
 
 	NodesServerStatsCollector *stats.NodesServerStats
+	NodesClientStatsCollector *stats.NodesClientStats
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -433,8 +434,8 @@ func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
 // GetMinersNum returns current miners number.
 func (s *Server) GetMinersNum() int {
 	var minersNum int
-	for nodeName := range s.nodes {
-		if strings.Contains(string(nodeName), "miner") {
+	for nodeName, node := range s.nodes {
+		if strings.Contains(string(nodeName), "miner") && node != nil {
 			minersNum++
 		}
 	}
@@ -455,16 +456,30 @@ func (s *Server) AddVRFSServerStats(ss *stats.VRFSRequest, _ *struct{}) error {
 	return nil
 }
 
+func (s *Server) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeRequest, _ *struct{}) error {
+	s.NodesClientStatsCollector.AddBlockStateChangeStats(rs)
+	return nil
+}
+
 //
 // flow
 //
 
 // EnableServerStatsCollector initializes Server.NodesServerStatsCollector,
-// and updates State.StatsCollectorEnabled for all nodes.
+// and updates State.ServerStatsCollectorEnabled for all nodes.
 func (s *Server) EnableServerStatsCollector() error {
-	s.NodesServerStatsCollector = stats.NewNodeServerStats()
+	s.NodesServerStatsCollector = stats.NewNodesServerStats()
 	return s.UpdateAllStates(func(state *State) {
-		state.StatsCollectorEnabled = true
+		state.ServerStatsCollectorEnabled = true
+	})
+}
+
+// EnableClientStatsCollector initializes Server.NodesClientStatsCollector,
+// and updates State.ClientStatsCollectorEnabled for all nodes.
+func (s *Server) EnableClientStatsCollector() error {
+	s.NodesClientStatsCollector = stats.NewNodesClientStats()
+	return s.UpdateAllStates(func(state *State) {
+		state.ClientStatsCollectorEnabled = true
 	})
 }
 

@@ -739,9 +739,19 @@ func (r *Runner) EnableServerStatsCollector() error {
 	return r.server.EnableServerStatsCollector()
 }
 
+// EnableClientStatsCollector implements config.Executor interface.
+func (r *Runner) EnableClientStatsCollector() error {
+	return r.server.EnableClientStatsCollector()
+}
+
 // GetServerStatsCollector implements config.Executor interface.
 func (r *Runner) GetServerStatsCollector() *stats.NodesServerStats {
 	return r.server.NodesServerStatsCollector
+}
+
+// GetClientStatsCollector implements config.Executor interface.
+func (r *Runner) GetClientStatsCollector() *stats.NodesClientStats {
+	return r.server.NodesClientStatsCollector
 }
 
 //
@@ -792,6 +802,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 
 		case *cases.HalfNodesDown:
 			state.HalfNodesDown = cfg
+
+		case *cases.BlockStateChangeRequestor:
+			state.BlockStateChangeRequestor = cfg
 
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())

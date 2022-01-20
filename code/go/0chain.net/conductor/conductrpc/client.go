@@ -201,3 +201,14 @@ func (c *client) addVRFSServerStats(ss *stats.VRFSRequest) (err error) {
 	}
 	return
 }
+
+func (c *client) addBlockStateChangeRequestorStats(ss *stats.BlockStateChangeRequest) (err error) {
+	err = c.client.Call("Server.AddBlockStateChangeRequestorStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddBlockStateChangeRequestorStats", ss, &struct{}{})
+	}
+	return
+}

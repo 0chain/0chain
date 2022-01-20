@@ -22,8 +22,8 @@ type (
 	}
 )
 
-// NewNodeServerStats creates initialised NodesServerStats.
-func NewNodeServerStats() *NodesServerStats {
+// NewNodesServerStats creates initialised NodesServerStats.
+func NewNodesServerStats() *NodesServerStats {
 	return &NodesServerStats{
 		Block: make(map[string]*BlockRequests),
 		VRFS:  make(map[string]*VRFSRequests),

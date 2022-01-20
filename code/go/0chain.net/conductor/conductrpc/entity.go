@@ -194,6 +194,10 @@ func (e *Entity) AddVRFSServerStats(ss *stats.VRFSRequest) error {
 	return e.client.addVRFSServerStats(ss)
 }
 
+func (e *Entity) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeRequest) error {
+	return e.client.addBlockStateChangeRequestorStats(rs)
+}
+
 var global *Entity
 
 // Init creates global Entity and locks until unlocked.
