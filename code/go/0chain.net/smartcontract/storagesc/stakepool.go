@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"sort"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -927,7 +928,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if t.Value < int64(conf.StakePool.MinLock) {
+	if t.Value < conf.StakePool.MinLock {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too small stake to lock")
 	}
@@ -992,6 +993,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"saving stake pool: %v", err)
 	}
+
+	// TO-DO: Update stake in eventDB
 
 	return
 }
@@ -1078,6 +1081,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
+
+	// TO-DO: Update stake in eventDB
 
 	return
 }
