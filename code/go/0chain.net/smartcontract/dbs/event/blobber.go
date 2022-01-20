@@ -82,7 +82,8 @@ func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
 
 func (edb *EventDb) deleteBlobber(id string) error {
 	result := edb.Store.Get().
-		Where("blobber_id = ?", id).Delete(&Blobber{})
+		Where(&Blobber{BlobberID: id}).
+		Delete(&Blobber{})
 	return result.Error
 }
 
