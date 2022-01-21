@@ -616,6 +616,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 }
 
 //GetMagicBlockCall for smart contract to get magic block
+//TODO not used, remove this func
 func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
 	var retObj interface{}
 	numSuccess := 0
