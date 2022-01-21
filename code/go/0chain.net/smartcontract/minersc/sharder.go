@@ -49,6 +49,10 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", common.NewErrorf("update_sharder_settings", "saving: %v", err)
 	}
 
+	if err = emitUpdateSharder(sn, balances, false); err != nil {
+		return "", common.NewErrorf("update_sharder_settings", "saving(event): %v", err)
+	}
+
 	return string(sn.Encode()), nil
 }
 
@@ -136,6 +140,11 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "saving sharder: %v", err)
 	}
 
+	err = emitAddSharder(newSharder, balances)
+	if err != nil {
+		return "", common.NewErrorf("add_sharder", "saving sharder(event): %v", err)
+	}
+
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {
 		return "", common.NewErrorf("add_sharder", "saving all sharders list: %v", err)
@@ -198,6 +207,10 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 		for i, v := range sharders.Nodes {
 			if v.ID == sn.ID {
 				sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
+
+				if err = emitDeleteSharder(sn.ID, balances); err != nil {
+					return
+				}
 				break
 			}
 		}
