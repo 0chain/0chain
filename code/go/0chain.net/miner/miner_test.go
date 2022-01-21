@@ -57,9 +57,12 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 		mc.AddGenesisBlock(gb)
 	}
 	b.ChainID = prevBlock.ChainID
-	data := &chain.ConfigData{BlockSize: 1024}
-	mc.Config = chain.NewConfigImpl(data)
-	data.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
+	if mc.Config != nil {
+		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	} else {
+		mc.Config = chain.NewConfigImpl(data)
+	}
 
 	usr, err := user.Current()
 	if err != nil {
@@ -145,7 +148,7 @@ func setupMinerChain() (*Chain, func()) {
 		mc.Chain = chain.Provider().(*chain.Chain)
 	}
 
-	minerChain.Config = chain.NewConfigImpl(&chain.ConfigData{})
+	mc.Config = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -368,9 +371,12 @@ func setupSelfNodeKeys() {
 
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
-	data := &chain.ConfigData{BlockSize: 1024}
-	mc.Config = chain.NewConfigImpl(data)
-	data.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
+	if mc.Config != nil {
+		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	} else {
+		mc.Config = chain.NewConfigImpl(data)
+	}
 
 	mb := mc.GetMagicBlock(0)
 	if mb == nil {
