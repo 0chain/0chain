@@ -37,8 +37,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Transaction{},
 		&Validator{},
 		&ReadMarker{},
-    &Block{},  
-    &Error{}),
+		&Block{},
+		&Error{},
 		&Miner{},
 		&Sharder{}); err != nil {
 		return err
