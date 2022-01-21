@@ -37,7 +37,7 @@ func BenchmarkRestTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benc
 		[]restBenchTest{
 			{
 				name:     "zcnsc_rest.getAuthorizerNodes",
-				endpoint: sc.getAuthorizerNodes,
+				endpoint: sc.GetAuthorizerNodes,
 			},
 		},
 	)
