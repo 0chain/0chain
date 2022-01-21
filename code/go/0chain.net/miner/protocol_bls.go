@@ -407,7 +407,12 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		// even though DKG is not enabled.
 
 		var rbOutput string // rboutput will ignored anyway
-		mc.computeRBO(ctx, mr, rbOutput)
+		if err := mc.computeRBO(ctx, mr, rbOutput); err != nil {
+			Logger.Error("computeRBO failed",
+				zap.Error(err),
+				zap.Int64("round", mr.GetRoundNumber()))
+			return false
+		}
 
 		return true
 	}
@@ -433,7 +438,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 }
 
 func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) error {
-	Logger.Debug("DKG computeRBO")
+	Logger.Debug("DKG computeRBO", zap.Int64("round", mr.GetRoundNumber()))
 	if mr.IsVRFComplete() {
 		Logger.Info("DKG computeRBO RBO is already completed")
 		return nil

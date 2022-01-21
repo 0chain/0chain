@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -142,6 +143,29 @@ func (c *Chain) FinalizeRound(r round.RoundI) {
 
 	logging.Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+	select {
+	case c.finalizedRoundsChannel <- r:
+	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
+		logging.Logger.Info("finalize round - push round to finalizedRoundsChannel timeout",
+			zap.Int64("round", r.GetRoundNumber()))
+	}
+}
+
+// ForceFinalizeRound force trigger the round finalization process
+// to avoid sharders stop finalizing blocks. This could happen if
+// one block continually timeout on block finalization due to the limited
+// cpu resources.
+func (c *Chain) ForceFinalizeRound() {
+	rn := c.GetCurrentRound()
+	r := c.GetRound(rn)
+	if r == nil {
+		logging.Logger.Error("force finalize round",
+			zap.Error(errors.New("can not get current round")),
+			zap.Int64("round", rn))
+		return
+	}
+
+	logging.Logger.Debug("force finalize round", zap.Int64("round", rn))
 	select {
 	case c.finalizedRoundsChannel <- r:
 	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
@@ -322,23 +346,29 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					zap.Int64("round", roundNumber))
 				return
 			case c.finalizedBlocksChannel <- fbWithReply:
-				err := <-fbWithReply.resultC
-				if err != nil {
-					logging.Logger.Error("finalize round - finalize block failed",
+				select {
+				case <-ctx.Done():
+					logging.Logger.Error("finalize round - context done",
+						zap.Error(ctx.Err()),
+						zap.Int64("round", roundNumber))
+				case err := <-fbWithReply.resultC:
+					if err != nil {
+						logging.Logger.Error("finalize round - finalize block failed",
+							zap.Int64("round", fb.Round),
+							zap.String("block", fb.Hash),
+							zap.Error(err))
+						return
+					}
+					logging.Logger.Info("finalize round - finalize block success",
 						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash),
-						zap.Error(err))
-					return
-				}
-				logging.Logger.Info("finalize round - finalize block success",
-					zap.Int64("round", fb.Round),
-					zap.String("block", fb.Hash))
+						zap.String("block", fb.Hash))
 
-				du := time.Since(ts)
-				if du > 3*time.Second {
-					logging.Logger.Debug("finalize round slow",
-						zap.Int64("round", roundNumber),
-						zap.Any("duration", time.Since(ts)))
+					du := time.Since(ts)
+					if du > 3*time.Second {
+						logging.Logger.Debug("finalize round slow",
+							zap.Int64("round", roundNumber),
+							zap.Any("duration", time.Since(ts)))
+					}
 				}
 			case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
 				logging.Logger.Error("finalize round - push fb to finalizedBlocksChannel timeout",

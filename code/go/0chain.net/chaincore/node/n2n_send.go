@@ -316,7 +316,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 
 			defer cancel()
 
-			logging.N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
+			logging.N2n.Info("sending",
+				zap.Int("from", selfNode.SetIndex),
+				zap.Int("to", receiver.SetIndex),
+				zap.String("handler", uri),
+				zap.Duration("duration", time.Since(ts)),
+				zap.String("entity", entity.GetEntityMetadata().GetName()),
+				zap.Any("id", entity.GetKey()),
+				zap.Any("err", err))
 			switch err {
 			case nil:
 			default:
@@ -333,6 +340,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			receiver.SetLastActiveTime(time.Now())
 			receiver.SetErrorCount(receiver.GetSendErrors())
 
+			//TODO may be we don't need to close here, since defer Body.close() is added
 			readAndClose(resp.Body)
 			if push {
 				timer.UpdateSince(ts)
@@ -470,6 +478,8 @@ func RejectDuplicateNotarizedBlockHandler(c Chainer, handler common.ReqRespHandl
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)
@@ -494,7 +504,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 		buf := bytes.Buffer{}
 		buf.ReadFrom(r.Body)
-		r.Body.Close()
 
 		go func() {
 			senderValidateFunc := func() error {
@@ -509,7 +518,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				})
 			}
 			// TODO:
-			ctx := WithSenderValidateFunc(context.Background(), senderValidateFunc)
+			root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second)
+			ctx := WithSenderValidateFunc(root, senderValidateFunc)
 			initialNodeID := r.Header.Get(HeaderInitialNodeID)
 			if initialNodeID != "" {
 				initSender := GetNode(initialNodeID)
@@ -555,7 +565,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			sender.AddReceived(1)
 
 		}()
-		common.Respond(w, r, "", nil)
+		common.Respond(w, r, nil, nil)
 	}
 }
 

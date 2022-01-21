@@ -421,6 +421,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
+	commitRead.ReadMarker.ReadSize = sizeRead
+
 	// if 3rd party pays
 	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
 	if err != nil {
@@ -474,6 +476,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("saving read marker", err.Error())
 	}
+
+	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
+	if err != nil {
+		return "", common.NewError("saving read marker in db:", err.Error())
+	}
+
 	sc.newRead(balances, numReads)
 
 	return // ok, the response and nil
@@ -564,11 +572,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"malformed input: "+err.Error())
 	}
 
-	if commitConnection.WriteMarker == nil {
-		return "", common.NewError("commit_connection_failed",
-			"invalid input: missing write_marker")
-	}
-
 	if !commitConnection.Verify() {
 		return "", common.NewError("commit_connection_failed", "Invalid input")
 	}
@@ -655,6 +658,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)
+	}
+
+	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"emitting write marker event: %v", err)
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)

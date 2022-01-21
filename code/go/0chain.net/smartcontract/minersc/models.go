@@ -647,7 +647,8 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
-
+	//Logger.Debug("saving miner node", zap.String("id", mn.ID),
+	//	zap.Int("pending", len(mn.Pending)), zap.Int("active", len(mn.Active)), zap.Int("size", len(mn.Encode())))
 	//Logger.Debug("MinerNode save successfully",
 	//	zap.String("path", encryption.Hash(mn.GetKey())),
 	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
@@ -847,6 +848,9 @@ type SimpleNode struct {
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+
+	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
+	Status int `json:"-"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

@@ -530,13 +530,20 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 }
 
 func (mc *Chain) ProgressOnNotarization(notRound *Round) {
-	if mc.GetCurrentRound() <= notRound.Number {
+	curNumber := mc.GetCurrentRound()
+	if curNumber <= notRound.Number {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", notRound.Number+1))
 		//notRound.CancelVerification()
 		//notRound.TryCancelBlockGeneration()
 		//TODO implement round centric context, that is cancelled when transition to the next happens
+		curRound := mc.GetMinerRound(curNumber)
 		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
+
+		if curRound != nil {
+			curRound.CancelVerification()
+			curRound.TryCancelBlockGeneration()
+		}
 	}
 }
 

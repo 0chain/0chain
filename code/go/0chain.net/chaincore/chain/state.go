@@ -33,8 +33,6 @@ func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
-var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
-var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")
 var ErrWrongNonce = common.NewError("wrong_nonce", "Nonce of sender is not valid")
 
 /*ComputeState - compute the state for the block */
@@ -118,15 +116,17 @@ func (c *Chain) ExecuteSmartContract(
 	var err error
 	ts := time.Now()
 	done := make(chan bool, 1)
-	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
-	defer cancelf()
+
+	sct := time.NewTimer(c.SmartContractTimeout())
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
 		done <- true
 	}()
 	select {
-	case <-cctx.Done():
-		return "", ErrSmartContractContext
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case <-sct.C:
+		return "", transaction.ErrSmartContractContext
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
@@ -186,6 +186,11 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		return nil, err
 	}
 
+	//we should check that client hash enough funds to pay for transaction before heavy computations are executed
+	if err = sctx.Validate(); err != nil {
+		return
+	}
+
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
@@ -203,26 +208,37 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		t := time.Now()
 		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
 		switch err {
-		case ErrSmartContractContext:
+		//internal errors
+		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
 			sctx.EmitError(err)
-			logging.Logger.Error("Error executing the SC, context error",
+			logging.Logger.Error("Error executing the SC, internal error",
 				zap.Error(err),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
 				zap.Any("txn", txn))
 			//return original error, to handle upwards
-			return events, context.DeadlineExceeded
+			return events, err
 		default:
 			if err != nil {
 				sctx.EmitError(err)
-				logging.Logger.Error("Error executing the SC",
+				logging.Logger.Debug("Error executing the SC, chargeable error",
 					zap.Error(err),
 					zap.String("block", b.Hash),
 					zap.String("begin client state", util.ToHex(startRoot)),
 					zap.String("prev block", b.PrevBlock.Hash),
 					zap.Any("txn", txn))
-				return
+
+				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
+				clientState = CreateTxnMPT(bState) // begin transaction
+				sctx = c.NewStateContext(b, clientState, txn, nil)
+
+				if e, ok := err.(*common.Error); ok {
+					output = e.Code + ":" + e.Msg
+				} else {
+					output = err.Error()
+				}
+				txn.Status = transaction.TxnError
 			}
 		}
 		txn.TransactionOutput = output
@@ -266,10 +282,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("state_Balance", state.Balance(txn.Fee)))
 			return
 		}
-	}
-
-	if err = sctx.Validate(); err != nil {
-		return
 	}
 
 	for _, transfer := range sctx.GetTransfers() {
@@ -346,7 +358,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
-	txn.Status = transaction.TxnSuccess
+	//if status is not set
+	if txn.Status == 0 {
+		txn.Status = transaction.TxnSuccess
+	}
 	return
 }
 
@@ -382,7 +397,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	if fs.Balance < amount {
-		return ErrInsufficientBalance
+		return transaction.ErrInsufficientBalance
 	}
 	ts, err := c.GetStateById(clientState, toClient)
 	if !isValid(err) {
