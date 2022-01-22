@@ -11,6 +11,10 @@ echo ""
 wget -O - https://github.com/facebook/rocksdb/archive/v6.15.5.tar.gz | tar xz 
 cd ./rocksdb* && \
 PORTABLE=1 make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 
+cd /usr/local/lib/
+ln -fs librocksdb.6.15.5.dylib /usr/local/lib/-mmacosx-version-min=12.0librocksdb.6.15.dylib
+ln -fs librocksdb.6.15.5.dylib /usr/local/lib/-mmacosx-version-min=10.12librocksdb.6.15.dylib
+
 
 
 echo ""
