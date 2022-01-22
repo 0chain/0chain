@@ -9,6 +9,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
@@ -42,16 +43,25 @@ func main() {
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
+
+	workdir := ""
+	flag.StringVar(&workdir, "work_dir", "", "work_dir")
+
+	// redisHost := flag.String("redis_host", "", "default redis pool host")
+	// redisPort := flag.Int("redis_port", 0, "default redis pool port")
+	// redisTxnsHost := flag.String("redis_txns_host", "", "TransactionDB redis host")
+	// redisTxnsPort := flag.Int("redis_txns_port", 0, "TransactionDB redis port")
+
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
-	config.SetupConfig()
-	config.SetupSmartContractConfig()
+	config.SetupConfig(workdir)
+	config.SetupSmartContractConfig(workdir)
 
 	if config.Development() {
-		logging.InitLogging("development")
+		logging.InitLogging("development", workdir)
 	} else {
-		logging.InitLogging("production")
+		logging.InitLogging("production", workdir)
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
@@ -62,7 +72,7 @@ func main() {
 
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
-	initEntities()
+	initEntities(workdir)
 	serverChain := chain.NewChainFromConfig()
 
 	signatureScheme := serverChain.GetSignatureScheme()
@@ -88,14 +98,14 @@ func main() {
 	mc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
 	mc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
-	mc.SetupConfigInfoDB()
+	mc.SetupConfigInfoDB(workdir)
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
 	if *initialStatesFile == "" {
-		*initialStatesFile = viper.GetString("network.initial_states")
+		*initialStatesFile = filepath.Join(workdir, viper.GetString("network.initial_states"))
 	}
 
 	initStates := state.NewInitStates()
@@ -103,7 +113,7 @@ func main() {
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
-		*magicBlockFile = viper.GetString("network.magic_block_file")
+		*magicBlockFile = filepath.Join(workdir, viper.GetString("network.magic_block_file"))
 	}
 
 	var magicBlock *block.MagicBlock
@@ -123,7 +133,7 @@ func main() {
 	}
 
 	if state.Debug() {
-		block.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger(filepath.Join(workdir, "/tmp/state.txt"))
 	}
 
 	// TODO: put it in a better place
@@ -291,7 +301,7 @@ func main() {
 	miner.SetupWorkers(ctx)
 
 	if config.Development() {
-		go TransactionGenerator(mc.Chain)
+		go TransactionGenerator(mc.Chain, workdir)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -363,11 +373,11 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 }
 
-func initEntities() {
+func initEntities(workdir string) {
 	memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
 	memoryStorage := memorystore.GetStorageProvider()
 
-	chain.SetupEntity(memoryStorage)
+	chain.SetupEntity(memoryStorage, workdir)
 	round.SetupEntity(memoryStorage)
 	round.SetupVRFShareEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
@@ -386,11 +396,11 @@ func initEntities() {
 	ememoryStorage := ememorystore.GetStorageProvider()
 	bls.SetupDKGEntity()
 	bls.SetupDKGSummary(ememoryStorage)
-	bls.SetupDKGDB()
+	bls.SetupDKGDB(workdir)
 	setupsc.SetupSmartContracts()
 
 	block.SetupMagicBlockData(ememoryStorage)
-	block.SetupMagicBlockDataDB()
+	block.SetupMagicBlockDataDB(workdir)
 }
 
 func initHandlers(c chain.Chainer) {
