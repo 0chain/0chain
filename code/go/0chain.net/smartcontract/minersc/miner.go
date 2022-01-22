@@ -108,6 +108,13 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
 		}
+
+		err = emitAddMiner(newMiner, balances)
+		if err != nil {
+			return "", common.NewErrorf("add_miner",
+				"insert new miner: %v", err)
+		}
+
 		update = true
 	}
 
@@ -240,6 +247,11 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
 			delete(dkgMiners.SimpleNodes, mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+			if err != nil {
+				return
+			}
+
+			err = emitDeleteMiner(mn.ID, balances)
 		}
 	} else {
 		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
@@ -291,6 +303,10 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
 
+	if err = emitUpdateMiner(mn, balances, false); err != nil {
+		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
+	}
+
 	return string(mn.Encode()), nil
 }
 
@@ -320,6 +336,7 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 
 // getMinerNode
 func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+
 	mn := NewMinerNode()
 	mn.ID = id
 	ms, err := state.GetTrieNode(mn.GetKey())
