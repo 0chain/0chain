@@ -47,10 +47,15 @@ func main() {
 	workdir := ""
 	flag.StringVar(&workdir, "work_dir", "", "work_dir")
 
-	// redisHost := flag.String("redis_host", "", "default redis pool host")
-	// redisPort := flag.Int("redis_port", 0, "default redis pool port")
-	// redisTxnsHost := flag.String("redis_txns_host", "", "TransactionDB redis host")
-	// redisTxnsPort := flag.Int("redis_txns_port", 0, "TransactionDB redis port")
+	redisHost := ""
+	redisPort := 0
+	flag.StringVar(&redisHost, "redis_host", "", "default redis pool host")
+	flag.IntVar(&redisPort, "redis_port", 0, "default redis pool port")
+
+	redisTxnsHost := ""
+	redisTxnsPort := 0
+	flag.StringVar(&redisTxnsHost, "redis_txns_host", "", "TransactionDB redis host")
+	flag.IntVar(&redisTxnsPort, "redis_txns_port", 0, "TransactionDB redis port")
 
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
@@ -72,7 +77,7 @@ func main() {
 
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
-	initEntities(workdir)
+	initEntities(workdir, redisHost, redisPort, redisTxnsHost, redisTxnsPort)
 	serverChain := chain.NewChainFromConfig()
 
 	signatureScheme := serverChain.GetSignatureScheme()
@@ -373,8 +378,14 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 }
 
-func initEntities(workdir string) {
-	memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
+func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost string, redisTxnsPort int) {
+	if len(redisHost) > 0 && redisPort > 0 {
+		memorystore.InitDefaultPool(redisHost, redisPort)
+	} else {
+		//inside docker
+		memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
+	}
+
 	memoryStorage := memorystore.GetStorageProvider()
 
 	chain.SetupEntity(memoryStorage, workdir)
@@ -387,7 +398,7 @@ func initEntities(workdir string) {
 	state.SetupStateNodes(memoryStorage)
 	client.SetupEntity(memoryStorage)
 
-	transaction.SetupTransactionDB()
+	transaction.SetupTransactionDB(redisTxnsHost, redisTxnsPort)
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
