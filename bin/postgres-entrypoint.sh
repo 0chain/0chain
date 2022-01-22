@@ -12,7 +12,7 @@ done
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
 
-for f in /blobber/sql/*; do
+for f in /zchain/sql/*; do
 	case "$f" in
 		*.sh)     echo "$0: running $f"; . "$f" ;;
 		*.sql)    echo "$0: running $f"; "${psql[@]}" -f "$f"; echo ;;
