@@ -20,15 +20,13 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:          db,
-		eBufferChannel: make(chan eventCtx, 100),
-		eChannel:       make(chan eventCtx, 100),
+		Store:    db,
+		eChannel: make(chan eventCtx, 10000),
 	}
 
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
-	go eventDb.channelBufferIntermediate()
 	go eventDb.addEventWorker()
 	return eventDb, nil
 }
@@ -40,31 +38,7 @@ type eventCtx struct {
 
 type EventDb struct {
 	dbs.Store
-	eChannel       chan eventCtx
-	eBufferChannel chan eventCtx
-}
-
-// helps maitaining dynamic buffer for addEventWorker
-func (edb EventDb) channelBufferIntermediate() {
-	buf := make([]eventCtx, 0)
-	for {
-		events, ok := <-edb.eBufferChannel
-		for _, e := range buf {
-			select {
-			case edb.eChannel <- e:
-			default:
-				break
-			}
-			buf = buf[1:]
-		}
-		if ok {
-			select {
-			case edb.eChannel <- events:
-			default:
-				buf = append(buf, events)
-			}
-		}
-	}
+	eChannel chan eventCtx
 }
 
 // addEventWorker this worker will try to add events unless thery are not added.

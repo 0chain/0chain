@@ -7,10 +7,6 @@ import (
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
-
-	"go.uber.org/zap"
-
-	"0chain.net/core/logging"
 )
 
 type (
@@ -47,7 +43,7 @@ const (
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
-	edb.eBufferChannel <- eventCtx{
+	edb.eChannel <- eventCtx{
 		ctx:    ctx,
 		events: events,
 	}
