@@ -36,6 +36,14 @@ import (
 	"0chain.net/smartcontract/setupsc"
 )
 
+var (
+	workdir       string
+	redisHost     string
+	redisPort     int
+	redisTxnsHost string
+	redisTxnsPort int
+)
+
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
@@ -44,16 +52,9 @@ func main() {
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
 
-	workdir := ""
 	flag.StringVar(&workdir, "work_dir", "", "work_dir")
-
-	redisHost := ""
-	redisPort := 0
 	flag.StringVar(&redisHost, "redis_host", "", "default redis pool host")
 	flag.IntVar(&redisPort, "redis_port", 0, "default redis pool port")
-
-	redisTxnsHost := ""
-	redisTxnsPort := 0
 	flag.StringVar(&redisTxnsHost, "redis_txns_host", "", "TransactionDB redis host")
 	flag.IntVar(&redisTxnsPort, "redis_txns_port", 0, "TransactionDB redis port")
 
