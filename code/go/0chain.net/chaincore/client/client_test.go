@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 }
 
 func initDefaultPool() error {

@@ -82,7 +82,7 @@ func TestSetupMagicBlockDataDB_Panic(t *testing.T) {
 				}
 			}()
 
-			SetupMagicBlockDataDB()
+			SetupMagicBlockDataDB("")
 		})
 	}
 }
