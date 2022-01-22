@@ -55,6 +55,13 @@ func initSession(delay time.Duration, maxTries int) error {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
 
+	cassandraPort := viper.GetInt("cassandra.connection.port")
+	if cassandraPort == 0 {
+		cassandraPort = 9042
+	}
+
+	cluster.Port = cassandraPort
+
 	// Setting the following for now because of https://github.com/gocql/gocql/issues/1200
 	cluster.WriteCoalesceWaitTime = 0
 

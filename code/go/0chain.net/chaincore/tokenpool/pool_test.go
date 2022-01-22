@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 }
 
 func TestDigPool(t *testing.T) {
