@@ -12,7 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -24,8 +25,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 const (
@@ -875,6 +874,20 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
+
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
+		if err != nil {
+			return fmt.Errorf("marshalling transactions in block: %v", err)
+		}
+		b.Events = append(b.Events, event.Event{
+			BlockNumber: b.Round,
+			TxHash:      txn.Hash,
+			Type:        int(event.TypeStats),
+			Tag:         int(event.TagAddTransaction),
+			Index:       txn.Hash,
+			Data:        string(data),
+		})
+
 		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
@@ -963,9 +976,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
-		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.GetHash()))
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
 		if err != nil {
 			return fmt.Errorf("marshalling transactions in block: %v", err)
 		}
@@ -977,6 +988,10 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			Index:       txn.Hash,
 			Data:        string(data),
 		})
+
+		events, err := c.UpdateState(ctx, b, bState, txn)
+		b.Events = append(b.Events, events...)
+
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
@@ -1004,6 +1019,11 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 				return common.NewError("state_update_error", err.Error())
 			}
 		}
+	}
+
+	err := emitBlockEvent(b.PrevBlock)
+	if err != nil {
+		logging.Logger.Error("emit block event error", zap.Error(err))
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
@@ -1059,7 +1079,6 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,
 		Status:            tr.Status,
-		Model:             gorm.Model{CreatedAt: time.Unix(int64(tr.CreationDate.Duration()), 0)},
 	}
 }
 

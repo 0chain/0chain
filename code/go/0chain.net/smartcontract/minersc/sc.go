@@ -75,12 +75,12 @@ func (msc *MinerSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (ipsc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
+func (msc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return msc.SmartContract.HandlerStats(ctx, params)
 }
 
-func (ipsc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
+func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
+	return msc.SmartContractExecutionStats
 }
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
@@ -94,7 +94,11 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
 	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
+	msc.SmartContract.RestHandlers["/get_miners_stats"] = msc.GetMinersStatsHandler
+	msc.SmartContract.RestHandlers["/get_miners_stake"] = msc.GetMinersStateHandler
 	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
+	msc.SmartContract.RestHandlers["/get_sharders_stats"] = msc.GetShardersStatsHandler
+	msc.SmartContract.RestHandlers["/get_sharders_stake"] = msc.GetShardersStateHandler
 	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler
 	msc.SmartContract.RestHandlers["/getPhase"] = msc.GetPhaseHandler
 	msc.SmartContract.RestHandlers["/getDkgList"] = msc.GetDKGMinerListHandler

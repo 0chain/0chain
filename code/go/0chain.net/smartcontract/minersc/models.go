@@ -664,7 +664,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	mn.ID = params.Get("id")
 
 	if mn.N2NHost == "" || mn.ID == "" {
-		return errors.New("BaseURL or ID is not specified")
+		return errors.New("URL or ID is not specified")
 	}
 	return nil
 }
@@ -847,6 +847,9 @@ type SimpleNode struct {
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+
+	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
+	Status int `json:"-"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

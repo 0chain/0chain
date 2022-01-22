@@ -212,7 +212,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 19,
+			restpoints: 24,
 		},
 		{
 			name:       "interest",
@@ -227,7 +227,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "miner",
 			address:    minersc.ADDRESS,
-			restpoints: 15,
+			restpoints: 19,
 		},
 		{
 			name:       "vesting",
