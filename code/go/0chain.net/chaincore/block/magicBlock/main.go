@@ -1,6 +1,20 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"math"
+	"os"
+	"os/exec"
+	"strconv"
+	"time"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -11,21 +25,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"bytes"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"flag"
-	"fmt"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"log"
-	"math"
-	"os"
-	"os/exec"
-	"strconv"
-	"time"
 )
 
 type cmdMagicBlock struct {
@@ -253,7 +254,7 @@ func getSummariesName(index int) string {
 func main() {
 	magicBlockConfig := flag.String("config_file", "", "config_file")
 	mainnet := flag.Bool("mainnet", false, "mainnet")
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 
 	flag.Parse()
 
