@@ -15,15 +15,20 @@ setup_sharder_runtime() {
     [ -d ./data/sharder$i ] || mkdir -p ./data/sharder$i
 
     cp -r ../docker.local/config "./data/sharder$i/"
+    cp -r ../docker.local/sql_script "./data/sharder$i/"
 
     cd  ./data/sharder$i
 
 
+
     find ./config -name "0chain.yaml" -exec sed -i '' 's/level: "debug"/level: "error"/g' {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/console: false/console: true/g" {} \;
-    find ./config -name "0chain.yaml" -exec sed -i '' "s/#    host: cassandra/    host: 127.0.0.1/g" {} \;
-    find ./config -name "0chain.yaml" -exec sed -i '' "s/#    port: 9042/    port: 904$i/g" {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/#   host: cassandra/    host: 127.0.0.1/g" {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/#   port: 9042/    port: 904$i/g" {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' 's/threshold_by_count: 66/threshold_by_count: 40/g' {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/    host: postgres/    host: 127.0.0.1/g" {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/    port: 5432/    port: 553$i/g" {} \;
+
 
     find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' 's/198.18.0.71/127.0.0.1/g' {} \;
     find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.72/127.0.0.1/g" {} \;

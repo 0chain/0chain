@@ -90,11 +90,12 @@ echo "
     echo " "
     echo "Please select what are you working on: "
 
-    select f in "install cassandra" "start sharder" "clean sharder"; do
+    select f in "install cassandra" "install postgres" "start sharder" "clean sharder"; do
         case $f in
-            "install cassandra"     )   cd $root && ./cli.sharder.cassandra.sh $i;      ;;
-            "start sharder"         )   cd $root && start_sharder;                  ;;
-            "clean sharder"         )   cd $root && clean_sharder                   ;;
+            "install cassandra"     )   cd $root && ./cli.sharder.cassandra.sh $i;    ;;
+            "install postgres"      )   cd $root && ./cli.sharder.postgres.sh $i;     ;;
+            "start sharder"         )   cd $root && start_sharder;                    ;;
+            "clean sharder"         )   cd $root && clean_sharder                     ;;
         esac
     done
 }
