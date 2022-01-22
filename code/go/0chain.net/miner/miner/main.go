@@ -36,15 +36,15 @@ import (
 	"0chain.net/smartcontract/setupsc"
 )
 
-var (
-	workdir       string
-	redisHost     string
-	redisPort     int
-	redisTxnsHost string
-	redisTxnsPort int
-)
-
 func main() {
+	var (
+		workdir       string
+		redisHost     string
+		redisPort     int
+		redisTxnsHost string
+		redisTxnsPort int
+	)
+
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	dkgFile := flag.String("dkg_file", "", "dkg_file")
