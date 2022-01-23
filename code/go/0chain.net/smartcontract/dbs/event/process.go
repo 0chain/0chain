@@ -143,7 +143,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return edb.addCurator(c)
+		return edb.addOrOverwriteCurator(c)
 	case TagRemoveCurator:
 		var c Curator
 		err := json.Unmarshal([]byte(event.Data), &c)
