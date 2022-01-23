@@ -74,6 +74,11 @@ func TestAddCurator(t *testing.T) {
 				return sa.ID == p.info.AllocationId && sa.Owner == p.clientId
 			})).Return("", nil).Once()
 
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagRemoveCurator, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
 		return args{ssc, txn, input, balances}
 	}
 
