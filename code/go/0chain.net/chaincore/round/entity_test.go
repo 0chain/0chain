@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 
 	sp := memorystore.GetStorageProvider()
 	SetupEntity(sp)
@@ -1559,7 +1559,7 @@ func TestSetupRoundSummaryDB_Panic(t *testing.T) {
 				}
 			}()
 
-			SetupRoundSummaryDB()
+			SetupRoundSummaryDB("")
 		})
 	}
 }

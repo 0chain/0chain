@@ -62,9 +62,9 @@ func main() {
 	// Initialize 0chain.net/core/logging
 	chainconfig.Configuration.DeploymentMode = chainconfig.DeploymentDevelopment
 	chainconfig.SetupDefaultConfig()
-	chainconfig.SetupConfig()
-	chainconfig.SetupSmartContractConfig()
-	InitLogging("development")
+	chainconfig.SetupConfig("")
+	chainconfig.SetupSmartContractConfig("")
+	InitLogging("development", "")
 
 	// Find our miners and sharders.
 	discoverPoolMembers(c.discoveryFile)

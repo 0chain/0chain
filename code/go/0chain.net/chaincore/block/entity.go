@@ -14,7 +14,6 @@ import (
 
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -875,6 +874,20 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
+
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
+		if err != nil {
+			return fmt.Errorf("marshalling transactions in block: %v", err)
+		}
+		b.Events = append(b.Events, event.Event{
+			BlockNumber: b.Round,
+			TxHash:      txn.Hash,
+			Type:        int(event.TypeStats),
+			Tag:         int(event.TagAddTransaction),
+			Index:       txn.Hash,
+			Data:        string(data),
+		})
+
 		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
@@ -965,9 +978,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
-		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.GetHash()))
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
 		if err != nil {
 			return fmt.Errorf("marshalling transactions in block: %v", err)
 		}
@@ -979,6 +990,10 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			Index:       txn.Hash,
 			Data:        string(data),
 		})
+
+		events, err := c.UpdateState(ctx, b, bState, txn)
+		b.Events = append(b.Events, events...)
+
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
@@ -1068,7 +1083,6 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,
 		Status:            tr.Status,
-		Model:             gorm.Model{CreatedAt: time.Unix(int64(tr.CreationDate.Duration()), 0)},
 	}
 }
 

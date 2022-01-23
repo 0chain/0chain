@@ -17,7 +17,7 @@ import (
 
 func init() {
 	viper.Set("logging.console", true)
-	InitLogging("development")
+	InitLogging("development", "")
 }
 
 func TestNewMemLogger(t *testing.T) {
