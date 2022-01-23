@@ -64,7 +64,7 @@ start_miner(){
     export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
 
     GIT_COMMIT="cli"
-    go build -o $root/data/miner$i/miner -v -tags "bn256 development" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
+    go build -o $root/data/miner$i/miner -v -tags "bn256 development dev" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
 
 
     keys_file=$root/data/miner$i/config/b0mnode${i}_keys.txt
