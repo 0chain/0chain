@@ -32,7 +32,7 @@ docker run --name $postgres \
 [ -d $root/data/$sharder/sql ] && rm -rf $root/data/$sharder/sql
 
 cp -rf ../bin $root/data/$sharder/
-cp -rf ../sql $root/data/$sharder/
+cp -rf ../docker.local/sql $root/data/$sharder/
 
 
 echo -n "[3/5] remove zchain_postgres_init: "
