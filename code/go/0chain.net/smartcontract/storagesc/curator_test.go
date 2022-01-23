@@ -172,7 +172,7 @@ func TestRemoveCurator(t *testing.T) {
 			})).Return("", nil).Once()
 
 		balances.On(
-			"EmitEvent", event.TypeStats, balances, txn, event.TagRemoveCurator)).Return(nil).Once()
+			"EmitEvent", event.TypeStats, balances, txn, event.TagRemoveCurator).Return(nil).Once()
 
 		return args{ssc, txn, input, balances}
 	}
