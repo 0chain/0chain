@@ -172,7 +172,13 @@ func TestRemoveCurator(t *testing.T) {
 			})).Return("", nil).Once()
 
 		balances.On(
-			"EmitEvent", event.TypeStats, balances, txn, event.TagRemoveCurator).Return(nil).Once()
+			"EmitEvent",
+			mock.MatchedBy(func(t event.EventType) bool { return t == event.TypeStats }),
+			mock.MatchedBy(func(tag event.EventTag) bool {
+				return tag == event.TagRemoveCurator || tag == event.TagAddCurator
+			}),
+			mock.MatchedBy(func(txn *transaction.Transaction) bool { return true }),
+			mock.MatchedBy(func(data string) bool { return true })).Return(nil).Once()
 
 		return args{ssc, txn, input, balances}
 	}
