@@ -16,6 +16,7 @@ setup_sharder_runtime() {
 
     cp -r ../docker.local/config "./data/sharder$i/"
     cp -r ../docker.local/sql_script "./data/sharder$i/"
+    cp -r ../docker.local/sql "./data/sharder$i/"
 
     cd  ./data/sharder$i
 
