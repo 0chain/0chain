@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 func TestAddCurator(t *testing.T) {
@@ -168,6 +170,9 @@ func TestRemoveCurator(t *testing.T) {
 				}
 				return sa.ID == p.info.AllocationId && sa.Owner == p.clientId
 			})).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent", event.TypeStats, balances, txn, event.TagRemoveCurator)).Return(nil).Once()
 
 		return args{ssc, txn, input, balances}
 	}
