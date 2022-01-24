@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [Initial Setup](#initial-setup) 
+  - [Host Machine Network Setup](#host-machine-network-setup)
   - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders) 
   - [Setup Network](#setup-network)
 - [Building and Starting the Nodes](#building-the-nodes)
@@ -22,6 +23,17 @@
 
 ## Initial Setup
 
+### Host Machine Network setup
+
+#### MacOS
+```bash
+./macos_network.sh
+```
+#### Windows
+Run powershell as administrator
+```powershell
+./windows_network.sh
+```
 ### Directory Setup for Miners and Sharders
 
 In the git/0chain run the following command
@@ -242,6 +254,11 @@ go build -tags "bn256 development"
 ```
 
 ## Debugging
+
+### Bringing up the chain faster
+```bash
+./0chain_dev_deployment.sh
+```
 
 ### Debug builds of 0chain
 

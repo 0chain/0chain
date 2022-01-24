@@ -29,6 +29,8 @@ const (
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagDeleteBlobber
+	TagAddAuthorizer
+	TagDeleteAuthorizer
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
 	TagAddBlock
@@ -67,6 +69,7 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
+	// blobber
 	case TagAddOrOverwriteBlobber:
 		var blobber Blobber
 		err := json.Unmarshal([]byte(event.Data), &blobber)
@@ -83,6 +86,16 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateBlobber(updates)
 	case TagDeleteBlobber:
 		return edb.deleteBlobber(event.Data)
+	// authorizer
+	case TagAddAuthorizer:
+		var auth *Authorizer
+		err := json.Unmarshal([]byte(event.Data), &auth)
+		if err != nil {
+			return err
+		}
+		return edb.AddAuthorizer(auth)
+	case TagDeleteAuthorizer:
+		return edb.DeleteAuthorizer(event.Data)
 	case TagAddOrOverwriteWriteMarker:
 		var wm WriteMarker
 		err := json.Unmarshal([]byte(event.Data), &wm)

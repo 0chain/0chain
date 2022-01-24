@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 }
 
 func TestGetConnection(t *testing.T) {
