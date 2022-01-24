@@ -1370,6 +1370,8 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewError("fini_alloc_failed",
 			"no allocation pools to pay min lock demand")
 	}
+
+	aps.sortExpiry()
 	apIndex := 0
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
