@@ -81,30 +81,47 @@ func TestFindTransactionByHash(t *testing.T) {
 	})
 
 	t.Run("GetTransactionByClientId", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByClientId("someClientID")
+		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", 0, 10)
 		require.NoError(t, err)
-		compareTransactions(t, gotTrs)
+		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClient")
+		gotTrs, err = eventDb.GetTransactionByClientId("someClient", 0, 10)
 		require.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
+
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", 0, 5)
+		require.NoError(t, err)
+		compareTransactions(t, gotTrs, 0, 5)
+
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", 5, 5)
+		require.NoError(t, err)
+		compareTransactions(t, gotTrs, 5, 5)
+
 	})
 
 	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash")
+		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", 0, 10)
 		require.NoError(t, err)
-		compareTransactions(t, gotTrs)
+		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash")
+		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 0, 10)
 		require.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
+
+		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 0, 5)
+		require.NoError(t, err)
+		compareTransactions(t, gotTrs, 0, 5)
+
+		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 5, 5)
+		require.NoError(t, err)
+		compareTransactions(t, gotTrs, 5, 5)
 	})
 
 }
 
-func compareTransactions(t *testing.T, gotTr []Transaction) {
+func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
 	i := 0
-	for i = 0; i < 10; i++ {
+	for i = offset; i < limit; i++ {
 		tr := Transaction{
 			Hash:      fmt.Sprintf("something_%d", i),
 			ClientId:  "someClientID",
@@ -115,7 +132,7 @@ func compareTransactions(t *testing.T, gotTr []Transaction) {
 		tr.UpdatedAt = gotTr[i].UpdatedAt
 		require.Equal(t, tr, gotTr[i], "Transaction not matching")
 	}
-	require.Equal(t, len(gotTr), 10, "Not all transactions were returned")
+	require.Equal(t, len(gotTr), limit, "Not all transactions were returned")
 }
 
 func SetUpTransactionData(t *testing.T, eventDb *EventDb) {

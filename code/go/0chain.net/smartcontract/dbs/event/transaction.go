@@ -38,14 +38,14 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 }
 
 // GetTransactionByClientId searches for transaction by clientID
-func (edb *EventDb) GetTransactionByClientId(clientID string) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByClientId(clientID string, offset, limit int) ([]Transaction, error) {
 	tr := []Transaction{}
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Scan(&tr)
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(offset).Limit(limit).Scan(&tr)
 	return tr, res.Error
 }
 
-func (edb *EventDb) GetTransactionByBlockHash(blockHash string) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByBlockHash(blockHash string, offset, limit int) ([]Transaction, error) {
 	tr := []Transaction{}
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Scan(&tr)
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(offset).Limit(limit).Scan(&tr)
 	return tr, res.Error
 }
