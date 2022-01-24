@@ -191,7 +191,7 @@ func (dkgs *DKGKeyShareImpl) Recover(dkgSigShares []DKGSignatureShare) (*bls.Sig
 }
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 }
 
 func TestGenerateDKG(tt *testing.T) {
