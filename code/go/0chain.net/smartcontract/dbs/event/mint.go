@@ -1,11 +1,10 @@
 package event
 
-import "0chain.net/core/datastore"
-
 type Mint struct {
-	Minter     datastore.Key `json:"minter"`
-	ToClientID datastore.Key `json:"to"`
-	Amount     int64         `json:"amount"`
+	Minter          string `json:"minter"`
+	ToClientID      string `json:"to"`
+	TransactionHash string `json:"transaction_hash"`
+	Amount          int64  `json:"amount"`
 }
 
 func (edb *EventDb) addMint(m Mint) error {
