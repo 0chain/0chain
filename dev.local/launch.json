@@ -10,7 +10,7 @@
           "request": "launch",
           "mode": "auto",
           "program": "${workspaceFolder}/sharder/sharder",
-          "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
+          "buildFlags":"-tags 'bn256 development dev' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
           "args": [
               "--deployment_mode", "1",
               "--keys_file", "../../../../../dev.local/data/sharder1/config/b0snode1_keys.txt", 
@@ -31,7 +31,7 @@
           "request": "launch",
           "mode": "auto",
           "program": "${workspaceFolder}/miner/miner",
-          "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
+          "buildFlags":"-tags 'bn256 development dev' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
           "args": [
               "--deployment_mode", "1",
               "--keys_file", "../../../../../dev.local/data/miner1/config/b0mnode1_keys.txt", 
@@ -56,7 +56,7 @@
           "request": "launch",
           "mode": "auto",
           "program": "${workspaceFolder}/miner/miner",
-          "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
+          "buildFlags":"-tags 'bn256 development dev' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
           "args": [
               "--deployment_mode", "1",
               "--keys_file", "../../../../../dev.local/data/miner2/config/b0mnode2_keys.txt", 
@@ -81,7 +81,7 @@
           "request": "launch",
           "mode": "auto",
           "program": "${workspaceFolder}/miner/miner",
-          "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
+          "buildFlags":"-tags 'bn256 development dev' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
           "args": [
               "--deployment_mode", "1",
               "--keys_file", "../../../../../dev.local/data/miner3/config/b0mnode3_keys.txt", 

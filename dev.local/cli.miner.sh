@@ -59,12 +59,14 @@ start_miner(){
 
     cd ./miner/miner
 
-    # Build bls with CGO_LDFLAGS and CGO_CPPFLAGS to fix `ld: library not found for -lcrypto`
-    export CGO_LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-    export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+    export LIBRARY_PATH="/usr/local/lib"
+    export LD_LIBRARY_PATH="/usr/local/lib:/usr/local/opt/openssl@1.1/lib"
+    export CGO_LDFLAGS="-L/usr/local/opt/openssl@1.1/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
+    export CGO_CFLAGS="-I/usr/local/opt/openssl@1.1/include -I/usr/local/include"
+    export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include -I/usr/local/include"
 
     GIT_COMMIT="cli"
-    go build -o $root/data/miner$i/miner -v -tags "bn256 development" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
+    go build -o $root/data/miner$i/miner -v -tags "bn256 development dev" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
 
 
     keys_file=$root/data/miner$i/config/b0mnode${i}_keys.txt
