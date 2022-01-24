@@ -273,7 +273,7 @@ func (bf *BlockFetcher) fetchFromMiners(ctx context.Context,
 
 	defer bf.release(limit)
 
-	var nb, err = chainer.getNotarizedBlockFromMiners(ctx, bfr.hash, bfr.round)
+	var nb, err = chainer.GetNotarizedBlockFromMiners(ctx, bfr.hash, bfr.round, true)
 	if err != nil {
 		bf.gotError(ctx, got, bfr.hash, err)
 		return
@@ -311,16 +311,19 @@ type FetchedNotarizedBlockHandler interface {
 	NotarizedBlockFetched(ctx context.Context, b *block.Block)
 }
 
+//go: generate
+//go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 // The Chainer represents Chain.
 type Chainer interface {
 	// LFB tickets work
 	SubLFBTicket() (sub chan *LFBTicket)
 	UnsubLFBTicket(sub chan *LFBTicket)
 	GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket)
+	GetLatestFinalizedMagicBlockClone(ctx context.Context) *block.Block
 	// blocks fetching
 	getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTicket) (
 		fb *block.Block, err error)
-	getNotarizedBlockFromMiners(ctx context.Context, hash string, round int64) (
+	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
 }
 
@@ -328,7 +331,7 @@ type Chainer interface {
 // the block fetching functions
 //
 
-// The getFinalizedBlockFromSharders - request for a finalized block from all
+// getFinalizedBlockFromSharders - request for a finalized block from all
 // sharders from current magic block.
 func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	ticket *LFBTicket) (fb *block.Block, err error) {
@@ -438,12 +441,12 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	}
 }
 
-// The getNotarizedBlockFromMiners - get a notarized block for a round from
+// getNotarizedBlockFromMiners - get a notarized block for a round from
 // miners. It verifies and validates block. But it never creates corresponding
 // Chain round, never adds the block to the round, never adds block to the
 // Chain, and never calls NotarizedBlockFetched that should be done after if
 // required.
-func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, round int64) (
+func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 	b *block.Block, err error) {
 	params := make(url.Values)
 	params.Add("block", hash)
@@ -508,20 +511,22 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 				continue
 			}
 
-			err = c.VerifyBlockNotarization(ctx, nb)
-			switch err {
-			case nil:
-			case context.Canceled, context.DeadlineExceeded:
-				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
-					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Any("duration", time.Since(ts)),
-					zap.Error(err))
-				return nil, err
-			default:
-				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
-					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Error(err))
-				continue
+			if withVerification {
+				err = c.VerifyBlockNotarization(ctx, nb)
+				switch err {
+				case nil:
+				case context.Canceled, context.DeadlineExceeded:
+					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
+						zap.Int64("round", nb.Round), zap.String("block", hash),
+						zap.Any("duration", time.Since(ts)),
+						zap.Error(err))
+					return nil, err
+				default:
+					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
+						zap.Int64("round", nb.Round), zap.String("block", hash),
+						zap.Error(err))
+					continue
+				}
 			}
 
 			// cancel further requests
@@ -539,12 +544,22 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 
 // RequestEntityFromMiners requests entity from miners in latest finalized magic block
 func (c *Chain) RequestEntityFromMiners(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.RequestEntityFromMinersOnMB(ctx, c.getLatestFinalizedMagicBlock(ctx), requestor, params, handler)
+	magicBlock := c.getLatestFinalizedMagicBlock(ctx)
+	if magicBlock == nil {
+		logging.Logger.Error("can't request entity")
+		return
+	}
+	c.RequestEntityFromMinersOnMB(ctx, magicBlock, requestor, params, handler)
 }
 
 // RequestEntityFromSharders requests entity from sharders in latest finalized magic block
 func (c *Chain) RequestEntityFromSharders(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.RequestEntityFromShardersOnMB(ctx, c.getLatestFinalizedMagicBlock(ctx), requestor, params, handler)
+	magicBlock := c.getLatestFinalizedMagicBlock(ctx)
+	if magicBlock == nil {
+		logging.Logger.Error("can't request entity")
+		return
+	}
+	c.RequestEntityFromShardersOnMB(ctx, magicBlock, requestor, params, handler)
 }
 
 // RequestEntityFromMinersOnMB requests entity from miners on given magic block
@@ -588,6 +603,23 @@ func (bf *BlockFetcher) fetch(ctx context.Context,
 	case bf.fetchBlock <- bfr:
 	}
 	return nil
+}
+
+func (c *Chain) GetNotarizedBlockForce(ctx context.Context, hash string, rn int64) (*block.Block, error) {
+	for true {
+		select {
+		case <-ctx.Done():
+			break
+		default:
+		}
+
+		notarizedBlock, err := c.GetNotarizedBlock(ctx, hash, rn)
+		if err != nil {
+			continue
+		}
+		return notarizedBlock, nil
+	}
+	return nil, context.DeadlineExceeded
 }
 
 // GetNotarizedBlock - get a notarized block for a round.

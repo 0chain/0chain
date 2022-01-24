@@ -212,7 +212,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 17,
+			restpoints: 24,
 		},
 		{
 			name:       "interest",
@@ -227,7 +227,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "miner",
 			address:    minersc.ADDRESS,
-			restpoints: 15,
+			restpoints: 19,
 		},
 		{
 			name:       "vesting",
@@ -400,8 +400,19 @@ func TestExecuteSmartContract(t *testing.T) {
 	type args struct {
 		ctx      context.Context
 		t        *transaction.Transaction
+		td       *sci.SmartContractTransactionData
 		balances chstate.StateContextI
 	}
+
+	smartContractData := sci.SmartContractTransactionData{
+		FunctionName: "miner_health_check",
+	}
+
+	blob, err := json.Marshal(smartContractData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -414,15 +425,23 @@ func TestExecuteSmartContract(t *testing.T) {
 				t: &transaction.Transaction{
 					ToClientID: "unknown",
 				},
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "miner_health_check",
+					InputData:    json.RawMessage{},
+				},
 			},
 			wantErr: true,
 		},
 		{
 			name: "Invalid_JSON_Data_ERR",
 			args: args{
+				balances: stateContextIMock,
 				t: &transaction.Transaction{
-					ToClientID:      minersc.ADDRESS,
-					TransactionData: "}{",
+					ToClientID: faucetsc.ADDRESS,
+				},
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "update-settings",
+					InputData:    json.RawMessage("}{"),
 				},
 			},
 			wantErr: true,
@@ -433,18 +452,10 @@ func TestExecuteSmartContract(t *testing.T) {
 				balances: stateContextIMock,
 				t: &transaction.Transaction{
 					ToClientID: minersc.ADDRESS,
-					TransactionData: func() string {
-						smartContractData := sci.SmartContractTransactionData{
-							FunctionName: "miner_health_check",
-						}
-
-						blob, err := json.Marshal(smartContractData)
-						if err != nil {
-							t.Fatal(err)
-						}
-
-						return string(blob)
-					}(),
+				},
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "miner_health_check",
+					InputData:    blob,
 				},
 			},
 			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0}}",
@@ -456,7 +467,7 @@ func TestExecuteSmartContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ExecuteSmartContract(tt.args.ctx, tt.args.t, tt.args.balances)
+			got, err := ExecuteSmartContract(tt.args.t, tt.args.td, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v", err, tt.wantErr)
 				return

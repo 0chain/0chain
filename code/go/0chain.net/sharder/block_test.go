@@ -226,7 +226,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.HashBlock()
-
+	makeTestChain(t)
 	sharder.GetSharderChain().AddBlock(b)
 
 	type fields struct {

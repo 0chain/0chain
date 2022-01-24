@@ -22,6 +22,23 @@ var ErrStopIterator = common.NewError("stop_iterator", "Stop MPT Iteration")
 
 var MaxStateNodesForSync = 10000
 
+func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return context.DeadlineExceeded
+		default:
+		}
+
+		err := c.GetBlockStateChange(b)
+		if err != nil {
+			logging.Logger.Info("can't get block state changes, retrying", zap.Error(err))
+			continue
+		}
+		return nil
+	}
+}
+
 //GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	ts := time.Now()
@@ -340,6 +357,9 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	params := &url.Values{}
 	params.Add("block", b.Hash)
 	mb := c.GetLatestFinalizedMagicBlock(cctx)
+	if mb == nil {
+		return nil, errors.New("can't get mb")
+	}
 	stateChangesC := make(chan *block.StateChange, mb.Miners.Size())
 
 	var handler = func(_ context.Context, entity datastore.Entity) (

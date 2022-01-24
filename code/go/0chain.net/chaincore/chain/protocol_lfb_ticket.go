@@ -396,12 +396,18 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 
 // StartLFMBWorker starts the worker for getting latest finalized magic block
 func (c *Chain) StartLFMBWorker(ctx context.Context) {
-	var lfmb *block.Block
+	var (
+		lfmb  *block.Block
+		clone *block.Block
+	)
+
 	for {
 		select {
 		case c.getLFMB <- lfmb:
+		case c.getLFMBClone <- clone:
 		case v := <-c.updateLFMB:
 			lfmb = v.block
+			clone = v.clone
 			logging.Logger.Debug("update LFMB", zap.Int64("round", lfmb.Round))
 			v.reply <- struct{}{}
 		case <-ctx.Done():
@@ -412,7 +418,8 @@ func (c *Chain) StartLFMBWorker(ctx context.Context) {
 
 func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block.Block) {
 	v := &updateLFMBWithReply{
-		block: lfmb.Clone(),
+		block: lfmb,
+		clone: lfmb.Clone(),
 		reply: make(chan struct{}, 1),
 	}
 	select {
