@@ -1006,7 +1006,15 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 
 		for i, bd := range alloc.BlobberDetails {
-			bd.Terms = blobbers[i].Terms
+			if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
+				bd.Terms.WritePrice = blobbers[i].Terms.WritePrice
+			}
+			if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
+				bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
+			}
+			bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
+			bd.Terms.ChallengeCompletionTime = blobbers[i].Terms.ChallengeCompletionTime
+			bd.Terms.MaxOfferDuration = blobbers[i].Terms.MaxOfferDuration
 		}
 	}
 
