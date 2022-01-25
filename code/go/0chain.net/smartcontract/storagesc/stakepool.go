@@ -445,14 +445,13 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	// Unstake is total balance of delegate pools want to unsake. But
 	// can't for now. Total stake for new offers (new allocations) can
 	// be calculated as (Balance - Unstake).
-	stat.Unstake = sp.stake() - sp.cleanStake()
+	stat.UnstakeTotal = sp.TotalUnStake
 	// Free is free space, excluding delegate pools want to unstake.
 	stat.Free = sp.cleanCapacity(now, blobber.Terms.WritePrice)
 	stat.Capacity = blobber.Capacity
 	stat.WritePrice = blobber.Terms.WritePrice
 
 	stat.OffersTotal = sp.TotalOffers
-	stat.UnstakeTotal = sp.TotalUnStake
 
 	// delegate pools
 	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
@@ -514,7 +513,7 @@ type stakePoolStat struct {
 
 	//Offers      []offerPoolStat `json:"offers"`       //
 	OffersTotal  state.Balance `json:"offers_total"` //
-	UnstakeTotal state.Balance `json:"unstakeTotal"`
+	UnstakeTotal state.Balance `json:"unstake_total"`
 	// delegate pools
 	Delegate []delegatePoolStat `json:"delegate"`
 	Penalty  state.Balance      `json:"penalty"` // total for all
