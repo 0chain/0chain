@@ -180,7 +180,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	)
 	defer func() { events = sctx.GetEvents() }()
 
-	//we should check that client hash enough funds to pay for transaction before heavy computations are executed
+	//we should check that client has enough funds to pay for transaction before heavy computations are executed
 	if err = sctx.Validate(); err != nil {
 		return
 	}
@@ -227,11 +227,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				clientState = CreateTxnMPT(bState) // begin transaction
 				sctx = c.NewStateContext(b, clientState, txn, nil)
 
-				if e, ok := err.(*common.Error); ok {
-					output = e.Code + ":" + e.Msg
-				} else {
-					output = err.Error()
-				}
+				output = err.Error()
 				txn.Status = transaction.TxnError
 			}
 		}
