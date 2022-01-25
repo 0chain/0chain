@@ -1,20 +1,21 @@
 package memorystore
 
 import (
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"github.com/alicebob/miniredis/v2"
-	"github.com/gomodule/redigo/redis"
-	"github.com/stretchr/testify/require"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 }
 
 func initDefaultPool() error {

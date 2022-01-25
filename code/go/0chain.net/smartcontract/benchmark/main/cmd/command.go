@@ -40,7 +40,7 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 }
 
 func init() {
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 	node.Self = &node.SelfNode{
 		Node: node.Provider(),
 	}

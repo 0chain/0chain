@@ -2,24 +2,54 @@ package zcnsc
 
 import (
 	"context"
-	"errors"
 	"net/url"
 
 	"0chain.net/smartcontract"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	cState "0chain.net/chaincore/chain/state"
+	"github.com/pkg/errors"
 )
 
-func (zcn *ZCNSmartContract) getAuthorizerNode(_ context.Context, params url.Values, ctx cState.StateContextI) (interface{}, error) {
-	authorizerID := params.Get("id")
-	if authorizerID == "" {
-		return nil, errors.New("authorizerID is empty")
+type AuthorizerNodeResponse struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
+}
+
+// GetAuthorizerNodes returns all authorizers from eventDB
+// which is used to assign jobs to all or a part of authorizers
+func (zcn *ZCNSmartContract) GetAuthorizerNodes(
+	_ context.Context,
+	_ url.Values,
+	ctx cState.StateContextI,
+) (interface{}, error) {
+	if ctx.GetEventDB() == nil {
+		return nil, errors.New("eventsDB not initialized")
 	}
 
-	node, err := GetAuthorizerNode(authorizerID, ctx)
+	authorizers, err := ctx.GetEventDB().GetAuthorizers()
+
 	if err != nil {
+		return nil, errors.Wrap(err, "getAuthorizerNodes DB error")
+	}
+
+	if authorizers == nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list")
 	}
 
-	return node, err
+	var nodes []*AuthorizerNodeResponse
+	for _, authorizer := range authorizers {
+		node := authorizerToAuthorizerNode(&authorizer)
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
+}
+
+func authorizerToAuthorizerNode(ev *event.Authorizer) *AuthorizerNodeResponse {
+	return &AuthorizerNodeResponse{
+		ID:  ev.AuthorizerID,
+		URL: ev.URL,
+	}
 }
