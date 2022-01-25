@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract"
 
@@ -178,7 +179,7 @@ func (msc *StorageSmartContract) GetTransactionByHashHandler(
 	return &transaction, err
 }
 
-func (msc *StorageSmartContract) GetErrorByTransactionHash(
+func (msc *StorageSmartContract) GetErrors(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,

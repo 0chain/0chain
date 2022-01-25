@@ -13,6 +13,6 @@ func (edb *EventDb) addError(err Error) error {
 }
 
 func (edb *EventDb) GetErrorByTransactionHash(transactionID string) ([]Error, error) {
-	var err []Error
-	return err, edb.Store.Get().Model(&Error{}).Where(Error{TransactionID: transactionID}).Find(&err).Error
+	var transactionErrors []Error
+	return transactionErrors, edb.Store.Get().Model(&Error{}).Where(Error{TransactionID: transactionID}).Find(&transactionErrors).Error
 }
