@@ -461,12 +461,10 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 			ID:         dp.ID,
 			Balance:    dp.Balance,
 			DelegateID: dp.DelegateID,
-			Interests:  dp.Interests,
 			Rewards:    dp.Rewards,
 			Penalty:    dp.Penalty,
 			UnStake:    dp.UnStake,
 		}
-		stat.Interests += dp.Rewards
 		stat.Penalty += dp.Penalty
 		stat.Delegate = append(stat.Delegate, dps)
 	}
@@ -500,7 +498,6 @@ type delegatePoolStat struct {
 	Balance    state.Balance `json:"balance"`     // current balance
 	DelegateID datastore.Key `json:"delegate_id"` // wallet
 	Rewards    state.Balance `json:"rewards"`     // total for all time
-	Interests  state.Balance `json:"interests"`   // total for all time (payed)
 	Penalty    state.Balance `json:"penalty"`     // total for all time
 	UnStake    bool          `json:"unstake"`     // want to unstake
 
@@ -519,9 +516,8 @@ type stakePoolStat struct {
 	OffersTotal  state.Balance `json:"offers_total"` //
 	UnstakeTotal state.Balance `json:"unstakeTotal"`
 	// delegate pools
-	Delegate  []delegatePoolStat `json:"delegate"`
-	Interests state.Balance      `json:"interests"` // total for all (TO REMOVE)
-	Penalty   state.Balance      `json:"penalty"`   // total for all
+	Delegate []delegatePoolStat `json:"delegate"`
+	Penalty  state.Balance      `json:"penalty"` // total for all
 	// rewards
 	Rewards rewardsStat `json:"rewards"`
 
@@ -877,7 +873,6 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 				ID:         dp.ID,
 				Balance:    dp.Balance,
 				DelegateID: dp.DelegateID,
-				Interests:  dp.Interests,
 				Rewards:    dp.Rewards,
 				Penalty:    dp.Penalty,
 			}
