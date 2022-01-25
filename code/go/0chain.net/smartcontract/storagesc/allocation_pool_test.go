@@ -391,77 +391,91 @@ func Test_allocationPools(t *testing.T) {
 
 	require.EqualValues(t, []*allocationPool{}, aps.blobberCut(a2, "b2", 21))
 
-	aps = allocationPools{
-		&allocationPool{
-			ExpireAt:     100,
-			AllocationID: "a1",
-			Blobbers:     blobberPools{},
-		},
-		&allocationPool{
-			ExpireAt:     15,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
+}
+
+func Test_allocationPools_sortExpiry(t *testing.T) {
+	tests := []struct {
+		name string
+		aps  allocationPools
+		want allocationPools
+	}{
+		{name: "sort by expiry",
+			aps: allocationPools{
+				&allocationPool{
+					ExpireAt:     100,
+					AllocationID: "a1",
+					Blobbers:     blobberPools{},
+				},
+				&allocationPool{
+					ExpireAt:     15,
+					AllocationID: "a2",
+					Blobbers: blobberPools{
+						&blobberPool{BlobberID: "b1", Balance: 101},
+						&blobberPool{BlobberID: "b2", Balance: 152},
+					},
+				},
+				&allocationPool{
+					ExpireAt:     210,
+					AllocationID: "a2",
+					Blobbers: blobberPools{
+						&blobberPool{BlobberID: "b1", Balance: 0},
+					},
+				},
+				&allocationPool{
+					ExpireAt:     125,
+					AllocationID: "a2",
+					Blobbers: blobberPools{
+						&blobberPool{BlobberID: "b1", Balance: 103},
+						&blobberPool{BlobberID: "b2", Balance: 154},
+					},
+				},
+				&allocationPool{
+					ExpireAt:     3,
+					AllocationID: "a3",
+					Blobbers:     blobberPools{},
+				},
 			},
-		},
-		&allocationPool{
-			ExpireAt:     210,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 0},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     125,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     3,
-			AllocationID: "a3",
-			Blobbers:     blobberPools{},
-		},
+			want: allocationPools{
+				&allocationPool{
+					ExpireAt:     3,
+					AllocationID: "a3",
+					Blobbers:     blobberPools{},
+				},
+				&allocationPool{
+					ExpireAt:     15,
+					AllocationID: "a2",
+					Blobbers: blobberPools{
+						&blobberPool{BlobberID: "b1", Balance: 101},
+						&blobberPool{BlobberID: "b2", Balance: 152},
+					},
+				},
+				&allocationPool{
+					ExpireAt:     100,
+					AllocationID: "a1",
+					Blobbers:     blobberPools{},
+				},
+				&allocationPool{
+					ExpireAt:     125,
+					AllocationID: "a2",
+					Blobbers: blobberPools{
+						&blobberPool{BlobberID: "b1", Balance: 103},
+						&blobberPool{BlobberID: "b2", Balance: 154},
+					},
+				},
+				&allocationPool{
+					ExpireAt:     210,
+					AllocationID: "a2",
+					Blobbers: blobberPools{
+						&blobberPool{BlobberID: "b1", Balance: 0},
+					},
+				},
+			}},
 	}
 
-	aps.sortExpiry()
-	assert.EqualValues(t, allocationPools{
-		&allocationPool{
-			ExpireAt:     3,
-			AllocationID: "a3",
-			Blobbers:     blobberPools{},
-		},
-		&allocationPool{
-			ExpireAt:     15,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     100,
-			AllocationID: "a1",
-			Blobbers:     blobberPools{},
-		},
-		&allocationPool{
-			ExpireAt:     125,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     210,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 0},
-			},
-		},
-	}, aps)
-
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.aps.sortExpiry()
+			require.EqualValues(t, tt.want, tt.aps)
+		})
+	}
 }
