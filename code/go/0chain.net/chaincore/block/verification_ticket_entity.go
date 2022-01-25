@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
@@ -14,6 +15,8 @@ import (
  */
 type BlockVerificationTicket struct {
 	datastore.NOIDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	VerificationTicket
 	Round   int64         `json:"round"`
 	BlockID datastore.Key `json:"block_id"`
@@ -63,7 +66,9 @@ func (vt *VerificationTicket) GetBlockVerificationTicket(b *Block) *BlockVerific
 
 /*BVTProvider - entity provider for block_verification_ticket object */
 func BVTProvider() datastore.Entity {
-	return &BlockVerificationTicket{}
+	bt := &BlockVerificationTicket{}
+	bt.Version = protocol.LatestSupportProtoVersion.String()
+	return bt
 }
 
 /*SetupBVTEntity - setup the entity */

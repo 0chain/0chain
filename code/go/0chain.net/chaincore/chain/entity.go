@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/chaincore/versions"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/blang/semver/v4"
@@ -93,6 +94,7 @@ type Chain struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
+	datastore.NoProtocolChange
 
 	mutexViewChangeMB sync.RWMutex
 
@@ -202,9 +204,11 @@ type Chain struct {
 	computeBlockStateC chan struct{}
 
 	// smart contract verions upgrader
-	scVersions versionUpgrader
+	scVersions          versionUpgrader
+	finalizedSCVersions versionUpgrader
 	// protocol versions upgrader
-	protoVersions versionUpgrader
+	protoVersions          versionUpgrader
+	finalizedProtoVersions versionUpgrader
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -428,7 +432,8 @@ func Provider() datastore.Entity {
 	c := &Chain{}
 	c.Config = NewConfigImpl(&ConfigData{})
 	c.Initialize()
-	c.Version = "1.0"
+	//c.Version = "1.0"
+	c.Version = protocol.LatestSupportProtoVersion.String()
 
 	c.blocks = make(map[string]*block.Block)
 	c.blocksMutex = &sync.RWMutex{}
@@ -474,8 +479,10 @@ func Provider() datastore.Entity {
 	c.bscMutex = &sync.Mutex{}
 
 	c.computeBlockStateC = make(chan struct{}, 1)
-	c.scVersions = newVersionsConsensus(getNodeIDs(mb), 80) // 80 percent to consensus
+	c.scVersions = newVersionsConsensus(getNodeIDs(mb), 80)          // 80 percent to consensus
+	c.finalizedSCVersions = newVersionsConsensus(getNodeIDs(mb), 80) // 80 percent to consensus
 	c.protoVersions = newVersionsConsensus(getNodeIDs(mb), 80)
+	c.finalizedProtoVersions = newVersionsConsensus(getNodeIDs(mb), 80)
 	return c
 }
 
@@ -1165,13 +1172,13 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme())
 }
 
-func (c *Chain) SetLatestSupportedSCVersion(id datastore.Key, v *semver.Version) error {
-	return c.scVersions.Add(id, *v)
-}
-
-func (c *Chain) SetLatestSupportedProtoVersion(id datastore.Key, v *semver.Version) error {
-	return c.protoVersions.Add(id, *v)
-}
+//func (c *Chain) SetLatestSupportedSCVersion(id datastore.Key, v *semver.Version) error {
+//	return c.scVersions.Add(id, *v)
+//}
+//
+//func (c *Chain) SetLatestSupportedProtoVersion(id datastore.Key, v *semver.Version) error {
+//	return c.protoVersions.Add(id, *v)
+//}
 
 // UpdateVersionCheckFunc function signature for checking if SC version could be updated
 type UpdateVersionCheckFunc func() (*semver.Version, bool, cstate.SwitchAdapter)
@@ -1344,7 +1351,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Unlock()
 
 	c.updateConfig(b)
-	c.updateSCVersion(b)
+	c.updateVersions(b)
 
 	// add LFB to blocks cache
 	if b != nil {
@@ -1424,7 +1431,7 @@ func (mc *Chain) updateConfig(b *block.Block) {
 // TODO: optimize this to do not read out version from MPT
 // each time when there's a block finalized. Should be notified
 // when the version is changed.
-func (mc *Chain) updateSCVersion(b *block.Block) {
+func (mc *Chain) updateVersions(b *block.Block) {
 	clientState, err := getClientState(b)
 	if err != nil {
 		// This might happen after stopping and starting the miners
@@ -1435,7 +1442,9 @@ func (mc *Chain) updateSCVersion(b *block.Block) {
 		return
 	}
 
-	if err := versions.UpdateVersionsWithState(clientState); err != nil {
+	if err := versions.UpdateVersionsWithState(clientState,
+		versions.UpdateSCVersion(getSCVersionFromState),
+		versions.UpdateProtoVersion(getProtoVersionFromState)); err != nil {
 		logging.Logger.Error("update versions on lfb failed", zap.Error(err))
 		return
 	}
@@ -1610,7 +1619,9 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		c.updateLatestFinalizedMagicBlock(context.Background(), b)
 		nds := getNodeIDs(b.MagicBlock)
 		c.scVersions.UpdateNodesList(nds)
+		c.finalizedSCVersions.UpdateNodesList(nds)
 		c.protoVersions.UpdateNodesList(nds)
+		c.finalizedProtoVersions.UpdateNodesList(nds)
 	}
 }
 

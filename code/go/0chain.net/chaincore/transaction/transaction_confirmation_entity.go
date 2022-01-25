@@ -9,6 +9,7 @@ import (
 
 /*Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain */
 type Confirmation struct {
+	datastore.NotProtocol
 	Version           string       `json:"version"`
 	Hash              string       `json:"hash"`
 	BlockHash         string       `json:"block_hash"`
@@ -84,7 +85,7 @@ func (c *Confirmation) GetHashBytes() []byte {
 
 func TransactionConfirmationProvider() datastore.Entity {
 	t := &Confirmation{}
-	t.Version = "1.0"
+	//t.Version = "1.0"
 	return t
 }
 

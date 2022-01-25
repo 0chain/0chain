@@ -10,6 +10,7 @@ import (
 
 type MagicBlockData struct {
 	datastore.IDField
+	datastore.NotProtocol
 	*MagicBlock
 }
 

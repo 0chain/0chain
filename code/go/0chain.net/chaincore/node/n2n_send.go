@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/protocol"
+	"0chain.net/chaincore/versions"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -227,6 +229,10 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		timeout = options.Timeout
 	}
 	return func(entity datastore.Entity) SendHandler {
+		protoVersion := versions.GetProtoVersion()
+		if protoVersion.LT(protocol.LatestSupportProtoVersion) {
+			entity = entity.ToPreviousVersion(entity)
+		}
 		data := getResponseData(options, entity).Bytes()
 
 		toPull := options.Pull
@@ -278,6 +284,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			if err != nil {
 				return false
 			}
+			req.Header.Set(HeaderProtoVersion, protoVersion.String())
 			defer req.Body.Close()
 
 			if options.Compress {
@@ -482,6 +489,13 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			http.Error(w, "Header Content-type=application/json not found", 400)
 			return
 		}
+
+		protoVersion, err := validateProtocolVersion(r.Header.Get(HeaderProtoVersion), true)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
@@ -532,6 +546,10 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
 				sender.AddReceived(1)
 				return
+			}
+
+			if protoVersion.LT(protocol.LatestSupportProtoVersion) {
+				entityMetadata = entityMetadata.GetPreviousVersionEntityMeta()
 			}
 
 			entity, err := getRequestEntity(r, &buf, entityMetadata)

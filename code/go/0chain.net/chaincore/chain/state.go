@@ -9,6 +9,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/versions"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 
 	"errors"
 
@@ -158,7 +159,37 @@ func (c *Chain) initVersions(round int64) error {
 			"lfb is too far away from current round, lfb round: %d, round: %d", lfb.Round, round)
 	}
 
-	return versions.InitVersionsOnce(lfb.ClientState)
+	return versions.InitVersionsOnce(lfb.ClientState,
+		versions.CheckSCVersionAndSetDelay(getSCVersionFromState),
+		versions.CheckProtoVersionAndSetDelay(getProtoVersionFromState))
+}
+
+func getSCVersionFromState(state util.MerklePatriciaTrieI) (*semver.Version, error) {
+	vn, err := bcstate.GetTrieNode(state, minersc.SCVersionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var vnode minersc.VersionNode
+	if err := vnode.Decode(vn.Encode()); err != nil {
+		return nil, err
+	}
+
+	return semver.New(vnode.String())
+}
+
+func getProtoVersionFromState(state util.MerklePatriciaTrieI) (*semver.Version, error) {
+	vn, err := bcstate.GetTrieNode(state, minersc.ProtoVersionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var vnode minersc.VersionNode
+	if err := vnode.Decode(vn.Encode()); err != nil {
+		return nil, err
+	}
+
+	return semver.New(vnode.String())
 }
 
 func (c *Chain) updateState(ctx context.Context,
@@ -537,4 +568,8 @@ func isValid(err error) bool {
 		return true
 	}
 	return false
+}
+
+func (c *Chain) GetLatestFinalizedState() util.MerklePatriciaTrieI {
+	return c.GetLatestFinalizedBlock().ClientState
 }

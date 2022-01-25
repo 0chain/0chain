@@ -3,11 +3,8 @@ package versions
 import (
 	"sync"
 
-	bcstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/minersc"
 	"github.com/blang/semver/v4"
 	"go.uber.org/zap"
 )
@@ -20,43 +17,73 @@ func newSCVersion() *Version {
 		lock: &sync.RWMutex{},
 	}
 
-	v.isStateReadyFunc = checkSCVersionOrInit(v)
-	v.updateVersionFunc = updateSCVersionWithState
+	//v.isStateReadyFunc = checkSCVersionOrInit(v)
+	//v.updateVersionFunc = updateSCVersionWithState
 
 	register(v)
 	return v
 }
 
-// checkSCVersionOrInit checks MPT state to see if sc version could be found,
-// return a function to set sc version with the value from state
-func checkSCVersionOrInit(scv *Version) isStateReadyCheckFunc {
-	return func(state util.MerklePatriciaTrieI) (initVersionFunc, error) {
-		v, err := GetSCVersionFromState(state)
+func CheckSCVersionAndSetDelay(getVersion GetVersionFunc) CheckVersionAndSetDelayFunc {
+	return func(state util.MerklePatriciaTrieI) (SetVersionFunc, error) {
+		v, err := getVersion(state)
 		if err != nil {
-			return nil, common.NewErrorf("init_sc_version_failed", "could not get sc version from MPT: %v", err)
+			return nil, err
 		}
 
 		return func() {
-			scv.Set(*v)
-			logging.Logger.Debug("init sc version", zap.String("version", v.String()))
+			scVersion.Set(*v)
 		}, nil
 	}
 }
 
-func updateSCVersionWithState(cv *Version, state util.MerklePatriciaTrieI) error {
-	v, err := GetSCVersionFromState(state)
-	if err != nil {
-		return err
-	}
+func UpdateSCVersion(getVersion GetVersionFunc) UpdateVersionFunc {
+	return func(state util.MerklePatriciaTrieI) error {
+		v, err := getVersion(state)
+		if err != nil {
+			return err
+		}
 
-	if v.GT(cv.Get()) {
-		cv.Set(*v)
-		logging.Logger.Debug("updated sc version",
-			zap.String("previous version", cv.String()),
-			zap.String("new version", v.String()))
+		if v.GT(scVersion.Get()) {
+			scVersion.Set(*v)
+			logging.Logger.Debug("updated sc version",
+				zap.String("previous version", scVersion.String()),
+				zap.String("new version", v.String()))
+		}
+		return nil
 	}
-	return nil
 }
+
+// checkSCVersionOrInit checks MPT state to see if sc version could be found,
+// return a function to set sc version with the value from state
+//func checkSCVersionOrInit(scv *Version) isStateReadyCheckFunc {
+//	return func(state util.MerklePatriciaTrieI) (initVersionFunc, error) {
+//		v, err := GetSCVersionFromState(state)
+//		if err != nil {
+//			return nil, common.NewErrorf("init_sc_version_failed", "could not get sc version from MPT: %v", err)
+//		}
+//
+//		return func() {
+//			scv.Set(*v)
+//			logging.Logger.Debug("init sc version", zap.String("version", v.String()))
+//		}, nil
+//	}
+//}
+//
+//func updateSCVersionWithState(cv *Version, state util.MerklePatriciaTrieI) error {
+//	v, err := GetSCVersionFromState(state)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if v.GT(cv.Get()) {
+//		cv.Set(*v)
+//		logging.Logger.Debug("updated sc version",
+//			zap.String("previous version", cv.String()),
+//			zap.String("new version", v.String()))
+//	}
+//	return nil
+//}
 
 // GetSCVersion returns smart contract version
 func GetSCVersion() semver.Version {
@@ -66,18 +93,4 @@ func GetSCVersion() semver.Version {
 // SetSCVersion sets smart contract version
 func SetSCVersion(v *semver.Version) {
 	scVersion.Set(*v)
-}
-
-func GetSCVersionFromState(state util.MerklePatriciaTrieI) (*semver.Version, error) {
-	vn, err := bcstate.GetTrieNode(state, minersc.SCVersionKey)
-	if err != nil {
-		return nil, err
-	}
-
-	var vnode minersc.VersionNode
-	if err := vnode.Decode(vn.Encode()); err != nil {
-		return nil, err
-	}
-
-	return semver.New(vnode.String())
 }

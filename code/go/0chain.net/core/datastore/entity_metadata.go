@@ -11,15 +11,18 @@ type (
 		Instance() Entity
 		GetStore() Store
 		GetIDColumnName() string
+
+		GetPreviousVersionEntityMeta() EntityMetadata
 	}
 
 	// EntityMetadataImpl implements EntityMetadata interface.
 	EntityMetadataImpl struct {
-		Name         string
-		DB           string
-		Store        Store
-		Provider     InstanceProvider
-		IDColumnName string
+		Name            string
+		DB              string
+		Store           Store
+		Provider        InstanceProvider
+		IDColumnName    string
+		PreviousVersion EntityMetadata
 	}
 )
 
@@ -53,4 +56,12 @@ func (em *EntityMetadataImpl) GetStore() Store {
 // GetIDColumnName implements EntityMetadata.GetIDColumnName method of interface.
 func (em *EntityMetadataImpl) GetIDColumnName() string {
 	return em.IDColumnName
+}
+
+func (em *EntityMetadataImpl) GetPreviousVersionEntityMeta() EntityMetadata {
+	if em.PreviousVersion != nil {
+		return em.PreviousVersion
+	}
+
+	return em
 }

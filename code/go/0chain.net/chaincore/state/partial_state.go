@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
@@ -19,10 +20,11 @@ var ErrHashMismatch = errors.New("Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Hash      util.Key    `json:"root"`
-	Version   string      `json:"version"`
 	StartRoot util.Key    `json:"start"`
-	Nodes     []util.Node `json:"_"`
+	Nodes     []util.Node `json:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
 }
@@ -40,7 +42,7 @@ var partialStateEntityMetadata *datastore.EntityMetadataImpl
 /*PartialStateProvider - a block summary instance provider */
 func PartialStateProvider() datastore.Entity {
 	ps := &PartialState{}
-	ps.Version = "1.0"
+	ps.Version = protocol.LatestSupportProtoVersion.String()
 	return ps
 }
 

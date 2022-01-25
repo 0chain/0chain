@@ -1,11 +1,12 @@
 package client
 
 import (
-	"0chain.net/core/cache"
 	"context"
 	"encoding/hex"
 	"errors"
 	"time"
+
+	"0chain.net/core/cache"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -33,10 +34,11 @@ type Client struct {
 	datastore.IDField               `yaml:",inline"`
 	datastore.VersionField          `yaml:"-"`
 	datastore.CreationDateField     `yaml:"-"`
-	PublicKey                       string                     `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes                  []byte                     `json:"-" msgpack:"-" yaml:"-"`
-	sigSchemeType                   string                     `yaml:"-"`
-	SigScheme                       encryption.SignatureScheme `json:"-" msgpack:"-" yaml:"-"`
+	datastore.NoProtocolChange
+	PublicKey      string                     `yaml:"public_key" json:"public_key"`
+	PublicKeyBytes []byte                     `json:"-" msgpack:"-" yaml:"-"`
+	sigSchemeType  string                     `yaml:"-"`
+	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-" yaml:"-"`
 }
 
 // NewClient - create a new client object

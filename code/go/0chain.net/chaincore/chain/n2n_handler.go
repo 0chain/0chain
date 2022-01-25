@@ -227,19 +227,33 @@ func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	logging.Logger.Debug("versions handler", zap.Any("versions", ve.Versions))
 	c := GetServerChain()
 
-	scV, err := ve.Get("sc_version")
+	scV, err := ve.Get(VersionEntitySCKey)
 	if err != nil {
 		logging.Logger.Error("versions handler: invalid sc version",
 			zap.Error(err))
 		return nil, nil
 	}
 
-	protoV, err := ve.Get("proto_version")
+	//fscV, err := ve.Get(VersionEntityFinalizedSCKey)
+	//if err != nil {
+	//	logging.Logger.Error("versions handler: invalid finalized sc version",
+	//		zap.Error(err))
+	//	return nil, nil
+	//}
+
+	protoV, err := ve.Get(VersionEntityProtoKey)
 	if err != nil {
 		logging.Logger.Error("versions handler: invalid protocol version",
 			zap.Error(err))
 		return nil, nil
 	}
+
+	//fprotoV, err := ve.Get(VersionEntityFinalizedProtoKey)
+	//if err != nil {
+	//	logging.Logger.Error("versions handler: invalid finalized protocol version",
+	//		zap.Error(err))
+	//	return nil, nil
+	//}
 
 	if err := node.ValidateSenderSignature(ctx); err != nil {
 		logging.Logger.Error("versions handler: failed to validate sender signature", zap.Error(err))
@@ -263,11 +277,38 @@ func VersionsHandler(ctx context.Context, entity datastore.Entity) (interface{},
 		}
 	}
 
+	//if fscV != nil {
+	//	if err := c.finalizedSCVersions.Add(sender.GetKey(), *fscV); err != nil {
+	//		logging.Logger.Error("versions handler: add finalized sc version failed", zap.Error(err))
+	//	}
+	//
+	//	// update local finalized sc version if the finalized sc version meet consensus
+	//	scConsensusV := c.finalizedSCVersions.GetConsensusVersion()
+	//	if scConsensusV != nil && scConsensusV.GT(versions.GetSCVersion()) {
+	//		versions.SetSCVersion(scConsensusV)
+	//		logging.Logger.Debug("versions handler: new sc version meet consensus",
+	//			zap.String("version", scConsensusV.String()))
+	//	}
+	//}
+
 	if protoV != nil {
 		if err := c.protoVersions.Add(sender.GetKey(), *protoV); err != nil {
 			logging.Logger.Error("versions handler: add protocol version failed", zap.Error(err))
 		}
 	}
 
+	//if fprotoV != nil {
+	//	if err := c.finalizedProtoVersions.Add(sender.GetKey(), *fprotoV); err != nil {
+	//		logging.Logger.Error("versions handler: add finalized protocol version failed", zap.Error(err))
+	//	}
+	//
+	//	protoConsensusV := c.finalizedProtoVersions.GetConsensusVersion()
+	//	if protoConsensusV != nil && protoConsensusV.GT(versions.GetProtoVersion()) {
+	//		versions.SetProtoVersion(protoConsensusV)
+	//		logging.Logger.Debug("versions handler: new protocol version meet consensus",
+	//			zap.String("version", protoConsensusV.String()))
+	//	}
+	//}
+	//
 	return nil, nil
 }

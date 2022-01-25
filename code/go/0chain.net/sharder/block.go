@@ -18,6 +18,7 @@ import (
 // BlockSummaries -
 type BlockSummaries struct {
 	datastore.IDField
+	datastore.NotProtocol
 	BSummaryList []*block.BlockSummary `json:"block_summaries"`
 }
 

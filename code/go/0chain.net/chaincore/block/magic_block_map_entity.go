@@ -11,13 +11,14 @@ import (
 /*MagicBlockSummary - the summary of the transaction */
 type MagicBlockMap struct {
 	datastore.IDField
+	datastore.NotProtocol
 	Hash       string `json:"hash"`
 	BlockRound int64  `json:"block_round"`
 }
 
 var magicBlockMapEntityMetadata *datastore.EntityMetadataImpl
 
-//MagicBlockSummaryProvider - factory method
+// MagicBlockMapProvider - factory method
 func MagicBlockMapProvider() datastore.Entity {
 	mb := &MagicBlockMap{}
 	return mb

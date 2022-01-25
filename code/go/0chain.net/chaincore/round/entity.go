@@ -192,6 +192,7 @@ func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
+	datastore.NotProtocol
 	Number     int64 `json:"number"`
 	RandomSeed int64 `json:"round_random_seed"`
 

@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -41,7 +42,9 @@ func init() {
 }
 
 // LFBTicketEntityMetadata implements datastore.EntityMetadata for LFBTicket.
-type LFBTicketEntityMetadata struct{}
+type LFBTicketEntityMetadata struct {
+	PreviousVersion datastore.EntityMetadata
+}
 
 // GetName returns registered datastore.EntityMetadata name.
 func (lfbtem *LFBTicketEntityMetadata) GetName() string {
@@ -55,7 +58,9 @@ func (lfbtem *LFBTicketEntityMetadata) GetDB() string {
 
 // Instance returns new blank LFBTicket.
 func (lfbtem *LFBTicketEntityMetadata) Instance() datastore.Entity {
-	return new(LFBTicket)
+	t := LFBTicket{}
+	t.Version = protocol.LatestSupportProtoVersion.String()
+	return &t
 }
 
 // GetStore is a stub.
@@ -68,11 +73,20 @@ func (lfbtem *LFBTicketEntityMetadata) GetIDColumnName() string {
 	return ""
 }
 
+func (lfbtem *LFBTicketEntityMetadata) GetPreviousVersionEntityMeta() datastore.EntityMetadata {
+	if lfbtem.PreviousVersion != nil {
+		return lfbtem.PreviousVersion
+	}
+	return lfbtem
+}
+
 // A LFBTicket represents ticket about LFB of a
 // sharder. A sharder broadcasts the ticket to
 // all other nodes (including other sharders).
 // The ticket signed to protect against forgery.
 type LFBTicket struct {
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Round     int64    `json:"round"`      // LFB round
 	SharderID string   `json:"sharder_id"` // sender
 	LFBHash   string   `json:"lfb_hash"`   // LFB hash
@@ -91,7 +105,7 @@ func (lfbt *LFBTicket) addSender(sharder string) {
 }
 
 func (lfbt *LFBTicket) hashData() string {
-	return fmt.Sprintf("%d:%s:%s", lfbt.Round, lfbt.SharderID, lfbt.LFBHash)
+	return fmt.Sprintf("%s:%d:%s:%s", lfbt.Version, lfbt.Round, lfbt.SharderID, lfbt.LFBHash)
 }
 
 func (lfbt *LFBTicket) Hash() string {

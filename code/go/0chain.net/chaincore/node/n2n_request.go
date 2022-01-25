@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/protocol"
+	"0chain.net/chaincore/versions"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
@@ -262,6 +264,20 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					close(closeTmC)
 				}
 
+				// do not accept response of previous protocol
+				_, err := validateProtocolVersion(resp.Header.Get(HeaderProtoVersion), false)
+				if err != nil {
+					logging.N2n.Error("requesting - failed to validate protocol version",
+						zap.Error(err),
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
+					)
+					return false
+				}
+
 				if resp.StatusCode == http.StatusNotModified {
 					provider.SetStatus(NodeStatusActive)
 					provider.SetLastActiveTime(time.Now())
@@ -279,7 +295,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				defer resp.Body.Close()
 				// reset context timeout so that the
 				// following data reading would not be canceled due to timeout
-				_, err := buf.ReadFrom(resp.Body)
+				_, err = buf.ReadFrom(resp.Body)
 				if err != nil {
 					logging.N2n.Error("requesting - read response failed",
 						zap.Int("from", selfNode.SetIndex),
@@ -347,6 +363,10 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				}
 			}
 
+			if versions.GetProtoVersion().LT(protocol.LatestSupportProtoVersion) {
+				entityMeta = entityMeta.GetPreviousVersionEntityMeta()
+			}
+
 			size, entity, err := getResponseEntity(resp, &buf, entityMeta)
 			if err != nil {
 				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
@@ -399,6 +419,17 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		if !validateRequest(sender, r) {
 			return
 		}
+
+		protoVersion, err := validateProtocolVersion(r.Header.Get(HeaderProtoVersion), true)
+		if err != nil {
+			logging.N2n.Error("message received - could not validate protocol version",
+				zap.Error(err),
+				zap.Int("from", sender.SetIndex),
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI))
+			return
+		}
+
 		sender.AddReceived(1)
 		ctx := context.TODO()
 		ts := time.Now()
@@ -412,8 +443,17 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		options := &SendOptions{Compress: true}
 		var buffer *bytes.Buffer
 		uri := r.URL.Path
+
+		w.Header().Set(HeaderProtoVersion, protoVersion.String())
+
 		switch v := data.(type) {
 		case datastore.Entity:
+			// if the protocol version in request is less than latest protocol,
+			// do protocol conversion
+			if protoVersion.LT(protocol.LatestSupportProtoVersion) {
+				v = v.ToPreviousVersion(v)
+			}
+
 			entity := v
 			codec := r.Header.Get(HeaderRequestCODEC)
 			switch codec {
@@ -459,6 +499,14 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.TODO()
 		ts := time.Now()
+		protoVersion, err := validateProtocolVersion(r.Header.Get(HeaderProtoVersion), true)
+		if err != nil {
+			logging.N2n.Error("message received",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI), zap.Error(err))
+			return
+		}
+
 		data, err := handler(ctx, r)
 		if err != nil {
 			common.Respond(w, r, nil, err)
@@ -468,10 +516,17 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			return
 		}
 		options := &SendOptions{Compress: true}
+
+		w.Header().Set(HeaderProtoVersion, protoVersion.String())
+
 		var buffer *bytes.Buffer
 		switch v := data.(type) {
 		case datastore.Entity:
 			entity := v
+			if protoVersion.LT(protocol.LatestSupportProtoVersion) {
+				entity = entity.ToPreviousVersion(entity)
+			}
+
 			codec := r.Header.Get(HeaderRequestCODEC)
 			switch codec {
 			case "JSON":

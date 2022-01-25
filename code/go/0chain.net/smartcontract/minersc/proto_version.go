@@ -45,10 +45,10 @@ func (msc *MinerSmartContract) updateProtoVersion(
 	logging.Logger.Debug("update protocol version")
 
 	// TODO: only owner are allowed to update the version
-	if t.ClientID != owner {
-		return "", common.NewError("update_sc_version_unauthorized_access",
-			"only the owner can update the smart contract version")
-	}
+	//if t.ClientID != owner {
+	//	return "", common.NewError("update_sc_version_unauthorized_access",
+	//		"only the owner can update the smart contract version")
+	//}
 
 	allowedV, ok, switchAdapterFunc := balances.CanUpdateProtoVersion()
 	if !ok {

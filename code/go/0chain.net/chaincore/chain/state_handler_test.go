@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/versions"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/assert"
@@ -1804,12 +1805,12 @@ func TestGetSCRestOutput(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			sv, err := semver.Make("1.0.0")
 			require.NoError(t, err)
-			smartcontract.SetSCVersion(sv)
+			versions.SetSCVersion(&sv)
 			w := httptest.NewRecorder()
 			chain.HandleSCRest(w, getRequest(test.address))
 
 			body := w.Body.String()
-			sc, err := smartcontract.GetSmartContract(test.address)
+			sc, err := smartcontract.GetSmartContract(sv, test.address)
 			require.NoError(t, err)
 			if test.empty {
 				require.EqualValues(t, body, "")

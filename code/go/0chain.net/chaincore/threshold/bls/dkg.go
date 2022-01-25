@@ -44,6 +44,7 @@ type DKG struct {
 
 type DKGSummary struct {
 	datastore.IDField
+	datastore.NotProtocol
 	StartingRound int64             `json:"starting_round"`
 	SecretShares  map[string]string `json:"secret_shares"`
 }

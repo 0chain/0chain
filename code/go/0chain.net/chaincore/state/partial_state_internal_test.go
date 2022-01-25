@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"0chain.net/core/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -20,8 +21,9 @@ func TestPartialState_SaveState(t *testing.T) {
 	require.NoError(t, err)
 
 	type fields struct {
+		datastore.VersionField
+		datastore.NoProtocolChange
 		Hash      util.Key
-		Version   string
 		StartRoot util.Key
 		Nodes     []util.Node
 		mndb      *util.MemoryNodeDB
@@ -60,12 +62,12 @@ func TestPartialState_SaveState(t *testing.T) {
 			t.Parallel()
 
 			ps := &PartialState{
-				Hash:    tt.fields.Hash,
-				Version: tt.fields.Version,
-				Nodes:   tt.fields.Nodes,
-				mndb:    tt.fields.mndb,
-				root:    tt.fields.root,
+				Hash:  tt.fields.Hash,
+				Nodes: tt.fields.Nodes,
+				mndb:  tt.fields.mndb,
+				root:  tt.fields.root,
 			}
+			ps.Version = tt.fields.Version
 			if err := ps.SaveState(tt.args.ctx, tt.args.stateDB); (err != nil) != tt.wantErr {
 				t.Errorf("SaveState() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -122,13 +124,12 @@ func TestPartialState_ComputeProperties(t *testing.T) {
 			t.Parallel()
 
 			ps := &PartialState{
-				Hash:    tt.fields.Hash,
-				Version: tt.fields.Version,
-				Nodes:   tt.fields.Nodes,
-				mndb:    tt.fields.mndb,
-				root:    tt.fields.root,
+				Hash:  tt.fields.Hash,
+				Nodes: tt.fields.Nodes,
+				mndb:  tt.fields.mndb,
+				root:  tt.fields.root,
 			}
-
+			ps.Version = tt.fields.Version
 			ps.ComputeProperties()
 			assert.Equal(t, tt.want, ps)
 		})
@@ -147,8 +148,9 @@ func TestPartialState_Validate(t *testing.T) {
 	ps.root = ps.mndb.ComputeRoot()
 
 	type fields struct {
+		datastore.VersionField
+		datastore.NoProtocolChange
 		Hash      util.Key
-		Version   string
 		StartRoot util.Key
 		Nodes     []util.Node
 		mndb      *util.MemoryNodeDB
@@ -175,12 +177,12 @@ func TestPartialState_Validate(t *testing.T) {
 			t.Parallel()
 
 			ps := &PartialState{
-				Hash:    tt.fields.Hash,
-				Version: tt.fields.Version,
-				Nodes:   tt.fields.Nodes,
-				mndb:    tt.fields.mndb,
-				root:    tt.fields.root,
+				Hash:  tt.fields.Hash,
+				Nodes: tt.fields.Nodes,
+				mndb:  tt.fields.mndb,
+				root:  tt.fields.root,
 			}
+			ps.Version = tt.fields.Version
 			if err := ps.Validate(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

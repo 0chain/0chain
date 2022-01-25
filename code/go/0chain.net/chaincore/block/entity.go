@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/client"
@@ -139,6 +140,7 @@ func (u *UnverifiedBlockBody) Clone() *UnverifiedBlockBody {
 /*Block - data structure that holds the block data */
 type Block struct {
 	UnverifiedBlockBody
+	datastore.NoProtocolChange
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
 	datastore.HashIDField
@@ -296,7 +298,8 @@ func (b *Block) Delete(ctx context.Context) error {
 /*Provider - entity provider for block object */
 func Provider() datastore.Entity {
 	b := &Block{}
-	b.Version = "1.0"
+	//b.Version = "1.0"
+	b.Version = protocol.LatestSupportProtoVersion.String()
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	return b

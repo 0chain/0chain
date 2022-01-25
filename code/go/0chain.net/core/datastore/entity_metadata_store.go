@@ -34,6 +34,10 @@ func RegisterEntityMetadata(entityName string, entityMetadata EntityMetadata) {
 func GetEntityMetadata(entityName string) EntityMetadata {
 	entityMetadataMap.mutex.Lock()
 	em := entityMetadataMap.store[entityName]
+
+	//if protocol.LatestSupportProtoVersion.GT(versions.GetProtoVersion()) {
+	//	em = em.GetPreviousVersionEntityMeta()
+	//}
 	entityMetadataMap.mutex.Unlock()
 
 	return em

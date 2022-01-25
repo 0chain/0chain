@@ -2,6 +2,7 @@ package miner
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/datastore"
 )
 
@@ -9,6 +10,8 @@ import (
 that are good enough to get notarization */
 type Notarization struct {
 	datastore.NOIDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	VerificationTickets []*block.VerificationTicket
 	BlockID             datastore.Key `json:"block_id"`
 	Round               int64
@@ -30,6 +33,7 @@ func (notarization *Notarization) GetKey() datastore.Key {
 /*NotarizationProvider - entity provider for block_notarization object */
 func NotarizationProvider() datastore.Entity {
 	notarization := &Notarization{}
+	notarization.Version = protocol.LatestSupportProtoVersion.String()
 	return notarization
 }
 

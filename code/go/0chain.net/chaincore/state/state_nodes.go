@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
@@ -16,6 +17,8 @@ import (
 //Nodes - a set of nodes for synching the state
 type Nodes struct {
 	datastore.IDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Version string      `json:"version"`
 	Nodes   []util.Node `json:"-"`
 }
@@ -32,7 +35,8 @@ var nodesEntityMetadata *datastore.EntityMetadataImpl
 /*NodesProvider - a block summary instance provider */
 func NodesProvider() datastore.Entity {
 	ns := &Nodes{}
-	ns.Version = "1.0"
+	//ns.Version = "1.0"
+	ns.Version = protocol.LatestSupportProtoVersion.String()
 	//ps.SetKey(fmt.Sprintf("%v", time.Now().UnixNano()))
 	return ns
 }

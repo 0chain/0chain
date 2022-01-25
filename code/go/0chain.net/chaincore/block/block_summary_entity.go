@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
@@ -16,6 +17,7 @@ type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
 	datastore.NOIDField
+	datastore.NoProtocolChange
 
 	Hash                  string        `json:"hash"`
 	MinerID               datastore.Key `json:"miner_id"`
@@ -53,7 +55,8 @@ func SetupBlockSummaryDB() {
 /*BlockSummaryProvider - a block summary instance provider */
 func BlockSummaryProvider() datastore.Entity {
 	b := &BlockSummary{}
-	b.Version = "1.0"
+	//b.Version = "1.0"
+	b.Version = protocol.LatestSupportProtoVersion.String()
 	b.CreationDate = common.Now()
 	return b
 }

@@ -21,8 +21,10 @@ func init() {
 }
 
 var (
-	VersionEntitySCKey    = "sc_version"
-	VersionEntityProtoKey = "proto_version"
+	VersionEntitySCKey             = "sc_version"
+	VersionEntityFinalizedSCKey    = "finalized_sc_version"
+	VersionEntityProtoKey          = "proto_version"
+	VersionEntityFinalizedProtoKey = "finalized_proto_version"
 )
 
 func (c *Chain) SendVersions(ctx context.Context, v *VersionsEntity) {
@@ -70,6 +72,21 @@ func StartVersionsWorker(ctx context.Context, c Chainer) {
 			case <-ctx.Done():
 				return
 			case <-tk.C:
+				//// get latest finalized sc_version in MPT
+				//finalizedSCVersion, err := getSCVersionFromState(c.GetLatestFinalizedState())
+				//if err == nil {
+				//	ve.Add(VersionEntityFinalizedProtoKey, *finalizedSCVersion)
+				//} else {
+				//	logging.Logger.Error("report versions, could not found sc version in state", zap.Error(err))
+				//}
+				//
+				//finalizedProtoVersion, err := getProtoVersionFromState(c.GetLatestFinalizedState())
+				//if err == nil {
+				//	ve.Add(VersionEntityFinalizedProtoKey, *finalizedProtoVersion)
+				//} else {
+				//	logging.Logger.Error("report versions, could not found sc version in state", zap.Error(err))
+				//}
+
 				// broadcast sc version report message
 				logging.Logger.Debug("report versions", zap.Any("versions", ve.Versions))
 				c.SendVersions(context.Background(), ve)
@@ -85,6 +102,8 @@ var versionsEntityMetaData *datastore.EntityMetadataImpl
 
 type VersionsEntity struct {
 	datastore.NOIDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Versions map[string]string `json:"versions"`
 	Sign     string            `json:"sign"`
 }
@@ -98,7 +117,9 @@ func (v *VersionsEntity) GetKey() datastore.Key {
 }
 
 func VersionsEntityProvider() datastore.Entity {
-	return &VersionsEntity{}
+	v := &VersionsEntity{}
+	v.Version = protocol.LatestSupportProtoVersion.String()
+	return v
 }
 
 func SetupVersionsEntity() {
@@ -109,12 +130,18 @@ func SetupVersionsEntity() {
 	datastore.RegisterEntityMetadata("versions", versionsEntityMetaData)
 }
 
+// Hash should not including the Sign field
 func (v *VersionsEntity) Hash() string {
-	if v.Versions == nil {
-		return ""
+	var ve = struct {
+		datastore.VersionField
+		Versions map[string]string `json:"versions"`
+	}{
+		Versions: v.Versions,
 	}
 
-	d, err := json.Marshal(v.Versions)
+	ve.Version = v.Version
+
+	d, err := json.Marshal(ve)
 	if err != nil {
 		panic(err)
 	}

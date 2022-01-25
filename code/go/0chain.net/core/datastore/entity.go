@@ -18,6 +18,8 @@ var (
 /*Entity - interface that reads and writes any implementing structure as JSON into the store */
 type Entity interface {
 	GetEntityMetadata() EntityMetadata
+	GetVersion() string
+	SetVersion(v string)
 	SetKey(key Key)
 	GetKey() Key
 	GetScore() int64
@@ -26,7 +28,21 @@ type Entity interface {
 	Read(ctx context.Context, key Key) error
 	Write(ctx context.Context) error
 	Delete(ctx context.Context) error
+
+	ProtoConverter
 }
+
+// ProtoConverter wraps the methods to convert the latest
+// protocol format to previous version
+type ProtoConverter interface {
+	ToPreviousVersion(origin Entity) Entity
+}
+
+//// PreviousDecoder wraps the methods to decode data into
+//// previous protocol
+//type PreviousDecoder interface {
+//	PreviousProtoDecode([]byte) (Entity, error)
+//}
 
 //AllocateEntities - allocate entities for the given entity type
 func AllocateEntities(size int, entityMetadata EntityMetadata) []Entity {

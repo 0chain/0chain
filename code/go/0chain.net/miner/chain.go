@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/cache"
 
 	"0chain.net/chaincore/block"
@@ -91,6 +92,8 @@ func GetMinerChain() *Chain {
 
 type StartChain struct {
 	datastore.IDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Start bool
 }
 
@@ -102,6 +105,7 @@ func (sc *StartChain) GetEntityMetadata() datastore.EntityMetadata {
 
 func StartChainProvider() datastore.Entity {
 	sc := &StartChain{}
+	sc.Version = protocol.LatestSupportProtoVersion.String()
 	return sc
 }
 

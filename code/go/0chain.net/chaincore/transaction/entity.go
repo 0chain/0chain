@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -44,6 +45,7 @@ type Transaction struct {
 	datastore.HashIDField
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
+	datastore.NoProtocolChange
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string        `json:"public_key,omitempty" msgpack:"puk,omitempty"`
@@ -327,7 +329,8 @@ func (t *Transaction) GetPublicKeyStr(ctx context.Context) (string, error) {
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	t := &Transaction{}
-	t.Version = "1.0"
+	//t.Version = "1.0"
+	t.Version = protocol.LatestSupportProtoVersion.String()
 	t.CreationDate = common.Now()
 	t.ChainID = datastore.ToKey(config.GetServerChainID())
 	t.EntityCollection = txnEntityCollection

@@ -3,11 +3,14 @@ package bls
 import (
 	"encoding/json"
 
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/datastore"
 )
 
 type DKGKeyShare struct {
 	datastore.IDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Message string `json:"message"`
 	Share   string `json:"share"`
 	Sign    string `json:"sign"`
@@ -30,6 +33,7 @@ func (dkgs *DKGKeyShare) GetEntityMetadata() datastore.EntityMetadata {
 
 func DKGProvider() datastore.Entity {
 	dkgs := &DKGKeyShare{}
+	dkgs.Version = protocol.LatestSupportProtoVersion.String()
 	return dkgs
 }
 

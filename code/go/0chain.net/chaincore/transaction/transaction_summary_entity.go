@@ -9,6 +9,7 @@ import (
 /*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
 	datastore.HashIDField
+	datastore.NotProtocol
 	Round int64 `json:"round"`
 }
 

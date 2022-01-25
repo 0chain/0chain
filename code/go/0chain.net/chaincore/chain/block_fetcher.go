@@ -12,6 +12,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -311,7 +312,7 @@ type FetchedNotarizedBlockHandler interface {
 	NotarizedBlockFetched(ctx context.Context, b *block.Block)
 }
 
-//go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
+//go:generate mockery -inpkg --testonly --name=Chainer --case=underscore
 // The Chainer represents Chain.
 type Chainer interface {
 	// LFB tickets work
@@ -325,6 +326,7 @@ type Chainer interface {
 	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
 	SendVersions(ctx context.Context, v *VersionsEntity)
+	GetLatestFinalizedState() util.MerklePatriciaTrieI
 }
 
 //

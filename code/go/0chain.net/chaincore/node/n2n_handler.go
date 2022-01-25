@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,9 +13,12 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/protocol"
+	"0chain.net/chaincore/versions"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
+	"github.com/blang/semver/v4"
 	"go.uber.org/zap"
 )
 
@@ -70,6 +74,7 @@ var (
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
 	HeaderNodeRequestSignature = "X-Node-Request-Signature"
+	HeaderProtoVersion         = "X-Proto-Version"
 )
 
 //N2NTimeTolerance - only a message signed within this time is considered valid
@@ -172,6 +177,8 @@ func ValidateSenderSignature(ctx context.Context) error {
 func SetHeaders(req *http.Request) {
 	req.Header.Set(HeaderRequestChainID, config.GetServerChainID())
 	req.Header.Set(HeaderNodeID, Self.Underlying().GetKey())
+	// Set protocol version in http header
+	req.Header.Set(HeaderProtoVersion, versions.GetProtoVersion().String())
 }
 
 func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key) string {
@@ -208,6 +215,18 @@ func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastor
 		}
 		buffer = bytes.NewReader(cbytes)
 	}
+	//
+	//// checks the protocol version
+	//protoVersion := r.Header.Get(HeaderProtoVersion)
+	//if protoVersion == "" {
+	//	return nil, errors.New("missing protocol version")
+	//}
+	//
+	//meta, err := getEntityMetaWithProtocolVersion(protoVersion, entityMetadata)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
@@ -291,4 +310,53 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 		return false
 	}
 	return true
+}
+
+//func getEntityMetaWithProtocolVersion(protoVersion string, entityMetadata datastore.EntityMetadata) (datastore.EntityMetadata, error) {
+//
+//	pv, err := protocolVersionHeaderCheck(protoVersion)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	if protocol.LatestSupportProtoVersion.GT(*pv) {
+//		entityMetadata = entityMetadata.GetPreviousVersionEntityMeta()
+//		if entityMetadata == nil {
+//			return nil, errors.New("no previous metadata provided, while current protocol version is greater than network protocol")
+//		}
+//	}
+//
+//	return entityMetadata, nil
+//}
+
+func validateProtocolVersion(protoVersion string, allowPrevious bool) (*semver.Version, error) {
+	pv, err := semver.New(protoVersion)
+	if err != nil {
+		return nil, errors.New("invalid protocol version")
+	}
+
+	if pv.EQ(versions.GetProtoVersion()) {
+		logging.Logger.Debug("valid consensus proto version", zap.String("version", pv.String()))
+		return pv, nil
+	}
+
+	if pv.EQ(protocol.LatestSupportProtoVersion) {
+		logging.Logger.Debug("valid proto version", zap.String("version", pv.String()))
+		return pv, nil
+	}
+
+	svs := []string{
+		protocol.LatestSupportProtoVersion.String(),
+	}
+
+	if allowPrevious {
+		svs = append([]string{protocol.PreviousProtoVersion.String()}, svs...)
+
+		if pv.EQ(protocol.PreviousProtoVersion) {
+			logging.Logger.Debug("valid previous proto version", zap.String("version", pv.String()))
+			return pv, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unsupported protocol version, supported versions: %v, got version: %s", svs, pv)
 }

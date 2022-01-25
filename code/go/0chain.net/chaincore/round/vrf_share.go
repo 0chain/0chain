@@ -5,12 +5,15 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/protocol"
 	"0chain.net/core/datastore"
 )
 
 //VRFShare - a VRF share
 type VRFShare struct {
 	datastore.NOIDField
+	datastore.VersionField
+	datastore.NoProtocolChange
 	Round             int64  `json:"round"`
 	Share             string `json:"share"`
 	RoundTimeoutCount int    `json:"timeoutcount"`
@@ -47,6 +50,7 @@ func (vrfs *VRFShare) Delete(ctx context.Context) error {
 /*VRFShareProvider - entity provider for client object */
 func VRFShareProvider() datastore.Entity {
 	vrfs := &VRFShare{}
+	vrfs.Version = protocol.LatestSupportProtoVersion.String()
 	return vrfs
 }
 
