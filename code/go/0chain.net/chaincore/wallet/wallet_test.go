@@ -34,7 +34,7 @@ const (
 )
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
 }

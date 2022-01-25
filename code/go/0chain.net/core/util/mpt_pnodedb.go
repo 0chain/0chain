@@ -31,13 +31,17 @@ const (
 	SSTTypePlainTable      = 1
 )
 
+var (
+	PNodeDBCompression = gorocksdb.LZ4Compression
+)
+
 var sstType = SSTTypeBlockBasedTable
 
 /*NewPNodeDB - create a new PNodeDB */
 func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
-	opts.SetCompression(gorocksdb.LZ4Compression)
+	opts.SetCompression(PNodeDBCompression)
 	if sstType == SSTTypePlainTable {
 		opts.SetAllowMmapReads(true)
 		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
