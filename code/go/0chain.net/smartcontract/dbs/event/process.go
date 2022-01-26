@@ -44,7 +44,7 @@ const (
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder
-	TagAddOverwriteCurator
+	TagAddOrOverwriteCurator
 	TagRemoveCurator
 )
 
@@ -183,7 +183,7 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateSharder(updates)
 	case TagDeleteSharder:
 		return edb.deleteSharder(event.Data)
-	case TagAddOverwriteCurator:
+	case TagAddOrOverwriteCurator:
 		var c Curator
 		err := json.Unmarshal([]byte(event.Data), &c)
 		if err != nil {
