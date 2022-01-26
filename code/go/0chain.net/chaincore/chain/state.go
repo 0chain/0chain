@@ -210,6 +210,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
+				zap.Duration("time_spent", time.Since(t)),
 				zap.Any("txn", txn))
 			//return original error, to handle upwards
 			return events, err
@@ -221,6 +222,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 					zap.String("block", b.Hash),
 					zap.String("begin client state", util.ToHex(startRoot)),
 					zap.String("prev block", b.PrevBlock.Hash),
+					zap.Duration("time_spent", time.Since(t)),
 					zap.Any("txn", txn))
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
