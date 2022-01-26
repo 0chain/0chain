@@ -31,14 +31,12 @@ const (
 	MinS
 	MaxDelegates
 	RewardRoundFrequency
-	InterestRate
 	RewardRate
 	ShareRatio
 	BlockReward
 	MaxCharge
 	Epoch
 	RewardDeclineRate
-	InterestDeclineRate
 	MaxMint
 	OwnerId
 )
@@ -56,14 +54,12 @@ var (
 		"min_s",
 		"max_delegates",
 		"reward_round_frequency",
-		"interest_rate",
 		"reward_rate",
 		"share_ratio",
 		"block_reward",
 		"max_charge",
 		"epoch",
 		"reward_decline_rate",
-		"interest_decline_rate",
 		"max_mint",
 		"owner_id",
 	}
@@ -84,14 +80,12 @@ var (
 		"min_s":                  {MinS, smartcontract.Int},
 		"max_delegates":          {MaxDelegates, smartcontract.Int},
 		"reward_round_frequency": {RewardRoundFrequency, smartcontract.Int64},
-		"interest_rate":          {InterestRate, smartcontract.Float64},
 		"reward_rate":            {RewardRate, smartcontract.Float64},
 		"share_ratio":            {ShareRatio, smartcontract.Float64},
 		"block_reward":           {BlockReward, smartcontract.StateBalance},
 		"max_charge":             {MaxCharge, smartcontract.Float64},
 		"epoch":                  {Epoch, smartcontract.Int64},
 		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
-		"interest_decline_rate":  {InterestDeclineRate, smartcontract.Float64},
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
 		"owner_id":               {OwnerId, smartcontract.Key},
 	}
@@ -151,8 +145,6 @@ func (gn *GlobalNode) setFloat64(key string, change float64) error {
 		gn.KPercent = change
 	case XPercent:
 		gn.XPercent = change
-	case InterestRate:
-		gn.InterestRate = change
 	case RewardRate:
 		gn.RewardRate = change
 	case ShareRatio:
@@ -161,8 +153,6 @@ func (gn *GlobalNode) setFloat64(key string, change float64) error {
 		gn.MaxCharge = change
 	case RewardDeclineRate:
 		gn.RewardDeclineRate = change
-	case InterestDeclineRate:
-		gn.InterestDeclineRate = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
