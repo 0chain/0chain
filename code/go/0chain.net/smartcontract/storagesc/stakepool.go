@@ -111,7 +111,6 @@ type delegatePool struct {
 	tokenpool.ZcnPool `json:"pool"`    // the pool
 	MintAt            common.Timestamp `json:"mint_at"`     // last mint time
 	DelegateID        datastore.Key    `json:"delegate_id"` // user
-	Interests         state.Balance    `json:"interests"`   // total
 	Rewards           state.Balance    `json:"rewards"`     // total
 	Penalty           state.Balance    `json:"penalty"`     // total
 	UnStake           bool             `json:"unstake"`     // want to unstake
