@@ -541,9 +541,8 @@ func Test_payFees(t *testing.T) {
 	t.Run("epoch", func(t *testing.T) {
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err)
-		var ir, rr = gn.InterestRate, gn.RewardRate
+		var rr = gn.RewardRate
 		gn.epochDecline()
-		assert.True(t, gn.InterestRate < ir)
 		assert.True(t, gn.RewardRate < rr)
 	})
 
