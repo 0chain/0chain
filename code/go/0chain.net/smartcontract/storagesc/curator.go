@@ -114,7 +114,7 @@ func (sc *StorageSmartContract) addCurator(
 			"cannot save allocation"+err.Error())
 	}
 
-	err = emitCuratorEvent(&aci, balances, txn, event.TagAddOverwriteCurator)
+	err = emitCuratorEvent(&aci, balances, event.TagAddOverwriteCurator)
 	if err != nil {
 		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
 	}
@@ -138,7 +138,7 @@ func curatorToCuratorEvent(ci *curatorInput) *event.Curator {
 	}
 }
 
-func emitCuratorEvent(ci *curatorInput, balances chainstate.StateContextI, txn *transaction.Transaction, eventTag event.EventTag) error {
+func emitCuratorEvent(ci *curatorInput, balances chainstate.StateContextI, eventTag event.EventTag) error {
 	data, err := json.Marshal(curatorToCuratorEvent(ci))
 	if err != nil {
 		return fmt.Errorf("failed to marshal curator: %v", err)
