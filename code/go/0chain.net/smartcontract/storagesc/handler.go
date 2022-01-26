@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/logging"
 
@@ -170,13 +172,53 @@ func (msc *StorageSmartContract) GetTransactionByHashHandler(
 ) (interface{}, error) {
 	var transactionHash = params.Get("transaction_hash")
 	if len(transactionHash) == 0 {
-		return nil, fmt.Errorf("cannot find valid transaction_hash: %v", transactionHash)
+		return nil, errors.New("cannot find valid transaction: transaction_hash is empty")
 	}
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
 	}
 	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
-	return &transaction, err
+	return transaction, err
+}
+
+func (msc *StorageSmartContract) GetTransactionByFilterHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var (
+		clientID     = params.Get("client_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		blockHash    = params.Get("block_hash")
+	)
+	if offsetString == "" {
+		offsetString = "0"
+	}
+	if limitString == "" {
+		limitString = "10"
+	}
+	offset, err := strconv.Atoi(offsetString)
+	if err != nil {
+		return nil, errors.New("offset value was not valid")
+	}
+
+	limit, err := strconv.Atoi(limitString)
+	if err != nil {
+		return nil, errors.New("limitString value was not valid")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	if clientID != "" {
+		return balances.GetEventDB().GetTransactionByClientId(clientID, offset, limit)
+	}
+	if blockHash != "" {
+		return balances.GetEventDB().GetTransactionByBlockHash(blockHash, offset, limit)
+	}
+	return nil, errors.New("No filter selected")
 }
 
 func (msc *StorageSmartContract) GetErrors(
