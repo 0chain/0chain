@@ -9,6 +9,7 @@ import (
 	"log"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
@@ -179,4 +180,21 @@ func getVerificationTicketsInfo(tickets []*block.VerificationTicket) []*cases.Ve
 		})
 	}
 	return tickInfo
+}
+
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+	if isIgnoringGenerateBlock(b.Round) {
+		return nil
+	}
+
+	return mc.generateBlockWorker.Run(ctx, func() error {
+		return mc.generateBlock(ctx, b, minerChain, waitOver)
+	})
+}
+
+func isIgnoringGenerateBlock(rNum int64) bool {
+	cfg := crpc.Client().State().NotarisingNonExistentBlock
+	nodeType, typeRank := getNodeTypeAndTypeRank(rNum)
+	// we need to ignore generating block phase on configured round and on the Generator1 node
+	return cfg != nil && cfg.OnRound == rNum && nodeType == generator && typeRank == 1
 }

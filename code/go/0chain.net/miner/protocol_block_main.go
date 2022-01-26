@@ -30,3 +30,9 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.updateFinalizedBlock(ctx, b)
 }
+
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+	return mc.generateBlockWorker.Run(ctx, func() error {
+		return mc.generateBlock(ctx, b, minerChain, waitOver)
+	})
+}

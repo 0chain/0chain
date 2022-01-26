@@ -69,44 +69,29 @@ func getNotNotarisedBlock(r round.RoundI) *block.Block {
 func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	nextRound := mc.startNextRound(ctx, r)
 
-	rNum, vneb := nextRound.GetRoundNumber(), crpc.Client().State().VerifyingNonExistentBlock
-	vneb.Lock()
-	if isSendingBadVerificationTicket(rNum) {
-		sendBadVerificationTicket(ctx, rNum, mc.GetMagicBlock(rNum))
-		// just notifying conductor that bad verification tickets is sent
-		if err := crpc.Client().ConfigureTestCase(nil); err != nil {
-			log.Panicf("Conductor: error while configuring test case: %v", err)
-		}
-		vneb.Sent = true
-	}
-	vneb.Unlock()
+	rNum := nextRound.GetRoundNumber()
+	sendBadVerificationTicketIfNeeded(rNum)
 
 	return nextRound
 }
 
-func isSendingBadVerificationTicket(round int64) bool {
+func sendBadVerificationTicketIfNeeded(rNum int64) {
 	cfg := crpc.Client().State().VerifyingNonExistentBlock
-	return cfg != nil && round == cfg.OnRound && !cfg.Sent
-}
 
-func sendBadVerificationTicket(ctx context.Context, round int64, magicBlock *block.MagicBlock) {
-	badVT := getBadBVTWithCustomHash(round)
-	magicBlock.Miners.SendAll(ctx, VerificationTicketSender(badVT))
+	cfg.Lock()
+	defer cfg.Unlock()
+
+	if cfg == nil || rNum != cfg.OnRound || cfg.Sent {
+		return
+	}
+
+	badVT := getBadBVTWithCustomHash(rNum)
+	magicBlock := GetMinerChain().GetMagicBlock(rNum)
+	magicBlock.Miners.SendAll(context.Background(), VerificationTicketSender(badVT))
 }
 
 func getBadBVTWithCustomHash(round int64) *block.BlockVerificationTicket {
-	mockedHash, state := "", crpc.Client().State()
-	switch {
-	case state.VerifyingNonExistentBlock != nil:
-		mockedHash = state.VerifyingNonExistentBlock.Hash
-
-	case state.NotarisingNonExistentBlock != nil:
-		mockedHash = state.NotarisingNonExistentBlock.Hash
-
-	default:
-		log.Panicf("Conductor: getBadBVTWithCustomHash call is unexpected")
-	}
-
+	mockedHash := crpc.Client().State().VerifyingNonExistentBlock.Hash
 	sign, err := node.Self.Sign(mockedHash)
 	if err != nil {
 		log.Panicf("Conductor: error while signing bad verification ticket: %v", err)
