@@ -40,6 +40,10 @@ func (n *Nodes) Num() int {
 	return len(n.Miners) + len(n.Sharders)
 }
 
+func (n *Nodes) IsEmpty() bool {
+	return (len(n.Miners) + len(n.Sharders)) == 0
+}
+
 // Get looks for Miner with provided Miner.Generator and Miner.TypeRank and returns it if founds.
 func (m Miners) Get(generator bool, typeRank int) *Miner {
 	for _, miner := range m {

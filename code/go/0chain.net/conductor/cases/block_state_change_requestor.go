@@ -44,6 +44,46 @@ const (
 	//		Requested nodes: ignore all block state change requests from Replica0
 	//		Check: Replica0 must finalize round_n.
 	BSCROnlyOneRepliesCorrectly
+
+	// BSCRChangeNode determines BlockStateChangeRequestorCaseType in which all nodes ignore Replica0,
+	// but only one node replies correctly.
+	//
+	//	Flow of this test case:
+	//		Replica0: Ignore all VerifyBlock messages on round_n
+	//		Requested nodes: ignore all block state change requests from Replica0, but only one
+	//		node sends incorrect state change with changed MPT node.
+	//		Check: Replica0 must retry requesting.
+	BSCRChangeNode
+
+	// BSCRDeleteNode determines BlockStateChangeRequestorCaseType in which all nodes ignore Replica0,
+	// but only one node replies correctly.
+	//
+	//	Flow of this test case:
+	//		Replica0: Ignore all VerifyBlock messages on round_n
+	//		Requested nodes: ignore all block state change requests from Replica0, but only one
+	//		node sends incorrect state change with deleted MPT node.
+	//		Check: Replica0 must retry requesting.
+	BSCRDeleteNode
+
+	// BSCRAddNode determines BlockStateChangeRequestorCaseType in which all nodes ignore Replica0,
+	// but only one node replies correctly.
+	//
+	//	Flow of this test case:
+	//		Replica0: Ignore all VerifyBlock messages on round_n
+	//		Requested nodes: ignore all block state change requests from Replica0, but only one
+	//		node sends incorrect state change with added MPT node.
+	//		Check: Replica0 must retry requesting.
+	BSCRAddNode
+
+	// BSCRAnotherPartialState determines BlockStateChangeRequestorCaseType in which all nodes ignore Replica0,
+	// but only one node replies correctly.
+	//
+	//	Flow of this test case:
+	//		Replica0: Ignore all VerifyBlock messages on round_n
+	//		Requested nodes: ignore all block state change requests from Replica0, but only one
+	//		node sends incorrect state change from another block.
+	//		Check: Replica0 must retry requesting.
+	BSCRAnotherPartialState
 )
 
 var (
@@ -81,18 +121,30 @@ func (n *BlockStateChangeRequestor) Check(ctx context.Context) (success bool, er
 
 func (n *BlockStateChangeRequestor) check() (success bool, err error) {
 	switch n.caseType {
-	case BSCRNoReplies:
-		return n.checkNoRepliesType()
-
 	case BSCROnlyOneRepliesCorrectly:
 		return n.checkOnlyOneRepliesCorrectly()
+
+	case BSCRNoReplies:
+		fallthrough
+
+	case BSCRChangeNode:
+		fallthrough
+
+	case BSCRAddNode:
+		fallthrough
+
+	case BSCRAnotherPartialState:
+		fallthrough
+
+	case BSCRDeleteNode:
+		return n.checkRetryRequesting(2)
 
 	default:
 		panic("unknown case type")
 	}
 }
 
-func (n *BlockStateChangeRequestor) checkNoRepliesType() (success bool, err error) {
+func (n *BlockStateChangeRequestor) checkRetryRequesting(minRequests int) (success bool, err error) {
 	replica0 := n.roundInfo.getNodeID(false, 0)
 	replica0Stats, ok := n.clientStats.BlockStateChange[replica0]
 	if !ok {
@@ -101,23 +153,15 @@ func (n *BlockStateChangeRequestor) checkNoRepliesType() (success bool, err erro
 
 	blockHash := n.notInfo.BlockID
 	numReports := replica0Stats.CountWithHash(blockHash)
-	if numReports < 2 {
+	if numReports < minRequests {
 		return false, fmt.Errorf("insufficient reports count: %d", numReports)
 	}
 	return true, nil
 }
 
 func (n *BlockStateChangeRequestor) checkOnlyOneRepliesCorrectly() (success bool, err error) {
-	replica0 := n.roundInfo.getNodeID(false, 0)
-	replica0Stats, ok := n.clientStats.BlockStateChange[replica0]
-	if !ok {
-		return false, errors.New("no reports from replica0")
-	}
-
-	blockHash := n.notInfo.BlockID
-	numReports := replica0Stats.CountWithHash(blockHash)
-	if numReports < 1 {
-		return false, fmt.Errorf("insufficient reports count: %d", numReports)
+	if _, err := n.checkRetryRequesting(1); err != nil {
+		return false, err
 	}
 
 	success = n.roundInfo != nil && n.roundInfo.IsFinalised

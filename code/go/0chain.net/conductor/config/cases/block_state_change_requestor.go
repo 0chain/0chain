@@ -19,6 +19,14 @@ type (
 		// CorrectResponseBy contains nodes which must response correctly to Replica0.
 		CorrectResponseBy Nodes `json:"correct_response_by" yaml:"correct_response_by" mapstructure:"correct_response_by"`
 
+		ChangedMPTNodeBy Nodes `json:"changed_mpt_node_by" yaml:"changed_mpt_node_by" mapstructure:"changed_mpt_node_by"`
+
+		DeletedMPTNodeBy Nodes `json:"deleted_mpt_node_by" yaml:"deleted_mpt_node_by" mapstructure:"deleted_mpt_node_by"`
+
+		AddedMPTNodeBy Nodes `json:"added_mpt_node_by" yaml:"added_mpt_node_by" mapstructure:"added_mpt_node_by"`
+
+		PartialStateFromAnotherBlockBy Nodes `json:"partial_state_from_another_block_by" yaml:"partial_state_from_another_block_by" mapstructure:"partial_state_from_another_block_by"`
+
 		Configured bool
 
 		Ignored int
@@ -60,6 +68,18 @@ func (n *BlockStateChangeRequestor) Name() string {
 	case cases.BSCROnlyOneRepliesCorrectly:
 		postfix = "only one node replies correctly"
 
+	case cases.BSCRChangeNode:
+		postfix = "one node sends state change with changed mpt node"
+
+	case cases.BSCRDeleteNode:
+		postfix = "one node sends state change with deleted mpt node"
+
+	case cases.BSCRAddNode:
+		postfix = "one node sends state change with added mpt node"
+
+	case cases.BSCRAnotherPartialState:
+		postfix = "one node sends partial state from another block"
+
 	default:
 		postfix = "unknown"
 	}
@@ -73,11 +93,36 @@ func (n *BlockStateChangeRequestor) Decode(val interface{}) error {
 
 func (n *BlockStateChangeRequestor) getType() cases.BlockStateChangeRequestorCaseType {
 	switch {
-	case n.IgnoringRequestsBy.Num() > 1 && n.CorrectResponseBy.Num() == 0:
+	case !n.IgnoringRequestsBy.IsEmpty() &&
+		n.CorrectResponseBy.IsEmpty() && n.ChangedMPTNodeBy.IsEmpty() && n.DeletedMPTNodeBy.IsEmpty() &&
+		n.PartialStateFromAnotherBlockBy.IsEmpty() && n.AddedMPTNodeBy.IsEmpty():
+
 		return cases.BSCRNoReplies
 
-	case n.IgnoringRequestsBy.Num() > 0 && n.CorrectResponseBy.Num() == 1:
+	case !n.IgnoringRequestsBy.IsEmpty() && n.CorrectResponseBy.Num() == 1 &&
+		n.ChangedMPTNodeBy.IsEmpty() && n.DeletedMPTNodeBy.IsEmpty() && n.AddedMPTNodeBy.IsEmpty() && n.PartialStateFromAnotherBlockBy.IsEmpty():
+
 		return cases.BSCROnlyOneRepliesCorrectly
+
+	case n.ChangedMPTNodeBy.Num() == 1 && !n.IgnoringRequestsBy.IsEmpty() &&
+		n.CorrectResponseBy.IsEmpty() && n.DeletedMPTNodeBy.IsEmpty() && n.AddedMPTNodeBy.IsEmpty() && n.PartialStateFromAnotherBlockBy.IsEmpty():
+
+		return cases.BSCRChangeNode
+
+	case n.DeletedMPTNodeBy.Num() == 1 && !n.IgnoringRequestsBy.IsEmpty() &&
+		n.CorrectResponseBy.IsEmpty() && n.ChangedMPTNodeBy.IsEmpty() && n.AddedMPTNodeBy.IsEmpty() && n.PartialStateFromAnotherBlockBy.IsEmpty():
+
+		return cases.BSCRDeleteNode
+
+	case n.AddedMPTNodeBy.Num() == 1 && !n.IgnoringRequestsBy.IsEmpty() &&
+		n.CorrectResponseBy.IsEmpty() && n.ChangedMPTNodeBy.IsEmpty() && n.DeletedMPTNodeBy.IsEmpty() && n.PartialStateFromAnotherBlockBy.IsEmpty():
+
+		return cases.BSCRAddNode
+
+	case n.PartialStateFromAnotherBlockBy.Num() == 1 && !n.IgnoringRequestsBy.IsEmpty() &&
+		n.CorrectResponseBy.IsEmpty() && n.ChangedMPTNodeBy.IsEmpty() && n.DeletedMPTNodeBy.IsEmpty() && n.AddedMPTNodeBy.IsEmpty():
+
+		return cases.BSCRAnotherPartialState
 
 	default:
 		return -1
