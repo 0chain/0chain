@@ -1050,7 +1050,15 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 
 		for i, bd := range alloc.BlobberDetails {
-			bd.Terms = blobbers[i].Terms
+			if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
+				bd.Terms.WritePrice = blobbers[i].Terms.WritePrice
+			}
+			if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
+				bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
+			}
+			bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
+			bd.Terms.ChallengeCompletionTime = blobbers[i].Terms.ChallengeCompletionTime
+			bd.Terms.MaxOfferDuration = blobbers[i].Terms.MaxOfferDuration
 		}
 	}
 
@@ -1407,6 +1415,8 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewError("fini_alloc_failed",
 			"no allocation pools to pay min lock demand")
 	}
+
+	aps.sortExpiry()
 	apIndex := 0
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the

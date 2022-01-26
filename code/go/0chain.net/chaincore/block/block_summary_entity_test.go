@@ -523,7 +523,7 @@ func TestSetupBlockSummaryDB_Panic(t *testing.T) {
 				}
 			}()
 
-			SetupBlockSummaryDB()
+			SetupBlockSummaryDB("")
 		})
 	}
 }

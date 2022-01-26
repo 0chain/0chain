@@ -224,7 +224,7 @@ func (aps allocationPools) get(allocID string) (
 
 func (aps *allocationPools) add(ap *allocationPool) {
 	if len(*aps) == 0 {
-		(*aps) = append((*aps), ap)
+		*aps = append(*aps, ap)
 		return
 	}
 	var i = sort.Search(len(*aps), func(i int) bool {
@@ -232,11 +232,11 @@ func (aps *allocationPools) add(ap *allocationPool) {
 	})
 	// out of bounds
 	if i == len(*aps) {
-		(*aps) = append((*aps), ap)
+		*aps = append(*aps, ap)
 		return
 	}
 	// insert next after the found one
-	(*aps) = append((*aps)[:i], append(allocationPools{ap},
+	*aps = append((*aps)[:i], append(allocationPools{ap},
 		(*aps)[i:]...)...)
 	return
 }
@@ -282,6 +282,12 @@ func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
 	return
 }
 
+func (aps allocationPools) sortExpiry() {
+	sort.Slice(aps, func(i, j int) bool {
+		return aps[i].ExpireAt < aps[j].ExpireAt
+	})
+}
+
 func isInTOMRList(torm []*allocationPool, ax *allocationPool) bool {
 	for _, tr := range torm {
 		if tr == ax {
@@ -313,7 +319,7 @@ Outer:
 		}
 		(*aps)[i], i = ax, i+1
 	}
-	(*aps) = (*aps)[:i]
+	*aps = (*aps)[:i]
 }
 
 func (aps *allocationPools) moveToChallenge(
