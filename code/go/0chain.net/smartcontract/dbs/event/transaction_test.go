@@ -41,6 +41,25 @@ func TestAddTransaction(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func SetupDatabase(t *testing.T) *EventDb {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	return eventDb
+}
+
 func TestFindTransactionByHash(t *testing.T) {
 	access := config.DbAccess{
 		Enabled:         true,
@@ -147,4 +166,26 @@ func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
 		err := eventDb.addTransaction(tr)
 		require.NoError(t, err, "Error while inserting Transaction to event Database")
 	}
+}
+
+func TestAddMint(t *testing.T) {
+	eventDb := SetupDatabase(t)
+	defer eventDb.Close()
+	err := eventDb.AutoMigrate()
+	defer eventDb.drop()
+	require.NoError(t, err)
+
+	SetUpTransactionData(t, eventDb)
+	eventDb.addMint(Mint{
+		TransactionHash: "something_9",
+		Amount:          40,
+	})
+	eventDb.addMint(Mint{
+		TransactionHash: "something_9",
+		Amount:          40,
+	})
+	tr, err := eventDb.GetTransactionByHash("something_9")
+	t.Log(tr)
+	require.NoError(t, err)
+	require.Equal(t, int64(80), tr.MintTotalAmount, "Total amount not correct")
 }

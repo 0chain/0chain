@@ -264,7 +264,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
-			nil,
+			&block.Block{},
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,

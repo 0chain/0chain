@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
+	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
@@ -525,7 +526,7 @@ func setupMocksFinishAllocation(
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
-			nil,
+			&block.Block{},
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,

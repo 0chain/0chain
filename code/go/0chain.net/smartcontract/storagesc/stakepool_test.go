@@ -13,6 +13,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
+	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/datastore"
@@ -126,7 +127,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
-			nil,
+			&block.Block{},
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,
