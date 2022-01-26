@@ -44,6 +44,8 @@ const (
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder
+	TagAddOrOverwriteCurator
+	TagRemoveCurator
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -181,6 +183,20 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateSharder(updates)
 	case TagDeleteSharder:
 		return edb.deleteSharder(event.Data)
+	case TagAddOrOverwriteCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteCurator(c)
+	case TagRemoveCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err != nil {
+			return err
+		}
+		return edb.removeCurator(c)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

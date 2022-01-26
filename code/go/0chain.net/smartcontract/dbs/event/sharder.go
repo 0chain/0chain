@@ -1,12 +1,14 @@
 package event
 
 import (
+	"errors"
+	"fmt"
+
+	"gorm.io/gorm"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 type Sharder struct {
