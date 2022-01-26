@@ -35,8 +35,6 @@ const (
 	TagAddOrOverwriteWriteMarker
 	TagAddBlock
 	TagAddOrOverwriteValidator
-	TagAddCurator
-	TagRemoveCurator
 	TagAddOrOverwriteReadMarker
 	TagAddMiner
 	TagAddOrOverwriteMiner
@@ -46,6 +44,8 @@ const (
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder
+	TagAddOverwriteCurator
+	TagRemoveCurator
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -137,20 +137,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addOrOverwriteValidator(vn)
-	case TagAddCurator:
-		var c Curator
-		err := json.Unmarshal([]byte(event.Data), &c)
-		if err != nil {
-			return err
-		}
-		return edb.addOrOverwriteCurator(c)
-	case TagRemoveCurator:
-		var c Curator
-		err := json.Unmarshal([]byte(event.Data), &c)
-		if err != nil {
-			return err
-		}
-		return edb.removeCurator(c)
 	case TagAddMiner:
 		var miner Miner
 		err := json.Unmarshal([]byte(event.Data), &miner)
@@ -197,6 +183,20 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateSharder(updates)
 	case TagDeleteSharder:
 		return edb.deleteSharder(event.Data)
+	case TagAddOverwriteCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteCurator(c)
+	case TagRemoveCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err != nil {
+			return err
+		}
+		return edb.removeCurator(c)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

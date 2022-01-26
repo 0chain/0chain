@@ -13,7 +13,7 @@ type Curator struct {
 	// Foreign Key
 	AllocationID string `json:"allocation_id"`
 
-	CuratorID string `json:"curator_id"`
+	CuratorID string `json:"curator_id" gorm:"uniqueIndex"`
 }
 
 func (edb *EventDb) overwriteCurator(c Curator) error {
