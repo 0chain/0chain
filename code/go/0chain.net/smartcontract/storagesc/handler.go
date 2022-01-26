@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/smartcontract/dbs/event"
-
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
