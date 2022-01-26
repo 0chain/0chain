@@ -70,7 +70,7 @@ func (sc *StorageSmartContract) removeCurator(
 			"cannot save allocation"+err.Error())
 	}
 
-	err = emitCuratorEvent(&rci, balances, txn, event.TagRemoveCurator)
+	err = emitCuratorEvent(&rci, balances, event.TagRemoveCurator)
 	if err != nil {
 		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
 	}
