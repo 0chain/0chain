@@ -16,7 +16,6 @@ setup_sharder_runtime() {
 
     cp -r ../docker.local/config "./data/sharder$i/"
     cp -r ../docker.local/sql_script "./data/sharder$i/"
-    cp -r ../docker.local/sql "./data/sharder$i/"
 
     cd  ./data/sharder$i
 
@@ -62,15 +61,15 @@ start_sharder(){
 
     cd ./sharder/sharder
 
-    export LIBRARY_PATH="/usr/local/lib:/usr/local/opt/openssl@1.1/lib"
-    export LD_LIBRARY_PATH="/usr/local/lib:/usr/local/opt/openssl@1.1/lib"
-    export DYLD_LIBRARY_PATH="/usr/local/lib:/usr/local/opt/openssl@1.1/lib"
-    export CGO_LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
-    export CGO_CFLAGS="-I/usr/local/opt/openssl@1.1/include -I/usr/local/include"
-    export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include -I/usr/local/include"
-    export LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
-    export CFLAGS="-I/usr/local/opt/openssl@1.1/include -I/usr/local/include"
-    export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include -I/usr/local/include"
+    export LIBRARY_PATH="/usr/local/lib:/opt/homebrew/Cellar/snappy/1.1.9/lib:/opt/homebrew/Cellar/lz4/1.9.3/lib:/opt/homebrew/Cellar/gmp/6.2.1_1/lib"
+    export LD_LIBRARY_PATH="/usr/local/lib:/opt/homebrew/Cellar/snappy/1.1.9/lib:/opt/homebrew/Cellar/lz4/1.9.3/lib:/opt/homebrew/Cellar/gmp/6.2.1_1/lib"
+    export DYLD_LIBRARY_PATH="/usr/local/lib:/opt/homebrew/Cellar/snappy/1.1.9/lib:/opt/homebrew/Cellar/lz4/1.9.3/lib:/opt/homebrew/Cellar/gmp/6.2.1_1/lib"
+    export CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
+    export CGO_CFLAGS="-I/usr/local/include"
+    export CGO_CPPFLAGS="-I/usr/local/include"
+    export LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
+    export CFLAGS="-I/usr/local/include"
+    export CPPFLAGS="-I/usr/local/include"
 
     GIT_COMMIT="cli"
     go build -mod mod -o $root/data/sharder$i/sharder -v -tags "bn256 development dev" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
