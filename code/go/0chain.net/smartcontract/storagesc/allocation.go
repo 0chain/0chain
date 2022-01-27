@@ -323,6 +323,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
 
+	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"Blobbers provided are not enough to honour the allocation")
+	}
+
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
@@ -422,7 +427,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
 
 	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation" + strings.Join(errs,"\n"))
+		return nil, 0, errors.New("Not enough blobbers to honor the allocation" + strings.Join(errs, "\n"))
 	}
 
 	sa.BlobberDetails = make([]*BlobberAllocation, 0)

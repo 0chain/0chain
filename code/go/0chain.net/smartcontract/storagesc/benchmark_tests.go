@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/encryption"
 	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
@@ -122,68 +121,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		{
-			name:     "storage.new_allocation_request_preferred",
-			endpoint: ssc.newAllocationRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[0],
-				CreationDate: now,
-				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
-			},
-			input: func() []byte {
-				var blobberUrls []string
-				for i := 0; i < viper.GetInt(bk.AvailableKeys); i++ {
-					blobberUrls = append(blobberUrls, getMockBlobberId(0)+".com")
-				}
-				bytes, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
-				}).encode()
-				return bytes
-			}(),
-		},
-		// diversified blobbers panics if blobbers are more than around 30-50
-		/*
-			{
-				name:     "storage.new_allocation_request_diversify",
-				endpoint: ssc.newAllocationRequest,
-				txn: &transaction.Transaction{
-					HashIDField: datastore.HashIDField{
-						Hash: encryption.Hash("mock transaction hash"),
-					},
-					ClientID:     data.Clients[0],
-					CreationDate: now,
-					Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
-				},
-				input: func() []byte {
-					bytes, _ := (&newAllocationRequest{
-						DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-						ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-						Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-						Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-						Owner:                      data.Clients[0],
-						OwnerPublicKey:             data.PublicKeys[0],
-						PreferredBlobbers:          []string{},
-						ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-						WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-						MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-						DiversifyBlobbers:          true,
-					}).encode()
-					return bytes
-				}(),
-			},
-		*/
 		{
 			name:     "storage.update_allocation_request",
 			endpoint: ssc.updateAllocationRequest,
