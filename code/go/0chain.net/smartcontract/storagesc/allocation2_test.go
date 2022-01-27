@@ -989,18 +989,8 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 
 	allBlobbersList, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
-	var individualBlobbers = sortedBlobbers{}
-	for _, blobber := range allBlobbersList.Nodes {
-		var b *StorageNode
-		b, err = ssc.getBlobber(blobber.ID, ctx)
-		if err != nil && err.Error() == errValueNotPresent {
-			continue
-		}
-		require.NoError(t, err)
-		individualBlobbers.add(b)
-	}
 
-	var newStakePools = []*stakePool{}
+	var newStakePools []*stakePool
 	for _, blobber := range allBlobbersList.Nodes {
 		var sp, err = ssc.getStakePool(blobber.ID, ctx)
 		require.NoError(t, err)
@@ -1009,7 +999,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientId, ctx)
 
-	confirmTestNewAllocation(t, f, allBlobbersList.Nodes, individualBlobbers, newStakePools, *wp, ctx)
+	confirmTestNewAllocation(t, f, allBlobbersList.Nodes, newStakePools, *wp, ctx)
 
 	return nil
 }
@@ -1078,7 +1068,7 @@ func (f formulaeCommitNewAllocation) offerExpiration() common.Timestamp {
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
-	blobbers1, blobbers2 sortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
+	blobbers1 sortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
 ) {
 	var transfers = ctx.GetTransfers()
 	require.Len(t, transfers, 1)
@@ -1108,12 +1098,8 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 			countUsedBlobbers++
 		}
 	}
-	require.EqualValues(t, f.blobbersUsed(), countUsedBlobbers)
 
-	require.EqualValues(t, f.blobbersUsed(), len(blobbers2))
-	for _, blobber := range blobbers2 {
-		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
-	}
+	require.EqualValues(t, f.blobbersUsed(), countUsedBlobbers)
 
 	var countOffers = 0
 	for i, stake := range stakes {
