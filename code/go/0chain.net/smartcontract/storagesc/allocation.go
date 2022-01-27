@@ -288,52 +288,26 @@ func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
 	balances chainstate.StateContextI) (*StorageNodes, error) {
 
 	var (
-		err             error
-		errCount        int
-		poolSize        = 8
-		inputBlobbers   = new(StorageNodes)
-		inputBlobberMap = make(map[string]bool)
+		err      error
+		errCount int
+		sns      = new(StorageNodes)
 	)
 
-	for _, b := range blobberIDs {
-		if _, ok := inputBlobberMap[b]; !ok {
-			inputBlobberMap[b] = true
-		}
-	}
-
-	input := make(chan string, len(inputBlobberMap))
-	output := make(chan *StorageNode, len(inputBlobberMap))
-	defer close(output)
-	for pool := 0; pool < poolSize; pool++ {
-		go func() {
-			for id := range input {
-				blobber, err := sc.getBlobber(id, balances)
-				if err != nil {
-					logging.Logger.Error("get_blobbers", zap.Error(err))
-					blobber = nil
-				}
-				output <- blobber
-			}
-		}()
-	}
-
-	for id := range inputBlobberMap {
-		input <- id
-	}
-	close(input)
-	for i := 0; i < len(inputBlobberMap); i++ {
-		blobber := <-output
-		if blobber == nil {
+	for _, id := range blobberIDs {
+		blobber, err := sc.getBlobber(id, balances)
+		if err != nil {
+			logging.Logger.Error("get_blobbers", zap.Error(err))
 			errCount++
 			continue
 		}
-		inputBlobbers.Nodes = append(inputBlobbers.Nodes, blobber)
+		sns.Nodes = append(sns.Nodes, blobber)
+
 	}
 
 	if errCount > 0 {
-		err = fmt.Errorf("error finding %v/%v blobbers", errCount, len(inputBlobberMap))
+		err = fmt.Errorf("error finding %v/%v blobbers", errCount, len(blobberIDs))
 	}
-	return inputBlobbers, err
+	return sns, err
 }
 
 // newAllocationRequest creates new allocation
