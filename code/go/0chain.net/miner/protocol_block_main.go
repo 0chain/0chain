@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 )
 
