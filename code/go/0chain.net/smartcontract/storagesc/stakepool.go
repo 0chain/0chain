@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"sort"
 
+	"0chain.net/smartcontract/stakepool"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -89,16 +91,6 @@ func userStakePoolsKey(scKey, clientID datastore.Key) datastore.Key {
 	return datastore.Key(scKey + ":stakepool:userpools:" + clientID)
 }
 
-// offerPool represents stake tokens of a blobber locked
-// for an allocation, it required for cases where blobber
-// changes terms or changes its capacity including reducing
-// the capacity to zero; it implemented not as a token
-// pool, but as set or values
-type offerPool struct {
-	Lock   state.Balance    `json:"lock"`   // offer stake
-	Expire common.Timestamp `json:"expire"` // offer expiration
-}
-
 // stake pool internal rewards information
 type stakePoolRewards struct {
 	Charge    state.Balance `json:"charge"`    // blobber charge
@@ -154,6 +146,8 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 // stake pool of a blobber
 
 type stakePool struct {
+	stakepool.StakePool
+
 	// delegates
 	Pools map[string]*delegatePool `json:"pools"`
 	// TotalOffers represents tokens required by currently
@@ -168,8 +162,10 @@ type stakePool struct {
 }
 
 func newStakePool() *stakePool {
+	bsp := stakepool.NewStakePool()
 	return &stakePool{
-		Pools: make(map[string]*delegatePool),
+		StakePool: *bsp,
+		Pools:     make(map[string]*delegatePool),
 	}
 }
 
@@ -476,14 +472,6 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 }
 
 // stat
-
-type offerPoolStat struct {
-	Lock         state.Balance    `json:"lock"`
-	Expire       common.Timestamp `json:"expire"`
-	AllocationID string           `json:"allocation_id"`
-	IsExpired    bool             `json:"is_expired"`
-}
-
 type rewardsStat struct {
 	Charge    state.Balance `json:"charge"`    // total for all time
 	Blobber   state.Balance `json:"blobber"`   // total for all time
@@ -509,7 +497,6 @@ type stakePoolStat struct {
 	Capacity   int64         `json:"capacity"`    // blobber bid
 	WritePrice state.Balance `json:"write_price"` // its write price
 
-	//Offers      []offerPoolStat `json:"offers"`       //
 	OffersTotal  state.Balance `json:"offers_total"` //
 	UnstakeTotal state.Balance `json:"unstake_total"`
 	// delegate pools
@@ -690,6 +677,11 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"invalid request: %v", err)
+	}
+
+	err = stakepool.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
 	}
 
 	var sp *stakePool
