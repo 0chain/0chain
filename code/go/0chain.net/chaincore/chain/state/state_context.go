@@ -205,8 +205,8 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	data, err := json.Marshal(event.Mint{
-		TransactionHash: sc.txn.Hash,
-		Amount:          int64(m.Amount),
+		BlockHash: sc.block.Hash,
+		Amount:    int64(m.Amount),
 	})
 	if err != nil {
 		return fmt.Errorf("marshalling mint: %v", err)
