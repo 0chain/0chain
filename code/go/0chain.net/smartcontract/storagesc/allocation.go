@@ -283,6 +283,59 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	})
 }
 
+// getBlobbers get blobbers from MPT concurrently based on input blobber ids
+func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
+	balances chainstate.StateContextI) (*StorageNodes, error) {
+
+	var (
+		err             error
+		errCount        int
+		poolSize        = 8
+		inputBlobbers   = new(StorageNodes)
+		inputBlobberMap = make(map[string]bool)
+	)
+
+	for _, b := range blobberIDs {
+		if _, ok := inputBlobberMap[b]; !ok {
+			inputBlobberMap[b] = true
+		}
+	}
+
+	input := make(chan string, len(inputBlobberMap))
+	output := make(chan *StorageNode, len(inputBlobberMap))
+	defer close(output)
+	for pool := 0; pool < poolSize; pool++ {
+		go func() {
+			for id := range input {
+				blobber, err := sc.getBlobber(id, balances)
+				if err != nil {
+					logging.Logger.Error("get_blobbers", zap.Error(err))
+					blobber = nil
+				}
+				output <- blobber
+			}
+		}()
+	}
+
+	for id := range inputBlobberMap {
+		input <- id
+	}
+	close(input)
+	for i := 0; i < len(inputBlobberMap); i++ {
+		blobber := <-output
+		if blobber == nil {
+			errCount++
+			continue
+		}
+		inputBlobbers.Nodes = append(inputBlobbers.Nodes, blobber)
+	}
+
+	if errCount > 0 {
+		err = fmt.Errorf("error finding %v/%v blobbers", errCount, len(inputBlobberMap))
+	}
+	return inputBlobbers, err
+}
+
 // newAllocationRequest creates new allocation
 func (sc *StorageSmartContract) newAllocationRequest(
 	t *transaction.Transaction,
@@ -335,20 +388,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
-	inputBlobbers := new(StorageNodes)
-	inputBlobberMap := make(map[string]bool)
-	for _, blobberID := range request.Blobbers {
-		if _, ok := inputBlobberMap[blobberID]; !ok {
-			blobber, err := sc.getBlobber(blobberID, balances)
-			if err != nil {
-				logging.Logger.Error("unable to fetch blobber in new_allocation",
-					zap.String("blobber_id", blobberID),
-					zap.Error(err))
-				continue
-			}
-			inputBlobbers.Nodes = append(inputBlobbers.Nodes, blobber)
-			inputBlobberMap[blobberID] = true
-		}
+	inputBlobbers, err := sc.getBlobbers(request.Blobbers, balances)
+	if err != nil {
+		logging.Logger.Error("unable to fetch blobber in new_allocation",
+			zap.Error(err))
 	}
 
 	blobberNodes, bSize, err := sc.selectBlobbers(

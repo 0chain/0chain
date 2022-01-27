@@ -255,25 +255,15 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	allocData := params.Get("allocation_data")
 	var request newAllocationRequest
 	if err = request.decode([]byte(allocData)); err != nil {
-		return "", common.NewErrInternal("can't decode allocation request", err.Error())
+		logging.Logger.Error("can't decode allocation request",
+			zap.Error(err))
 	}
 
 	var sa = request.storageAllocation()
 
-	inputBlobbers := new(StorageNodes)
-	inputBlobberMap := make(map[string]bool)
-	for _, blobberID := range request.Blobbers {
-		if _, ok := inputBlobberMap[blobberID]; !ok {
-			blobber, err := ssc.getBlobber(blobberID, balances)
-			if err != nil {
-				logging.Logger.Error("unable to fetch blobber in new_allocation",
-					zap.String("blobber_id", blobberID),
-					zap.Error(err))
-				continue
-			}
-			inputBlobbers.Nodes = append(inputBlobbers.Nodes, blobber)
-			inputBlobberMap[blobberID] = true
-		}
+	inputBlobbers, err := ssc.getBlobbers(request.Blobbers, balances)
+	if err != nil {
+		return "", common.NewErrInternal("fetching blobbers", err.Error())
 	}
 
 	blobberNodes, bSize, err := ssc.selectBlobbers(
