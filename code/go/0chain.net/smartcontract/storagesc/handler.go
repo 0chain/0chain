@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"net/url"
 	"strconv"
 	"time"
@@ -259,8 +260,24 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 
 	var sa = request.storageAllocation()
 
+	inputBlobbers := new(StorageNodes)
+	inputBlobberMap := make(map[string]bool)
+	for _, blobberID := range request.Blobbers {
+		if _, ok := inputBlobberMap[blobberID]; !ok {
+			blobber, err := ssc.getBlobber(blobberID, balances)
+			if err != nil {
+				logging.Logger.Error("unable to fetch blobber in new_allocation",
+					zap.String("blobber_id", blobberID),
+					zap.Error(err))
+				continue
+			}
+			inputBlobbers.Nodes = append(inputBlobbers.Nodes, blobber)
+			inputBlobberMap[blobberID] = true
+		}
+	}
+
 	blobberNodes, bSize, err := ssc.selectBlobbers(
-		creationDate, sa, balances, request.Blobbers)
+		creationDate, sa, balances, inputBlobbers.Nodes)
 
 	if err != nil {
 		return "", common.NewErrInternal("selecting blobbers", err.Error())

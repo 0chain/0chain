@@ -41,7 +41,7 @@ func TestNewAllocation(t *testing.T) {
 		MinAllocDuration:           5 * time.Minute,
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		MaxStake:                   zcnToBalance(100.0),
-		MaxBlobbersPerAllocation: 	40,
+		MaxBlobbersPerAllocation:   40,
 	}
 	var blobberYaml = mockBlobberYaml{
 		readPrice:               0.01,
@@ -80,11 +80,10 @@ func TestNewAllocation(t *testing.T) {
 		nextBlobber.BaseURL = "mockBaseUrl" + strconv.Itoa(i)
 		writePrice *= 0.9
 		blobbers.add(&nextBlobber)
+		request.Blobbers = append(request.Blobbers, nextBlobber.ID)
 		stakes = append(stakes, stake)
 		stake = stake / 10
 	}
-
-	request.Blobbers = *blobbers
 
 	t.Run("new allocation random blobbers", func(t *testing.T) {
 		request := request
@@ -969,6 +968,8 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	require.NoError(t, err)
 
 	for i, blobber := range blobbers {
+		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		require.NoError(t, err)
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &delegatePool{}
 		stakePool.Pools["paula"].Balance = state.Balance(stakes[i])

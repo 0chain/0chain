@@ -210,7 +210,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				MinLockPeriod: mockMinLockPeriod,
 				MaxLockPeriod: mockMaxLockPeriod,
 			},
-			MaxBlobbersPerAllocation: 	40,
+			MaxBlobbersPerAllocation: 40,
 		}
 		now                         = common.Timestamp(23000000)
 		mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -271,10 +271,15 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		inputBytes, err := json.Marshal(&p.marker)
 		require.NoError(t, err)
+
+		var blobbersID []string
+		for _, blobber := range mockAllBlobbers.Nodes {
+			blobbersID = append(blobbersID, blobber.ID)
+		}
 		inputObj := freeStorageAllocationInput{
 			RecipientPublicKey: mockUserPublicKey,
 			Marker:             string(inputBytes),
-			Blobbers: 			mockAllBlobbers.Nodes,
+			Blobbers:           blobbersID,
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
@@ -296,6 +301,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 			balances.On(
 				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
+			balances.On(
+				"GetTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
+			).Return(&StorageNode{}, nil)
 		}
 
 		balances.On(
@@ -381,7 +389,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"GetTrieNode",
 			allocation.GetKey(ssc.ID),
 		).Return(&allocation, nil).Once()
-
 
 		balances.On(
 			"GetSignatureScheme",
@@ -575,7 +582,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
-		MaxBlobbersPerAllocation: 	40,
+		MaxBlobbersPerAllocation:   40,
 	}
 	var now = common.Timestamp(29000000)
 	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -701,7 +708,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		).Return("", nil).Once()
 
 		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
-				mockAllBlobbers, nil, ).Once()
+			mockAllBlobbers, nil).Once()
 
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),

@@ -82,15 +82,15 @@ func TestSelectBlobbers(t *testing.T) {
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
-			DataShards:        args.dataShards,
-			ParityShards:      args.parityShards,
-			Owner:             mockOwner,
-			OwnerPublicKey:    mockPublicKey,
-			Expiration:        args.expiration,
-			Size:              args.allocSize,
-			ReadPriceRange:    PriceRange{mockMinPrice, mockMaxPrice},
-			WritePriceRange:   PriceRange{mockMinPrice, mockMaxPrice},
-			DiverseBlobbers:   args.diverseBlobbers,
+			DataShards:      args.dataShards,
+			ParityShards:    args.parityShards,
+			Owner:           mockOwner,
+			OwnerPublicKey:  mockPublicKey,
+			Expiration:      args.expiration,
+			Size:            args.allocSize,
+			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
+			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
+			DiverseBlobbers: args.diverseBlobbers,
 		}
 
 		var sNodes = StorageNodes{}
@@ -727,7 +727,7 @@ func isEqualStrings(a, b []string) (eq bool) {
 	return true
 }
 
-func getListOfBlobbers(dataShards, parityShards int) []*StorageNode{
+func getListOfBlobbers(dataShards, parityShards int) []*StorageNode {
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
 
@@ -767,7 +767,6 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.Expiration = common.Now()
 	nar.Owner = clientID
 	nar.OwnerPublicKey = clientPk
-	nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
 
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
@@ -791,9 +790,12 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	ne.Expiration = 1240
 	ne.Owner = clientID
 	ne.OwnerPublicKey = clientPk
-	ne.Blobbers = getListOfBlobbers(ne.DataShards, ne.ParityShards)
+	blobbers := getListOfBlobbers(ne.DataShards, ne.ParityShards)
 	ne.ReadPriceRange = PriceRange{1, 2}
 	ne.WritePriceRange = PriceRange{2, 3}
+	for _, blobber := range blobbers {
+		ne.Blobbers = append(ne.Blobbers, blobber.ID)
+	}
 	require.NoError(t, nd.decode(mustEncode(t, &ne)))
 	assert.EqualValues(t, &ne, &nd)
 }
@@ -959,6 +961,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"not enough tokens to honor the min lock demand (0 < 270)"
 		errMsg9 = "allocation_creation_failed: " +
 			"no tokens to lock"
+		errMsg10 = "allocation_creation_failed: " +
+			"Blobbers provided are not enough to honour the allocation"
 	)
 
 	var (
@@ -1029,9 +1033,13 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = "" // not set
 	nar.OwnerPublicKey = pubKey
-	nar.Blobbers = nil                      // not set
+	nar.Blobbers = nil                               // not set
 	nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 
+	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	requireErrMsg(t, err, errMsg10)
+
+	nar.Blobbers = []string{"1", "2"}
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg5p9)
 
@@ -1071,7 +1079,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
 	tx.Value = 0
-	nar.Blobbers = allBlobbers.Nodes
+	for _, blobber := range allBlobbers.Nodes {
+		_, err := balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		require.NoError(t, err)
+		nar.Blobbers = append(nar.Blobbers, blobber.ID)
+	}
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg8)
 
@@ -1080,6 +1092,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	allBlobbers.Nodes[0].Used = 5 * GB
 	allBlobbers.Nodes[1].Used = 10 * GB
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	require.NoError(t, err)
+	_, err = balances.InsertTrieNode(allBlobbers.Nodes[0].GetKey(ssc.ID), allBlobbers.Nodes[0])
+	require.NoError(t, err)
+	_, err = balances.InsertTrieNode(allBlobbers.Nodes[1].GetKey(ssc.ID), allBlobbers.Nodes[1])
 	require.NoError(t, err)
 
 	tx.Value = 400
@@ -1090,6 +1106,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	allBlobbers.Nodes[0].Used = 5 * GB
 	allBlobbers.Nodes[1].Used = 10 * GB
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	require.NoError(t, err)
+	_, err = balances.InsertTrieNode(allBlobbers.Nodes[0].GetKey(ssc.ID), allBlobbers.Nodes[0])
+	require.NoError(t, err)
+	_, err = balances.InsertTrieNode(allBlobbers.Nodes[1].GetKey(ssc.ID), allBlobbers.Nodes[1])
 	require.NoError(t, err)
 
 	balances.balances[clientID] = 1100
@@ -1300,7 +1320,6 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
-	nar.Blobbers = allBlobbers.Nodes
 	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
@@ -1324,6 +1343,12 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	balances.(*testBalances).balances[clientID] = 1100
 
 	tx.Value = 400
+
+	for _, blobber := range allBlobbers.Nodes {
+		_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		nar.Blobbers = append(nar.Blobbers, blobber.ID)
+		require.NoError(t, err)
+	}
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	require.NoError(t, err)
 	return
@@ -1774,7 +1799,12 @@ func Test_preferred_blobbers(t *testing.T) {
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 2 * GB // 2 GB
 		nar.MaxChallengeCompletionTime = 200 * time.Hour
-		nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
+		blobbers := getListOfBlobbers(nar.DataShards, nar.ParityShards)
+		for _, blobber := range blobbers {
+			nar.Blobbers = append(nar.Blobbers, blobber.ID)
+			_, err := balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+			require.NoError(t, err)
+		}
 		return
 	}
 

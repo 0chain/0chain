@@ -1,9 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"sort"
 	"strings"
 	"time"
@@ -174,7 +176,7 @@ type newAllocationRequest struct {
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
-	Blobbers                   []*StorageNode   `json:"blobbers"`
+	Blobbers                   []string         `json:"blobbers"`
 }
 
 // storageAllocation from the request
@@ -333,8 +335,24 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
+	inputBlobbers := new(StorageNodes)
+	inputBlobberMap := make(map[string]bool)
+	for _, blobberID := range request.Blobbers {
+		if _, ok := inputBlobberMap[blobberID]; !ok {
+			blobber, err := sc.getBlobber(blobberID, balances)
+			if err != nil {
+				logging.Logger.Error("unable to fetch blobber in new_allocation",
+					zap.String("blobber_id", blobberID),
+					zap.Error(err))
+				continue
+			}
+			inputBlobbers.Nodes = append(inputBlobbers.Nodes, blobber)
+			inputBlobberMap[blobberID] = true
+		}
+	}
+
 	blobberNodes, bSize, err := sc.selectBlobbers(
-		t.CreationDate, sa, balances, request.Blobbers)
+		t.CreationDate, sa, balances, inputBlobbers.Nodes)
 
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)

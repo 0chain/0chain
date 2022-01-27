@@ -302,8 +302,11 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.Size = 2 * GB // 2 GB
 	nar.MaxChallengeCompletionTime = 200 * time.Hour
 
-	nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
-	for _, b := range nar.Blobbers {
+	blobbers := getListOfBlobbers(nar.DataShards, nar.ParityShards)
+	for _, b := range blobbers {
+		nar.Blobbers = append(nar.Blobbers, b.ID)
+		_, err := balances.InsertTrieNode(b.GetKey(ssc.ID), b)
+		require.NoError(t, err)
 		var sp = newStakePool()
 		sp.Settings.NumDelegates = 100
 		sp.Settings.MinStake = 0
@@ -325,7 +328,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		b.ID = bb.id
 		blobs = append(blobs, bb)
 
-		_, err := balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+		_, err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
 		require.NoError(t, err)
 	}
 
