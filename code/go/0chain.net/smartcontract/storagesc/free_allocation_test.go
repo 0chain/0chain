@@ -302,8 +302,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
-				"GetTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
-			).Return(&StorageNode{}, nil)
+				"GetTrieNode", blobber.GetKey(ssc.ID),
+			).Return(blobber, nil)
 		}
 
 		balances.On(
