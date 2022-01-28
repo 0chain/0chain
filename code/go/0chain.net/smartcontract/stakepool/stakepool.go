@@ -160,6 +160,69 @@ func (sp *StakePool) EmptyAccount(
 	return amount, false, nil
 }
 
+// slash represents blobber penalty; it returns number of tokens moved in
+// reality, with regards to division errors
+func (sp *StakePool) slash(
+	alloc *StorageAllocation,
+	blobID string,
+	until common.Timestamp,
+	wp *writePool,
+	offer, slash state.Balance,
+) (move state.Balance, err error) {
+	if offer == 0 || slash == 0 {
+		return // nothing to move
+	}
+
+	if slash > offer {
+		slash = offer // can't move the offer left
+	}
+
+	// the move is total movements, but it should be divided by all
+	// related stake holders, that can loose some tokens due to
+	// division error;
+
+	var ap = wp.allocPool(alloc.ID, until)
+	if ap == nil {
+		ap = new(allocationPool)
+		ap.AllocationID = alloc.ID
+		ap.ExpireAt = 0
+		alloc.addWritePoolOwner(alloc.Owner)
+		wp.Pools.add(ap)
+	}
+
+	// offer ratio of entire stake; we are slashing only part of the offer
+	// moving the tokens to allocation user; the ratio is part of entire
+	// stake should be moved;
+	var ratio = (float64(slash) / float64(sp.stake()))
+
+	for _, dp := range sp.orderedPools() {
+		var one = state.Balance(float64(dp.Balance) * ratio)
+		if one == 0 {
+			continue
+		}
+		if _, _, err = dp.TransferTo(ap, one, nil); err != nil {
+			return 0, fmt.Errorf("transferring blobber slash: %v", err)
+		}
+		dp.Penalty += one
+		move += one
+	}
+
+	// move
+	if blobID != "" {
+		var bp, ok = ap.Blobbers.get(blobID)
+		if !ok {
+			ap.Blobbers.add(&blobberPool{
+				BlobberID: blobID,
+				Balance:   move,
+			})
+		} else {
+			bp.Balance += move
+		}
+	}
+
+	return
+}
+
 func (sp *StakePool) PayRewards(value float64) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()

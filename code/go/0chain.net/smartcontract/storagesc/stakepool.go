@@ -3,10 +3,8 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
-	"sort"
 	"strconv"
 
 	"0chain.net/core/logging"
@@ -25,6 +23,7 @@ import (
 	"0chain.net/smartcontract"
 )
 
+/*
 // A userStakePools collects stake pools references for a user.
 type userStakePools struct {
 	// Pools is map blobber_id -> []pool_id.
@@ -146,30 +145,30 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 	}
 	return
 }
-
+*/
 // stake pool of a blobber
 
 type stakePool struct {
 	stakepool.StakePool
 
 	// delegates
-	Pools map[string]*delegatePool `json:"pools"`
+	//Pools map[string]*delegatePool `json:"pools"`
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	TotalOffers state.Balance
 	// Total amount to be un staked
 	TotalUnStake state.Balance
 	// total rewards information
-	Rewards stakePoolRewards `json:"rewards"`
+	//Rewards stakePoolRewards `json:"rewards"`
 	// Settings of the stake pool.
-	Settings stakePoolSettings `json:"settings"`
+	//Settings stakePoolSettings `json:"settings"`
 }
 
 func newStakePool() *stakePool {
 	bsp := stakepool.NewStakePool()
 	return &stakePool{
 		StakePool: *bsp,
-		Pools:     make(map[string]*delegatePool),
+		//Pools:     make(map[string]*delegatePool),
 	}
 }
 
@@ -217,12 +216,7 @@ func (sp *stakePool) stake() (stake state.Balance) {
 	return
 }
 
-// is allowed delegate wallet
-func (sp *stakePool) isAllowed(id datastore.Key) bool {
-	return sp.Settings.DelegateWallet == "" ||
-		sp.Settings.DelegateWallet == id
-}
-
+/*
 // add delegate wallet
 func (sp *stakePool) dig(t *transaction.Transaction,
 	balances chainstate.StateContextI) (
@@ -292,7 +286,7 @@ func (sp *stakePool) empty(
 	delete(sp.Pools, poolID)
 	return
 }
-
+*/
 // add offer of an allocation related to blobber owns this stake pool
 func (sp *stakePool) addOffer(amount state.Balance) {
 	sp.TotalOffers += amount
@@ -304,25 +298,12 @@ func (sp *stakePool) extendOffer(delta state.Balance) (err error) {
 	return
 }
 
-func maxBalance(a, b state.Balance) state.Balance {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func minBalance(a, b state.Balance) state.Balance {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 type stakePoolUpdateInfo struct {
 	stake  state.Balance // stake of all delegate pools
 	offers state.Balance // offers stake
 }
 
+/*
 func (sp *stakePool) orderedPools() (dps []*delegatePool) {
 	dps = make([]*delegatePool, 0, len(sp.Pools))
 	for _, dp := range sp.Pools {
@@ -333,16 +314,7 @@ func (sp *stakePool) orderedPools() (dps []*delegatePool) {
 	})
 	return
 }
-
-// update information about the stake pool internals
-func (sp *stakePool) update(conf *scConfig, sscID string, now common.Timestamp,
-	balances chainstate.StateContextI) (info *stakePoolUpdateInfo, err error) {
-	info = new(stakePoolUpdateInfo)
-	info.stake = sp.stake() // capacity stake
-	info.offers = sp.TotalOffers
-	return
-}
-
+*/
 // slash represents blobber penalty; it returns number of tokens moved in
 // reality, with regards to division errors
 func (sp *stakePool) slash(
@@ -351,6 +323,7 @@ func (sp *stakePool) slash(
 	until common.Timestamp,
 	wp *writePool,
 	offer, slash state.Balance,
+	balances chainstate.StateContextI,
 ) (move state.Balance, err error) {
 	if offer == 0 || slash == 0 {
 		return // nothing to move
@@ -378,16 +351,20 @@ func (sp *stakePool) slash(
 	// stake should be moved;
 	var ratio = (float64(slash) / float64(sp.stake()))
 
-	for _, dp := range sp.orderedPools() {
-		var one = state.Balance(float64(dp.Balance) * ratio)
-		if one == 0 {
+	for _, dp := range sp.Pools {
+		var dpSlash = state.Balance(float64(dp.Balance) * ratio)
+		if dpSlash == 0 {
 			continue
 		}
-		if _, _, err = dp.TransferTo(ap, one, nil); err != nil {
-			return 0, fmt.Errorf("transferring blobber slash: %v", err)
-		}
-		dp.Penalty += one
-		move += one
+		//if _, _, err = dp.TransferTo(ap, one, nil); err != nil {
+		//	return 0, fmt.Errorf("transferring blobber slash: %v", err)
+		//}
+		dp.Balance -= dpSlash
+		ap.Balance += dpSlash
+
+		//dp.Penalty += one
+		//balances.EmitEvent(event.TypeStats, event.TagStakePool, id, one)
+		move += dpSlash
 	}
 
 	// move
