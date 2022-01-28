@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -679,15 +683,15 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"invalid request: %v", err)
 	}
 
-	err = stakepool.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
-	}
-
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
+	}
+
+	err = sp.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
 	}
 
 	if len(sp.Pools) >= conf.MaxDelegates {
@@ -744,6 +748,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
+
+	amount, err := sp.UnlockPool(t, stakepool.Blobber, spr.BlobberID, spr.PoolID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
+	}
+	resp = strconv.FormatInt(int64(amount), 10)
+	logging.Logger.Info("piers stake pool unlock", zap.String("unlocked", resp))
 
 	var usp *userStakePools
 	usp, err = ssc.getUserStakePool(t.ClientID, balances)

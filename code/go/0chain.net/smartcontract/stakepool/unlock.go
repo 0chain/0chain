@@ -10,20 +10,15 @@ import (
 	"0chain.net/core/datastore"
 )
 
-func UnlockPool(
+func (sp *StakePool) UnlockPool(
 	txn *transaction.Transaction,
 	providerType Provider,
 	providerId datastore.Key,
 	poolId datastore.Key,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
-	sp, err := GetStakePool(providerType, providerId, balances)
-	if err != nil {
-		return 0, fmt.Errorf("can't get stake pool: %v", err)
-	}
-
 	var usp *userStakePools
-	usp, err = getOrCreateUserStakePool(providerType, txn.ClientID, balances)
+	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}

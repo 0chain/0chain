@@ -10,7 +10,7 @@ import (
 	"0chain.net/core/datastore"
 )
 
-func LockPool(
+func (sp *StakePool) LockPool(
 	txn *transaction.Transaction,
 	providerType Provider,
 	providerId datastore.Key,
@@ -18,11 +18,6 @@ func LockPool(
 	balances cstate.StateContextI,
 ) error {
 	const MaxDelegates = 100
-
-	sp, err := GetStakePool(providerType, providerId, balances)
-	if err != nil {
-		return fmt.Errorf("can't get stake pool: %v", err)
-	}
 
 	if len(sp.Pools) >= MaxDelegates {
 		return fmt.Errorf("max_delegates reached: %v, no more stake pools allowed",
@@ -36,7 +31,7 @@ func LockPool(
 		Created: balances.GetBlock().Round,
 	}
 
-	if err = balances.AddTransfer(state.NewTransfer(
+	if err := balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, txn.ToClientID, state.Balance(txn.Value),
 	)); err != nil {
 		return err
@@ -46,7 +41,7 @@ func LockPool(
 	sp.Pools[newPoolId] = &dp
 
 	var usp *userStakePools
-	usp, err = getOrCreateUserStakePool(providerType, txn.ClientID, balances)
+	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
 	if err != nil {
 		return fmt.Errorf("can't get user pools list: %v", err)
 	}
