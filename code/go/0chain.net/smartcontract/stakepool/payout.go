@@ -28,8 +28,8 @@ func PayoutReward(
 			"can't decode request: %v", err)
 	}
 
-	var usp *userStakePools
-	usp, err := getUserStakePool(prr.ProviderType, client, balances)
+	var usp *UserStakePools
+	usp, err := GetUserStakePool(prr.ProviderType, client, balances)
 	if err != nil {
 		return 0, common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related user stake pools: %v", err)

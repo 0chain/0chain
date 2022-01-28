@@ -121,14 +121,14 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
-	if err = blobber.StakePoolSettings.validate(conf); err != nil {
+	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
-	sp.Settings.NumDelegates = blobber.StakePoolSettings.NumDelegates
+	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {

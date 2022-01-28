@@ -40,7 +40,7 @@ func (sp *StakePool) LockPool(
 	var newPoolId = txn.Hash
 	sp.Pools[newPoolId] = &dp
 
-	var usp *userStakePools
+	var usp *UserStakePools
 	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
 	if err != nil {
 		return fmt.Errorf("can't get user pools list: %v", err)

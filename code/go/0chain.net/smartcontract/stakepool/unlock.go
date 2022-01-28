@@ -17,7 +17,7 @@ func (sp *StakePool) UnlockPool(
 	poolId datastore.Key,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
-	var usp *userStakePools
+	var usp *UserStakePools
 	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)

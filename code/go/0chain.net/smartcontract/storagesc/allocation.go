@@ -1423,19 +1423,14 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberDetails {
 		// min lock demand rest
-		var paid state.Balance = 0
-		if lack := d.MinLockDemand - d.Spent; lack > 0 {
+		var paid float64 = 0.0
+		if lack := float64(d.MinLockDemand - d.Spent); lack > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
-				if pay > aps[apIndex].Balance {
-					pay = aps[apIndex].Balance
+				if pay > float64(aps[apIndex].Balance) {
+					pay = float64(aps[apIndex].Balance)
 				}
-				_, err := transferReward(sc.ID, aps[apIndex].ZcnPool, sps[i], pay, balances)
-				if err != nil {
-					return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
-						"%v from alocation poosl %v, minlock demand %v spent %v error %v",
-						lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
-				}
+				aps[apIndex].Balance -= state.Balance(pay)
 				if aps[apIndex].Balance == 0 {
 					apIndex++
 				}
@@ -1447,10 +1442,18 @@ func (sc *StorageSmartContract) finishAllocation(
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
 					"ammount was short by %v", d.BlobberID, lack)
 			}
+
+			err = sps[i].PayRewards(paid)
+			if err != nil {
+				return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
+					"%v from alocation poosl %v, minlock demand %v spent %v error %v",
+					lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
+			}
 		}
-		d.Spent += paid
-		d.FinalReward += paid
+		d.Spent += state.Balance(paid)
+		d.FinalReward += state.Balance(paid)
 	}
+
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving allocation write pools: "+err.Error())
@@ -1474,24 +1477,22 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
-	var passPayments state.Balance = 0
+	var passPayments float64 = 0.0
 	for i, d := range alloc.BlobberDetails {
-		var b = blobbers[i] // related blobber
+		var b = blobbers[i]
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			var (
-				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-				move  = state.Balance(float64(cp.Balance) * ratio * passRates[i])
+				ratio  = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+				reward = float64(cp.Balance) * ratio * passRates[i]
 			)
-			var reward state.Balance
-			if reward, err = transferReward(sc.ID, *cp.ZcnPool, sps[i], move, balances); err != nil {
+			err = sps[i].PayRewards(reward)
+			if err != nil {
 				return common.NewError("fini_alloc_failed",
-					"moving tokens to stake pool of "+d.BlobberID+": "+
-						err.Error())
+					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			sps[i].Rewards.Blobber += reward
-			d.Spent += move
-			d.FinalReward += move
-			passPayments += move
+			d.Spent += state.Balance(reward)
+			d.FinalReward += state.Balance(reward)
+			passPayments += reward
 		}
 
 		if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
@@ -1512,7 +1513,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
 	}
-	cp.Balance -= passPayments
+	cp.Balance -= state.Balance(passPayments)
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
 
