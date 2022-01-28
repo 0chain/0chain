@@ -24,7 +24,7 @@ func (sp *StakePool) LockPool(
 			MaxDelegates)
 	}
 
-	dp := delegatePool{
+	dp := DelegatePool{
 		Balance: state.Balance(txn.Value),
 		Reward:  0,
 		Status:  status,

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -678,10 +680,10 @@ func setupMocksFinishAllocation(
 		sp.Settings.ServiceCharge = blobberYaml.serviceCharge
 		for j, stake := range bStakes[i] {
 			var jd = strconv.Itoa(j)
-			var delegatePool = &delegatePool{}
+			var delegatePool = &stakepool.DelegatePool{}
 			delegatePool.Balance = zcnToBalance(stake.zcnAmount)
-			delegatePool.DelegateID = "delegate " + id + " " + jd
-			delegatePool.MintAt = stake.MintAt
+			//delegatePool.DelegateID = "delegate " + id + " " + jd
+			//delegatePool.MintAt = stake.MintAt
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 		}
@@ -895,7 +897,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 
 	for i, blobber := range blobbers {
 		var stakePool = newStakePool()
-		stakePool.Pools["paula"] = &delegatePool{}
+		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
 		stakePool.Pools["paula"].Balance = state.Balance(stakes[i])
 		require.NoError(t, stakePool.save(ssc.ID, blobber.ID, ctx))
 	}

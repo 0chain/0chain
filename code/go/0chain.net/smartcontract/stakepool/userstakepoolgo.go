@@ -105,7 +105,7 @@ func getUserStakePoolBytes(
 }
 
 // getUserStakePool of given client
-func getUserStakePool(
+func GetUserStakePool(
 	p Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,

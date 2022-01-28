@@ -3,6 +3,7 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -110,7 +111,7 @@ type delegatePool struct {
 	Penalty           state.Balance    `json:"penalty"`     // total
 	UnStake           bool             `json:"unstake"`     // want to unstake
 }
-
+*/
 // stake pool settings
 
 type stakePoolSettings struct {
@@ -121,7 +122,7 @@ type stakePoolSettings struct {
 	// MaxStake allowed.
 	MaxStake state.Balance `json:"max_stake"`
 	// NumDelegates maximum allowed.
-	NumDelegates int `json:"num_delegates"`
+	MaxNumDelegates int `json:"num_delegates"`
 	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
 	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
 	// then the blobber can't be registered / updated.
@@ -140,12 +141,12 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 		return fmt.Errorf("service_charge (%f) is greater than"+
 			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
-	if sps.NumDelegates <= 0 {
+	if sps.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
 	}
 	return
 }
-*/
+
 // stake pool of a blobber
 
 type stakePool struct {
@@ -356,9 +357,6 @@ func (sp *stakePool) slash(
 		if dpSlash == 0 {
 			continue
 		}
-		//if _, _, err = dp.TransferTo(ap, one, nil); err != nil {
-		//	return 0, fmt.Errorf("transferring blobber slash: %v", err)
-		//}
 		dp.Balance -= dpSlash
 		ap.Balance += dpSlash
 
@@ -430,23 +428,23 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 
 	// delegate pools
 	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
-	for _, dp := range sp.orderedPools() {
+	for poolId, dp := range sp.Pools {
 		var dps = delegatePoolStat{
-			ID:         dp.ID,
-			Balance:    dp.Balance,
-			DelegateID: dp.DelegateID,
-			Rewards:    dp.Rewards,
-			Penalty:    dp.Penalty,
-			UnStake:    dp.UnStake,
+			ID:      poolId,
+			Balance: dp.Balance,
+			//DelegateID: dp.DelegateID,
+			Rewards: dp.Reward,
+			//Penalty:    dp.Penalty,
+			UnStake: dp.Status == stakepool.Unstaking,
 		}
-		stat.Penalty += dp.Penalty
+		//stat.Penalty += dp.Penalty
 		stat.Delegate = append(stat.Delegate, dps)
 	}
 
 	// rewards
-	stat.Rewards.Charge = sp.Rewards.Charge       // total for all time
-	stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
-	stat.Rewards.Validator = sp.Rewards.Validator // total for all time
+	stat.Rewards.Charge = sp.Reward // total for all time
+	//stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
+	//stat.Rewards.Validator = sp.Rewards.Validator // total for all time
 
 	stat.Settings = sp.Settings
 	return
@@ -487,7 +485,7 @@ type stakePoolStat struct {
 	Rewards rewardsStat `json:"rewards"`
 
 	// Settings of the stake pool
-	Settings stakePoolSettings `json:"settings"`
+	Settings stakepool.StakePoolSettings `json:"settings"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {
@@ -504,60 +502,6 @@ func (stat *stakePoolStat) decode(input []byte) error {
 
 //
 // smart contract methods
-//
-
-// user stake pools (e.g. user delegate pools)
-//
-
-// getUserStakePoolBytes of a client
-func (ssc *StorageSmartContract) getUserStakePoolBytes(clientID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(userStakePoolsKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
-// getUserStakePool of given client
-func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
-	balances chainstate.StateContextI) (usp *userStakePools, err error) {
-
-	var poolb []byte
-	if poolb, err = ssc.getUserStakePoolBytes(clientID, balances); err != nil {
-		return
-	}
-	usp = newUserStakePools()
-	err = usp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return
-}
-
-// getOrCreateUserStakePool of given client
-func (ssc *StorageSmartContract) getOrCreateUserStakePool(
-	clientID datastore.Key, balances chainstate.StateContextI) (
-	usp *userStakePools, err error) {
-
-	var poolb []byte
-	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	if err == util.ErrValueNotPresent {
-		return newUserStakePools(), nil
-	}
-
-	usp = newUserStakePools()
-	err = usp.Decode(poolb)
-	return
-}
-
-// blobber's and validator's stake pool
 //
 
 // getStakePoolBytes of a blobber
@@ -614,7 +558,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 	sp.Settings.MinStake = settings.MinStake
 	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceCharge = settings.ServiceCharge
-	sp.Settings.NumDelegates = settings.NumDelegates
+	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	return
 }
 
@@ -666,37 +610,37 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get stake pool: %v", err)
 	}
 
-	err = sp.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
-	}
-
 	if len(sp.Pools) >= conf.MaxDelegates {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
 			conf.MaxDelegates)
 	}
 
-	var dp *delegatePool // created delegate pool
-	if resp, dp, err = sp.dig(t, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"stake pool digging error: %v", err)
-	}
-
-	// add to user pools
-	var usp *userStakePools
-	usp, err = ssc.getOrCreateUserStakePool(t.ClientID, balances)
+	err = sp.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
 	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"can't get user pools list: %v", err)
+		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
 	}
-	usp.add(spr.BlobberID, dp.ID) // add the new delegate pool
+	/*
+		var dp *delegatePool // created delegate pool
+		if resp, dp, err = sp.dig(t, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"stake pool digging error: %v", err)
+		}
 
-	if err = usp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"saving user pools: %v", err)
-	}
+		// add to user pools
+		var usp *userStakePools
+		usp, err = ssc.getOrCreateUserStakePool(t.ClientID, balances)
+		if err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"can't get user pools list: %v", err)
+		}
+		usp.add(spr.BlobberID, dp.ID) // add the new delegate pool
 
+		if err = usp.save(ssc.ID, t.ClientID, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"saving user pools: %v", err)
+		}
+	*/
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"saving stake pool: %v", err)
@@ -732,43 +676,43 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	}
 	resp = strconv.FormatInt(int64(amount), 10)
 	logging.Logger.Info("piers stake pool unlock", zap.String("unlocked", resp))
-
-	var usp *userStakePools
-	usp, err = ssc.getUserStakePool(t.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"can't get related user stake pools: %v", err)
-	}
-
-	var unstake common.Timestamp
-	resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"unlocking tokens: %v", err)
-	}
-
-	// the tokens can't be unlocked due to opened offers, but we mark it
-	// as 'unstake' and returns maximal time to wait to unlock the pool
-	if unstake > 0 {
-		// save the pool and return special result
-		if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
+	/*
+		var usp *userStakePools
+		usp, err = ssc.getUserStakePool(t.ClientID, balances)
+		if err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"saving stake pool: %v", err)
+				"can't get related user stake pools: %v", err)
 		}
-		return toJson(&unlockResponse{Unstake: unstake}), nil
-	}
 
-	if !usp.del(spr.BlobberID, spr.PoolID) {
-		err = usp.save(ssc.ID, t.ClientID, balances)
-	} else {
-		err = usp.remove(ssc.ID, t.ClientID, balances)
-	}
+		var unstake common.Timestamp
+		resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
+		if err != nil {
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"unlocking tokens: %v", err)
+		}
 
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"saving user pools: %v", err)
-	}
+		// the tokens can't be unlocked due to opened offers, but we mark it
+		// as 'unstake' and returns maximal time to wait to unlock the pool
+		if unstake > 0 {
+			// save the pool and return special result
+			if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
+				return "", common.NewErrorf("stake_pool_unlock_failed",
+					"saving stake pool: %v", err)
+			}
+			return toJson(&unlockResponse{Unstake: unstake}), nil
+		}
 
+		if !usp.del(spr.BlobberID, spr.PoolID) {
+			err = usp.save(ssc.ID, t.ClientID, balances)
+		} else {
+			err = usp.remove(ssc.ID, t.ClientID, balances)
+		}
+
+		if err != nil {
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"saving user pools: %v", err)
+		}
+	*/
 	// save the pool
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
@@ -818,16 +762,16 @@ type userPoolStat struct {
 }
 
 // user oriented statistic
+// todo get from event database
 func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 
 	var (
 		clientID = datastore.Key(params.Get("client_id"))
-		usp      *userStakePools
 	)
 
-	usp, err = ssc.getUserStakePool(clientID, balances)
+	usp, err := stakepool.GetUserStakePool(stakepool.Blobber, clientID, balances)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get user stake pool")
 	}
@@ -847,11 +791,11 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 				return nil, common.NewErrNoResource("missing delegate pool")
 			}
 			var dps = delegatePoolStat{
-				ID:         dp.ID,
-				Balance:    dp.Balance,
-				DelegateID: dp.DelegateID,
-				Rewards:    dp.Rewards,
-				Penalty:    dp.Penalty,
+				ID:      id,
+				Balance: dp.Balance,
+				//DelegateID: dp.DelegateID,
+				Rewards: dp.Reward,
+				//Penalty:    dp.Penalty,
 			}
 			ups.Pools[blobberID] = append(ups.Pools[blobberID], &dps)
 		}

@@ -39,19 +39,23 @@ const (
 	Deleting
 )
 
+func (p PoolStatus) String() string {
+	return [...]string{"active", "pending", "inactive", "unstaking", "deleting"}[p]
+}
+
 func stakePoolKey(p Provider, id string) datastore.Key {
 	return datastore.Key(p.String() + ":stakepool:" + id)
 }
 
 type StakePool struct {
-	Pools    map[string]*delegatePool `json:"pools"`
-	Rewards  state.Balance            `json:"rewards"`
-	Settings stakePoolSettings        `json:"settings"`
+	Pools    map[string]*DelegatePool `json:"pools"`
+	Reward   state.Balance            `json:"rewards"`
+	Settings StakePoolSettings        `json:"settings"`
 	Minter   cstate.ApprovedMinters   `json:"minter"`
 	mutex    *sync.RWMutex
 }
 
-type stakePoolSettings struct {
+type StakePoolSettings struct {
 	DelegateWallet  string        `json:"delegate_wallet"`
 	MinStake        state.Balance `json:"min_stake"`
 	MaxStake        state.Balance `json:"max_stake"`
@@ -59,7 +63,7 @@ type stakePoolSettings struct {
 	ServiceCharge   float64       `json:"service_charge"`
 }
 
-type delegatePool struct {
+type DelegatePool struct {
 	Balance state.Balance `json:"balance"`
 	Reward  state.Balance `json:"reward"`
 	Status  PoolStatus    `json:"status"`
@@ -68,7 +72,7 @@ type delegatePool struct {
 
 func NewStakePool() *StakePool {
 	return &StakePool{
-		Pools: make(map[string]*delegatePool),
+		Pools: make(map[string]*DelegatePool),
 	}
 }
 
@@ -160,69 +164,6 @@ func (sp *StakePool) EmptyAccount(
 	return amount, false, nil
 }
 
-// slash represents blobber penalty; it returns number of tokens moved in
-// reality, with regards to division errors
-func (sp *StakePool) slash(
-	alloc *StorageAllocation,
-	blobID string,
-	until common.Timestamp,
-	wp *writePool,
-	offer, slash state.Balance,
-) (move state.Balance, err error) {
-	if offer == 0 || slash == 0 {
-		return // nothing to move
-	}
-
-	if slash > offer {
-		slash = offer // can't move the offer left
-	}
-
-	// the move is total movements, but it should be divided by all
-	// related stake holders, that can loose some tokens due to
-	// division error;
-
-	var ap = wp.allocPool(alloc.ID, until)
-	if ap == nil {
-		ap = new(allocationPool)
-		ap.AllocationID = alloc.ID
-		ap.ExpireAt = 0
-		alloc.addWritePoolOwner(alloc.Owner)
-		wp.Pools.add(ap)
-	}
-
-	// offer ratio of entire stake; we are slashing only part of the offer
-	// moving the tokens to allocation user; the ratio is part of entire
-	// stake should be moved;
-	var ratio = (float64(slash) / float64(sp.stake()))
-
-	for _, dp := range sp.orderedPools() {
-		var one = state.Balance(float64(dp.Balance) * ratio)
-		if one == 0 {
-			continue
-		}
-		if _, _, err = dp.TransferTo(ap, one, nil); err != nil {
-			return 0, fmt.Errorf("transferring blobber slash: %v", err)
-		}
-		dp.Penalty += one
-		move += one
-	}
-
-	// move
-	if blobID != "" {
-		var bp, ok = ap.Blobbers.get(blobID)
-		if !ok {
-			ap.Blobbers.add(&blobberPool{
-				BlobberID: blobID,
-				Balance:   move,
-			})
-		} else {
-			bp.Balance += move
-		}
-	}
-
-	return
-}
-
 func (sp *StakePool) PayRewards(value float64) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
@@ -234,7 +175,7 @@ func (sp *StakePool) PayRewards(value float64) error {
 	var serviceCharge float64
 	serviceCharge = sp.Settings.ServiceCharge * value
 	if state.Balance(serviceCharge) > 0 {
-		sp.Rewards += state.Balance(serviceCharge)
+		sp.Reward += state.Balance(serviceCharge)
 	}
 
 	if state.Balance(value-serviceCharge) == 0 {
