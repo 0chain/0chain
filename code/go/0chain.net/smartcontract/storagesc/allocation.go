@@ -576,8 +576,6 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	// mark as expired, but it will be alive at least chellenge_competion_time
 	alloc.Expiration = t.CreationDate
 
-	// stake pool (offers)
-
 	for _, ba := range alloc.BlobberDetails {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(ba.BlobberID, balances); err != nil {
