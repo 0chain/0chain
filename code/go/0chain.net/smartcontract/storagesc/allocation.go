@@ -287,21 +287,68 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
 	balances chainstate.StateContextI) (*StorageNodes, error) {
 
-	var (
-		err      error
-		errCount int
-		sns      = new(StorageNodes)
-	)
+	type inputData struct {
+		index     int
+		blobberID string
+	}
 
-	for _, id := range blobberIDs {
-		blobber, err := sc.getBlobber(id, balances)
-		if err != nil {
-			logging.Logger.Error("get_blobbers", zap.Error(err))
+	type outputData struct {
+		index int
+		data  *StorageNode
+	}
+
+	var (
+		err        error
+		errCount   int
+		sns        = new(StorageNodes)
+		numWorkers = 4
+		inputChan  = make(chan inputData, len(blobberIDs))
+		outChan    = make(chan outputData, len(blobberIDs))
+		snsMap     = make(map[int]*StorageNode)
+	)
+	defer close(outChan)
+
+	for pool := 0; pool < numWorkers; pool++ {
+		go func(poolID int) {
+			for bInput := range inputChan {
+				logging.Logger.Info("fet_blobber worker processing blobber_id",
+					zap.Int("worker_id", poolID),
+					zap.String("blobber_id", bInput.blobberID))
+				blobber, err := sc.getBlobber(bInput.blobberID, balances)
+				if err != nil {
+					logging.Logger.Error("fetch_blobber_from_mpt",
+						zap.Error(err))
+					blobber = nil
+				}
+				outChan <- outputData{
+					index: bInput.index,
+					data:  blobber,
+				}
+			}
+		}(pool)
+	}
+
+	for i, id := range blobberIDs {
+		inputChan <- inputData{
+			index:     i,
+			blobberID: id,
+		}
+	}
+	close(inputChan)
+
+	for i := 0; i < len(blobberIDs); i++ {
+		blobberData := <-outChan
+		if blobberData.data == nil {
 			errCount++
 			continue
 		}
-		sns.Nodes = append(sns.Nodes, blobber)
+		snsMap[blobberData.index] = blobberData.data
+	}
 
+	for i := range blobberIDs {
+		if v, ok := snsMap[i]; ok {
+			sns.Nodes = append(sns.Nodes, v)
+		}
 	}
 
 	if errCount > 0 {

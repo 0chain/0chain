@@ -232,7 +232,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     (1 * GB) / (64 * KB),
+			ReadCounter:     (1 * GB) / CHUNK_SIZE,
 			PayerID:         client.id,
 		}
 		rm.ReadMarker.Signature, err = client.scheme.Sign(
@@ -416,7 +416,7 @@ func Test_flow_reward(t *testing.T) {
 				AllocationRoot:         "root-1",
 				PreviousAllocationRoot: "",
 				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
+				Size:                   100 * MB,
 				BlobberID:              b2.id,
 				Timestamp:              common.Timestamp(tp),
 				ClientID:               client.id,
@@ -448,11 +448,11 @@ func Test_flow_reward(t *testing.T) {
 
 		// TODO not clear for me
 		/*
-		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
-			float64(avgTerms.WritePrice) *
-			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
+			var moved = int64(sizeInGB(cc.WriteMarker.Size) *
+				float64(avgTerms.WritePrice) *
+				alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
 
-		require.EqualValues(t, moved, cp.Balance)*/
+			require.EqualValues(t, moved, cp.Balance)*/
 
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
