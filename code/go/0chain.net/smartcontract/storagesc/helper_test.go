@@ -280,16 +280,12 @@ var avgTerms = Terms{
 	ChallengeCompletionTime: 200 * time.Second,
 }
 
-// add allocation and 20 blobbers
-func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
-	now, exp int64, nblobs int, balances chainState.StateContextI) (
-	allocID string, blobs []*Client) {
+func createNAR(t testing.TB, ssc *StorageSmartContract,
+	client *Client, now, exp int64,
+	balances chainState.StateContextI) (*newAllocationRequest, []*Client) {
+	var blobs []*Client
 
-	if nblobs <= 0 {
-		nblobs = 30
-	}
-
-	setConfig(t, balances)
+	scYaml = setConfig(t, balances)
 
 	var nar = new(newAllocationRequest)
 	nar.DataShards = 10
@@ -304,9 +300,9 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 
 	blobbers := getListOfBlobbers(nar.DataShards, nar.ParityShards)
 	for _, b := range blobbers {
-		nar.Blobbers = append(nar.Blobbers, b.ID)
-		_, err := balances.InsertTrieNode(b.GetKey(ssc.ID), b)
-		require.NoError(t, err)
+		//nar.Blobbers = append(nar.Blobbers, b.ID)
+		//_, err := balances.InsertTrieNode(b.GetKey(ssc.ID), b)
+		//require.NoError(t, err)
 		var sp = newStakePool()
 		sp.Settings.NumDelegates = 100
 		sp.Settings.MinStake = 0
@@ -316,10 +312,10 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		b.Terms.MaxOfferDuration = 1000 * 20 * time.Second
 		b.StakePoolSettings = sp.Settings
 
-		sp.Offers[allocID] = &offerPool{
-			Expire: common.Timestamp(exp),
-			Lock:   90,
-		}
+		//sp.Offers[allocID] = &offerPool{
+		//	Expire: common.Timestamp(exp),
+		//	Lock:   90,
+		//}
 		dp1 := new(delegatePool)
 		dp1.Balance = 20e10
 		sp.Pools["hash1"] = dp1
@@ -327,11 +323,24 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		var bb = addBlobber(t, ssc, b.Capacity, now, b.Terms, 50*x10, balances)
 		b.ID = bb.id
 		blobs = append(blobs, bb)
+		nar.Blobbers = append(nar.Blobbers, b.ID)
 
-		_, err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+		_, err := balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
 		require.NoError(t, err)
 	}
+	return nar, blobs
+}
 
+// add allocation and 20 blobbers
+func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
+	now, exp int64, nblobs int, balances chainState.StateContextI) (
+	string, []*Client) {
+
+	if nblobs <= 0 {
+		nblobs = 30
+	}
+
+	nar, blobs := createNAR(t, ssc, client, now, exp, balances)
 	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
 		balances)
 	require.NoError(t, err)

@@ -272,7 +272,7 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	return filterBlobberFunc(func(b *StorageNode) (kick bool, error string) {
 		var sp, err = sc.getStakePool(b.ID, balances)
 		if err != nil {
-			return true, "sc.getStakePool error"
+			return true, "sc.getStakePool error: " + err.Error()
 		}
 		if b.Terms.WritePrice == 0 {
 			return false, "b.Terms.WritePrice == 0"

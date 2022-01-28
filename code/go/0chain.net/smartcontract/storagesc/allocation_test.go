@@ -728,6 +728,7 @@ func isEqualStrings(a, b []string) (eq bool) {
 }
 
 func getListOfBlobbers(dataShards, parityShards int) []*StorageNode {
+
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
 

@@ -139,16 +139,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				{
 					tp += 1
 
-					var nar = new(newAllocationRequest)
-					nar.DataShards = 10
-					nar.ParityShards = 10
-					nar.Expiration = common.Timestamp(exp)
-					nar.Owner = client.id
-					nar.OwnerPublicKey = client.pk
-					nar.ReadPriceRange = PriceRange{1e10, 10e10}
-					nar.WritePriceRange = PriceRange{2e10, 20e10}
-					nar.Size = 1 * KB // 2 GB
-					nar.MaxChallengeCompletionTime = 200 * time.Hour
+					nar, _ := createNAR(b, ssc, client, tp, exp, balances)
 
 					input = mustEncode(b, nar)                        //
 					tx = newTransaction(client.id, ADDRESS, 1e10, tp) //
