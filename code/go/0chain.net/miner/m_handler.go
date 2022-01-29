@@ -271,6 +271,10 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	//if mr := mc.getOrCreateRound(ctx, b.Round); mr != nil {
 	if mr := mc.GetMinerRound(b.Round); mr != nil {
 		//use proposed blocks as current block cache, since we store blocks there before they are added to the round
+		if mr.IsVerificationComplete() {
+			logging.Logger.Debug("handle verify block - received block for round with finished verification phase")
+			return nil, nil
+		}
 		for _, blocks := range mr.GetProposedBlocks() {
 			if blocks.Hash == b.Hash {
 				logging.Logger.Debug("handle verify block - block already received, ignore",
