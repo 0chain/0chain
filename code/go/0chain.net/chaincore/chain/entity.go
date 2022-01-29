@@ -648,9 +648,6 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 
 	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
-	if b.PrevBlock != nil {
-		b.ComputeChainWeight()
-	}
 
 	var err error
 	b, _, err = r.AddNotarizedBlock(b)
@@ -673,9 +670,6 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	b.SetRoundRandomSeed(r.GetRandomSeed())
 	b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)
-	if b.PrevBlock != nil {
-		b.ComputeChainWeight()
-	}
 	return b
 }
 

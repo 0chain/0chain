@@ -18,7 +18,7 @@ type bNode struct {
 	Rank               int     `json:"rank"`
 	GeneratorID        int     `json:"generator_id"`
 	GeneratorName      string  `json:"generator_name"`
-	ChainWeight        float64 `json:"chain_weight"`
+	Weight             float64 `json:"chain_weight"`
 	Verifications      int     `json:"verifications"`
 	Verified           bool    `json:"verified"`
 	VerificationFailed bool    `json:"verification_failed"`
@@ -79,7 +79,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 			Rank:               b.RoundRank,
 			GeneratorID:        miner.SetIndex,
 			GeneratorName:      miner.Description,
-			ChainWeight:        b.ChainWeight,
+			Weight:             b.Weight(),
 			Verifications:      b.VerificationTicketsSize(),
 			Verified:           b.GetVerificationStatus() != block.VerificationPending,
 			VerificationFailed: b.GetVerificationStatus() == block.VerificationFailed,
