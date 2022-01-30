@@ -23,20 +23,13 @@ var ErrStopIterator = common.NewError("stop_iterator", "Stop MPT Iteration")
 var MaxStateNodesForSync = 10000
 
 func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return context.DeadlineExceeded
-		default:
-		}
-
+	return common.RunWithRetries(ctx, 20, func() error {
 		err := c.GetBlockStateChange(b)
 		if err != nil {
 			logging.Logger.Info("can't get block state changes, retrying", zap.Error(err))
-			continue
 		}
-		return nil
-	}
+		return err
+	})
 }
 
 //GetBlockStateChange - get the state change of the block from the network
