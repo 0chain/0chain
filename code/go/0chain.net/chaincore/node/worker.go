@@ -150,6 +150,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 					zap.String("pool miners pointer", fmt.Sprintf("%p", np)))
 				return
 			}
+			defer resp.Body.Close()
 
 			logging.N2n.Debug("node active check - ping success",
 				zap.Int64("start round", startRound),
@@ -162,7 +163,6 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 				info.AsOf = time.Now()
 				nd.SetInfo(info)
 			}
-			resp.Body.Close()
 			if !nd.IsActive() {
 				logging.N2n.Info("Node active",
 					zap.String("node_type", nd.GetNodeTypeName()),
