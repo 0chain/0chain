@@ -210,5 +210,5 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	transfer := transfers[0]
 	require.Equal(t, int64(transfer.Amount), tr.Value)
 	require.Equal(t, transfer.ClientID, tr.ClientID)
-	require.Equal(t, transfer.ToClientID, gn.BurnAddress)
+	require.Equal(t, transfer.ToClientID, gn.Config.BurnAddress)
 }
