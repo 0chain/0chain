@@ -108,13 +108,16 @@ func CreateZCNSmartContract() *ZCNSmartContract {
 
 func CreateSmartContractGlobalNode() *GlobalNode {
 	return &GlobalNode{
-		ID:                 ADDRESS,
-		MinMintAmount:      111,
-		PercentAuthorizers: 70,
-		MinBurnAmount:      100,
-		MinStakeAmount:     200,
-		BurnAddress:        "0",
-		MinAuthorizers:     1,
+		ID: ADDRESS,
+		Config: &ZCNSConfig{
+			MinMintAmount:      111,
+			PercentAuthorizers: 70,
+			MinAuthorizers:     1,
+			MinBurnAmount:      100,
+			MinStakeAmount:     200,
+			BurnAddress:        "0",
+			MaxFee:             0,
+		},
 	}
 }
 

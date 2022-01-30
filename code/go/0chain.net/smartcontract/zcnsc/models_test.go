@@ -102,14 +102,14 @@ func Test_ShouldGetGlobalNode(t *testing.T) {
 	expected, _ := GetGlobalNode(balances)
 
 	require.Equal(t, node.ID, expected.ID)
-	require.Equal(t, node.MinBurnAmount, expected.MinBurnAmount)
+	require.Equal(t, node.Config.MinBurnAmount, expected.Config.MinBurnAmount)
 }
 
 func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 	node := CreateSmartContractGlobalNode()
-	node.BurnAddress = "11"
-	node.MinMintAmount = 12
-	node.MinBurnAmount = 13
+	node.Config.BurnAddress = "11"
+	node.Config.MinMintAmount = 12
+	node.Config.MinBurnAmount = 13
 
 	expected := CreateSmartContractGlobalNode()
 
@@ -118,9 +118,9 @@ func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 
 	require.NoError(t, err, "must Save the global node in state")
 
-	expected.BurnAddress = "11"
-	expected.MinMintAmount = 12
-	expected.MinBurnAmount = 13
+	expected.Config.BurnAddress = "11"
+	expected.Config.MinMintAmount = 12
+	expected.Config.MinBurnAmount = 13
 }
 
 func Test_PublicKey(t *testing.T) {
@@ -188,7 +188,7 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, error) {
 	node := CreateSmartContractGlobalNode()
-	node.MinBurnAmount = 111
+	node.Config.MinBurnAmount = 111
 	balances := MakeMockStateContext()
 	err := node.Save(balances)
 	return balances, node, err

@@ -76,8 +76,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	}
 
 	// compare the global min of authorizerNode Authorizer to that of the transaction amount
-	if globalNode.MinStakeAmount > tran.Value {
-		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", globalNode.MinStakeAmount, tran.Value)
+	if globalNode.Config.MinStakeAmount > tran.Value {
+		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", globalNode.Config.MinStakeAmount, tran.Value)
 		err = common.NewError(code, msg)
 		Logger.Error("min stake amount > transaction value", zap.Error(err))
 		return "", err

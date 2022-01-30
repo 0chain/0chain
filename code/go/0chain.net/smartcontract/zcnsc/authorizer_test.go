@@ -175,17 +175,17 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 	globalNode, err := GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, int64(11), globalNode.MinStakeAmount)
+	require.Equal(t, int64(11), globalNode.Config.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = int64(100)
+	node.Config.MinStakeAmount = int64(100)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
 	globalNode, err = GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, int64(100), globalNode.MinStakeAmount)
+	require.Equal(t, int64(100), globalNode.Config.MinStakeAmount)
 }
 
 func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
@@ -204,7 +204,7 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	tr.Value = 99
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = 100
+	node.Config.MinStakeAmount = 100
 	err := node.Save(ctx)
 	require.NoError(t, err)
 
