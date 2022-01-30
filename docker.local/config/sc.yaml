@@ -165,8 +165,7 @@ smart_contracts:
     max_duration: "2h"
     max_destinations: 3
     max_description_length: 20
-
-  zcn:
+  zcnsc:
     min_mint_amount: 1
     percent_authorizers: 0.7
     min_authorizers: 1

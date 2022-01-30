@@ -44,6 +44,8 @@ func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ s
 	zcn.SmartContract = sc
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
+	//zcn.SmartContract.RestHandlers["/getConfig"] = zcn.getConfigHandler
+	zcn.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, "update-settings"), nil)
 }
 
 // GetName ...

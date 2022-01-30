@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"0chain.net/chaincore/config"
+	. "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/util"
 
@@ -12,10 +12,24 @@ import (
 	"0chain.net/core/common"
 )
 
-type persistentNode interface {
-	util.Serializable
-	GetKey() string
-}
+const (
+	SmartContract = "smart_contracts"
+	ZcnSc         = "zcnsc"
+)
+
+const (
+	MinMintAccount     = "min_mint_account"
+	PercentAuthorizers = "percent_authorizers"
+	MinAuthorizers     = "min_authorizers"
+	MinBurnAmount      = "min_burn_amount"
+	MinStakeAmount     = "min_stake_amount"
+	BurnAddress        = "burn_address"
+	MaxFee             = "max_fee"
+)
+
+var (
+	cfg = SmartContractConfig
+)
 
 func isNil(i interface{}) bool {
 	return i == nil || reflect.ValueOf(i).IsNil()
@@ -85,13 +99,17 @@ func GetGlobalNode(ctx cstate.StateContextI) (*GlobalNode, error) {
 		return nil, err
 	}
 
-	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcn.min_mint_amount"))
-	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64("smart_contracts.zcn.percent_authorizers")
-	gn.MinAuthorizers = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_authorizers")
-	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_burn_amount")
-	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
-	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
-	gn.MaxFee = config.SmartContractConfig.GetInt64("smart_contracts.zcn.max_fee")
+	gn.MinMintAmount = state.Balance(cfg.GetInt(Section(MinMintAccount)))
+	gn.PercentAuthorizers = cfg.GetFloat64(Section(PercentAuthorizers))
+	gn.MinAuthorizers = cfg.GetInt64(Section(MinAuthorizers))
+	gn.MinBurnAmount = cfg.GetInt64(Section(MinBurnAmount))
+	gn.MinStakeAmount = cfg.GetInt64(Section(MinStakeAmount))
+	gn.BurnAddress = cfg.GetString(Section(BurnAddress))
+	gn.MaxFee = cfg.GetInt64(Section(MaxFee))
 
 	return gn, nil
+}
+
+func Section(section string) string {
+	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
