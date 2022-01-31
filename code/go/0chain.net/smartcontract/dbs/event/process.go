@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"golang.org/x/net/context"
 
@@ -47,7 +48,10 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagAddOrOverwriteStakePool
-	TagStakePool
+	TagRemoveStakePool
+	TagAddOrOverwriteDelegatePool
+	TagRemoveDelegatePool
+	TagRewardDelegatePool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -199,6 +203,28 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.removeCurator(c)
+	case TagAddOrOverwriteStakePool:
+		var sp StakePool
+		err := json.Unmarshal([]byte(event.Data), &sp)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteStakePool(sp)
+	case TagAddOrOverwriteDelegatePool:
+		var dp DelegatePool
+		err := json.Unmarshal([]byte(event.Data), &dp)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteDelegatePool(dp)
+	case TagRemoveDelegatePool:
+		return edb.deleteMiner(event.Data)
+	case TagRewardDelegatePool:
+		reward, err := strconv.ParseInt(event.Data, 10, 64)
+		if err != nil {
+			return err
+		}
+		return edb.addDelegatePoolReward(reward, event.Index)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

@@ -13,24 +13,67 @@ type DelegatePool struct {
 	PoolId string `json:"pool_id"`
 
 	// foreign keys todo: when user(ID) created, enable it
-	DelegateId string `json:"delegate_id"`
-	BlobberId  string `json:"blobber_id"`
+	DelegateId   string `json:"delegate_id"`
+	ProviderId   string `json:"provider_id"`
+	ProviderType int    `json:"provider_type"`
 
 	Reward       int64 `json:"reward"`
-	Penalty      int64 `json:"penalty"`
+	TotalReward  int64 `json:"total_reward"`
+	TotalPenalty int64 `json:"total_penalty"`
 	Status       int   `json:"status"`
 	RoundCreated int64 `json:"round_created"`
 }
 
-func (edb *EventDb) GetDelegatesByBlobber(blobberId string) (*[]DelegatePool, error) {
+func (edb *EventDb) addDelegatePoolReward(reward int64, id string) error {
+	dp, err := edb.getDelegateByPoolId(id)
+	if err != nil {
+		return err
+	}
+	sp, err := edb.getStakePool(dp.ProviderId, dp.ProviderType)
+	if reward > 0 {
+		dp.TotalReward += reward
+		sp.TotalRewards += reward
+	} else {
+		dp.TotalPenalty -= reward
+		sp.TotalPenalty -= reward
+	}
+	if err := edb.addOrOverwriteStakePool(sp); err != nil {
+		return err
+	}
+	if err := edb.addOrOverwriteDelegatePool(dp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (edb *EventDb) getDelegateByPoolId(poolId string) (DelegatePool, error) {
+	var dp DelegatePool
+	result := edb.Store.Get().
+		Model(&DelegatePool{}).
+		Where(&DelegatePool{PoolId: poolId}).
+		Find(&dp)
+	return dp, result.Error
+}
+
+func (edb *EventDb) deleteDelegatePool(id string) error {
+	result := edb.Store.Get().
+		Where(&DelegatePool{PoolId: id}).
+		Delete(&DelegatePool{})
+
+	return result.Error
+}
+
+func (edb *EventDb) getDelegatesByBlobber(blobberId string) (*[]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
-		Where(&DelegatePool{BlobberId: blobberId}).
+		Where(&DelegatePool{ProviderId: blobberId}).
 		Find(&dps)
 	return &dps, result.Error
 }
-func (edb *EventDb) GetDelegatesByUser(delegateId string) (*[]DelegatePool, error) {
+
+func (edb *EventDb) getDelegatesByUser(delegateId string) (*[]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
