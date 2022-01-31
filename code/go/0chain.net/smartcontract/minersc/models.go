@@ -12,8 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
@@ -587,7 +585,6 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 // MinerNode struct that holds information about the registering miner.
 type MinerNode struct {
 	*SimpleNode `json:"simple_miner"`
-	StakePool   stakepool.StakePool          `json:"takePool"`
 	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
 	Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
 	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`

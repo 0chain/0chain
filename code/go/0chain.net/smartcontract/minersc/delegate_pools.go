@@ -6,10 +6,8 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
-	"0chain.net/smartcontract/stakepool"
-
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -36,12 +34,6 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		transfer *state.Transfer
 	)
 	mn, err = getMinerNode(dp.MinerID, balances)
-
-	err = mn.StakePool.LockPool(t, stakepool.Blobber, dp.MinerID, stakepool.Active, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
-	}
-
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
@@ -196,11 +188,6 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 		DeleteVC:            gn.ViewChange,
 	}
 	mn.Deleting[dp.PoolID] = pool // add to deleting
-
-	_, err = mn.StakePool.UnlockPool(t, stakepool.Miner, mn.ID, dp.PoolID, balances)
-	if err != nil {
-		return "", common.NewError("delegate_pool_del", err.Error())
-	}
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
