@@ -443,7 +443,7 @@ func Test_flow_reward(t *testing.T) {
 		var sp *stakePool
 		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10,
+		require.EqualValues(t, state.Balance(2e10),
 			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
 
 		cp, err = ssc.getChallengePool(allocID, balances)
