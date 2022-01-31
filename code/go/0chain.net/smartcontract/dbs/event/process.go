@@ -47,6 +47,7 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagAddOrOverwriteStakePool
+	TagStakePool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {

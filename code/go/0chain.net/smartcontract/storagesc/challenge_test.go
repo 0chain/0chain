@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/partitions"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -543,9 +545,8 @@ func setupChallengeMocks(
 	sp.Settings.ServiceCharge = blobberYaml.serviceCharge
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
-		sp.Pools["paula"+id] = &delegatePool{}
+		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
 		sp.Pools["paula"+id].Balance = state.Balance(stake)
-		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
 	require.NoError(t, sp.save(ssc.ID, challenge.BlobberID, ctx))
@@ -555,10 +556,9 @@ func setupChallengeMocks(
 		var sPool = newStakePool()
 		sPool.Settings.ServiceCharge = validatorYamls[i].serviceCharge
 		for j, stake := range validatorStakes[i] {
-			var pool = &delegatePool{}
+			var pool = &stakepool.DelegatePool{}
 			pool.Balance = state.Balance(stake)
 			var id = validator + " delegate " + strconv.Itoa(j)
-			pool.DelegateID = id
 			sPool.Pools[id] = pool
 		}
 		sPool.Settings.DelegateWallet = validator + " wallet"
@@ -732,26 +732,25 @@ func confirmBlobberPenalty(
 	require.InDelta(t, f.challengePoolBalance-(f.reward()-f.validatorsReward()),
 		int64(challengePool.Balance), errDelta)
 
-	require.EqualValues(t, 0, int64(blobber.Rewards.Charge))
-	require.EqualValues(t, 0, int64(blobber.Rewards.Blobber))
+	require.EqualValues(t, 0, int64(blobber.Reward))
+	require.EqualValues(t, 0, int64(blobber.Reward))
 
 	for _, sp := range validatorsSPs {
 		for wallet, pool := range sp.Pools {
 			var wSplit = strings.Split(wallet, " ")
-			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Charge), errDelta)
-			require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Validator), errDelta)
+			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
+			require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
 			index, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Rewards), errDelta)
+			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
 		}
 	}
 
 	if f.scYaml.BlobberSlash > 0.0 {
-		for _, pool := range blobber.Pools {
-			var delegate = strings.Split(pool.DelegateID, " ")
+		for id, pool := range blobber.Pools {
+			var delegate = strings.Split(id, " ")
 			index, err := strconv.Atoi(delegate[1])
 			require.NoError(t, err)
-			require.InDelta(t, f.delegatePenalty(index), int64(pool.Penalty), errDelta)
 			require.InDelta(t, f.stakes[index]-f.delegatePenalty(index), int64(pool.Balance), errDelta)
 		}
 	}
@@ -818,17 +817,17 @@ func confirmBlobberReward(
 ) {
 	require.InDelta(t, f.challengePoolBalance-f.rewardReturned(), int64(challengePool.Balance), errDelta)
 
-	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Rewards.Charge), errDelta)
-	require.InDelta(t, f.blobberReward()-f.blobberServiceCharge(), int64(blobber.Rewards.Blobber), errDelta)
+	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
+	require.InDelta(t, f.blobberReward()-f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 
 	for _, sp := range validatorsSPs {
 		for wallet, pool := range sp.Pools {
 			var wSplit = strings.Split(wallet, " ")
-			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Charge), errDelta)
-			require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Validator), errDelta)
+			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
+			require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
 			index, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Rewards), errDelta)
+			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
 		}
 	}
 

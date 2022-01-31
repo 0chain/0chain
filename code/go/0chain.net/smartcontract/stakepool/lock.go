@@ -46,7 +46,7 @@ func (sp *StakePool) LockPool(
 		return fmt.Errorf("can't get user pools list: %v", err)
 	}
 	usp.add(providerId, newPoolId)
-	if err = usp.save(providerType, txn.ClientID, balances); err != nil {
+	if err = usp.Save(providerType, txn.ClientID, balances); err != nil {
 		return fmt.Errorf("saving user pools: %v", err)
 	}
 

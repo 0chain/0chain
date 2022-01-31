@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -74,6 +75,7 @@ func TestCommitBlobberRead(t *testing.T) {
 		timestamp:   0,
 	}
 	var now common.Timestamp = 100
+	var nowRound int64 = 10
 	var read = mockReadMarker{
 		readCounter: 500,
 		timestamp:   now,
@@ -83,10 +85,10 @@ func TestCommitBlobberRead(t *testing.T) {
 		expiration: 2 * now,
 	}
 	var stakes = []mockStakePool{
-		{2, now - 1},
-		{3, now + 1},
+		{2, nowRound - 1},
+		{3, nowRound + 1},
 		{5, 0},
-		{3, now * 10},
+		{3, nowRound * 10},
 	}
 	var rPools = mockReadPools{
 		thisAllocation: []mockAllocationPool{
@@ -347,26 +349,22 @@ func testCommitBlobberRead(
 	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
 
 	var sPool = stakePool{
-		Pools: make(map[string]*delegatePool),
-		Settings: stakePoolSettings{
-			ServiceCharge:  blobberYaml.serviceCharge,
-			DelegateWallet: delegateWallet,
+		StakePool: stakepool.StakePool{
+			Pools: make(map[string]*stakepool.DelegatePool),
+			Settings: stakepool.StakePoolSettings{
+				ServiceCharge:  blobberYaml.serviceCharge,
+				DelegateWallet: delegateWallet,
+			},
 		},
 	}
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
-		sPool.Pools["pool"+id] = &delegatePool{
-			DelegateID: strconv.Itoa(i),
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      id,
-					Balance: zcnToBalance(stake.zcnAmount),
-				},
-			},
-			MintAt: stake.MintAt,
+		sPool.Pools["pool"+id] = &stakepool.DelegatePool{
+			Balance: zcnToBalance(stake.zcnAmount),
+			Created: stake.MintAt,
 		}
 	}
-	sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId
+	//sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId
 	require.NoError(t, sPool.save(ssc.ID, blobberId, ctx))
 
 	ss := &StorageStats{}
@@ -414,8 +412,8 @@ func confirmCommitBlobberRead(
 	require.EqualValues(t, f.read.readCounter, stats.Stats.NumReads)
 	require.Len(t, newReadPool.Pools, len(f.readPools.thisAllocation)+f.readPools.otherAllocations)
 
-	require.InDelta(t, f.blobberCharge(), int64(newStakePool.Rewards.Charge), errDelta)
-	require.InDelta(t, f.blobberReward()-f.blobberCharge(), int64(newStakePool.Rewards.Blobber), errDelta)
+	require.InDelta(t, f.blobberCharge(), int64(newStakePool.Reward), errDelta)
+	require.InDelta(t, f.blobberReward()-f.blobberCharge(), int64(newStakePool.Reward), errDelta)
 
 	require.True(t, true)
 	for _, transfer := range ctx.GetTransfers() {

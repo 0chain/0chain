@@ -140,7 +140,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	if err := sp.PayRewards(blobberReward); err != nil {
+	if err := sp.DistributeRewards(blobberReward); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 

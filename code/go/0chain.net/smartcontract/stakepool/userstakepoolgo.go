@@ -72,7 +72,7 @@ func (usp *UserStakePools) Decode(p []byte) error {
 }
 
 // save the user stake pools
-func (usp *UserStakePools) save(
+func (usp *UserStakePools) Save(
 	p Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,

@@ -3,6 +3,7 @@ package stakepool
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 
 	"0chain.net/core/common"
@@ -64,10 +65,10 @@ type StakePoolSettings struct {
 }
 
 type DelegatePool struct {
-	Balance state.Balance `json:"balance"`
-	Reward  state.Balance `json:"reward"`
-	Status  PoolStatus    `json:"status"`
-	Created int64         `json:"created"`
+	Balance      state.Balance `json:"balance"`
+	Reward       state.Balance `json:"reward"`
+	Status       PoolStatus    `json:"status"`
+	RoundCreated int64         `json:"round_created"`
 }
 
 func NewStakePool() *StakePool {
@@ -86,6 +87,17 @@ func (sp *StakePool) Encode() (b []byte) {
 
 func (sp *StakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
+}
+
+func (sp *StakePool) OrderedPoolIds() []string {
+	ids := make([]string, 0, len(sp.Pools))
+	for id := range sp.Pools {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i] < ids[j]
+	})
+	return ids
 }
 
 func GetStakePool(
@@ -164,7 +176,7 @@ func (sp *StakePool) EmptyAccount(
 	return amount, false, nil
 }
 
-func (sp *StakePool) PayRewards(value float64) error {
+func (sp *StakePool) DistributeRewards(value float64) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
@@ -192,9 +204,9 @@ func (sp *StakePool) PayRewards(value float64) error {
 		return fmt.Errorf("no stake")
 	}
 
-	for _, dp := range sp.Pools {
-		ratio := float64(dp.Balance) / stake
-		dp.Reward += state.Balance(valueLeft * ratio)
+	for _, id := range sp.OrderedPoolIds() {
+		ratio := float64(sp.Pools[id].Balance) / stake
+		sp.Pools[id].Reward += state.Balance(valueLeft * ratio)
 	}
 	return nil
 }
@@ -203,8 +215,8 @@ func (sp *StakePool) stake() (stake state.Balance) {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
-	for _, dp := range sp.Pools {
-		stake += dp.Balance
+	for _, id := range sp.OrderedPoolIds() {
+		stake += sp.Pools[id].Balance
 	}
 	return
 }

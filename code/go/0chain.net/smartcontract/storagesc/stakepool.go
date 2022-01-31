@@ -66,18 +66,11 @@ func validateStakePoolSettings(
 
 type stakePool struct {
 	stakepool.StakePool
-
-	// delegates
-	//Pools map[string]*delegatePool `json:"pools"`
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
-	TotalOffers state.Balance
+	TotalOffers state.Balance `json:"total_offers"`
 	// Total amount to be un staked
-	TotalUnStake state.Balance
-	// total rewards information
-	//Rewards stakePoolRewards `json:"rewards"`
-	// Settings of the stake pool.
-	//Settings stakePoolSettings `json:"settings"`
+	TotalUnStake state.Balance `json:"total_un_stake"`
 }
 
 func newStakePool() *stakePool {
