@@ -1123,7 +1123,6 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", metric.FormattedTime(cf))
 		}
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.GetKey())
-		fmt.Fprintf(w, "<td class='number'>%.8f</td>", cf.ChainWeight)
 		fmt.Fprintf(w, "<td>%s</td>", cf.BlockHash)
 		fmt.Fprintf(w, "<td>%v</td>", util.ToHex(cf.ClientStateHash))
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedCount)

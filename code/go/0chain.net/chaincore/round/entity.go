@@ -342,7 +342,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool {
-		return rnb[i].ChainWeight > rnb[j].ChainWeight
+		return rnb[i].Weight() > rnb[j].Weight()
 	})
 	r.notarizedBlocks = rnb
 	logging.Logger.Debug("reached notarization", zap.Int64("round", b.Round))

@@ -606,20 +606,16 @@ func (bf *BlockFetcher) fetch(ctx context.Context,
 }
 
 func (c *Chain) GetNotarizedBlockForce(ctx context.Context, hash string, rn int64) (*block.Block, error) {
-	for true {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-
+	var repl *block.Block
+	err := common.RunWithRetries(ctx, 20, func() error {
 		notarizedBlock, err := c.GetNotarizedBlock(ctx, hash, rn)
 		if err != nil {
-			continue
+			return err
 		}
-		return notarizedBlock, nil
-	}
-	return nil, context.DeadlineExceeded
+		repl = notarizedBlock
+		return nil
+	})
+	return repl, err
 }
 
 // GetNotarizedBlock - get a notarized block for a round.
