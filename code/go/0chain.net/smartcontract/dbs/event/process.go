@@ -57,6 +57,11 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 		switch EventType(event.Type) {
 		case TypeStats:
 			err = edb.addStat(event)
+		case TypeError:
+			err = edb.addError(Error{
+				TransactionID: event.TxHash,
+				Error:         event.Data,
+			})
 		default:
 		}
 		if err != nil {
