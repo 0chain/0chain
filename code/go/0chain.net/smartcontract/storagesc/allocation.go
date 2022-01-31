@@ -231,30 +231,6 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 	return
 }
 
-// update blobbers list in the all blobbers list
-func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
-	balances chainstate.StateContextI) (err error) {
-
-	// update the blobbers in all blobbers list
-	for _, b := range update {
-		all.Nodes.update(b)
-		// don't replace if blobber has removed from the all blobbers list;
-		// for example, if the blobber has removed, then it shouldn't be
-		// in the all blobbers list
-		if err := emitUpdateBlobber(b, balances); err != nil {
-			return fmt.Errorf("emmiting blobber %v: %v", b, err)
-		}
-	}
-
-	// save
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
-	if err != nil {
-		return fmt.Errorf("can't save all blobber list: %v", err)
-	}
-
-	return
-}
-
 // convert time.Duration to common.Timestamp truncating to seconds
 func toSeconds(dur time.Duration) common.Timestamp {
 	return common.Timestamp(dur / time.Second)
@@ -369,6 +345,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
 			sa.ChallengeCompletionTime = b.Terms.ChallengeCompletionTime
 		}
+
+		if err := emitUpdateBlobber(b, balances); err != nil {
+			return "", fmt.Errorf("emmiting blobber %v: %v", b, err)
+		}
 	}
 
 	sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
@@ -381,11 +361,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	sa.Tx = t.Hash
 
 	if err = sc.addBlobbersOffers(sa, blobberNodes, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
-	}
-
-	err = updateBlobbersInAll(allBlobbersList, blobberNodes, balances)
-	if err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
@@ -585,14 +560,9 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	return string(alloc.Encode()), nil // closing
 }
 
-func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
+func (sc *StorageSmartContract) saveUpdatedAllocation(
 	alloc *StorageAllocation, blobbers []*StorageNode,
 	balances chainstate.StateContextI) (err error) {
-
-	// save all
-	if err = updateBlobbersInAll(all, blobbers, balances); err != nil {
-		return
-	}
 
 	// save related blobbers
 	for _, b := range blobbers {
@@ -938,17 +908,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
 
-	var all *StorageNodes // all blobbers list
-	if all, err = sc.getBlobbersList(balances); err != nil {
-		return "", common.NewError("allocation_updating_failed",
-			"can't get all blobbers list: "+err.Error())
-	}
-
-	if len(all.Nodes) == 0 {
-		return "", common.NewError("allocation_updating_failed",
-			"empty blobbers list")
-	}
-
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_updating_failed",
 			"missing client_id in transaction")
@@ -1062,7 +1021,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		alloc.IsImmutable = true
 	}
 
-	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
+	err = sc.saveUpdatedAllocation(alloc, blobbers, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
@@ -1425,12 +1384,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
 
-	var allb *StorageNodes
-	if allb, err = sc.getBlobbersList(balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get all blobbers list: "+err.Error())
-	}
-
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
@@ -1473,8 +1426,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
-		// update the blobber in all (replace with existing one)
-		allb.Nodes.update(b)
+
 		if err := emitUpdateBlobber(b, balances); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"emitting blobber "+b.ID+": "+err.Error())
@@ -1494,13 +1446,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"moving challenge pool rest back to write pool: "+err.Error())
-	}
-
-	// save all blobbers list
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allb)
-	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving all blobbers list: "+err.Error())
 	}
 
 	// save all rest and remove allocation from all allocations list

@@ -273,7 +273,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 
 			ssc, balances := setExpectations(t, tt.parameters)
 
-			err := ssc.payBlobberBlockRewards(balances)
+			err := ssc.blobberBlockRewards(balances)
 
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {

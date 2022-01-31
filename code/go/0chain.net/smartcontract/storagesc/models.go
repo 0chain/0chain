@@ -19,10 +19,11 @@ import (
 )
 
 var (
-	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ALL_BLOBBERS_KEY           = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+	ALL_BLOBBERS_PARTITION_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_partition"))
+	ALL_VALIDATORS_KEY         = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+	ALL_ALLOCATIONS_KEY        = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+	STORAGE_STATS_KEY          = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
 )
 
 type ClientAllocation struct {
