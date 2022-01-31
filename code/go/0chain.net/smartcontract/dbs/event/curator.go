@@ -27,6 +27,26 @@ func (edb *EventDb) overwriteCurator(c Curator) error {
 	return result.Error
 }
 
+//GetCuratorsByAllocationID returns an array of curator ID
+//from curators table matching the given allocation ID
+func (edb *EventDb) GetCuratorsByAllocationID(allocationID string) ([]string, error) {
+	var curators []Curator
+	curatorIDs := make([]string, 0)
+	result := edb.Store.Get().Model(&Curator{}).
+		Where(&Curator{AllocationID: allocationID}).
+		Find(&curators)
+
+	if result.Error != nil {
+		return curatorIDs, result.Error
+	}
+
+	for _, curator := range curators {
+		curatorIDs = append(curatorIDs, curator.CuratorID)
+	}
+
+	return curatorIDs, nil
+}
+
 func (edb *EventDb) addOrOverwriteCurator(c Curator) error {
 	exists, err := c.exists(edb)
 	if err != nil {

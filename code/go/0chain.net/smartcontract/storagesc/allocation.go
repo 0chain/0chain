@@ -127,10 +127,7 @@ func (sc *StorageSmartContract) addUserAllocation(
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
 	var err error
-	if err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"Failed to get allocation list: %v", err)
-	}
+
 	all, err := sc.getAllAllocationsList(balances)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
