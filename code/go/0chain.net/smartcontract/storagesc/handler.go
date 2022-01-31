@@ -536,3 +536,21 @@ func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.
 	block, err := balances.GetEventDB().GetBlocks()
 	return &block, err
 }
+
+func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate.StateContextI) (int64, error) {
+	if ssc != nil {
+		storageNodes, err := ssc.getBlobbersList(balances)
+		if err != nil {
+			return 0, fmt.Errorf("error from getBlobbersList in GetTotalData: %v", err)
+		}
+
+		var totalSavedData int64
+		for _, sn := range storageNodes.Nodes {
+			totalSavedData += sn.SavedData
+		}
+
+		return totalSavedData, nil
+	}
+
+	return 0, fmt.Errorf("storageSmartContract is nil")
+}

@@ -642,13 +642,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	for _, b := range alloc.Blobbers {
 		if b.ID == commitConnection.WriteMarker.BlobberID {
 			storageNode = b
+			break
 		}
 	}
 
 	storageNode.SavedData += alloc.Stats.UsedSize
-
-	err = emitAddOrOverwriteBlobber(storageNode, balances)
-	if err != nil {
+	// emit blobber update event
+	if err = emitAddOrOverwriteBlobber(storageNode, balances); err != nil {
 		logging.Logger.Error("error emitting blobber", zap.Any("blobber", storageNode.ID), zap.Error(err))
 	}
 
