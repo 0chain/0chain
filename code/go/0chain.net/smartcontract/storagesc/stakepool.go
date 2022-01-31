@@ -158,9 +158,9 @@ type stakePool struct {
 	Pools map[string]*delegatePool `json:"pools"`
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
-	TotalOffers state.Balance
+	TotalOffers state.Balance `json:"total_offers"`
 	// Total amount to be un staked
-	TotalUnStake state.Balance
+	TotalUnStake state.Balance `json:"total_un_stake"`
 	// total rewards information
 	Rewards stakePoolRewards `json:"rewards"`
 	// Settings of the stake pool.
