@@ -776,11 +776,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 
 	pr.CancelVerification()
 	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
-	if _, _, err := mc.AddNotarizedBlockToRound(pr, pb); err != nil {
-		finish(false)
-		return err
-	}
-
+	mc.AddNotarizedBlockToRound(pr, pb)
 	finish(true)
 	return nil
 }
@@ -1169,14 +1165,7 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
 	//TODO Sort this context
 	ctx, _ = context.WithTimeout(common.GetRootContext(), 30*time.Second)
-	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
-		logging.Logger.Error("add notarized block failed",
-			zap.Int64("round", r.GetRoundNumber()),
-			zap.String("block", b.Hash),
-			zap.Error(err))
-		return false
-	}
-
+	mc.AddNotarizedBlockToRound(r, b)
 	mc.UpdateNodeState(b)
 
 	if !b.IsStateComputed() {

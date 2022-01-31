@@ -678,14 +678,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (*
 	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	var err error
-	b, r, err = c.AddNotarizedBlockToRound(r, nb)
-	if err != nil {
-		logging.Logger.Error("get notarized block failed",
-			zap.Int64("cround", cround), zap.Int64("round", rn),
-			zap.String("block", hash), zap.Error(err))
-		return nil, err
-	}
+	b, r = c.AddNotarizedBlockToRound(r, nb)
 
 	// Add the round if chain does not have it
 	if c.GetRound(nb.Round) == nil {
@@ -767,14 +760,7 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	var err error
-	_, r, err = c.AddNotarizedBlockToRound(r, fb)
-	if err != nil {
-		logging.Logger.Error("async fetch fb from sharders failed",
-			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
-			zap.Error(err))
-		return
-	}
+	_, r = c.AddNotarizedBlockToRound(r, fb)
 
 	//  Add the round to chain if does not in the chain yet
 	if c.GetRound(fb.Round) == nil {
