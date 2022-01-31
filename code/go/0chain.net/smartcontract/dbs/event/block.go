@@ -28,8 +28,8 @@ type Block struct {
 	ChainId               string    `json:"chain_id"`
 	RunningTxnCount       string    `json:"running_txn_count"`
 	RoundTimeoutCount     int       `json:"round_timeout_count"`
-	CreatedAt             time.Time `json:"created_at"`
 	MintTotalAmount       int64     `json:"mint_total_amount"`
+	CreatedAt             time.Time `json:"created_at"`
 }
 
 func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
