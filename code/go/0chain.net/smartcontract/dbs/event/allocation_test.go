@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -221,7 +220,6 @@ func TestAllocations(t *testing.T) {
 			MovedToChallenge:           sa.MovedToChallenge,
 			MovedBack:                  sa.MovedBack,
 			MovedToValidators:          sa.MovedToValidators,
-			Curators:                   strings.Join(sa.Curators, ","),
 			TimeUnit:                   int64(sa.TimeUnit),
 			NumWrites:                  sa.Stats.NumWrites,
 			NumReads:                   sa.Stats.NumReads,
