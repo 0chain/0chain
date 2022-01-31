@@ -50,6 +50,8 @@ func init() {
 	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
+//iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,
+//returns this block
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
 	isIn := func(blocks []*block.Block, hash string) bool {
 		for _, b := range blocks {

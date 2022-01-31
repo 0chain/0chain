@@ -916,7 +916,9 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 /*ChainHasTransaction - indicates if this chain has the transaction */
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
+	visited := 0
 	for cb := b; cb != nil; pb, cb = cb, c.GetLocalPreviousBlock(ctx, cb) {
+		visited++
 		if cb.Round == 0 {
 			return false, nil
 		}
@@ -927,8 +929,9 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 			return false, nil
 		}
 	}
-	if false {
-		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+	if true {
+		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round),
+			zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate), zap.Int("visited", visited))
 	}
 	return false, ErrInsufficientChain
 }
