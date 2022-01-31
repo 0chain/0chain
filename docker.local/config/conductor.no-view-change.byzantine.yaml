@@ -2,24 +2,28 @@ enable:
   - "attack round transfer"
   - "resend past messages"
   - "restart"
+  - "collect verification ticket"
 sets:
-  - name: "attack round transfer"
+#  - name: "attack round transfer"
+#    tests:
+#      - "not notarised block extension"
+#      - "send different blocks from first generator"
+#      - "send different blocks from all generators"
+#      - "breaking single block"
+#      - "send insufficient proposals"
+#      - "verifying non existent block"
+#      - "notarising non existent block"
+#  - name: "resend past messages"
+#    tests:
+#      - "resend proposed block"
+#      - "resend notarisation"
+#  - name: "restart"
+#    tests:
+#      - "bad timeout VRF share"
+#      - "half nodes down"
+  - name: "collect verification ticket"
     tests:
-      - "not notarised block extension"
-      - "send different blocks from first generator"
-      - "send different blocks from all generators"
-      - "breaking single block"
-      - "send insufficient proposals"
-      - "verifying non existent block"
-      - "notarising non existent block"
-  - name: "resend past messages"
-    tests:
-      - "resend proposed block"
-      - "resend notarisation"
-  - name: "restart"
-    tests:
-      - "bad timeout VRF share"
-      - "half nodes down"
+      - "collect verification ticket"
 
 tests:
   - name: "not notarised block extension"
@@ -165,5 +169,17 @@ tests:
       - configure_half_nodes_down_test_case:
           test_report:
             round: 30
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "collect verification ticket"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: { }
+      - start: [ "miner-1", "miner-2", "miner-3", "sharder-1", "sharder-2" ]
+      - configure_collect_verification_ticket:
+          test_report:
+            round: 6
+      - unlock: [ "miner-1", "miner-2", "miner-3", "sharder-1", "sharder-2" ]
       - make_test_case_check:
           wait_time: 5m

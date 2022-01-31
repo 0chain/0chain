@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/chaincore/node"
 )
 
 var keyPairs = make(map[string]string)

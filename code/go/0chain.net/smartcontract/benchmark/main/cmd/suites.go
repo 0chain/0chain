@@ -75,7 +75,7 @@ func runSuite(
 				benchmarkResults{
 					test:   bm,
 					result: result,
-					error: err,
+					error:  err,
 				},
 			)
 

@@ -9,6 +9,6 @@ type (
 )
 
 // IsTesting implements TestCaseConfigurator interface.
-func (b *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int) bool {
+func (b *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int, isMonitor bool) bool {
 	return b.OnRound == round && b.ByGenerator == generator && nodeTypeRank == b.ByNodeWithTypeRank
 }

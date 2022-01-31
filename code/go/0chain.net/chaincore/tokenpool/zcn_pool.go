@@ -44,11 +44,11 @@ func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*stat
 	p.TokenPool.Balance = state.Balance(txn.Value)
 
 	tpr := &TokenPoolTransferResponse{
-		TxnHash: txn.Hash, // transaction hash
-		FromClient: txn.ClientID, // authorizer node id
-		ToPool: p.ID, // transaction hash
-		ToClient: txn.ToClientID, // smart contracts address
-		Value: state.Balance(txn.Value),
+		TxnHash:    txn.Hash,       // transaction hash
+		FromClient: txn.ClientID,   // authorizer node id
+		ToPool:     p.ID,           // transaction hash
+		ToClient:   txn.ToClientID, // smart contracts address
+		Value:      state.Balance(txn.Value),
 	}
 
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))

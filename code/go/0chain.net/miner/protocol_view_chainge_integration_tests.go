@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
@@ -17,8 +18,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests
 	crpcutils "0chain.net/conductor/utils"

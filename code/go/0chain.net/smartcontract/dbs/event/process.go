@@ -103,7 +103,7 @@ func (edb *EventDb) addStat(event Event) error {
 	case TagAddBlock:
 		var block Block
 		err := json.Unmarshal([]byte(event.Data), &block)
-		if err!= nil {
+		if err != nil {
 			return err
 		}
 		return edb.addBlock(block)

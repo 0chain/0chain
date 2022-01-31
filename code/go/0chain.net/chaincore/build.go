@@ -1,5 +1,4 @@
 package chaincore
 
-
 func init() {
 }

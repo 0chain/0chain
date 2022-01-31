@@ -87,7 +87,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	s := crpc.Client().State()
-	var isTestingFunc func(round int64, generator bool, typeRank int) bool
+	var isTestingFunc func(round int64, generator bool, typeRank int, isMonitor bool) bool
 	switch {
 	case s.ExtendNotNotarisedBlock != nil:
 		isTestingFunc = s.ExtendNotNotarisedBlock.IsTesting
@@ -110,12 +110,18 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	case s.BadTimeoutVRFS != nil:
 		isTestingFunc = s.BadTimeoutVRFS.IsTesting
 
+	case s.CollectVerificationTicket != nil:
+		log.Printf("reached collect verification in finalized block round: %v is monitor %v", round, crpc.Client().State().IsMonitor)
+		isTestingFunc = s.CollectVerificationTicket.IsTesting
+		nodeType, typeRank := getNodeTypeAndTypeRank(round)
+		log.Printf("testing is %v", isTestingFunc(round, nodeType == generator, typeRank, crpc.Client().State().IsMonitor))
+
 	default:
 		return false
 	}
 
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
-	return isTestingFunc(round, nodeType == generator, typeRank)
+	return isTestingFunc(round, nodeType == generator, typeRank, crpc.Client().State().IsMonitor)
 }
 
 func addRoundInfoResult(finalisedBlockHash string, r round.RoundI) error {

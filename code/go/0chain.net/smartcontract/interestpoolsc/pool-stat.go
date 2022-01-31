@@ -48,5 +48,3 @@ func (ps *poolStat) decode(input []byte) error {
 	err := json.Unmarshal(input, ps)
 	return err
 }
-
-

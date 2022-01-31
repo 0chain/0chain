@@ -22,6 +22,13 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		return
 	}
 
+	if isCollectVerificationTicket(msg.BlockVerificationTicket.Round) {
+		if err := configureCollectVerficationTicket(msg.BlockVerificationTicket.BlockID); err != nil {
+			log.Panicf("Conductor: CollectVerficationTicket: error while configuring test: %v", err)
+		}
+		return
+	}
+
 	wg := new(sync.WaitGroup)
 	if isBreakingSingleBlock(msg.BlockVerificationTicket.Round, msg.BlockVerificationTicket.VerifierID) {
 		wg.Add(1)
@@ -38,7 +45,6 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 			wg.Done()
 		}()
 	}
-
 	mc.handleVerificationTicketMessage(ctx, msg)
 
 	wg.Wait()
@@ -55,6 +61,15 @@ func isIgnoringVerificationTicket(round int64) bool {
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
 	isFirstRankedReplica := nodeType == replica && typeRank == 0
 	return isFirstRankedReplica && cfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
+}
+
+func isCollectVerificationTicket(round int64) bool {
+	cfg := crpc.Client().State().CollectVerificationTicket
+	if cfg == nil || round != cfg.OnRound {
+		return false
+	}
+
+	return crpc.Client().State().IsMonitor
 }
 
 func isBreakingSingleBlock(roundNum int64, verTicketFromMiner string) bool {
@@ -94,6 +109,17 @@ func sendBreakingBlock(blockHash string) (sentBlockHash string, err error) {
 	mc.SendBlock(context.Background(), cpBl)
 
 	return cpBl.Hash, nil
+}
+
+func configureCollectVerficationTicket(currentBlockID string) error {
+	cfg := &cases.CollectVerificationTicketCfg{
+		BlockHash: currentBlockID,
+	}
+	blob, err := cfg.Encode()
+	if err != nil {
+		return err
+	}
+	return crpc.Client().ConfigureTestCase(blob)
 }
 
 func configureBreakingSingleBlock(firstBlockHash, secondBlockHash string) error {

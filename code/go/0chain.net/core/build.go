@@ -1,5 +1,4 @@
 package core
 
-
 func init() {
 }

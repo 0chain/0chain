@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/conductor/config/cases"
 	"github.com/mitchellh/mapstructure"
+
+	"0chain.net/conductor/config/cases"
 )
 
 type flowExecuteFunc func(name string, ex Executor, val interface{},
@@ -478,6 +479,26 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 
 		cfg := cases.NewHalfNodesDown(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_half_nodes_down_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewHalfNodesDown(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_collect_verification_ticket", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewCollectVerification()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
