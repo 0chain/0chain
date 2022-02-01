@@ -146,6 +146,28 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
+func (sn *BlobberChallenge) getSuccessCount(isSuccess bool,
+	now common.Timestamp, lastNDays int64, cct time.Duration) (count int) {
+	fromTimestamp := common.Timestamp(common.ToTime(now).Add(time.Duration(lastNDays) * time.Hour * -24).Unix())
+
+	if sn.LatestCompletedChallenge.Created < fromTimestamp {
+		return
+	}
+
+	for i := len(sn.Challenges) - 1; i >= 0; i++ {
+		if sn.Challenges[i].Created < fromTimestamp {
+			return
+		}
+		success, failure := sn.Challenges[i].getStats()
+		pass, _, _ := sn.Challenges[i].isChallengePassed(success, failure, cct, now)
+		if pass == isSuccess {
+			count++
+		}
+
+	}
+	return
+}
+
 type StorageChallenge struct {
 	Created        common.Timestamp   `json:"created"`
 	ID             string             `json:"id"`
@@ -156,6 +178,29 @@ type StorageChallenge struct {
 	Blobber        *StorageNode       `json:"blobber"`
 	AllocationRoot string             `json:"allocation_root"`
 	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
+}
+
+func (sc *StorageChallenge) isChallengePassed(success, failure int,
+	challengeCompletionTime time.Duration, now common.Timestamp) (pass, fresh bool, threshold int) {
+
+	cct := toSeconds(challengeCompletionTime)
+	threshold = len(sc.Validators) / 2
+	pass = success > threshold ||
+		(success > failure && success+failure < threshold)
+	fresh = sc.Created+cct >= now
+
+	return
+}
+
+func (sc *StorageChallenge) getStats() (success, fail int) {
+	for _, vt := range sc.Response.ValidationTickets {
+		if vt.Result {
+			success++
+		} else {
+			fail++
+		}
+	}
+	return
 }
 
 type ValidationNode struct {

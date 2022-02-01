@@ -406,13 +406,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		prev = last.Created
 	}
 
-	var (
-		threshold = len(challReq.Validators) / 2
-		pass      = success > threshold ||
-			(success > failure && success+failure < threshold)
-		cct   = toSeconds(details.Terms.ChallengeCompletionTime)
-		fresh = challReq.Created+cct >= t.CreationDate
-	)
+	pass, fresh, threshold := challReq.isChallengePassed(
+		success, failure, details.Terms.ChallengeCompletionTime, t.CreationDate)
 
 	// verification, or partial verification
 	if pass && fresh {
