@@ -105,19 +105,18 @@ func (wcf *WithContextFunc) Run(ctx context.Context, f func() error) error {
 func RunWithRetries(ctx context.Context, retries int, f func() error) error {
 	err := f()
 	if err != nil {
-		timeout := 5 //start with 5 millis and increase every time by 10 * i
+		timeout := time.Duration(5) //start with 5 millis and increase every time by 10 * i
 		for i := 1; i < retries; i++ {
-			timer := time.NewTimer(time.Duration(int64(timeout)))
+			timer := time.NewTimer(timeout * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-timer.C:
 				if err := f(); err != nil {
-					timeout = timeout + 10*i
+					timeout = timeout + time.Duration(10*i)
 					continue
 				}
 				return nil
-			default:
 			}
 		}
 		return NewError("run_with_retries", "run number exceeds")
