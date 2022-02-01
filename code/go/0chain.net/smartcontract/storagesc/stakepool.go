@@ -6,18 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 
 	"0chain.net/smartcontract/dbs/event"
-
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -158,7 +153,7 @@ func (sp *stakePool) empty(
 	sp.Pools[poolID].Balance = 0
 	sp.Pools[poolID].Status = stakepool.Deleting
 
-	return false, nil
+	return true, nil
 }
 
 // add offer of an allocation related to blobber owns this stake pool
@@ -454,8 +449,9 @@ type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
 	// for now and the TokenPoolTransferResponse if has a pool had unlocked
 
-	Unstake common.Timestamp `json:"unstake"` // max time to wait to unstake
-	tokenpool.TokenPoolTransferResponse
+	Unstake bool          `json:"unstake"` // max time to wait to unstake
+	Balance state.Balance `json:"balance"`
+	//tokenpool.TokenPoolTransferResponse
 }
 
 // add delegated stake pool
@@ -523,15 +519,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"can't get related stake pool: %v", err)
 	}
 
-	//var usp *userStakePools
-	//usp, err = ssc.getUserStakePool(t.ClientID, balances)
-	//if err != nil {
-	//	return "", common.NewErrorf("stake_pool_unlock_failed",
-	//		"can't get related user stake pools: %v", err)
-	//}
-
-	var unstake common.Timestamp
-	unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
+	unstake, err := sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
@@ -539,31 +527,19 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 
 	// the tokens can't be unlocked due to opened offers, but we mark it
 	// as 'unstake' and returns maximal time to wait to unlock the pool
-	if unstake {
+	if !unstake {
 		// save the pool and return special result
 		if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		return toJson(&unlockResponse{Unstake: unstake}), nil
+		return toJson(&unlockResponse{Unstake: false}), nil
 	}
-
-	//if !usp.del(spr.BlobberID, spr.PoolID) {
-	//	err = usp.save(ssc.ID, t.ClientID, balances)
-	//} else {
-	//	err = usp.remove(ssc.ID, t.ClientID, balances)
-	//}
-	//if err != nil {
-	//	return "", common.NewErrorf("stake_pool_unlock_failed",
-	//		"saving user pools: %v", err)
-	//}
 
 	amount, err := sp.UnlockPool(t, stakepool.Blobber, spr.BlobberID, spr.PoolID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
-	resp = strconv.FormatInt(int64(amount), 10)
-	logging.Logger.Info("piers stake pool unlock", zap.String("unlocked", resp))
 
 	// save the pool
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
@@ -571,9 +547,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"saving stake pool: %v", err)
 	}
 
-	// TO-DO: Update stake in eventDB
-
-	return
+	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }
 
 //

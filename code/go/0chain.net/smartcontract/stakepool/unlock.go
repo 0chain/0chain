@@ -10,13 +10,6 @@ import (
 	"0chain.net/core/datastore"
 )
 
-func (dp *DelegatePool) UnlockPool() error {
-	dp.Status = Deleting
-	amount, removed, err :=
-
-	return nil
-}
-
 func (sp *StakePool) UnlockPool(
 	txn *transaction.Transaction,
 	providerType Provider,
@@ -40,7 +33,7 @@ func (sp *StakePool) UnlockPool(
 	}
 
 	dp.Status = Deleting
-	amount, removed, err := sp.EmptyAccount(
+	amount, removed, err := sp.MintRewards(
 		txn.ClientID, poolId, providerId, providerType, balances,
 	)
 	if err != nil {
