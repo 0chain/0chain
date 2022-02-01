@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"path"
@@ -14,27 +15,33 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
-	"golang.org/x/sys/unix"
 )
 
 var volumesMap map[string]*volume
 var unableVolumes map[string]*volume
 
 const (
-	//Contains 2000 directories that contains 2000 blocks each, so one twoKilo directory contains 4*10^6blocks.
-	//So 2000 such twokilo directories will contain 8*10^9 blocks
+	// Contains 2000 directories that contains 2000 blocks each, so one twoKilo directory contains 4*10^6blocks.
+	// So 2000 such twokilo directories will contain 8*10^9 blocks
 	HK = "HK"
-	//Hot directory content limit
+	// Hot directory content limit
 	HDCL = 2000
 
-	//Contains 1000 directories that contains 1000 blocks each, so one kilo directories contains 10^9 blocks
+	// Contains 1000 directories that contains 1000 blocks each, so one kilo directories contains 10^9 blocks
 	WK = "WK"
-	//Warm directory content limit
+	// Warm directory content limit
 	WDCL = 1000
+
+	minSizeFirst  = "min_size_first"
+	random        = "random"
+	roundRobin    = "round_robin"
+	minCountFirst = "min_count_first"
 )
 
 type selectedDiskVolume struct {
@@ -44,12 +51,12 @@ type selectedDiskVolume struct {
 }
 
 type diskTier struct {
-	Volumes          []*volume //List of hot volumes
+	Volumes          []*volume // List of hot volumes
 	SelectNextVolume func(volumes []*volume, prevInd int)
-	SelectedVolumeCh <-chan selectedDiskVolume //volume that will be used to store blocks next
+	SelectedVolumeCh <-chan selectedDiskVolume // volume that will be used to store blocks next
 	PrevVolInd       int
 	Mu               sync.Mutex
-	//Directory content limit
+	// Directory content limit
 	DCL       int
 	DirPrefix string
 }
@@ -58,7 +65,7 @@ func (d *diskTier) removeSelectedVolume() {
 	selectedVolume := d.Volumes[d.PrevVolInd]
 	unableVolumes[selectedVolume.Path] = selectedVolume
 	d.Volumes = append(d.Volumes[:d.PrevVolInd], d.Volumes[d.PrevVolInd+1:]...)
-	d.PrevVolInd-- //It is inaccurate for strategy other than round_robin but other strategy does not require this value so its fine
+	d.PrevVolInd-- // It is inaccurate for strategy other than round_robin but other strategy does not require this value so its fine
 
 }
 
@@ -95,11 +102,11 @@ type volume struct {
 	SizeToMaintain   uint64
 	InodesToMaintain uint64
 
-	CountMu     sync.Mutex //Count Mutex to update blockssize and blockscount
+	CountMu     sync.Mutex // Count Mutex to update blockssize and blockscount
 	BlocksSize  uint64
 	BlocksCount uint64
 
-	//used in selecting directory
+	// used in selecting directory
 	IndMu           sync.Mutex // Index mutex to update indexes and current directory blocks count
 	CurKInd         int
 	CurDirInd       int
@@ -114,7 +121,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
-			if err := os.MkdirAll(blocksPath, 0644); err != nil {
+			if err := os.MkdirAll(blocksPath, 0777); err != nil {
 				return err
 			}
 		}
@@ -127,7 +134,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		blocksCount, err := countFiles(blocksPath)
 
 		if err != nil && errors.Is(err, os.ErrNotExist) {
-			err := os.MkdirAll(blocksPath, 0644)
+			err := os.MkdirAll(blocksPath, 0777)
 			if err != nil {
 				return err
 			}
@@ -159,7 +166,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	blocksCount, err := countFiles(blocksPath)
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(blocksPath, 0644)
+		err := os.MkdirAll(blocksPath, 0777)
 		if err != nil {
 			return err
 		}
@@ -245,16 +252,16 @@ func (v *volume) read(hash, blockPath string) (*block.Block, error) {
 	}
 	defer r.Close()
 
-	var b *block.Block
-	err = datastore.ReadJSON(r, b)
+	b := block.Block{}
+	err = datastore.ReadJSON(r, &b)
 	if err != nil {
 		return nil, err
 	}
 
-	return b, nil
+	return &b, nil
 }
 
-//When a block is moved to cold tier delete function will be called
+// When a block is moved to cold tier delete function will be called
 func (v *volume) delete(hash, path string) error {
 	finfo, err := os.Stat(path)
 	if err != nil {
@@ -277,17 +284,39 @@ func (v *volume) delete(hash, path string) error {
 }
 
 func (v *volume) updateSize(n int64) {
+	var volStat unix.Statfs_t
+	_ = unix.Statfs(v.Path, &volStat)
+
 	if n < 0 {
+		if v.BlocksSize < uint64(volStat.Bsize) {
+			v.BlocksSize = 0
+			return
+		}
+		n *= -1
 		v.BlocksSize -= uint64(n)
 	} else {
+		if v.BlocksSize > (math.MaxUint64 - uint64(n)) {
+			v.BlocksSize = math.MaxUint64
+			return
+		}
 		v.BlocksSize += uint64(n)
 	}
 }
 
 func (v *volume) updateCount(n int64) {
+	var volStat unix.Statfs_t
+	_ = unix.Statfs(v.Path, &volStat)
+
 	if n < 0 {
+		n *= -1
+		if v.BlocksCount == 0 {
+			return
+		}
 		v.BlocksCount -= uint64(n)
 	} else {
+		if v.BlocksCount == math.MaxUint64 {
+			return
+		}
 		v.BlocksCount += uint64(n)
 	}
 }
@@ -374,15 +403,15 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 	Logger.Info(fmt.Sprintf("Initializing volumes in %v mode", mode))
 	switch mode {
 	case "start":
-		//Delete all existing data and start fresh
-		startVolumes(volsMap, &dTier) //will panic if right config setup is not provided
-	case "restart": //Nothing is lost but sharder was off for maintenance mode
+		// Delete all existing data and start fresh
+		startVolumes(volsMap, &dTier) // will panic if right config setup is not provided
+	case "restart": // Nothing is lost but sharder was off for maintenance mode
 		restartVolumes(volsMap, &dTier)
-	case "recover": //Metadata is lost
+	case "recover": // Metadata is lost
 		recoverVolumeMetaData(volsMap, &dTier)
-	case "repair": //Metadata is present but some disk failed
+	case "repair": // Metadata is present but some disk failed
 		panic("Repair mode not implemented")
-	case "repair_and_recover": //Metadata is lost and some disk failed
+	case "repair_and_recover": // Metadata is lost and some disk failed
 		panic("Repair and recover mode not implemented")
 	default:
 		panic(fmt.Errorf("%v mode is not supported", mode))
@@ -397,7 +426,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 	switch strategy {
 	default:
 		panic(fmt.Errorf("Strategy %v is not supported", strategy))
-	case "random":
+	case random:
 		f = func(volumes []*volume, prevInd int) {
 			dTier.Mu.Lock()
 			defer dTier.Mu.Unlock()
@@ -435,7 +464,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 				}
 			}
 		}
-	case "round_robin":
+	case roundRobin:
 		f = func(volumes []*volume, prevInd int) {
 			dTier.Mu.Lock()
 			defer dTier.Mu.Unlock()
@@ -500,7 +529,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 				}
 			}
 		}
-	case "min_size_first":
+	case minSizeFirst:
 		f = func(volumes []*volume, prevInd int) {
 			dTier.Mu.Lock()
 			defer dTier.Mu.Unlock()
@@ -549,7 +578,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 				}
 			}
 		}
-	case "min_count_first":
+	case minCountFirst:
 		f = func(volumes []*volume, prevInd int) {
 			dTier.Mu.Lock()
 			defer dTier.Mu.Unlock()
@@ -644,8 +673,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 				Logger.Error(err.Error())
 				continue
 			}
-
-			if err := os.MkdirAll(vPath, 0644); err != nil {
+			if err := os.MkdirAll(vPath, 0777); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
@@ -725,7 +753,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			allowedBlockSize *= GB
 		}
 
-		//Create index state which stores curDirBlockNums, curDir index and curKIndex
+		// Create index state which stores curDirBlockNums, curDir index and curKIndex
 
 		dTier.Volumes = append(dTier.Volumes, &volume{
 			Path:                vPath,
@@ -876,7 +904,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 				continue
 			}
 
-			if err := os.MkdirAll(volPath, 0644); err != nil {
+			if err := os.MkdirAll(volPath, 0777); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
@@ -886,7 +914,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 				continue
 			}
 		}
-		//Check available size and inodes and add volume to volume pool
+		// Check available size and inodes and add volume to volume pool
 		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
 			Logger.Error(err.Error())
