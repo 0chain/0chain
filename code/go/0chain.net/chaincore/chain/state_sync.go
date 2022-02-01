@@ -38,6 +38,17 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
 		logging.Logger.Debug("block has the same state", zap.Any("block", b.Hash),
 			zap.Any("block_state_hash", b.ClientStateHash))
+		if !b.PrevBlock.IsStateComputed() {
+			return common.NewError("get_block_state_changes", "block is not changed but prev block state is not computed")
+		}
+		s := block.CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
+		b.SetClientState(s)
+		b.SetStateStatus(b.PrevBlock.GetStateStatus())
+
+		logging.Logger.Debug("get_block_state_changes - apply took",
+			zap.Int64("round", b.Round),
+			zap.Any("duration", time.Since(ts)))
+		return nil
 	}
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
