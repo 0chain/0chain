@@ -99,7 +99,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		mode = "start"
 	}
 
-	var bmrPath, qmrPath string = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
+	/*var bmrPath, qmrPath string = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
 	boltConfigMap := sViper.GetStringMapString("bolt")
 	if boltConfigMap == nil {
 		bmrPath = DefaultBlockMetaRecordDB
@@ -113,13 +113,13 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		if boltConfigMap["query_meta_record_path"] == "" {
 			qmrPath = DefaultQueryMetaRecordDB
 		}
-	}
+	}*/
 
 	switch mode {
 	case "start", "recover":
-		InitMetaRecordDB(bmrPath, qmrPath, true) //Removes existing metadata and creates new db
+		InitMetaRecordDB("localhost", "6379", true) //Removes existing metadata and creates new db
 	default:
-		InitMetaRecordDB(bmrPath, qmrPath, false)
+		InitMetaRecordDB("localhost", "6379", false)
 	}
 
 	switch Tiering(storageType) {

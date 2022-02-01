@@ -128,7 +128,7 @@ func (c *diskCache) Replace() { //only lru implemented
 
 	limitCh := make(chan struct{}, 10)
 	wg := sync.WaitGroup{}
-	for ca := range GetHashKeyForReplacement() {
+	for ca := range GetHashKeysForReplacement() {
 		limitCh <- struct{}{}
 		wg.Add(1)
 		go func(ca *cacheAccess) {

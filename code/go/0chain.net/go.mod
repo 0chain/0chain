@@ -4,15 +4,19 @@ go 1.16
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
+	github.com/alicebob/miniredis v2.5.0+incompatible
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/didip/tollbooth v4.0.0+incompatible
+	github.com/elliotchance/redismock v1.5.3
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/go-playground/validator/v10 v10.6.1
+	github.com/go-redis/redis v6.15.9+incompatible // indirect
+	github.com/go-redis/redis/v8 v8.11.4
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
@@ -35,7 +39,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/gozstd v1.14.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
-	go.etcd.io/bbolt v1.3.2
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f

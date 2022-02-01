@@ -25,78 +25,79 @@ func setupColdWorker(ctx context.Context) {
 			break
 		case <-t.C:
 			Logger.Info("Moving blocks to cold tier")
-			maxPrefix := []byte(time.Now().Add(-pollInterval).Format(time.RFC3339))
+			maxPrefix := time.Now().Add(-pollInterval).UnixMicro()
 			var newColdPath string
 
 			guideChannel := make(chan struct{}, 10)
 			wg := sync.WaitGroup{}
 
 			var errorOccurred bool
-			for ubr, prevKey := GetUnmovedBlock([]byte{}, maxPrefix); ubr != nil; ubr, prevKey = GetUnmovedBlock(prevKey, maxPrefix) {
-				if errorOccurred {
-					break
+			for ubrs := GetUnmovedBlocks(maxPrefix, 1000); ubrs != nil; ubrs = GetUnmovedBlocks(maxPrefix, 1000) {
+				for _, ubr := range ubrs {
+					if errorOccurred {
+						break
+					}
+
+					guideChannel <- struct{}{}
+					wg.Add(1)
+
+					Logger.Info(fmt.Sprintf("Moving block %v to cold tier", ubr.Hash))
+					go func(ubr *UnmovedBlockRecord) {
+						defer func() {
+							<-guideChannel
+							wg.Done()
+						}()
+
+						bwr, err := GetBlockWhereRecord(ubr.Hash)
+						if err != nil {
+							errorOccurred = true
+							Logger.Error(fmt.Sprintf("Unexpected error; Error: %v", err))
+							errCh <- err
+							return
+						}
+
+						newColdPath, err = Store.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
+						if err != nil {
+							errorOccurred = true
+							Logger.Error(err.Error())
+							errCh <- err
+							return
+						}
+
+						Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
+						switch bwr.Tiering {
+						case HotTier:
+							bwr.Tiering = newTiering(HotTier, HotTier, Store.ColdTier.DeleteLocal)
+						case WarmTier:
+							bwr.Tiering = newTiering(WarmTier, WarmTier, Store.ColdTier.DeleteLocal)
+						}
+
+						if Store.ColdTier.DeleteLocal {
+							bwr.BlockPath = ""
+						}
+						bwr.ColdPath = newColdPath
+
+						if err := ubr.Delete(); err != nil {
+							errorOccurred = true
+							Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not delete meta record from unmoved block bucket. Error: %v", bwr.Hash, newColdPath, err))
+							errCh <- err
+							return
+						}
+						Logger.Info(fmt.Sprintf("Block meta data for %v from unmoved bucket is removed", ubr.Hash))
+
+						if err := bwr.AddOrUpdate(); err != nil {
+							errorOccurred = true
+							Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not update meta record. Error: %v", bwr.Hash, newColdPath, err))
+							errCh <- err
+						}
+						Logger.Info(fmt.Sprintf("Block meta data for bmr for block %v is updated successfully", bwr.Hash))
+					}(ubr)
 				}
 
-				guideChannel <- struct{}{}
-				wg.Add(1)
-
-				Logger.Info(fmt.Sprintf("Moving block %v to cold tier", ubr.Hash))
-				go func(ubr *UnmovedBlockRecord) {
-					defer func() {
-						<-guideChannel
-						wg.Done()
-					}()
-
-					bwr, err := GetBlockWhereRecord(ubr.Hash)
-					if err != nil {
-						errorOccurred = true
-						Logger.Error(fmt.Sprintf("Unexpected error; Error: %v", err))
-						errCh <- err
-						return
-					}
-
-					newColdPath, err = Store.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
-					if err != nil {
-						errorOccurred = true
-						Logger.Error(err.Error())
-						errCh <- err
-						return
-					}
-
-					Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
-					switch bwr.Tiering {
-					case HotTier:
-						bwr.Tiering = newTiering(HotTier, HotTier, Store.ColdTier.DeleteLocal)
-					case WarmTier:
-						bwr.Tiering = newTiering(WarmTier, WarmTier, Store.ColdTier.DeleteLocal)
-					}
-
-					if Store.ColdTier.DeleteLocal {
-						bwr.BlockPath = ""
-					}
-					bwr.ColdPath = newColdPath
-
-					if err := ubr.Delete(); err != nil {
-						errorOccurred = true
-						Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not delete meta record from unmoved block bucket. Error: %v", bwr.Hash, newColdPath, err))
-						errCh <- err
-						return
-					}
-					Logger.Info(fmt.Sprintf("Block meta data for %v from unmoved bucket is removed", ubr.Hash))
-
-					if err := bwr.AddOrUpdate(); err != nil {
-						errorOccurred = true
-						Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not update meta record. Error: %v", bwr.Hash, newColdPath, err))
-						errCh <- err
-					}
-					Logger.Info(fmt.Sprintf("Block meta data for bmr for block %v is updated successfully", bwr.Hash))
-				}(ubr)
+				wg.Wait()
 			}
-
-			wg.Wait()
 		}
 	}
-
 }
 
 func setupVolumeRevivingWorker(ctx context.Context) {
