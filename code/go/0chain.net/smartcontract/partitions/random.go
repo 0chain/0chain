@@ -281,9 +281,12 @@ func (rs *randomSelector) getPartition(
 	var part PartitionItemList
 	if rs.ItemType == ItemString {
 		part = &itemList{}
+	} else if rs.ItemType == ItemBlobber {
+		part = &blobberItemList{}
 	} else {
 		part = &validatorItemList{}
 	}
+
 	err := part.get(rs.partitionKey(i), balances)
 	if err != nil {
 		return nil, err
