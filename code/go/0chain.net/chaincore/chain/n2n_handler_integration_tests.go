@@ -12,10 +12,13 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/conductrpc/stats/middleware"
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 func SetupX2MRequestors() {
@@ -45,13 +48,13 @@ func (c *Chain) BlockStateChangeHandler(ctx context.Context, r *http.Request) (i
 		return nil, fmt.Errorf("%w: conductor expected error", common.ErrInternal)
 
 	case cfg.ChangedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
-		return changeMPTNode(ctx, r)
+		return changeMPTNode(r)
 
 	case cfg.DeletedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
 		return deleteMPTNode(ctx, r)
 
 	case cfg.AddedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
-		return addMPTNode(ctx, r)
+		return addMPTNode(r)
 
 	case cfg.PartialStateFromAnotherBlockBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
 		return changePartialState(ctx, r)
@@ -78,18 +81,31 @@ func createMinerInformer(r *http.Request) cases.MinerInformer {
 	return cases.NewMinerInformer(roundI, miners, sChain.GetGeneratorsNum())
 }
 
-func changeMPTNode(ctx context.Context, r *http.Request) (*block.StateChange, error) {
-	stChange, err := GetServerChain().blockStateChangeHandler(ctx, r)
+func changeMPTNode(r *http.Request) (*block.StateChange, error) {
+	sChain := GetServerChain()
+	bl, err := sChain.getNotarizedBlock(context.Background(), r.FormValue("round"), r.FormValue("block"))
 	if err != nil {
-		return nil, err
+		log.Panicf("Conductor: error while fetching notarized block: %v")
 	}
 
-	if len(stChange.Nodes) == 0 {
-		log.Panicf("Conductor: mpt is empty")
+	bsc := block.NewBlockStateChange(bl)
+	st := state.State{
+		TxnHashBytes: encryption.RawHash("txn hash"),
+		Round:        bl.Round,
+		Balance:      1000000000,
 	}
 
-	stChange.Nodes[len(stChange.Nodes)-1] = stChange.Nodes[0].Clone()
-	return stChange, nil
+	for _, n := range bsc.Nodes {
+		if n.GetNodeType() == util.NodeTypeLeafNode {
+			ln, ok := n.(*util.LeafNode)
+			if !ok {
+				log.Panic("Conductor: unexpected node type")
+			}
+			ln.SetValue(&st)
+		}
+	}
+
+	return bsc, nil
 }
 
 func deleteMPTNode(ctx context.Context, r *http.Request) (*block.StateChange, error) {
@@ -106,18 +122,23 @@ func deleteMPTNode(ctx context.Context, r *http.Request) (*block.StateChange, er
 	return stChange, nil
 }
 
-func addMPTNode(ctx context.Context, r *http.Request) (*block.StateChange, error) {
-	stChange, err := GetServerChain().blockStateChangeHandler(ctx, r)
+func addMPTNode(r *http.Request) (*block.StateChange, error) {
+	sChain := GetServerChain()
+	bl, err := sChain.getNotarizedBlock(context.Background(), r.FormValue("round"), r.FormValue("block"))
 	if err != nil {
-		return nil, err
+		log.Panicf("Conductor: error while fetching notarized block: %v")
 	}
 
-	if len(stChange.Nodes) == 0 {
-		log.Panicf("Conductor: mpt is empty")
+	bsc := block.NewBlockStateChange(bl)
+	lastNode := bsc.Nodes[len(bsc.Nodes)-1]
+	st := state.State{
+		TxnHashBytes: encryption.RawHash("txn hash"),
+		Round:        bl.Round,
+		Balance:      1000000000,
 	}
+	bsc.AddNode(util.NewLeafNode(util.Path(""), util.Path(lastNode.GetHash()), lastNode.GetOrigin(), &st))
 
-	stChange.AddNode(stChange.Nodes[0])
-	return stChange, nil
+	return bsc, nil
 }
 
 func changePartialState(ctx context.Context, r *http.Request) (*block.StateChange, error) {
