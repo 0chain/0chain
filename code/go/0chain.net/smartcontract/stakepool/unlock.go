@@ -10,6 +10,13 @@ import (
 	"0chain.net/core/datastore"
 )
 
+func (dp *DelegatePool) UnlockPool() error {
+	dp.Status = Deleting
+	amount, removed, err :=
+
+	return nil
+}
+
 func (sp *StakePool) UnlockPool(
 	txn *transaction.Transaction,
 	providerType Provider,
@@ -29,11 +36,13 @@ func (sp *StakePool) UnlockPool(
 
 	dp, ok := sp.Pools[poolId]
 	if !ok {
-		return 0, fmt.Errorf("can't get find pools: %v", poolId)
+		return 0, fmt.Errorf("can't find pool: %v", poolId)
 	}
 
 	dp.Status = Deleting
-	amount, removed, err := sp.EmptyAccount(txn.ClientID, poolId, balances)
+	amount, removed, err := sp.EmptyAccount(
+		txn.ClientID, poolId, providerId, providerType, balances,
+	)
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)
 	}

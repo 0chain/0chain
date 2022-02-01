@@ -47,7 +47,8 @@ func PayoutReward(
 			"can't get related stake pool: %v", err)
 	}
 
-	total, removed, err := sp.EmptyAccount(client, prr.PoolId, balances)
+	total, removed, err := sp.EmptyAccount(
+		client, prr.PoolId, providerId, prr.ProviderType, balances)
 	if err != nil {
 		return 0, common.NewErrorf("stake_pool_unlock_failed",
 			"error emptying account, %v", err)

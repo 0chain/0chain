@@ -47,6 +47,7 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagStakePoolReward
+	TagStakePoolBalance
 	TagAddOrOverwriteStakePool
 	TagAddOrOverwriteDelegatePool
 	TagRemoveDelegatePool

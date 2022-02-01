@@ -133,18 +133,18 @@ func (sp *StakePool) Save(
 func (sp *StakePool) EmptyAccount(
 	clientId,
 	poolId, providerId string,
-	providerType int,
+	providerType Provider,
 	balances cstate.StateContextI,
 ) (state.Balance, bool, error) {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
-	account, ok := sp.Pools[poolId]
+	dPool, ok := sp.Pools[poolId]
 	if !ok {
 		return 0, false, fmt.Errorf("cannot find rewards for %s", poolId)
 	}
 
-	amount := account.Balance
+	amount := dPool.Reward
 	if amount > 0 {
 		minter, err := cstate.GetMinter(sp.Minter)
 		if err != nil {
@@ -157,8 +157,10 @@ func (sp *StakePool) EmptyAccount(
 		}); err != nil {
 			return 0, false, fmt.Errorf("minting rewards: %v", err)
 		}
+		dPool
 	}
-	account.Balance = 0
+
+	dPool.Balance = 0
 	dpId := DelegatePoolId{
 		StakePoolId: StakePoolId{
 			ProviderId:   providerId,
@@ -166,7 +168,7 @@ func (sp *StakePool) EmptyAccount(
 		},
 		PoolId: poolId,
 	}
-	if account.Status == Deleting {
+	if dPool.Status == Deleting {
 		delete(sp.Pools, poolId)
 		err := dpId.emit(event.TagRemoveDelegatePool, balances)
 		if err != nil {
@@ -186,7 +188,7 @@ func (sp *StakePool) EmptyAccount(
 func (sp *StakePool) DistributeRewards(
 	value float64,
 	providerId string,
-	providerType int,
+	providerType Provider,
 	balances cstate.StateContextI,
 ) error {
 	sp.mutex.Lock()

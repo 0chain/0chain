@@ -25,10 +25,10 @@ func (sp *StakePool) LockPool(
 	}
 
 	dp := DelegatePool{
-		Balance: state.Balance(txn.Value),
-		Reward:  0,
-		Status:  status,
-		Created: balances.GetBlock().Round,
+		Balance:      state.Balance(txn.Value),
+		Reward:       0,
+		Status:       status,
+		RoundCreated: balances.GetBlock().Round,
 	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
@@ -48,6 +48,17 @@ func (sp *StakePool) LockPool(
 	usp.add(providerId, newPoolId)
 	if err = usp.Save(providerType, txn.ClientID, balances); err != nil {
 		return fmt.Errorf("saving user pools: %v", err)
+	}
+
+	if err := dp.emitNew(
+		txn.ClientID,
+		newPoolId,
+		providerId,
+		providerType,
+		status,
+		balances,
+	); err != nil {
+		return err
 	}
 
 	return nil

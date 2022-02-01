@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -129,6 +131,10 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
+
+	if err := sp.EmitUpdate(blobber.ID, stakepool.Blobber, balances); err != nil {
+		return err
+	}
 
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {

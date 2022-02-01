@@ -6,6 +6,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool"
 )
 
 const allValidatorsPartitionSize = 50
@@ -76,7 +77,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
+	sp, err = sc.getOrUpdateStakePool(conf, t.ClientID, stakepool.Validator,
 		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",

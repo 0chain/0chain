@@ -14,8 +14,8 @@ type DbUpdates struct {
 }
 
 type StakePoolId struct {
-	ProviderId   string `json:"provider_id"`
-	ProviderType int    `json:"provider_type"`
+	ProviderId   string   `json:"provider_id"`
+	ProviderType Provider `json:"provider_type"`
 }
 
 type DelegatePoolId struct {
@@ -39,11 +39,26 @@ type SpReward struct {
 }
 
 func (spr *SpReward) emit(balances cstate.StateContextI) error {
-	edbData, err := json.Marshal(spr)
+	data, err := json.Marshal(spr)
 	if err != nil {
 		return err
 	}
-	balances.EmitEvent(event.TypeStats, event.TagStakePoolReward, spr.ProviderId, string(edbData))
+	balances.EmitEvent(event.TypeStats, event.TagStakePoolReward, spr.ProviderId, string(data))
+	return nil
+}
+
+type SpBalance struct {
+	StakePoolId
+	Balance         int64            `json:"sp_reward"`
+	DelegateBalance map[string]int64 `json:"delegate_reward"`
+}
+
+func (spr *SpBalance) emit(balances cstate.StateContextI) error {
+	data, err := json.Marshal(spr)
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(event.TypeStats, event.TagStakePoolBalance, spr.ProviderId, string(data))
 	return nil
 }
 
@@ -67,6 +82,26 @@ type EdbStakePool struct {
 	ServiceCharge   float64       `json:"service_charge"`
 }
 
+func (sp StakePool) EmitNew(
+	providerId string,
+	providerType Provider,
+	balances cstate.StateContextI,
+) error {
+	data, err := json.Marshal(&EdbStakePool{
+		ProviderId:      providerId,
+		ProviderType:    int(providerType),
+		MinStake:        sp.Settings.MinStake,
+		MaxStake:        sp.Settings.MaxStake,
+		MaxNumDelegates: sp.Settings.MaxNumDelegates,
+		ServiceCharge:   sp.Settings.ServiceCharge,
+	})
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteStakePool, providerId, string(data))
+	return nil
+}
+
 type EdbDelegatePool struct {
 	PoolId       string `json:"pool_id"`
 	DelegateId   string `json:"delegate_id"`
@@ -80,7 +115,33 @@ type EdbDelegatePool struct {
 	RoundCreated int64 `json:"round_created"`
 }
 
-func (dp DelegatePool) updates(poolId string, providerType Provider) DbUpdates {
+func (dp DelegatePool) emitNew(
+	clientId, poolId, providerId string,
+	providerType Provider,
+	status PoolStatus,
+	balances cstate.StateContextI,
+) error {
+	data, err := json.Marshal(&EdbDelegatePool{
+		PoolId:       poolId,
+		DelegateId:   clientId,
+		ProviderId:   providerId,
+		ProviderType: int(providerType),
+		Status:       int(status),
+		RoundCreated: balances.GetBlock().Round,
+	})
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagAddOrOverwriteDelegatePool,
+		providerId,
+		string(data),
+	)
+	return nil
+}
+
+func (dp DelegatePool) Updates(poolId string, providerType Provider) DbUpdates {
 	return DbUpdates{
 		Id: poolId,
 		Updates: map[string]interface{}{
@@ -91,7 +152,16 @@ func (dp DelegatePool) updates(poolId string, providerType Provider) DbUpdates {
 	}
 }
 
-func (sp StakePool) updates(id string, providerType int) (DbUpdates, []DbUpdates) {
+func (sp *StakePool) EmitUpdate(id string, providerType Provider, balances cstate.StateContextI) error {
+	data, err := json.Marshal(sp.updates(id, providerType))
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteStakePool, id, string(data))
+	return nil
+}
+
+func (sp StakePool) updates(id string, providerType Provider) *DbUpdates {
 	spUpdates := DbUpdates{
 		Id: id,
 		Updates: map[string]interface{}{
@@ -104,9 +174,7 @@ func (sp StakePool) updates(id string, providerType int) (DbUpdates, []DbUpdates
 			"service_charge": sp.Settings.ServiceCharge,
 		},
 	}
-	var dpUpdates []DbUpdates
-
-	return spUpdates, dpUpdates
+	return &spUpdates
 }
 
 func (sp StakePool) emit(id string, providerType int, balances cstate.StateContextI) {

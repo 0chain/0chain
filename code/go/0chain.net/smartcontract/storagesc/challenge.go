@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/chaincore/block"
@@ -140,7 +142,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	if err := sp.DistributeRewards(blobberReward); err != nil {
+	err = sp.DistributeRewards(blobberReward, bc.BlobberID, stakepool.Blobber, balances)
+	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
