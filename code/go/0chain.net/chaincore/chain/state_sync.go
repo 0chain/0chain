@@ -35,6 +35,10 @@ func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) er
 //GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	ts := time.Now()
+	if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
+		logging.Logger.Debug("block has the same state", zap.Any("block", b.Hash),
+			zap.Any("block_state_hash", b.ClientStateHash))
+	}
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
 		return common.NewError("get block state changes", err.Error())
