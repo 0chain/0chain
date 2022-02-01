@@ -6,6 +6,8 @@
 package storagesc
 
 import (
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
 	"fmt"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -32,6 +34,31 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	}
 
 	blobber.LastHealthCheck = t.CreationDate // set to now
+
+	_, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return fmt.Errorf("failed to get blobber: %v", err)
+		}
+
+		allBlobbersList, err := getBlobbersList(balances)
+		if err != nil {
+			return fmt.Errorf("failed to get blobber list: %v", err)
+		}
+		_, err = allBlobbersList.Add(
+			&partitions.BlobberNode{
+				Id:  blobber.ID,
+				Url: blobber.BaseURL,
+			}, balances)
+		if err != nil {
+			return fmt.Errorf("failed to add blobber to partition: %v", err)
+		}
+
+		err = allBlobbersList.Save(balances)
+		if err != nil {
+			return fmt.Errorf("failed to save blobber partition: %v", err)
+		}
+	}
 
 	// create stake pool
 	var sp *stakePool

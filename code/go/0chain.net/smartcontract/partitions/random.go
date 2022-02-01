@@ -24,6 +24,7 @@ type ItemType int
 const (
 	ItemString ItemType = iota
 	ItemValidator
+	ItemBlobber
 )
 
 //------------------------------------------------------------------------------
