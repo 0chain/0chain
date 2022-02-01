@@ -84,13 +84,13 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 
 // GetBlobberCountHandler returns Blobber count from its individual stored value.
 func (ssc *StorageSmartContract) GetBlobberCountHandler(
-	ctx context.Context,
-	params url.Values,
+	_ context.Context,
+	_ url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
 	blobberCount, err := balances.GetEventDB().GetBlobberCount()
 	if err != nil {
-		return nil, fmt.Errorf("Error while geting the blobber count")
+		return nil, fmt.Errorf("error while geting the blobber count")
 	}
 	return map[string]int64{
 		"count": blobberCount,
@@ -99,8 +99,8 @@ func (ssc *StorageSmartContract) GetBlobberCountHandler(
 
 // GetBlobberTotalStakesHandler returns blobber total stake
 func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
-	ctx context.Context,
-	params url.Values,
+	_ context.Context,
+	_ url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
 	if balances.GetEventDB() == nil {
@@ -125,12 +125,12 @@ func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
 
 // GetBlobberLatitudeLongitudeHandler returns blobber latitude and longitude
 func (ssc *StorageSmartContract) GetBlobberLatitudeLongitudeHandler(
-	ctx context.Context,
-	params url.Values,
+	_ context.Context,
+	_ url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
 	if balances.GetEventDB() == nil {
-		return nil, fmt.Errorf("Unable to connect to eventdb database")
+		return nil, fmt.Errorf("unable to connect to eventdb database")
 	}
 	blobbers, err := balances.GetEventDB().GetAllBlobberLatLong()
 	if err != nil {
