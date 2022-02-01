@@ -99,3 +99,23 @@ func BlockStateChangeRequestor(requestor node.EntityRequestor) node.EntityReques
 		return requestor(urlParams, handler)
 	}
 }
+
+func MinerNotarisedBlockRequestor(requestor node.EntityRequestor) node.EntityRequestor {
+	return func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) node.SendHandler {
+		if !crpc.Client().State().ClientStatsCollectorEnabled {
+			return requestor(urlParams, handler)
+		}
+
+		rNum, _ := strconv.Atoi(urlParams.Get("round"))
+		rs := &stats.MinerNotarisedBlockRequest{
+			NodeID: node.Self.ID,
+			Round:  rNum,
+			Block:  urlParams.Get("block"),
+		}
+		if err := crpc.Client().AddMinerNotarisedBlockRequestorStats(rs); err != nil {
+			log.Panicf("Conductor: error while adding client stats: %v", err)
+		}
+
+		return requestor(urlParams, handler)
+	}
+}

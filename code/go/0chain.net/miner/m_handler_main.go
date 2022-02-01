@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"net/http"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
@@ -24,4 +25,9 @@ func SetupM2MReceivers(c node.Chainer) {
 // for a block.
 func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	return notarizationReceiptHandler(ctx, entity)
+}
+
+// NotarizedBlockSendHandler - handles a request for a notarized block.
+func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return notarizedBlockSendHandler(ctx, r)
 }

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/conductor/config/cases"
 	"github.com/mitchellh/mapstructure"
+
+	"0chain.net/conductor/config/cases"
 )
 
 type flowExecuteFunc func(name string, ex Executor, val interface{},
@@ -492,6 +493,20 @@ func init() {
 		}
 
 		cfg := cases.NewBlockStateChangeRequestor(ex.GetClientStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_miner_notarised_block_requestor_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableClientStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewMinerNotarisedBlockRequestor(ex.GetClientStatsCollector())
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}

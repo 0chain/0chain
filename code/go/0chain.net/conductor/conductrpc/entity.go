@@ -198,6 +198,10 @@ func (e *Entity) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeReq
 	return e.client.addBlockStateChangeRequestorStats(rs)
 }
 
+func (e *Entity) AddMinerNotarisedBlockRequestorStats(rs *stats.MinerNotarisedBlockRequest) error {
+	return e.client.addMinerNotarisedBlockRequestorStats(rs)
+}
+
 var global *Entity
 
 // Init creates global Entity and locks until unlocked.

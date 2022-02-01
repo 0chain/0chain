@@ -95,6 +95,16 @@ func (r *RoundInfo) Decode(blob []byte) error {
 	return json.Unmarshal(blob, r)
 }
 
+// Encode encodes BlockInfo to bytes.
+func (b *BlockInfo) Encode() ([]byte, error) {
+	return json.Marshal(b)
+}
+
+// Decode decodes BlockInfo from bytes.
+func (b *BlockInfo) Decode(blob []byte) error {
+	return json.Unmarshal(blob, b)
+}
+
 type (
 	// NotarisationInfo represents simple struct for reports containing notarisation's information
 	// needed for making tests checks.

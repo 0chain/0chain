@@ -806,6 +806,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.BlockStateChangeRequestor:
 			state.BlockStateChangeRequestor = cfg
 
+		case *cases.MinerNotarisedBlockRequestor:
+			state.MinerNotarisedBlockRequestor = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}
