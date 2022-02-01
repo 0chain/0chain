@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"golang.org/x/net/context"
 
@@ -47,11 +46,11 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
+	TagStakePoolReward
 	TagAddOrOverwriteStakePool
-	TagRemoveStakePool
 	TagAddOrOverwriteDelegatePool
 	TagRemoveDelegatePool
-	TagRewardDelegatePool
+	TagEmptyDelegatePool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -204,27 +203,13 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.removeCurator(c)
 	case TagAddOrOverwriteStakePool:
-		var sp StakePool
-		err := json.Unmarshal([]byte(event.Data), &sp)
-		if err != nil {
-			return err
-		}
-		return edb.addOrOverwriteStakePool(sp)
+		return nil // todo
 	case TagAddOrOverwriteDelegatePool:
-		var dp DelegatePool
-		err := json.Unmarshal([]byte(event.Data), &dp)
-		if err != nil {
-			return err
-		}
-		return edb.addOrOverwriteDelegatePool(dp)
+		return nil // todo
 	case TagRemoveDelegatePool:
-		return edb.deleteMiner(event.Data)
-	case TagRewardDelegatePool:
-		reward, err := strconv.ParseInt(event.Data, 10, 64)
-		if err != nil {
-			return err
-		}
-		return edb.addDelegatePoolReward(reward, event.Index)
+		return nil // todo
+	case TagEmptyDelegatePool:
+		return nil // todo
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

@@ -1,13 +1,57 @@
 package stakepool
 
 import (
+	"encoding/json"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`
 	Updates map[string]interface{} `json:"updates"`
+}
+
+type StakePoolId struct {
+	ProviderId   string `json:"provider_id"`
+	ProviderType int    `json:"provider_type"`
+}
+
+type DelegatePoolId struct {
+	StakePoolId
+	PoolId string `json:"pool_id"`
+}
+
+func (dp *DelegatePoolId) emit(tag event.EventTag, balances cstate.StateContextI) error {
+	data, err := json.Marshal(dp)
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(event.TypeStats, tag, dp.PoolId, string(data))
+	return nil
+}
+
+type SpReward struct {
+	StakePoolId
+	SpReward       int64            `json:"sp_reward"`
+	DelegateReward map[string]int64 `json:"delegate_reward"`
+}
+
+func (spr *SpReward) emit(balances cstate.StateContextI) error {
+	edbData, err := json.Marshal(spr)
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(event.TypeStats, event.TagStakePoolReward, spr.ProviderId, string(edbData))
+	return nil
+}
+
+func emitDeleteSp(
+	providerId string,
+	providerType int,
+) error {
+	return nil
 }
 
 type EdbStakePool struct {
@@ -41,6 +85,17 @@ type EdbDelegatePool struct {
 	TotalPenalty int64 `json:"total_penalty"`
 	Status       int   `json:"status"`
 	RoundCreated int64 `json:"round_created"`
+}
+
+func (dp DelegatePool) updates(poolId string, providerType Provider) DbUpdates {
+	return DbUpdates{
+		Id: poolId,
+		Updates: map[string]interface{}{
+			"pool_id":       poolId,
+			"provider_type": providerType,
+			"status":        dp.Status,
+		},
+	}
 }
 
 func (sp StakePool) updates(id string, providerType int) (DbUpdates, []DbUpdates) {

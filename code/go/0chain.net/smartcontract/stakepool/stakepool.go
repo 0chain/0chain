@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
@@ -119,7 +121,7 @@ func GetStakePool(
 	return sp, nil
 }
 
-func (sp *StakePool) save(
+func (sp *StakePool) Save(
 	p Provider,
 	id string,
 	balances cstate.StateContextI,
@@ -128,21 +130,10 @@ func (sp *StakePool) save(
 	return err
 }
 
-func (sp *StakePool) AddReward(user string, amount state.Balance) error {
-	sp.mutex.Lock()
-	defer sp.mutex.Unlock()
-
-	account, ok := sp.Pools[user]
-	if !ok {
-		return fmt.Errorf("cannot find rewards for %s", user)
-	}
-	account.Balance += amount
-	return nil
-}
-
 func (sp *StakePool) EmptyAccount(
 	clientId,
-	poolId string,
+	poolId, providerId string,
+	providerType int,
 	balances cstate.StateContextI,
 ) (state.Balance, bool, error) {
 	sp.mutex.Lock()
@@ -168,15 +159,36 @@ func (sp *StakePool) EmptyAccount(
 		}
 	}
 	account.Balance = 0
-
+	dpId := DelegatePoolId{
+		StakePoolId: StakePoolId{
+			ProviderId:   providerId,
+			ProviderType: providerType,
+		},
+		PoolId: poolId,
+	}
 	if account.Status == Deleting {
 		delete(sp.Pools, poolId)
+		err := dpId.emit(event.TagRemoveDelegatePool, balances)
+		if err != nil {
+			return 0, false, err
+		}
 		return amount, true, nil
+	} else {
+		err := dpId.emit(event.TagEmptyDelegatePool, balances)
+		if err != nil {
+			return 0, false, err
+		}
+		return amount, false, nil
 	}
-	return amount, false, nil
+
 }
 
-func (sp *StakePool) DistributeRewards(value float64) error {
+func (sp *StakePool) DistributeRewards(
+	value float64,
+	providerId string,
+	providerType int,
+	balances cstate.StateContextI,
+) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
@@ -193,6 +205,14 @@ func (sp *StakePool) DistributeRewards(value float64) error {
 	if state.Balance(value-serviceCharge) == 0 {
 		return nil // nothing to move
 	}
+	reward := SpReward{
+		StakePoolId: StakePoolId{
+			ProviderId:   providerId,
+			ProviderType: providerType,
+		},
+		SpReward:       int64(serviceCharge),
+		DelegateReward: make(map[string]int64),
+	}
 
 	if len(sp.Pools) == 0 {
 		return fmt.Errorf("no stake pools to move tokens to")
@@ -207,6 +227,10 @@ func (sp *StakePool) DistributeRewards(value float64) error {
 	for _, id := range sp.OrderedPoolIds() {
 		ratio := float64(sp.Pools[id].Balance) / stake
 		sp.Pools[id].Reward += state.Balance(valueLeft * ratio)
+		reward.DelegateReward[id] = int64(sp.Pools[id].Reward)
+	}
+	if err := reward.emit(balances); err != nil {
+		return err
 	}
 	return nil
 }
