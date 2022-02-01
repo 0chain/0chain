@@ -242,7 +242,7 @@ func getBlobbersFromQuery(params url.Values, eventsDB *event.EventDb) ([]event.B
 	return blobbers, nil
 }
 
-func (msc *StorageSmartContract) GetTransactionByHashHandler(
+func (ssc *StorageSmartContract) GetTransactionByHashHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
@@ -258,7 +258,7 @@ func (msc *StorageSmartContract) GetTransactionByHashHandler(
 	return transaction, err
 }
 
-func (msc *StorageSmartContract) GetTransactionByFilterHandler(
+func (ssc *StorageSmartContract) GetTransactionByFilterHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
@@ -298,7 +298,7 @@ func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	return nil, errors.New("No filter selected")
 }
 
-func (msc *StorageSmartContract) GetErrors(
+func (ssc *StorageSmartContract) GetErrors(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,

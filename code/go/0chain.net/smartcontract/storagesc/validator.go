@@ -27,7 +27,7 @@ func getValidatorsList(balances c_state.StateContextI) (partitions.RandPartition
 	return all, nil
 }
 
-func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+func (ssc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
 	newValidator := &ValidationNode{}
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
 	if err != nil {
@@ -35,7 +35,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID))
+	_, err = balances.GetTrieNode(newValidator.GetKey(ssc.ID))
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("add_validator_failed",
@@ -60,29 +60,29 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", err
 		}
 
-		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+		balances.InsertTrieNode(newValidator.GetKey(ssc.ID), newValidator)
 
-		sc.statIncr(statAddValidator)
-		sc.statIncr(statNumberOfValidators)
+		ssc.statIncr(statAddValidator)
+		ssc.statIncr(statNumberOfValidators)
 	} else {
-		sc.statIncr(statUpdateValidator)
+		ssc.statIncr(statUpdateValidator)
 	}
 
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("add_vaidator",
 			"can't get SC configurations: %v", err)
 	}
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
+	sp, err = ssc.getOrCreateStakePool(conf, t.ClientID,
 		&newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
