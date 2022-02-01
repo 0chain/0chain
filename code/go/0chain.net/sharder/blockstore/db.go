@@ -1,24 +1,21 @@
 package blockstore
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+	"github.com/go-redis/redis"
 	"strings"
-	"sync"
 	"time"
-
-	"go.etcd.io/bbolt"
 )
 
 type WhichTier uint8
 
 //db variables
 var (
-	bwrDB *bbolt.DB
-	qDB   *bbolt.DB //query db
+	/*bwrDB    *bbolt.DB
+	qDB      *bbolt.DB //query db*/
+	bwrRedis blockStore
 )
 
 /*
@@ -49,114 +46,56 @@ const (
 	CacheHashAccessTimeBucket = "chab"
 )
 
-//Create db file and create buckets
-func InitMetaRecordDB(bmrDB, qmrDB string, deleteExistingDB bool) {
-	wg := sync.WaitGroup{}
-	wg.Add(2)
+// redis constant values
+const (
+	redisHashCacheHashAccessTime      = "redisHashCacheHashAccessTime"
+	redisSortedSetCacheAccessTimeHash = "redisSortedSetCacheAccessTimeHash"
+	redisSortedSetUnmovedBlock        = "redisSortedSetUnmovedBlock"
+)
 
-	if deleteExistingDB {
-		os.Remove(bmrDB)
-		os.Remove(qmrDB)
-	}
-	//Open db for storing whereabout of blocks
-	go func() {
-		defer wg.Done()
-		var err error
-		parentDir, _ := filepath.Split(bmrDB)
-		if err := os.MkdirAll(parentDir, 0644); err != nil {
-			panic(err)
-		}
+var ctx = context.Background()
 
-		bwrDB, err = bbolt.Open(bmrDB, 0644, bbolt.DefaultOptions) // fix me
-		if err != nil {
-			panic(err)
-		}
+// InitMetaRecordDB Create db file and create buckets.
+func InitMetaRecordDB(host, port string, deleteExistingDB bool) {
 
-		err = bwrDB.Update(func(t *bbolt.Tx) error {
-			_, err := t.CreateBucketIfNotExists([]byte(BlockWhereBucket))
-			if err != nil {
-				return err
-			}
-			_, err = t.CreateBucketIfNotExists([]byte(UnmovedBlockBucket))
-			return err
-		})
+	bwrRedis.Client = redis.NewClient(&redis.Options{
+		Addr:     "localhost" + ":" + "6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 
-		if err != nil {
-			panic(err)
-		}
-
-	}()
-
-	go func() {
-		defer wg.Done()
-		var err error
-		parentDir, _ := filepath.Split(qmrDB)
-		if err := os.MkdirAll(parentDir, 0644); err != nil {
-			panic(err)
-		}
-
-		qDB, err = bbolt.Open(qmrDB, 0644, bbolt.DefaultOptions) // fix me
-		if err != nil {
-			panic(err)
-		}
-
-		err = qDB.Update(func(t *bbolt.Tx) error {
-			_, err = t.CreateBucketIfNotExists([]byte(BlockUsageBucket))
-			return err
-		})
-	}()
-
-	wg.Wait()
+	_, _ = bwrRedis.Client.FlushDB().Result()
 }
 
-//It simply provides whereabouts of a block. It can be in Warm Tier, Cold Tier, Hot and Warm Tier, Hot and Cold Tier, etc.
+// BlockWhereRecord It simply provides whereabouts of a block. It can be in Warm Tier, Cold Tier, Hot and Warm Tier, Hot and Cold Tier, etc.
 type BlockWhereRecord struct {
 	Hash      string    `json:"-"`
 	Tiering   WhichTier `json:"tr"`
-	BlockPath string    `json:"vp,omitempty"` //For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName"
+	BlockPath string    `json:"vp,omitempty"` //For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName".
 	ColdPath  string    `json:"cp,omitempty"`
 }
 
-//Add or Update whereabout of a block
+// AddOrUpdate Add or Update whereabout of a block.
 func (bwr *BlockWhereRecord) AddOrUpdate() (err error) {
 	value, err := json.Marshal(bwr)
-
 	if err != nil {
 		return err
 	}
-	key := []byte(bwr.Hash)
 
-	err = bwrDB.Update(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(BlockWhereBucket))
-		return bkt.Put(key, value)
-	})
-
-	return
+	return bwrRedis.Set(bwr.Hash, value)
 }
 
-//Get whereabout of a block
+// GetBlockWhereRecord Get whereabout of a block.
 func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
-	var data []byte
-	var bwr BlockWhereRecord
-	key := []byte(hash)
-
-	err := bwrDB.View(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(BlockWhereBucket))
-		bwrData := bkt.Get(key)
-
-		if bwrData == nil {
-			return fmt.Errorf("Block meta record for %v not found.", hash)
-		}
-
-		data = make([]byte, len(bwrData))
-		copy(data, bwrData)
-		return nil
-	})
-
+	data, err := bwrRedis.Get(hash)
 	if err != nil {
 		return nil, err
 	}
+	if data == nil {
+		return nil, fmt.Errorf("Block meta record for %v not found.", hash)
+	}
 
+	bwr := BlockWhereRecord{}
 	err = json.Unmarshal(data, &bwr)
 	if err != nil {
 		return nil, err
@@ -166,19 +105,12 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 	return &bwr, nil
 }
 
-//Delete metadata
-func DeleteBlockWhereRecord(hash string) {
-	bwrDB.Update(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(BlockWhereBucket))
-		if bkt == nil {
-			return nil
-		}
-
-		return bkt.Delete([]byte(hash))
-	})
+// DeleteBlockWhereRecord Delete metadata.
+func DeleteBlockWhereRecord(hash string) error {
+	return bwrRedis.Delete(hash)
 }
 
-//Unmoved blocks; If cold tiering is enabled then record of unmoved blocks will be kept inside UnmovedBlockRecord bucket.
+// UnmovedBlockRecord Unmoved blocks; If cold tiering is enabled then record of unmoved blocks will be kept inside UnmovedBlockRecord bucket.
 //Some worker will query for the unmoved block and if it is within the date range then it will be moved to the cold storage.
 type UnmovedBlockRecord struct {
 	CreatedAt time.Time `json:"crAt"`
@@ -186,59 +118,16 @@ type UnmovedBlockRecord struct {
 }
 
 func (ubr *UnmovedBlockRecord) Add() (err error) {
-	key := []byte(ubr.CreatedAt.Format(time.RFC3339))
-	value := []byte(ubr.Hash)
-
-	err = bwrDB.Update(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(UnmovedBlockBucket))
-		return bkt.Put(key, value)
-	})
-
-	return
+	return bwrRedis.SetSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
 }
 
 func (ubr *UnmovedBlockRecord) Delete() (err error) {
-	key := []byte(ubr.CreatedAt.Format(time.RFC3339))
-	return bwrDB.Update(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(UnmovedBlockBucket))
-		return bkt.Delete(key)
-	})
+	return bwrRedis.DeleteSorted(redisSortedSetUnmovedBlock, ubr.Hash)
 }
 
-func GetUnmovedBlock(prevKey, upto []byte) (ubr *UnmovedBlockRecord, timeByte []byte) {
-	var hashByte []byte
-	bwrDB.View(func(t *bbolt.Tx) error {
-		cursor := t.Bucket([]byte(UnmovedBlockBucket)).Cursor()
-		k, v := cursor.Seek(prevKey)
-
-		if bytes.Compare(k, prevKey) == 0 {
-			k, v = cursor.Next()
-		}
-
-		if k == nil || bytes.Compare(k, upto) > 0 {
-			return nil
-		}
-
-		timeByte = make([]byte, len(k))
-		hashByte = make([]byte, len(v))
-		copy(timeByte, k)
-		copy(hashByte, v)
-
-		return nil
-	})
-
-	if timeByte == nil {
-		return
-	}
-
-	createdAt, _ := time.Parse(time.RFC3339, string(timeByte))
-
-	ubr = &UnmovedBlockRecord{
-		CreatedAt: createdAt,
-		Hash:      string(hashByte),
-	}
-
-	return
+// GetUnmovedBlocks returns the number of blocks = count from the range [0,lastBlock).
+func GetUnmovedBlocks(lastBlock, count int64) (ubrs []*UnmovedBlockRecord) {
+	return bwrRedis.GetSortedRangeByScore(redisSortedSetUnmovedBlock, lastBlock, count)
 }
 
 //Add a cache bucket to store accessed time as key and hash as its value
@@ -249,7 +138,7 @@ type cacheAccess struct {
 	AccessTime *time.Time
 }
 
-func GetHashKeyForReplacement() chan *cacheAccess {
+func GetHashKeysForReplacement() chan *cacheAccess {
 	ch := make(chan *cacheAccess, 10)
 
 	go func() {
@@ -257,28 +146,27 @@ func GetHashKeyForReplacement() chan *cacheAccess {
 			close(ch)
 		}()
 
-		bwrDB.View(func(t *bbolt.Tx) error {
-			bkt := t.Bucket([]byte(CacheAccessTimeHashBucket))
-			if bkt == nil {
-				return nil
+		i, _ := bwrRedis.GetCountSorted(redisSortedSetCacheAccessTimeHash)
+		i /= 2 //Number of blocks to replace
+		var startRange int64 = 0
+		var endRange int64 = 0
+		k := int(i)
+		for j := 0; j < k; j = int(endRange) {
+			endRange += 1000
+			if endRange > i {
+				endRange = i
 			}
-
-			i := bkt.Stats().KeyN / 2 //Number of blocks to replace
-			count := 0
-
-			cursor := bkt.Cursor()
-			for k, _ := cursor.Next(); k != nil && count < i; k, _ = cursor.Next() {
+			blocks, _ := bwrRedis.GetSortedRange(redisSortedSetCacheAccessTimeHash, startRange, endRange)
+			for _, block := range blocks {
 				ca := new(cacheAccess)
-				sl := strings.Split(string(k), CacheAccessTimeSeparator)
+				sl := strings.Split(block, CacheAccessTimeSeparator)
 				ca.Hash = sl[1]
 				accessTime, _ := time.Parse(time.RFC3339, sl[0])
 				ca.AccessTime = &accessTime
 				ch <- ca
-				count++
 			}
-			return nil
-		})
-
+			startRange = endRange + 1
+		}
 	}()
 
 	return ch
@@ -286,31 +174,29 @@ func GetHashKeyForReplacement() chan *cacheAccess {
 
 func (ca *cacheAccess) addOrUpdate() error {
 	timeStr := ca.AccessTime.Format(time.RFC3339)
-	accessTimeKey := []byte(fmt.Sprintf("%v:%v", timeStr, ca.Hash))
+	accessTimeKey := fmt.Sprintf("%v%v%v", timeStr, CacheAccessTimeSeparator, ca.Hash)
 
-	return bwrDB.Update(func(t *bbolt.Tx) error {
-		accessTimeBkt := t.Bucket([]byte(CacheAccessTimeHashBucket))
-		if accessTimeBkt == nil {
-			return fmt.Errorf("%v bucket does not exist", CacheAccessTimeHashBucket)
-		}
+	timeValue, err := bwrRedis.GetFromHash(redisHashCacheHashAccessTime, ca.Hash)
+	if err != nil {
+		return err
+	}
 
-		hashBkt := t.Bucket([]byte(CacheHashAccessTimeBucket))
-		if hashBkt == nil {
-			return fmt.Errorf("%v bucket does not exist", CacheHashAccessTimeBucket)
-		}
+	if bwrRedis.StartTx() != nil {
+		return err
+	}
+	if timeValue[0] != nil {
+		delKey := fmt.Sprintf("%v%v%v", timeValue[0].(string), CacheAccessTimeSeparator, ca.Hash)
+		err = bwrRedis.DeleteSorted(redisSortedSetCacheAccessTimeHash, delKey)
+	}
+	err = bwrRedis.SetSorted(redisSortedSetCacheAccessTimeHash, 0.0, accessTimeKey)
+	err = bwrRedis.SetToHash(redisHashCacheHashAccessTime, ca.Hash, timeStr)
 
-		timeValue := hashBkt.Get([]byte(ca.Hash))
-		if timeValue != nil {
-			delKey := []byte(fmt.Sprintf("%v%v%v", string(timeValue), CacheAccessTimeSeparator, ca.Hash))
-			accessTimeBkt.Delete(delKey)
-		}
+	err = bwrRedis.Exec()
+	if err != nil {
+		return err
+	}
 
-		if err := accessTimeBkt.Put(accessTimeKey, nil); err != nil {
-			return err
-		}
-
-		return hashBkt.Put([]byte(ca.Hash), []byte(timeStr))
-	})
+	return nil
 }
 
 // func (ca *cacheAccess) update() {
@@ -342,22 +228,19 @@ func (ca *cacheAccess) addOrUpdate() error {
 // }
 
 func (ca *cacheAccess) delete() error {
-	return bwrDB.Update(func(t *bbolt.Tx) error {
-		tBucket := t.Bucket([]byte(CacheAccessTimeHashBucket))
-		if tBucket == nil {
-			return nil
-		}
+	err := bwrRedis.StartTx()
+	if err != nil {
+		return err
+	}
+	err = bwrRedis.DeleteSorted(redisSortedSetCacheAccessTimeHash,
+		fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339), CacheAccessTimeSeparator, ca.Hash),
+	)
+	err = bwrRedis.DeleteFromHash(redisHashCacheHashAccessTime, ca.Hash)
 
-		hBucket := t.Bucket([]byte(CacheHashAccessTimeBucket))
-		if hBucket == nil {
-			return nil
-		}
+	err = bwrRedis.Exec()
+	if err != nil {
+		return err
+	}
 
-		tKey := []byte(fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339), CacheAccessTimeSeparator, ca.Hash))
-		if err := tBucket.Delete(tKey); err != nil {
-			return err
-		}
-
-		return hBucket.Delete([]byte(ca.Hash))
-	})
+	return nil
 }
