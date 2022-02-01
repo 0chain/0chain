@@ -1,9 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -47,7 +49,7 @@ func (sc *StorageSmartContract) getBlobberBytes(blobberID string,
 	return blobberBytes.Encode(), nil
 }
 
-func (sc *StorageSmartContract) getBlobber(blobberID string,
+func (sc *StorageSmartContract) getBlobberDeprecated(blobberID string,
 	balances cstate.StateContextI) (blobber *StorageNode, err error) {
 
 	var b []byte
@@ -61,6 +63,24 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	}
 
 	return
+}
+
+func (sc *StorageSmartContract) getBlobber(blobberID string,
+	balances cstate.StateContextI) (blobber *StorageNode, err error) {
+
+	blobberEvent, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		logging.Logger.Error("failed to fetch blobber from eventsDB instance: ", zap.Any("err", err))
+		return sc.getBlobberDeprecated(blobberID, balances)
+	}
+
+	sn, err := blobberTableToStorageNode(*blobberEvent)
+	if err != nil {
+		logging.Logger.Error("failed to deserialise blobber to storage-node: ", zap.Any("err", err))
+		return sc.getBlobberDeprecated(blobberID, balances)
+	}
+
+	return &sn, nil
 }
 
 func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {

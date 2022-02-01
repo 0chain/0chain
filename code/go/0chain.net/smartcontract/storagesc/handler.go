@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -161,6 +162,81 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		sns.Nodes.add(&sn)
 	}
 	return sns, nil
+}
+
+// GetAllocationBlobbersHandler returns list of all blobbers alive (e.g. excluding
+// blobbers with zero capacity).
+func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
+	ctx context.Context,
+	params url.Values, balances cstate.StateContextI,
+	sa StorageAllocation,
+) (interface{}, error) {
+	
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("events db is not initialised")
+	}
+
+	blobbers, err := getBlobbersFromQuery(params, balances.GetEventDB())
+	if err != nil || len(blobbers) == 0 {
+		return nil, fmt.Errorf("no blobbers found %v", err)
+	}
+
+	var sns StorageNodes
+	for _, blobber := range blobbers {
+		sn, err := blobberTableToStorageNode(blobber)
+		if err != nil {
+			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+		}
+		sns.Nodes.add(&sn)
+	}
+
+	var size = sa.DataShards + sa.ParityShards
+	creationDateInt, err := strconv.Atoi(params.Get("creation_date"))
+	if err != nil {
+		return nil, fmt.Errorf("creationDate is mandatory to proceed")
+	}
+	creationDate := common.Timestamp(creationDateInt)
+	var bSize = (sa.Size + int64(size-1)) / int64(size)
+
+	var list = sa.filterBlobbers(sns.Nodes.copy(), creationDate,
+		bSize, filterHealthyBlobbers(creationDate),
+		ssc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
+
+	if len(list) < size {
+		return nil, errors.New("not enough blobbers to honor the allocation")
+	}
+
+	return list, nil
+}
+
+func getBlobbersFromQuery(params url.Values, eventsDB *event.EventDb) ([]event.Blobber, error) {
+	var blobbers []event.Blobber
+	dbStore := eventsDB.Store.Get()
+
+	if maxChallengeTime, _ := strconv.Atoi(params.Get("max_challenge_time")); maxChallengeTime != 0 {
+		dbStore = dbStore.Where("challenge_completion_time > ?", maxChallengeTime)
+	}
+
+	readRange := &PriceRange{}
+	writeRange := &PriceRange{}
+
+	if err := json.Unmarshal([]byte(params.Get("read_price_range")), readRange); err != nil {
+		dbStore = dbStore.Where("read_price BETWEEN ? AND ?", readRange.Min, readRange.Max)
+	}
+
+	if err := json.Unmarshal([]byte(params.Get("write_price_range")), writeRange); err != nil {
+		dbStore = dbStore.Where("write_price BETWEEN ? AND ?", writeRange.Min, writeRange.Max)
+	}
+	if capacityUsed, err := strconv.Atoi(params.Get("capacity_used")); err != nil {
+		dbStore = dbStore.Where("used < ?", capacityUsed)
+	}
+
+	result := dbStore.Find(&blobbers)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving blobbers, error %v", result.Error)
+	}
+
+	return blobbers, nil
 }
 
 func (msc *StorageSmartContract) GetTransactionByHashHandler(
