@@ -47,13 +47,6 @@ func (spr *SpReward) emit(balances cstate.StateContextI) error {
 	return nil
 }
 
-func emitDeleteSp(
-	providerId string,
-	providerType int,
-) error {
-	return nil
-}
-
 type EdbStakePool struct {
 	ProviderId   string `json:"provider_id"`
 	ProviderType int    `json:"provider_type"`
