@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"math"
 	"math/rand"
 	"strconv"
 )
@@ -45,7 +44,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	var stakeTotals []float64
 	var totalQStake float64
 	var weight []float64
-	var totalweight float64
+	var totalWeight float64
 	for _, b := range blobberPartition {
 		var sp *stakePool
 		var blobber *StorageNode
@@ -76,31 +75,15 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		totalQStake += stake
 		blobberWeight := float64(blobber.Terms.WritePrice) * stake * float64(successChallenge)
 		weight = append(weight, blobberWeight)
-		totalweight += blobberWeight
+		totalWeight += blobberWeight
 	}
 
-	if totalweight == 0 {
-		totalweight = 1
+	if totalWeight == 0 {
+		totalWeight = 1
 	}
 
 	for i, qsp := range stakePools {
-		reward := float64(conf.BlockReward.BlockReward) * (weight[i] / totalweight)
-		totalDelegateRewards := reward
-		for id, delegate := range qsp.Pools {
-			var ratio float64
-			if stakeTotals[i] > 0 {
-				ratio = float64(delegate.Balance) / stakeTotals[i]
-			} else {
-				ratio = 0
-			}
-			dReward := float64(conf.BlockReward.BlockReward) * weight[i] * ratio
-			finalReward := math.Min(totalDelegateRewards, dReward)
-			qsp.Pools[id].Rewards += state.Balance(finalReward)
-			totalDelegateRewards -= finalReward
-			if totalDelegateRewards < 0 {
-				totalDelegateRewards = 0
-			}
-		}
+		reward := float64(conf.BlockReward.BlockReward) * (weight[i] / totalWeight)
 
 		if err := mintReward(qsp, reward, balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
