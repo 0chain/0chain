@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/partitions"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,7 +20,27 @@ import (
 	"0chain.net/core/util"
 )
 
-const blobberHealthTime = 60 * 60 // 1 Hour
+const (
+	blobberHealthTime        = 60 * 60 // 1 Hour
+	allBlobbersPartitionSize = 50
+)
+
+func getBlobbersList(balances cstate.StateContextI) (partitions.RandPartition, error) {
+	all, err := partitions.GetRandomSelector(ALL_BLOBBERS_PARTITION_KEY, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		all = partitions.NewRandomSelector(
+			ALL_BLOBBERS_KEY,
+			allBlobbersPartitionSize,
+			nil,
+			partitions.ItemBlobber,
+		)
+	}
+	all.SetCallback(nil)
+	return all, nil
+}
 
 func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
