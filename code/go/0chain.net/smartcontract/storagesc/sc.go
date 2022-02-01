@@ -122,6 +122,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
+	ssc.SmartContract.RestHandlers["/get_alloc_blobbers"] = ssc.GetAllocationBlobbersHandler
 }
 
 func (ssc *StorageSmartContract) GetName() string {

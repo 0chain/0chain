@@ -168,10 +168,17 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 // blobbers with zero capacity).
 func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	ctx context.Context,
-	params url.Values, balances cstate.StateContextI,
-	sa StorageAllocation,
-) (interface{}, error) {
-	
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	var creationDate = common.Timestamp(time.Now().Unix())
+
+	allocData := params.Get("allocation_data")
+	var request newAllocationRequest
+	if err := request.decode([]byte(allocData)); err != nil {
+		return "", common.NewErrInternal("can't decode allocation request", err.Error())
+	}
+
+	var sa = request.storageAllocation()
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("events db is not initialised")
 	}
@@ -191,11 +198,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	}
 
 	var size = sa.DataShards + sa.ParityShards
-	creationDateInt, err := strconv.Atoi(params.Get("creation_date"))
-	if err != nil {
-		return nil, fmt.Errorf("creationDate is mandatory to proceed")
-	}
-	creationDate := common.Timestamp(creationDateInt)
+
 	var bSize = (sa.Size + int64(size-1)) / int64(size)
 
 	var list = sa.filterBlobbers(sns.Nodes.copy(), creationDate,
