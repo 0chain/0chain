@@ -219,6 +219,28 @@ func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	return nil, errors.New("No filter selected")
 }
 
+func (msc *StorageSmartContract) GetLatestWriteMarker(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	return balances.GetEventDB().GetLatestWriteMarker()
+}
+
+func (msc *StorageSmartContract) GetLatestReadMarker(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	return balances.GetEventDB().GetLatestReadMarker()
+}
+
 func (msc *StorageSmartContract) GetErrors(
 	ctx context.Context,
 	params url.Values,
