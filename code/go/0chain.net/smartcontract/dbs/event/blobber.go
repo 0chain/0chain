@@ -1,7 +1,7 @@
 package event
 
 import (
-	"0chain.net/smartcontract/storagesc"
+	"0chain.net/chaincore/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,6 +48,12 @@ type BlobberLatLong struct {
 	// geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+}
+
+// BlobberPriceRange represents a price range allowed by user to filter blobbers.
+type BlobberPriceRange struct {
+	Min state.Balance `json:"min"`
+	Max state.Balance `json:"max"`
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
@@ -124,8 +130,8 @@ func (edb *EventDb) GetBlobbersFromParams(params url.Values) ([]Blobber, error) 
 		dbStore = dbStore.Where("challenge_completion_time > ?", maxChallengeTime)
 	}
 
-	readRange := &storagesc.PriceRange{}
-	writeRange := &storagesc.PriceRange{}
+	readRange := &BlobberPriceRange{}
+	writeRange := &BlobberPriceRange{}
 
 	if err := json.Unmarshal([]byte(params.Get("read_price_range")), readRange); err != nil {
 		dbStore = dbStore.Where("read_price BETWEEN ? AND ?", readRange.Min, readRange.Max)
