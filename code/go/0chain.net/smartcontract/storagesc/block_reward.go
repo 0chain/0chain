@@ -37,6 +37,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	r := rand.New(rand.NewSource(int64(randomSeed)))
 
 	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
+	if err != nil {
+		return common.NewError("blobber_block_rewards_failed",
+			"Error getting random partition: "+err.Error())
+	}
 
 	// filter out blobbers with stake too low to qualify for rewards
 	var qualifyingBlobberIds []string
