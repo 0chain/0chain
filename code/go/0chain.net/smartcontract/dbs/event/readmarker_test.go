@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -112,4 +113,64 @@ func TestReadMarkers(t *testing.T) {
 	count, err := eventDb.CountReadMarkersFromQuery(query)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, count)
+}
+
+func TestLastReadMarker(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	if err != nil {
+		t.Errorf("Error while migrating")
+		return
+	}
+
+	defer eventDb.drop()
+	_, err = eventDb.GetLatestReadMarker()
+	if !assert.Error(t, err, "Empty Readmarker should return an erro") {
+		return
+	}
+	err = eventDb.addOrOverwriteBlobber(Blobber{BlobberID: "someHash"})
+	if !assert.NoError(t, err, "Error while writing blobber marker") {
+		return
+	}
+	err = eventDb.addTransaction(Transaction{Hash: "something"})
+	if !assert.NoError(t, err, "Error while writing blobber marker") {
+		return
+	}
+
+	want := ReadMarker{TransactionID: "something", BlobberID: "someHash"}
+	err = eventDb.addOrOverwriteReadMarker(ReadMarker{TransactionID: "something", BlobberID: "someHash"})
+	if !assert.NoError(t, err, "Error while writing read marker") {
+		return
+	}
+
+	err = eventDb.addOrOverwriteReadMarker(want)
+	if !assert.NoError(t, err, "Error while writing read marker") {
+		return
+	}
+
+	got, err := eventDb.GetLatestReadMarker()
+	if err != nil {
+		t.Errorf("Read marker should not return error %v", err)
+		return
+	}
+	got.CreatedAt = want.CreatedAt
+	got.UpdatedAt = want.UpdatedAt
+	got.ID = want.ID
+	assert.Equal(t, want, got, "Latest transaction should be returned")
 }
