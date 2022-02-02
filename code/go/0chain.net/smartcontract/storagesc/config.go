@@ -34,9 +34,6 @@ type freeAllocationSettings struct {
 
 type stakePoolConfig struct {
 	MinLock int64 `json:"min_lock"`
-	// Interest rate of the stake pool
-	InterestRate     float64       `json:"interest_rate"`
-	InterestInterval time.Duration `json:"interest_interval"`
 }
 
 type readPoolConfig struct {
@@ -215,15 +212,6 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
 			sc.StakePool.MinLock)
 	}
-	if sc.StakePool.InterestRate < 0 {
-		return fmt.Errorf("negative stakepool.interest_rate: %v",
-			sc.StakePool.InterestRate)
-	}
-	if sc.StakePool.InterestInterval <= 0 {
-		return fmt.Errorf("invalid stakepool.interest_interval <= 0: %v",
-			sc.StakePool.InterestInterval)
-	}
-
 	if sc.MaxTotalFreeAllocation < 0 {
 		return fmt.Errorf("negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
 	}
@@ -415,10 +403,6 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
-	conf.StakePool.InterestRate = scc.GetFloat64(
-		pfx + "stakepool.interest_rate")
-	conf.StakePool.InterestInterval = scc.GetDuration(
-		pfx + "stakepool.interest_interval")
 
 	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
 	conf.MaxIndividualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
