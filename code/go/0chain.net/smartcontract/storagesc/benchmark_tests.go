@@ -621,18 +621,6 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage.stake_pool_pay_interests",
-			endpoint: ssc.stakePoolPayInterests,
-			txn:      &transaction.Transaction{},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&stakePoolRequest{
-					BlobberID: getMockBlobberId(0),
-					PoolID:    getMockBlobberStakePoolId(0, 0),
-				})
-				return bytes
-			}(),
-		},
-		{
 			name:     "storage.challenge_response",
 			endpoint: ssc.verifyChallenge,
 			txn: &transaction.Transaction{

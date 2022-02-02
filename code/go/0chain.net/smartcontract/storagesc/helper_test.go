@@ -364,9 +364,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	}
 
 	conf.StakePool = &stakePoolConfig{
-		MinLock:          10,
-		InterestRate:     0.01,
-		InterestInterval: 5 * time.Second,
+		MinLock: 10,
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
