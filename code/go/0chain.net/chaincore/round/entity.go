@@ -29,6 +29,7 @@ type Phase int32
 const (
 	ShareVRF Phase = iota
 	Verify
+	//mb cancelled is better name
 	Notarize
 	Share
 	Complete

@@ -261,6 +261,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					tm.Stop()
 					close(closeTmC)
 				}
+				defer resp.Body.Close()
 
 				if resp.StatusCode == http.StatusNotModified {
 					provider.SetStatus(NodeStatusActive)
@@ -276,7 +277,6 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					return true
 				}
 
-				defer resp.Body.Close()
 				// reset context timeout so that the
 				// following data reading would not be canceled due to timeout
 				_, err := buf.ReadFrom(resp.Body)
