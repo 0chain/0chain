@@ -207,6 +207,10 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 		newPartition = &itemList{
 			Key: rs.partitionKey(rs.NumPartitions),
 		}
+	} else if rs.ItemType == ItemBlobber {
+		newPartition = &blobberItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
 	} else {
 		newPartition = &validatorItemList{
 			Key: rs.partitionKey(rs.NumPartitions),

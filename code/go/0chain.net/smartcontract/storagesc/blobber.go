@@ -29,7 +29,7 @@ func getBlobbersList(balances cstate.StateContextI) (partitions.RandPartition, e
 			return nil, err
 		}
 		all = partitions.NewRandomSelector(
-			ALL_BLOBBERS_KEY,
+			ALL_BLOBBERS_PARTITION_KEY,
 			allBlobbersPartitionSize,
 			nil,
 			partitions.ItemBlobber,
