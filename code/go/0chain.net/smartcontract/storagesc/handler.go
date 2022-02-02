@@ -225,7 +225,7 @@ func (msc *StorageSmartContract) GetLatestWriteMarker(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
+		return nil, common.NewErrInternal("can't get write marker, database is not responding")
 	}
 	return balances.GetEventDB().GetLatestWriteMarker()
 }
@@ -236,7 +236,7 @@ func (msc *StorageSmartContract) GetLatestReadMarker(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
+		return nil, common.NewErrInternal("can't get read marker, database is not responding")
 	}
 	return balances.GetEventDB().GetLatestReadMarker()
 }
