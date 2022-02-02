@@ -127,7 +127,7 @@ func TestLatestWriteMarker(t *testing.T) {
 	}
 
 	defer eventDb.drop()
-	_, err = eventDb.GetLatestReadMarker()
+	_, err = eventDb.GetLatestWriteMarker()
 	if !assert.Error(t, err, "Empty Readmarker should return an erro") {
 		return
 	}

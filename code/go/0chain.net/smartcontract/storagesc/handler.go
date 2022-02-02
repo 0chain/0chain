@@ -235,10 +235,14 @@ func (msc *StorageSmartContract) GetLatestReadMarker(
 	params url.Values,
 	balances cstate.StateContextI,
 ) (interface{}, error) {
+	var (
+		clientID  = params.Get("client")
+		blobberID = params.Get("blobber")
+	)
 	if balances.GetEventDB() == nil {
 		return nil, common.NewErrInternal("can't get read marker, database is not responding")
 	}
-	return balances.GetEventDB().GetLatestReadMarker()
+	return balances.GetEventDB().GetLatestReadMarker(clientID, blobberID)
 }
 
 func (msc *StorageSmartContract) GetErrors(
