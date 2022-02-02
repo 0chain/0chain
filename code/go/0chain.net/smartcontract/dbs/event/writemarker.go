@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"gorm.io/gorm"
 )
 
@@ -46,6 +47,11 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]Writ
 		Where(&WriteMarker{AllocationID: allocationID}).
 		Find(&wms)
 	return &wms, result.Error
+}
+
+func (edb *EventDb) GetLatestWriteMarker() (WriteMarker, error) {
+	var wm WriteMarker
+	return wm, edb.Get().Model(&WriteMarker{}).Last(&wm).Error
 }
 
 func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {

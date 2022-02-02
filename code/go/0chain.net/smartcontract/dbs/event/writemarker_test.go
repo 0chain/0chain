@@ -1,16 +1,18 @@
 package event
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"os"
 	"testing"
 	"time"
+
+	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -98,4 +100,64 @@ func TestWriteMarkers(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(*wms))
 	require.EqualValues(t, eWriteMarker.BlockNumber, (*wms)[0].BlockNumber)
+}
+
+func TestLatestWriteMarker(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	if err != nil {
+		t.Errorf("Error while migrating")
+		return
+	}
+
+	defer eventDb.drop()
+	_, err = eventDb.GetLatestReadMarker()
+	if !assert.Error(t, err, "Empty Readmarker should return an erro") {
+		return
+	}
+	err = eventDb.addOrOverwriteBlobber(Blobber{BlobberID: "someHash"})
+	if !assert.NoError(t, err, "Error while writing blobber marker") {
+		return
+	}
+	err = eventDb.addTransaction(Transaction{Hash: "something"})
+	if !assert.NoError(t, err, "Error while writing blobber marker") {
+		return
+	}
+
+	want := WriteMarker{TransactionID: "something", BlobberID: "someHash"}
+	err = eventDb.addOrOverwriteWriteMarker(WriteMarker{TransactionID: "something", BlobberID: "someHash"})
+	if !assert.NoError(t, err, "Error while writing read marker") {
+		return
+	}
+
+	err = eventDb.addOrOverwriteWriteMarker(want)
+	if !assert.NoError(t, err, "Error while writing read marker") {
+		return
+	}
+
+	got, err := eventDb.GetLatestWriteMarker()
+	if err != nil {
+		t.Errorf("Read marker should not return error %v", err)
+		return
+	}
+	got.CreatedAt = want.CreatedAt
+	got.UpdatedAt = want.UpdatedAt
+	got.ID = want.ID
+	assert.Equal(t, want, got, "Latest write transaction should be returned")
 }
