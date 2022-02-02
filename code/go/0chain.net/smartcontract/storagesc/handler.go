@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -183,7 +182,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		return nil, errors.New("events db is not initialised")
 	}
 
-	blobbers, err := getBlobbersFromQuery(params, balances.GetEventDB())
+	blobbers, err := balances.GetEventDB().GetBlobbersFromParams(params)
 	if err != nil || len(blobbers) == 0 {
 		return nil, fmt.Errorf("no blobbers found %v", err)
 	}
@@ -209,37 +208,12 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		return nil, errors.New("not enough blobbers to honor the allocation")
 	}
 
-	return list, nil
-}
-
-func getBlobbersFromQuery(params url.Values, eventsDB *event.EventDb) ([]event.Blobber, error) {
-	var blobbers []event.Blobber
-	dbStore := eventsDB.Store.Get()
-
-	if maxChallengeTime, _ := strconv.Atoi(params.Get("max_challenge_time")); maxChallengeTime != 0 {
-		dbStore = dbStore.Where("challenge_completion_time > ?", maxChallengeTime)
+	var blobberIDs []string
+	for _, blobber := range list {
+		blobberIDs = append(blobberIDs, blobber.ID)
 	}
 
-	readRange := &PriceRange{}
-	writeRange := &PriceRange{}
-
-	if err := json.Unmarshal([]byte(params.Get("read_price_range")), readRange); err != nil {
-		dbStore = dbStore.Where("read_price BETWEEN ? AND ?", readRange.Min, readRange.Max)
-	}
-
-	if err := json.Unmarshal([]byte(params.Get("write_price_range")), writeRange); err != nil {
-		dbStore = dbStore.Where("write_price BETWEEN ? AND ?", writeRange.Min, writeRange.Max)
-	}
-	if capacityUsed, err := strconv.Atoi(params.Get("capacity_used")); err != nil {
-		dbStore = dbStore.Where("used < ?", capacityUsed)
-	}
-
-	result := dbStore.Find(&blobbers)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving blobbers, error %v", result.Error)
-	}
-
-	return blobbers, nil
+	return blobberIDs, nil
 }
 
 func (ssc *StorageSmartContract) GetTransactionByHashHandler(
