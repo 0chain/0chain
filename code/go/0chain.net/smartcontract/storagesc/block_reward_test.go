@@ -55,11 +55,19 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			bID := "blobber" + strconv.Itoa(i)
 			sp, err := ssc.getStakePool(bID, balances)
 			require.NoError(t, err)
+
 			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
+
+			for j := range p.delegatesBal[i] {
+				key := "delegate" + strconv.Itoa(j)
+				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
+			}
 		}
 		allBR, err := getActivePassedBlobbersList(balances)
 		require.NoError(t, err)
 		err = allBR.Migrate("dump", balances)
+		require.NoError(t, err)
+		_, err = balances.DeleteTrieNode("dump")
 		require.NoError(t, err)
 	}
 
@@ -70,7 +78,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		result  result
 	}{
 		{
-			name: "test 1 blobber",
+			name: "1_blobber",
 			params: params{
 				numBlobbers:       1,
 				wp:                []state.Balance{2},
@@ -80,6 +88,19 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			result: result{
 				blobberRewards:          []state.Balance{1000},
 				blobberDelegatesRewards: [][]state.Balance{{250, 0, 750}},
+			},
+		},
+		{
+			name: "2_blobber",
+			params: params{
+				numBlobbers:       2,
+				wp:                []state.Balance{3, 1},
+				successChallenges: []int{5, 2},
+				delegatesBal:      [][]state.Balance{{1, 0, 3}, {1, 6, 3}},
+			},
+			result: result{
+				blobberRewards:          []state.Balance{750, 250},
+				blobberDelegatesRewards: [][]state.Balance{{187, 0, 562}, {25, 150, 75}},
 			},
 		},
 	}
