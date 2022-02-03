@@ -23,6 +23,7 @@ type testBalances struct {
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.Serializable
+	block     *block.Block
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
@@ -32,6 +33,8 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	tb = &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
 		tree:     make(map[datastore.Key]util.Serializable),
+		txn:      new(transaction.Transaction),
+		block:    new(block.Block),
 	}
 
 	if mpts {
@@ -55,10 +58,17 @@ func (tb *testBalances) setTransaction(t testing.TB,
 	}
 }
 
+func (tb *testBalances) GetTransaction() *transaction.Transaction {
+	return tb.txn
+}
+
+func (tb *testBalances) GetBlock() *block.Block {
+	return tb.block
+}
+
 // stubs
 func (tb *testBalances) GetBlock() *block.Block                                    { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
 func (tb *testBalances) GetBlockSharders(b *block.Block) []string                  { return nil }
 func (tb *testBalances) Validate() error                                           { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                                   { return nil }
