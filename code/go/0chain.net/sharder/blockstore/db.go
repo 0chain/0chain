@@ -1,7 +1,6 @@
 package blockstore
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
@@ -53,18 +52,18 @@ const (
 	redisSortedSetUnmovedBlock        = "redisSortedSetUnmovedBlock"
 )
 
-var ctx = context.Background()
-
 // InitMetaRecordDB Create db file and create buckets.
-func InitMetaRecordDB(host, port string, deleteExistingDB bool) {
+func InitMetaRecordDB(host, port, password string, deleteExistingDB bool) {
 
 	bwrRedis.Client = redis.NewClient(&redis.Options{
-		Addr:     "localhost" + ":" + "6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     host + ":" + port,
+		Password: password, // no password set
+		DB:       0,        // use default DB
 	})
 
-	_, _ = bwrRedis.Client.FlushDB().Result()
+	if deleteExistingDB {
+		_, _ = bwrRedis.Client.FlushDB().Result()
+	}
 }
 
 // BlockWhereRecord It simply provides whereabouts of a block. It can be in Warm Tier, Cold Tier, Hot and Warm Tier, Hot and Cold Tier, etc.
@@ -118,16 +117,16 @@ type UnmovedBlockRecord struct {
 }
 
 func (ubr *UnmovedBlockRecord) Add() (err error) {
-	return bwrRedis.SetSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
+	return bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
 }
 
 func (ubr *UnmovedBlockRecord) Delete() (err error) {
-	return bwrRedis.DeleteSorted(redisSortedSetUnmovedBlock, ubr.Hash)
+	return bwrRedis.DeleteFromSorted(redisSortedSetUnmovedBlock, ubr.Hash)
 }
 
 // GetUnmovedBlocks returns the number of blocks = count from the range [0,lastBlock).
 func GetUnmovedBlocks(lastBlock, count int64) (ubrs []*UnmovedBlockRecord) {
-	return bwrRedis.GetSortedRangeByScore(redisSortedSetUnmovedBlock, lastBlock, count)
+	return bwrRedis.GetRangeByScoreFromSorted(redisSortedSetUnmovedBlock, lastBlock, count)
 }
 
 //Add a cache bucket to store accessed time as key and hash as its value
@@ -146,7 +145,7 @@ func GetHashKeysForReplacement() chan *cacheAccess {
 			close(ch)
 		}()
 
-		i, _ := bwrRedis.GetCountSorted(redisSortedSetCacheAccessTimeHash)
+		i, _ := bwrRedis.GetCountFromSorted(redisSortedSetCacheAccessTimeHash)
 		i /= 2 //Number of blocks to replace
 		var startRange int64 = 0
 		var endRange int64 = 0
@@ -156,7 +155,7 @@ func GetHashKeysForReplacement() chan *cacheAccess {
 			if endRange > i {
 				endRange = i
 			}
-			blocks, _ := bwrRedis.GetSortedRange(redisSortedSetCacheAccessTimeHash, startRange, endRange)
+			blocks, _ := bwrRedis.GetRangeFromSorted(redisSortedSetCacheAccessTimeHash, startRange, endRange)
 			for _, block := range blocks {
 				ca := new(cacheAccess)
 				sl := strings.Split(block, CacheAccessTimeSeparator)
@@ -184,11 +183,11 @@ func (ca *cacheAccess) addOrUpdate() error {
 	if bwrRedis.StartTx() != nil {
 		return err
 	}
-	if timeValue[0] != nil {
-		delKey := fmt.Sprintf("%v%v%v", timeValue[0].(string), CacheAccessTimeSeparator, ca.Hash)
-		err = bwrRedis.DeleteSorted(redisSortedSetCacheAccessTimeHash, delKey)
+	if timeValue != nil {
+		delKey := fmt.Sprintf("%v%v%v", timeValue.(string), CacheAccessTimeSeparator, ca.Hash)
+		err = bwrRedis.DeleteFromSorted(redisSortedSetCacheAccessTimeHash, delKey)
 	}
-	err = bwrRedis.SetSorted(redisSortedSetCacheAccessTimeHash, 0.0, accessTimeKey)
+	err = bwrRedis.SetToSorted(redisSortedSetCacheAccessTimeHash, 0.0, accessTimeKey)
 	err = bwrRedis.SetToHash(redisHashCacheHashAccessTime, ca.Hash, timeStr)
 
 	err = bwrRedis.Exec()
@@ -232,7 +231,7 @@ func (ca *cacheAccess) delete() error {
 	if err != nil {
 		return err
 	}
-	err = bwrRedis.DeleteSorted(redisSortedSetCacheAccessTimeHash,
+	err = bwrRedis.DeleteFromSorted(redisSortedSetCacheAccessTimeHash,
 		fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339), CacheAccessTimeSeparator, ca.Hash),
 	)
 	err = bwrRedis.DeleteFromHash(redisHashCacheHashAccessTime, ca.Hash)
