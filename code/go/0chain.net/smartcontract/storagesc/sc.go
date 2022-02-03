@@ -53,7 +53,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["update_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_settings"), nil)
 	// reading / writing
 	// old
-	// ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
+	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContract.RestHandlers["/readmarkers"] = ssc.GetReadMarkersHandler
 	ssc.SmartContract.RestHandlers["/count_readmarkers"] = ssc.GetReadMarkersCount
 	ssc.SmartContract.RestHandlers["/getWriteMarkers"] = ssc.GetWriteMarkersHandler
@@ -123,7 +123,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
 	ssc.SmartContract.RestHandlers["/latestwritemarker"] = ssc.GetLatestWriteMarker
-	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.GetLatestReadMarker
+	// ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.GetLatestReadMarker
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 }
 
