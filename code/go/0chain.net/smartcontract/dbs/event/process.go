@@ -49,33 +49,36 @@ const (
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
-	newEvents := edb.removeDuplicate(ctx, events)
-
-	edb.addEvents(ctx, newEvents)
-	for _, event := range newEvents {
-		var err error = nil
-		switch EventType(event.Type) {
-		case TypeStats:
-			err = edb.addStat(event)
-		case TypeError:
-			err = edb.addError(Error{
-				TransactionID: event.TxHash,
-				Error:         event.Data,
-			})
-		default:
-		}
-		if err != nil {
-			logging.Logger.Error(
-				"event could not be processed",
-				zap.Any("event", event),
-				zap.Error(err),
-			)
-		}
-	}
+	edb.eventsChannel <- events
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	for {
+		events := <-edb.eventsChannel
+		newEvents := edb.removeDuplicate(ctx, events)
 
+		edb.addEvents(ctx, newEvents)
+		for _, event := range newEvents {
+			var err error = nil
+			switch EventType(event.Type) {
+			case TypeStats:
+				err = edb.addStat(event)
+			case TypeError:
+				err = edb.addError(Error{
+					TransactionID: event.TxHash,
+					Error:         event.Data,
+				})
+			default:
+			}
+			if err != nil {
+				logging.Logger.Error(
+					"event could not be processed",
+					zap.Any("event", event),
+					zap.Error(err),
+				)
+			}
+		}
+	}
 }
 
 func (edb *EventDb) addStat(event Event) error {
