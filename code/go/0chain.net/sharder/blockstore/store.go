@@ -117,9 +117,9 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 	switch mode {
 	case "start", "recover":
-		InitMetaRecordDB("localhost", "6379", true) //Removes existing metadata and creates new db
+		InitMetaRecordDB("localhost", "6379", "", true) //Removes existing metadata and creates new db
 	default:
-		InitMetaRecordDB("localhost", "6379", false)
+		InitMetaRecordDB("localhost", "6379", "", false)
 	}
 
 	switch Tiering(storageType) {
