@@ -416,6 +416,7 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 		sp.Settings.MaxStake = settings.MaxStake
 		sp.Settings.ServiceCharge = settings.ServiceCharge
 		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+		sp.Minter = chainstate.MinterStorage
 		if err := sp.EmitNew(providerId, providerType, balances); err != nil {
 			return nil, err
 		}

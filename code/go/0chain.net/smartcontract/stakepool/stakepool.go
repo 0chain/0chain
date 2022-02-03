@@ -55,7 +55,7 @@ type StakePool struct {
 	Reward   state.Balance            `json:"rewards"`
 	Settings StakePoolSettings        `json:"settings"`
 	Minter   cstate.ApprovedMinters   `json:"minter"`
-	mutex    *sync.RWMutex
+	mutex    sync.RWMutex             `json:"-"`
 }
 
 type StakePoolSettings struct {
