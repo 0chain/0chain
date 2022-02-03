@@ -74,6 +74,10 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 	}
 }
 
+func (edb *EventDb) addEventsWorker(ctx context.Context) {
+
+}
+
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
