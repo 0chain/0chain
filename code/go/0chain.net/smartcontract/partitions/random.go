@@ -24,6 +24,7 @@ const (
 	ItemString ItemType = iota
 	ItemValidator
 	ItemBlobber
+	ItemBlobberReward
 )
 
 //------------------------------------------------------------------------------
@@ -210,6 +211,10 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 		newPartition = &blobberItemList{
 			Key: rs.partitionKey(rs.NumPartitions),
 		}
+	} else if rs.ItemType == ItemBlobberReward {
+		newPartition = &blobberRewardItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
 	} else {
 		newPartition = &validatorItemList{
 			Key: rs.partitionKey(rs.NumPartitions),
@@ -287,6 +292,8 @@ func (rs *randomSelector) getPartition(
 		part = &itemList{}
 	} else if rs.ItemType == ItemBlobber {
 		part = &blobberItemList{}
+	} else if rs.ItemType == ItemBlobberReward {
+		part = &blobberRewardItemList{}
 	} else {
 		part = &validatorItemList{}
 	}
@@ -327,4 +334,85 @@ func (rs *randomSelector) Decode(b []byte) error {
 	err := json.Unmarshal(b, rs)
 	rs.Partitions = make([]PartitionItemList, rs.NumPartitions, rs.NumPartitions)
 	return err
+}
+
+func (rs *randomSelector) Migrate(
+	toKey datastore.Key,
+	balances state.StateContextI,
+) error {
+	_, err := balances.GetTrieNode(toKey)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+
+			for i := 0; i < rs.NumPartitions; i++ {
+
+				err = rs.Partitions[i].get(rs.partitionKey(i), balances)
+				if err != nil {
+					return err
+				}
+				_, err = balances.InsertTrieNode(PartitionKey(toKey, i), rs.Partitions[i])
+				if err != nil {
+					return err
+				}
+
+				_, err = balances.DeleteTrieNode(rs.partitionKey(i))
+				if err != nil {
+					return err
+				}
+
+			}
+			_, err = balances.InsertTrieNode(toKey, rs)
+			if err != nil {
+				return fmt.Errorf("error inserting node: %v", err)
+			}
+
+			_, err = balances.DeleteTrieNode(rs.Name)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		return errors.New("partition to migrate to is already populated")
+	}
+	return nil
+}
+
+func (rs *randomSelector) UpdateItem(
+	partIndex int,
+	it PartitionItem,
+	balances state.StateContextI,
+) error {
+
+	partition, err := rs.getPartition(partIndex, balances)
+	if err != nil {
+		return err
+	}
+
+	err = partition.update(it)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rs *randomSelector) GetItem(
+	partIndex int,
+	itemName string,
+	balances state.StateContextI,
+) (PartitionItem, error) {
+
+	partition, err := rs.getPartition(partIndex, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range partition.itemRange(0, partition.length()) {
+		if item.Name() == itemName {
+			return item, nil
+		}
+	}
+
+	return nil, errors.New("item not present")
 }

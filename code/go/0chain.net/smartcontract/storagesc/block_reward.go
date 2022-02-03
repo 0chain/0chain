@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/partitions"
 	"math/rand"
 	"time"
 )
@@ -21,7 +22,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		return nil
 	}
 
-	allBlobbers, err := getBlobbersList(balances)
+	allBlobbers, err := getActivePassedBlobbersList(balances)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
@@ -44,33 +45,28 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	var totalWeight float64
 	for _, b := range blobberPartition {
 		var sp *stakePool
-		var blobber *StorageNode
+		var blobber partitions.BlobberRewardNode
+
+		err = blobber.Decode(b.Encode())
+		if err != nil {
+			return common.NewError("blobber_block_rewards_failed",
+				"can't decode blobber reward node: "+err.Error())
+		}
 		if sp, err = ssc.getStakePool(b.Name(), balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed",
 				"can't get related stake pool: "+err.Error())
 		}
 
-		if blobber, err = ssc.getBlobber(b.Name(), balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"can't get blobber detail: "+err.Error())
-		}
 		var stake float64
 		for _, delegate := range sp.Pools {
 			stake += float64(delegate.Balance)
 		}
-		bc, err := ssc.getBlobberChallenge(b.Name(), balances)
-		if err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"can't get blobbers challenge: "+err.Error())
-		}
-		successChallenge := bc.getSuccessCount(true, balances.GetTransaction().CreationDate,
-			conf.BlockReward.ChallengePeriod, blobber.Terms.ChallengeCompletionTime)
 
-		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.ID)
+		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.Id)
 		stakePools = append(stakePools, sp)
 		stakeTotals = append(stakeTotals, stake)
 		totalQStake += stake
-		blobberWeight := float64(blobber.Terms.WritePrice) * stake * float64(successChallenge)
+		blobberWeight := float64(blobber.WritePrice) * stake * float64(blobber.SuccessChallenges)
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
 	}

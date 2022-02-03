@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"0chain.net/chaincore/chain/state"
+	state2 "0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -12,12 +13,13 @@ import (
 
 //------------------------------------------------------------------------------
 
-type BlobberNode struct {
-	Id  string `json:"id"`
-	Url string `json:"url"`
+type BlobberRewardNode struct {
+	Id                string         `json:"id"`
+	SuccessChallenges int            `json:"success_challenges"`
+	WritePrice        state2.Balance `json:"write_price"`
 }
 
-func (bn *BlobberNode) Encode() []byte {
+func (bn *BlobberRewardNode) Encode() []byte {
 	var b, err = json.Marshal(bn)
 	if err != nil {
 		panic(err)
@@ -25,27 +27,27 @@ func (bn *BlobberNode) Encode() []byte {
 	return b
 }
 
-func (bn *BlobberNode) Decode(b []byte) error {
+func (bn *BlobberRewardNode) Decode(b []byte) error {
 	return json.Unmarshal(b, bn)
 }
 
-func (bn *BlobberNode) Data() string {
-	return bn.Url
+func (bn *BlobberRewardNode) Data() string {
+	return string(bn.Encode())
 }
 
-func (bn *BlobberNode) Name() string {
+func (bn *BlobberRewardNode) Name() string {
 	return bn.Id
 }
 
 //------------------------------------------------------------------------------
 
-type blobberItemList struct {
-	Key     datastore.Key `json:"-"`
-	Items   []BlobberNode `json:"items"`
-	Changed bool          `json:"-"`
+type blobberRewardItemList struct {
+	Key     datastore.Key       `json:"-"`
+	Items   []BlobberRewardNode `json:"items"`
+	Changed bool                `json:"-"`
 }
 
-func (il *blobberItemList) Encode() []byte {
+func (il *blobberRewardItemList) Encode() []byte {
 	var b, err = json.Marshal(il)
 	if err != nil {
 		panic(err)
@@ -53,22 +55,22 @@ func (il *blobberItemList) Encode() []byte {
 	return b
 }
 
-func (il *blobberItemList) Decode(b []byte) error {
+func (il *blobberRewardItemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *blobberItemList) save(balances state.StateContextI) error {
+func (il *blobberRewardItemList) save(balances state.StateContextI) error {
 	_, err := balances.InsertTrieNode(il.Key, il)
 	return err
 }
 
-func (il *blobberItemList) get(key datastore.Key, balances state.StateContextI) error {
+func (il *blobberRewardItemList) get(key datastore.Key, balances state.StateContextI) error {
 	val, err := balances.GetTrieNode(key)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		il = &blobberItemList{
+		il = &blobberRewardItemList{
 			Key: key,
 		}
 	}
@@ -79,25 +81,35 @@ func (il *blobberItemList) get(key datastore.Key, balances state.StateContextI) 
 	return nil
 }
 
-func (il *blobberItemList) add(it PartitionItem) {
-	il.Items = append(il.Items, BlobberNode{
-		Id:  it.Name(),
-		Url: it.Data(),
+func (il *blobberRewardItemList) add(it PartitionItem) {
+	var brn BlobberRewardNode
+	brn.Decode(it.Encode())
+	il.Items = append(il.Items, BlobberRewardNode{
+		Id:                it.Name(),
+		SuccessChallenges: brn.SuccessChallenges,
+		WritePrice:        brn.WritePrice,
 	})
 	il.Changed = true
 }
 
-func (il *blobberItemList) update(it PartitionItem) error {
+func (il *blobberRewardItemList) update(it PartitionItem) error {
 	var found bool
 	for i := range il.itemRange(0, il.length()) {
 		if il.Items[i].Name() == it.Name() {
 			found = true
-			il.Items[i] = BlobberNode{
-				Id:  it.Name(),
-				Url: it.Data(),
+			var newItem BlobberRewardNode
+			err := newItem.Decode(it.Encode())
+			if err != nil {
+				return fmt.Errorf("decoding error: %v", err)
+			}
+			il.Items[i] = BlobberRewardNode{
+				Id:                it.Name(),
+				SuccessChallenges: newItem.SuccessChallenges,
+				WritePrice:        newItem.WritePrice,
 			}
 		}
 	}
+
 	if !found {
 		return errors.New("item not found in list")
 	}
@@ -105,7 +117,7 @@ func (il *blobberItemList) update(it PartitionItem) error {
 	return nil
 }
 
-func (il *blobberItemList) remove(item PartitionItem) error {
+func (il *blobberRewardItemList) remove(item PartitionItem) error {
 	if len(il.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
@@ -119,7 +131,7 @@ func (il *blobberItemList) remove(item PartitionItem) error {
 	return nil
 }
 
-func (il *blobberItemList) cutTail() PartitionItem {
+func (il *blobberRewardItemList) cutTail() PartitionItem {
 	if len(il.Items) == 0 {
 		return nil
 	}
@@ -130,15 +142,15 @@ func (il *blobberItemList) cutTail() PartitionItem {
 	return &tail
 }
 
-func (il *blobberItemList) length() int {
+func (il *blobberRewardItemList) length() int {
 	return len(il.Items)
 }
 
-func (il *blobberItemList) changed() bool {
+func (il *blobberRewardItemList) changed() bool {
 	return il.Changed
 }
 
-func (il *blobberItemList) itemRange(start, end int) []PartitionItem {
+func (il *blobberRewardItemList) itemRange(start, end int) []PartitionItem {
 	if start > end || end > len(il.Items) {
 		return nil
 	}
@@ -150,7 +162,7 @@ func (il *blobberItemList) itemRange(start, end int) []PartitionItem {
 	return rtv
 }
 
-func (il *blobberItemList) find(searchItem PartitionItem) int {
+func (il *blobberRewardItemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
 		if item.Name() == searchItem.Name() {
 			return i
