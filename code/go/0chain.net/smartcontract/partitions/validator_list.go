@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
@@ -114,6 +115,24 @@ func (il *validatorItemList) add(it PartitionItem) {
 		Url: string(it.Data()),
 	})
 	il.Changed = true
+}
+
+func (il *validatorItemList) update(it PartitionItem) error {
+	var found bool
+	for i := range il.itemRange(0, il.length()) {
+		if il.Items[i].Name() == it.Name() {
+			found = true
+			il.Items[i] = ValidationNode{
+				Id:  it.Name(),
+				Url: it.Data(),
+			}
+		}
+	}
+	if !found {
+		return errors.New("item not found in list")
+	}
+	il.Changed = true
+	return nil
 }
 
 func (il *validatorItemList) remove(item PartitionItem) error {

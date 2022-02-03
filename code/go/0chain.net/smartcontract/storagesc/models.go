@@ -24,11 +24,13 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 var (
-	ALL_BLOBBERS_KEY           = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_BLOBBERS_PARTITION_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_partition"))
-	ALL_VALIDATORS_KEY         = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY        = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY          = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ALL_BLOBBERS_KEY            = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+	ALL_BLOBBERS_PARTITION_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_partition"))
+	ALL_VALIDATORS_KEY          = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+	ALL_ALLOCATIONS_KEY         = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+	STORAGE_STATS_KEY           = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ONGOING_PASSED_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("ongoing_passed_blobbers")) //for ongoing period
+	ACTIVE_PASSED_BLOBBERS_KEY  = datastore.Key(ADDRESS + encryption.Hash("active_passed_blobbers"))  // for previous period
 )
 
 type ClientAllocation struct {
@@ -373,6 +375,11 @@ func (sng StorageNodeGeolocation) validate() error {
 			"latitude %f should be in range [-180, 180]", sng.Longitude)
 	}
 	return nil
+}
+
+type partitionLocation struct {
+	Index     int              `json:"index"`
+	Timestamp common.Timestamp `json:"timestamp"`
 }
 
 // StorageNode represents Blobber configurations.

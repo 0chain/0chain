@@ -28,6 +28,44 @@ import (
 	"go.uber.org/zap"
 )
 
+const passedBlobbersPartitionSize = 50
+
+// getActivePassedBlobbersList gets blobbers passed challenge from last challenge period
+func getActivePassedBlobbersList(balances c_state.StateContextI) (partitions.RandPartition, error) {
+	all, err := partitions.GetRandomSelector(ACTIVE_PASSED_BLOBBERS_KEY, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		all = partitions.NewRandomSelector(
+			ACTIVE_PASSED_BLOBBERS_KEY,
+			passedBlobbersPartitionSize,
+			nil,
+			partitions.ItemBlobberReward,
+		)
+	}
+	all.SetCallback(nil)
+	return all, nil
+}
+
+// getOngoingPassedBlobbersList gets blobbers passed challenge from ongoing challenge period
+func getOngoingPassedBlobbersList(balances c_state.StateContextI) (partitions.RandPartition, error) {
+	all, err := partitions.GetRandomSelector(ONGOING_PASSED_BLOBBERS_KEY, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		all = partitions.NewRandomSelector(
+			ONGOING_PASSED_BLOBBERS_KEY,
+			passedBlobbersPartitionSize,
+			nil,
+			partitions.ItemBlobberReward,
+		)
+	}
+	all.SetCallback(nil)
+	return all, nil
+}
+
 func (sc *StorageSmartContract) completeChallengeForBlobber(
 	blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge,
 	challengeResponse *ChallengeResponse) bool {
@@ -305,6 +343,34 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (resp string, err error) {
 
 	var challResp ChallengeResponse
+
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewError("verify_challenge",
+			"cannot get smart contract configurations: "+err.Error())
+	}
+
+	if balances.GetBlock().Round%conf.BlockReward.ChallengePeriod == 0 {
+		// clean active_passed_blobbers partition
+		_, err = balances.DeleteTrieNode(ACTIVE_PASSED_BLOBBERS_KEY)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"cannot delete active partition: "+err.Error())
+		}
+
+		// move ongoing_passed_blobbers to active_passed_blobbers
+		ongoingList, err := getOngoingPassedBlobbersList(balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"cannot get ongoing partition: "+err.Error())
+		}
+		err = ongoingList.Migrate(ACTIVE_PASSED_BLOBBERS_KEY, balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"cannot migrate ongoing partition: "+err.Error())
+		}
+	}
+
 	if err = json.Unmarshal(input, &challResp); err != nil {
 		return
 	}
@@ -387,6 +453,60 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	// verification, or partial verification
 	if pass && fresh {
 
+		blobber, err := sc.getBlobber(t.ClientID, balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"can't get blobber"+err.Error())
+		}
+
+		ogList, err := getOngoingPassedBlobbersList(balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"can't get ongoing partition list"+err.Error())
+		}
+
+		// this expiry of blobber needs to be corrected once logic is finalized
+		if blobber.RewardPartition.Timestamp+common.Timestamp(conf.BlockReward.ChallengePeriod) <
+			balances.GetTransaction().CreationDate {
+
+			partIndex, err := ogList.Add(
+				&partitions.BlobberRewardNode{
+					Id:                blobber.ID,
+					SuccessChallenges: 0,
+					WritePrice:        blobber.Terms.WritePrice,
+				}, balances)
+			if err != nil {
+				return "", common.NewError("verify_challenge",
+					"can't add to ongoing partition list"+err.Error())
+			}
+
+			blobber.RewardPartition = partitionLocation{
+				Index:     partIndex,
+				Timestamp: balances.GetTransaction().CreationDate,
+			}
+
+			_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+			if err != nil {
+				return "", common.NewError("verify_challenge",
+					"error inserting blobber to chain"+err.Error())
+			}
+		}
+
+		blobberRewardItem, err := ogList.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"can't get blobber reward from partition list"+err.Error())
+		}
+
+		var brStats partitions.BlobberRewardNode
+		err = brStats.Decode(blobberRewardItem.Encode())
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"can't decode blobber reward item"+err.Error())
+		}
+
+		brStats.SuccessChallenges++
+
 		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
 			&challResp)
 		if !completed {
@@ -402,7 +522,16 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.SuccessChallenges++
 		details.Stats.OpenChallenges--
 
-		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		err = ogList.UpdateItem(blobber.RewardPartition.Index, &brStats, balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"error updating blobber reward item")
+		}
+
+		_, err = balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		if err != nil {
+			return "", common.NewError("verify_challenge", err.Error())
+		}
 		sc.challengeResolved(balances, true)
 
 		var partial = 1.0
