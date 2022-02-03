@@ -807,9 +807,6 @@ func Test_flow_penalty(t *testing.T) {
 		sp, err = ssc.getStakePool(b4.id, balances)
 		require.NoError(t, err)
 
-		var offer = sp.findOffer(allocID)
-		require.NotNil(t, offer)
-
 		// until the end
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -832,7 +829,6 @@ func Test_flow_penalty(t *testing.T) {
 			// last loop balances (previous balance)
 			spl = sp.stake()
 			wpl = wp.allocUntil(allocID, until)
-			opl = offer.Lock
 			cpl = cp.Balance
 			b4l = balances.balances[b4.id]
 		)
@@ -891,11 +887,6 @@ func Test_flow_penalty(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, sp.stake() < spl)
 			spl = sp.stake()
-
-			offer = sp.findOffer(allocID)
-			require.NotNil(t, offer)
-			assert.True(t, opl > offer.Lock)
-			opl = offer.Lock
 
 			// no rewards for the blobber
 			assert.True(t, b4l == balances.balances[b4.id])
@@ -1021,14 +1012,6 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			if !isAllocBlobber(b.id, alloc) {
 				continue
 			}
-			var sp *stakePool
-			sp, err = ssc.getStakePool(b.id, balances)
-			require.NoError(t, err)
-
-			var offer = sp.findOffer(allocID)
-			require.NotNil(t, offer)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
-			require.EqualValues(t, 5000000027, offer.Lock)
 		}
 
 		// values before
@@ -1119,7 +1102,6 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.Nil(t, sp.findOffer(allocID)) // no offers expected
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 
@@ -1256,11 +1238,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-
-			var offer = sp.findOffer(allocID)
-			require.NotNil(t, offer)
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
-			require.EqualValues(t, 5000000027, offer.Lock)
 		}
 
 		// values before
@@ -1350,7 +1328,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.Nil(t, sp.findOffer(allocID)) // no offers expected
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 

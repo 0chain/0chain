@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"fmt"
 	"strconv"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -43,8 +44,6 @@ const (
 	WritePoolMaxLockPeriod
 
 	StakePoolMinLock
-	StakePoolInterestRate
-	StakePoolInterestInterval
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -103,8 +102,6 @@ var (
 		"writepool.max_lock_period",
 
 		"stakepool.min_lock",
-		"stakepool.interest_rate",
-		"stakepool.interest_interval",
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
@@ -162,9 +159,7 @@ var (
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock":          {StakePoolMinLock, smartcontract.Int64},
-		"stakepool.interest_rate":     {StakePoolInterestRate, smartcontract.Float64},
-		"stakepool.interest_interval": {StakePoolInterestInterval, smartcontract.Duration},
+		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.StateBalance},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.StateBalance},
@@ -312,11 +307,6 @@ func (conf *scConfig) setInt64(key string, change int64) error {
 
 func (conf *scConfig) setFloat64(key string, change float64) error {
 	switch Settings[key].setting {
-	case StakePoolInterestRate:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.InterestRate = change
 	case FreeAllocationReadPoolFraction:
 		conf.FreeAllocationSettings.ReadPoolFraction = change
 	case ValidatorReward:
@@ -381,11 +371,6 @@ func (conf *scConfig) setDuration(key string, change time.Duration) error {
 			conf.WritePool = &writePoolConfig{}
 		}
 		conf.WritePool.MaxLockPeriod = change
-	case StakePoolInterestInterval:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.InterestInterval = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
@@ -499,10 +484,6 @@ func (conf *scConfig) get(key Setting) interface{} {
 		return conf.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
-	case StakePoolInterestRate:
-		return conf.StakePool.InterestRate
-	case StakePoolInterestInterval:
-		return conf.StakePool.InterestInterval
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:

@@ -685,16 +685,8 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			balances.On(
 				"GetTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return(blobber, nil).Once()
-			var sp = newStakePool()
-			sp.Offers[p.allocationId] = &offerPool{}
-			balances.On(
-				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
-			).Return(sp, nil).Once()
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
-			).Return(nil).Once()
-			balances.On(
-				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
 			).Return(nil).Once()
 			sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
 				BlobberID:    blobber.ID,
