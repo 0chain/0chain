@@ -611,12 +611,9 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
-/*AddNotarizedBlockToRound - adds notarized block to cache and sync info from notarized block to round  */
-func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI, error) {
-	if b.GetRoundRandomSeed() == 0 {
-		return nil, nil, common.NewError("add_notarized_block_to_round", "block has no seed")
-	}
-
+/*AddNotarizedBlockToRound - adds notarized block to round, sets RRS with block's if needed.
+Client should check if block is valid notarized block, round should be created*/
+func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 
@@ -630,33 +627,29 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		logging.Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
-	// Only for blocks with greater RTC (elder blocks)
-	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
-		r.GetTimeoutCount() < b.RoundTimeoutCount {
-
-		logging.Logger.Debug("AddNotarizedBlockToRound round and block random seed different",
-			zap.Int64("Round", r.GetRoundNumber()),
-			zap.Int64("Round_rrs", r.GetRandomSeed()),
-			zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
-			zap.Int("Round_timeout", r.GetTimeoutCount()),
-			zap.Int("Block_round_timeout", b.RoundTimeoutCount))
-		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
-		r.SetTimeoutCount(b.RoundTimeoutCount)
+	// Notarized block can be obtained before timeout, but received after timeout when in theory new RRS is obtained,
+	// we accept this notarization and set current round RRS and timeout count
+	if r.GetRandomSeed() != b.GetRoundRandomSeed() {
+		logging.Logger.Debug("RRS for notarized block is different", zap.Int64("Round_rrs", r.GetRandomSeed()),
+			zap.Int64("Block_rrs", b.GetRoundRandomSeed()), zap.Int("notarized_blocks_count", len(r.GetNotarizedBlocks())))
+		//reset round RRS only if it has no notarized rounds yet or received notarized block was obtained during next timeout (should not happen ever)
+		if len(r.GetNotarizedBlocks()) == 0 || b.RoundTimeoutCount > r.GetTimeoutCount() {
+			logging.Logger.Debug("AddNotarizedBlockToRound round and block random seed different",
+				zap.Int64("Round", r.GetRoundNumber()),
+				zap.Int64("Round_rrs", r.GetRandomSeed()),
+				zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
+				zap.Int("Round_timeout", r.GetTimeoutCount()),
+				zap.Int("Block_round_timeout", b.RoundTimeoutCount))
+			r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
+			r.SetTimeoutCount(b.RoundTimeoutCount)
+		}
 	}
 
 	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
-	if b.PrevBlock != nil {
-		b.ComputeChainWeight()
-	}
+	b, _ = r.AddNotarizedBlock(b)
 
-	var err error
-	b, _, err = r.AddNotarizedBlock(b)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return b, r, nil
+	return b, r
 }
 
 /*AddRoundBlock - add a block for a given round to the cache */
@@ -668,12 +661,9 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 		return b2
 	}
 	//TODO very dangerous code, we can break block hash with changing it!!! sort it out
-	b.SetRoundRandomSeed(r.GetRandomSeed())
-	b.RoundTimeoutCount = r.GetTimeoutCount()
+	//b.SetRoundRandomSeed(r.GetRandomSeed())
+	//b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)
-	if b.PrevBlock != nil {
-		b.ComputeChainWeight()
-	}
 	return b
 }
 
@@ -1009,6 +999,12 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	defer c.roundsMutex.Unlock()
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		logging.Logger.Debug("SetRandomSeed round already has the seed")
+		return false
+	}
+	//if round was notarized once it is guaranteed that RRS is set, and in this case we will not reset it,
+	//this RRS is protected with consensus and can be reset only with consensus in SetRandomSeedForNotarizedBlock
+	if len(r.GetNotarizedBlocks()) > 0 {
+		logging.Logger.Error("Current round has notarized block")
 		return false
 	}
 	if randomSeed == 0 {

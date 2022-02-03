@@ -182,6 +182,18 @@ var GlobalSettingName = []string{
 	"server_chain.health_check.show_counters",
 }
 
+var GlobalSettingsIgnored = map[string]bool{
+	GlobalSettingName[DbsEventsEnabled]:         true,
+	GlobalSettingName[DbsEventsName]:            true,
+	GlobalSettingName[DbsEventsUser]:            true,
+	GlobalSettingName[DbsEventsPassword]:        true,
+	GlobalSettingName[DbsEventsHost]:            true,
+	GlobalSettingName[DbsEventsPort]:            true,
+	GlobalSettingName[DbsEventsMaxIdleConns]:    true,
+	GlobalSettingName[DbsEventsMaxOpenConns]:    true,
+	GlobalSettingName[DbsEventsConnMaxLifetime]: true,
+}
+
 // GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
 var GlobalSettingInfo = map[string]struct {
 	settingType smartcontract.ConfigType
@@ -477,6 +489,9 @@ func (gl *GlobalSettings) GetBool(field GlobalSetting) (bool, error) {
 func getStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
 	for key := range GlobalSettingInfo {
+		if _, ok := GlobalSettingsIgnored[key]; ok {
+			continue
+		}
 		globals[key] = viper.GetString(key)
 	}
 	return globals

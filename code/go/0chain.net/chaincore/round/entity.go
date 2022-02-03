@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/core/common"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -296,11 +295,7 @@ func (r *Round) GetVRFOutput() string {
 
 // AddNotarizedBlock - this will be concurrent as notarization is recognized by
 // verifying as well as notarization message from others.
-func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
-	if b.GetRoundRandomSeed() == 0 {
-		return nil, false, common.NewError("add_notarized_block", "block has no seed")
-	}
-
+func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -315,7 +310,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 			logging.Logger.Debug("add notarized block - block already exist, merge tickets",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return blk, false, nil
+			return blk, false
 		}
 		if blk.RoundRank == b.RoundRank {
 			found = i
@@ -342,11 +337,11 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool {
-		return rnb[i].ChainWeight > rnb[j].ChainWeight
+		return rnb[i].Weight() > rnb[j].Weight()
 	})
 	r.notarizedBlocks = rnb
 	logging.Logger.Debug("reached notarization", zap.Int64("round", b.Round))
-	return b, true, nil
+	return b, true
 }
 
 // UpdateNotarizedBlock updates the notarized block in the round
