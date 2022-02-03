@@ -555,7 +555,7 @@ func (gn *GlobalNode) setLastRound(round int64) {
 }
 
 func (gn *GlobalNode) save(balances cstate.StateContextI) (err error) {
-	if _, err = balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
+	if err = balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
 		return fmt.Errorf("saving global node: %v", err)
 	}
 	return
@@ -630,7 +630,7 @@ func (mn *MinerNode) numActiveDelegates() int {
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	//var key datastore.Key
 	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
-	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
+	if err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
 	//Logger.Debug("saving miner node", zap.String("id", mn.ID),
@@ -980,11 +980,11 @@ func NewUserNode() *UserNode {
 func (un *UserNode) save(balances cstate.StateContextI) (err error) {
 
 	if len(un.Pools) > 0 {
-		if _, err = balances.InsertTrieNode(un.GetKey(), un); err != nil {
+		if err = balances.InsertTrieNode(un.GetKey(), un); err != nil {
 			return fmt.Errorf("saving user node: %v", err)
 		}
 	} else {
-		if _, err = balances.DeleteTrieNode(un.GetKey()); err != nil {
+		if err = balances.DeleteTrieNode(un.GetKey()); err != nil {
 			return fmt.Errorf("deleting user node: %v", err)
 		}
 	}
@@ -1247,7 +1247,7 @@ func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 }
 
 func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
-	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
+	if err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
 		return common.NewError("update_all_miners_list_failed", err.Error())
 	}
 	return nil
@@ -1256,7 +1256,7 @@ func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 // getDKGMinersList gets dkg miners list
 func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
-	allMinersDKGBytes, err := state.GetTrieNode(DKGMinersKey)
+	raw, err := state.GetTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -1264,75 +1264,74 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 
 		return dkgMiners, nil
 	}
-
-	if err := dkgMiners.Decode(allMinersDKGBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("decode DKGMinersKey failed, err: %v", err)
+	var ok bool
+	if dkgMiners, ok = raw.(*DKGMinerNodes); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return dkgMiners, nil
 }
 
 // updateDKGMinersList update the dkg miners list
 func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
 	logging.Logger.Info("update dkg miners list", zap.Int("len", len(dkgMiners.SimpleNodes)))
-	_, err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
+	err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
 	return err
 }
 
 func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
-	mpksBytes, err := state.GetTrieNode(MinersMPKKey)
+	mpks := block.NewMpks()
+	raw, err := state.GetTrieNode(MinersMPKKey, mpks)
 	if err != nil {
 		return nil, err
 	}
 
-	mpks := block.NewMpks()
-	if err := mpks.Decode(mpksBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode node MinersMPKKey, err: %v", err)
+	var ok bool
+	if mpks, ok = raw.(*block.Mpks); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return mpks, nil
 }
 
 func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
-	_, err := state.InsertTrieNode(MinersMPKKey, mpks)
+	err := state.InsertTrieNode(MinersMPKKey, mpks)
 	return err
 }
 
 func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
-	magicBlockBytes, err := state.GetTrieNode(MagicBlockKey)
+	magicBlock := block.NewMagicBlock()
+	raw, err := state.GetTrieNode(MagicBlockKey, magicBlock)
 	if err != nil {
 		return nil, err
 	}
 
-	magicBlock := block.NewMagicBlock()
-	if err = magicBlock.Decode(magicBlockBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode MagicBlockKey, err: %v", err)
+	var ok bool
+	if magicBlock, ok = raw.(*block.MagicBlock); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return magicBlock, nil
 }
 
 func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) error {
-	_, err := state.InsertTrieNode(MagicBlockKey, magicBlock)
+	err := state.InsertTrieNode(MagicBlockKey, magicBlock)
 	return err
 }
 
 func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
 	var gsos = block.NewGroupSharesOrSigns()
-	groupBytes, err := state.GetTrieNode(GroupShareOrSignsKey)
+	raw, err := state.GetTrieNode(GroupShareOrSignsKey, gsos)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = gsos.Decode(groupBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode GroupShareOrSignKey, err: %v", err)
+	var ok bool
+	if gsos, ok = raw.(*block.GroupSharesOrSigns); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return gsos, nil
 }
 
 func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupSharesOrSigns) error {
-	_, err := state.InsertTrieNode(GroupShareOrSignsKey, gsos)
+	err := state.InsertTrieNode(GroupShareOrSignsKey, gsos)
 	return err
 }
 
@@ -1350,7 +1349,7 @@ func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 }
 
 func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
+	err := state.InsertTrieNode(ShardersKeepKey, sharders)
 	return err
 }
 
@@ -1367,21 +1366,21 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 }
 
 func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(AllShardersKey, sharders)
+	err := state.InsertTrieNode(AllShardersKey, sharders)
 	return err
 }
 
 func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
-	nodesBytes, err := balances.GetTrieNode(key)
+	nodesList := &MinerNodes{}
+	raw, err := balances.GetTrieNode(key, nodesList)
 	if err != nil {
 		return nil, err
 	}
 
-	nodesList := &MinerNodes{}
-	if err = nodesList.Decode(nodesBytes.Encode()); err != nil {
-		return nil, err
+	var ok bool
+	if nodesList, ok = raw.(*MinerNodes); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return nodesList, nil
 }
 

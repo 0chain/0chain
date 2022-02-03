@@ -178,7 +178,7 @@ func (vsc *VestingSmartContract) updateConfig(
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -189,18 +189,6 @@ func (vsc *VestingSmartContract) updateConfig(
 //
 // helpers
 //
-
-func (vsc *VestingSmartContract) getConfigBytes(
-	balances chainstate.StateContextI,
-) (b []byte, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configurations from sc.yaml
 func getConfiguredConfig() (conf *config, err error) {
 	const prefix = "smart_contracts.vestingsc."
@@ -223,11 +211,10 @@ func getConfiguredConfig() (conf *config, err error) {
 	return
 }
 
-func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI,
-) (conf *config, err error) {
-	var confb []byte
-	confb, err = vsc.getConfigBytes(balances)
+func (vsc *VestingSmartContract) getConfig(balances chainstate.StateContextI) (conf *config, err error) {
+	var raw util.Serializable
+	conf = new(config)
+	raw, err = balances.GetTrieNode(scConfigKey(vsc.ID), conf)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -237,9 +224,9 @@ func (vsc *VestingSmartContract) getConfig(
 			return nil, err
 		}
 	} else {
-		conf = new(config)
-		if err = conf.Decode(confb); err != nil {
-			return nil, err
+		var ok bool
+		if conf, ok = raw.(*config); !ok {
+			return nil, fmt.Errorf("unexpected node type")
 		}
 	}
 	return conf, nil

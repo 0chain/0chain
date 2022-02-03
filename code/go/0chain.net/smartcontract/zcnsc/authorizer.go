@@ -190,7 +190,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// delete authorizer node
-	_, err = ctx.DeleteTrieNode(authorizer.GetKey())
+	err = ctx.DeleteTrieNode(authorizer.GetKey())
 	if err != nil {
 		msg := fmt.Sprintf(
 			"failed to delete authorizerID: (%v), node key: (%v), err: %v",

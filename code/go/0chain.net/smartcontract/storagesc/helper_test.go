@@ -320,7 +320,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
 	balances chainState.StateContextI) {
 
-	var _, err = balances.InsertTrieNode(key, val)
+	var err = balances.InsertTrieNode(key, val)
 	require.NoError(t, err)
 }
 
@@ -403,7 +403,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.AllocationRoot = allocRoot
 
 	require.True(t, blobberChall.addChallenge(storChall))
-	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
+	err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
 	return
 }

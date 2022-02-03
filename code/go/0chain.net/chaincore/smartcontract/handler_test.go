@@ -61,16 +61,10 @@ func TestExecuteRestAPI(t *testing.T) {
 	t.Parallel()
 
 	gn := &faucetsc.GlobalNode{}
-	blob := gn.Encode()
 
 	sc := mocks.StateContextI{}
-	sc.On("GetTrieNode", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) util.Serializable {
-			return &util.SecureSerializableValue{Buffer: blob}
-		},
-		func(_ datastore.Key) error {
-			return nil
-		},
+	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*faucetsc.GlobalNode")).Return(
+		gn, nil,
 	)
 
 	type args struct {
@@ -277,25 +271,16 @@ func makeTestStateContextIMock() *mocks.StateContextI {
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*faucetsc.GlobalNode")).Return(
-		func(_ datastore.Key, _ util.Serializable) datastore.Key {
-			return ""
-		},
 		func(_ datastore.Key, _ util.Serializable) error {
 			return nil
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNodes")).Return(
-		func(_ datastore.Key, _ util.Serializable) datastore.Key {
-			return ""
-		},
 		func(_ datastore.Key, _ util.Serializable) error {
 			return nil
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNode")).Return(
-		func(_ datastore.Key, _ util.Serializable) datastore.Key {
-			return ""
-		},
 		func(_ datastore.Key, _ util.Serializable) error {
 			return nil
 		},
@@ -313,19 +298,13 @@ func TestExecuteWithStats(t *testing.T) {
 	smcoi.SmartContract.SmartContractExecutionStats["token refills"] = metrics.NewHistogram(metrics.NilSample{})
 	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
 
-	gn := &faucetsc.GlobalNode{}
-	blob := gn.Encode()
-
 	stateContextIMock := makeTestStateContextIMock()
-	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) util.Serializable {
-			return &util.SecureSerializableValue{Buffer: blob}
-		},
-		func(_ datastore.Key) error {
-			return nil
-		},
+	gn := &faucetsc.GlobalNode{}
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*faucetsc.GlobalNode")).Return(
+		gn, nil)
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNodes")).Return(
+		&minersc.MinerNodes{}, nil,
 	)
-
 	type args struct {
 		smcoi    sci.SmartContractInterface
 		sc       *sci.SmartContract
@@ -385,18 +364,23 @@ func TestExecuteSmartContract(t *testing.T) {
 	t.Parallel()
 
 	gn := &minersc.GlobalNode{}
-	blob := gn.Encode()
 
 	stateContextIMock := makeTestStateContextIMock()
-	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) util.Serializable {
-			return &util.SecureSerializableValue{Buffer: blob}
-		},
-		func(_ datastore.Key) error {
-			return nil
-		},
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.GlobalNode")).Return(
+		gn, nil,
 	)
-
+	gnf := &faucetsc.GlobalNode{}
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*faucetsc.GlobalNode")).Return(
+		gnf, nil,
+	)
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNodes")).Return(
+		&minersc.MinerNodes{}, nil,
+	)
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNode")).Return(
+		&minersc.MinerNode{
+			SimpleNode: &minersc.SimpleNode{},
+		}, nil,
+	)
 	type args struct {
 		ctx      context.Context
 		t        *transaction.Transaction

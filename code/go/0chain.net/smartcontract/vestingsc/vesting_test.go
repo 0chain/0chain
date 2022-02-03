@@ -119,8 +119,6 @@ func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
 		balances = newTestBalances()
 		err      error
 	)
-	_, err = vsc.getPoolBytes(poolKey(vsc.ID, txHash), balances)
-	require.Equal(t, util.ErrValueNotPresent, err)
 	_, err = vsc.getPool(poolKey(vsc.ID, txHash), balances)
 	require.Equal(t, util.ErrValueNotPresent, err)
 	var vp = newVestingPoolFromReqeust(clientID, &addRequest{
@@ -135,12 +133,8 @@ func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
 	vp.ID = poolKey(vsc.ID, txHash)
 	require.NoError(t, vp.save(balances))
 	var (
-		poolb []byte
-		got   *vestingPool
+		got *vestingPool
 	)
-	poolb, err = vsc.getPoolBytes(poolKey(vsc.ID, txHash), balances)
-	require.NoError(t, err)
-	assert.Equal(t, string(vp.Encode()), string(poolb))
 	got, err = vsc.getPool(poolKey(vsc.ID, txHash), balances)
 	require.NoError(t, err)
 	assert.EqualValues(t, vp, got)

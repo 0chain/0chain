@@ -128,7 +128,7 @@ func TestUpdateConfig(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 		prevConf := configureConfig()
-		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(prevConf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(vsc.ID), mock.AnythingOfType("*vestingsc.config")).Return(prevConf, nil).Once()
 		var conf config
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
@@ -155,7 +155,7 @@ func TestUpdateConfig(t *testing.T) {
 			"InsertTrieNode",
 			scConfigKey(vsc.ID),
 			&conf,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return args{
 			vsc:      vsc,

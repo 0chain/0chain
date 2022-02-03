@@ -85,7 +85,7 @@ func (fsa *freeStorageAssigner) Decode(p []byte) error {
 }
 
 func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContextI) error {
-	_, err := balances.InsertTrieNode(freeStorageAssignerKey(sscKey, fsa.ClientId), fsa)
+	err := balances.InsertTrieNode(freeStorageAssignerKey(sscKey, fsa.ClientId), fsa)
 	return err
 }
 
@@ -357,32 +357,23 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	return resp, nil
 }
 
-func (ssc *StorageSmartContract) getFreeStorageAssignerBytes(
-	clientID datastore.Key,
-	balances cstate.StateContextI,
-) ([]byte, error) {
-	var val util.Serializable
-	val, err := balances.GetTrieNode(freeStorageAssignerKey(ssc.ID, clientID))
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 // getWritePool of current client
 func (ssc *StorageSmartContract) getFreeStorageAssigner(
 	clientID datastore.Key,
 	balances cstate.StateContextI,
 ) (*freeStorageAssigner, error) {
 	var err error
-	var aBytes []byte
-	if aBytes, err = ssc.getFreeStorageAssignerBytes(clientID, balances); err != nil {
+
+	fsa := new(freeStorageAssigner)
+	var raw util.Serializable
+	raw, err = balances.GetTrieNode(freeStorageAssignerKey(ssc.ID, clientID), fsa)
+	if err != nil {
 		return nil, err
 	}
 
-	fsa := new(freeStorageAssigner)
-	if err := fsa.Decode(aBytes); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if fsa, ok = raw.(*freeStorageAssigner); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return fsa, nil
 }

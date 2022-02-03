@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -206,18 +207,22 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 	*PhaseNode, error) {
 
 	pn := &PhaseNode{}
-	phaseNodeBytes, err := statectx.GetTrieNode(pn.GetKey())
+	raw, err := statectx.GetTrieNode(pn.GetKey(), pn)
+	if err == util.ErrEncoding {
+		return nil, err
+	}
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
 	}
-	if phaseNodeBytes == nil {
+	if raw == nil {
 		pn.Phase = Start
 		pn.CurrentRound = statectx.GetBlock().Round
 		pn.StartRound = statectx.GetBlock().Round
 		return pn, nil
 	}
-	if err := pn.Decode(phaseNodeBytes.Encode()); err != nil {
-		return nil, err
+	var ok bool
+	if pn, ok = raw.(*PhaseNode); !ok {
+		return nil, errors.New("unexpected node type")
 	}
 	pn.CurrentRound = statectx.GetBlock().Round
 	return pn, nil
@@ -277,7 +282,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		}
 	}
 
-	_, err := balances.InsertTrieNode(pn.GetKey(), pn)
+	err := balances.InsertTrieNode(pn.GetKey(), pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		Logger.DPanic("failed to set phase node -- insert failed",
 			zap.Any("error", err))
@@ -547,7 +552,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 	// dkgMinersList = NewDKGMinerNodes()
-	// _, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
+	// err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
 	// if err != nil {
 	// 	return err
 	// }

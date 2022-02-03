@@ -58,7 +58,7 @@ func (rp *readPool) Decode(p []byte) error {
 func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI) (
 	err error) {
 
-	_, err = balances.InsertTrieNode(readPoolKey(sscKey, clientID), rp)
+	err = balances.InsertTrieNode(readPoolKey(sscKey, clientID), rp)
 	return
 }
 
@@ -245,30 +245,18 @@ func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
 // smart contract methods
 //
 
-// getReadPoolBytes of a client
-func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
-	balances cstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getReadPool of current client
-func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
-	balances cstate.StateContextI) (rp *readPool, err error) {
-
-	var poolb []byte
-	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
+func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key, balances cstate.StateContextI) (rp *readPool, err error) {
+	var raw util.Serializable
+	rp = new(readPool)
+	raw, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID), rp)
+	if err != nil {
 		return
 	}
-	rp = new(readPool)
-	err = rp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+
+	var ok bool
+	if rp, ok = raw.(*readPool); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }
@@ -277,7 +265,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 
-	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
+	_, err = balances.GetTrieNode(readPoolKey(ssc.ID, t.ClientID), nil)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())

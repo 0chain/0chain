@@ -107,7 +107,7 @@ func TestSelectBlobbers(t *testing.T) {
 			sp.Pools[mockPoolId].Balance = mockStatke
 			balances.On(
 				"GetTrieNode",
-				stakePoolKey(ssc.ID, mockBlobberId+strconv.Itoa(i)),
+				stakePoolKey(ssc.ID, mockBlobberId+strconv.Itoa(i)), mock.Anything,
 			).Return(&sp, nil).Once()
 		}
 
@@ -117,7 +117,7 @@ func TestSelectBlobbers(t *testing.T) {
 			MinAllocDuration: confMinAllocDuration,
 			OwnerId:          owner,
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(conf, nil).Once()
 
 		return ssc, sa, sNodes, balances
 	}
@@ -358,13 +358,13 @@ func TestExtendAllocation(t *testing.T) {
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
 				balances.On(
-					"GetTrieNode", stakePoolKey(ssc.ID, mockBlobber.ID),
+					"GetTrieNode", stakePoolKey(ssc.ID, mockBlobber.ID), mock.Anything,
 				).Return(&sp, nil).Once()
 				balances.On(
 					"InsertTrieNode",
 					stakePoolKey(ssc.ID, mockBlobber.ID),
 					mock.Anything,
-				).Return("", nil).Once()
+				).Return(nil).Once()
 			}
 		}
 
@@ -390,25 +390,25 @@ func TestExtendAllocation(t *testing.T) {
 			if i == 0 {
 				sa.addWritePoolOwner(sa.Owner)
 				balances.On(
-					"GetTrieNode", writePoolKey(ssc.ID, sa.Owner),
+					"GetTrieNode", writePoolKey(ssc.ID, sa.Owner), mock.Anything,
 				).Return(&wp, nil).Once()
 				balances.On(
 					"InsertTrieNode", writePoolKey(ssc.ID, sa.Owner), mock.Anything,
-				).Return("", nil).Once()
+				).Return(nil).Once()
 			} else {
 				wpOwner := mockWpOwner + strconv.Itoa(i)
 				sa.addWritePoolOwner(wpOwner)
 				balances.On(
-					"GetTrieNode", writePoolKey(ssc.ID, wpOwner),
+					"GetTrieNode", writePoolKey(ssc.ID, wpOwner), mock.Anything,
 				).Return(&wp, nil).Once()
 				balances.On(
 					"InsertTrieNode", writePoolKey(ssc.ID, wpOwner), mock.Anything,
-				).Return("", nil).Once()
+				).Return(nil).Once()
 			}
 		}
 
 		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, sa.ID),
+			"GetTrieNode", challengePoolKey(ssc.ID, sa.ID), mock.Anything,
 		).Return(newChallengePool(), nil).Once()
 		balances.On(
 			"InsertTrieNode", challengePoolKey(ssc.ID, sa.ID),
@@ -422,7 +422,7 @@ func TestExtendAllocation(t *testing.T) {
 					float64(sa.durationInTimeUnits(args.request.Expiration))
 				return cp.Balance/10 == state.Balance(newFunds/10) // ignore type cast errors
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return ssc, &txn, sa, blobbers, balances
 	}
@@ -531,7 +531,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	alloc.Expiration = 1050
 	alloc.Owner = clientID
 	alloc.OwnerPublicKey = clientPk
-	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	require.NoError(t, err)
 	var got *StorageAllocation
 	got, err = ssc.getAllocation(allocID, balances)
@@ -585,7 +585,7 @@ func TestTransferAllocation(t *testing.T) {
 		for _, curator := range p.existingCurators {
 			sa.Curators = append(sa.Curators, curator)
 		}
-		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(&sa, nil).Once()
+		balances.On("GetTrieNode", sa.GetKey(ssc.ID), mock.Anything).Return(&sa, nil).Once()
 
 		var wp writePool
 		if p.existingWPForAllocation || p.existingNoiseWPools > 0 {
@@ -595,9 +595,9 @@ func TestTransferAllocation(t *testing.T) {
 			if p.existingWPForAllocation {
 				wp.Pools.add(&allocationPool{AllocationID: p.info.AllocationId})
 			}
-			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(&wp, nil).Twice()
+			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId), mock.Anything).Return(&wp, nil).Twice()
 		} else {
-			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(
+			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId), mock.Anything).Return(
 				nil, util.ErrValueNotPresent).Twice()
 		}
 
@@ -611,7 +611,7 @@ func TestTransferAllocation(t *testing.T) {
 				_, ok := wp.Pools.get(p.info.AllocationId)
 				return ok
 
-			})).Return("", nil).Once()
+			})).Return(nil).Once()
 
 		balances.On(
 			"InsertTrieNode",
@@ -625,7 +625,7 @@ func TestTransferAllocation(t *testing.T) {
 				return sa.ID == p.info.AllocationId &&
 					sa.Owner == p.info.NewOwnerId &&
 					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
-			})).Return("", nil).Once()
+			})).Return(nil).Once()
 
 		var oldClientAlloc = ClientAllocation{
 			ClientID: mockOldOwner,
@@ -635,7 +635,7 @@ func TestTransferAllocation(t *testing.T) {
 		}
 		oldClientAlloc.Allocations.List.add(p.info.AllocationId)
 		balances.On(
-			"GetTrieNode", oldClientAlloc.GetKey(ssc.ID),
+			"GetTrieNode", oldClientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return(&oldClientAlloc, nil).Once()
 		balances.On(
 			"InsertTrieNode",
@@ -643,14 +643,14 @@ func TestTransferAllocation(t *testing.T) {
 			mock.MatchedBy(func(ca *ClientAllocation) bool {
 				return ca.ClientID == mockOldOwner &&
 					len(ca.Allocations.List) == 0
-			})).Return("", nil).Once()
+			})).Return(nil).Once()
 
 		var newClientAlloc = ClientAllocation{
 			ClientID:    p.info.NewOwnerId,
 			Allocations: &Allocations{},
 		}
 		balances.On(
-			"GetTrieNode", newClientAlloc.GetKey(ssc.ID),
+			"GetTrieNode", newClientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return(&newClientAlloc, nil).Once()
 		balances.On(
 			"InsertTrieNode",
@@ -659,7 +659,7 @@ func TestTransferAllocation(t *testing.T) {
 				_, ok := ca.Allocations.List.getIndex(p.info.AllocationId)
 				return ca.ClientID == p.info.NewOwnerId &&
 					len(ca.Allocations.List) == 1 && ok
-			})).Return("", nil).Once()
+			})).Return(nil).Once()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -824,7 +824,7 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 	// create stake pools
 	for _, b := range blobbers {
 		var sp = newStakePool()
-		_, err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+		err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
 		require.NoError(t, err)
 	}
 	// add the offers
@@ -987,7 +987,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	conf.MinAllocSize = 20 * GB
 	conf.TimeUnit = 2 * time.Minute
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	// 1.
@@ -997,7 +997,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// setup unhealthy blobbers
 	var allBlobbers = newTestAllBlobbers()
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
 	// 3.
@@ -1055,7 +1055,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	// make the blobbers health
 	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
 	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
@@ -1080,7 +1080,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	allBlobbers.Nodes[0].Used = 5 * GB
 	allBlobbers.Nodes[1].Used = 10 * GB
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
 	tx.Value = 400
@@ -1091,7 +1091,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	allBlobbers.Nodes[0].Used = 5 * GB
 	allBlobbers.Nodes[1].Used = 10 * GB
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
 	balances.balances[clientID] = 1100
@@ -1285,13 +1285,13 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
 
 	allBlobbers = newTestAllBlobbers()
 	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
 	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
@@ -1320,7 +1320,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	allBlobbers.Nodes[0].Used = 5 * GB
 	allBlobbers.Nodes[1].Used = 10 * GB
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
 	balances.(*testBalances).balances[clientID] = 1100
@@ -1854,9 +1854,9 @@ func Test_preferred_blobbers(t *testing.T) {
 			var all, err = ssc.getBlobbersList(balances)
 			require.NoError(t, err)
 			all.Nodes.update(b)
-			_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
+			err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
 			require.NoError(t, err)
-			_, err = balances.InsertTrieNode(b.GetKey(ssc.ID), b)
+			err = balances.InsertTrieNode(b.GetKey(ssc.ID), b)
 			require.NoError(t, err)
 		}
 

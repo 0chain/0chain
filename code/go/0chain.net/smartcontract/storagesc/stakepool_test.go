@@ -187,7 +187,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -203,7 +202,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			ID: storageScId,
 		},
 	}
-	_, err := ctx.InsertTrieNode(scConfigKey(ssc.ID), scYaml)
+	err := ctx.InsertTrieNode(scConfigKey(ssc.ID), scYaml)
 	require.NoError(t, err)
 	var spr = &stakePoolRequest{
 		BlobberID: blobberId,

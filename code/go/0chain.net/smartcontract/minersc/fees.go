@@ -177,7 +177,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		if mn.Delete {
 			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
-			if _, err := balances.DeleteTrieNode(mn.GetKey()); err != nil {
+			if err := balances.DeleteTrieNode(mn.GetKey()); err != nil {
 				return fmt.Errorf("deleting miner node: %v", err)
 			}
 			minerDelete = true
@@ -244,14 +244,14 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	if minerDelete {
-		if _, err = balances.InsertTrieNode(AllMinersKey, miners); err != nil {
+		if err = balances.InsertTrieNode(AllMinersKey, miners); err != nil {
 			return common.NewErrorf("view_change_pools_work",
 				"failed saving all miners list: %v", err)
 		}
 	}
 
 	if sharderDelete {
-		if _, err = balances.InsertTrieNode(AllShardersKey, sharders); err != nil {
+		if err = balances.InsertTrieNode(AllShardersKey, sharders); err != nil {
 			return common.NewErrorf("view_change_pools_work",
 				"failed saving all sharder list: %v", err)
 		}

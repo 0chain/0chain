@@ -32,6 +32,7 @@ var (
 	// ErrValueNotPresent - error indicating given path is not present in the
 	// db.
 	ErrValueNotPresent = errors.New("value not present")
+	ErrEncoding        = errors.New("encoding error")
 )
 
 // global node db version

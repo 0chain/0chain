@@ -43,7 +43,7 @@ func AddMockAllocations(
 		sa := addMockAllocation(
 			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators,
 		)
-		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
+		err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
 			panic(err)
 		}
@@ -52,7 +52,7 @@ func AddMockAllocations(
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(sscId, sa.ID)
 		cp.Balance = mockMinLockDemand * 100
-		_, err = balances.InsertTrieNode(challengePoolKey(sscId, sa.ID), cp)
+		err = balances.InsertTrieNode(challengePoolKey(sscId, sa.ID), cp)
 
 		startClients := i % len(clients)
 		amountPerBlobber := state.Balance(100 * 1e10)
@@ -99,11 +99,11 @@ func AddMockAllocations(
 		}
 	}
 	for i := 0; i < len(wps); i++ {
-		_, err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i])
+		err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i])
 		if err != nil {
 			panic(err)
 		}
-		_, err = balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i])
+		err = balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i])
 		if err != nil {
 			panic(err)
 		}
@@ -114,10 +114,10 @@ func AddMockAllocations(
 		for _, pool := range rps[i].Pools {
 			fp = append(fp, pool.ID)
 		}
-		_, _ = balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp)
+		_ = balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp)
 	}
 	for i, fp := range fps {
-		_, err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp)
+		err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp)
 		if err != nil {
 			panic(err)
 		}
@@ -125,7 +125,7 @@ func AddMockAllocations(
 
 	for _, ca := range cas {
 		if ca != nil {
-			_, err := balances.InsertTrieNode(ca.GetKey(ADDRESS), ca)
+			err := balances.InsertTrieNode(ca.GetKey(ADDRESS), ca)
 			if err != nil {
 				panic(err)
 			}
@@ -135,13 +135,13 @@ func AddMockAllocations(
 		if len(ch.Challenges) > 0 {
 			ch.LatestCompletedChallenge = ch.Challenges[0]
 		}
-		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
+	err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
 	if err != nil {
 		panic(err)
 	}
@@ -291,7 +291,7 @@ func AddMockBlobbers(
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
+		err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
 		if err != nil {
 			panic(err)
 		}
@@ -321,7 +321,7 @@ func AddMockBlobbers(
 			}
 		}
 	}
-	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+	err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
 	if err != nil {
 		panic(err)
 	}
@@ -345,7 +345,7 @@ func AddMockValidators(
 			PublicKey:         publicKeys[i],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
-		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
+		err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
 		if err != nil {
 			panic(err)
 		}
@@ -408,7 +408,7 @@ func GetMockStakePools(
 	}.ID
 	for cId, usp := range usps {
 		if usp != nil {
-			_, err := balances.InsertTrieNode(userStakePoolsKey(sscId, clients[cId]), usp)
+			err := balances.InsertTrieNode(userStakePoolsKey(sscId, clients[cId]), usp)
 			if err != nil {
 				panic(err)
 			}
@@ -478,7 +478,7 @@ func AddMockFreeStorageAssigners(
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	for i := 0; i < viper.GetInt(sc.NumFreeStorageAssigners); i++ {
-		_, err := balances.InsertTrieNode(
+		err := balances.InsertTrieNode(
 			freeStorageAssignerKey(sscId, clients[i]),
 			&freeStorageAssigner{
 				ClientId:           clients[i],
@@ -498,7 +498,7 @@ func AddMockFreeStorageAssigners(
 func AddMockStats(
 	balances cstate.StateContextI,
 ) {
-	_, _ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
+	_ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1000,
 			NumWrites:                 1000,
@@ -533,7 +533,7 @@ func AddMockWriteRedeems(
 			commitRead := &ReadConnection{
 				ReadMarker: &rm,
 			}
-			_, err := balances.InsertTrieNode(commitRead.GetKey(ADDRESS), commitRead)
+			err := balances.InsertTrieNode(commitRead.GetKey(ADDRESS), commitRead)
 			if err != nil {
 				panic(err)
 			}
@@ -665,7 +665,7 @@ func SetMockConfig(
 	conf.BlockReward = &blockReward{}
 	conf.ExposeMpt = true
 
-	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	var err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
 	}

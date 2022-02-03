@@ -35,7 +35,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID))
+	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID), nil)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("add_validator_failed",

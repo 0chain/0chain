@@ -147,7 +147,7 @@ func saveWallets(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 			balance := state.Balance(w.Balance)
 			s := state.State{Balance: balance}
 			s.SetTxnHash(strings.Repeat("00", 32))
-			if _, err := mpt.Insert(util.Path(w.ClientID), &s); err != nil {
+			if err := mpt.Insert(util.Path(w.ClientID), &s); err != nil {
 				panic(err)
 			}
 			_, err := getState(mpt, w.ClientID)
@@ -179,7 +179,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 		value := prng.Int63n(wf.Balance)
 		if wf.Balance == 0 {
 			if mpt != nil {
-				if _, err := mpt.Delete(util.Path(wf.ClientID)); err != nil {
+				if err := mpt.Delete(util.Path(wf.ClientID)); err != nil {
 					panic(err)
 				}
 			}
@@ -190,7 +190,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 					panic(err)
 				}
 				s.Balance -= state.Balance(value)
-				if _, err := mpt.Insert(util.Path(wf.ClientID), s); err != nil {
+				if err := mpt.Insert(util.Path(wf.ClientID), s); err != nil {
 					panic(err)
 				}
 				wf.Balance = int64(s.Balance)
@@ -205,7 +205,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 				panic(err)
 			}
 			s.Balance += state.Balance(value)
-			if _, err := mpt.Insert(util.Path(wt.ClientID), s); err != nil {
+			if err := mpt.Insert(util.Path(wt.ClientID), s); err != nil {
 				panic(err)
 			}
 			wt.Balance = int64(s.Balance)
@@ -244,7 +244,7 @@ func createWallets(num int) []*Wallet {
 }
 
 func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
-	ss, err := mpt.GetNodeValue(util.Path(clientID))
+	ss, err := mpt.GetNodeValue(util.Path(clientID), nil)
 	if err != nil {
 		return nil, err
 	}

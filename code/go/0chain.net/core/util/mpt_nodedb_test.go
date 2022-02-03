@@ -1304,7 +1304,7 @@ func TestMemoryNodeDB_Validate(t *testing.T) {
 				mpt := NewMerklePatriciaTrie(mndb, 1, nil)
 
 				n := NewFullNode(&AState{balance: 2})
-				_, err := mpt.Insert(n.GetHashBytes(), n)
+				err := mpt.Insert(n.GetHashBytes(), n)
 				require.NoError(t, err)
 
 				return fields{

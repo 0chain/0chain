@@ -74,7 +74,7 @@ func (usp *userStakePools) Decode(p []byte) error {
 func (usp *userStakePools) save(scKey, clientID datastore.Key,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(userStakePoolsKey(scKey, clientID), usp)
+	err = balances.InsertTrieNode(userStakePoolsKey(scKey, clientID), usp)
 	return
 }
 
@@ -82,7 +82,7 @@ func (usp *userStakePools) save(scKey, clientID datastore.Key,
 func (usp *userStakePools) remove(scKey, clientID datastore.Key,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.DeleteTrieNode(userStakePoolsKey(scKey, clientID))
+	err = balances.DeleteTrieNode(userStakePoolsKey(scKey, clientID))
 	return
 }
 
@@ -219,7 +219,7 @@ func (sp *stakePool) offersStake(now common.Timestamp, dry bool) (
 func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
+	err = balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
 	return
 }
 
@@ -767,31 +767,20 @@ func (stat *stakePoolStat) decode(input []byte) error {
 
 // user stake pools (e.g. user delegate pools)
 //
-
-// getUserStakePoolBytes of a client
-func (ssc *StorageSmartContract) getUserStakePoolBytes(clientID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(userStakePoolsKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getUserStakePool of given client
 func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
 	balances chainstate.StateContextI) (usp *userStakePools, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getUserStakePoolBytes(clientID, balances); err != nil {
+	var raw util.Serializable
+	usp = newUserStakePools()
+	raw, err = balances.GetTrieNode(userStakePoolsKey(ssc.ID, clientID), usp)
+	if err != nil {
 		return
 	}
-	usp = newUserStakePools()
-	err = usp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+
+	var ok bool
+	if usp, ok = raw.(*userStakePools); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }
@@ -801,8 +790,7 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 	clientID datastore.Key, balances chainstate.StateContextI) (
 	usp *userStakePools, err error) {
 
-	var poolb []byte
-	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
+	usp, err = ssc.getUserStakePool(clientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return
 	}
@@ -811,38 +799,26 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 		return newUserStakePools(), nil
 	}
 
-	usp = newUserStakePools()
-	err = usp.Decode(poolb)
 	return
 }
 
 // blobber's and validator's stake pool
 //
 
-// getStakePoolBytes of a blobber
-func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
+	var raw util.Serializable
+	sp = newStakePool()
+	raw, err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID), sp)
+	if err != nil {
 		return
 	}
-	sp = newStakePool()
-	err = sp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+
+	var ok bool
+	if sp, ok = raw.(*stakePool); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }
@@ -963,7 +939,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	}
 
 	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"saving configurations: %v", err)
@@ -1033,7 +1009,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	conf.Minted += info.minted
 
 	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving configuration: %v", err)
@@ -1122,7 +1098,7 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 	conf.Minted += info.minted
 
 	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"saving configurations: "+err.Error())

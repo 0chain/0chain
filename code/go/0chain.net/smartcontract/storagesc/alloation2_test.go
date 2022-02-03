@@ -351,12 +351,31 @@ func testCancelAllocation(
 	wpBalance state.Balance,
 	thisExpires, now common.Timestamp,
 ) error {
+	var bs sortedBlobbers
+	for _, b := range blobbers {
+		s := &StorageNode{}
+		s.Decode(b.Encode())
+		bs.add(s)
+	}
+
+	var stakes [][]mockStakePool
+	for _, k := range bStakes {
+		var s []mockStakePool
+		for _, ss := range k {
+			s = append(s, mockStakePool{
+				zcnAmount: ss.zcnAmount,
+				MintAt:    ss.MintAt,
+			})
+		}
+		stakes = append(stakes, s)
+	}
+
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
 		scYaml:               scYaml,
-		allocation:           sAllocation,
-		blobbers:             blobbers,
-		bStakes:              bStakes,
+		allocation:           *sAllocation.deepCopy(t),
+		blobbers:             bs,
+		bStakes:              stakes,
 		challengePoolBalance: challengePoolBalance,
 		now:                  now,
 		challengeCreation:    challenges,
@@ -380,11 +399,18 @@ func testCancelAllocation(
 				Created:      created,
 			})
 		}
-		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
+		err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
 		require.NoError(t, err)
 	}
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
+	raw, err := ssc.getAllAllocationsList(ctx)
+	if err != nil {
+		return err
+	}
+	allAllocationsBefore := &Allocations{}
+	for _, a := range raw.List {
+		allAllocationsBefore.List.add(a)
+	}
 
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {
@@ -443,6 +469,10 @@ func testFinalizeAllocation(
 	)
 
 	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
+	if err != nil {
+		return err
+	}
+	i := len(allAllocationsBefore.List)
 
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
@@ -452,7 +482,7 @@ func testFinalizeAllocation(
 
 	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
 	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
+	require.EqualValues(t, i-1, len(allAllocationsAfter.List))
 
 	var newScYaml = &scConfig{}
 	newScYaml, err = ssc.getConfig(ctx, false)
@@ -637,7 +667,6 @@ func setupMocksFinishAllocation(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -655,12 +684,12 @@ func setupMocksFinishAllocation(
 	}
 
 	sAllocation.WritePoolOwners = []string{sAllocation.Owner}
-	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
+	err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
 
 	var allications = Allocations{}
 	allications.List.add(sAllocation.ID)
-	_, err = ctx.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allications)
+	err = ctx.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allications)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{
@@ -709,7 +738,7 @@ func setupMocksFinishAllocation(
 
 	var blobberList = new(StorageNodes)
 	blobberList.Nodes = blobbers
-	_, err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
+	err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
 	require.NoError(t, err)
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
@@ -733,11 +762,11 @@ func setupMocksFinishAllocation(
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
 		require.NoError(t, sp.save(ssc.ID, blobber.ID, ctx))
 
-		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 		require.NoError(t, err)
 	}
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
 	var request = lockRequest{
@@ -919,11 +948,19 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	scYaml scConfig, blobberYaml mockBlobberYaml, stakes blobberStakes,
 ) (err error) {
 	require.EqualValues(t, len(blobbers), len(stakes))
+
+	var bs sortedBlobbers
+	for _, b := range blobbers {
+		s := &StorageNode{}
+		s.Decode(b.Encode())
+		bs.add(s)
+	}
+
 	var f = formulaeCommitNewAllocation{
 		scYaml:      scYaml,
 		blobberYaml: blobberYaml,
 		request:     request,
-		blobbers:    blobbers,
+		blobbers:    bs,
 		stakes:      stakes,
 	}
 
@@ -940,7 +977,6 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -962,7 +998,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 
 	var blobberList = new(StorageNodes)
 	blobberList.Nodes = blobbers
-	_, err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
+	err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
 	require.NoError(t, err)
 
 	for i, blobber := range blobbers {
@@ -975,7 +1011,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	var wPool = writePool{}
 	require.NoError(t, wPool.save(ssc.ID, clientId, ctx))
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
 	_, err = ssc.newAllocationRequest(txn, input, ctx)

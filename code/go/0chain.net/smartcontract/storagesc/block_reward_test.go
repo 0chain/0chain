@@ -95,7 +95,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			},
 		}
 		conf.BlockReward.setWeightsFromRatio(p.sharderRatio, p.minerRatio, p.blobberCapacityRatio, p.blobberUsageRatio)
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(conf, nil).Once()
 		if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 ||
 			conf.BlockReward.BlockReward == 0 {
 			return ssc, balances
@@ -151,9 +151,9 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 					Minter: ADDRESS, ToClientID: id, Amount: reward.serviceChargeUsage,
 				}).Return(nil)
 			}
-			balances.On("GetTrieNode", stakePoolKey(ssc.ID, id)).Return(&sPool, nil).Once()
+			balances.On("GetTrieNode", stakePoolKey(ssc.ID, id), mock.Anything).Return(&sPool, nil).Once()
 		}
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(blobbers, nil).Once()
+		balances.On("GetTrieNode", ALL_BLOBBERS_KEY, mock.Anything).Return(blobbers, nil).Once()
 
 		for i, sPool := range sPools {
 			i := i
@@ -182,10 +182,10 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 						sp.Settings.DelegateWallet == sPool.Settings.DelegateWallet
 
 				}),
-			).Return("", nil).Once()
+			).Return(nil).Once()
 		}
 		conf.Minted += zcnToBalance(p.blockReward)
-		balances.On("InsertTrieNode", scConfigKey(ssc.ID), conf).Return("", nil).Once()
+		balances.On("InsertTrieNode", scConfigKey(ssc.ID), conf).Return(nil).Once()
 		return ssc, balances
 	}
 

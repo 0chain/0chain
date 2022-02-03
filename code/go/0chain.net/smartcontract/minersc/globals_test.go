@@ -62,7 +62,7 @@ func TestUpdateGlobals(t *testing.T) {
 		var txn = &transaction.Transaction{
 			ClientID: p.client,
 		}
-		balances.On("GetTrieNode", GLOBALS_KEY).Return(&GlobalSettings{
+		balances.On("GetTrieNode", GLOBALS_KEY, mock.AnythingOfType("*minersc.GlobalSettings")).Return(&GlobalSettings{
 			Fields: make(map[string]string),
 		}, nil).Once()
 		balances.On(
@@ -76,7 +76,7 @@ func TestUpdateGlobals(t *testing.T) {
 				}
 				return true
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return args{
 			msc:      msc,

@@ -76,15 +76,15 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 
 		wp *writePool
 
-		b, err = ssc.getWritePoolBytes(clientID, balances)
+		b, err = ssc.getWritePool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	wp = new(writePool)
 	require.NoError(t, wp.save(ssc.ID, clientID, balances))
-	b, err = ssc.getWritePoolBytes(clientID, balances)
+	b, err = ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, wp.Encode(), b)
+	assert.EqualValues(t, wp, b)
 }
 
 func TestStorageSmartContract_getWritePool(t *testing.T) {
@@ -115,7 +115,7 @@ func testSetWritePoolConfig(t *testing.T, wpc *writePoolConfig,
 		err  error
 	)
 	conf.WritePool = wpc
-	_, err = balances.InsertTrieNode(scConfigKey(sscID), &conf)
+	err = balances.InsertTrieNode(scConfigKey(sscID), &conf)
 	require.NoError(t, err)
 }
 
@@ -164,7 +164,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	}, balances, ssc.ID)
 
 	var fp fundedPools = []string{client.id}
-	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
+	err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
 
 	var alloc = StorageAllocation{
 		ID: allocID,

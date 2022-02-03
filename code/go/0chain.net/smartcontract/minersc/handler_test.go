@@ -39,7 +39,7 @@ func TestConfigHandler(t *testing.T) {
 		var msc = &MinerSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
-		balances.On("GetTrieNode", GlobalNodeKey).Return(
+		balances.On("GetTrieNode", GlobalNodeKey, mock.AnythingOfType("*minersc.GlobalNode")).Return(
 			nil, util.ErrValueNotPresent,
 		).Once()
 

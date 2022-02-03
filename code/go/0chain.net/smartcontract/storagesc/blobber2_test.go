@@ -9,7 +9,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -247,7 +246,6 @@ func testCommitBlobberRead(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -298,7 +296,7 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 	var input = readConection.Encode()
 
-	_, err = ctx.InsertTrieNode(readConection.GetKey(ssc.ID), lastReadConnection)
+	err = ctx.InsertTrieNode(readConection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
 	var storageAllocation = &StorageAllocation{
 		ID:                      allocationId,
@@ -315,7 +313,7 @@ func testCommitBlobberRead(
 		},
 		Owner: payerId,
 	}
-	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
+	err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 
 	var rPool = readPool{
 		Pools: []*allocationPool{},
@@ -371,7 +369,7 @@ func testCommitBlobberRead(
 
 	ss := &StorageStats{}
 	ss.Stats = &StorageAllocationStats{}
-	_, err = ctx.InsertTrieNode(ss.GetKey(ssc.ID), ss)
+	err = ctx.InsertTrieNode(ss.GetKey(ssc.ID), ss)
 	require.NoError(t, err)
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
@@ -387,7 +385,7 @@ func testCommitBlobberRead(
 
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := ctx.GetTrieNode(stats.GetKey(ssc.ID))
+	statsBytes, err := ctx.GetTrieNode(stats.GetKey(ssc.ID), nil)
 	require.NoError(t, err)
 	require.NotNil(t, statsBytes)
 	require.NoError(t, stats.Decode(statsBytes.Encode()))

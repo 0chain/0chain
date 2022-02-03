@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
@@ -29,25 +28,28 @@ func (il *itemList) Decode(b []byte) error {
 }
 
 func (il *itemList) save(balances state.StateContextI) error {
-	_, err := balances.InsertTrieNode(il.Key, il)
+	err := balances.InsertTrieNode(il.Key, il)
 	return err
 }
 
-func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
-	val, err := balances.GetTrieNode(key)
+func getItemList(key datastore.Key, balances state.StateContextI) (*itemList, error) {
+	var il *itemList
+	raw, err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return err
+			return nil, err
 		}
 		il = &itemList{
 			Key: key,
 		}
+		return il, nil
 	}
-	if err := il.Decode(val.Encode()); err != nil {
-		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if il, ok = raw.(*itemList); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	il.Key = key
-	return nil
+	return il, nil
 }
 
 func (il *itemList) add(it PartitionItem) {

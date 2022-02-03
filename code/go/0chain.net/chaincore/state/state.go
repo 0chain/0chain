@@ -85,14 +85,3 @@ func (s *State) SetTxnHash(txnHash string) error {
 	s.TxnHashBytes = hashBytes
 	return nil
 }
-
-//Deserializer - a deserializer to convert raw serialized data to a state object
-type Deserializer struct {
-}
-
-//Deserialize - implement interface
-func (bd *Deserializer) Deserialize(sv util.Serializable) util.Serializable {
-	s := &State{}
-	s.Decode(sv.Encode())
-	return s
-}

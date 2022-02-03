@@ -55,7 +55,7 @@ func TestUpdateSettings(t *testing.T) {
 
 		var oldChanges smartcontract.StringMap
 		oldChanges.Fields = p.previousMap
-		balances.On("GetTrieNode", settingChangesKey).Return(&oldChanges, nil).Once()
+		balances.On("GetTrieNode", settingChangesKey, mock.Anything).Return(&oldChanges, nil).Once()
 
 		for key, value := range p.inputMap {
 			oldChanges.Fields[key] = value
@@ -83,12 +83,12 @@ func TestUpdateSettings(t *testing.T) {
 				}
 				return true
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		var conf = &scConfig{
 			OwnerId: owner,
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(conf, nil).Once()
 
 		return args{
 			ssc:      ssc,
@@ -214,8 +214,8 @@ func TestCommitSettingChanges(t *testing.T) {
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(&scConfig{OwnerId: owner}, nil).Once()
-		balances.On("GetTrieNode", settingChangesKey).Return(&smartcontract.StringMap{
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(&scConfig{OwnerId: owner}, nil).Once()
+		balances.On("GetTrieNode", settingChangesKey, mock.Anything).Return(&smartcontract.StringMap{
 			Fields: p.inputMap,
 		}, nil).Once()
 
@@ -292,7 +292,7 @@ func TestCommitSettingChanges(t *testing.T) {
 				}
 				return true
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return args{
 			ssc:      ssc,

@@ -19,7 +19,7 @@ func AddMockWallets(
 			SignerThresholdIDs: clients[:MaxSigners],
 			NumRequired:        MaxSigners,
 		}
-		_, err := balances.InsertTrieNode(getWalletKey(clients[i]), &wallet)
+		err := balances.InsertTrieNode(getWalletKey(clients[i]), &wallet)
 		if err != nil {
 			panic(err)
 		}

@@ -34,7 +34,7 @@ func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer        
 func (sc *mockStateContext) Validate() error                                           { return nil }
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) error                      { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
@@ -63,13 +63,13 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, templ util.Serializable) (util.Serializable, error) {
 	return sc.store[key], nil
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) error {
 	sc.store[key] = node
-	return key, nil
+	return nil
 }
 
 func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {

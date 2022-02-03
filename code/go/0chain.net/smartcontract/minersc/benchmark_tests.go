@@ -59,7 +59,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 			CurrentRound: 2,
 			Restarts:     0,
 		}
-		_, err := balances.InsertTrieNode(pn.GetKey(), &pn)
+		err := balances.InsertTrieNode(pn.GetKey(), &pn)
 		if err != nil {
 			panic(err)
 		}

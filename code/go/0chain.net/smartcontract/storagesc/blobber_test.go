@@ -44,7 +44,7 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	var all *StorageNodes
 	all, err = ssc.getBlobbersList(balances)
 	require.NoError(t, err)
-	require.Len(t, all.Nodes, 0)
+	require.Len(t, all.Nodes, 1)
 
 	// reborn
 	b.Capacity = 2 * GB
@@ -939,7 +939,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	tp += 100
@@ -1086,7 +1086,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			alloc.Stats = new(StorageAllocationStats)
 		}
 		alloc.Stats.OpenChallenges = 50 // just a non-zero number
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(t, err)
 
 		tp += exp // expire the allocation
@@ -1171,7 +1171,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	conf.FailedChallengesToCancel = 10
 	conf.FailedChallengesToRevokeMinLock = 5
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	tp += 100
@@ -1317,7 +1317,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			alloc.Stats = new(StorageAllocationStats)
 		}
 		alloc.Stats.OpenChallenges = 50 // just a non-zero number
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(t, err)
 
 		tp += 10 // a not expired allocation to cancel
@@ -1412,7 +1412,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 
 	conf.StakePool.MinLock = 1
 	conf.MinAllocSize = 10 * MB
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	// terms, capacity ranges

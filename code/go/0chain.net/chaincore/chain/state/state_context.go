@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"sync"
 
 	"0chain.net/chaincore/block"
@@ -41,10 +42,10 @@ type StateContextI interface {
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
-	SetStateContext(st *state.State) error                    // cannot use in smart contracts or REST endpoints
-	GetTrieNode(key datastore.Key) (util.Serializable, error) // Can use in REST endpoints
-	InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error)
-	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
+	SetStateContext(st *state.State) error                                             // cannot use in smart contracts or REST endpoints
+	GetTrieNode(key datastore.Key, templ util.Serializable) (util.Serializable, error) // Can use in REST endpoints
+	InsertTrieNode(key datastore.Key, node util.Serializable) error
+	DeleteTrieNode(key datastore.Key) error
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
 	AddMint(m *state.Mint) error
@@ -82,7 +83,6 @@ type StateContext struct {
 func NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
-	csd state.DeserializerI,
 	t *transaction.Transaction,
 	getSharderFunc func(*block.Block) []string,
 	getLastestFinalizedMagicBlock func() *block.Block,
@@ -95,7 +95,6 @@ func NewStateContext(
 	return &StateContext{
 		block:                         b,
 		state:                         s,
-		clientStateDeserializer:       csd,
 		txn:                           t,
 		getSharders:                   getSharderFunc,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
@@ -248,16 +247,18 @@ func (sc *StateContext) Validate() error {
 func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s := &state.State{}
 	s.Balance = state.Balance(0)
-	ss, err := sc.state.GetNodeValue(util.Path(clientID))
+	ss, err := sc.state.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return s, err
 	}
-	s = sc.clientStateDeserializer.Deserialize(ss).(*state.State)
+	if val, ok := ss.(*state.State); ok {
+		return val, nil
+	}
 	//TODO: should we apply the pending transfers?
-	return s, nil
+	return s, errors.New("bad state returned type from MPT")
 }
 
 //GetClientBalance - get the balance of the client
@@ -285,21 +286,21 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return sc.getSignature()
 }
 
-func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
+func (sc *StateContext) GetTrieNode(key datastore.Key, templ util.Serializable) (util.Serializable, error) {
 	key_hash := encryption.Hash(key)
-	return sc.state.GetNodeValue(util.Path(key_hash))
+	return sc.state.GetNodeValue(util.Path(key_hash), templ)
 }
 
-func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) error {
 	key_hash := encryption.Hash(key)
-	byteKey, err := sc.state.Insert(util.Path(key_hash), node)
-	return datastore.Key(byteKey), err
+	err := sc.state.Insert(util.Path(key_hash), node)
+	return err
 }
 
-func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+func (sc *StateContext) DeleteTrieNode(key datastore.Key) error {
 	key_hash := encryption.Hash(key)
-	byteKey, err := sc.state.Delete(util.Path(key_hash))
-	return datastore.Key(byteKey), err
+	err := sc.state.Delete(util.Path(key_hash))
+	return err
 }
 
 //SetStateContext - set the state context

@@ -302,7 +302,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 					t.Errorf("wrong balance for %v: now %v : should %v", tt.args.t.ToClientID, stateBalance, balance)
 				}
 
-				savedGNode, err := tt.args.balances.GetTrieNode(tt.args.gn.getKey())
+				savedGNode, err := tt.args.balances.GetTrieNode(tt.args.gn.getKey(), nil)
 				if err != nil {
 					t.Errorf("can not fetch already saved global node")
 				}
@@ -310,7 +310,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 					t.Errorf("wrong saved node")
 				}
 
-				savedUNode, err := tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID))
+				savedUNode, err := tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID), nil)
 				if err != nil {
 					t.Errorf("can not fetch already saved user node")
 				}

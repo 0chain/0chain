@@ -58,7 +58,7 @@ func (wp *writePool) Decode(p []byte) error {
 func (wp *writePool) save(sscKey, clientID string,
 	balances chainState.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(writePoolKey(sscKey, clientID), wp)
+	err = balances.InsertTrieNode(writePoolKey(sscKey, clientID), wp)
 	return
 }
 
@@ -139,31 +139,19 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 //
 // smart contract methods
 //
-
-// getWritePoolBytes of a client
-func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	balances chainState.StateContextI) (wp *writePool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
+	wp = new(writePool)
+	var raw util.Serializable
+	raw, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
+	if err != nil {
 		return
 	}
-	wp = new(writePool)
-	err = wp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if wp, ok = raw.(*writePool); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }
@@ -363,7 +351,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	// save new linked allocation pool
-	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("write_pool_lock_failed",
 			"saving allocation: %v", err)

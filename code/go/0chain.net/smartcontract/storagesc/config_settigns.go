@@ -614,7 +614,7 @@ func (ssc *StorageSmartContract) updateSettings(
 		updateChanges.Fields[key] = value
 	}
 
-	_, err = balances.InsertTrieNode(settingChangesKey, updateChanges)
+	err = balances.InsertTrieNode(settingChangesKey, updateChanges)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
@@ -650,7 +650,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 		return "", common.NewError("update_settings", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
@@ -659,18 +659,18 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 }
 
 func getSettingChanges(balances cstate.StateContextI) (*smartcontract.StringMap, error) {
-	val, err := balances.GetTrieNode(settingChangesKey)
-	if err != nil || val == nil {
+	var changes = new(smartcontract.StringMap)
+	raw, err := balances.GetTrieNode(settingChangesKey, changes)
+	if err != nil || raw == nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return smartcontract.NewStringMap(), nil
 	}
 
-	var changes = new(smartcontract.StringMap)
-	err = changes.Decode(val.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if changes, ok = raw.(*smartcontract.StringMap); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	if changes.Fields == nil {
 		return smartcontract.NewStringMap(), nil

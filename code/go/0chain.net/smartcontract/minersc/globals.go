@@ -300,7 +300,7 @@ func (gl *GlobalSettings) Decode(p []byte) error {
 
 func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
 	gl.Version += 1
-	_, err := balances.InsertTrieNode(GLOBALS_KEY, gl)
+	err := balances.InsertTrieNode(GLOBALS_KEY, gl)
 	return err
 }
 
@@ -482,24 +482,18 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
-	val, err := balances.GetTrieNode(GLOBALS_KEY)
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
 	var err error
-	var poolb []byte
-	if poolb, err = getGlobalSettingsBytes(balances); err != nil {
+	gl := newGlobalSettings()
+
+	raw, err := balances.GetTrieNode(GLOBALS_KEY, gl)
+	if err != nil {
 		return nil, err
 	}
-	gl := newGlobalSettings()
-	err = gl.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+
+	var ok bool
+	if gl, ok = raw.(*GlobalSettings); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return gl, err
 }

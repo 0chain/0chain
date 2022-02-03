@@ -190,7 +190,7 @@ func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value i
 
 	state := &AState{}
 	state.balance = value
-	_, err := mpt.Insert([]byte(key), state)
+	err := mpt.Insert([]byte(key), state)
 	if err != nil {
 		t.Error(err)
 	}
@@ -201,7 +201,7 @@ func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value i
 func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	key string, value int64) {
 
-	val, err := mpt.GetNodeValue([]byte(key))
+	val, err := mpt.GetNodeValue([]byte(key), nil)
 	if err != nil {
 		t.Fatalf("getting inserted value: %v %v, err: %v", key, value, err)
 	}
@@ -335,21 +335,21 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 			p1 = Path(fmt.Sprintf("cafe%d", round))
 			p2 = Path(fmt.Sprintf("face%d", round))
 		)
-		_, err = tmpt.Insert(p1, &v1)
+		err = tmpt.Insert(p1, &v1)
 		require.NoError(t, err)
-		_, err = tmpt.Insert(p2, &v2)
+		err = tmpt.Insert(p2, &v2)
 		require.NoError(t, err)
 
 		// remove
 		if round-2 >= 0 {
-			_, err = tmpt.Delete(Path(fmt.Sprintf("cafe%d", round-2)))
+			err = tmpt.Delete(Path(fmt.Sprintf("cafe%d", round-2)))
 			require.NoError(t, err)
 		}
 
 		// change
 		if round-1 >= 0 {
 			var cval = testValue(fmt.Sprintf("test-value-%d-changed", round-1))
-			_, err = tmpt.Insert(Path(fmt.Sprintf("face%d", round-1)),
+			err = tmpt.Insert(Path(fmt.Sprintf("face%d", round-1)),
 				&cval)
 			require.NoError(t, err)
 		}
@@ -521,7 +521,7 @@ func TestMPT_MultipleConcurrentInserts(t *testing.T) {
 	}
 	// insert some of the nodes to the original mpt
 	for i := 0; i < numGoRoutines; i++ {
-		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+		err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
 		require.NoError(t, err)
 	}
 	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
@@ -533,7 +533,7 @@ func TestMPT_MultipleConcurrentInserts(t *testing.T) {
 		go func(mpt2 MerklePatriciaTrieI, i int) {
 			defer wg.Done()
 			for j := 1; j < numTxns; j++ {
-				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+				err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
 				require.NoError(t, err)
 			}
 		}(mpt2, i)
@@ -558,7 +558,7 @@ func TestMPT_ConcurrentMerges(t *testing.T) {
 	}
 	// insert some of the nodes to the original mpt
 	for i := 0; i < numGoRoutines; i++ {
-		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+		err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
 		require.NoError(t, err)
 	}
 	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0), mpt.GetRoot())
@@ -568,7 +568,7 @@ func TestMPT_ConcurrentMerges(t *testing.T) {
 		go func(mpt2 MerklePatriciaTrieI, i int) {
 			defer wg.Done()
 			for j := 1; j < numTxns; j++ {
-				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+				err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
 				require.NoError(t, err)
 				mpt.MergeMPTChanges(mpt2) // may produce error because of optimistic lock failure
 				// the transient mpt state contains no missing nodes
@@ -780,7 +780,7 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 
 	t.Helper()
 
-	_, err := mpt.Insert(Path(key), &Txn{value})
+	err := mpt.Insert(Path(key), &Txn{value})
 	if err != nil {
 		t.Error(err)
 	}
@@ -789,7 +789,7 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 }
 
 func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
-	val, err := mpt.GetNodeValue(Path(key))
+	val, err := mpt.GetNodeValue(Path(key), nil)
 	if value == "" {
 		if !(val == nil || err == ErrValueNotPresent) {
 			t.Fatalf("setting value to blank didn't return nil value: %v, %v",
@@ -868,7 +868,7 @@ func iterNopHandler() MPTIteratorHandler {
 func doDelete(t *testing.T, mpt MerklePatriciaTrieI, key string, expErr error) {
 	t.Helper()
 
-	_, err := mpt.Delete([]byte(key))
+	err := mpt.Delete([]byte(key))
 	if err != expErr {
 		t.Fatalf("expect err: %v, got err: %v", expErr, err)
 		return
@@ -935,7 +935,7 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	if values != exp {
 		t.Fatalf("values mismatch: %v, got %v", values, exp)
 	}
-	v, err := mpt2.GetNodeValue(Path("1234589701"))
+	v, err := mpt2.GetNodeValue(Path("1234589701"), nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1087,7 +1087,7 @@ func TestCloneMPT2(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 
-	if _, err := mpt.Insert([]byte("aaa"), &User{}); err != nil {
+	if err := mpt.Insert([]byte("aaa"), &User{}); err != nil {
 		t.Error(err)
 	}
 
@@ -1112,7 +1112,7 @@ func TestCloneMPT2(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got := CloneMPT(tt.args.mpt)
-			if _, err := mpt1.Insert([]byte("bbb"), &User{Age: 1}); err != nil {
+			if err := mpt1.Insert([]byte("bbb"), &User{Age: 1}); err != nil {
 				t.Error(err)
 			}
 			mpt2 := NewMerklePatriciaTrie(mndb, Sequence(1), mpt.root)
@@ -1294,7 +1294,7 @@ func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			got, err := mpt.GetNodeValue(tt.args.path)
+			got, err := mpt.GetNodeValue(tt.args.path, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetNodeValue() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1353,7 +1353,8 @@ func TestMerklePatriciaTrie_Insert(t *testing.T) {
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			got, err := mpt.Insert(tt.args.path, tt.args.value)
+			err := mpt.Insert(tt.args.path, tt.args.value)
+			got := mpt.GetRoot()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Insert() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2023,7 +2024,7 @@ func TestMerklePatriciaTrie_IntegrityAfterValueUpdate(t *testing.T) {
 	mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
 	txn := &Txn{"1"}
 
-	_, err := mpt.Insert(Path("00"), txn)
+	err := mpt.Insert(Path("00"), txn)
 	require.NoError(t, err)
 	checkIterationHash(t, mpt, "34a278944ef883d7c642a7b69b5675cf9d8cc5c60dd90d00adea1c4164425037")
 	_, changes, _, _ := mpt.GetChanges()

@@ -152,7 +152,7 @@ func (c *Chain) NewStateContext(
 	txn *transaction.Transaction,
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
+	return bcstate.NewStateContext(b, s,
 		txn,
 		c.GetBlockSharders,
 		func() *block.Block {
@@ -174,7 +174,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	var (
-		clientState = CreateTxnMPT(bState) // begin transaction
+		clientState = util.NewMPTCachingProxy(ctx, CreateTxnMPT(bState)) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
 		startRoot   = sctx.GetState().GetRoot()
 	)
@@ -226,7 +226,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 					zap.Any("txn", txn))
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
-				clientState = CreateTxnMPT(bState) // begin transaction
+				clientState = util.NewMPTCachingProxy(ctx, CreateTxnMPT(bState)) // begin transaction
 				sctx = c.NewStateContext(b, clientState, txn, nil)
 
 				output = err.Error()
@@ -311,6 +311,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	// commit transaction
+	clientState.Flush()
 	if err = bState.MergeMPTChanges(clientState); err != nil {
 		if state.DebugTxn() {
 			logging.Logger.DPanic("update state - merge mpt error",
@@ -405,9 +406,9 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
-		_, err = clientState.Delete(util.Path(fromClient))
+		err = clientState.Delete(util.Path(fromClient))
 	} else {
-		_, err = clientState.Insert(util.Path(fromClient), fs)
+		err = clientState.Insert(util.Path(fromClient), fs)
 	}
 	if err != nil {
 		if state.DebugTxn() {
@@ -422,7 +423,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
-	_, err = clientState.Insert(util.Path(toClient), ts)
+	err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
@@ -465,7 +466,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
-	_, err = clientState.Insert(util.Path(toClient), ts)
+	err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
@@ -499,17 +500,20 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	if clientState == nil {
 		return nil, common.NewError("getState", "client state does not exist")
 	}
-	s := &state.State{}
-	s.Balance = state.Balance(0)
-	ss, err := clientState.GetNodeValue(util.Path(clientID))
+	templ := &state.State{}
+	ss, err := clientState.GetNodeValue(util.Path(clientID), templ)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		return s, err
+		return templ, err
 	}
-	s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
-	return s, nil
+	if val, ok := ss.(*state.State); !ok {
+		return templ, common.NewError("getState", "wrong MPT value type")
+	} else {
+		templ = val
+	}
+	return templ, nil
 }
 
 /*GetState - Get the state of a client w.r.t a block. Note, don't call this from within state computation logic
@@ -518,7 +522,8 @@ the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
+	templ := &state.State{}
+	ss, err := b.ClientState.GetNodeValue(util.Path(clientID), templ)
 	if err != nil {
 		if !b.IsStateComputed() {
 			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
@@ -529,8 +534,12 @@ func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) 
 		}
 		return nil, err
 	}
-	st := c.clientStateDeserializer.Deserialize(ss).(*state.State)
-	return st, nil
+	if val, ok := ss.(*state.State); !ok {
+		return nil, common.NewError("state_not_synched", "State sync is not yet complete")
+	} else {
+		templ = val
+	}
+	return templ, nil
 }
 
 func isValid(err error) bool {

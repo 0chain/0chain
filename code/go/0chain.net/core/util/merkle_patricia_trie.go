@@ -84,8 +84,8 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 	return mpt.root
 }
 
-/*GetNodeValue - get the value for a given path */
-func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
+/*GetNodeValue - get the value for a given path, for given teplate object is returned, if template is nil, then raw value is returned */
+func (mpt *MerklePatriciaTrie) GetNodeValue(path Path, template Serializable) (Serializable, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
 		return nil, fmt.Errorf("invalid hex path: path=%q, err=%v", string(path), err)
 	}
@@ -112,11 +112,18 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if v == nil { // This can happen if path given is partial that aligns with a full node that has no value
 		return nil, ErrValueNotPresent
 	}
+	if template != nil {
+		err := template.Decode(v.Encode())
+		if err != nil {
+			return nil, ErrEncoding
+		}
+		return template, nil
+	}
 	return v, err
 }
 
 /*Insert - inserts (updates) a value into this trie and updates the trie all the way up and produces a new root */
-func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error) {
+func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) error {
 	if value == nil {
 		Logger.Debug("Insert nil value, delete data on path:",
 			zap.String("path", string(path)))
@@ -140,23 +147,23 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 		_, newRootHash, err = mpt.insert(valueCopy, mpt.root, Path(""), path)
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
 	mpt.setRoot(newRootHash)
-	return newRootHash, nil
+	return nil
 }
 
 /*Delete - delete a value from the trie */
-func (mpt *MerklePatriciaTrie) Delete(path Path) (Key, error) {
+func (mpt *MerklePatriciaTrie) Delete(path Path) error {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 
 	_, newRootHash, err := mpt.delete(mpt.root, Path(""), path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	mpt.setRoot(newRootHash)
-	return newRootHash, nil
+	return nil
 }
 
 //GetPathNodes - implement interface */

@@ -60,11 +60,10 @@ func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
-	datastore.Key, error) {
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) error {
 
 	delete(tb.tree, key)
-	return key, nil
+	return nil
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
@@ -77,7 +76,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key) (
+func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
@@ -93,7 +92,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (_ datastore.Key, _ error) {
+	node util.Serializable) (_ error) {
 
 	tb.tree[key] = node
 	return

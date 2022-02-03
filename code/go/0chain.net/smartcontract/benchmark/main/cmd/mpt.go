@@ -66,7 +66,6 @@ func getBalances(
 	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
-		&state.Deserializer{},
 		txn,
 		func(*block.Block) []string { return data.Sharders },
 		func() *block.Block { return bk },
@@ -103,7 +102,6 @@ func setUpMpt(
 	balances := cstate.NewStateContext(
 		bk,
 		pMpt,
-		&state.Deserializer{},
 		&transaction.Transaction{
 			HashIDField: datastore.HashIDField{
 				Hash: encryption.Hash("mock transaction hash"),
@@ -220,7 +218,7 @@ func addMockClients(
 		is := &state.State{}
 		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
-		_, err = pMpt.Insert(util.Path(clientID), is)
+		err = pMpt.Insert(util.Path(clientID), is)
 		if err != nil {
 			panic(err)
 		}

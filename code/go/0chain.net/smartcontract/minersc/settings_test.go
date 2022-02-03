@@ -135,7 +135,7 @@ func TestUpdateSettings(t *testing.T) {
 				}
 				return true
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return args{
 			msc:      msc,

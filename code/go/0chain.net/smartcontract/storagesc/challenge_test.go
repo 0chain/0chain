@@ -494,7 +494,6 @@ func setupChallengeMocks(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -571,7 +570,7 @@ func setupChallengeMocks(
 	}
 	require.NoError(t, ssc.saveStakePools(validators, validatorsSPs, ctx))
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
 	return txn, ssc, allocation, challenge, details, ctx

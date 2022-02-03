@@ -263,7 +263,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -299,7 +298,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		StartRound: scYaml.startRound,
 	}
 	PhaseRounds[phaseNode.Phase] = runtime.phaseRound
-	_, err := ctx.InsertTrieNode(phaseNode.GetKey(), phaseNode)
+	err := ctx.InsertTrieNode(phaseNode.GetKey(), phaseNode)
 	require.NoError(t, err)
 
 	var self = &MinerNode{
@@ -307,7 +306,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			ID: selfId,
 		},
 	}
-	_, err = ctx.InsertTrieNode(self.GetKey(), self)
+	err = ctx.InsertTrieNode(self.GetKey(), self)
 	require.NoError(t, err)
 
 	var miner = &MinerNode{
@@ -340,10 +339,10 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	}
 
 	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
-	_, err = ctx.InsertTrieNode(miner.GetKey(), miner)
+	err = ctx.InsertTrieNode(miner.GetKey(), miner)
 	require.NoError(t, err)
 	for i := 0; i < numberOfSharders; i++ {
-		_, err = ctx.InsertTrieNode(sharders[i].GetKey(), sharders[i])
+		err = ctx.InsertTrieNode(sharders[i].GetKey(), sharders[i])
 		require.NoError(t, err)
 	}
 	var allSharders = &MinerNodes{

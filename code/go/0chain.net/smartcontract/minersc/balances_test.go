@@ -116,8 +116,8 @@ func (tb *testBalances) GetEvents() []event.Event                               
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
-	return "", nil
+func (tb *testBalances) DeleteTrieNode(datastore.Key) error {
+	return nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return tb.lfmb
@@ -137,7 +137,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key) (
+func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
@@ -153,10 +153,10 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (_ datastore.Key, _ error) {
+	node util.Serializable) error {
 
 	tb.tree[key] = node
-	return
+	return nil
 }
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {

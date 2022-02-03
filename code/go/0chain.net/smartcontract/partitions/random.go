@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 )
 
 const notFound = -1
@@ -216,7 +215,7 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 }
 
 func (rs *randomSelector) deleteTail(balances state.StateContextI) error {
-	_, err := balances.DeleteTrieNode(rs.partitionKey(len(rs.Partitions) - 1))
+	err := balances.DeleteTrieNode(rs.partitionKey(len(rs.Partitions) - 1))
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
@@ -250,7 +249,7 @@ func (rs *randomSelector) Save(balances state.StateContextI) error {
 				}
 				numPartitions++
 			} else {
-				_, err := balances.DeleteTrieNode(rs.partitionKey(i))
+				err := balances.DeleteTrieNode(rs.partitionKey(i))
 				if err != nil {
 					if err != util.ErrValueNotPresent {
 						return err
@@ -261,7 +260,7 @@ func (rs *randomSelector) Save(balances state.StateContextI) error {
 	}
 	rs.NumPartitions = numPartitions
 
-	_, err := balances.InsertTrieNode(rs.Name, rs)
+	err := balances.InsertTrieNode(rs.Name, rs)
 	if err != nil {
 		return err
 	}
@@ -279,32 +278,34 @@ func (rs *randomSelector) getPartition(
 	}
 	var part PartitionItemList
 	if rs.ItemType == ItemString {
-		part = &itemList{}
+		var err error
+		part, err = getItemList(rs.partitionKey(i), balances)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		part = &validatorItemList{}
-	}
-	err := part.get(rs.partitionKey(i), balances)
-	if err != nil {
-		return nil, err
+		var err error
+		part, err = getValidatorItemList(rs.partitionKey(i), balances)
+		if err != nil {
+			return nil, err
+		}
 	}
 	rs.Partitions[i] = part
 	return part, nil
 }
 
-func GetRandomSelector(
-	key datastore.Key,
-	balances state.StateContextI,
-) (RandPartition, error) {
-	var rs randomSelector
-	val, err := balances.GetTrieNode(key)
+func GetRandomSelector(key datastore.Key, balances state.StateContextI) (RandPartition, error) {
+	var rs *randomSelector
+	raw, err := balances.GetTrieNode(key, rs)
 	if err != nil {
 		return nil, err
 
 	}
-	if err := rs.Decode(val.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if rs, ok = raw.(*randomSelector); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-	return &rs, nil
+	return rs, nil
 }
 
 func (rs *randomSelector) Encode() []byte {

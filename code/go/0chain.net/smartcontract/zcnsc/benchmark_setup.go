@@ -44,7 +44,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
 	gn.MaxFee = config.SmartContractConfig.GetInt64(benchmark.MaxFee)
 
-	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
+	_ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
 
 func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start, end int) {
@@ -85,7 +85,7 @@ func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 		un := &UserNode{
 			ID: client,
 		}
-		_, _ = balances.InsertTrieNode(un.GetKey(), un)
+		_ = balances.InsertTrieNode(un.GetKey(), un)
 	}
 }
 

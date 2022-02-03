@@ -9,7 +9,6 @@ import (
 	"0chain.net/core/util"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 )
 
 type persistentNode interface {
@@ -24,44 +23,42 @@ func isNil(i interface{}) bool {
 // GetAuthorizerNode returns error if node not found
 func GetAuthorizerNode(id string, ctx cstate.StateContextI) (*AuthorizerNode, error) {
 	node := &AuthorizerNode{ID: id}
-	blob, err := ctx.GetTrieNode(node.GetKey())
+	raw, err := ctx.GetTrieNode(node.GetKey(), node)
 	if err != nil {
 		return node, err
 	}
 
-	if isNil(blob) {
+	if isNil(raw) {
 		return nil, fmt.Errorf("authorizer node (%s) not found", id)
 	}
-
-	if err := node.Decode(blob.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %v", common.ErrDecoding, err)
+	var ok bool
+	if node, ok = raw.(*AuthorizerNode); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return node, err
 }
 
 // GetUserNode returns error if node not found
 func GetUserNode(id string, ctx cstate.StateContextI) (*UserNode, error) {
 	node := &UserNode{ID: id}
-	blob, err := ctx.GetTrieNode(node.GetKey())
+	raw, err := ctx.GetTrieNode(node.GetKey(), node)
 	if err != nil {
 		return node, err
 	}
 
-	if isNil(blob) {
+	if isNil(raw) {
 		return nil, fmt.Errorf("user node: %s not found", id)
 	}
-
-	if err := node.Decode(blob.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if node, ok = raw.(*UserNode); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return node, err
 }
 
 func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
 	node := &GlobalNode{ID: ADDRESS}
-	serializable, err := balances.GetTrieNode(node.GetKey())
+	raw, err := balances.GetTrieNode(node.GetKey(), node)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -69,8 +66,9 @@ func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
 			return node, err
 		}
 	}
-	if err := node.Decode(serializable.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %v", common.ErrDecoding, err)
+	var ok bool
+	if node, ok = raw.(*GlobalNode); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return node, nil
 }

@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
 	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
@@ -90,39 +89,27 @@ func (cp *clientPools) add(poolID datastore.Key) (ok bool) {
 func (cp *clientPools) save(vscKey, clientID datastore.Key,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(clientPoolsKey(vscKey, clientID), cp)
+	err = balances.InsertTrieNode(clientPoolsKey(vscKey, clientID), cp)
 	return
 }
 
 //
 // SC helpers
 //
+func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
+	balances chainstate.StateContextI) (cp *clientPools, err error) {
 
-func (vsc *VestingSmartContract) getClientPoolsBytes(clientID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID))
+	var raw util.Serializable
+	cp = new(clientPools)
+	raw, err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID), cp)
 	if err != nil {
 		return
 	}
 
-	return val.Encode(), nil
-}
-
-func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
-
-	var listb []byte
-	if listb, err = vsc.getClientPoolsBytes(clientID, balances); err != nil {
-		return
+	var ok bool
+	if cp, ok = raw.(*clientPools); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
-	cp = new(clientPools)
-	if err = cp.Decode(listb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-
 	return
 }
 

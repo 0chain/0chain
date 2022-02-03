@@ -70,7 +70,7 @@ func AddControlObjects(
 		fields[i] = int64(i)
 	}
 
-	_, err := balances.InsertTrieNode(controlMKey, &itemArray{
+	err := balances.InsertTrieNode(controlMKey, &itemArray{
 		Fields: fields,
 	})
 	if err != nil {
@@ -78,7 +78,7 @@ func AddControlObjects(
 	}
 
 	for i := 0; i < n; i++ {
-		_, err := balances.InsertTrieNode(getControlNKey(i), &item{
+		err := balances.InsertTrieNode(getControlNKey(i), &item{
 			Field: int64(i),
 		})
 		if err != nil {
@@ -87,7 +87,7 @@ func AddControlObjects(
 	}
 
 	for i := 0; i < n; i++ {
-		_, err := balances.InsertTrieNode(getControlNKey(i), &item{
+		err := balances.InsertTrieNode(getControlNKey(i), &item{
 			Field: int64(i),
 		})
 		if err != nil {

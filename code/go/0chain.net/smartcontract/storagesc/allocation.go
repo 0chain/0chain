@@ -22,13 +22,14 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 
 	alloc = new(StorageAllocation)
 	alloc.ID = allocID
-	var allocb util.Serializable
-	if allocb, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err != nil {
+	var raw util.Serializable
+	if raw, err = balances.GetTrieNode(alloc.GetKey(sc.ID), alloc); err != nil {
 		return nil, err
 	}
-	err = alloc.Decode(allocb.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+
+	var ok bool
+	if alloc, ok = raw.(*StorageAllocation); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }
@@ -37,16 +38,19 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	balances chainstate.StateContextI) (*Allocations, error) {
 
 	allocationList := &Allocations{}
-	var clientAlloc ClientAllocation
-	clientAlloc.ClientID = clientID
-	allocationListBytes, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID))
-	if allocationListBytes == nil {
+	var clientAlloc = &ClientAllocation{ClientID: clientID}
+	raw, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), allocationList)
+	if err == util.ErrEncoding {
+		return nil, err
+	}
+	if err != nil {
 		return allocationList, nil
 	}
-	err = json.Unmarshal(allocationListBytes.Encode(), &clientAlloc)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, "failed to retrieve existing allocations list")
+	var ok bool
+	if clientAlloc, ok = raw.(*ClientAllocation); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return clientAlloc.Allocations, nil
 }
 
@@ -55,14 +59,17 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 
 	allocationList := &Allocations{}
 
-	allocationListBytes, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY)
-	if allocationListBytes == nil {
+	raw, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY, allocationList)
+	if err == util.ErrEncoding {
+		return nil, err
+	}
+	if raw == nil {
 		return allocationList, nil
 	}
-	err = json.Unmarshal(allocationListBytes.Encode(), allocationList)
-	if err != nil {
+	var ok bool
+	if allocationList, ok = raw.(*Allocations); !ok {
 		return nil, common.NewError("getAllAllocationsList_failed",
-			"Failed to retrieve existing allocations list")
+			"bad node type")
 	}
 	return allocationList, nil
 }
@@ -86,7 +93,7 @@ func (sc *StorageSmartContract) removeUserAllocation(
 		return fmt.Errorf("failed to remove allocation %s from client %s list", alloc.ID, oldUser)
 	}
 
-	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
+	err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
 	if err != nil {
 		return fmt.Errorf("saving client allocations list (client: %s): %v", oldUser, err)
 	}
@@ -113,7 +120,7 @@ func (sc *StorageSmartContract) addUserAllocation(
 		return fmt.Errorf("failed to add allocation %s to client %s list", alloc.ID, newUser)
 	}
 
-	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
+	err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
 	if err != nil {
 		return fmt.Errorf("saving client allocations list (client: %s): %v", newUser, err)
 	}
@@ -134,7 +141,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"Failed to get allocation list: %v", err)
 	}
 
-	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err == nil {
+	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID), nil); err == nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
@@ -149,12 +156,12 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 
 	all.List.add(alloc.ID)
 
-	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
+	if err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving all allocations list: %v", err)
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
@@ -219,7 +226,7 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 		sp.addOffer(sa, sa.BlobberDetails[i])
 
 		// save blobber
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		if err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return fmt.Errorf("can't save blobber: %v", err)
 		}
 		// save its stake pool
@@ -247,7 +254,7 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 	}
 
 	// save
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
 	if err != nil {
 		return fmt.Errorf("can't save all blobber list: %v", err)
 	}
@@ -576,7 +583,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 
 	// save allocation
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("allocation_closing_failed",
 			"can't save allocation: "+err.Error())
@@ -596,13 +603,13 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 
 	// save related blobbers
 	for _, b := range blobbers {
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		if err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return
 		}
 	}
 
 	// save allocation
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return
 	}
@@ -1272,7 +1279,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	}
 
 	alloc.Finalized, alloc.Canceled = true, true
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
@@ -1346,7 +1353,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	alloc.Finalized = true
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
@@ -1469,7 +1476,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		conf.Minted += info.minted
 		// update the blobber
 		b.Used -= d.Size
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		if err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
@@ -1497,7 +1504,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	// save all blobbers list
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allb)
+	err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allb)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving all blobbers list: "+err.Error())
@@ -1528,14 +1535,14 @@ func (sc *StorageSmartContract) finishAllocation(
 			"invalid state: allocation not found in all allocations list")
 	}
 
-	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
+	err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving all allocations list: "+err.Error())
 	}
 
 	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving configurations: "+err.Error())
@@ -1593,7 +1600,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 		}
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("curator_transfer_allocation_failed",
 			"saving new allocation: %v", err)

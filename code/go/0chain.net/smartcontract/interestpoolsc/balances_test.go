@@ -65,8 +65,8 @@ func (tb *testBalances) GetEventDB() *event.EventDb { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
-	return "", nil
+func (tb *testBalances) DeleteTrieNode(datastore.Key) error {
+	return nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return tb.lfmb
@@ -88,7 +88,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key) (
+func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) (
 	node util.Serializable, err error) {
 	if encryption.IsHash(key) {
 		return nil, common.NewError("failed to get trie node",
@@ -102,10 +102,10 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (_ datastore.Key, _ error) {
+	node util.Serializable) (_ error) {
 	//@TODO add mutex to secure reading and writing into the map
 	if encryption.IsHash(key) {
-		return "", common.NewError("failed to insert trie node",
+		return common.NewError("failed to insert trie node",
 			"key is too short")
 	}
 	tb.tree[key] = node

@@ -116,7 +116,7 @@ func (fc *FaucetSmartContract) updateSettings(
 	if err = gn.validate(); err != nil {
 		return "", common.NewError("update_settings", "cannot validate changes: "+err.Error())
 	}
-	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
+	err = balances.InsertTrieNode(gn.GetKey(), gn)
 	if err != nil {
 		return "", common.NewError("update_settings", "saving global node: "+err.Error())
 	}
@@ -140,11 +140,11 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		balances.AddTransfer(transfer)
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
-		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
+		err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
 			return err.Error(), nil
 		}
-		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+		err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			return "", err
 		}
@@ -163,7 +163,7 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
 		balances.AddTransfer(transfer)
-		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+		err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			return "", err
 		}
@@ -175,11 +175,16 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 
 func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
 	un := &UserNode{ID: id}
-	us, err := balances.GetTrieNode(un.GetKey(globalKey))
-	if err != nil {
-		return un, err
+	us, err := balances.GetTrieNode(un.GetKey(globalKey), un)
+	if err == util.ErrEncoding {
+		return nil, err
 	}
-	if err := un.Decode(us.Encode()); err != nil {
+	if err != nil {
+		return &UserNode{ID: id}, err
+	}
+	if val, ok := us.(*UserNode); ok {
+		un = val
+	} else {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return un, err
@@ -199,14 +204,22 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 }
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
+	//fc.ID won't be used https://go.dev/play/p/ouTqvjFrCTq
 	gn := &GlobalNode{ID: fc.ID}
-	gv, err := balances.GetTrieNode(gn.GetKey())
-	if err != nil {
-		return gn, err
+	gv, err := balances.GetTrieNode(gn.GetKey(), gn)
+	if err == util.ErrEncoding {
+		return nil, err
 	}
-	if err := gn.Decode(gv.Encode()); err != nil {
+	if err != nil {
+		return &GlobalNode{ID: fc.ID}, err
+	}
+
+	if val, ok := gv.(*GlobalNode); ok {
+		gn = val
+	} else {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
+
 	if gn.FaucetConfig == nil {
 		gn.FaucetConfig = getConfig()
 	}

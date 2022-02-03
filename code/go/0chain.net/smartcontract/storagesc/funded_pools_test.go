@@ -32,12 +32,12 @@ func TestAddToFundedPools(t *testing.T) {
 			var existingPools fundedPools = p.existing
 			balances.On(
 				"GetTrieNode",
-				fundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client), mock.Anything,
 			).Return(&existingPools, nil).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
-				fundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client), mock.Anything,
 			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
@@ -55,7 +55,7 @@ func TestAddToFundedPools(t *testing.T) {
 				}
 				return p.newPool == (*fp)[len(*fp)-1]
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return ssc, balances
 	}
@@ -129,12 +129,12 @@ func TestIsFundedPool(t *testing.T) {
 			var existingPools fundedPools = p.existing
 			balances.On(
 				"GetTrieNode",
-				fundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client), mock.Anything,
 			).Return(&existingPools, nil).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
-				fundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client), mock.Anything,
 			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 

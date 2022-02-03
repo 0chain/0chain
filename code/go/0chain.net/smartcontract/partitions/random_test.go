@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -100,13 +101,13 @@ func TestFuzzyRandom(t *testing.T) {
 
 	for i := 0; i <= fuzzyRunLength/mockDivisionSize; i++ {
 		balances.On(
-			"GetTrieNode",
-			rs.partitionKey(i),
+			"GetTrieNode", mock.AnythingOfType("util.Serializable"),
+			rs.partitionKey(i), mock.AnythingOfType("util.Serializable"),
 		).Return(nil, util.ErrValueNotPresent).Maybe()
 		balances.On(
 			"DeleteTrieNode",
 			rs.partitionKey(i),
-		).Return("", nil).Maybe()
+		).Return(nil).Maybe()
 	}
 
 	r := rand.New(rand.NewSource(mockSeed))

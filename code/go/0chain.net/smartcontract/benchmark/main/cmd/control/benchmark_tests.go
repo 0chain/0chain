@@ -83,7 +83,7 @@ func controlIndividual(balances cstate.StateContextI) error {
 	var itArray []item
 	for i := 0; i < n; i++ {
 		var it item
-		val, err := balances.GetTrieNode(getControlNKey(i))
+		val, err := balances.GetTrieNode(getControlNKey(i), nil)
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func controlUpdateIndividual(balances cstate.StateContextI) error {
 
 	for i := 0; i < n; i++ {
 		var it item
-		val, err := balances.GetTrieNode(getControlNKey(i))
+		val, err := balances.GetTrieNode(getControlNKey(i), nil)
 		if err != nil {
 			return err
 		}
@@ -113,7 +113,7 @@ func controlUpdateIndividual(balances cstate.StateContextI) error {
 		}
 
 		it.Field = 1
-		_, err = balances.InsertTrieNode(getControlNKey(i), &it)
+		err = balances.InsertTrieNode(getControlNKey(i), &it)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func controlArray(balances cstate.StateContextI) error {
 	}
 
 	var ia itemArray
-	val, err := balances.GetTrieNode(controlMKey)
+	val, err := balances.GetTrieNode(controlMKey, nil)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 	}
 
 	var ia itemArray
-	val, err := balances.GetTrieNode(controlMKey)
+	val, err := balances.GetTrieNode(controlMKey, nil)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 	}
 
 	ia.Fields = append(ia.Fields, 1)
-	_, err = balances.InsertTrieNode(controlMKey, &ia)
+	err = balances.InsertTrieNode(controlMKey, &ia)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 }
 
 func allMiners(balances cstate.StateContextI) error {
-	nodesBytes, err := balances.GetTrieNode(minersc.AllMinersKey)
+	nodesBytes, err := balances.GetTrieNode(minersc.AllMinersKey, nil)
 	if err != nil {
 		return err
 	}

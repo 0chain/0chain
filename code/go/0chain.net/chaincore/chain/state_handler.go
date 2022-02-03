@@ -85,7 +85,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	node, err := lfb.ClientState.GetNodeValue(util.Path(encryption.Hash(scAddress + key)))
+	node, err := lfb.ClientState.GetNodeValue(util.Path(encryption.Hash(scAddress+key)), nil)
 	if err != nil {
 		return nil, err
 	}

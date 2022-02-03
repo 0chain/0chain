@@ -37,7 +37,7 @@ func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 	ctx := MakeMockStateContext()
 	for _, authorizerKey := range authorizersID {
 		node := &AuthorizerNode{ID: authorizerKey}
-		nodes, err := ctx.GetTrieNode(node.GetKey())
+		nodes, err := ctx.GetTrieNode(node.GetKey(), node)
 		require.NoError(t, err)
 		require.NotNil(t, nodes)
 	}
@@ -135,7 +135,7 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 
 	authorizeNode, _ := GetAuthorizerNode(authorizerID, ctx)
 
-	node, err := ctx.GetTrieNode(authorizeNode.GetKey())
+	node, err := ctx.GetTrieNode(authorizeNode.GetKey(), &AuthorizerNode{})
 
 	require.NoError(t, err)
 	require.NotNil(t, node)
@@ -350,13 +350,11 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	require.NoError(t, err)
 
 	// FillFromContext
-	blob, err := ctx.GetTrieNode(node.GetKey())
+	newNode := &AuthorizerNode{}
+	blob, err := ctx.GetTrieNode(node.GetKey(), newNode)
 	require.NoError(t, err)
 	require.NotNil(t, blob)
-	newNode := &AuthorizerNode{}
-	err = newNode.Decode(blob.Encode())
-	require.NoError(t, err)
-	require.NotNil(t, newNode)
+	newNode = blob.(*AuthorizerNode)
 	require.NotNil(t, newNode.Staking.TokenLockInterface)
 }
 
@@ -416,8 +414,8 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	require.NoError(t, err)
 
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
-	require.NoError(t, err)
-	require.NotEmpty(t, resp)
+	require.Error(t, err)
+	require.Empty(t, resp)
 }
 
 func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {

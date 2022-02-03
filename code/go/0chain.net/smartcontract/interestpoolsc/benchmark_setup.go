@@ -22,7 +22,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 
 		_ = un.addPool(pool)
 
-		_, err := balances.InsertTrieNode(un.getKey(ADDRESS), un)
+		err := balances.InsertTrieNode(un.getKey(ADDRESS), un)
 		if err != nil {
 			panic(err)
 		}
@@ -32,7 +32,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 	gn.MinLock = state.Balance(viper.GetFloat64(benchmark.InterestPoolMinLock))
 	gn.MinLockPeriod = viper.GetDuration(benchmark.InterestPoolMinLockPeriod)
 	gn.MaxMint = state.Balance(viper.GetFloat64(benchmark.InterestPoolMaxMint))
-	_, err := balances.InsertTrieNode(gn.getKey(), gn)
+	err := balances.InsertTrieNode(gn.getKey(), gn)
 	if err != nil {
 		panic(err)
 	}

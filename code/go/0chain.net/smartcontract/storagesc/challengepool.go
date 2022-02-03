@@ -64,7 +64,7 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 func (cp *challengePool) save(sscKey, allocationID string,
 	balances cstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
+	err = balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
 	return
 }
 
@@ -171,7 +171,7 @@ func (ssc *StorageSmartContract) getChallengePoolBytes(
 	err error) {
 
 	var val util.Serializable
-	val, err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID))
+	val, err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID), nil)
 	if err != nil {
 		return
 	}
@@ -182,15 +182,16 @@ func (ssc *StorageSmartContract) getChallengePoolBytes(
 func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	balances cstate.StateContextI) (cp *challengePool, err error) {
 
-	var poolb []byte
-	poolb, err = ssc.getChallengePoolBytes(allocationID, balances)
+	cp = newChallengePool()
+	var raw util.Serializable
+	raw, err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID), cp)
 	if err != nil {
 		return
 	}
-	cp = newChallengePool()
-	err = cp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+
+	var ok bool
+	if cp, ok = raw.(*challengePool); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }

@@ -78,7 +78,7 @@ func AddMockNodes(
 				newNode.Pending[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			}
 		}
-		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
+		err := balances.InsertTrieNode(newNode.GetKey(), newNode)
 		if err != nil {
 			panic(err)
 		}
@@ -90,7 +90,7 @@ func AddMockNodes(
 		dkgMiners := NewDKGMinerNodes()
 		dkgMiners.SimpleNodes = nodeMap
 		dkgMiners.T = viper.GetInt(benchmark.InternalT)
-		_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+		err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 
 		mpks := block.NewMpks()
 		for key := range nodeMap {
@@ -100,13 +100,13 @@ func AddMockNodes(
 			}
 
 		}
-		_, err = balances.InsertTrieNode(MinersMPKKey, mpks)
+		err = balances.InsertTrieNode(MinersMPKKey, mpks)
 	} else {
-		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
+		err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
 			Nodes: allNodes.Nodes[1:],
 		})
 	}
-	_, err = balances.InsertTrieNode(key, &allNodes)
+	err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +125,7 @@ func AddNodeDelegates(
 		AddUserNodesForNode(i, NodeTypeSharder, sharders, clients, cns)
 	}
 	for _, un := range cns {
-		_, _ = balances.InsertTrieNode(un.GetKey(), &un)
+		_ = balances.InsertTrieNode(un.GetKey(), &un)
 	}
 }
 
@@ -195,10 +195,10 @@ func AddMagicBlock(
 	balances cstate.StateContextI,
 ) {
 	var magicBlock block.MagicBlock
-	_, _ = balances.InsertTrieNode(MagicBlockKey, &magicBlock)
+	_ = balances.InsertTrieNode(MagicBlockKey, &magicBlock)
 
 	var gsos = block.NewGroupSharesOrSigns()
-	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
+	_ = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
 }
 
 func AddPhaseNode(balances cstate.StateContextI) {
@@ -208,7 +208,7 @@ func AddPhaseNode(balances cstate.StateContextI) {
 		CurrentRound: 2,
 		Restarts:     0,
 	}
-	_, err := balances.InsertTrieNode(pn.GetKey(), &pn)
+	err := balances.InsertTrieNode(pn.GetKey(), &pn)
 	if err != nil {
 		panic(err)
 	}

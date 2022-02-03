@@ -125,9 +125,8 @@ type Chain struct {
 
 	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
-	clientStateDeserializer state.DeserializerI
-	stateDB                 util.NodeDB
-	stateMutex              *sync.RWMutex
+	stateDB    util.NodeDB
+	stateMutex *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *finalizeBlockWithReply
@@ -273,7 +272,7 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 	}
 
 	s := CreateTxnMPT(block.ClientState)
-	return s.GetNodeValue(getNodePath(path))
+	return s.GetNodeValue(getNodePath(path), nil)
 }
 
 func mbRoundOffset(rn int64) int64 {
@@ -478,7 +477,6 @@ func (c *Chain) Initialize() {
 	//c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
-	c.clientStateDeserializer = &state.Deserializer{}
 	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB
 	//c.stateDB = util.NewMemoryNodeDB()
@@ -1321,17 +1319,15 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 		return nil, errors.New("client state is nil")
 	}
 
-	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
-	if err != nil {
-		return nil, err
-	}
-
 	gl := &minersc.GlobalSettings{
 		Fields: make(map[string]string),
 	}
-	err = gl.Decode(val.Encode())
+	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)), gl)
 	if err != nil {
 		return nil, err
+	}
+	if val, ok := val.(*minersc.GlobalSettings); ok {
+		gl = val
 	}
 
 	return gl, nil

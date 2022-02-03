@@ -67,17 +67,17 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 		input, err := json.Marshal(p.info)
 		require.NoError(t, err)
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(conf, nil).Once()
 
 		//var newRedeemed []freeStorageRedeemed
 		if p.exists {
 			balances.On(
 				"GetTrieNode",
-				freeStorageAssignerKey(ssc.ID, p.info.Name),
+				freeStorageAssignerKey(ssc.ID, p.info.Name), mock.Anything,
 			).Return(&p.existing, nil).Once()
 		} else {
 			balances.On(
-				"GetTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name),
+				"GetTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name), mock.Anything,
 			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
@@ -89,7 +89,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 				TotalLimit:         zcnToBalance(p.info.TotalLimit),
 				CurrentRedeemed:    p.existing.CurrentRedeemed,
 				RedeemedTimestamps: p.existing.RedeemedTimestamps,
-			}).Return("", nil).Once()
+			}).Return(nil).Once()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -280,47 +280,47 @@ func TestFreeAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 		balances.On(
 			"GetTrieNode",
-			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
+			freeStorageAssignerKey(ssc.ID, p.marker.Assigner), mock.Anything,
 		).Return(&p.assigner, nil).Once()
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(conf, nil)
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+		balances.On("GetTrieNode", ALL_BLOBBERS_KEY, mock.Anything).Return(
 			mockAllBlobbers, nil,
 		).Once()
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
-				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
+				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
 			).Return(newStakePool(), nil).Twice()
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
-			).Return("", nil).Once()
+			).Return(nil).Once()
 			balances.On(
 				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
-			).Return("", nil).Once()
+			).Return(nil).Once()
 		}
 
 		balances.On(
 			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
+			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(nil, util.ErrValueNotPresent).Once()
 
 		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash),
+			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On(
 			"InsertTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		var clientAlloc = ClientAllocation{ClientID: p.marker.Recipient}
 		balances.On(
-			"GetTrieNode", clientAlloc.GetKey(ssc.ID),
+			"GetTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On(
-			"GetTrieNode", ALL_ALLOCATIONS_KEY,
+			"GetTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
 		).Return(&Allocations{}, nil).Once()
 
 		allocation := StorageAllocation{ID: txn.Hash}
@@ -332,17 +332,17 @@ func TestFreeAllocationRequest(t *testing.T) {
 				}
 				balances.TestData()[newSaSaved] = true
 				return key == allocation.GetKey(ssc.ID)
-			}),
+			}), mock.Anything,
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On(
 			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 		balances.On(
 			"InsertTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 		balances.On(
 			"InsertTrieNode", allocation.GetKey(ssc.ID), mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		balances.On(
 			"InsertTrieNode",
@@ -355,7 +355,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				CurrentRedeemed:    p.assigner.CurrentRedeemed + state.Balance(txn.Value),
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		balances.On("AddMint", &state.Mint{
 			Minter:     ADDRESS,
@@ -374,22 +374,22 @@ func TestFreeAllocationRequest(t *testing.T) {
 					len(pool.Blobbers) == mockNumBlobbers &&
 					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
 						conf.FreeAllocationSettings.Duration).Unix())+toSeconds(mockChallengeCompletionTime)
-			})).Return("", nil).Once()
+			})).Return(nil).Once()
 
 		// readPoolLock blockchain access
 		balances.On(
-			"GetTrieNode", fundedPoolsKey(ssc.ID, p.marker.Recipient),
+			"GetTrieNode", fundedPoolsKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On(
 			"InsertTrieNode", fundedPoolsKey(ssc.ID, p.marker.Recipient), mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		balances.On(
 			"GetTrieNode",
 			mock.MatchedBy(func(key string) bool {
 				return balances.TestData()[newSaSaved].(bool) &&
 					key == allocation.GetKey(ssc.ID)
-			}),
+			}), mock.Anything,
 		).Return(&allocation, nil).Once()
 
 		balances.On(
@@ -410,7 +410,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return().Maybe()
 
 		balances.On(
-			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient),
+			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On("InsertTrieNode",
 			readPoolKey(ssc.ID, p.marker.Recipient),
@@ -421,7 +421,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					pool.ID == mockTransactionHash &&
 					pool.AllocationID == mockTransactionHash &&
 					pool.ExpireAt == txn.CreationDate+toSeconds(conf.FreeAllocationSettings.Duration)
-			})).Return("", nil).Once()
+			})).Return(nil).Once()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -649,18 +649,18 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		if p.doesNotExist {
 			balances.On(
 				"GetTrieNode",
-				freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
+				freeStorageAssignerKey(ssc.ID, p.marker.Assigner), mock.Anything,
 			).Return(nil, util.ErrValueNotPresent).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
-				freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
+				freeStorageAssignerKey(ssc.ID, p.marker.Assigner), mock.Anything,
 			).Return(&p.assigner, nil).Once()
 		}
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.Anything).Return(conf, nil).Once()
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+		balances.On("GetTrieNode", ALL_BLOBBERS_KEY, mock.Anything).Return(
 			mockAllBlobbers, nil,
 		).Once()
 
@@ -669,7 +669,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			Allocations: &Allocations{},
 		}
 		ca.Allocations.List.add(p.allocationId)
-		balances.On("GetTrieNode", ca.GetKey(ssc.ID)).Return(
+		balances.On("GetTrieNode", ca.GetKey(ssc.ID), mock.Anything).Return(
 			&ca, nil,
 		).Once()
 
@@ -683,40 +683,40 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
-				"GetTrieNode", blobber.GetKey(ssc.ID),
+				"GetTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return(blobber, nil).Once()
 			var sp = newStakePool()
 			sp.Offers[p.allocationId] = &offerPool{}
 			balances.On(
-				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
+				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
 			).Return(sp, nil).Once()
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
-			).Return("", nil).Once()
+			).Return(nil).Once()
 			balances.On(
 				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
-			).Return("", nil).Once()
+			).Return(nil).Once()
 			sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
 				BlobberID:    blobber.ID,
 				AllocationID: p.allocationId,
 			})
 		}
-		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(
+		balances.On("GetTrieNode", sa.GetKey(ssc.ID), mock.Anything).Return(
 			&sa, nil,
 		).Once()
 		balances.On(
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		balances.On(
 			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
+			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(&writePool{}, nil).Once()
 
 		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
+			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId), mock.Anything,
 		).Return(&challengePool{}, nil).Once()
 
 		balances.On(
@@ -734,7 +734,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				CurrentRedeemed:    p.assigner.CurrentRedeemed + state.Balance(txn.Value),
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		balances.On("AddMint", &state.Mint{
 			Minter:     ADDRESS,
@@ -754,7 +754,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					pool.AllocationID == p.allocationId &&
 					len(pool.Blobbers) == mockNumBlobbers
 			}),
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",

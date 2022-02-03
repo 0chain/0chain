@@ -449,7 +449,7 @@ func (vp *vestingPool) drain(t *transaction.Transaction,
 
 // save the pool
 func (vp *vestingPool) save(balances chainstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(vp.ID, vp)
+	err = balances.InsertTrieNode(vp.ID, vp)
 	return
 }
 
@@ -517,30 +517,17 @@ type info struct {
 // helpers
 //
 
-func (vsc *VestingSmartContract) getPoolBytes(poolID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
-
-	var val util.Serializable
-	if val, err = balances.GetTrieNode(poolID); err != nil {
-		return
-	}
-
-	return val.Encode(), nil
-}
-
-func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
-	balances chainstate.StateContextI) (vp *vestingPool, err error) {
-
-	var poolb []byte
-	if poolb, err = vsc.getPoolBytes(poolID, balances); err != nil {
-		return
-	}
-
+func (vsc *VestingSmartContract) getPool(poolID datastore.Key, balances chainstate.StateContextI) (vp *vestingPool, err error) {
+	var raw util.Serializable
 	vp = newVestingPool()
-	if err = vp.Decode(poolb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	if raw, err = balances.GetTrieNode(poolID, vp); err != nil {
+		return
 	}
 
+	var ok bool
+	if vp, ok = raw.(*vestingPool); !ok {
+		return nil, fmt.Errorf("unexpected node type")
+	}
 	return
 }
 
@@ -715,7 +702,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 		cp.remove(vp.ID)
 
 		if len(cp.Pools) == 0 {
-			_, err = balances.DeleteTrieNode(clientPoolsKey(vsc.ID, t.ClientID))
+			err = balances.DeleteTrieNode(clientPoolsKey(vsc.ID, t.ClientID))
 			if err != nil {
 				return "", common.NewError("delete_vesting_pool_failed",
 					"can't delete client's pools list: "+err.Error())
@@ -728,7 +715,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 		}
 	}
 
-	if _, err = balances.DeleteTrieNode(vp.ID); err != nil {
+	if err = balances.DeleteTrieNode(vp.ID); err != nil {
 		return "", common.NewError("delete_vesting_pool_failed",
 			"can't delete vesting pool: "+err.Error())
 	}

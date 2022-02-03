@@ -4,9 +4,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"context"
-	"errors"
 	"go.uber.org/zap"
 	"io"
+	"sync"
 )
 
 const (
@@ -14,16 +14,14 @@ const (
 	Concurrency = 4
 )
 
-var (
-	PathBadType  = errors.New("key is not path type")
-	ValueBadType = errors.New("value is not Serializable type")
-)
-
+//Caching proxy that wraps MerklePatriciaTrieI. Flush is never called automatically.
+//User of this proxy should be aware, that GetRoot, MergeDB, Iterate and other methods should be called only after Flush, to get recent updates.
 type MPTCachingProxy struct {
-	mpt     MerklePatriciaTrieI
-	cache   map[string]Serializable
-	flusher *common.WithContextFunc
-	flush   func(key, value interface{})
+	mpt        MerklePatriciaTrieI
+	cache      map[string]Serializable
+	flusher    *common.WithContextFunc
+	flush      func(path Path, value Serializable)
+	cacheGuard sync.Mutex
 }
 
 func NewMPTCachingProxy(ctx context.Context, mpt MerklePatriciaTrieI) *MPTCachingProxy {
@@ -31,19 +29,9 @@ func NewMPTCachingProxy(ctx context.Context, mpt MerklePatriciaTrieI) *MPTCachin
 	p.flusher = common.NewWithContextFunc(Concurrency)
 
 	p.cache = make(map[string]Serializable, CacheSize)
-	p.flush = func(key, value interface{}) {
-		path, ok := key.(Path)
-		if !ok {
-			logging.Logger.Error("mpt_cache_flush", zap.Error(PathBadType))
-			return
-		}
-		ser, ok := value.(Serializable)
-		if !ok {
-			logging.Logger.Error("mpt_cache_flush", zap.Error(ValueBadType))
-			return
-		}
+	p.flush = func(path Path, value Serializable) {
 		err := p.flusher.Run(ctx, func() error {
-			_, err := p.mpt.Insert(path, ser)
+			err := p.mpt.Insert(path, value)
 			return err
 		})
 		if err != nil {
@@ -55,8 +43,10 @@ func NewMPTCachingProxy(ctx context.Context, mpt MerklePatriciaTrieI) *MPTCachin
 }
 
 func (p *MPTCachingProxy) Flush() {
+	p.cacheGuard.Lock()
+	defer p.cacheGuard.Unlock()
 	for key, val := range p.cache {
-		p.flush(key, val)
+		p.flush(Path(key), val)
 	}
 	p.cache = make(map[string]Serializable, CacheSize)
 }
@@ -78,15 +68,23 @@ func (p *MPTCachingProxy) GetVersion() Sequence {
 }
 
 func (p *MPTCachingProxy) GetRoot() Key {
+	//TODO: think about force flush here, to refresh root
 	return p.mpt.GetRoot()
 }
 
-func (p *MPTCachingProxy) GetNodeValue(path Path) (Serializable, error) {
+func (p *MPTCachingProxy) GetNodeValue(path Path, template Serializable) (Serializable, error) {
+	p.cacheGuard.Lock()
+	defer p.cacheGuard.Unlock()
+
 	get, ok := p.cache[string(path)]
 	if !ok {
-		value, err := p.mpt.GetNodeValue(path)
+		value, err := p.mpt.GetNodeValue(path, template)
 		if err != nil {
 			return value, err
+		}
+		if len(p.cache) > CacheSize {
+			logging.Logger.Warn("Cache is overflown, use direct write")
+			return value, nil
 		}
 		p.cache[string(path)] = value
 		return value, nil
@@ -95,26 +93,43 @@ func (p *MPTCachingProxy) GetNodeValue(path Path) (Serializable, error) {
 }
 
 //TODO remove key return here
-func (p *MPTCachingProxy) Insert(path Path, value Serializable) (Key, error) {
-	key, err := p.mpt.Insert(path, value)
-	if err != nil || len(p.cache) > CacheSize {
-		return key, err
+func (p *MPTCachingProxy) Insert(path Path, value Serializable) error {
+	p.cacheGuard.Lock()
+	defer p.cacheGuard.Unlock()
+
+	if len(p.cache) > CacheSize {
+		logging.Logger.Warn("Cache is overflown, use direct write")
+		return p.mpt.Insert(path, value)
 	}
 	p.cache[string(path)] = value
-	return key, err
+	return nil
 }
 
 //TODO remove key return here
-func (p *MPTCachingProxy) Delete(path Path) (Key, error) {
-	delete(p.cache, string(path))
+func (p *MPTCachingProxy) Delete(path Path) error {
+	p.cacheGuard.Lock()
+	defer p.cacheGuard.Unlock()
+
+	_, ok := p.cache[string(path)]
+	if ok {
+		delete(p.cache, string(path))
+		err := p.mpt.Delete(path)
+		//this value could be added to cache and wasn't flushed yet
+		if err == ErrValueNotPresent {
+			return nil
+		}
+		return err
+	}
 	return p.mpt.Delete(path)
 }
 
 func (p *MPTCachingProxy) Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error {
+	//TODO: think about force flush here, to refresh iterated nodes
 	return p.mpt.Iterate(ctx, handler, visitNodeTypes)
 }
 
 func (p *MPTCachingProxy) IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
+	//TODO: think about force flush here, to refresh root
 	return p.mpt.IterateFrom(ctx, node, handler, visitNodeTypes)
 }
 

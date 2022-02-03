@@ -73,20 +73,19 @@ func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, strin
 func (tb *testBalances) EmitError(error)                                           {}
 func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
-func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
-	datastore.Key, error) {
+
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) error {
 
 	if tb.mpts != nil {
 		if encryption.IsHash(key) {
-			return "", common.NewError("failed to get trie node",
+			return common.NewError("failed to get trie node",
 				"key is too short")
 		}
-		var btkey, err = tb.mpts.mpt.Delete(util.Path(encryption.Hash(key)))
-		return datastore.Key(btkey), err
+		return tb.mpts.mpt.Delete(util.Path(encryption.Hash(key)))
 	}
 
 	delete(tb.tree, key)
-	return "", nil
+	return nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
@@ -106,7 +105,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key) (
+func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
@@ -115,7 +114,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	}
 
 	if tb.mpts != nil {
-		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)))
+		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)), templ)
 	}
 
 	var ok bool
@@ -126,19 +125,18 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (datastore.Key, error) {
+	node util.Serializable) error {
 
 	if tb.mpts != nil {
 		if encryption.IsHash(key) {
-			return "", common.NewError("failed to get trie node",
+			return common.NewError("failed to get trie node",
 				"key is too short")
 		}
-		var btkey, err = tb.mpts.mpt.Insert(util.Path(encryption.Hash(key)), node)
-		return datastore.Key(btkey), err
+		return tb.mpts.mpt.Insert(util.Path(encryption.Hash(key)), node)
 	}
 
 	tb.tree[key] = node
-	return "", nil
+	return nil
 }
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {

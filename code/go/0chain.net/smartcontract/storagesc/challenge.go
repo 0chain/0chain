@@ -46,30 +46,21 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 	return found
 }
 
-func (sc *StorageSmartContract) getBlobberChallengeBytes(blobberID string,
-	balances c_state.StateContextI) (b []byte, err error) {
-
-	var (
-		bc   BlobberChallenge
-		seri util.Serializable
-	)
-	bc.BlobberID = blobberID
-	if seri, err = balances.GetTrieNode(bc.GetKey(sc.ID)); err != nil {
-		return
-	}
-	return seri.Encode(), nil
-}
-
 func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 	balances c_state.StateContextI) (bc *BlobberChallenge, err error) {
 
-	var b []byte
-	if b, err = sc.getBlobberChallengeBytes(blobberID, balances); err != nil {
+	var (
+		raw util.Serializable
+	)
+	bc = &BlobberChallenge{BlobberID: blobberID}
+	if raw, err = balances.GetTrieNode(bc.GetKey(sc.ID), bc); err != nil {
 		return
 	}
+
 	bc = new(BlobberChallenge)
-	if err = bc.Decode(b); err != nil {
-		return nil, fmt.Errorf("decoding blobber_challenge: %v", err)
+	var ok bool
+	if bc, ok = raw.(*BlobberChallenge); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }
@@ -447,7 +438,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		}
 
 		// save allocation object
-		_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+		err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
@@ -490,7 +481,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		}
 
 		// save allocation object
-		_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+		err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
@@ -531,15 +522,15 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	var stats = &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	var statsBytes util.Serializable
-	statsBytes, err = balances.GetTrieNode(stats.GetKey(sc.ID))
+	var raw util.Serializable
+	raw, err = balances.GetTrieNode(stats.GetKey(sc.ID), stats)
 	if err != nil && err != util.ErrValueNotPresent {
 		return // unexpected MPT error
 	}
-	if statsBytes != nil {
-		if err = stats.Decode(statsBytes.Encode()); err != nil {
-			Logger.Error("storage stats decode error")
-			return
+	if raw != nil {
+		var ok bool
+		if stats, ok = raw.(*StorageStats); !ok {
+			return fmt.Errorf("unexpected node type")
 		}
 	}
 	lastChallengeTime := stats.LastChallengedTime
@@ -742,12 +733,11 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
 
-	blobberChallengeBytes, _ := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
-	if blobberChallengeBytes != nil {
-		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
-		if err != nil {
-			return "", common.NewError("blobber_challenge_decode_error",
-				"Error decoding the blobber challenge")
+	raw, err := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	if raw != nil {
+		var ok bool
+		if blobberChallengeObj, ok = raw.(*BlobberChallenge); !ok {
+			return "", fmt.Errorf("unexpected node type")
 		}
 	}
 

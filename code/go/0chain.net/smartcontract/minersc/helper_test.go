@@ -209,7 +209,7 @@ func mustEncode(t *testing.T, val interface{}) []byte {
 func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
 	balances cstate.StateContextI) {
 
-	var _, err = balances.InsertTrieNode(key, val)
+	var err = balances.InsertTrieNode(key, val)
 	require.NoError(t, err)
 }
 

@@ -16,7 +16,7 @@ import (
 func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
-	mbits, err := balances.GetTrieNode(pkey)
+	mbits, err := balances.GetTrieNode(pkey, nil)
 	if err != nil && err != util.ErrValueNotPresent {
 		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 			zap.String("key", pkey))
@@ -246,7 +246,7 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 		}
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
 			delete(dkgMiners.SimpleNodes, mn.ID)
-			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+			err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 			if err != nil {
 				return
 			}
@@ -339,15 +339,15 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 
 	mn := NewMinerNode()
 	mn.ID = id
-	ms, err := state.GetTrieNode(mn.GetKey())
+	raw, err := state.GetTrieNode(mn.GetKey(), mn)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := mn.Decode(ms.Encode()); err != nil {
-		return nil, err
+	var ok bool
+	if mn, ok = raw.(*MinerNode); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return mn, nil
 }
 

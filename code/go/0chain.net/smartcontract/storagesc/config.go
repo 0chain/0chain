@@ -12,7 +12,6 @@ import (
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
@@ -362,18 +361,6 @@ func (conf *scConfig) Decode(b []byte) error {
 // rest handler and update function
 //
 
-// getConfigBytes returns encoded configurations or an error.
-func (ssc *StorageSmartContract) getConfigBytes(
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(ssc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configs from sc.yaml
 func getConfiguredConfig() (conf *scConfig, err error) {
 	const pfx = "smart_contracts.storagesc."
@@ -481,7 +468,7 @@ func (ssc *StorageSmartContract) setupConfig(
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return nil, err
 	}
@@ -493,13 +480,11 @@ func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *scConfig, err error) {
 
-	var confb []byte
-	confb, err = ssc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
 	conf = new(scConfig)
+	var raw util.Serializable
+	if raw, err = balances.GetTrieNode(scConfigKey(ssc.ID), conf); err != nil && err != util.ErrValueNotPresent {
+		return nil, err
+	}
 
 	if err == util.ErrValueNotPresent {
 		if !setup {
@@ -507,9 +492,9 @@ func (ssc *StorageSmartContract) getConfig(
 		}
 		return ssc.setupConfig(balances)
 	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	var ok bool
+	if conf, ok = raw.(*scConfig); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
 	return
 }

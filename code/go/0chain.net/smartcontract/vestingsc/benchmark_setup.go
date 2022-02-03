@@ -36,11 +36,11 @@ func AddVestingPools(
 		vestingPool.ID = geMockVestingPoolId(i)
 		vestingPool.Balance = mockVpBalance
 		clientPools.Pools = append(clientPools.Pools, vestingPool.ID)
-		_, err := balances.InsertTrieNode(vestingPool.ID, &vestingPool)
+		err := balances.InsertTrieNode(vestingPool.ID, &vestingPool)
 		if err != nil {
 			panic(err)
 		}
-		_, err = balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools)
+		err = balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools)
 		if err != nil {
 			panic(err)
 		}

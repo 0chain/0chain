@@ -250,12 +250,12 @@ func Benchmark_generateChallenges(b *testing.B) {
 		for _, d := range alloc.BlobberDetails {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
 		stats.Stats.NumWrites += 10    // total stats
 		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
 	}
-	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+	err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
 	require.NoError(b, err)
 
 	// 5. merge all transactions into p node db
@@ -285,12 +285,12 @@ func Benchmark_generateChallenges(b *testing.B) {
 					// revert the stats to allow generation
 					tp += 1
 					var statsb util.Serializable
-					statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID))
+					statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID), nil)
 					require.NoError(b, err)
 					require.NoError(b, stats.Decode(statsb.Encode()))
 					stats.LastChallengedSize = 0
 					stats.LastChallengedTime = 0
-					_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+					err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
 					require.NoError(b, err)
 
 					tp += 1
@@ -399,12 +399,12 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		for _, d := range alloc.BlobberDetails {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
 		stats.Stats.NumWrites += 10    // total stats
 		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
 	}
-	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+	err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
 	require.NoError(b, err)
 
 	// 5. merge all transactions into p node db

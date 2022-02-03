@@ -135,7 +135,7 @@ func (msc *MinerSmartContract) AddSharder(
 	allSharders.Nodes = append(allSharders.Nodes, newSharder)
 
 	// save the added sharder
-	_, err = balances.InsertTrieNode(newSharder.GetKey(), newSharder)
+	err = balances.InsertTrieNode(newSharder.GetKey(), newSharder)
 	if err != nil {
 		return "", common.NewErrorf("add_sharder", "saving sharder: %v", err)
 	}
@@ -214,7 +214,7 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 				break
 			}
 		}
-		if _, err = balances.InsertTrieNode(ShardersKeepKey, sharders); err != nil {
+		if err = balances.InsertTrieNode(ShardersKeepKey, sharders); err != nil {
 			return
 		}
 	} else {
@@ -266,15 +266,14 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 
 	sn := NewMinerNode()
 	sn.ID = sid
-	ss, err := balances.GetTrieNode(sn.GetKey())
+	raw, err := balances.GetTrieNode(sn.GetKey(), sn)
 	if err != nil {
 		return nil, err
 	}
-
-	if err = sn.Decode(ss.Encode()); err != nil {
-		return nil, fmt.Errorf("invalid state: decoding sharder: %v", err)
+	var ok bool
+	if sn, ok = raw.(*MinerNode); !ok {
+		return nil, fmt.Errorf("unexpected node type")
 	}
-
 	return sn, nil
 }
 

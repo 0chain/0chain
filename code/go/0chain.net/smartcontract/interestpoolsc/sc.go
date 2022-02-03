@@ -149,11 +149,10 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 
 func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_state.StateContextI) *UserNode {
 	un := newUserNode(id)
-	userBytes, err := balances.GetTrieNode(un.getKey(ip.ID))
+	raw, err := balances.GetTrieNode(un.getKey(ip.ID), un)
 	if err == nil {
-		err = un.Decode(userBytes.Encode())
-		if err == nil {
-			return un
+		if val, ok := raw.(*UserNode); ok {
+			return val
 		}
 	}
 	return un
@@ -161,10 +160,10 @@ func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_st
 
 func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) *GlobalNode {
 	gn := newGlobalNode()
-	globalBytes, err := balances.GetTrieNode(gn.getKey())
+	raw, err := balances.GetTrieNode(gn.getKey(), gn)
 	if err == nil {
-		if err := gn.Decode(globalBytes.Encode()); err == nil {
-			return gn
+		if val, ok := raw.(*GlobalNode); ok {
+			return val
 		}
 	}
 	const pfx = "smart_contracts.interestpoolsc."
