@@ -242,7 +242,13 @@ func (msc *StorageSmartContract) GetLatestReadMarker(
 	if balances.GetEventDB() == nil {
 		return nil, common.NewErrInternal("can't get read marker, database is not responding")
 	}
-	return balances.GetEventDB().GetLatestReadMarker(clientID, blobberID)
+	readMarker, err := balances.GetEventDB().GetLatestReadMarker(clientID, blobberID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"read_marker": readMarker,
+	}, nil
 }
 
 func (msc *StorageSmartContract) GetErrors(
