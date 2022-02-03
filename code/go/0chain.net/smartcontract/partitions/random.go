@@ -346,11 +346,11 @@ func (rs *randomSelector) Migrate(
 
 			for i := 0; i < rs.NumPartitions; i++ {
 
-				err = rs.Partitions[i].get(rs.partitionKey(i), balances)
+				partition, err := rs.getPartition(i, balances)
 				if err != nil {
 					return err
 				}
-				_, err = balances.InsertTrieNode(PartitionKey(toKey, i), rs.Partitions[i])
+				_, err = balances.InsertTrieNode(PartitionKey(toKey, i), partition)
 				if err != nil {
 					return err
 				}

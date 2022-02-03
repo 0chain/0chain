@@ -62,10 +62,6 @@ func (tb *testBalances) GetTransaction() *transaction.Transaction {
 	return tb.txn
 }
 
-func (tb *testBalances) GetBlock() *block.Block {
-	return tb.block
-}
-
 // stubs
 func (tb *testBalances) GetBlock() *block.Block                                    { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
