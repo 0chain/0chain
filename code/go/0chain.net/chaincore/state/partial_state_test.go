@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 
 	setupPartialStateDBMocks()
 }

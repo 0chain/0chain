@@ -12,7 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -24,8 +25,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 const (
@@ -875,12 +874,39 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
+
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
+		if err != nil {
+			return fmt.Errorf("marshalling transactions in block: %v", err)
+		}
+		b.Events = append(b.Events, event.Event{
+			BlockNumber: b.Round,
+			TxHash:      txn.Hash,
+			Type:        int(event.TypeStats),
+			Tag:         int(event.TagAddTransaction),
+			Index:       txn.Hash,
+			Data:        string(data),
+		})
+
 		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
 			logging.Logger.Error("compute state - cancelled",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+				zap.Error(err))
+			//rollback changes for the next attempt
+			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
+			b.Events = nil
+			return err
+		case transaction.ErrSmartContractContext:
+			b.SetStateStatus(StateCancelled)
+			logging.Logger.Error("compute state - smart contract timeout",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.String("client_state", util.ToHex(b.ClientStateHash)),
@@ -907,9 +933,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(b.Events)
 		b.Events = nil
 	}
 
@@ -965,9 +991,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
-		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.GetHash()))
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
 		if err != nil {
 			return fmt.Errorf("marshalling transactions in block: %v", err)
 		}
@@ -979,6 +1003,10 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			Index:       txn.Hash,
 			Data:        string(data),
 		})
+
+		events, err := c.UpdateState(ctx, b, bState, txn)
+		b.Events = append(b.Events, events...)
+
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
@@ -993,6 +1021,19 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 			b.Events = nil
 			return common.NewError("state_update_error", err.Error())
+		case transaction.ErrSmartContractContext:
+			b.SetStateStatus(StateCancelled)
+			logging.Logger.Error("compute state - smart contract timeout",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
+				zap.Error(err))
+			//rollback changes for the next attempt
+			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
+			b.Events = nil
+			return err
 		default:
 			if err != nil {
 				b.SetStateStatus(StateFailed)
@@ -1008,10 +1049,15 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		}
 	}
 
+	err := emitBlockEvent(b.PrevBlock)
+	if err != nil {
+		logging.Logger.Error("emit block event error", zap.Error(err))
+	}
+
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(b.Events)
 		b.Events = nil
 	}
 
@@ -1063,7 +1109,6 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,
 		Status:            tr.Status,
-		Model:             gorm.Model{CreatedAt: time.Unix(int64(tr.CreationDate.Duration()), 0)},
 	}
 }
 

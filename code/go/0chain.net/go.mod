@@ -3,7 +3,7 @@ module 0chain.net
 go 1.16
 
 require (
-	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
+	github.com/0chain/gorocksdb v0.0.0-20220125141924-9721107d4a29
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
@@ -41,7 +41,7 @@ require (
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	golang.org/x/net v0.0.0-20211020060615-d418f374d309 // indirect
+	golang.org/x/net v0.0.0-20211020060615-d418f374d309
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.2.1

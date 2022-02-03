@@ -6,8 +6,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 
 	"gorm.io/gorm"
 )
@@ -63,7 +64,7 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 
 func (edb *EventDb) exists(ctx context.Context, event Event) (bool, error) {
 	var ev Event
-	result := edb.Store.Get().WithContext(ctx).Model(&Event{}).Where(&Event{TxHash: event.TxHash, Index: event.Index}).Take(&ev)
+	result := edb.Store.Get().WithContext(ctx).Model(&Event{}).Where(&Event{TxHash: event.TxHash, Index: event.Index, Tag: event.Tag, Type: event.Type}).Take(&ev)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return false, nil
 	}

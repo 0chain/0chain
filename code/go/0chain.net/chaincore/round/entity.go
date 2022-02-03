@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"sort"
 	"sync"
@@ -28,6 +29,7 @@ type Phase int32
 const (
 	ShareVRF Phase = iota
 	Verify
+	//mb cancelled is better name
 	Notarize
 	Share
 	Complete
@@ -532,8 +534,10 @@ func SetupEntity(store datastore.Store) {
 }
 
 //SetupRoundSummaryDB - setup the round summary db
-func SetupRoundSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
+func SetupRoundSummaryDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/roundsummary")
+
+	db, err := ememorystore.CreateDB(datadir)
 	if err != nil {
 		panic(err)
 	}

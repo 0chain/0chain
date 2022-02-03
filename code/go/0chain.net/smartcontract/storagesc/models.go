@@ -503,6 +503,10 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
+func (d *BlobberAllocation) Offer() state.Balance {
+	return state.Balance(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
+}
+
 // The upload used after commitBlobberConnection (size < 0) to calculate
 // internal integral value. The size argument expected to be positive (not
 // negative).
@@ -1174,6 +1178,7 @@ type ReadMarker struct {
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
+	ReadSize        float64          `json:"read_size"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {

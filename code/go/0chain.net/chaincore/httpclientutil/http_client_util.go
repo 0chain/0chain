@@ -287,6 +287,7 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 			logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
 			numErrs++
 			errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+			response.Body.Close()
 			continue
 		}
 
@@ -615,6 +616,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 }
 
 //GetMagicBlockCall for smart contract to get magic block
+//TODO not used, remove this func
 func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
 	var retObj interface{}
 	numSuccess := 0
@@ -632,7 +634,11 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 		var err error
 		for {
 			response, err = httpClient.Get(u)
-			if err != nil || retried >= 4 || response.StatusCode != http.StatusTooManyRequests {
+			if err != nil {
+				break
+			}
+			if retried >= 4 || response.StatusCode != http.StatusTooManyRequests {
+				response.Body.Close()
 				break
 			}
 			response.Body.Close()

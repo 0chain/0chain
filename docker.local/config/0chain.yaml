@@ -2,7 +2,7 @@ version: 1.0
 
 logging:
   level: "debug"
-  console: false # printing log to console is only supported in development mode
+  console: true # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
 
@@ -171,6 +171,8 @@ cassandra:
   connection:
     delay: 10 # in seconds
     retries: 10
+#   host: cassandra
+#   port: 9042
 
 # integration tests related configurations
 integration_tests:
