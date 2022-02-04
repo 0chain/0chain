@@ -39,7 +39,7 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 
 	allocationList := &Allocations{}
 	var clientAlloc = &ClientAllocation{ClientID: clientID}
-	raw, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), allocationList)
+	raw, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), clientAlloc)
 	if err == util.ErrEncoding {
 		return nil, err
 	}
