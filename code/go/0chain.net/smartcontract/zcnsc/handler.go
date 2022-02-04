@@ -4,6 +4,9 @@ import (
 	"context"
 	"net/url"
 
+	"0chain.net/core/common"
+	"0chain.net/core/util"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -22,7 +25,19 @@ func (zcn *ZCNSmartContract) GetConfig(
 	_ url.Values,
 	ctx cState.StateContextI,
 ) (interface{}, error) {
-	return nil, nil
+	gn, err := GetGlobalNode(ctx)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, common.NewError("get config handler", err.Error())
+	}
+
+	var zcnConfig *ZCNSConfig
+	if gn == nil || gn.Config == nil {
+		zcnConfig = loadSettings()
+	} else {
+		zcnConfig = gn.Config
+	}
+
+	return zcnConfig.ToStringMap()
 }
 
 // GetAuthorizerNodes returns all authorizers from eventDB

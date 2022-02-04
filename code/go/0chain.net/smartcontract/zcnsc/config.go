@@ -1,7 +1,10 @@
 package zcnsc
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/state"
 )
@@ -29,6 +32,29 @@ type ZCNSConfig struct {
 	MinStakeAmount     int64         `json:"min_stake_amount"`
 	BurnAddress        string        `json:"burn_address"`
 	MaxFee             int64         `json:"max_fee"`
+}
+
+func (cfg *ZCNSConfig) ToStringMap() (res *smartcontract.StringMap, err error) {
+	bytes, err := json.Marshal(cfg)
+	if err != nil {
+		return res, err
+	}
+
+	var stringMap map[string]interface{}
+
+	err = json.Unmarshal(bytes, &stringMap)
+	if err != nil {
+		return res, err
+	}
+
+	res = new(smartcontract.StringMap)
+	res.Fields = make(map[string]string)
+
+	for k, v := range stringMap {
+		res.Fields[k] = fmt.Sprintf("%v", v)
+	}
+
+	return
 }
 
 func Section(section string) string {
