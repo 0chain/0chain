@@ -95,7 +95,7 @@ func (il *validatorItemList) save(balances state.StateContextI) error {
 }
 
 func getValidatorItemList(key datastore.Key, balances state.StateContextI) (*validatorItemList, error) {
-	var il *validatorItemList
+	il := &validatorItemList{}
 	raw, err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

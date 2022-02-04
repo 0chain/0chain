@@ -295,7 +295,7 @@ func (rs *randomSelector) getPartition(
 }
 
 func GetRandomSelector(key datastore.Key, balances state.StateContextI) (RandPartition, error) {
-	var rs *randomSelector
+	rs := &randomSelector{}
 	raw, err := balances.GetTrieNode(key, rs)
 	if err != nil {
 		return nil, err

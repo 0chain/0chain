@@ -33,7 +33,7 @@ func (il *itemList) save(balances state.StateContextI) error {
 }
 
 func getItemList(key datastore.Key, balances state.StateContextI) (*itemList, error) {
-	var il *itemList
+	il := &itemList{}
 	raw, err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
