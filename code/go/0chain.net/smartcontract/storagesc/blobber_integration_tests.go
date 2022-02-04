@@ -1,4 +1,3 @@
-//go:build integration_tests
 // +build integration_tests
 
 package storagesc
@@ -14,13 +13,13 @@ import (
 )
 
 // insert new blobber, filling its stake pool
-func (ssc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
+func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI) (err error) {
 	// check for duplicates
 	for _, b := range blobbers.Nodes {
 		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
-			return ssc.updateBlobber(t, conf, blobber, blobbers, balances)
+			return sc.updateBlobber(t, conf, blobber, blobbers, balances)
 		}
 	}
 
@@ -33,21 +32,21 @@ func (ssc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// the stake pool can be created by related validator
 	var sp *stakePool
-	sp, err = ssc.getOrCreateStakePool(conf, blobber.ID,
+	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
 		&blobber.StakePoolSettings, balances)
 	if err != nil {
 		return
 	}
 
-	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
 	blobbers.Nodes.add(blobber) // add to all
 
 	// statistic
-	ssc.statIncr(statAddBlobber)
-	ssc.statIncr(statNumberOfBlobbers)
+	sc.statIncr(statAddBlobber)
+	sc.statIncr(statNumberOfBlobbers)
 
 	var (
 		client = crpc.Client()

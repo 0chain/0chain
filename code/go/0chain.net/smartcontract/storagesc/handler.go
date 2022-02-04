@@ -216,7 +216,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	return blobberIDs, nil
 }
 
-func (ssc *StorageSmartContract) GetTransactionByHashHandler(
+func (msc *StorageSmartContract) GetTransactionByHashHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
@@ -232,7 +232,7 @@ func (ssc *StorageSmartContract) GetTransactionByHashHandler(
 	return transaction, err
 }
 
-func (ssc *StorageSmartContract) GetTransactionByFilterHandler(
+func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
@@ -272,7 +272,7 @@ func (ssc *StorageSmartContract) GetTransactionByFilterHandler(
 	return nil, errors.New("No filter selected")
 }
 
-func (ssc *StorageSmartContract) GetErrors(
+func (msc *StorageSmartContract) GetErrors(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,

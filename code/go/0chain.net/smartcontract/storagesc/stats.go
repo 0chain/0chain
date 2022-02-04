@@ -1,15 +1,15 @@
 package storagesc
 
 import (
-	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
+	c_state "0chain.net/chaincore/chain/state"
 	. "0chain.net/core/logging"
 )
 
-func (ssc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) {
+func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(ssc.ID))
+	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
 	if statsBytes != nil {
 		err = stats.Decode(statsBytes.Encode())
 		if err != nil {
@@ -17,17 +17,17 @@ func (ssc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeS
 			return
 		}
 	}
-
+	
 	stats.Stats.NumWrites++
 	stats.Stats.UsedSize += writeSize
-	statectx.InsertTrieNode(stats.GetKey(ssc.ID), stats)
+	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 
 }
 
-func (ssc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) {
+func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(ssc.ID))
+	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
 	if err != nil {
 		return
 	}
@@ -38,15 +38,15 @@ func (ssc *StorageSmartContract) newRead(statectx c_state.StateContextI, numRead
 			return
 		}
 	}
-
-	stats.Stats.NumReads += numReads
-	statectx.InsertTrieNode(stats.GetKey(ssc.ID), stats)
+	
+	stats.Stats.NumReads+=numReads
+	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 }
 
-func (ssc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) {
+func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(ssc.ID))
+	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
 	if err != nil {
 		return
 	}
@@ -57,18 +57,18 @@ func (ssc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, ch
 			return
 		}
 	}
-
+	
 	stats.Stats.OpenChallenges++
 	stats.Stats.TotalChallenges++
 	stats.LastChallengedSize = stats.Stats.UsedSize
 	stats.LastChallengedTime = challengeTimestamp
-	statectx.InsertTrieNode(stats.GetKey(ssc.ID), stats)
+	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 }
 
-func (ssc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI, challengedPassed bool) {
+func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI, challengedPassed bool) {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(ssc.ID))
+	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
 	if err != nil {
 		return
 	}
@@ -79,12 +79,12 @@ func (ssc *StorageSmartContract) challengeResolved(statectx c_state.StateContext
 			return
 		}
 	}
-
+	
 	stats.Stats.OpenChallenges--
 	if challengedPassed {
 		stats.Stats.SuccessChallenges++
 	} else {
 		stats.Stats.FailedChallenges++
 	}
-	statectx.InsertTrieNode(stats.GetKey(ssc.ID), stats)
+	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 }
