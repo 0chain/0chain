@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/mocks"
@@ -55,24 +57,15 @@ func MakeMockStateContext() *mocks.StateContextI {
 
 	authorizers = make(map[string]*Authorizer, len(authorizersID))
 	for _, id := range authorizersID {
-		scheme := ctx.GetSignatureScheme()
-		_ = scheme.GenerateKeys()
-
-		node := CreateAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
-		tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
-		_, _, _ = node.Staking.DigPool(tr.Hash, tr)
-
-		a := &Authorizer{
-			Scheme: scheme,
-			Node:   node,
-		}
-
-		authorizers[node.GetKey()] = a
+		createTestAuthorizer(ctx, id)
 	}
 
 	// Transfers
 
 	var transfers []*state.Transfer
+
+	// EventsDB
+	events = make(map[string]*AuthorizerNode, 100)
 
 	/// GetClientBalance
 
@@ -126,7 +119,9 @@ func MakeMockStateContext() *mocks.StateContextI {
 					if authorizer, ok := authorizers[key]; ok {
 						return authorizer.Node
 					}
-					return nil
+				}
+				if strings.Contains(key, AuthorizerNewNodeType) {
+					return createTestAuthorizer(ctx, key).Node
 				}
 				if strings.Contains(key, GlobalNodeType) {
 					return globalNode
@@ -228,5 +223,52 @@ func MakeMockStateContext() *mocks.StateContextI {
 		On("AddMint", mock.AnythingOfType("*state.Mint")).
 		Return(nil)
 
+	// EventsDB
+
+	ctx.On(
+		"EmitEvent",
+		mock.AnythingOfType("event.EventType"),
+		mock.AnythingOfType("event.EventTag"),
+		mock.AnythingOfType("string"), // authorizerID
+		mock.AnythingOfType("string"), // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			fmt.Println(".")
+		})
+
+	ctx.On(
+		"EmitEvent",
+		event.TypeStats,
+		event.TagAddAuthorizer,
+		mock.AnythingOfType("string"), // authorizerID
+		mock.AnythingOfType("string"), // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+			if err != nil {
+				panic(err)
+			}
+			if authorizerNode.ID != id {
+				panic("authorizerID must be equal to ID")
+			}
+			events[id] = authorizerNode
+		})
+
 	return ctx
+}
+
+func createTestAuthorizer(ctx *mocks.StateContextI, id string) *Authorizer {
+	scheme := ctx.GetSignatureScheme()
+	_ = scheme.GenerateKeys()
+
+	node := CreateAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
+	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
+	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
+
+	authorizers[node.GetKey()] = &Authorizer{
+		Scheme: scheme,
+		Node:   node,
+	}
+
+	return authorizers[node.GetKey()]
 }

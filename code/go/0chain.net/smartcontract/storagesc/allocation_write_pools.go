@@ -20,7 +20,7 @@ type allocationWritePools struct {
 
 func (awp *allocationWritePools) activeAllocationPools(
 	allocID string, now common.Timestamp,
-) []*allocationPool {
+) allocationPools {
 	var cut = awp.allocationPools.allocationCut(allocID)
 	cut = removeExpired(cut, now)
 	return cut

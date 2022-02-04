@@ -1,17 +1,19 @@
 package event
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+
+	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
 )
 
 func init() {

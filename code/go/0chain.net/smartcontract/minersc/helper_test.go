@@ -228,14 +228,12 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.LastRound = 0
 	gn.MaxStake = state.Balance(100.0e10)
 	gn.MinStake = state.Balance(0.01e10)
-	gn.InterestRate = 0.1
 	gn.RewardRate = 1.0
 	gn.ShareRatio = 0.10
 	gn.BlockReward = state.Balance(0.7e10)
 	gn.MaxCharge = 0.5 // %
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
-	gn.InterestDeclineRate = 0.1
 	gn.MaxMint = state.Balance(4e6 * 1e10)
 	gn.Minted = 0
 

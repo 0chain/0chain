@@ -26,7 +26,7 @@ import (
 
 func init() {
 	block.SetupEntity(&mocks.Store{})
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 
 	startTestServer()
 }

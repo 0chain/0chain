@@ -38,7 +38,7 @@ var numOfTransactions int
 func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 }
 
 func getContext() (context.Context, func()) {
@@ -467,7 +467,7 @@ func SetUpSingleSelf() func() {
 	block.SetupBlockSummaryEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
 
-	chain.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 	round.SetupEntity(memorystore.GetStorageProvider())
 
 	c := chain.Provider().(*chain.Chain)
@@ -542,7 +542,7 @@ func setupSelf() func() {
 
 	block.SetupEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
-	chain.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 	round.SetupEntity(memorystore.GetStorageProvider())
 
 	mb := block.NewMagicBlock()

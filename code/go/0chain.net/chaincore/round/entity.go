@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
+	"runtime/pprof"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -531,8 +534,10 @@ func SetupEntity(store datastore.Store) {
 }
 
 //SetupRoundSummaryDB - setup the round summary db
-func SetupRoundSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
+func SetupRoundSummaryDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/roundsummary")
+
+	db, err := ememorystore.CreateDB(datadir)
 	if err != nil {
 		panic(err)
 	}
@@ -556,7 +561,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
-		//pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
 			r.GetPhase(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}

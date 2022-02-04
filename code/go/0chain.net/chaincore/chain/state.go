@@ -186,7 +186,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		return nil, err
 	}
 
-	//we should check that client hash enough funds to pay for transaction before heavy computations are executed
+	//we should check that client has enough funds to pay for transaction before heavy computations are executed
 	if err = sctx.Validate(); err != nil {
 		return
 	}
@@ -216,6 +216,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
+				zap.Duration("time_spent", time.Since(t)),
 				zap.Any("txn", txn))
 			//return original error, to handle upwards
 			return events, err
@@ -227,17 +228,14 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 					zap.String("block", b.Hash),
 					zap.String("begin client state", util.ToHex(startRoot)),
 					zap.String("prev block", b.PrevBlock.Hash),
+					zap.Duration("time_spent", time.Since(t)),
 					zap.Any("txn", txn))
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
 				clientState = CreateTxnMPT(bState) // begin transaction
 				sctx = c.NewStateContext(b, clientState, txn, nil)
 
-				if e, ok := err.(*common.Error); ok {
-					output = e.Code + ":" + e.Msg
-				} else {
-					output = err.Error()
-				}
+				output = err.Error()
 				txn.Status = transaction.TxnError
 			}
 		}
@@ -248,6 +246,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.Any("txn_hash", txn.Hash),
 			zap.String("txn_func", scData.FunctionName),
+			zap.Int("txn_status", txn.Status),
 			zap.Any("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
 			zap.Any("current_root", util.ToHex(sctx.GetState().GetRoot())))

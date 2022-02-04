@@ -35,8 +35,13 @@ func init() {
 	redis_txns = os.Getenv("REDIS_TXNS")
 }
 
-func SetupTransactionDB() {
-	memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
+	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
+		memorystore.AddPool("txndb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
+	} else {
+		//inside docker
+		memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+	}
 }
 
 /*Transaction type for capturing the transaction data */
