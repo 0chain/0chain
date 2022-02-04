@@ -16,7 +16,7 @@ import (
 
 const (
 	ADDRESS              = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	name                 = "zcn"
+	NAME                 = "zcnsc"
 	AddAuthorizerFunc    = "AddAuthorizer"
 	DeleteAuthorizerFunc = "DeleteAuthorizer"
 	MintFunc             = "mint"
@@ -43,14 +43,14 @@ func (zcn *ZCNSmartContract) InitSC() {}
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
+	zcn.SmartContract.RestHandlers["/getConfig"] = zcn.GetConfig
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
-	//zcn.SmartContract.RestHandlers["/getConfig"] = zcn.getConfigHandler
-	zcn.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, "update-settings"), nil)
+	//zcn.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, "update-settings"), nil)
 }
 
 // GetName ...
 func (zcn *ZCNSmartContract) GetName() string {
-	return name
+	return NAME
 }
 
 // GetAddress ...

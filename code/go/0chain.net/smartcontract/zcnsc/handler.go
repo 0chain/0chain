@@ -17,6 +17,14 @@ type AuthorizerNodeResponse struct {
 	URL string `json:"url"`
 }
 
+func (zcn *ZCNSmartContract) GetConfig(
+	_ context.Context,
+	_ url.Values,
+	ctx cState.StateContextI,
+) (interface{}, error) {
+	return nil, nil
+}
+
 // GetAuthorizerNodes returns all authorizers from eventDB
 // which is used to assign jobs to all or a part of authorizers
 func (zcn *ZCNSmartContract) GetAuthorizerNodes(
