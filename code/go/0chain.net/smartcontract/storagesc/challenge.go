@@ -30,6 +30,10 @@ import (
 
 const passedBlobbersPartitionSize = 50
 
+func OngoingBlobberKey(round int64) datastore.Key {
+	return ONGOING_PASSED_BLOBBERS_KEY + ":round:" + strconv.Itoa(int(round))
+}
+
 // getActivePassedBlobbersList gets blobbers passed challenge from last challenge period
 func getActivePassedBlobbersList(balances c_state.StateContextI) (partitions.RandPartition, error) {
 	all, err := partitions.GetRandomSelector(ACTIVE_PASSED_BLOBBERS_KEY, balances)
@@ -50,20 +54,26 @@ func getActivePassedBlobbersList(balances c_state.StateContextI) (partitions.Ran
 
 // getOngoingPassedBlobbersList gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobbersList(balances c_state.StateContextI) (partitions.RandPartition, error) {
-	all, err := partitions.GetRandomSelector(ONGOING_PASSED_BLOBBERS_KEY, balances)
+	key := OngoingBlobberKey(balances.GetBlock().Round)
+	all, err := partitions.GetRandomSelector(key, balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		all = partitions.NewRandomSelector(
-			ONGOING_PASSED_BLOBBERS_KEY,
-			passedBlobbersPartitionSize,
-			nil,
-			partitions.ItemBlobberReward,
-		)
+		all = newOngoingPassedBlobbersList(balances)
 	}
 	all.SetCallback(nil)
 	return all, nil
+}
+
+func newOngoingPassedBlobbersList(balances c_state.StateContextI) partitions.RandPartition {
+	key := OngoingBlobberKey(balances.GetBlock().Round)
+	return partitions.NewRandomSelector(
+		key,
+		passedBlobbersPartitionSize,
+		nil,
+		partitions.ItemBlobberReward,
+	)
 }
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(
@@ -350,24 +360,27 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
+	ongoingList, err := getOngoingPassedBlobbersList(balances)
+	if err != nil {
+		return "", common.NewError("verify_challenge",
+			"cannot get ongoing partition: "+err.Error())
+	}
+
 	if balances.GetBlock().Round%conf.BlockReward.ChallengePeriod == 0 {
-		// clean active_passed_blobbers partition
-		_, err = balances.DeleteTrieNode(ACTIVE_PASSED_BLOBBERS_KEY)
-		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"cannot delete active partition: "+err.Error())
+
+		if balances.GetBlock().Round != 0 {
+			_, err = balances.InsertTrieNode(ACTIVE_PASSED_BLOBBERS_KEY, ongoingList)
+			if err != nil {
+				return "", common.NewError("verify_challenge",
+					"error updating active passed partition: "+err.Error())
+			}
 		}
 
-		// move ongoing_passed_blobbers to active_passed_blobbers
-		ongoingList, err := getOngoingPassedBlobbersList(balances)
+		ongoingList = newOngoingPassedBlobbersList(balances)
+		_, err = balances.InsertTrieNode(OngoingBlobberKey(balances.GetBlock().Round), ongoingList)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
-				"cannot get ongoing partition: "+err.Error())
-		}
-		err = ongoingList.Migrate(ACTIVE_PASSED_BLOBBERS_KEY, balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"cannot migrate ongoing partition: "+err.Error())
+				"cannot reset ongoing partition: "+err.Error())
 		}
 	}
 
@@ -459,17 +472,13 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				"can't get blobber"+err.Error())
 		}
 
-		ogList, err := getOngoingPassedBlobbersList(balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"can't get ongoing partition list"+err.Error())
-		}
-
 		// this expiry of blobber needs to be corrected once logic is finalized
-		if blobber.RewardPartition.Timestamp+common.Timestamp(conf.BlockReward.ChallengePeriod) <
-			balances.GetTransaction().CreationDate {
+		startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
 
-			partIndex, err := ogList.Add(
+		if blobber.RewardPartition.StartRound != startRound ||
+			balances.GetBlock().Round == 0 {
+
+			partIndex, err := ongoingList.Add(
 				&partitions.BlobberRewardNode{
 					Id:                blobber.ID,
 					SuccessChallenges: 0,
@@ -481,8 +490,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			}
 
 			blobber.RewardPartition = partitionLocation{
-				Index:     partIndex,
-				Timestamp: balances.GetTransaction().CreationDate,
+				Index:      partIndex,
+				StartRound: startRound,
 			}
 
 			_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
@@ -492,7 +501,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			}
 		}
 
-		blobberRewardItem, err := ogList.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
+		blobberRewardItem, err := ongoingList.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
 				"can't get blobber reward from partition list"+err.Error())
@@ -522,10 +531,16 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.SuccessChallenges++
 		details.Stats.OpenChallenges--
 
-		err = ogList.UpdateItem(blobber.RewardPartition.Index, &brStats, balances)
+		err = ongoingList.UpdateItem(blobber.RewardPartition.Index, &brStats, balances)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
 				"error updating blobber reward item")
+		}
+
+		err = ongoingList.Save(balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge",
+				"error saving ongoing blobber reward partition")
 		}
 
 		_, err = balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
@@ -603,6 +618,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	return "", common.NewError("not_enough_validations",
 		"Not enough validations, no successful validations")
+}
+
+func getStartRound(currentRound, changePeriod int64) int64 {
+	extra := currentRound % changePeriod
+	return currentRound - extra
 }
 
 func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,

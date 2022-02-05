@@ -39,7 +39,6 @@ type Partition interface {
 	SetCallback(ChangePartitionCallback)
 	Size(state.StateContextI) (int, error)
 	Save(state.StateContextI) error
-	Migrate(toKey datastore.Key, balances state.StateContextI) error
 	UpdateItem(partIndex int, it PartitionItem, balances state.StateContextI) error
 	GetItem(partIndex int, itemName string, balances state.StateContextI) (PartitionItem, error)
 }
