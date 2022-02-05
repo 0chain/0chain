@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/datastore"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/state"
@@ -22,6 +24,7 @@ const (
 	MinStakeAmount     = "min_stake_amount"
 	BurnAddress        = "burn_address"
 	MaxFee             = "max_fee"
+	OwnerID            = "owner_id"
 )
 
 type ZCNSConfig struct {
@@ -32,6 +35,7 @@ type ZCNSConfig struct {
 	MinStakeAmount     int64         `json:"min_stake_amount"`
 	BurnAddress        string        `json:"burn_address"`
 	MaxFee             int64         `json:"max_fee"`
+	OwnerId            datastore.Key `json:"owner_id"`
 }
 
 func (cfg *ZCNSConfig) ToStringMap() (res *smartcontract.StringMap, err error) {
@@ -70,6 +74,7 @@ func loadSettings() (conf *ZCNSConfig) {
 	conf.MinStakeAmount = cfg.GetInt64(Section(MinStakeAmount))
 	conf.BurnAddress = cfg.GetString(Section(BurnAddress))
 	conf.MaxFee = cfg.GetInt64(Section(MaxFee))
+	conf.OwnerId = cfg.GetString(Section(OwnerID))
 
 	return conf
 }

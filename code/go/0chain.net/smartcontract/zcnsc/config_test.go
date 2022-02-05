@@ -18,24 +18,28 @@ func TestConfigMap_Get(t *testing.T) {
 		MinBurnAmount:      103,
 		MinStakeAmount:     104,
 		MaxFee:             105,
+		OwnerId:            "106",
 	}
 
 	stringMap, err := cfg.ToStringMap()
 	require.NoError(t, err)
 
-	require.Contains(t, stringMap.Fields, "burn_address")
-	require.Contains(t, stringMap.Fields, "min_mint_amount")
-	require.Contains(t, stringMap.Fields, "percent_authorizers")
-	require.Contains(t, stringMap.Fields, "min_authorizers")
-	require.Contains(t, stringMap.Fields, "min_burn_amount")
-	require.Contains(t, stringMap.Fields, "min_stake_amount")
-	require.Contains(t, stringMap.Fields, "max_fee")
+	require.Equal(t, 8, len(stringMap.Fields))
+	require.Contains(t, stringMap.Fields, zcnsc.BurnAddress)
+	require.Contains(t, stringMap.Fields, zcnsc.MinBurnAmount)
+	require.Contains(t, stringMap.Fields, zcnsc.MinMintAmount)
+	require.Contains(t, stringMap.Fields, zcnsc.PercentAuthorizers)
+	require.Contains(t, stringMap.Fields, zcnsc.MinAuthorizers)
+	require.Contains(t, stringMap.Fields, zcnsc.MinStakeAmount)
+	require.Contains(t, stringMap.Fields, zcnsc.MaxFee)
+	require.Contains(t, stringMap.Fields, zcnsc.OwnerID)
 
-	require.Equal(t, fmt.Sprintf("%v", cfg.BurnAddress), stringMap.Fields["burn_address"])
-	require.Equal(t, fmt.Sprintf("%v", cfg.MinMintAmount), stringMap.Fields["min_mint_amount"])
-	require.Equal(t, fmt.Sprintf("%v", cfg.PercentAuthorizers), stringMap.Fields["percent_authorizers"])
-	require.Equal(t, fmt.Sprintf("%v", cfg.MinAuthorizers), stringMap.Fields["min_authorizers"])
-	require.Equal(t, fmt.Sprintf("%v", cfg.MinBurnAmount), stringMap.Fields["min_burn_amount"])
-	require.Equal(t, fmt.Sprintf("%v", cfg.MinStakeAmount), stringMap.Fields["min_stake_amount"])
-	require.Equal(t, fmt.Sprintf("%v", cfg.MaxFee), stringMap.Fields["max_fee"])
+	require.Equal(t, fmt.Sprintf("%v", cfg.BurnAddress), stringMap.Fields[zcnsc.BurnAddress])
+	require.Equal(t, fmt.Sprintf("%v", cfg.MinMintAmount), stringMap.Fields[zcnsc.MinMintAmount])
+	require.Equal(t, fmt.Sprintf("%v", cfg.PercentAuthorizers), stringMap.Fields[zcnsc.PercentAuthorizers])
+	require.Equal(t, fmt.Sprintf("%v", cfg.MinAuthorizers), stringMap.Fields[zcnsc.MinAuthorizers])
+	require.Equal(t, fmt.Sprintf("%v", cfg.MinBurnAmount), stringMap.Fields[zcnsc.MinBurnAmount])
+	require.Equal(t, fmt.Sprintf("%v", cfg.MinStakeAmount), stringMap.Fields[zcnsc.MinStakeAmount])
+	require.Equal(t, fmt.Sprintf("%v", cfg.MaxFee), stringMap.Fields[zcnsc.MaxFee])
+	require.Equal(t, fmt.Sprintf("%v", cfg.OwnerId), stringMap.Fields[zcnsc.OwnerID])
 }
