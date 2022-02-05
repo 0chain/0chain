@@ -19,6 +19,7 @@ const (
 	NAME                 = "zcnsc"
 	AddAuthorizerFunc    = "AddAuthorizer"
 	DeleteAuthorizerFunc = "DeleteAuthorizer"
+	UpdateConfigFunc     = "UpdateConfig"
 	MintFunc             = "mint"
 	BurnFunc             = "burn"
 )
@@ -45,7 +46,7 @@ func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ s
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
 	zcn.SmartContract.RestHandlers["/getConfig"] = zcn.GetConfig
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
-	//zcn.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, "update-settings"), nil)
+	zcn.SmartContractExecutionStats[UpdateConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateConfigFunc), nil)
 }
 
 // GetName ...
@@ -87,6 +88,8 @@ func (zcn *ZCNSmartContract) Execute(
 		return zcn.AddAuthorizer(trans, inputData, balances)
 	case DeleteAuthorizerFunc:
 		return zcn.DeleteAuthorizer(trans, inputData, balances)
+	case UpdateConfigFunc:
+		return zcn.UpdateConfig(trans, inputData, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}

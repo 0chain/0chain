@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract"
+
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
 
@@ -33,6 +35,36 @@ type GlobalNode struct {
 	Config *ZCNSConfig `json:"config"`
 }
 
+func (gn *GlobalNode) UpdateConfig(smartcontract.StringMap) error {
+	return nil
+}
+
+func (gn *GlobalNode) Validate() error {
+	const (
+		Code = "failed to validate global node"
+	)
+
+	switch {
+	case gn.Config.MinStakeAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.Config.MinStakeAmount))
+	case gn.Config.MinMintAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.Config.MinMintAmount))
+	case gn.Config.MaxFee < 1:
+		return common.NewError(Code, fmt.Sprintf("max fee (%v) is less than 1", gn.Config.MaxFee))
+	case gn.Config.MinAuthorizers < 20:
+		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 20", gn.Config.MinAuthorizers))
+	case gn.Config.MinBurnAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.Config.MinBurnAmount))
+	case gn.Config.PercentAuthorizers < 70:
+		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 70", gn.Config.PercentAuthorizers))
+	case gn.Config.BurnAddress == "":
+		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.Config.BurnAddress))
+	case gn.Config.OwnerId == "":
+		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.Config.OwnerId))
+	}
+	return nil
+}
+
 func (gn *GlobalNode) GetKey() datastore.Key {
 	return fmt.Sprintf("%s:%s:%s", ADDRESS, GlobalNodeType, gn.ID)
 }
@@ -59,6 +91,8 @@ func (gn *GlobalNode) Save(balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 	return
 }
+
+// -----------  AuthorizerSignature -------------------
 
 type AuthorizerSignature struct {
 	ID        string `json:"authorizer_id"`

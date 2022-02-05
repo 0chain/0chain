@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/core/datastore"
+	"0chain.net/core/common"
 
-	"0chain.net/smartcontract"
-
+	chain "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
+	"0chain.net/smartcontract"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -38,17 +42,56 @@ type ZCNSConfig struct {
 	OwnerId            datastore.Key `json:"owner_id"`
 }
 
+func (zcn *ZCNSmartContract) UpdateConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
+	const (
+		Code     = "failed to update configuration"
+		FuncName = "UpdateConfig"
+	)
+
+	gn, err := GetGlobalNode(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, Code)
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner(FuncName, func() bool {
+		return gn.Config.OwnerId == t.ClientID
+	}); err != nil {
+		return "", errors.Wrap(err, Code)
+	}
+
+	var input smartcontract.StringMap
+	err = input.Decode(inputData)
+	if err != nil {
+		return "", errors.Wrap(err, Code)
+	}
+
+	if err := gn.UpdateConfig(input); err != nil {
+		return "", errors.Wrap(err, Code)
+	}
+
+	if err = gn.Validate(); err != nil {
+		return "", common.NewError(Code, "cannot validate changes: "+err.Error())
+	}
+
+	_, err = ctx.InsertTrieNode(gn.GetKey(), gn)
+	if err != nil {
+		return "", common.NewError(Code, "saving global node: "+err.Error())
+	}
+
+	return string(gn.Encode()), nil
+}
+
 func (cfg *ZCNSConfig) ToStringMap() (res *smartcontract.StringMap, err error) {
 	bytes, err := json.Marshal(cfg)
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "failed to convert config to StringMap")
 	}
 
 	var stringMap map[string]interface{}
 
 	err = json.Unmarshal(bytes, &stringMap)
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "failed to convert config to StringMap")
 	}
 
 	res = new(smartcontract.StringMap)
