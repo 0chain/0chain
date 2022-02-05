@@ -14,3 +14,7 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 	numGenerators := c.GetGeneratorsNumOfRound(r.GetRoundNumber())
 	return rank != -1 && rank < numGenerators
 }
+
+func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
+	return c.chainHasTransaction(ctx, b, txn)
+}
