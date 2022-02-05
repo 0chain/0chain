@@ -33,12 +33,12 @@ const (
 
 type ZCNSConfig struct {
 	MinMintAmount      state.Balance `json:"min_mint_amount"`
+	MinBurnAmount      state.Balance `json:"min_burn_amount"`
+	MinStakeAmount     state.Balance `json:"min_stake_amount"`
+	MaxFee             state.Balance `json:"max_fee"`
 	PercentAuthorizers float64       `json:"percent_authorizers"`
 	MinAuthorizers     int64         `json:"min_authorizers"`
-	MinBurnAmount      int64         `json:"min_burn_amount"`
-	MinStakeAmount     int64         `json:"min_stake_amount"`
 	BurnAddress        string        `json:"burn_address"`
-	MaxFee             int64         `json:"max_fee"`
 	OwnerId            datastore.Key `json:"owner_id"`
 }
 
@@ -65,7 +65,7 @@ func (zcn *ZCNSmartContract) UpdateConfig(t *transaction.Transaction, inputData 
 		return "", errors.Wrap(err, Code)
 	}
 
-	if err := gn.UpdateConfig(input); err != nil {
+	if err := gn.UpdateConfig(&input); err != nil {
 		return "", errors.Wrap(err, Code)
 	}
 
@@ -113,10 +113,10 @@ func loadSettings() (conf *ZCNSConfig) {
 	conf.MinMintAmount = state.Balance(cfg.GetInt(Section(MinMintAmount)))
 	conf.PercentAuthorizers = cfg.GetFloat64(Section(PercentAuthorizers))
 	conf.MinAuthorizers = cfg.GetInt64(Section(MinAuthorizers))
-	conf.MinBurnAmount = cfg.GetInt64(Section(MinBurnAmount))
-	conf.MinStakeAmount = cfg.GetInt64(Section(MinStakeAmount))
+	conf.MinBurnAmount = state.Balance(cfg.GetInt64(Section(MinBurnAmount)))
+	conf.MinStakeAmount = state.Balance(cfg.GetInt64(Section(MinStakeAmount)))
 	conf.BurnAddress = cfg.GetString(Section(BurnAddress))
-	conf.MaxFee = cfg.GetInt64(Section(MaxFee))
+	conf.MaxFee = state.Balance(cfg.GetInt64(Section(MaxFee)))
 	conf.OwnerId = cfg.GetString(Section(OwnerID))
 
 	return conf

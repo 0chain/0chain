@@ -3,6 +3,7 @@ package zcnsc
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"0chain.net/smartcontract"
@@ -35,7 +36,66 @@ type GlobalNode struct {
 	Config *ZCNSConfig `json:"config"`
 }
 
-func (gn *GlobalNode) UpdateConfig(smartcontract.StringMap) error {
+func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
+	var (
+		err error
+		c   *ZCNSConfig
+	)
+
+	if gn.Config == nil {
+		gn.Config = new(ZCNSConfig)
+	}
+
+	c = gn.Config
+
+	for key, value := range cfg.Fields {
+		switch key {
+		case MinMintAmount:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+			}
+			c.MinMintAmount = state.Balance(amount * 1e10)
+		case MinBurnAmount:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+			}
+			c.MinBurnAmount = state.Balance(amount * 1e10)
+		case BurnAddress:
+			if value == "" {
+				return fmt.Errorf("key %s is empty", key)
+			}
+			c.BurnAddress = value
+		case PercentAuthorizers:
+			c.PercentAuthorizers, err = strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to float64", key, value)
+			}
+		case MinAuthorizers:
+			c.MinAuthorizers, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+			}
+		case MinStakeAmount:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+			}
+			c.MinStakeAmount = state.Balance(amount * 1e10)
+		case MaxFee:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+			}
+			c.MaxFee = state.Balance(amount * 1e10)
+		case OwnerID:
+			c.OwnerId = value
+		default:
+			return fmt.Errorf("key %s not recognised as setting", key)
+		}
+	}
+
 	return nil
 }
 

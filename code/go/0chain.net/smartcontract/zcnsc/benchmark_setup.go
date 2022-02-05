@@ -41,10 +41,10 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	cfg.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
 	cfg.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
 	cfg.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)
-	cfg.MinBurnAmount = config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount)
-	cfg.MinStakeAmount = config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount)
+	cfg.MinBurnAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount))
+	cfg.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount))
 	cfg.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
-	cfg.MaxFee = config.SmartContractConfig.GetInt64(benchmark.MaxFee)
+	cfg.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MaxFee))
 
 	gn.Config = cfg
 
