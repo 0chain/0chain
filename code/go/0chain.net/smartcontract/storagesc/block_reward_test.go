@@ -63,11 +63,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 			}
 		}
-		allBR, err := getActivePassedBlobbersList(balances)
-		require.NoError(t, err)
-		err = allBR.Migrate("dump", balances)
-		require.NoError(t, err)
-		_, err = balances.DeleteTrieNode("dump")
+
+		_, err := balances.DeleteTrieNode(ACTIVE_PASSED_BLOBBERS_KEY)
 		require.NoError(t, err)
 	}
 
