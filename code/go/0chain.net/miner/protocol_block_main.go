@@ -5,23 +5,10 @@ package miner
 
 import (
 	"context"
-	"fmt"
-	"math"
-	"time"
-
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
-	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -38,4 +25,7 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 	return
+}
+
+func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
 }
