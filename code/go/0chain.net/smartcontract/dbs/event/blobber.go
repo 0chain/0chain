@@ -2,13 +2,10 @@ package event
 
 import (
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"strconv"
-
-	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
 )
@@ -122,29 +119,29 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 	return count, res.Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(params url.Values) ([]Blobber, error) {
+func (edb *EventDb) GetBlobbersFromParams(params map[string]interface{}) ([]Blobber, error) {
 	var blobbers []Blobber
 	dbStore := edb.Store.Get()
 
-	if maxChallengeTime, _ := strconv.Atoi(params.Get("max_challenge_time")); maxChallengeTime != 0 {
+	if maxChallengeTime, _ := params["max_challenge_time"].(int); maxChallengeTime != 0 {
 		dbStore = dbStore.Where("challenge_completion_time > ?", maxChallengeTime)
 	}
 
 	readRange := &BlobberPriceRange{}
 	writeRange := &BlobberPriceRange{}
 
-	if err := json.Unmarshal([]byte(params.Get("read_price_range")), readRange); err != nil {
+	if err := json.Unmarshal([]byte(params["read_price_range"].(string)), readRange); err != nil {
 		dbStore = dbStore.Where("read_price BETWEEN ? AND ?", readRange.Min, readRange.Max)
 	}
 
-	if err := json.Unmarshal([]byte(params.Get("write_price_range")), writeRange); err != nil {
+	if err := json.Unmarshal([]byte(params["write_price_range"].(string)), writeRange); err != nil {
 		dbStore = dbStore.Where("write_price BETWEEN ? AND ?", writeRange.Min, writeRange.Max)
 	}
-	if capacityUsed, err := strconv.Atoi(params.Get("capacity_used")); err != nil {
+	if capacityUsed, _ := params["capacity_used"].(int); capacityUsed != 0 {
 		dbStore = dbStore.Where("used < ?", capacityUsed)
 	}
 
-	result := dbStore.Find(&blobbers)
+	result := dbStore.Select("id").Find(&blobbers)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving blobbers, error %v", result.Error)
 	}

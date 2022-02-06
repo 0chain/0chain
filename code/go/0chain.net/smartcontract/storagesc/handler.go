@@ -182,7 +182,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		return nil, errors.New("events db is not initialised")
 	}
 
-	blobbers, err := balances.GetEventDB().GetBlobbersFromParams(params)
+	blobbers, err := balances.GetEventDB().GetBlobbersFromParams(paramsToMap(params))
 	if err != nil || len(blobbers) == 0 {
 		return nil, fmt.Errorf("no blobbers found %v", err)
 	}
@@ -216,7 +216,72 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	return blobberIDs, nil
 }
 
-func (msc *StorageSmartContract) GetTransactionByHashHandler(
+// GetAllocationDeprecatedBlobbersHandler returns list of all blobbers alive (e.g. excluding
+// blobbers with zero capacity).
+func (ssc *StorageSmartContract) GetAllocationDeprecatedBlobbersHandler(
+	ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	var creationDate = common.Timestamp(time.Now().Unix())
+
+	allocData := params.Get("allocation_data")
+	var request newAllocationRequest
+	if err := request.decode([]byte(allocData)); err != nil {
+		return "", common.NewErrInternal("can't decode allocation request", err.Error())
+	}
+
+	var sa = request.storageAllocation()
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("events db is not initialised")
+	}
+
+	blobbers, err := balances.GetEventDB().GetBlobbersFromParams(paramsToMap(params))
+	if err != nil || len(blobbers) == 0 {
+		return nil, fmt.Errorf("no blobbers found %v", err)
+	}
+
+	var sns StorageNodes
+	for _, blobber := range blobbers {
+		sn, err := blobberTableToStorageNode(blobber)
+		if err != nil {
+			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+		}
+		sns.Nodes.add(&sn)
+	}
+
+	var size = sa.DataShards + sa.ParityShards
+
+	var bSize = (sa.Size + int64(size-1)) / int64(size)
+
+	var list = sa.filterBlobbers(sns.Nodes.copy(), creationDate,
+		bSize, filterHealthyBlobbers(creationDate),
+		ssc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
+
+	if len(list) < size {
+		return nil, errors.New("not enough blobbers to honor the allocation")
+	}
+
+	var blobberIDs []string
+	for _, blobber := range list {
+		blobberIDs = append(blobberIDs, blobber.ID)
+	}
+
+	return blobberIDs, nil
+}
+
+func paramsToMap(params url.Values) map[string]interface{} {
+
+	var paramsMap = make(map[string]interface{})
+
+	paramsMap["max_challenge_time"] = params.Get("max_challenge_time")
+	paramsMap["read_price_range"] = params.Get("read_price_range")
+	paramsMap["write_price_range"] = params.Get("write_price_range")
+	paramsMap["capacity_used"] = params.Get("capacity_used")
+
+	return paramsMap
+}
+
+func (ssc *StorageSmartContract) GetTransactionByHashHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
