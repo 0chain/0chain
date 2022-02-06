@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -99,27 +100,57 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		mode = "start"
 	}
 
-	/*var bmrPath, qmrPath = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
-	boltConfigMap := sViper.GetStringMapString("bolt")
-	if boltConfigMap == nil {
-		bmrPath = DefaultBlockMetaRecordDB
-		qmrPath = DefaultQueryMetaRecordDB
+	var (
+		hostRedisDB, portRedisDB, passwordRedisDB = DefaultHostRedisDB, DefaultPortRedisDB, DefaultPasswordRedisDB
+		numberRedisDB                             = DefaultNumberRedisDB
+	)
+	redisConfigMap := sViper.GetStringMapString("redis")
+	if redisConfigMap == nil {
+		hostRedisDB = DefaultHostRedisDB
+		portRedisDB = DefaultPortRedisDB
+		passwordRedisDB = DefaultPasswordRedisDB
+		numberRedisDB = DefaultNumberRedisDB
 	} else {
-
-		if boltConfigMap["block_meta_record_path"] == "" {
-			bmrPath = DefaultBlockMetaRecordDB
+		if redisConfigMap["host"] == "" {
+			hostRedisDB = DefaultHostRedisDB
+		} else {
+			hostRedisDB = redisConfigMap["host"]
 		}
 
-		if boltConfigMap["query_meta_record_path"] == "" {
-			qmrPath = DefaultQueryMetaRecordDB
+		if redisConfigMap["port"] == "" {
+			portRedisDB = DefaultPortRedisDB
+		} else {
+			portRedisDB = redisConfigMap["portRedisDB"]
 		}
-	}*/
+
+		if redisConfigMap["password"] == "" {
+			passwordRedisDB = DefaultPasswordRedisDB
+		} else {
+			passwordRedisDB = redisConfigMap["password"]
+		}
+		if redisConfigMap["numDB"] == "" {
+			numberRedisDB = DefaultNumberRedisDB
+		} else {
+			numberRedisDB, _ = strconv.Atoi(redisConfigMap["numDB"])
+		}
+	}
 
 	switch mode {
 	case "start", "recover":
-		InitMetaRecordDB("localhost", "6379", true) // Removes existing metadata and creates new db
+		InitMetaRecordDB(hostRedisDB,
+			portRedisDB,
+			passwordRedisDB,
+			numberRedisDB,
+			true,
+		)
+
 	default:
-		InitMetaRecordDB("localhost", "6379", "", false)
+		InitMetaRecordDB(hostRedisDB,
+			portRedisDB,
+			passwordRedisDB,
+			numberRedisDB,
+			false,
+		)
 	}
 
 	switch Tiering(storageType) {

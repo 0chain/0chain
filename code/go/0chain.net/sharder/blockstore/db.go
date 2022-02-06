@@ -12,9 +12,9 @@ type WhichTier uint8
 
 //db variables
 var (
-	/*bwrDB    *bbolt.DB
-	qDB      *bbolt.DB //query db*/
-	bwrRedis blockStore
+	bwrRedis      blockStore
+	_, offsetTime = time.Now().Local().Zone()
+	startTime     = time.Date(1970, 1, 1, 0, 0, offsetTime, 0, time.UTC)
 )
 
 /*
@@ -31,34 +31,27 @@ const (
 	WarmAndColdTier WhichTier = 10
 )
 
-//bucket constant values
-const (
-	DefaultBlockMetaRecordDB = "/meta/bmr.db"
-	DefaultQueryMetaRecordDB = "/meta/qmr.db"
-	BlockWhereBucket         = "bwb"
-	UnmovedBlockBucket       = "ubb"
-	BlockUsageBucket         = "bub"
-	//Contains key that is combination of "accessTime:hash" and value of nil
-	CacheAccessTimeHashBucket = "cahb"
-	CacheAccessTimeSeparator  = ":"
-	//Contains key value; "hash:accessTime"
-	CacheHashAccessTimeBucket = "chab"
-)
-
 // redis constant values
 const (
+	DefaultHostRedisDB     = "localhost"
+	DefaultPortRedisDB     = "6379"
+	DefaultPasswordRedisDB = ""
+	DefaultNumberRedisDB   = 0
+
 	redisHashCacheHashAccessTime      = "redisHashCacheHashAccessTime"
 	redisSortedSetCacheAccessTimeHash = "redisSortedSetCacheAccessTimeHash"
 	redisSortedSetUnmovedBlock        = "redisSortedSetUnmovedBlock"
+
+	CacheAccessTimeSeparator = ":"
 )
 
 // InitMetaRecordDB Create db file and create buckets.
-func InitMetaRecordDB(host, port, password string, deleteExistingDB bool) {
+func InitMetaRecordDB(host, port, password string, numDB int, deleteExistingDB bool) {
 
 	bwrRedis.Client = redis.NewClient(&redis.Options{
 		Addr:     host + ":" + port,
-		Password: password, // no password set
-		DB:       0,        // use default DB
+		Password: password,
+		DB:       numDB,
 	})
 
 	if deleteExistingDB {
@@ -117,7 +110,19 @@ type UnmovedBlockRecord struct {
 }
 
 func (ubr *UnmovedBlockRecord) Add() (err error) {
-	return bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
+	endTime := time.Date(
+		ubr.CreatedAt.Year(),
+		ubr.CreatedAt.Month(),
+		ubr.CreatedAt.Day(),
+		ubr.CreatedAt.Hour(),
+		ubr.CreatedAt.Minute(),
+		ubr.CreatedAt.Second(),
+		ubr.CreatedAt.Nanosecond(),
+		time.UTC,
+	)
+	difference := endTime.Sub(startTime)
+
+	return bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(difference.Microseconds()), ubr.Hash)
 }
 
 func (ubr *UnmovedBlockRecord) Delete() (err error) {

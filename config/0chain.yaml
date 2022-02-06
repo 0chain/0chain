@@ -149,9 +149,11 @@ storage:
   #If storage type is Cache and Warm then 1 + 2 = 3
   
   storage_type: 3
-  bolt:
-    block_meta_record_path: "/meta/bmr.db"
-    query_meta_record_path: "/meta/qmr.db"
+  redis:
+    host: "localhost"
+    port: "6379"
+    password: ""
+    numberDB: "0"
   cache:
     storage_strategy: "random" # random, round robin, min_size_first, min_count_first etc.
     cache_strategy: ""

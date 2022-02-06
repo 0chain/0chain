@@ -25,14 +25,26 @@ func setupColdWorker(ctx context.Context) {
 			break
 		case <-t.C:
 			Logger.Info("Moving blocks to cold tier")
-			maxPrefix := time.Now().Add(-pollInterval).UnixMicro()
+			maxPrefix := time.Now().Add(-pollInterval)
+			endTime := time.Date(
+				maxPrefix.Year(),
+				maxPrefix.Month(),
+				maxPrefix.Day(),
+				maxPrefix.Hour(),
+				maxPrefix.Minute(),
+				maxPrefix.Second(),
+				maxPrefix.Nanosecond(),
+				time.UTC,
+			)
+			difference := endTime.Sub(startTime)
+
 			var newColdPath string
 
 			guideChannel := make(chan struct{}, 10)
 			wg := sync.WaitGroup{}
 
 			var errorOccurred bool
-			for ubrs := GetUnmovedBlocks(maxPrefix, 1000); ubrs != nil; ubrs = GetUnmovedBlocks(maxPrefix, 1000) {
+			for ubrs := GetUnmovedBlocks(difference.Microseconds(), 1000); ubrs != nil; ubrs = GetUnmovedBlocks(difference.Microseconds(), 1000) {
 				for _, ubr := range ubrs {
 					if errorOccurred {
 						break
