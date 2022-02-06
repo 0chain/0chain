@@ -38,7 +38,7 @@ var (
 var sstType = SSTTypeBlockBasedTable
 
 /*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
+func NewPNodeDB(dataDir, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	opts.SetCompression(PNodeDBCompression)
