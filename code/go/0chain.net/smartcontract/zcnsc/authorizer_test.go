@@ -178,7 +178,7 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	require.Equal(t, int64(11), globalNode.Config.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.Config.MinStakeAmount = int64(100)
+	node.Config.MinStakeAmount = state.Balance(100 * 1e10)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)
