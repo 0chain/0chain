@@ -28,6 +28,7 @@ func (sp *StakePool) LockPool(
 		Balance:      state.Balance(txn.Value),
 		Reward:       0,
 		Status:       status,
+		DelegateID:   txn.ClientID,
 		RoundCreated: balances.GetBlock().Round,
 	}
 

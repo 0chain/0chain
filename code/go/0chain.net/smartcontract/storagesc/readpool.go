@@ -130,7 +130,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
-
+	var moved state.Balance = 0
 	var torm []*allocationPool // to remove later (empty allocation pools)
 	for _, ap := range cut {
 		if value == 0 {
@@ -160,7 +160,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			Balance: state.Balance(move),
 		})
 
-		//value -= move
+		moved += state.Balance(move)
 		//sp.Rewards.Blobber += value
 		if bp.Balance == 0 {
 			ap.Blobbers.removeByIndex(bi)
@@ -170,7 +170,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		}
 	}
 
-	if value != 0 {
+	if moved < value {
 		return "", fmt.Errorf("not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
 	}

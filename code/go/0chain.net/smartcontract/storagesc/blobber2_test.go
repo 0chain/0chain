@@ -360,8 +360,8 @@ func testCommitBlobberRead(
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
 		sPool.Pools["pool"+id] = &stakepool.DelegatePool{
-			Balance: zcnToBalance(stake.zcnAmount),
-			Created: stake.MintAt,
+			Balance:      zcnToBalance(stake.zcnAmount),
+			RoundCreated: stake.MintAt,
 		}
 	}
 	//sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId

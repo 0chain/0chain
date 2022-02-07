@@ -286,10 +286,10 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
 	for poolId, dp := range sp.Pools {
 		var dps = delegatePoolStat{
-			ID:      poolId,
-			Balance: dp.Balance,
-			//DelegateID: dp.DelegateID,
-			Rewards: dp.Reward,
+			ID:         poolId,
+			Balance:    dp.Balance,
+			DelegateID: dp.DelegateID,
+			Rewards:    dp.Reward,
 			//Penalty:    dp.Penalty,
 			UnStake: dp.Status == stakepool.Unstaking,
 		}
