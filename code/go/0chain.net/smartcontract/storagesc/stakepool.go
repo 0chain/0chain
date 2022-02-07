@@ -618,10 +618,10 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 				return nil, common.NewErrNoResource("missing delegate pool")
 			}
 			var dps = delegatePoolStat{
-				ID:      id,
-				Balance: dp.Balance,
-				//DelegateID: dp.DelegateID,
-				Rewards: dp.Reward,
+				ID:         id,
+				Balance:    dp.Balance,
+				DelegateID: dp.DelegateID,
+				Rewards:    dp.Reward,
 				//Penalty:    dp.Penalty,
 			}
 			ups.Pools[blobberID] = append(ups.Pools[blobberID], &dps)

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"sync"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -55,7 +57,7 @@ type StakePool struct {
 	Reward   state.Balance            `json:"rewards"`
 	Settings StakePoolSettings        `json:"settings"`
 	Minter   cstate.ApprovedMinters   `json:"minter"`
-	mutex    sync.RWMutex             `json:"-"`
+	//mutex    sync.RWMutex             `json:"-"`
 }
 
 type StakePoolSettings struct {
@@ -95,6 +97,8 @@ func (sp *StakePool) Decode(input []byte) error {
 }
 
 func (sp *StakePool) OrderedPoolIds() []string {
+	//sp.mutex.Lock()
+	//defer sp.mutex.Unlock()
 	ids := make([]string, 0, len(sp.Pools))
 	for id := range sp.Pools {
 		ids = append(ids, id)
@@ -191,9 +195,6 @@ func (sp *StakePool) DistributeRewards(
 	providerType Provider,
 	balances cstate.StateContextI,
 ) error {
-	sp.mutex.Lock()
-	defer sp.mutex.Unlock()
-
 	if value == 0 {
 		return nil // nothing to move
 	}
@@ -238,8 +239,8 @@ func (sp *StakePool) DistributeRewards(
 }
 
 func (sp *StakePool) stake() (stake state.Balance) {
-	sp.mutex.Lock()
-	defer sp.mutex.Unlock()
+	//sp.mutex.Lock()
+	//defer sp.mutex.Unlock()
 
 	for _, id := range sp.OrderedPoolIds() {
 		stake += sp.Pools[id].Balance

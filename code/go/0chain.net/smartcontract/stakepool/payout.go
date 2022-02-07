@@ -9,8 +9,8 @@ import (
 )
 
 type payRewardRequest struct {
-	ProviderType Provider
-	PoolId       string
+	ProviderType Provider `json:"provider_type"`
+	PoolId       string   `json:"pool_id"`
 }
 
 func (spr *payRewardRequest) decode(p []byte) error {
@@ -31,13 +31,13 @@ func PayoutReward(
 	var usp *UserStakePools
 	usp, err := GetUserStakePool(prr.ProviderType, client, balances)
 	if err != nil {
-		return 0, common.NewErrorf("stake_pool_unlock_failed",
+		return 0, common.NewErrorf("pay_reward_failed",
 			"can't get related user stake pools: %v", err)
 	}
 
 	providerId := usp.find(prr.PoolId)
 	if len(providerId) == 0 {
-		return 0, common.NewErrorf("stake_pool_unlock_failed",
+		return 0, common.NewErrorf("pay_reward_failed",
 			"user %v does not own stake pool %v", client, prr.PoolId)
 	}
 
@@ -50,7 +50,7 @@ func PayoutReward(
 	total, removed, err := sp.MintRewards(
 		client, prr.PoolId, providerId, prr.ProviderType, balances)
 	if err != nil {
-		return 0, common.NewErrorf("stake_pool_unlock_failed",
+		return 0, common.NewErrorf("pay_reward_failed",
 			"error emptying account, %v", err)
 	}
 	if removed {
