@@ -247,7 +247,7 @@ func mockBWR() *BlockWhereRecord {
 }
 
 func mockUBR() *UnmovedBlockRecord {
-	now := time.Now()
+	now := time.Now().Truncate(time.Microsecond)
 	bin, _ := time.Now().MarshalBinary()
 	hash := sha3.Sum256(bin)
 	return &UnmovedBlockRecord{

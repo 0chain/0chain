@@ -34,7 +34,7 @@ func setupColdWorker(ctx context.Context) {
 				maxPrefix.Minute(),
 				maxPrefix.Second(),
 				maxPrefix.Nanosecond(),
-				time.UTC,
+				time.Local,
 			)
 			difference := endTime.Sub(startTime)
 

@@ -12,9 +12,8 @@ type WhichTier uint8
 
 //db variables
 var (
-	bwrRedis      blockStore
-	_, offsetTime = time.Now().Local().Zone()
-	startTime     = time.Date(1970, 1, 1, 0, 0, offsetTime, 0, time.UTC)
+	bwrRedis  blockStore
+	startTime = time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local)
 )
 
 /*
@@ -110,6 +109,7 @@ type UnmovedBlockRecord struct {
 }
 
 func (ubr *UnmovedBlockRecord) Add() (err error) {
+	ubr.CreatedAt = ubr.CreatedAt.Truncate(time.Microsecond)
 	endTime := time.Date(
 		ubr.CreatedAt.Year(),
 		ubr.CreatedAt.Month(),
@@ -118,7 +118,7 @@ func (ubr *UnmovedBlockRecord) Add() (err error) {
 		ubr.CreatedAt.Minute(),
 		ubr.CreatedAt.Second(),
 		ubr.CreatedAt.Nanosecond(),
-		time.UTC,
+		time.Local,
 	)
 	difference := endTime.Sub(startTime)
 
@@ -130,8 +130,18 @@ func (ubr *UnmovedBlockRecord) Delete() (err error) {
 }
 
 // GetUnmovedBlocks returns the number of blocks = count from the range [0,lastBlock).
-func GetUnmovedBlocks(lastBlock, count int64) (ubrs []*UnmovedBlockRecord) {
-	return bwrRedis.GetRangeByScoreFromSorted(redisSortedSetUnmovedBlock, lastBlock, count)
+func GetUnmovedBlocks(lastBlock, count int64) []*UnmovedBlockRecord {
+	ubrsZ, _ := bwrRedis.GetRangeByScoreFromSorted(redisSortedSetUnmovedBlock, lastBlock, count)
+	var ubrs []*UnmovedBlockRecord
+	for _, ubr := range ubrsZ {
+		t := time.Duration(int64(ubr.Score))
+		ubrs = append(
+			ubrs,
+			&UnmovedBlockRecord{CreatedAt: startTime.Add(t * time.Microsecond), Hash: ubr.Member.(string)},
+		)
+	}
+
+	return ubrs
 }
 
 //Add a cache bucket to store accessed time as key and hash as its value

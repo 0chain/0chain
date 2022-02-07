@@ -3,7 +3,6 @@ package blockstore
 import (
 	"fmt"
 	"github.com/go-redis/redis"
-	"time"
 )
 
 type (
@@ -53,21 +52,11 @@ func (db *blockStore) GetRangeFromSorted(key string, start, stop int64) ([]strin
 }
 
 // GetRangeByScoreFromSorted return a range of members in a sorted set, by score.
-func (db *blockStore) GetRangeByScoreFromSorted(key string, lastBlock, count int64) []*UnmovedBlockRecord {
-	ubrsZ, _ := db.Client.ZRangeByScoreWithScores(
+func (db *blockStore) GetRangeByScoreFromSorted(key string, lastBlock, count int64) ([]redis.Z, error) {
+	return db.Client.ZRangeByScoreWithScores(
 		key,
 		redis.ZRangeBy{Min: "-inf", Max: fmt.Sprintf("%v", lastBlock), Offset: 0, Count: count},
 	).Result()
-
-	if ubrsZ == nil {
-		return nil
-	}
-	var ubrs []*UnmovedBlockRecord
-	for _, ubr := range ubrsZ {
-		ubrs = append(ubrs, &UnmovedBlockRecord{CreatedAt: time.UnixMicro(int64(ubr.Score)), Hash: ubr.Member.(string)})
-	}
-
-	return ubrs
 }
 
 // Set add the specified member to the set stored at key.

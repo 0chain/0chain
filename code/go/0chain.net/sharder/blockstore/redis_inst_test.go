@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -28,27 +27,34 @@ func TestMain(m *testing.M) {
 
 func Test_Delete(t *testing.T) {
 	bwrRedis.Client.FlushDB()
+	ubr := mockBWR()
+	val, err := json.Marshal(&ubr)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
-		name string
-		ubr  *UnmovedBlockRecord
-		want []byte
+		name  string
+		ubr   *UnmovedBlockRecord
+		value []byte
+		want  []byte
 	}{
 		{
-			name: "OK",
-			ubr:  mockUBR(),
-			want: make([]byte, 0),
+			name:  "OK",
+			ubr:   mockUBR(),
+			value: val,
+			want:  make([]byte, 0),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := bwrRedis.Set(test.ubr.Hash, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = bwrRedis.Delete(test.ubr.Hash)
+			err = bwrRedis.Set(test.ubr.Hash, test.value)
 			assert.NoError(t, err)
 			got, _ := bwrRedis.Get(test.ubr.Hash)
+			assert.Equal(t, test.value, got)
+			err = bwrRedis.Delete(test.ubr.Hash)
+			assert.NoError(t, err)
+			got, _ = bwrRedis.Get(test.ubr.Hash)
 			assert.Equal(t, test.want, got)
 		})
 	}
@@ -63,20 +69,22 @@ func Test_Get(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		ubr  *UnmovedBlockRecord
-		want []byte
+		name  string
+		ubr   *UnmovedBlockRecord
+		value []byte
+		want  []byte
 	}{
 		{
-			name: "OK",
-			ubr:  mockUBR(),
-			want: val,
+			name:  "OK",
+			ubr:   mockUBR(),
+			value: val,
+			want:  val,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := bwrRedis.Set(test.ubr.Hash, test.want)
+			err = bwrRedis.Set(test.ubr.Hash, test.value)
 			assert.NoError(t, err)
 			got, _ := bwrRedis.Get(test.ubr.Hash)
 			assert.Equal(t, test.want, got)
@@ -138,12 +146,12 @@ func Test_DeleteFromHash(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			err := bwrRedis.SetToHash(redisHashCacheHashAccessTime, test.ubr.Hash, test.ubr.CreatedAt.Format(time.RFC3339))
 			assert.NoError(t, err)
+			got, _ := bwrRedis.GetFromHash(redisHashCacheHashAccessTime, test.ubr.Hash)
+			assert.Equal(t, test.ubr.CreatedAt.Format(time.RFC3339), got.(string))
 			err = bwrRedis.DeleteFromHash(redisHashCacheHashAccessTime, test.ubr.Hash)
 			assert.NoError(t, err)
-			got, _ := bwrRedis.GetFromHash(redisHashCacheHashAccessTime, test.ubr.Hash)
-			if !reflect.DeepEqual(test.want, got.(string)) {
-				t.Errorf("Delete want %v | got %v", test.want, got)
-			}
+			got, _ = bwrRedis.GetFromHash(redisHashCacheHashAccessTime, test.ubr.Hash)
+			assert.Equal(t, test.want, got.(string))
 		})
 	}
 }
@@ -207,25 +215,37 @@ func Test_DeleteFromSorted(t *testing.T) {
 	tests := []struct {
 		name string
 		ubr  *UnmovedBlockRecord
-		want string
+		want []string
 	}{
 		{
 			name: "OK",
 			ubr:  mockUBR(),
-			want: "",
+			want: []string{},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(test.ubr.CreatedAt.UnixMicro()), test.ubr.Hash)
+			endTime := time.Date(
+				test.ubr.CreatedAt.Year(),
+				test.ubr.CreatedAt.Month(),
+				test.ubr.CreatedAt.Day(),
+				test.ubr.CreatedAt.Hour(),
+				test.ubr.CreatedAt.Minute(),
+				test.ubr.CreatedAt.Second(),
+				test.ubr.CreatedAt.Nanosecond(),
+				time.Local,
+			)
+			difference := endTime.Sub(startTime)
+
+			err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(difference.Microseconds()), test.ubr.Hash)
 			assert.NoError(t, err)
+			got, _ := bwrRedis.GetRangeFromSorted(redisSortedSetUnmovedBlock, 0, 1)
+			assert.Equal(t, test.ubr.Hash, got[0])
 			err = bwrRedis.DeleteFromSorted(redisSortedSetUnmovedBlock, test.ubr.Hash)
 			assert.NoError(t, err)
-			got, _ := bwrRedis.GetFromHash(redisSortedSetUnmovedBlock, test.ubr.Hash)
-			if !reflect.DeepEqual(test.want, got.(string)) {
-				t.Errorf("Delete want %v | got %v", test.want, got)
-			}
+			got, _ = bwrRedis.GetRangeFromSorted(redisSortedSetUnmovedBlock, 0, 1)
+			assert.Equal(t, test.want, got)
 		})
 	}
 }
@@ -235,7 +255,7 @@ func Test_GetCountFromSorted(t *testing.T) {
 	count := 5
 	for i := 0; i < count; i++ {
 		ubr := mockUBR()
-		err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
+		err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(i), ubr.Hash)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -270,7 +290,7 @@ func Test_GetRangeFromSorted(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ubr := mockUBR()
-		err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
+		err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(i), ubr.Hash)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,7 +328,20 @@ func Test_GetRangeByScoreFromSorted(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		ubr := mockUBR()
-		err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(ubr.CreatedAt.UnixMicro()), ubr.Hash)
+		ubr.CreatedAt.Truncate(time.Microsecond)
+		endTime := time.Date(
+			ubr.CreatedAt.Year(),
+			ubr.CreatedAt.Month(),
+			ubr.CreatedAt.Day(),
+			ubr.CreatedAt.Hour(),
+			ubr.CreatedAt.Minute(),
+			ubr.CreatedAt.Second(),
+			ubr.CreatedAt.Nanosecond(),
+			time.Local,
+		)
+		difference := endTime.Sub(startTime)
+
+		err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(difference.Microseconds()), ubr.Hash)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -316,7 +349,18 @@ func Test_GetRangeByScoreFromSorted(t *testing.T) {
 			testData = append(testData, ubr)
 		}
 	}
-
+	now := time.Now()
+	endTime := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		now.Hour(),
+		now.Minute(),
+		now.Second(),
+		now.Nanosecond(),
+		time.Local,
+	)
+	lastBlock := endTime.Sub(startTime)
 	tests := []struct {
 		name      string
 		ubr       *UnmovedBlockRecord
@@ -327,7 +371,7 @@ func Test_GetRangeByScoreFromSorted(t *testing.T) {
 		{
 			name:      "OK",
 			ubr:       mockUBR(),
-			lastBlock: time.Now().UnixMicro(),
+			lastBlock: int64(lastBlock),
 			count:     3,
 			want:      testData,
 		},
@@ -335,10 +379,12 @@ func Test_GetRangeByScoreFromSorted(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := bwrRedis.GetRangeByScoreFromSorted(redisSortedSetUnmovedBlock, test.lastBlock, test.count)
+			got, _ := bwrRedis.GetRangeByScoreFromSorted(redisSortedSetUnmovedBlock, test.lastBlock, test.count)
 			for idx := range got {
-				assert.Equal(t, test.want[idx].Hash, got[idx].Hash)
-				assert.Equal(t, test.want[idx].CreatedAt.UnixMicro(), got[idx].CreatedAt.UnixMicro())
+				assert.Equal(t, test.want[idx].Hash, got[idx].Member.(string))
+				tq := time.Duration(int64(got[idx].Score))
+				createdAt := startTime.Add(tq * time.Microsecond)
+				assert.Equal(t, test.want[idx].CreatedAt, createdAt)
 			}
 		})
 	}
@@ -346,26 +392,39 @@ func Test_GetRangeByScoreFromSorted(t *testing.T) {
 
 func Test_SetToSorted(t *testing.T) {
 	bwrRedis.Client.FlushDB()
+	ubr := mockUBR()
 	tests := []struct {
 		name string
 		ubr  *UnmovedBlockRecord
-		want string
+		want []string
 	}{
 		{
 			name: "OK",
-			ubr:  mockUBR(),
-			want: "",
+			ubr:  ubr,
+			want: []string{ubr.Hash},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(test.ubr.CreatedAt.UnixMicro()), test.ubr.Hash)
+			test.ubr.CreatedAt.Truncate(time.Microsecond)
+			endTime := time.Date(
+				test.ubr.CreatedAt.Year(),
+				test.ubr.CreatedAt.Month(),
+				test.ubr.CreatedAt.Day(),
+				test.ubr.CreatedAt.Hour(),
+				test.ubr.CreatedAt.Minute(),
+				test.ubr.CreatedAt.Second(),
+				test.ubr.CreatedAt.Nanosecond(),
+				time.Local,
+			)
+			difference := endTime.Sub(startTime)
+
+			err := bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(difference.Microseconds()), test.ubr.Hash)
 			assert.NoError(t, err)
-			got, _ := bwrRedis.GetFromHash(redisSortedSetUnmovedBlock, test.ubr.Hash)
-			if !reflect.DeepEqual(test.want, got.(string)) {
-				t.Errorf("Delete want %v | got %v", test.want, got)
-			}
+			values, err := bwrRedis.GetRangeFromSorted(redisSortedSetUnmovedBlock, 0, 1)
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, values)
 		})
 	}
 }
