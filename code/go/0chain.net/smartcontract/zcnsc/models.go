@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+	"gorm.io/gorm"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -17,9 +20,10 @@ import (
 )
 
 const (
-	AuthorizerNodeType = "authnode"
-	GlobalNodeType     = "globalnode"
-	UserNodeType       = "usernode"
+	AuthorizerNodeType    = "authnode"
+	AuthorizerNewNodeType = "create"
+	GlobalNodeType        = "globalnode"
+	UserNodeType          = "usernode"
 )
 
 // ------------- GlobalNode ------------------------
@@ -343,6 +347,42 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 		return common.NewError("save_auth_node_failed", "saving authorizer node: "+err.Error())
 	}
 	return nil
+}
+
+func (an *AuthorizerNode) ToEvent() ([]byte, error) {
+	data, err := json.Marshal(&event.Authorizer{
+		Model:           gorm.Model{},
+		AuthorizerID:    an.ID,
+		URL:             an.URL,
+		Latitude:        0,
+		Longitude:       0,
+		LastHealthCheck: 0,
+		DelegateWallet:  "",
+		MinStake:        0,
+		MaxStake:        0,
+		NumDelegates:    0,
+		ServiceCharge:   0,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshalling authorizer event: %v", err)
+	}
+
+	return data, nil
+}
+
+func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
+	ev := &event.Authorizer{}
+	err := json.Unmarshal(buf, ev)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthorizerNode{
+		ID:        ev.AuthorizerID,
+		URL:       ev.URL,
+		PublicKey: "",  // fetch this from MPT
+		Staking:   nil, // fetch this from MPT
+	}, nil
 }
 
 // CreateAuthorizer To review: tokenLock init values

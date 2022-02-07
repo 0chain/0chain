@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ var (
 )
 
 /*TransactionGenerator - generates a steady stream of transactions */
-func TransactionGenerator(c *chain.Chain) {
+func TransactionGenerator(c *chain.Chain, workdir string) {
 	wallet.SetupWallet()
 
 	viper.SetDefault("development.txn_generation.max_txn_fee", 10000)
@@ -50,7 +51,7 @@ func TransactionGenerator(c *chain.Chain) {
 		numWorkers int
 	)
 
-	GenerateClients(c, numClients)
+	GenerateClients(c, numClients, workdir)
 
 	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize())
 	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
@@ -189,12 +190,12 @@ func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 }
 
 /*GetOwnerWallet - get the owner wallet. Used to get the initial state get going */
-func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
+func GetOwnerWallet(c *chain.Chain, workdir string) *wallet.Wallet {
 	var keysFile string
 	if c.ClientSignatureScheme() == "ed25519" {
-		keysFile = "config/owner_keys.txt"
+		keysFile = filepath.Join(workdir, "config/owner_keys.txt")
 	} else {
-		keysFile = "config/b0owner_keys.txt"
+		keysFile = filepath.Join(workdir, "config/b0owner_keys.txt")
 	}
 	reader, err := os.Open(keysFile)
 	if err != nil {
@@ -222,8 +223,8 @@ func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
 }
 
 /*GenerateClients - generate the given number of clients */
-func GenerateClients(c *chain.Chain, numClients int) {
-	ownerWallet := GetOwnerWallet(c)
+func GenerateClients(c *chain.Chain, numClients int, workdir string) {
+	ownerWallet := GetOwnerWallet(c, workdir)
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
 

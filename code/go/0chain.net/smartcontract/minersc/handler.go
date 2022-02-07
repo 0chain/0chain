@@ -21,6 +21,8 @@ import (
 
 const (
 	cantGetMinerNodeMsg = "can't get miner node"
+	inactiveNodes       = -1
+	activeNodes         = 1
 )
 
 // user oriented pools requests handler
@@ -86,6 +88,46 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	return allMinersList, nil
 }
 
+func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get miners. no db connection")
+	}
+
+	active, err := balances.GetEventDB().CountActiveMiners()
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	inactive, err := balances.GetEventDB().CountInactiveMiners()
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	return map[string]int64{
+		"active_miners":   active,
+		"inactive_miners": inactive,
+	}, nil
+
+}
+
+func (msc *MinerSmartContract) GetMinersStateHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get miners. no db connection")
+	}
+
+	ts, err := balances.GetEventDB().GetMinersTotalStake()
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	return map[string]int64{
+		"miners_total_stake": ts,
+	}, nil
+
+}
+
 const cantGetShardersListMsg = "can't get sharders list"
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -94,6 +136,46 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
 	}
 	return allShardersList, nil
+}
+
+func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get sharders. no db connection")
+	}
+
+	active, err := balances.GetEventDB().CountActiveSharders()
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	inactive, err := balances.GetEventDB().CountInactiveSharders()
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	return map[string]int64{
+		"active_sharders":   active,
+		"inactive_sharders": inactive,
+	}, nil
+
+}
+
+func (msc *MinerSmartContract) GetShardersStateHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get sharders. no db connection")
+	}
+
+	ts, err := balances.GetEventDB().GetShardersTotalStake()
+	if err != nil {
+		return nil, common.NewErrNoResource("db error", err.Error())
+	}
+
+	return map[string]int64{
+		"sharders_total_stake": ts,
+	}, nil
+
 }
 
 func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {

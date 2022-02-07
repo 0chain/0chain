@@ -3,10 +3,12 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"golang.org/x/net/context"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 
 	"gorm.io/gorm"
 )

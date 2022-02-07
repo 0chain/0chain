@@ -26,7 +26,7 @@ import (
 
 func init() {
 	block.SetupEntity(&mocks.Store{})
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 
 	startTestServer()
 }
@@ -931,6 +931,8 @@ func TestGetBlockSummaryCall(t *testing.T) {
 }
 
 func TestGetMagicBlockCall(t *testing.T) {
+	//this test is skipped since the only place tested method is used is test itself
+	t.Skip()
 	t.Parallel()
 
 	b := block.NewBlock("", 1)

@@ -1,10 +1,12 @@
 package event
 
 import (
-	"0chain.net/core/common"
 	"errors"
 	"fmt"
+
 	"gorm.io/gorm"
+
+	"0chain.net/core/common"
 )
 
 type ReadMarker struct {

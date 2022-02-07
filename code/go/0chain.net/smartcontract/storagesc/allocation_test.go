@@ -352,9 +352,6 @@ func TestExtendAllocation(t *testing.T) {
 					Pools: map[string]*delegatePool{
 						mockPoolId: {},
 					},
-					Offers: map[string]*offerPool{
-						mockAllocationId: {},
-					},
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
 				balances.On(
@@ -800,60 +797,6 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	assert.EqualValues(t, &ne, &nd)
 }
 
-func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
-	const errMsg = "can't get blobber's stake pool: value not present"
-	var (
-		alloc    StorageAllocation
-		b1, b2   StorageNode
-		balances = newTestBalances(t, false)
-		ssc      = newTestStorageSC()
-
-		err error
-	)
-	// setup
-	alloc.ID, b1.ID, b2.ID = "a1", "b1", "b2"
-	alloc.ChallengeCompletionTime = 150 * time.Second
-	alloc.Expiration = 100
-	alloc.BlobberDetails = []*BlobberAllocation{
-		&BlobberAllocation{Size: 20 * 1024, Terms: Terms{WritePrice: 12000}},
-		&BlobberAllocation{Size: 20 * 1024, Terms: Terms{WritePrice: 4000}},
-	}
-	// stake pool not found
-	var blobbers = []*StorageNode{&b1, &b2}
-	requireErrMsg(t, ssc.addBlobbersOffers(&alloc, blobbers, balances), errMsg)
-	// create stake pools
-	for _, b := range blobbers {
-		var sp = newStakePool()
-		_, err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
-		require.NoError(t, err)
-	}
-	// add the offers
-	require.NoError(t, ssc.addBlobbersOffers(&alloc, blobbers, balances))
-	// check out all
-	var sp1, sp2 *stakePool
-	// stake pool 1
-	sp1, err = ssc.getStakePool(b1.ID, balances)
-	require.NoError(t, err)
-	// offer 1
-	var off1 = sp1.findOffer(alloc.ID)
-	require.NotNil(t, off1)
-	assert.Equal(t, toSeconds(alloc.ChallengeCompletionTime)+alloc.Expiration,
-		off1.Expire)
-	assert.Equal(t, state.Balance(sizeInGB(20*1024)*12000.0), off1.Lock)
-	assert.Len(t, sp1.Offers, 1)
-	// stake pool 2
-	sp2, err = ssc.getStakePool(b2.ID, balances)
-	require.NoError(t, err)
-	// offer 2
-	var off2 = sp2.findOffer(alloc.ID)
-	require.NotNil(t, off1)
-	assert.Equal(t, toSeconds(alloc.ChallengeCompletionTime)+alloc.Expiration,
-		off2.Expire)
-	assert.Equal(t, state.Balance(sizeInGB(20*1024)*4000.0), off2.Lock)
-	assert.Len(t, sp2.Offers, 1)
-
-}
-
 func Test_updateBlobbersInAll(t *testing.T) {
 	var (
 		all        StorageNodes
@@ -1181,22 +1124,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
-	// 2. stake pool offers
-	var expire = aresp.Until()
-
 	sp1, err = ssc.getStakePool("b1", balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, &offerPool{
-		Lock:   10 * sb.Nodes[0].Terms.WritePrice,
-		Expire: expire,
-	}, sp1.Offers[aresp.ID])
 
 	sp2, err = ssc.getStakePool("b2", balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, &offerPool{
-		Lock:   10 * sb.Nodes[1].Terms.WritePrice,
-		Expire: expire,
-	}, sp2.Offers[aresp.ID])
 
 	// 3. challenge pool existence
 	var cp *challengePool
@@ -1437,17 +1369,6 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, tx.CreationDate, alloc.Expiration)
-
-	var expire = alloc.Until()
-
-	for _, detail := range alloc.BlobberDetails {
-		var sp *stakePool
-		sp, err = ssc.getStakePool(detail.BlobberID, balances)
-		require.NoError(t, err)
-		var offer = sp.findOffer(alloc.ID)
-		require.NotNil(t, offer)
-		assert.Equal(t, expire, offer.Expire)
-	}
 }
 
 func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
@@ -1696,12 +1617,6 @@ func Test_finalize_allocation(t *testing.T) {
 	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
-	var sp *stakePool
-	sp, err = ssc.getStakePool(b1.id, balances)
-	require.NoError(t, err)
-
-	require.NotNil(t, sp.findOffer(allocID))
-
 	// expire the allocation
 	tp += int64(alloc.Until())
 
@@ -1724,11 +1639,7 @@ func Test_finalize_allocation(t *testing.T) {
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
-	sp, err = ssc.getStakePool(b1.id, balances)
-	require.NoError(t, err)
-
 	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
-	require.Nil(t, sp.findOffer(allocID), "should be removed")
 	assert.Zero(t, cp.Balance, "should be drained")
 	assert.Zero(t, wp.allocUntil(allocID, common.Timestamp(tp)),
 		"should be drained")

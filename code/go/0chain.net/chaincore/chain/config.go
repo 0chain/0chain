@@ -1,11 +1,12 @@
 package chain
 
 import (
+	"sync"
+	"time"
+
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 	"go.uber.org/zap"
-	"sync"
-	"time"
 
 	"0chain.net/smartcontract/dbs"
 
@@ -78,6 +79,13 @@ type ConfigImpl struct {
 //FOR TEST PURPOSE ONLY
 func (c *ConfigImpl) ConfDataForTest() *ConfigData {
 	return c.conf
+}
+
+//TODO: for test usage only, extend with more fields
+func UpdateConfigImpl(conf *ConfigImpl, data *ConfigData) {
+	if data.BlockSize != 0 {
+		conf.conf.BlockSize = data.BlockSize
+	}
 }
 
 func NewConfigImpl(conf *ConfigData) *ConfigImpl {
@@ -552,42 +560,6 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 		conf.SmartContractTimeout = DefaultSmartContractTimeout
 	}
 	conf.SmartContractSettingUpdatePeriod, err = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.Enabled, err = cf.GetBool(minersc.DbsEventsEnabled)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.Name, err = cf.GetString(minersc.DbsEventsName)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.User, err = cf.GetString(minersc.DbsEventsUser)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.Password, err = cf.GetString(minersc.DbsEventsPassword)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.Host, err = cf.GetString(minersc.DbsEventsHost)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.Port, err = cf.GetString(minersc.DbsEventsPort)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.MaxIdleConns, err = cf.GetInt(minersc.DbsEventsMaxIdleConns)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.MaxOpenConns, err = cf.GetInt(minersc.DbsEventsMaxOpenConns)
-	if err != nil {
-		return err
-	}
-	conf.DbsEvents.ConnMaxLifetime, err = cf.GetDuration(minersc.DbsEventsConnMaxLifetime)
 	if err != nil {
 		return err
 	}

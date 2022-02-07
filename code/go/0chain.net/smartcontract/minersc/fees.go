@@ -26,32 +26,6 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	}
 }
 
-// pay interests for active pools
-func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *GlobalNode,
-	balances cstate.StateContextI) (err error) {
-
-	if !gn.canMint() {
-		return // no mints anymore
-	}
-
-	// all active
-	for _, pool := range mn.Active {
-		var amount = state.Balance(float64(pool.Balance) * gn.InterestRate)
-		if amount == 0 {
-			continue
-		}
-		var mint = state.NewMint(ADDRESS, pool.DelegateID, amount)
-		if err = balances.AddMint(mint); err != nil {
-			return common.NewErrorf("pay_fees/pay_interests",
-				"error adding mint for stake %v-%v: %v", mn.ID, pool.ID, err)
-		}
-		msc.addMint(gn, mint.Amount) //
-		pool.AddInterests(amount)    // stat
-	}
-
-	return
-}
-
 // LRU cache in action.
 func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
 	poolID string, balances cstate.StateContextI) (err error) {
@@ -198,9 +172,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			return fmt.Errorf("could not get miner node: %v", er)
 		}
 
-		if err = msc.payInterests(mn, gn, balances); err != nil {
-			return
-		}
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
 		}
@@ -237,9 +208,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			return fmt.Errorf("could not found sharder node: %v", er)
 		}
 
-		if err = msc.payInterests(sn, gn, balances); err != nil {
-			return
-		}
 		if err = msc.unlockDeleted(sn, round, balances); err != nil {
 			return
 		}
@@ -440,6 +408,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"saving generator node: %v", err)
+	}
+
+	if err = emitUpdateMiner(mn, balances, false); err != nil {
+		return "", common.NewErrorf("pay_fees", "saving generator node to db: %v", err)
 	}
 
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {

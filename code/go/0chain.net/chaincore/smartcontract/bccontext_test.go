@@ -16,7 +16,7 @@ import (
 var blsPublicKeys []string
 
 func init() {
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 	blsPublicKeys = make([]string, 10)
 	for i := 0; i < 10; i++ {
 		ss := encryption.NewBLS0ChainScheme()
