@@ -9,11 +9,9 @@ import (
 
 type Curator struct {
 	gorm.Model
-
-	// Foreign Key
-	AllocationID string `json:"allocation_id"`
-
-	CuratorID string `json:"curator_id" gorm:"uniqueIndex"`
+	CuratorID    string     `json:"curator_id" gorm:"uniqueIndex"`
+	AllocationID string     `json:"allocation_id"` // Foreign Key
+	Allocation   Allocation `json:"-" gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (edb *EventDb) overwriteCurator(c Curator) error {
