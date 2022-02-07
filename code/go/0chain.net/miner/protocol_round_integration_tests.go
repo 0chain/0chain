@@ -76,18 +76,25 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 }
 
 func sendBadVerificationTicketIfNeeded(rNum int64) {
-	cfg := crpc.Client().State().VerifyingNonExistentBlock
+	state := crpc.Client().State()
+	testCfg := state.VerifyingNonExistentBlock
 
-	cfg.Lock()
-	defer cfg.Unlock()
+	testCfg.Lock()
+	defer testCfg.Unlock()
 
-	if cfg == nil || rNum != cfg.OnRound || cfg.Sent {
+	if testCfg == nil || rNum != testCfg.OnRound || testCfg.Sent || !state.IsMonitor {
 		return
 	}
 
 	badVT := getBadBVTWithCustomHash(rNum)
 	magicBlock := GetMinerChain().GetMagicBlock(rNum)
 	magicBlock.Miners.SendAll(context.Background(), VerificationTicketSender(badVT))
+
+	testCfg.Sent = true
+
+	if err := crpc.Client().ConfigureTestCase(nil); err != nil {
+		log.Panicf("Conductor: error while configuring test case: %v", err)
+	}
 }
 
 func getBadBVTWithCustomHash(round int64) *block.BlockVerificationTicket {
