@@ -11,12 +11,6 @@ import (
 
 type (
 	// BlockStateChangeRequestor represents implementation of the TestCase interface.
-	//
-	//	Flow of this test case:
-	//		Attack BlockStateChangeRequestor: no replies
-	//		Replica0: Ignore all VerifyBlock messages on round_n
-	//		Requested nodes: ignore all block state change requests from Replica0
-	//		Check: Replica0 must retry requesting.
 	BlockStateChangeRequestor struct {
 		notInfo *NotarisationInfo
 
@@ -24,8 +18,32 @@ type (
 
 		clientStats *stats.NodesClientStats
 
+		caseType BlockStateChangeRequestorCaseType
+
 		wg *sync.WaitGroup
 	}
+
+	// BlockStateChangeRequestorCaseType represents type that determines test behavior.
+	BlockStateChangeRequestorCaseType int
+)
+
+const (
+	// BSCRNoReplies determines BlockStateChangeRequestorCaseType in which all nodes ignore Replica0.
+	//
+	//	Flow of this test case:
+	//		Replica0: Ignore all VerifyBlock messages on round_n
+	//		Requested nodes: ignore all block state change requests from Replica0
+	//		Check: Replica0 must retry requesting.
+	BSCRNoReplies BlockStateChangeRequestorCaseType = iota
+
+	// BSCROnlyOneRepliesCorrectly determines BlockStateChangeRequestorCaseType in which all nodes ignore Replica0,
+	// but only one node replies correctly.
+	//
+	//	Flow of this test case:
+	//		Replica0: Ignore all VerifyBlock messages on round_n
+	//		Requested nodes: ignore all block state change requests from Replica0
+	//		Check: Replica0 must finalize round_n.
+	BSCROnlyOneRepliesCorrectly
 )
 
 var (
@@ -34,11 +52,12 @@ var (
 )
 
 // NewBlockStateChangeRequestor creates initialised BlockStateChangeRequestor.
-func NewBlockStateChangeRequestor(clientStatsCollector *stats.NodesClientStats) *BlockStateChangeRequestor {
+func NewBlockStateChangeRequestor(clientStatsCollector *stats.NodesClientStats, caseType BlockStateChangeRequestorCaseType) *BlockStateChangeRequestor {
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
 	return &BlockStateChangeRequestor{
 		clientStats: clientStatsCollector,
+		caseType:    caseType,
 		wg:          wg,
 	}
 }
@@ -61,6 +80,19 @@ func (n *BlockStateChangeRequestor) Check(ctx context.Context) (success bool, er
 }
 
 func (n *BlockStateChangeRequestor) check() (success bool, err error) {
+	switch n.caseType {
+	case BSCRNoReplies:
+		return n.checkNoRepliesType()
+
+	case BSCROnlyOneRepliesCorrectly:
+		return n.checkOnlyOneRepliesCorrectly()
+
+	default:
+		panic("unknown case type")
+	}
+}
+
+func (n *BlockStateChangeRequestor) checkNoRepliesType() (success bool, err error) {
 	replica0 := n.roundInfo.getNodeID(false, 0)
 	replica0Stats, ok := n.clientStats.BlockStateChange[replica0]
 	if !ok {
@@ -73,6 +105,26 @@ func (n *BlockStateChangeRequestor) check() (success bool, err error) {
 		return false, fmt.Errorf("insufficient reports count: %d", numReports)
 	}
 	return true, nil
+}
+
+func (n *BlockStateChangeRequestor) checkOnlyOneRepliesCorrectly() (success bool, err error) {
+	replica0 := n.roundInfo.getNodeID(false, 0)
+	replica0Stats, ok := n.clientStats.BlockStateChange[replica0]
+	if !ok {
+		return false, errors.New("no reports from replica0")
+	}
+
+	blockHash := n.notInfo.BlockID
+	numReports := replica0Stats.CountWithHash(blockHash)
+	if numReports < 1 {
+		return false, fmt.Errorf("insufficient reports count: %d", numReports)
+	}
+
+	success = n.roundInfo != nil && n.roundInfo.IsFinalised
+	if !success {
+		err = errors.New("round is not finalised")
+	}
+	return success, err
 }
 
 // Configure implements TestCase interface.
