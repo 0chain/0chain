@@ -22,18 +22,18 @@ import (
 )
 
 type Home struct {
-	Name              string
-	ChainName         string
-	ID                string
-	PublicKey         string
-	BuildTag          string
-	StartTime         time.Time
-	NodeType          string
-	isDevMode         bool
-	CurrentMagicBlock *block.MagicBlock
-	Miners            []Node
-	Sharders          []Node
-	HealthSummary     HealthSummary
+	Name              string            `json:"home"`
+	ChainName         string            `json:"chain_name"`
+	ID                string            `json:"id"`
+	PublicKey         string            `json:"public_key"`
+	BuildTag          string            `json:"build_tag"`
+	StartTime         time.Time         `json:"start_time"`
+	NodeType          string            `json:"node_type"`
+	isDevMode         bool              `json:"is_dev_mode"`
+	CurrentMagicBlock *block.MagicBlock `json:"current_magic_block"`
+	Miners            []Node            `json:"miners"`
+	Sharders          []Node            `json:"sharders"`
+	HealthSummary     HealthSummary     `json:"health_summary"`
 }
 
 func jsonHome(ctx context.Context) Home {
@@ -59,24 +59,24 @@ func jsonHome(ctx context.Context) Home {
 }
 
 type Node struct {
-	Status                      string
-	Index                       int
-	Rank                        string
-	Name                        string
-	Host                        string
-	Path                        string
-	Port                        int
-	Sent                        int64
-	SendErrors                  int64
-	Received                    int64
-	LastActiveTime              time.Time
-	LargeMessageSendTimeSec     float64
-	OptimalLargeMessageSendTime float64
-	Description                 string
-	BuildTag                    string
-	StateMissingNodes           int64
-	MinersMedianNetworkTime     time.Duration
-	AvgBlockTxns                int
+	Status                      string        `json:"status"`
+	Index                       int           `json:"index"`
+	Rank                        string        `json:"rank"`
+	Name                        string        `json:"name"`
+	Host                        string        `json:"host"`
+	Path                        string        `json:"path"`
+	Port                        int           `json:"port"`
+	Sent                        int64         `json:"sent"`
+	SendErrors                  int64         `json:"send_errors"`
+	Received                    int64         `json:"received"`
+	LastActiveTime              time.Time     `json:"last_active_time"`
+	LargeMessageSendTimeSec     float64       `json:"large_message_send_time_sec"`
+	OptimalLargeMessageSendTime float64       `json:"optimal_large_message_send_time"`
+	Description                 string        `json:"description"`
+	BuildTag                    string        `json:"build_tag"`
+	StateMissingNodes           int64         `json:"state_missing_nodes"`
+	MinersMedianNetworkTime     time.Duration `json:"miners_median_network_time"`
+	AvgBlockTxns                int           `json:"avg_block_txns"`
 }
 
 func (c *Chain) getNodePool(np *node.Pool) []Node {
@@ -88,7 +88,7 @@ func (c *Chain) getNodePool(np *node.Pool) []Node {
 		return nodes[i].SetIndex < nodes[j].SetIndex
 	})
 	viewNodes := make([]Node, len(nodes))
-	for _, nd := range nodes {
+	for i, nd := range nodes {
 		n := Node{
 			Index:                       nd.SetIndex,
 			Name:                        nd.GetPseudoName(),
@@ -124,16 +124,16 @@ func (c *Chain) getNodePool(np *node.Pool) []Node {
 			n.Host = nd.Host
 			n.Port = nd.Port
 		}
-		viewNodes = append(viewNodes, n)
+		viewNodes[i] = n
 	}
 	return viewNodes
 }
 
 type HealthSummary struct {
-	RoundHealth RoundHealth
-	ChainHealth ChainHealth
-	InfraHealth InfraHealth
-	BlockHealth BlockHealth
+	RoundHealth RoundHealth `json:"round_health"`
+	ChainHealth ChainHealth `json:"chain_health"`
+	InfraHealth InfraHealth `json:"infra_health"`
+	BlockHealth BlockHealth `json:"block_health"`
 }
 
 func (c *Chain) getHealthSummary(ctx context.Context) HealthSummary {
@@ -149,55 +149,55 @@ func (c *Chain) getHealthSummary(ctx context.Context) HealthSummary {
 }
 
 type RoundHealth struct {
-	Round         int64
-	VRFs          string
-	RRS           int64
-	Proposals     int
-	Notarizations int
-	Phase         string
-	Shares        int
-	VRFThreshold  int
-	LFBTicket     int64
-	isActive      bool
+	Round         int64  `json:"round"`
+	VRFs          string `json:"vrfs"`
+	RRS           int64  `json:"rrs"`
+	Proposals     int    `json:"proposals"`
+	Notarizations int    `json:"notarizations"`
+	Phase         string `json:"phase"`
+	Shares        int    `json:"shares"`
+	VRFThreshold  int    `json:"vrf_threshold"`
+	LFBTicket     int64  `json:"lfb_ticket"`
+	isActive      bool   `json:"is_active"`
 }
 
 type ChainHealth struct {
-	LatestFinalizedRound        int64
-	DeterministicFinalizedRound int64
-	Rollbacks                   int64
-	Timeouts                    int64
-	RoundTimeoutCount           int64
-	RelatedMB                   int64
-	FinalizedMB                 int64
+	LatestFinalizedRound        int64 `json:"latest_finalized_round"`
+	DeterministicFinalizedRound int64 `json:"determintinistic_finalized_round"`
+	Rollbacks                   int64 `json:"rollbacks"`
+	Timeouts                    int64 `json:"timeouts"`
+	RoundTimeoutCount           int64 `json:"round_timeout_count"`
+	RelatedMB                   int64 `json:"related_mb"`
+	FinalizedMB                 int64 `json:"finalized_mb"`
 }
 
 type InfraHealth struct {
-	GoRoutines            int
-	HeapAlloc             uint64
-	MissingNodes          *int64
-	StateMissingNodes     int64
-	RedisCollection       int64
-	IsLFBStateComputed    bool
-	IsDKGProcessDisabled  bool
-	IsLFBStateInitialized bool
-	DKGPhase              string
-	DKGRestarts           int64
+	GoRoutines            int    `json:"go_routines"`
+	HeapAlloc             uint64 `json:"heap_alloc"`
+	MissingNodes          *int64 `json:"missing_nodes"`
+	StateMissingNodes     int64  `json:"state_missing_nodes"`
+	RedisCollection       int64  `json:"redis_collection"`
+	IsLFBStateComputed    bool   `json:"is_lfb_state_computed"`
+	IsDKGProcessDisabled  bool   `json:"is_dkg_process_disabled"`
+	IsLFBStateInitialized bool   `json:"is_lfb_state_initialized"`
+	DKGPhase              string `json:"dkg_phase"`
+	DKGRestarts           int64  `json:"dkg_restart"`
 }
 
 type BlockHealth struct {
-	Blocks                 []blockName
-	BlockHash              string
-	NumVerificationTickets int
-	Consensus              int
-	CRB                    string
-	LFMBStartingRound      int64
-	LFMBHash               string
+	Blocks                 []blockName `json:"blocks"`
+	BlockHash              string      `json:"block_hash"`
+	NumVerificationTickets int         `json:"num_verification_tickets"`
+	Consensus              int         `json:"concensus"`
+	CRB                    string      `json:"crb"`
+	LFMBStartingRound      int64       `json:"lfmb_starting_round"`
+	LFMBHash               string      `json:"lfmb_hash"`
 }
 
 type blockName struct {
-	name  string
-	style string
-	block *block.Block
+	Name  string       `json:"name"`
+	Style string       `json:"style"`
+	Block *block.Block `json:"block"`
 }
 
 func (c *Chain) getRoundHealth(ctx context.Context) RoundHealth {
