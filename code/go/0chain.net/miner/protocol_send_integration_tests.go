@@ -55,13 +55,11 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		good, bad = crpcutils.Split(state, state.RoundTimeout,
 			mb.Miners.CopyNodes())
 
-	case isSendingBadTimeoutVRFS(vrfs.Round):
-		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1)
-		bad = getMinersByRatio(mb, 0.33)
-
 	default:
 		good = mb.Miners.CopyNodes() // all good
 	}
+
+	sendBadTimeoutVRFSIfNeeded(vrfs, mb)
 
 	if len(good) > 0 {
 		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(vrfs), good)
@@ -71,11 +69,24 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	}
 }
 
-func isSendingBadTimeoutVRFS(round int64) bool {
+func sendBadTimeoutVRFSIfNeeded(vrfs *round.VRFShare, mb *block.MagicBlock) {
 	state := crpc.Client().State()
 	cfg := state.BadTimeoutVRFS
+
+	cfg.Lock()
+	defer cfg.Unlock()
+
 	// VRFS with bad timeout should be sent from the Monitors
-	return cfg != nil && cfg.OnRound == round && state.IsMonitor
+	sending := cfg != nil && cfg.OnRound == vrfs.Round && state.IsMonitor && !cfg.Sent
+	if !sending {
+		return
+	}
+
+	badVRFS := withTimeout(vrfs, vrfs.RoundTimeoutCount+1)
+	bad := getMinersByRatio(mb, 0.33)
+	mb.Miners.SendToMultipleNodes(context.Background(), RoundVRFSender(badVRFS), bad)
+
+	cfg.Sent = true
 }
 
 func getMinersByRatio(mb *block.MagicBlock, ratio float64) []*node.Node {

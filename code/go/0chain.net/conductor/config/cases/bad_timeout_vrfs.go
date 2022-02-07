@@ -1,9 +1,12 @@
 package cases
 
 import (
+	"sync"
+
+	"github.com/mitchellh/mapstructure"
+
 	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
-	"github.com/mitchellh/mapstructure"
 )
 
 type (
@@ -11,9 +14,13 @@ type (
 	BadTimeoutVRFS struct {
 		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
 
+		Sent bool
+
 		monitorID string
 
 		statsCollector *stats.NodesServerStats
+
+		mu sync.Mutex
 	}
 )
 
@@ -47,4 +54,18 @@ func (n *BadTimeoutVRFS) Name() string {
 // Decode implements MapDecoder interface.
 func (n *BadTimeoutVRFS) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
+}
+
+func (n *BadTimeoutVRFS) Lock() {
+	if n == nil {
+		return
+	}
+	n.mu.Lock()
+}
+
+func (n *BadTimeoutVRFS) Unlock() {
+	if n == nil {
+		return
+	}
+	n.mu.Unlock()
 }

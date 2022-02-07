@@ -794,9 +794,7 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 			state.ResendNotarisation = cfg
 
 		case *cases.BadTimeoutVRFS:
-			if state.IsMonitor {
-				state.BadTimeoutVRFS = cfg
-			}
+			state.BadTimeoutVRFS = cfg
 
 		case *cases.HalfNodesDown:
 			state.HalfNodesDown = cfg
