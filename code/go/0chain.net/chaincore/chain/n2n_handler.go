@@ -46,8 +46,8 @@ var (
 	FBRequestor node.EntityRequestor
 )
 
-/*SetupX2MRequestors - setup requestors */
-func SetupX2MRequestors() {
+// setupX2MRequestors - setup requestors */
+func setupX2MRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
@@ -115,8 +115,8 @@ func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error
 	return ns, nil
 }
 
-// BlockStateChangeHandler - provide the state changes associated with a block.
-func (c *Chain) BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// blockStateChangeHandler - provide the state changes associated with a block.
+func (c *Chain) blockStateChangeHandler(ctx context.Context, r *http.Request) (*block.StateChange, error) {
 	var b, err = c.getNotarizedBlock(ctx, r)
 	if err != nil {
 		return nil, err

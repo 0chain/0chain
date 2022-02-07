@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"0chain.net/chaincore/node"
@@ -25,7 +26,7 @@ type (
 // BlockStats represents middleware for collecting nodes blocks servers stats.
 func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStatsConfigurator) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !crpc.Client().State().StatsCollectorEnabled {
+		if !crpc.Client().State().ServerStatsCollectorEnabled {
 			handler(w, r)
 			return
 		}
@@ -58,7 +59,7 @@ func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStats
 // Collects vrfs requests stats.
 func VRFSStats(handler datastore.JSONEntityReqResponderF) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		if !crpc.Client().State().StatsCollectorEnabled {
+		if !crpc.Client().State().ServerStatsCollectorEnabled {
 			return handler(ctx, entity)
 		}
 
@@ -77,5 +78,24 @@ func VRFSStats(handler datastore.JSONEntityReqResponderF) datastore.JSONEntityRe
 		}
 
 		return handler(ctx, entity)
+	}
+}
+
+// BlockStateChangeRequestor represents a middleware for collecting stats about client's block state change requests.
+func BlockStateChangeRequestor(requestor node.EntityRequestor) node.EntityRequestor {
+	return func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) node.SendHandler {
+		if !crpc.Client().State().ClientStatsCollectorEnabled {
+			return requestor(urlParams, handler)
+		}
+
+		rs := &stats.BlockStateChangeRequest{
+			NodeID: node.Self.ID,
+			Block:  urlParams.Get("block"),
+		}
+		if err := crpc.Client().AddBlockStateChangeRequestorStats(rs); err != nil {
+			log.Panicf("Conductor: error while adding client stats: %v", err)
+		}
+
+		return requestor(urlParams, handler)
 	}
 }

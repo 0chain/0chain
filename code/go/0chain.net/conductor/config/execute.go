@@ -93,6 +93,12 @@ type Executor interface {
 	// GetServerStatsCollector returns current server stats collector.
 	GetServerStatsCollector() *stats.NodesServerStats
 
+	// EnableClientStatsCollector enables client stats collecting.
+	EnableClientStatsCollector() error
+
+	// GetClientStatsCollector returns current client stats collector.
+	GetClientStatsCollector() *stats.NodesClientStats
+
 	// ConfigureTestCase runs cases.TestCase's configuring with cases.TestCaseConfigurator configuration.
 	ConfigureTestCase(cases.TestCaseConfigurator) error
 

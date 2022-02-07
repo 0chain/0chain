@@ -110,6 +110,9 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	case s.BadTimeoutVRFS != nil:
 		isTestingFunc = s.BadTimeoutVRFS.IsTesting
 
+	case s.BlockStateChangeRequestor != nil:
+		isTestingFunc = s.BlockStateChangeRequestor.IsTesting
+
 	default:
 		return false
 	}

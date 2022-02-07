@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
+	cfg "0chain.net/conductor/config/cases"
 )
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
@@ -45,8 +46,8 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 }
 
 func isIgnoringVerificationTicket(round int64) bool {
-	cfg := crpc.Client().State().VerifyingNonExistentBlock
-	if cfg == nil || round != cfg.OnRound {
+	testCfg := crpc.Client().State().VerifyingNonExistentBlock
+	if testCfg == nil || round != testCfg.OnRound {
 		return false
 	}
 
@@ -54,7 +55,7 @@ func isIgnoringVerificationTicket(round int64) bool {
 	mc := GetMinerChain()
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
 	isFirstRankedReplica := nodeType == replica && typeRank == 0
-	return isFirstRankedReplica && cfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
+	return isFirstRankedReplica && testCfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
 }
 
 func isBreakingSingleBlock(roundNum int64, verTicketFromMiner string) bool {
@@ -65,8 +66,8 @@ func isBreakingSingleBlock(roundNum int64, verTicketFromMiner string) bool {
 		return false
 	}
 	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
-	cfg := crpc.Client().State().BreakingSingleBlock
-	shouldTest := cfg != nil && cfg.OnRound == roundNum && isFirstGenerator
+	testCfg := crpc.Client().State().BreakingSingleBlock
+	shouldTest := testCfg != nil && testCfg.OnRound == roundNum && isFirstGenerator
 	if !shouldTest {
 		return false
 	}
@@ -97,11 +98,11 @@ func sendBreakingBlock(blockHash string) (sentBlockHash string, err error) {
 }
 
 func configureBreakingSingleBlock(firstBlockHash, secondBlockHash string) error {
-	cfg := &cases.BreakingSingleBlockCfg{
+	caseCfg := &cases.BreakingSingleBlockCfg{
 		FirstSentBlockHash:  firstBlockHash,
 		SecondSentBlockHash: secondBlockHash,
 	}
-	blob, err := cfg.Encode()
+	blob, err := caseCfg.Encode()
 	if err != nil {
 		return err
 	}
@@ -110,58 +111,65 @@ func configureBreakingSingleBlock(firstBlockHash, secondBlockHash string) error 
 
 // HandleVerifyBlockMessage - handles the verify block message.
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
-	if isIgnoringProposalOrNotarisation(msg.Block.Round) {
+	if isIgnoringProposal(msg.Block.Round) {
 		return
 	}
 
-	crpc.Client().State().ResendProposedBlock.Lock()
-	if isResendingProposedBlock(msg.Block.Round) {
-		resendProposedBlock(msg.Block)
-		if err := crpc.Client().ConfigureTestCase([]byte(msg.Block.Hash)); err != nil {
-			log.Panicf("Conductor: error while configuring test case: %#v", err)
-		}
-	}
-	crpc.Client().State().ResendProposedBlock.Unlock()
+	resendProposedBlockIfNeeded(msg.Block)
 
 	mc.handleVerifyBlockMessage(ctx, msg)
 }
 
-func isIgnoringProposalOrNotarisation(round int64) bool {
-	vnebCfg := crpc.Client().State().VerifyingNonExistentBlock
-	isVerifyingNonExistentBlock := vnebCfg != nil && round == vnebCfg.OnRound
-	nnebCfg := crpc.Client().State().NotarisingNonExistentBlock
-	isNotarisingNonExistentBlock := nnebCfg != nil && round == nnebCfg.OnRound
-	if !isVerifyingNonExistentBlock && !isNotarisingNonExistentBlock {
+func isIgnoringProposal(round int64) bool {
+	var (
+		state   = crpc.Client().State()
+		testCfg cfg.TestReporter
+	)
+	switch {
+	case state.VerifyingNonExistentBlock != nil:
+		testCfg = state.VerifyingNonExistentBlock
+
+	case state.NotarisingNonExistentBlock != nil:
+		testCfg = state.NotarisingNonExistentBlock
+
+	case state.BlockStateChangeRequestor != nil:
+		testCfg = state.BlockStateChangeRequestor
+
+	default:
 		return false
 	}
 
-	// we need to ignore msg by the first ranked replica
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
-	return nodeType == replica && typeRank == 0
+	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
-func isResendingProposedBlock(round int64) (resending bool) {
-	cfg := crpc.Client().State().ResendProposedBlock
-	resending = cfg != nil && round == cfg.OnRound && !cfg.Resent
+func resendProposedBlockIfNeeded(b *block.Block) {
+	testCfg := crpc.Client().State().ResendProposedBlock
+
+	testCfg.Lock()
+	defer testCfg.Unlock()
+
+	var (
+		nodeType, typeRank = getNodeTypeAndTypeRank(b.Round)
+		resending          = testCfg != nil && testCfg.IsTesting(b.Round, nodeType == generator, typeRank) && !testCfg.Resent
+	)
 	if !resending {
 		return
 	}
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
-	return nodeType == generator && typeRank == 1
-}
-
-func resendProposedBlock(bl *block.Block) {
-	miners := GetMinerChain().GetMiners(bl.Round)
-	miners.SendAll(context.Background(), VerifyBlockSender(bl))
+	miners := GetMinerChain().GetMiners(b.Round)
+	miners.SendAll(context.Background(), VerifyBlockSender(b))
 
 	crpc.Client().State().ResendProposedBlock.Resent = true
-	return
+
+	if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
+		log.Panicf("Conductor: error while configuring test case: %#v", err)
+	}
 }
 
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	if isIgnoringProposalOrNotarisation(msg.Notarization.Round) {
+	if isIgnoringNotarisation(msg.Notarization.Round) {
 		return
 	}
 
@@ -169,7 +177,29 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 
 	resendNotarisationIfNeeded(msg.Notarization.Round)
 
+	configureBlockStateChangeRequestorTestCaseIfNeeded(msg.Notarization)
+
 	mc.handleNotarizationMessage(ctx, msg)
+}
+
+func isIgnoringNotarisation(round int64) bool {
+	var (
+		state   = crpc.Client().State()
+		testCfg cfg.TestReporter
+	)
+	switch {
+	case state.VerifyingNonExistentBlock != nil:
+		testCfg = state.VerifyingNonExistentBlock
+
+	case state.NotarisingNonExistentBlock != nil:
+		testCfg = state.NotarisingNonExistentBlock
+
+	default:
+		return false
+	}
+
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
 func obtainNotarisationIfNeeded(not *Notarization) {
@@ -214,6 +244,39 @@ func resendNotarisationIfNeeded(round int64) {
 	miners.SendAll(context.Background(), BlockNotarizationSender(not))
 
 	cfg.Resent = true
+}
+
+func configureBlockStateChangeRequestorTestCaseIfNeeded(not *Notarization) {
+	testCfg := crpc.Client().State().BlockStateChangeRequestor
+
+	testCfg.Lock()
+	defer testCfg.Unlock()
+
+	var (
+		nodeType, typeRank = getNodeTypeAndTypeRank(not.Round)
+		configuring        = testCfg != nil && testCfg.OnRound == not.Round &&
+			nodeType == replica && typeRank == 0 && !testCfg.Configured
+	)
+	if !configuring {
+		return
+	}
+
+	blob, err := getNotarisationInfo(not).Encode()
+	if err != nil {
+		log.Panicf("Conductor: error while encoding notarisation info: %v", err)
+	}
+	if err := crpc.Client().ConfigureTestCase(blob); err != nil {
+		log.Panicf("Conductor: error while configuring test case: %v", err)
+	}
+	testCfg.Configured = true
+}
+
+func getNotarisationInfo(not *Notarization) *cases.NotarisationInfo {
+	return &cases.NotarisationInfo{
+		VerificationTickets: getVerificationTicketsInfo(not.VerificationTickets),
+		BlockID:             not.BlockID,
+		Round:               not.Round,
+	}
 }
 
 const (

@@ -59,13 +59,15 @@ type State struct {
 	ResendNotarisation                    *cases.ResendNotarisation
 	BadTimeoutVRFS                        *cases.BadTimeoutVRFS
 	HalfNodesDown                         *cases.HalfNodesDown
+	BlockStateChangeRequestor             *cases.BlockStateChangeRequestor
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses
 	ValidatorProof *config.Bad // blobber sends invalid proof to validators
 	Challenges     *config.Bad // blobber ignores challenges
 
-	StatsCollectorEnabled bool
+	ServerStatsCollectorEnabled bool
+	ClientStatsCollectorEnabled bool
 }
 
 // Name returns NodeName by given NodeID.

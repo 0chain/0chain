@@ -484,6 +484,20 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("configure_block_state_change_requestor_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableClientStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewBlockStateChangeRequestor(ex.GetClientStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {
