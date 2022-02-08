@@ -90,7 +90,7 @@ func (rp *readPool) movePartToBlobber(
 
 	for _, id := range sp.OrderedPoolIds() {
 		ratio := float64(sp.Pools[id].Balance) / stake
-		move := float64(value) * ratio
+		move := float64(valueLeft) * ratio
 		if state.Balance(move) > ap.Balance {
 			return fmt.Errorf("allocation pool balance %v not enough to cover stake pool reward %v",
 				ap.Balance, blobberCharge)
@@ -133,7 +133,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	var moved state.Balance = 0
 	var torm []*allocationPool // to remove later (empty allocation pools)
 	for _, ap := range cut {
-		if value == 0 {
+		if value == moved {
 			break // all required tokens has moved to the blobber
 		}
 		var bi, ok = ap.Blobbers.getIndex(blobID)

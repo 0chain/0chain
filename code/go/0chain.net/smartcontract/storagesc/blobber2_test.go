@@ -413,18 +413,14 @@ func confirmCommitBlobberRead(
 	require.Len(t, newReadPool.Pools, len(f.readPools.thisAllocation)+f.readPools.otherAllocations)
 
 	require.InDelta(t, f.blobberCharge(), int64(newStakePool.Reward), errDelta)
-	require.InDelta(t, f.blobberReward()-f.blobberCharge(), int64(newStakePool.Reward), errDelta)
 
-	require.True(t, true)
-	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, storageScId, transfer.ClientID)
-		if transfer.ToClientID == delegateWallet {
-			require.InDelta(t, f.blobberCharge(), int64(transfer.Amount), errDelta)
-		} else {
-			index, err := strconv.Atoi(transfer.ToClientID)
-			require.NoError(t, err)
-			require.InDelta(t, f.delegateRward(int64(index)), int64(transfer.Amount), errDelta)
-		}
+	for i, id := range newStakePool.OrderedPoolIds() {
+		require.InDelta(
+			t,
+			f.delegateRward(int64(i)),
+			int64(newStakePool.Pools[id].Reward),
+			errDelta,
+		)
 	}
 }
 
