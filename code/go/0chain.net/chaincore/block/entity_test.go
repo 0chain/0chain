@@ -35,7 +35,7 @@ func init() {
 	clientEM.Store = sp
 	datastore.RegisterEntityMetadata("client", clientEM)
 
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 	config.SetServerChainID("")
 }
 

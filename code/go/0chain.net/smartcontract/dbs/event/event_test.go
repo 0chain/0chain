@@ -55,7 +55,12 @@ func (edb *EventDb) drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
+	err = edb.Store.Get().Migrator().DropTable(&Error{})
+	if err != nil {
+		return err
+	}
+  
+  err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
 	if err != nil {
 		return err
 	}
@@ -65,10 +70,27 @@ func (edb *EventDb) drop() error {
 		return err
 	}
 
-
 	err = edb.Store.Get().Migrator().DropTable(&Block{})
+	if err != nil {
+		return err
+	}
 
 	err = edb.Store.Get().Migrator().DropTable(&ReadMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Miner{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Curator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
 	if err != nil {
 		return err
 	}

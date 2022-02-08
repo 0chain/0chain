@@ -418,7 +418,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		default:
 		}
 		if bsc == nil {
-			logging.Logger.Error("get_block_state_change - could not get state changes from miners",
+			logging.Logger.Error("get_block_state_change - could not get state changes from remote",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			return nil, common.NewError("block_state_change_error",

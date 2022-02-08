@@ -22,6 +22,7 @@ const (
 )
 
 var (
+	events            map[string]*AuthorizerNode
 	authorizers       = make(map[string]*Authorizer, len(authorizersID))
 	authorizersID     = []string{authorizerPrefixID + "_0", authorizerPrefixID + "_1", authorizerPrefixID + "_2"}
 	clients           = []string{clientPrefixID + "_0", clientPrefixID + "_1", clientPrefixID + "_2"}

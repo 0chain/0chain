@@ -904,6 +904,19 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 			b.Events = nil
 			return err
+		case transaction.ErrSmartContractContext:
+			b.SetStateStatus(StateCancelled)
+			logging.Logger.Error("compute state - smart contract timeout",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+				zap.Error(err))
+			//rollback changes for the next attempt
+			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
+			b.Events = nil
+			return err
 		default:
 			if err != nil {
 				b.SetStateStatus(StateFailed)
@@ -1008,6 +1021,19 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 			b.Events = nil
 			return common.NewError("state_update_error", err.Error())
+		case transaction.ErrSmartContractContext:
+			b.SetStateStatus(StateCancelled)
+			logging.Logger.Error("compute state - smart contract timeout",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
+				zap.Error(err))
+			//rollback changes for the next attempt
+			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
+			b.Events = nil
+			return err
 		default:
 			if err != nil {
 				b.SetStateStatus(StateFailed)

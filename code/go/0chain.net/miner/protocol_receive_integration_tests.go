@@ -178,7 +178,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 
 	obtainNotarisationIfNeeded(msg.Notarization)
 
-	resendNotarisationIfNeeded(msg.Notarization)
+	resendNotarisationIfNeeded(msg.Notarization.Round)
 
 	configureBlockStateChangeRequestorTestCaseIfNeeded(msg.Notarization)
 
@@ -206,19 +206,17 @@ func isIgnoringNotarisation(round int64) bool {
 }
 
 func obtainNotarisationIfNeeded(not *Notarization) {
-	testCfg := crpc.Client().State().ResendNotarisation
+	cfg := crpc.Client().State().ResendNotarisation
 
-	testCfg.Lock()
-	defer testCfg.Unlock()
+	cfg.Lock()
+	defer cfg.Unlock()
 
-	var (
-		nodeType, typeRank = getNodeTypeAndTypeRank(not.Round)
-		obtaining          = testCfg != nil && not.Round == testCfg.OnRound-2 && !testCfg.Resent &&
-			((nodeType == generator) == testCfg.ByGenerator) && testCfg.ByNodeWithTypeRank == typeRank
-	)
-	if !obtaining {
+	if cfg == nil || not.Round != cfg.OnRound-2 || cfg.Notarisation != nil {
 		return
 	}
+
+	// obtain notarisation if it is configured on round r-2 and notarisation is not obtained.
+	// obtained notarisation will be resent on next round by Replica0
 
 	blob, err := json.Marshal(not)
 	if err != nil {
@@ -227,29 +225,28 @@ func obtainNotarisationIfNeeded(not *Notarization) {
 	crpc.Client().State().ResendNotarisation.Notarisation = blob
 }
 
-func resendNotarisationIfNeeded(not *Notarization) {
-	testCfg := crpc.Client().State().ResendNotarisation
+func resendNotarisationIfNeeded(round int64) {
+	cfg := crpc.Client().State().ResendNotarisation
 
-	testCfg.Lock()
-	defer testCfg.Unlock()
+	cfg.Lock()
+	defer cfg.Unlock()
 
-	var (
-		nodeType, typeRank = getNodeTypeAndTypeRank(not.Round)
-		resending          = testCfg != nil && not.Round == testCfg.OnRound-1 &&
-			((nodeType == generator) == testCfg.ByGenerator) && testCfg.ByNodeWithTypeRank == typeRank
-	)
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	resending := cfg != nil && round == cfg.OnRound-1 && nodeType == replica && typeRank == 0 && !cfg.Resent
 	if !resending {
 		return
 	}
 
-	resNot := new(Notarization)
-	if err := json.Unmarshal(crpc.Client().State().ResendNotarisation.Notarisation, resNot); err != nil {
+	// resending notarisation obtained on round r-1 by Replica0 if it was not resent
+
+	not := new(Notarization)
+	if err := json.Unmarshal(crpc.Client().State().ResendNotarisation.Notarisation, not); err != nil {
 		log.Panicf("Conductor: error while resending notarisation: %v", err)
 	}
-	miners := GetMinerChain().GetMagicBlock(not.Round).Miners
+	miners := GetMinerChain().GetMagicBlock(round).Miners
 	miners.SendAll(context.Background(), BlockNotarizationSender(not))
 
-	testCfg.Resent = true
+	cfg.Resent = true
 }
 
 func configureBlockStateChangeRequestorTestCaseIfNeeded(not *Notarization) {
@@ -299,7 +296,7 @@ const (
 // 		Generator0:	rank = 0; typeRank = 0.
 // 		Generator1:	rank = 1; typeRank = 1.
 // 		Replica0:	rank = 2; typeRank = 0.
-// 		Replica0:	rank = 3; typeRank = 1.
+// 		Replica1:	rank = 3; typeRank = 1.
 func getNodeTypeAndTypeRank(round int64) (nodeType, typeRank int) {
 	mc := GetMinerChain()
 

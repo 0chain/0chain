@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs/event"
 	"go.uber.org/zap"
 )
 
@@ -19,86 +20,115 @@ import (
 // ContractMap contains all the SC addresses
 // ToClient is an SC address
 func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (string, error) {
+	const (
+		code = "failed to add authorizer"
+	)
+
 	var (
-		//publicKey    = tran.PublicKey  // authorizer public key
+		publicKey    = tran.PublicKey  // authorizer public key
 		authorizerID = tran.ClientID   // sender address
 		recipientID  = tran.ToClientID // smart contract address
-		node         *AuthorizerNode
+		authorizer   *AuthorizerNode
 		err          error
-		errorCode    = "failed to add authorizer"
 	)
 
 	if inputData == nil {
 		msg := "input data is nil"
-		err = common.NewError(errorCode, msg)
+		err = common.NewError(code, msg)
 		Logger.Error(msg, zap.Error(err))
 		return "", err
 	}
 
-	node, err = GetAuthorizerNode(authorizerID, ctx)
+	// Decode input
+
+	params := AuthorizerParameter{}
+	err = params.Decode(inputData)
+	if err != nil {
+		err = common.NewError(code, "failed to decode AuthorizerParameter")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	if params.PublicKey == "" {
+		err = common.NewError(code, "public key was not included with transaction")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	publicKey = params.PublicKey
+
+	// Check existing Authorizer
+
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err == nil {
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
-		err = common.NewError(errorCode, msg)
+		err = common.NewError(code, msg)
 		Logger.Warn("get authorizer node", zap.Error(err))
 		return "", err
 	}
 
-	gn, err := GetGlobalNode(ctx)
+	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err := common.NewError(errorCode, msg)
+		err := common.NewError(code, msg)
 		Logger.Error("get global node", zap.Error(err))
 		return "", err
 	}
 
 	// compare the global min of authorizerNode Authorizer to that of the transaction amount
-	if gn.MinStakeAmount > tran.Value {
-		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", gn.MinStakeAmount, tran.Value)
-		err = common.NewError(errorCode, msg)
+	if globalNode.MinStakeAmount > tran.Value {
+		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", globalNode.MinStakeAmount, tran.Value)
+		err = common.NewError(code, msg)
 		Logger.Error("min stake amount > transaction value", zap.Error(err))
 		return "", err
 	}
 
-	authParam := AuthorizerParameter{}
-	err = authParam.Decode(inputData)
-	if err != nil {
-		err = common.NewError(errorCode, "failed to decode AuthorizerParameter")
-		Logger.Error("public key error", zap.Error(err))
-		return "", err
-	}
+	// Create Authorizer instance
 
-	if authParam.PublicKey == "" {
-		err = common.NewError(errorCode, "public key was not included with transaction")
-		Logger.Error("public key error", zap.Error(err))
-		return "", err
-	}
-
-	// Save authorizer
-	// authorizerID = tran.ClientID
-	node = CreateAuthorizer(authorizerID, authParam.PublicKey, authParam.URL)
-
-	err = node.Save(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("saving authorizer node", zap.Error(err))
-		return "", err
-	}
+	authorizer = CreateAuthorizer(authorizerID, publicKey, params.URL)
 
 	//Dig pool for authorizer
 
-	transfer, response, err := node.Staking.DigPool(tran.Hash, tran)
+	transfer, response, err := authorizer.Staking.DigPool(tran.Hash, tran)
 	if err != nil {
-		err = common.NewError(errorCode, fmt.Sprintf("error digging pool, err: (%v)", err))
+		err = common.NewError(code, fmt.Sprintf("error digging pool, err: (%v)", err))
 		return "", err
 	}
 
 	err = ctx.AddTransfer(transfer)
 	if err != nil {
 		msg := "Error: '%v', transaction.ClientId: '%s', transaction.ToClientId: '%s', transfer.ClientID: '%s', transfer.ToClientID: '%s'"
-		err = common.NewError(errorCode, fmt.Sprintf(msg, err, authorizerID, recipientID, transfer.ClientID, transfer.ToClientID))
+		err = common.NewError(
+			code,
+			fmt.Sprintf(
+				msg,
+				err,
+				authorizerID,
+				recipientID,
+				transfer.ClientID,
+				transfer.ToClientID,
+			),
+		)
 		return "", err
 	}
+
+	err = authorizer.Save(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("saving authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	ev, err := authorizer.ToEvent()
+	if err != nil {
+		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("emitting event", zap.Error(err))
+		return "", err
+	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
 
 	return response, err
 }
@@ -106,14 +136,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
 	var (
 		authorizerID = tran.ClientID
-		node         *AuthorizerNode
+		authorizer   *AuthorizerNode
 		transfer     *state.Transfer
 		response     string
 		err          error
 		errorCode    = "failed to delete authorizer"
 	)
 
-	node, err = GetAuthorizerNode(authorizerID, ctx)
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get authorizer (authorizerID: %v), err: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
@@ -121,14 +151,14 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		return "", err
 	}
 
-	if node == nil {
+	if authorizer == nil {
 		msg := fmt.Sprintf("authorizer (authorizerID: %v) not found, err: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
 		Logger.Error("authorizer node not found", zap.Error(err))
 		return "", err
 	}
 
-	gn, err := GetGlobalNode(ctx)
+	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node (authorizerID: %v), err: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
@@ -137,7 +167,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// empty the authorizer's pool
-	pool := node.Staking
+	pool := authorizer.Staking
 	if pool == nil {
 		msg := "pool is not created"
 		err := common.NewError(errorCode, msg)
@@ -145,7 +175,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		return "", err
 	}
 
-	transfer, response, err = pool.EmptyPool(gn.ID, tran.ClientID, tran)
+	transfer, response, err = pool.EmptyPool(globalNode.ID, tran.ClientID, tran)
 	if err != nil {
 		msg := fmt.Sprintf("error emptying pool, err: (%v)", err)
 		err = common.NewError(errorCode, msg)
@@ -163,13 +193,20 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// delete authorizer node
-	_, err = ctx.DeleteTrieNode(node.GetKey())
+	_, err = ctx.DeleteTrieNode(authorizer.GetKey())
 	if err != nil {
-		msg := fmt.Sprintf("failed to delete authorizerID: (%v), node key: (%v), err: %v", authorizerID, node.GetKey(), err)
+		msg := fmt.Sprintf(
+			"failed to delete authorizerID: (%v), node key: (%v), err: %v",
+			authorizerID,
+			authorizer.GetKey(),
+			err,
+		)
 		err = common.NewError(errorCode, msg)
 		Logger.Error("delete trie node", zap.Error(err))
 		return "", err
 	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagDeleteAuthorizer, authorizerID, authorizerID)
 
 	Logger.Info(
 		"deleted authorizer",
