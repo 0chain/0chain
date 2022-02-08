@@ -37,14 +37,11 @@ func (ssc *StorageSmartContract) payReward(
 			"can't get related stake pool: %v", err)
 	}
 
-	_, removed, err := sp.MintRewards(
-		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, balances)
+	_, err = sp.MintRewards(
+		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
 	if err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
 			"error emptying account, %v", err)
-	}
-	if removed {
-		usp.Del(providerId, prr.PoolId)
 	}
 
 	if err := usp.Save(stakepool.Blobber, txn.ClientID, balances); err != nil {

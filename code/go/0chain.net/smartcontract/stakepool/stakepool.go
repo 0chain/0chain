@@ -138,26 +138,27 @@ func (sp *StakePool) MintRewards(
 	clientId,
 	poolId, providerId string,
 	providerType Provider,
+	usp *UserStakePools,
 	balances cstate.StateContextI,
-) (state.Balance, bool, error) {
+) (state.Balance, error) {
 
 	dPool, ok := sp.Pools[poolId]
 	if !ok {
-		return 0, false, fmt.Errorf("cannot find rewards for %s", poolId)
+		return 0, fmt.Errorf("cannot find rewards for %s", poolId)
 	}
 	reward := dPool.Reward
 
 	if reward > 0 {
 		minter, err := cstate.GetMinter(sp.Minter)
 		if err != nil {
-			return 0, false, err
+			return 0, err
 		}
 		if err := balances.AddMint(&state.Mint{
 			Minter:     minter,
 			ToClientID: clientId,
 			Amount:     reward,
 		}); err != nil {
-			return 0, false, fmt.Errorf("minting rewards: %v", err)
+			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
 		dPool.Reward = 0
 	}
@@ -173,15 +174,16 @@ func (sp *StakePool) MintRewards(
 		delete(sp.Pools, poolId)
 		err := dpId.emit(event.TagRemoveDelegatePool, balances)
 		if err != nil {
-			return 0, false, err
+			return 0, err
 		}
-		return reward, true, nil
+		usp.Del(providerId, poolId)
+		return reward, nil
 	} else {
 		err := dpId.emit(event.TagEmptyDelegatePool, balances)
 		if err != nil {
-			return 0, false, err
+			return 0, err
 		}
-		return reward, false, nil
+		return reward, nil
 	}
 }
 

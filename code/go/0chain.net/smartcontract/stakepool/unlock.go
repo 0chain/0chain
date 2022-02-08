@@ -33,17 +33,12 @@ func (sp *StakePool) UnlockPool(
 	}
 
 	dp.Status = Deleting
-	amount, removed, err := sp.MintRewards(
-		txn.ClientID, poolId, providerId, providerType, balances,
+	amount, err := sp.MintRewards(
+		txn.ClientID, poolId, providerId, providerType, usp, balances,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)
 	}
-	if !removed {
-		return 0, fmt.Errorf("can't delete pool: %v", poolId)
-	}
-
-	usp.Del(providerId, poolId)
 
 	return amount, nil
 }

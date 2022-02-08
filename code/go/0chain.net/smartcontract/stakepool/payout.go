@@ -47,14 +47,11 @@ func PayoutReward(
 			"can't get related stake pool: %v", err)
 	}
 
-	total, removed, err := sp.MintRewards(
-		client, prr.PoolId, providerId, prr.ProviderType, balances)
+	total, err := sp.MintRewards(
+		client, prr.PoolId, providerId, prr.ProviderType, usp, balances)
 	if err != nil {
 		return 0, common.NewErrorf("pay_reward_failed",
 			"error emptying account, %v", err)
-	}
-	if removed {
-		usp.Del(providerId, prr.PoolId)
 	}
 
 	return total, nil

@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"encoding/json"
-	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -401,8 +400,14 @@ func testCancelAllocation(
 	var newAlloc *StorageAllocation
 	newAlloc, err = ssc.getAllocation(sAllocation.ID, ctx)
 	require.NoError(t, err)
+	var sps []*stakePool
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(blobber.ID, ctx)
+		require.NoError(t, err)
+		sps = append(sps, sp)
+	}
 
-	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, wpBalance, ctx)
+	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
 	return nil
 }
 
@@ -459,8 +464,14 @@ func testFinalizeAllocation(
 	var newAlloc *StorageAllocation
 	newAlloc, err = ssc.getAllocation(sAllocation.ID, ctx)
 	require.NoError(t, err)
+	var sps []*stakePool
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(blobber.ID, ctx)
+		require.NoError(t, err)
+		sps = append(sps, sp)
+	}
 
-	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, wpBalance, ctx)
+	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
 	return nil
 }
 
@@ -473,17 +484,14 @@ func confirmFinalizeAllocation(
 	allocationWritePool writePool,
 	allocation StorageAllocation,
 	wpStartBalance state.Balance,
+	sps []*stakePool,
 	ctx cstate.StateContextI,
 ) {
 	require.EqualValues(t, 0, challengePool.Balance)
 
-	var rewardTransfers = []bool{}
-	var minLockTransfers = []bool{}
 	var rewardDelegateTransfers = [][]bool{}
 	var minLockdelegateTransfers = [][]bool{}
 	for i := range f.bStakes {
-		rewardTransfers = append(rewardTransfers, false)
-		minLockTransfers = append(minLockTransfers, false)
 		if len(f.bStakes[i]) > 0 {
 			rewardDelegateTransfers = append(rewardDelegateTransfers, []bool{})
 			minLockdelegateTransfers = append(minLockdelegateTransfers, []bool{})
@@ -494,83 +502,27 @@ func confirmFinalizeAllocation(
 		}
 	}
 
-	var minLockPayment = state.Balance(0)
-	var challengePayments = state.Balance(0)
-	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, storageScId, transfer.ClientID)
-		var wSplit = strings.Split(transfer.ToClientID, " ")
-		require.Len(t, wSplit, 3)
-		bId, err := strconv.Atoi(wSplit[1])
-		require.NoError(t, err)
-		if wSplit[0] == blobberId {
-			if !rewardTransfers[bId] {
-				if math.Abs(float64(f.blobberServiceCharge(bId)-int64(transfer.Amount))) <= errDelta {
-					rewardTransfers[bId] = true
-					challengePayments += transfer.Amount
-					continue
-				}
-			}
-			require.False(t, minLockTransfers[bId])
-			require.InDelta(t, f.minLockServiceCharge(bId), int64(transfer.Amount), errDelta)
-			minLockTransfers[bId] = true
-			minLockPayment += transfer.Amount
-			continue
-		}
-		dId, err := strconv.Atoi(wSplit[2])
-		require.NoError(t, err)
-		if !rewardDelegateTransfers[bId][dId] {
-			if math.Abs(float64(f.blobberDelegateReward(bId, dId)-int64(transfer.Amount))) <= errDelta {
-				rewardDelegateTransfers[bId][dId] = true
-				challengePayments += transfer.Amount
-				continue
-			}
-		}
-		require.False(t, minLockdelegateTransfers[bId][dId])
-		require.InDelta(t, f.minLockDelegatePayment(bId, dId), int64(transfer.Amount), errDelta)
-		minLockPayment += transfer.Amount
-		minLockdelegateTransfers[bId][dId] = true
-	}
-	var leftOver int64 = 0
-	for _, pool := range allocationWritePool.Pools {
-		if pool.AllocationID == ownerId {
-			leftOver += int64(pool.Balance)
-		}
-	}
-	// Result of a lot of calculations, so be more generous with error delta
-	var largeDelta = float64(len(ctx.GetTransfers()))
-	require.InDelta(t, leftOver, int64(allocation.MovedBack+wpStartBalance), largeDelta)
-	require.InDelta(
-		t,
-		f.challengePoolBalance-int64(challengePayments),
-		int64(allocation.MovedBack),
-		largeDelta,
-	)
+	f1 := f.blobberServiceCharge(0)
+	f2 := f.minLockServiceCharge(0)
+	f3 := f.blobberDelegateReward(0, 0)
+	f4 := f.minLockDelegatePayment(0, 0)
+	f1 = f1
+	f2 = f2
+	f3 = f3
+	f4 = f4
 
-	for i, transfered := range minLockTransfers {
-		if !transfered {
-			require.InDelta(t, f.minLockServiceCharge(i), 0, errDelta)
-		}
-	}
-	for i, transfered := range rewardTransfers {
-		if !transfered {
-			require.InDelta(t, f.blobberServiceCharge(i), 0, errDelta)
+	for i, sp := range sps {
+		serviceCharge := f.blobberServiceCharge(i) + f.minLockServiceCharge(i)
+		require.InDelta(t, serviceCharge, int64(sp.Reward), errDelta)
+		for poolId, dp := range sp.Pools {
+			wSplit := strings.Split(poolId, " ")
+			dId, err := strconv.Atoi(wSplit[2])
+			require.NoError(t, err)
+			reward := f.blobberDelegateReward(i, dId) + f.minLockDelegatePayment(i, dId)
+			require.InDelta(t, reward, int64(dp.Reward), errDelta)
 		}
 	}
 
-	for i := range rewardDelegateTransfers {
-		for j, transfered := range rewardDelegateTransfers[i] {
-			if !transfered {
-				require.InDelta(t, f.blobberDelegateReward(i, j), 0, errDelta)
-			}
-		}
-	}
-	for i := range minLockdelegateTransfers {
-		for j, transfered := range minLockdelegateTransfers[i] {
-			if !transfered {
-				require.InDelta(t, f.minLockDelegatePayment(i, j), 0, errDelta)
-			}
-		}
-	}
 }
 
 func setupMocksFinishAllocation(
