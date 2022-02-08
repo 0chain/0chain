@@ -6,22 +6,44 @@ package chain
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/conductor/conductrpc/stats/middleware"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 )
 
 func SetupX2MRequestors() {
 	setupX2MRequestors()
 
 	if crpc.Client().State().ClientStatsCollectorEnabled {
-		BlockStateChangeRequestor = middleware.BlockStateChangeRequestor(BlockStateChangeRequestor)
+		BlockStateChangeRequestor = BlockStateChangeRequestorStats(BlockStateChangeRequestor)
+	}
+}
+
+// BlockStateChangeRequestorStats represents a middleware for collecting stats about client's block state change requests.
+func BlockStateChangeRequestorStats(requestor node.EntityRequestor) node.EntityRequestor {
+	return func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) node.SendHandler {
+		if !crpc.Client().State().ClientStatsCollectorEnabled {
+			return requestor(urlParams, handler)
+		}
+
+		rs := &stats.BlockStateChangeRequest{
+			NodeID: node.Self.ID,
+			Block:  urlParams.Get("block"),
+		}
+		if err := crpc.Client().AddBlockStateChangeRequestorStats(rs); err != nil {
+			log.Panicf("Conductor: error while adding client stats: %v", err)
+		}
+
+		return requestor(urlParams, handler)
 	}
 }
 

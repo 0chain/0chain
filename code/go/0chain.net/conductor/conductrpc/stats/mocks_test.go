@@ -5,7 +5,6 @@ func mockBlockRequest() *BlockRequest {
 		NodeID:   "node-id",
 		Hash:     "hash",
 		Round:    5,
-		Handler:  "handler",
 		SenderID: "sender-id",
 	}
 }
