@@ -14,7 +14,7 @@ type (
 	//
 	//	Flow of this test case:
 	//		Malicious replicas start to send VRFShares for current round as if they get up after restart
-	//		(T0) Leader_0(Adv): send VRFShare(timeout), 0<=i<1/3f
+	//		(T0) Replica_i(Adv): send VRFShare(timeout), 0<=i<1/3f (on round n)
 	BadTimeoutVRFS struct {
 		res *RoundInfo
 

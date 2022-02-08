@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -488,20 +489,28 @@ func (c *Chain) Initialize() {
 }
 
 /*SetupEntity - setup the entity */
-func SetupEntity(store datastore.Store) {
+func SetupEntity(store datastore.Store, workdir string) {
 	chainEntityMetadata = datastore.MetadataProvider()
 	chainEntityMetadata.Name = "chain"
 	chainEntityMetadata.Provider = Provider
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
-	SetupStateDB()
+	SetupStateDB(workdir)
 }
 
 var stateDB *util.PNodeDB
 
 //SetupStateDB - setup the state db
-func SetupStateDB() {
-	db, err := util.NewPNodeDB("data/rocksdb/state", "/0chain/log/rocksdb/state")
+func SetupStateDB(workdir string) {
+
+	datadir := "data/rocksdb/state"
+	logsdir := "/0chain/log/rocksdb/state"
+	if len(workdir) > 0 {
+		datadir = filepath.Join(workdir, datadir)
+		logsdir = filepath.Join(workdir, "log/rocksdb/state")
+	}
+
+	db, err := util.NewPNodeDB(datadir, logsdir)
 	if err != nil {
 		panic(err)
 	}
@@ -517,10 +526,10 @@ func CloseStateDB() {
 
 func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
 
-func (c *Chain) SetupConfigInfoDB() {
+func (c *Chain) SetupConfigInfoDB(workdir string) {
 	c.configInfoDB = "configdb"
 	c.configInfoStore = ememorystore.GetStorageProvider()
-	db, err := ememorystore.CreateDB("data/rocksdb/config")
+	db, err := ememorystore.CreateDB(filepath.Join(workdir, "data/rocksdb/config"))
 	if err != nil {
 		panic(err)
 	}
@@ -907,7 +916,9 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 /*ChainHasTransaction - indicates if this chain has the transaction */
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
+	visited := 0
 	for cb := b; cb != nil; pb, cb = cb, c.GetLocalPreviousBlock(ctx, cb) {
+		visited++
 		if cb.Round == 0 {
 			return false, nil
 		}
@@ -918,8 +929,9 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 			return false, nil
 		}
 	}
-	if false {
-		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+	if true {
+		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round),
+			zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate), zap.Int("visited", visited))
 	}
 	return false, ErrInsufficientChain
 }

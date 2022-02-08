@@ -117,9 +117,11 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 	// events db
-	ssc.SmartContractExecutionStats["/get_transaction"] = ssc.GetTransactionByHashHandler
+	ssc.SmartContract.RestHandlers["/transaction"] = ssc.GetTransactionByHashHandler
+	ssc.SmartContract.RestHandlers["/transactions"] = ssc.GetTransactionByFilterHandler
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
+	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 }
 
 func (ssc *StorageSmartContract) GetName() string {
@@ -277,8 +279,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolLock(t, input, balances)
 	case "stake_pool_unlock":
 		resp, err = sc.stakePoolUnlock(t, input, balances)
-	case "stake_pool_pay_interests":
-		resp, err = sc.stakePoolPayInterests(t, input, balances)
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(

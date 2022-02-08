@@ -782,9 +782,7 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 			state.SendInsufficientProposals = cfg
 
 		case *cases.VerifyingNonExistentBlock:
-			if state.IsMonitor {
-				state.VerifyingNonExistentBlock = cfg
-			}
+			state.VerifyingNonExistentBlock = cfg
 
 		case *cases.NotarisingNonExistentBlock:
 			state.NotarisingNonExistentBlock = cfg
@@ -796,9 +794,7 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 			state.ResendNotarisation = cfg
 
 		case *cases.BadTimeoutVRFS:
-			if state.IsMonitor {
-				state.BadTimeoutVRFS = cfg
-			}
+			state.BadTimeoutVRFS = cfg
 
 		case *cases.HalfNodesDown:
 			state.HalfNodesDown = cfg
