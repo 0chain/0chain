@@ -1,56 +1,56 @@
 ###
 ### Blockchain miners Byzantine tests
 ###
-
----
-# enabled test cases sets
-enable:
-  - "Sharder"
-
-# sets of test cases
-sets:
-  - name: "Sharder"
-    tests:
-      - "Send bad FB to miners when all miners are down and then they are brought up"
-      - "Send bad MB to miners when all miners are down and then they are brought up"
-
 #
-# test cases
+#---
+## enabled test cases sets
+#enable:
+#  - "Sharder"
 #
-tests:
-  - name: "Send bad FB to miners when all miners are down and then they are brought up"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start: ["sharder-1", "sharder-2"]
-      - start: ["miner-1", "miner-2", "miner-3"]
-      - wait_round:
-          round: 100
-          timeout: "5m"
-      - stop: ["miner-1", "miner-2", "miner-3"]
-      - finalized_block:
-          by: ["sharder-1", "sharder-2"]
-          bad: ["miner-1", "miner-2", "miner-3"]
-      - start: ["miner-1", "miner-2", "miner-3"]
-      - wait_round:
-          shift: 10
-          timeout: "5m"
-
-  - name: "Send bad MB to miners when all miners are down and then they are brought up"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start: ["sharder-1"]
-      - start: ["sharder-2"]
-      - start: ["miner-1", "miner-2", "miner-3"]
-      - wait_round:
-          round: 100
-          timeout: "5m"
-      - stop: ["miner-1", "miner-2", "miner-3"]
-      - magic_block:
-          by: ["sharder-1", "sharder-2"]
-          bad: ["miner-1", "miner-2", "miner-3"]
-      - start: ["miner-1", "miner-2", "miner-3"]
-      - wait_round:
-          shift: 50
-          timeout: "10m"
+## sets of test cases
+#sets:
+#  - name: "Sharder"
+#    tests:
+#      - "Send bad FB to miners when all miners are down and then they are brought up"
+#      - "Send bad MB to miners when all miners are down and then they are brought up"
+#
+##
+## test cases
+##
+#tests:
+#  - name: "Send bad FB to miners when all miners are down and then they are brought up"
+#    flow:
+#      - set_monitor: "sharder-1"
+#      - cleanup_bc: {}
+#      - start: ["sharder-1", "sharder-2"]
+#      - start: ["miner-1", "miner-2", "miner-3"]
+#      - wait_round:
+#          round: 100
+#          timeout: "5m"
+#      - stop: ["miner-1", "miner-2", "miner-3"]
+#      - finalized_block:
+#          by: ["sharder-1", "sharder-2"]
+#          bad: ["miner-1", "miner-2", "miner-3"]
+#      - start: ["miner-1", "miner-2", "miner-3"]
+#      - wait_round:
+#          shift: 10
+#          timeout: "5m"
+#
+#  - name: "Send bad MB to miners when all miners are down and then they are brought up"
+#    flow:
+#      - set_monitor: "sharder-1"
+#      - cleanup_bc: {}
+#      - start: ["sharder-1"]
+#      - start: ["sharder-2"]
+#      - start: ["miner-1", "miner-2", "miner-3"]
+#      - wait_round:
+#          round: 100
+#          timeout: "5m"
+#      - stop: ["miner-1", "miner-2", "miner-3"]
+#      - magic_block:
+#          by: ["sharder-1", "sharder-2"]
+#          bad: ["miner-1", "miner-2", "miner-3"]
+#      - start: ["miner-1", "miner-2", "miner-3"]
+#      - wait_round:
+#          shift: 50
+#          timeout: "10m"
