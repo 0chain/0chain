@@ -325,8 +325,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
 		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash),
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-		zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", pb.ChainWeight))
+		zap.Int8("state_status", b.GetStateStatus()))
 
 	return
 }

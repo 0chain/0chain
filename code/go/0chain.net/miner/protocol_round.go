@@ -632,22 +632,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 				zap.Any("prev_creation_date", b.PrevBlock.CreationDate))
 			return
 		}
-		b.ComputeChainWeight()
-		mc.updatePriorBlock(ctx, mr.Round, b)
-	} else {
-		// We can establish an upper bound for chain weight at the current
-		// round, subtract 1 and add block's own weight and check if that's
-		// less than the chain weight sent.
-		var (
-			lfb                   = mc.GetLatestFinalizedBlock()
-			chainWeightUpperBound = lfb.ChainWeight + float64(b.Round-lfb.Round)
-		)
-		if b.ChainWeight > chainWeightUpperBound-1+b.Weight() {
-			logging.Logger.Error("add to verification (wrong chain weight)",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash),
-				zap.Float64("chain_weight", b.ChainWeight))
-			return
-		}
+		mc.updatePriorBlock(mr.Round, b)
 	}
 
 	mr.AddProposedBlock(b)
@@ -773,11 +758,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 
 	pr.CancelVerification()
 	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
-	if _, _, err := mc.AddNotarizedBlockToRound(pr, pb); err != nil {
-		finish(false)
-		return err
-	}
-
+	mc.AddNotarizedBlockToRound(pr, pb)
 	finish(true)
 	return nil
 }
@@ -788,8 +769,7 @@ func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
 		zap.String("block", b.Hash),
 		zap.String("prev_block", b.PrevHash),
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-		zap.Float64("weight", b.Weight()),
-		zap.Float64("chain_weight", b.ChainWeight))
+		zap.Float64("weight", b.Weight()))
 	//mc.StartVerification(ctx, mr)
 	mr.AddBlockToVerify(b)
 }
@@ -1045,7 +1025,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 
 	if b.PrevBlock != nil && b.PrevBlock.IsBlockNotarized() {
-		mc.updatePriorBlock(ctx, r, b)
+		mc.updatePriorBlock(r, b)
 		return bvt, nil
 	}
 
@@ -1056,14 +1036,12 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	return bvt, nil
 }
 
-func (mc *Chain) updatePriorBlock(ctx context.Context, r round.RoundI, b *block.Block) {
+func (mc *Chain) updatePriorBlock(r round.RoundI, b *block.Block) {
 	pb := b.PrevBlock
 	mc.MergeVerificationTickets(pb, b.GetPrevBlockVerificationTickets())
 	pr := mc.GetMinerRound(pb.Round)
-	if pr != nil {
-		mc.AddNotarizedBlock(ctx, pr, pb)
-	} else {
-		logging.Logger.Error("verify round - previous round not present",
+	if pr == nil {
+		logging.Logger.Error("update prior block - previous round not present",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash))
@@ -1166,14 +1144,7 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
 	//TODO Sort this context
 	ctx, _ = context.WithTimeout(common.GetRootContext(), 30*time.Second)
-	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
-		logging.Logger.Error("add notarized block failed",
-			zap.Int64("round", r.GetRoundNumber()),
-			zap.String("block", b.Hash),
-			zap.Error(err))
-		return false
-	}
-
+	mc.AddNotarizedBlockToRound(r, b)
 	mc.UpdateNodeState(b)
 
 	if !b.IsStateComputed() {
@@ -1770,7 +1741,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	if have != nil && rcvd.Round-1 == have.Round {
 		rcvd.SetPreviousBlock(have)
 		mc.bumpLFBTicket(ctx, rcvd)
-		if err := mc.SyncStateOrComputeLocal(ctx, rcvd); err != nil {
+		if err := mc.GetBlockStateChange(rcvd); err != nil {
 			logging.Logger.Error("ensure lfb", zap.Error(err))
 		}
 
