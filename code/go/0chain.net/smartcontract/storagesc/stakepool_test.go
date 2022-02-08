@@ -153,8 +153,8 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	for i, stake := range delegates {
 		var id = strconv.Itoa(i)
 		stakePool.Pools["pool"+id] = &stakepool.DelegatePool{
-			Balance: zcnToBalance(stake.zcnAmount),
-			Created: stake.MintAt,
+			Balance:      zcnToBalance(stake.zcnAmount),
+			RoundCreated: stake.MintAt,
 		}
 	}
 	var usp = stakepool.NewUserStakePools()
@@ -185,7 +185,7 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, clientId, transfer.ClientID)
 		txPool, ok := newStakePool.Pools[transactionHash]
 		require.True(t, ok)
-		require.EqualValues(t, f.now, txPool.Created)
+		require.EqualValues(t, f.now, txPool.RoundCreated)
 	}
 
 	pools, ok := newUsp.Pools[blobberId]

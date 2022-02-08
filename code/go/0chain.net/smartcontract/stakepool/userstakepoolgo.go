@@ -28,7 +28,7 @@ func (usp *UserStakePools) add(providerId, poolID datastore.Key) {
 	usp.Pools[providerId] = append(usp.Pools[providerId], poolID)
 }
 
-func (usp *UserStakePools) find(searchId datastore.Key) datastore.Key {
+func (usp *UserStakePools) Find(searchId datastore.Key) datastore.Key {
 	for providedId, provider := range usp.Pools {
 		for _, poolId := range provider {
 			if searchId == poolId {
@@ -39,7 +39,7 @@ func (usp *UserStakePools) find(searchId datastore.Key) datastore.Key {
 	return ""
 }
 
-func (usp *UserStakePools) del(providerId, poolID datastore.Key) (empty bool) {
+func (usp *UserStakePools) Del(providerId, poolID datastore.Key) (empty bool) {
 	var (
 		list = usp.Pools[providerId]
 		i    int

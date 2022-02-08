@@ -8,12 +8,12 @@ import (
 	"0chain.net/core/common"
 )
 
-type payRewardRequest struct {
+type PayRewardRequest struct {
 	ProviderType Provider `json:"provider_type"`
 	PoolId       string   `json:"pool_id"`
 }
 
-func (spr *payRewardRequest) decode(p []byte) error {
+func (spr *PayRewardRequest) Decode(p []byte) error {
 	return json.Unmarshal(p, spr)
 }
 
@@ -22,8 +22,8 @@ func PayoutReward(
 	input []byte,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
-	var prr payRewardRequest
-	if err := prr.decode(input); err != nil {
+	var prr PayRewardRequest
+	if err := prr.Decode(input); err != nil {
 		return 0, common.NewErrorf("pay_reward_failed",
 			"can't decode request: %v", err)
 	}
@@ -35,7 +35,7 @@ func PayoutReward(
 			"can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.find(prr.PoolId)
+	providerId := usp.Find(prr.PoolId)
 	if len(providerId) == 0 {
 		return 0, common.NewErrorf("pay_reward_failed",
 			"user %v does not own stake pool %v", client, prr.PoolId)
@@ -54,7 +54,7 @@ func PayoutReward(
 			"error emptying account, %v", err)
 	}
 	if removed {
-		usp.del(providerId, prr.PoolId)
+		usp.Del(providerId, prr.PoolId)
 	}
 
 	return total, nil

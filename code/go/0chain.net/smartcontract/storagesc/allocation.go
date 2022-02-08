@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/logging"
-
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -1265,7 +1263,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 func (sc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
 	balances chainstate.StateContextI) (resp string, err error) {
-	logging.Logger.Info("piers cancelAllocationRequest")
 	var req lockRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
@@ -1407,7 +1404,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	sps []*stakePool,
 	balances chainstate.StateContextI,
 ) (err error) {
-	logging.Logger.Info("piers finishAllocation")
 	wps, err := alloc.getAllocationPools(sc, balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)

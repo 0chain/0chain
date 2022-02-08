@@ -22,7 +22,7 @@ func (sp *StakePool) UnlockPool(
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}
-	foundProvider := usp.find(poolId)
+	foundProvider := usp.Find(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
 		return 0, fmt.Errorf("user %v does not own stake pool %v", txn.ClientID, poolId)
 	}
@@ -43,7 +43,7 @@ func (sp *StakePool) UnlockPool(
 		return 0, fmt.Errorf("can't delete pool: %v", poolId)
 	}
 
-	usp.del(providerId, poolId)
+	usp.Del(providerId, poolId)
 
 	return amount, nil
 }

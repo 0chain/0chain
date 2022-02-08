@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"sort"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -143,12 +140,13 @@ func (sp *StakePool) MintRewards(
 	providerType Provider,
 	balances cstate.StateContextI,
 ) (state.Balance, bool, error) {
+
 	dPool, ok := sp.Pools[poolId]
 	if !ok {
 		return 0, false, fmt.Errorf("cannot find rewards for %s", poolId)
 	}
-
 	reward := dPool.Reward
+
 	if reward > 0 {
 		minter, err := cstate.GetMinter(sp.Minter)
 		if err != nil {
@@ -164,7 +162,6 @@ func (sp *StakePool) MintRewards(
 		dPool.Reward = 0
 	}
 
-	dPool.Balance = 0
 	dpId := DelegatePoolId{
 		StakePoolId: StakePoolId{
 			ProviderId:   providerId,
@@ -186,7 +183,6 @@ func (sp *StakePool) MintRewards(
 		}
 		return reward, false, nil
 	}
-
 }
 
 func (sp *StakePool) DistributeRewards(
