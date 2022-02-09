@@ -728,23 +728,11 @@ func confirmBlobberPenalty(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-(f.reward()-f.validatorsReward()),
-		int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
 
 	require.EqualValues(t, 0, int64(blobber.Reward))
 	require.EqualValues(t, 0, int64(blobber.Reward))
-	/*
-		for _, sp := range validatorsSPs {
-			for wallet, pool := range sp.Pools {
-				var wSplit = strings.Split(wallet, " ")
-				require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
-				require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
-				index, err := strconv.Atoi(wSplit[2])
-				require.NoError(t, err)
-				require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
-			}
-		}
-	*/
+
 	for _, sp := range validatorsSPs {
 		for wallet, pool := range sp.Pools {
 			var wSplit = strings.Split(wallet, " ")
@@ -760,6 +748,7 @@ func confirmBlobberPenalty(
 			var delegate = strings.Split(id, " ")
 			index, err := strconv.Atoi(delegate[1])
 			require.NoError(t, err)
+
 			require.InDelta(t, f.stakes[index]-f.delegatePenalty(index), int64(pool.Balance), errDelta)
 		}
 	}
