@@ -23,7 +23,6 @@ type Block struct {
 	PrevHash              string    `json:"prev_hash"`
 	Signature             string    `json:"signature"`
 	ChainId               string    `json:"chain_id"`
-	ChainWeight           string    `json:"chain_weight"`
 	RunningTxnCount       string    `json:"running_txn_count"`
 	RoundTimeoutCount     int       `json:"round_timeout_count"`
 	CreatedAt             time.Time `json:"created_at"`
