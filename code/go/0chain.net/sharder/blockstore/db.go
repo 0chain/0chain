@@ -12,8 +12,8 @@ type WhichTier uint8
 
 //db variables
 var (
-	bwrRedis  blockStore
-	startTime = time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local)
+	redisClient *redis.Client
+	startTime   = time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local)
 )
 
 /*
@@ -47,14 +47,14 @@ const (
 // InitMetaRecordDB Create db file and create buckets.
 func InitMetaRecordDB(host, port, password string, numDB int, deleteExistingDB bool) {
 
-	bwrRedis.Client = redis.NewClient(&redis.Options{
+	redisClient = redis.NewClient(&redis.Options{
 		Addr:     host + ":" + port,
 		Password: password,
 		DB:       numDB,
 	})
 
 	if deleteExistingDB {
-		_, _ = bwrRedis.Client.FlushDB().Result()
+		_, _ = redisClient.FlushDB().Result()
 	}
 }
 
@@ -73,12 +73,12 @@ func (bwr *BlockWhereRecord) AddOrUpdate() (err error) {
 		return err
 	}
 
-	return bwrRedis.Set(bwr.Hash, value)
+	return redisClient.Set(bwr.Hash, value, 0).Err()
 }
 
 // GetBlockWhereRecord Get whereabout of a block.
 func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
-	data, err := bwrRedis.Get(hash)
+	data, err := redisClient.Get(hash).Bytes()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 
 // DeleteBlockWhereRecord Delete metadata.
 func DeleteBlockWhereRecord(hash string) error {
-	return bwrRedis.Delete(hash)
+	return redisClient.Del(hash).Err()
 }
 
 // UnmovedBlockRecord Unmoved blocks; If cold tiering is enabled then record of unmoved blocks will be kept inside UnmovedBlockRecord bucket.
@@ -122,16 +122,22 @@ func (ubr *UnmovedBlockRecord) Add() (err error) {
 	)
 	difference := endTime.Sub(startTime)
 
-	return bwrRedis.SetToSorted(redisSortedSetUnmovedBlock, float64(difference.Microseconds()), ubr.Hash)
+	return redisClient.ZAdd(
+		redisSortedSetUnmovedBlock,
+		redis.Z{Member: ubr.Hash, Score: float64(difference.Microseconds())},
+	).Err()
 }
 
 func (ubr *UnmovedBlockRecord) Delete() (err error) {
-	return bwrRedis.DeleteFromSorted(redisSortedSetUnmovedBlock, ubr.Hash)
+	return redisClient.ZRem(redisSortedSetUnmovedBlock, ubr.Hash).Err()
 }
 
 // GetUnmovedBlocks returns the number of blocks = count from the range [0,lastBlock).
 func GetUnmovedBlocks(lastBlock, count int64) []*UnmovedBlockRecord {
-	ubrsZ, _ := bwrRedis.GetRangeByScoreFromSorted(redisSortedSetUnmovedBlock, lastBlock, count)
+	ubrsZ, _ := redisClient.ZRangeByScoreWithScores(
+		redisSortedSetUnmovedBlock,
+		redis.ZRangeBy{Min: "-inf", Max: fmt.Sprintf("%v", lastBlock), Offset: 0, Count: count},
+	).Result()
 	var ubrs []*UnmovedBlockRecord
 	for _, ubr := range ubrsZ {
 		t := time.Duration(int64(ubr.Score))
@@ -160,26 +166,29 @@ func GetHashKeysForReplacement() chan *cacheAccess {
 			close(ch)
 		}()
 
-		i, _ := bwrRedis.GetCountFromSorted(redisSortedSetCacheAccessTimeHash)
-		i /= 2 //Number of blocks to replace
-		var startRange int64 = 0
-		var endRange int64 = 0
-		k := int(i)
-		for j := 0; j < k; j = int(endRange) {
-			endRange += 1000
-			if endRange > i {
-				endRange = i
+		count, _ := redisClient.ZCard(redisSortedSetCacheAccessTimeHash).Result()
+		count /= 2 //Number of blocks to replace
+		var endRange int64 = 1000
+		var endCount int64
+		k := int(count)
+		for i := 0; i < k; i = int(endCount) {
+			if endRange > count {
+				endRange = count
+			} else {
+				count -= endRange
 			}
-			blocks, _ := bwrRedis.GetRangeFromSorted(redisSortedSetCacheAccessTimeHash, startRange, endRange)
+			endCount += endRange
+
+			blocks, _ := redisClient.ZRange(redisSortedSetCacheAccessTimeHash, 0, endRange).Result()
+
 			for _, block := range blocks {
 				ca := new(cacheAccess)
 				sl := strings.Split(block, CacheAccessTimeSeparator)
 				ca.Hash = sl[1]
-				accessTime, _ := time.Parse(time.RFC3339, sl[0])
+				accessTime, _ := time.Parse(time.RFC3339Nano, sl[0])
 				ca.AccessTime = &accessTime
 				ch <- ca
 			}
-			startRange = endRange + 1
 		}
 	}()
 
@@ -189,28 +198,34 @@ func GetHashKeysForReplacement() chan *cacheAccess {
 func (ca *cacheAccess) addOrUpdate() error {
 	timeStr := ca.AccessTime.Format(time.RFC3339)
 	accessTimeKey := fmt.Sprintf("%v%v%v", timeStr, CacheAccessTimeSeparator, ca.Hash)
-
-	timeValue, err := bwrRedis.GetFromHash(redisHashCacheHashAccessTime, ca.Hash)
+	tx := redisClient.TxPipeline()
+	timeValue, err := tx.HGet(redisHashCacheHashAccessTime, ca.Hash).Result()
 	if err != nil {
 		return err
 	}
 
-	if bwrRedis.StartTx() != nil {
-		return err
+	if timeValue != "" {
+		delKey := fmt.Sprintf("%v%v%v", timeValue, CacheAccessTimeSeparator, ca.Hash)
+		err = tx.ZRem(redisSortedSetCacheAccessTimeHash, delKey).Err()
+		if err != nil {
+			tx.Discard()
+			return err
+		}
 	}
-	if timeValue != nil {
-		delKey := fmt.Sprintf("%v%v%v", timeValue.(string), CacheAccessTimeSeparator, ca.Hash)
-		err = bwrRedis.DeleteFromSorted(redisSortedSetCacheAccessTimeHash, delKey)
-	}
-	err = bwrRedis.SetToSorted(redisSortedSetCacheAccessTimeHash, 0.0, accessTimeKey)
-	err = bwrRedis.SetToHash(redisHashCacheHashAccessTime, ca.Hash, timeStr)
-
-	err = bwrRedis.Exec()
+	err = tx.ZAdd(redisSortedSetCacheAccessTimeHash, redis.Z{Member: accessTimeKey, Score: 0.0}).Err()
 	if err != nil {
+		tx.Discard()
+		return err
+	}
+	err = tx.HSet(redisHashCacheHashAccessTime, ca.Hash, timeStr).Err()
+	if err != nil {
+		tx.Discard()
 		return err
 	}
 
-	return nil
+	_, err = tx.Exec()
+
+	return err
 }
 
 // func (ca *cacheAccess) update() {
@@ -242,19 +257,21 @@ func (ca *cacheAccess) addOrUpdate() error {
 // }
 
 func (ca *cacheAccess) delete() error {
-	err := bwrRedis.StartTx()
-	if err != nil {
-		return err
-	}
-	err = bwrRedis.DeleteFromSorted(redisSortedSetCacheAccessTimeHash,
+	tx := redisClient.TxPipeline()
+	err := tx.ZRem(
+		redisSortedSetCacheAccessTimeHash,
 		fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339), CacheAccessTimeSeparator, ca.Hash),
-	)
-	err = bwrRedis.DeleteFromHash(redisHashCacheHashAccessTime, ca.Hash)
-
-	err = bwrRedis.Exec()
+	).Err()
 	if err != nil {
+		tx.Discard()
 		return err
 	}
+	err = tx.HDel(redisHashCacheHashAccessTime, ca.Hash).Err()
+	if err != nil {
+		tx.Discard()
+		return err
+	}
+	_, err = tx.Exec()
 
-	return nil
+	return err
 }
