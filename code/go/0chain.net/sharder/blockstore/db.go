@@ -41,7 +41,7 @@ const (
 	redisSortedSetCacheAccessTimeHash = "redisSortedSetCacheAccessTimeHash"
 	redisSortedSetUnmovedBlock        = "redisSortedSetUnmovedBlock"
 
-	CacheAccessTimeSeparator = ":"
+	CacheAccessTimeSeparator = "/"
 )
 
 // InitMetaRecordDB Create db file and create buckets.
@@ -196,7 +196,7 @@ func GetHashKeysForReplacement() chan *cacheAccess {
 }
 
 func (ca *cacheAccess) addOrUpdate() error {
-	timeStr := ca.AccessTime.Format(time.RFC3339)
+	timeStr := ca.AccessTime.Format(time.RFC3339Nano)
 	accessTimeKey := fmt.Sprintf("%v%v%v", timeStr, CacheAccessTimeSeparator, ca.Hash)
 	tx := redisClient.TxPipeline()
 	timeValue, err := tx.HGet(redisHashCacheHashAccessTime, ca.Hash).Result()
@@ -260,7 +260,7 @@ func (ca *cacheAccess) delete() error {
 	tx := redisClient.TxPipeline()
 	err := tx.ZRem(
 		redisSortedSetCacheAccessTimeHash,
-		fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339), CacheAccessTimeSeparator, ca.Hash),
+		fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339Nano), CacheAccessTimeSeparator, ca.Hash),
 	).Err()
 	if err != nil {
 		tx.Discard()
