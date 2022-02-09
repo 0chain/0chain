@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -85,7 +86,7 @@ func (sc *StateChange) GetChanges() []*util.NodeChange {
 func (sc *StateChange) MarshalJSON() ([]byte, error) {
 	var data = make(map[string]interface{})
 	data["block"] = sc.Block
-	return sc.MartialPartialState(data)
+	return sc.MarshalPartialStateJSON(data)
 }
 
 //UnmarshalJSON - implement Unmarshaler interface
@@ -105,5 +106,30 @@ func (sc *StateChange) UnmarshalJSON(data []byte) error {
 		logging.Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
-	return sc.UnmarshalPartialState(obj)
+	return sc.UnmarshalPartialStateJSON(obj)
+}
+
+func (sc *StateChange) MarshalMsgpack() ([]byte, error) {
+	var data = make(map[string]interface{})
+	data["block"] = sc.Block
+	return sc.MarshalPartialStateMsgpack(data)
+}
+
+func (sc *StateChange) UnmarshalMsgpack(data []byte) error {
+	var obj map[string]interface{}
+	err := msgpack.Unmarshal(data, &obj)
+	if err != nil {
+		logging.Logger.Error("unmarshal msgpack - state change", zap.Error(err))
+		return err
+	}
+	if block, ok := obj["block"]; ok {
+		if sc.Block, ok = block.(string); !ok {
+			logging.Logger.Error("unmarshal msgpack - invalid block hash", zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+	} else {
+		logging.Logger.Error("unmarshal msgpack - invalid block hash", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	return sc.UnmarshalPartialStateMsgpack(obj)
 }
