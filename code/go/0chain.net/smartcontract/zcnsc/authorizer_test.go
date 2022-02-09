@@ -185,7 +185,7 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 	globalNode, err = GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, state.Balance(100), globalNode.Config.MinStakeAmount)
+	require.Equal(t, state.Balance(100*1e10), globalNode.Config.MinStakeAmount)
 }
 
 func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
