@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -217,6 +218,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		default:
 			if err != nil {
 				sctx.EmitError(err)
+
+				if strings.Contains(err.Error(), "node not found") {
+					logging.Logger.Error("Error executing the SC, internal error",
+						zap.Error(err),
+						zap.String("block", b.Hash),
+						zap.String("begin client state", util.ToHex(startRoot)),
+						zap.String("prev block", b.PrevBlock.Hash),
+						zap.Duration("time_spent", time.Since(t)),
+						zap.Any("txn", txn))
+					return events, err
+				}
+
 				logging.Logger.Debug("Error executing the SC, chargeable error",
 					zap.Error(err),
 					zap.String("block", b.Hash),
