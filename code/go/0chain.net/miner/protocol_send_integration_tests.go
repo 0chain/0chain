@@ -257,7 +257,7 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 
 	if isDelayingBlock(b.Round) {
 		delayedBlock <- b
-		return
+		ctx = context.Background()
 	}
 
 	mc.sendBlock(ctx, b)

@@ -472,7 +472,7 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
-	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -706,7 +706,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		zap.String("computed_state_hash", util.ToHex(blockState.GetRoot())),
 		zap.Int("changes", blockState.GetChangeCount()),
 		zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
 		zap.Int32("iteration_count", iterInfo.count))
 	block.StateSanityCheck(ctx, b)
 	b.ComputeTxnMap()

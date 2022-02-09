@@ -2,10 +2,12 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"time"
 
-	"0chain.net/conductor/config/cases"
 	"github.com/mitchellh/mapstructure"
+
+	"0chain.net/conductor/config/cases"
 )
 
 type flowExecuteFunc func(name string, ex Executor, val interface{},
@@ -357,6 +359,16 @@ func init() {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
 		return ex.Challenges(&cs)
+	})
+
+	register(saveLogsDirectiveName, func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.SaveLogs(); err != nil {
+			log.Printf("Warning, logs are not saved, err: %v", err)
+		}
+
+		return nil
 	})
 
 	// checks

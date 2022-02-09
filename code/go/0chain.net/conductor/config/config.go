@@ -21,7 +21,8 @@ type (
 
 // CleanupBC represents blockchain cleaning.
 type CleanupBC struct {
-	Timeout time.Duration `json:"timeout" yaml:"timeout" mapstructure:"timeout"`
+	SaveLastLogs bool          `json:"save_last_logs" yaml:"save_last_logs" mapstructure:"save_last_logs"`
+	Timeout      time.Duration `json:"timeout" yaml:"timeout" mapstructure:"timeout"`
 }
 
 type Phase int
@@ -126,6 +127,8 @@ type Config struct {
 	StuckWarningThreshold string     `json:"stuck_warning_threshold" yaml:"stuck_warning_threshold" mapstructure:"stuck_warning_threshold"`
 	Env                   map[string]string
 	stuckWarningThreshold *time.Duration
+
+	Cleanup CleanupBC
 }
 
 // cleaning up custom environment variables before each test
