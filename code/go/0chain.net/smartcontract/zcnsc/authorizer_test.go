@@ -204,7 +204,7 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	tr.Value = 99
 
 	node := CreateSmartContractGlobalNode()
-	node.Config.MinStakeAmount = 100
+	node.Config.MinStakeAmount = state.Balance(100 * 1e10)
 	err := node.Save(ctx)
 	require.NoError(t, err)
 
