@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -516,24 +515,6 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 			args:  args{b: b},
 			want:  b,
 			want1: false,
-		},
-		{
-			name: "FALSE_with_no_random_seed",
-			fields: fields{
-				notarizedBlocks: []*block.Block{
-					func() *block.Block {
-						// creating new reference for same block
-						b := block.NewBlock("", b.Round)
-						b.HashBlock()
-
-						return b
-					}(),
-				},
-			},
-			args:    args{b: b3},
-			want:    b,
-			want1:   false,
-			wantErr: common.NewError("add_notarized_block", "block has no seed"),
 		},
 		{
 			name: "TRUE",
