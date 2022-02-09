@@ -547,6 +547,7 @@ func setupChallengeMocks(
 		var id = strconv.Itoa(i)
 		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
 		sp.Pools["paula"+id].Balance = state.Balance(stake)
+		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
 	require.NoError(t, sp.save(ssc.ID, challenge.BlobberID, ctx))
@@ -744,8 +745,8 @@ func confirmBlobberPenalty(
 	}
 
 	if f.scYaml.BlobberSlash > 0.0 {
-		for id, pool := range blobber.Pools {
-			var delegate = strings.Split(id, " ")
+		for _, pool := range blobber.Pools {
+			var delegate = strings.Split(pool.DelegateID, " ")
 			index, err := strconv.Atoi(delegate[1])
 			require.NoError(t, err)
 
