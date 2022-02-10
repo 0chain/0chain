@@ -382,7 +382,7 @@ func sendInsufficientProposals(ctx context.Context, b *block.Block) {
 	var (
 		currRound    = mc.GetRound(b.Round)
 		miners       = mc.GetMagicBlock(b.Round).Miners.CopyNodes()
-		sendCount    = len(miners) / 3
+		sendCount    = (len(miners) / 3) - 1
 		minersToSend = make([]*node.Node, 0, sendCount)
 	)
 	for ind := 0; len(minersToSend) < sendCount && ind < len(miners); ind++ {
