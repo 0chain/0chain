@@ -28,7 +28,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const passedBlobbersPartitionSize = 10
+const passedBlobbersPartitionSize = 50
 
 func OngoingBlobberKey(startRound int64) datastore.Key {
 	return ONGOING_PASSED_BLOBBERS_KEY + ":round:" + strconv.Itoa(int(startRound))
