@@ -106,6 +106,8 @@ const (
 	Zcn            = "zcn."
 	DbsEvents      = "dbs.Events."
 
+	BlockReward = "block_reward."
+
 	Fas = "free_allocation_settings."
 
 	AvailableKeys           = Internal + "available_keys"
@@ -166,6 +168,9 @@ const (
 	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
 	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 
+	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
+	StorageBlockRewardChallengePeriod = SmartContract + StorageSc + BlockReward + "challenge_period"
+
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
 	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
@@ -209,8 +214,8 @@ func (w SimulatorParameter) String() string {
 		"num_clients",
 		"num_miners",
 		"num_active_miners",
-		"nun_sharders",
-		"nun__active_sharders",
+		"num_sharders",
+		"num_active_sharders",
 		"num_allocations",
 		"num_blobbers_per_Allocation",
 		"num_blobbers",

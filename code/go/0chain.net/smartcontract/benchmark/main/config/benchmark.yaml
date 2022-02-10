@@ -2,7 +2,7 @@ simulation:
   num_clients: 1000
   num_miners: 1000
   num_active_miners: 100
-  nun_sharders: 100
+  num_sharders: 100
   num_active_sharders: 25
   num_allocations: 1000
   num_blobbers: 100
@@ -120,6 +120,9 @@ smart_contracts:
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
+    block_reward:
+      block_reward: 1
+      challenge_period: 30
   interestpoolsc:
     min_lock: 10
     apr: 0.1
