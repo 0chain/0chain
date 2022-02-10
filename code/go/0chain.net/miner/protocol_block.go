@@ -371,8 +371,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
 		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash),
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-		zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", pb.ChainWeight))
+		zap.Int8("state_status", b.GetStateStatus()))
 
 	return
 }
@@ -519,7 +518,7 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {

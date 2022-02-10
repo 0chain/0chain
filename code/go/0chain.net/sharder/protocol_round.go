@@ -21,14 +21,7 @@ func shouldNotFinalize(r round.RoundI) bool {
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	b *block.Block) bool {
 
-	_, ok, err := r.AddNotarizedBlock(b)
-	if err != nil {
-		Logger.Error("Add notarized block failed",
-			zap.Int64("round", r.GetRoundNumber()),
-			zap.String("block", b.Hash),
-			zap.Error(err))
-		return false
-	}
+	_, ok := r.AddNotarizedBlock(b)
 
 	if !ok && shouldNotFinalize(r) {
 		return false
