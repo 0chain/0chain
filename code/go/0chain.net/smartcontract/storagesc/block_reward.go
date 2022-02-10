@@ -57,10 +57,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				"can't get related stake pool: "+err.Error())
 		}
 
-		var stake float64
-		for _, delegate := range sp.Pools {
-			stake += float64(delegate.Balance)
-		}
+		stake := float64(sp.stake())
 
 		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.Id)
 		stakePools = append(stakePools, sp)
