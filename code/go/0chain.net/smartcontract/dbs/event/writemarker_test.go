@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
-func TestWriteMarkers(t *testing.T) {
+func TestWriteMarker(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgres")
 
 	type StorageWriteMarker struct {
@@ -100,6 +101,105 @@ func TestWriteMarkers(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(*wms))
 	require.EqualValues(t, eWriteMarker.BlockNumber, (*wms)[0].BlockNumber)
+}
+
+func TestGetWriteMarkers(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	if err != nil {
+		t.Errorf("Error while migrating")
+		return
+	}
+	defer eventDb.drop()
+
+	err = eventDb.addOrOverwriteBlobber(Blobber{BlobberID: "someHash"})
+	if !assert.NoError(t, err, "Error while writing blobber marker") {
+		return
+	}
+	err = eventDb.addTransaction(Transaction{Hash: "something"})
+	if !assert.NoError(t, err, "Error while writing blobber marker") {
+		return
+	}
+
+	addWriterMarkers(t, eventDb, "someHash")
+
+	t.Run("GetWriteMarkers", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkers(0, 10, false)
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 0, 10, false)
+
+		gotWM, err = eventDb.GetWriteMarkers(0, 10, true)
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 0, 10, true)
+
+		gotWM, err = eventDb.GetWriteMarkers(0, 5, false)
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 0, 5, false)
+
+		gotWM, err = eventDb.GetWriteMarkers(0, 5, true)
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 0, 5, true)
+
+		gotWM, err = eventDb.GetWriteMarkers(5, 5, false)
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 5, 5, false)
+
+		gotWM, err = eventDb.GetWriteMarkers(5, 5, true)
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
+	})
+}
+
+func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
+	for i := 0; i < 10; i++ {
+		transactionID := fmt.Sprintf("transactionHash_%d", i)
+		err := eventDb.addTransaction(Transaction{Hash: transactionID})
+		if !assert.NoError(t, err, "Error while writing blobber marker") {
+			return
+		}
+		err = eventDb.addOrOverwriteWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)})
+		if !assert.NoError(t, err, "Error while writing read marker") {
+			return
+		}
+	}
+}
+
+func compareWriteMarker(t *testing.T, gotWM []WriteMarker, blobberID string, offset, limit int, isDescending bool) {
+	if isDescending {
+		for j, i := 0, offset+limit-1; i >= offset; i, j = i-1, j-1 {
+			transactionID := fmt.Sprintf("transactionHash_%d", i)
+			want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)}
+			want.ID = gotWM[j].ID
+			want.CreatedAt = gotWM[j].CreatedAt
+			want.UpdatedAt = gotWM[j].UpdatedAt
+			assert.Equal(t, want, gotWM[j], "Got invalid WM")
+		}
+		return
+	}
+	for i := offset; i < offset+limit; i++ {
+		transactionID := fmt.Sprintf("transactionHash_%d", i)
+		want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)}
+		want.ID = gotWM[i].ID
+		want.CreatedAt = gotWM[i].CreatedAt
+		want.UpdatedAt = gotWM[i].UpdatedAt
+		assert.Equal(t, want, gotWM[i], "Got invalid WM")
+	}
 }
 
 func TestLatestWriteMarker(t *testing.T) {

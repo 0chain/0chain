@@ -219,15 +219,36 @@ func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	return nil, errors.New("No filter selected")
 }
 
-func (msc *StorageSmartContract) GetLatestWriteMarker(
+func (msc *StorageSmartContract) GetWriteMarkerHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
 ) (interface{}, error) {
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get write marker, database is not responding")
+	var (
+		offsetString       = params.Get("offset")
+		limitString        = params.Get("limit")
+		isDescendingString = params.Get("is_descending")
+	)
+	if offsetString == "" {
+		offsetString = "0"
 	}
-	return balances.GetEventDB().GetLatestWriteMarker()
+	if limitString == "" {
+		limitString = "10"
+	}
+	offset, err := strconv.Atoi(offsetString)
+	if err != nil {
+		return nil, errors.New("offset value was not valid")
+	}
+
+	limit, err := strconv.Atoi(limitString)
+	if err != nil {
+		return nil, errors.New("limitString value was not valid")
+	}
+	isDescending, err := strconv.ParseBool(isDescendingString)
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	return balances.GetEventDB().GetWriteMarkers(offset, limit, isDescending)
 }
 
 func (msc *StorageSmartContract) GetErrors(
