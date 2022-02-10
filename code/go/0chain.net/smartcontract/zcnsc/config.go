@@ -46,10 +46,10 @@ type ZCNSConfig struct {
 	OwnerId            datastore.Key `json:"owner_id"`
 }
 
-func (zcn *ZCNSmartContract) UpdateConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
 	const (
 		Code     = "failed to update configuration"
-		FuncName = "UpdateConfig"
+		FuncName = "UpdateGlobalConfig"
 	)
 
 	gn, err := GetGlobalNode(ctx)

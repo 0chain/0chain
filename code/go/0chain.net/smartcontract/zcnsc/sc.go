@@ -15,13 +15,14 @@ import (
 )
 
 const (
-	ADDRESS              = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	NAME                 = "zcnsc"
-	AddAuthorizerFunc    = "AddAuthorizer"
-	DeleteAuthorizerFunc = "DeleteAuthorizer"
-	UpdateConfigFunc     = "UpdateConfig"
-	MintFunc             = "mint"
-	BurnFunc             = "burn"
+	ADDRESS                    = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	NAME                       = "zcnsc"
+	AddAuthorizerFunc          = "AddAuthorizer"
+	DeleteAuthorizerFunc       = "DeleteAuthorizer"
+	UpdateGlobalConfigFunc     = "UpdateGlobalConfig"
+	UpdateAuthorizerConfigFunc = "UpdateAuthorizerConfig"
+	MintFunc                   = "mint"
+	BurnFunc                   = "burn"
 )
 
 // ZCNSmartContract ...
@@ -46,7 +47,8 @@ func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ s
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
 	zcn.SmartContract.RestHandlers["/getConfig"] = zcn.GetConfig
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
-	zcn.SmartContractExecutionStats[UpdateConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateConfigFunc), nil)
+	zcn.SmartContractExecutionStats[UpdateGlobalConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateGlobalConfigFunc), nil)
+	zcn.SmartContractExecutionStats[UpdateAuthorizerConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateAuthorizerConfigFunc), nil)
 }
 
 // GetName ...
@@ -88,8 +90,10 @@ func (zcn *ZCNSmartContract) Execute(
 		return zcn.AddAuthorizer(trans, inputData, balances)
 	case DeleteAuthorizerFunc:
 		return zcn.DeleteAuthorizer(trans, inputData, balances)
-	case UpdateConfigFunc:
-		return zcn.UpdateConfig(trans, inputData, balances)
+	case UpdateGlobalConfigFunc:
+		return zcn.UpdateGlobalConfig(trans, inputData, balances)
+	case UpdateAuthorizerConfigFunc:
+		return zcn.UpdateAuthorizerConfig(trans, inputData, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}

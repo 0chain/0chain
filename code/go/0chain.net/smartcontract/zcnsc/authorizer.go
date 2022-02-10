@@ -216,3 +216,11 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 
 	return response, err
 }
+
+func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
+	tran *transaction.Transaction,
+	inputData []byte,
+	ctx cstate.StateContextI,
+) (string, error) {
+	return "", nil
+}
