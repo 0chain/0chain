@@ -173,7 +173,7 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 	node.Staking.ID = "11"
 

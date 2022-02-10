@@ -80,7 +80,7 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 
 func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 	sc := MakeMockStateContext()
-	an := CreateAuthorizer("id", "public key", "https://localhost:9876")
+	an := NewAuthorizer("id", "public key", "https://localhost:9876")
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
@@ -104,7 +104,7 @@ func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 }
 
 func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
-	an := CreateAuthorizer("id", "public key", "https://localhost:9876")
+	an := NewAuthorizer("id", "public key", "https://localhost:9876")
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
@@ -283,7 +283,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 
 func Test_Can_DigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	an := CreateAuthorizer(tr.ClientID, "key", "https://localhost:9876")
+	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
 	_, _, err := an.Staking.DigPool(tr.Hash, tr)
 	require.NoError(t, err)
 }
@@ -293,7 +293,7 @@ func Test_Can_EmptyPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	gn, err := GetGlobalNode(balances)
 
-	an := CreateAuthorizer(tr.ClientID, "key", "https://localhost:9876")
+	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
 
 	_, _, _ = an.Staking.DigPool(tr.Hash, tr)
 	_, _, err = an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
@@ -303,7 +303,7 @@ func Test_Can_EmptyPool(t *testing.T) {
 
 func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	require.NotNil(t, node.Staking.TokenLockInterface)
 
 	newNode := &AuthorizerNode{}
@@ -317,7 +317,7 @@ func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 //	ctx := MakeMockStateContext()
 //
 //	tr := CreateAddAuthorizerTransaction("client0", 10)
-//	an := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+//	an := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 //	err = ans.AddAuthorizer(an)
 //	require.NoError(t, err)
 //	require.NotNil(t, an.Staking.TokenLockInterface)
@@ -342,7 +342,7 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 
 	// Init
 	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx, 10)
-	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	require.NotNil(t, node.Staking.TokenLockInterface)
 
 	// Add

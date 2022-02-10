@@ -169,7 +169,7 @@ func createUserNode(id string, nonce int64) *UserNode {
 //
 //func CreateMockAuthorizer(clientId string, ctx state.StateContextI) (*AuthorizerNode, error) {
 //	tr := CreateAddAuthorizerTransaction(clientId, ctx, 100)
-//	authorizerNode := CreateAuthorizer(clientId, tr.PublicKey, "https://localhost:9876")
+//	authorizerNode := NewAuthorizer(clientId, tr.PublicKey, "https://localhost:9876")
 //	_, _, err := authorizerNode.Staking.DigPool(tr.Hash, tr)
 //	return authorizerNode, err
 //}

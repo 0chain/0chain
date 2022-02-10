@@ -31,6 +31,10 @@ const (
 	OwnerID            = "owner_id"
 )
 
+type AuthorizerConfig struct {
+	Fee state.Balance `json:"fee"`
+}
+
 type ZCNSConfig struct {
 	MinMintAmount      state.Balance `json:"min_mint_amount"`
 	MinBurnAmount      state.Balance `json:"min_burn_amount"`

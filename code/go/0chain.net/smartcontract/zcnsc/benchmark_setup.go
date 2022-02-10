@@ -56,7 +56,7 @@ func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, 
 		id := clients[i]
 		publicKey := publicKeys[i]
 
-		authorizer := CreateAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
+		authorizer := NewAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
 		authorizer.Staking = createTokenPool(id)
 
 		err := authorizer.Save(ctx)
@@ -85,10 +85,8 @@ func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
 }
 
 func addMockUserNodes(clients []string, balances cstate.StateContextI) {
-	for _, client := range clients {
-		un := &UserNode{
-			ID: client,
-		}
+	for _, clientId := range clients {
+		un := NewUserNode(clientId, 0)
 		_, _ = balances.InsertTrieNode(un.GetKey(), un)
 	}
 }

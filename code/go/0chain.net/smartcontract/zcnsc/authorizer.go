@@ -85,7 +85,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 
 	// Create Authorizer instance
 
-	authorizer = CreateAuthorizer(authorizerID, publicKey, params.URL)
+	authorizer = NewAuthorizer(authorizerID, publicKey, params.URL)
 
 	//Dig pool for authorizer
 
