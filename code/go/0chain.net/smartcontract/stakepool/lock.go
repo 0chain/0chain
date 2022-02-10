@@ -46,15 +46,8 @@ func (sp *StakePool) LockPool(
 	status PoolStatus,
 	balances cstate.StateContextI,
 ) error {
-	const MaxDelegates = 100
-
 	if err := CheckClientBalance(txn, balances); err != nil {
 		return err
-	}
-
-	if len(sp.Pools) >= MaxDelegates {
-		return fmt.Errorf("max_delegates reached: %v, no more stake pools allowed",
-			MaxDelegates)
 	}
 
 	dp := DelegatePool{
