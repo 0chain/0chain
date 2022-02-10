@@ -58,6 +58,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err
 }
@@ -643,6 +644,22 @@ func BenchmarkTests(
 			}(),
 		},
 		{
+			name: "storage.blobber_block_rewards",
+			endpoint: func(
+				_ *transaction.Transaction,
+				_ []byte,
+				balances cstate.StateContextI,
+			) (string, error) {
+				err := ssc.blobberBlockRewards(balances)
+				if err != nil {
+					return "", err
+				} else {
+					return "blobber block rewarded", nil
+				}
+			},
+			txn: &transaction.Transaction{},
+		},
+		{
 			name:     "storage.challenge_response",
 			endpoint: ssc.verifyChallenge,
 			txn: &transaction.Transaction{
@@ -674,7 +691,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-
 		{
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,

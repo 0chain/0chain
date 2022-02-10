@@ -271,8 +271,35 @@ func AddMockBlobbers(
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
+	activePart, err := getActivePassedBlobbersList(balances)
+	if err != nil {
+		panic(err)
+	}
+	ongPart, err := getOngoingPassedBlobbersList(balances, 0)
+	if err != nil {
+		panic(err)
+	}
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
+
+		partIndex, err := activePart.Add(&partitions.BlobberRewardNode{
+			Id:                id,
+			SuccessChallenges: 2,
+			WritePrice:        getMockBlobberWritePrice(),
+		}, balances)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = ongPart.Add(&partitions.BlobberRewardNode{
+			Id:                id,
+			SuccessChallenges: 2,
+			WritePrice:        getMockBlobberWritePrice(),
+		}, balances)
+		if err != nil {
+			panic(err)
+		}
+
 		blobber := &StorageNode{
 			ID:      id,
 			BaseURL: id + ".com",
@@ -286,10 +313,14 @@ func AddMockBlobbers(
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
+			RewardPartition: partitionLocation{
+				Index:      partIndex,
+				StartRound: 0,
+			},
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
+		_, err = balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
 		if err != nil {
 			panic(err)
 		}
@@ -319,7 +350,17 @@ func AddMockBlobbers(
 			}
 		}
 	}
-	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+
+	err = activePart.Save(balances)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ongPart.Save(balances)
+	if err != nil {
+		panic(err)
+	}
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
 	if err != nil {
 		panic(err)
 	}
@@ -644,7 +685,10 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
-	conf.BlockReward = &blockReward{}
+	conf.BlockReward = &blockReward{
+		BlockReward:     state.Balance(viper.GetInt(sc.StorageBlockReward)),
+		ChallengePeriod: viper.GetInt64(sc.StorageBlockRewardChallengePeriod),
+	}
 	conf.ExposeMpt = true
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
