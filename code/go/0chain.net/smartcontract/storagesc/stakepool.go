@@ -488,7 +488,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 
 	err = sp.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
 	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed", "%v", err)
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"stake pool digging error: %v", err)
 	}
 
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
