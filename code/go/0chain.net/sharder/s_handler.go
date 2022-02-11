@@ -45,7 +45,7 @@ func SetupS2SRequestors() {
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	BlockSummaryRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummary/get", options, blockSummaryEntityMetadata)
 
-	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_JSON, Compress: true}
+	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundSummariesEntityMetadata := datastore.GetEntityMetadata("round_summaries")
 	RoundSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/roundsummaries/get", options, roundSummariesEntityMetadata)
 
