@@ -377,27 +377,44 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
 
-	ongoingList, err := getOngoingPassedBlobbersList(balances, startRound)
-	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"cannot get ongoing partition: "+err.Error())
-	}
+	var ongoingList partitions.RandPartition
 
 	if balances.GetBlock().Round%conf.BlockReward.ChallengePeriod == 0 {
 
 		if balances.GetBlock().Round != 0 {
+
+			ongoingList, err = getOngoingPassedBlobbersList(balances, startRound-conf.BlockReward.ChallengePeriod)
+			if err != nil {
+				return "", common.NewError("verify_challenge",
+					"cannot get ongoing partition: "+err.Error())
+			}
+
 			_, err = balances.InsertTrieNode(ACTIVE_PASSED_BLOBBERS_KEY, ongoingList)
 			if err != nil {
 				return "", common.NewError("verify_challenge",
 					"error updating active passed partition: "+err.Error())
 			}
+
+			ongoingList = newOngoingPassedBlobbersList(startRound)
+			_, err = balances.InsertTrieNode(OngoingBlobberKey(startRound), ongoingList)
+			if err != nil {
+				return "", common.NewError("verify_challenge",
+					"cannot reset ongoing partition: "+err.Error())
+			}
+
+		} else {
+			ongoingList, err = getOngoingPassedBlobbersList(balances, startRound)
+			if err != nil {
+				return "", common.NewError("verify_challenge",
+					"cannot get ongoing partition: "+err.Error())
+			}
 		}
 
-		ongoingList = newOngoingPassedBlobbersList(startRound)
-		_, err = balances.InsertTrieNode(OngoingBlobberKey(startRound), ongoingList)
+	} else {
+		ongoingList, err = getOngoingPassedBlobbersList(balances, startRound)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
-				"cannot reset ongoing partition: "+err.Error())
+				"cannot get ongoing partition: "+err.Error())
 		}
 	}
 
@@ -499,6 +516,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					Id:                blobber.ID,
 					SuccessChallenges: 0,
 					WritePrice:        blobber.Terms.WritePrice,
+					ReadPrice:         blobber.Terms.ReadPrice,
 				}, balances)
 			if err != nil {
 				return "", common.NewError("verify_challenge",
