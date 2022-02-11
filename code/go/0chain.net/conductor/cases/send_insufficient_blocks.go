@@ -11,12 +11,12 @@ type (
 	// SendInsufficientProposals represents implementation of the TestCase interface.
 	//
 	//	Flow of this test case:
-	//		Check make progress for adversarial leader
-	//		(T0) Leader_0 (ad):  send Proposal0_0 for replica j , 0 <= j <1/3f
+	//		check make progress for an adversarial leader
+	//		(T0) Leader_0:  send Proposal0_0 for replica j , 0 <= j <1/2f
 	//		(T0) Leader_1:  send Proposal0_1
-	//		(T0 + δ + Δ) Replica_i: send Verification0_1
+	//		(T0 + δ + Δ) Replica_i: send Verification0_0
 	SendInsufficientProposals struct {
-		firstGenBlockHash string
+		firstGenBlockHash string // Generator0 blocks hash
 
 		res *RoundInfo
 

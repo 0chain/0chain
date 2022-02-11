@@ -27,7 +27,7 @@ type (
 )
 
 var (
-	// Ensure NotNotarisedBlockExtension implements TestCase interface.
+	// Ensure ResendProposedBlock implements TestCase interface.
 	_ TestCase = (*ResendProposedBlock)(nil)
 )
 
