@@ -6,6 +6,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -38,15 +39,18 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		return nil
 	}
 
+	bbr := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
+		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio)
+
 	allBlobbers, err := getActivePassedBlobbersList(balances)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+	random := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 
-	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
+	blobberPartition, err := allBlobbers.GetRandomSlice(random, balances)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"Error getting random partition: "+err.Error())
@@ -83,7 +87,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		reward := float64(conf.BlockReward.BlockReward) * (weight[i] / totalWeight)
+		reward := bbr * (weight[i] / totalWeight)
 
 		if err := mintReward(qsp, reward, balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
@@ -107,4 +111,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	return nil
+}
+
+func getBlockReward(br state.Balance, currentRound, brChangePeriod int64, brChangeRatio float64) float64 {
+	changeBalance := 1 - brChangeRatio
+	changePeriods := currentRound % brChangePeriod
+	return float64(br) * math.Pow(changeBalance, float64(changePeriods))
 }
