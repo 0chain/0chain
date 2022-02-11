@@ -149,6 +149,8 @@ smart_contracts:
     # reward paid out every block
     block_reward:
       block_reward: 1
+      block_reward_change_period: 10000
+      block_reward_change_ratio: 0.1
       qualifying_stake: 1
       sharder_ratio: 10
       miner_ratio: 40

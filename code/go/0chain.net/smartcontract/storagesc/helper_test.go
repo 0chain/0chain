@@ -372,8 +372,10 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	}
 
 	conf.BlockReward = &blockReward{
-		BlockReward:     1000,
-		ChallengePeriod: 30,
+		BlockReward:             1000,
+		BlockRewardChangePeriod: 1000,
+		BlockRewardChangeRatio:  0.1,
+		ChallengePeriod:         30,
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)

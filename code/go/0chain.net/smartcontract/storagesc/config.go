@@ -49,13 +49,15 @@ type writePoolConfig struct {
 }
 
 type blockReward struct {
-	BlockReward           state.Balance `json:"block_reward"`
-	QualifyingStake       state.Balance `json:"qualifying_stake"`
-	SharderWeight         float64       `json:"sharder_weight"`
-	MinerWeight           float64       `json:"miner_weight"`
-	BlobberCapacityWeight float64       `json:"blobber_capacity_weight"`
-	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
-	ChallengePeriod       int64         `json:"challenge_period"`
+	BlockReward             state.Balance `json:"block_reward"`
+	BlockRewardChangePeriod int64         `json:"block_reward_change_period"`
+	BlockRewardChangeRatio  float64       `json:"block_reward_change_ratio"`
+	QualifyingStake         state.Balance `json:"qualifying_stake"`
+	SharderWeight           float64       `json:"sharder_weight"`
+	MinerWeight             float64       `json:"miner_weight"`
+	BlobberCapacityWeight   float64       `json:"blobber_capacity_weight"`
+	BlobberUsageWeight      float64       `json:"blobber_usage_weight"`
+	ChallengePeriod         int64         `json:"challenge_period"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
@@ -440,6 +442,8 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
+	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
 	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
 
 	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
