@@ -21,8 +21,8 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-type Home struct {
-	Name              string            `json:"home"`
+type home struct {
+	Name              string            `json:"name"`
 	ChainName         string            `json:"chain_name"`
 	ID                string            `json:"id"`
 	PublicKey         string            `json:"public_key"`
@@ -31,19 +31,19 @@ type Home struct {
 	NodeType          string            `json:"node_type"`
 	isDevMode         bool              `json:"is_dev_mode"`
 	CurrentMagicBlock *block.MagicBlock `json:"current_magic_block"`
-	Miners            []Node            `json:"miners"`
-	Sharders          []Node            `json:"sharders"`
-	HealthSummary     HealthSummary     `json:"health_summary"`
+	Miners            []nodeInfo        `json:"miners"`
+	Sharders          []nodeInfo        `json:"sharders"`
+	HealthSummary     healthSummary     `json:"health_summary"`
 }
 
-func jsonHome(ctx context.Context) Home {
+func jsonHome(ctx context.Context) home {
 	sc := GetServerChain()
 	selfNode := node.Self.Underlying()
 	mb := sc.GetCurrentMagicBlock()
 	miners := sc.getNodePool(mb.Miners)
 	sharders := sc.getNodePool(mb.Sharders)
 	healthSummary := sc.getHealthSummary(ctx)
-	return Home{
+	return home{
 		Name:              selfNode.GetPseudoName(),
 		ChainName:         sc.GetKey(),
 		PublicKey:         selfNode.PublicKey,
@@ -58,7 +58,7 @@ func jsonHome(ctx context.Context) Home {
 	}
 }
 
-type Node struct {
+type nodeInfo struct {
 	Status                      string        `json:"status"`
 	Index                       int           `json:"index"`
 	Rank                        string        `json:"rank"`
@@ -79,7 +79,7 @@ type Node struct {
 	AvgBlockTxns                int           `json:"avg_block_txns"`
 }
 
-func (c *Chain) getNodePool(np *node.Pool) []Node {
+func (c *Chain) getNodePool(np *node.Pool) []nodeInfo {
 	r := c.GetRound(c.GetCurrentRound())
 	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.GetLatestFinalizedBlock()
@@ -87,9 +87,9 @@ func (c *Chain) getNodePool(np *node.Pool) []Node {
 	sort.SliceStable(nodes, func(i, j int) bool {
 		return nodes[i].SetIndex < nodes[j].SetIndex
 	})
-	viewNodes := make([]Node, len(nodes))
+	viewNodes := make([]nodeInfo, len(nodes))
 	for i, nd := range nodes {
-		n := Node{
+		n := nodeInfo{
 			Index:                       nd.SetIndex,
 			Name:                        nd.GetPseudoName(),
 			Sent:                        nd.GetSent(),
@@ -129,18 +129,18 @@ func (c *Chain) getNodePool(np *node.Pool) []Node {
 	return viewNodes
 }
 
-type HealthSummary struct {
-	RoundHealth RoundHealth `json:"round_health"`
+type healthSummary struct {
+	RoundHealth roundHealth `json:"round_health"`
 	ChainHealth ChainHealth `json:"chain_health"`
 	InfraHealth InfraHealth `json:"infra_health"`
 	BlockHealth BlockHealth `json:"block_health"`
 }
 
-func (c *Chain) getHealthSummary(ctx context.Context) HealthSummary {
+func (c *Chain) getHealthSummary(ctx context.Context) healthSummary {
 	roundHealth := c.getRoundHealth(ctx)
 	chainHealth := c.getChainHealth()
 	infraHealth := c.getInfraHealth()
-	return HealthSummary{
+	return healthSummary{
 		RoundHealth: roundHealth,
 		ChainHealth: chainHealth,
 		InfraHealth: infraHealth,
@@ -148,7 +148,7 @@ func (c *Chain) getHealthSummary(ctx context.Context) HealthSummary {
 	}
 }
 
-type RoundHealth struct {
+type roundHealth struct {
 	Round         int64  `json:"round"`
 	VRFs          string `json:"vrfs"`
 	RRS           int64  `json:"rrs"`
@@ -200,7 +200,7 @@ type blockName struct {
 	Block *block.Block `json:"block"`
 }
 
-func (c *Chain) getRoundHealth(ctx context.Context) RoundHealth {
+func (c *Chain) getRoundHealth(ctx context.Context) roundHealth {
 	var rn = c.GetCurrentRound()
 	cr := c.GetRound(rn)
 
@@ -246,7 +246,7 @@ func (c *Chain) getRoundHealth(ctx context.Context) RoundHealth {
 		}
 	}
 
-	return RoundHealth{
+	return roundHealth{
 		isActive:      isActive,
 		Round:         rn,
 		VRFs:          vrfMsg,
