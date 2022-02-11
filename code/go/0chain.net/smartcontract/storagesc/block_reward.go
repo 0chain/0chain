@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
 	"math/rand"
 	"time"
@@ -25,7 +26,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	const (
 		alpha = 1
 		A     = 1
-		B     = 0
+		B     = 1
 	)
 
 	if conf, err = ssc.getConfig(balances, true); err != nil {
@@ -67,11 +68,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		stake := float64(sp.stake())
 
+		gamma := maths.GetGamma(A, B, alpha, blobber.TotalData, blobber.DataRead)
 		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.Id)
 		stakePools = append(stakePools, sp)
 		stakeTotals = append(stakeTotals, stake)
 		totalQStake += stake
-		blobberWeight := float64(blobber.WritePrice) * stake * float64(blobber.SuccessChallenges)
+		blobberWeight := (gamma*float64(blobber.SuccessChallenges) + 1) * stake
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
 	}
