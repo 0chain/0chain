@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/block"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -247,7 +248,7 @@ func testCommitBlobberRead(
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
-			nil,
+			&block.Block{},
 			&util.MerklePatriciaTrie{},
 			&state.Deserializer{},
 			txn,
@@ -273,6 +274,8 @@ func testCommitBlobberRead(
 			ID: storageScId,
 		},
 	}
+
+	setConfig(t, ctx)
 
 	var lastReadConnection = &ReadConnection{
 		ReadMarker: &ReadMarker{
@@ -318,6 +321,16 @@ func testCommitBlobberRead(
 		Owner: payerId,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
+
+	blobber := &StorageNode{
+		ID: blobberId,
+		Terms: Terms{
+			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
+			WritePrice: zcnToBalance(blobberYaml.writePrice),
+		},
+	}
+
+	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 
 	var rPool = readPool{
 		Pools: []*allocationPool{},
