@@ -517,6 +517,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					SuccessChallenges: 0,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,
+					TotalData:         blobber.DataWritten,
+					DataRead:          blobber.DataRead,
 				}, balances)
 			if err != nil {
 				return "", common.NewError("verify_challenge",

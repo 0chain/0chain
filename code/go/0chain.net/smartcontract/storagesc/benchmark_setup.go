@@ -285,6 +285,8 @@ func AddMockBlobbers(
 			SuccessChallenges: 2,
 			WritePrice:        getMockBlobberWritePrice(),
 			ReadPrice:         getMockBlobberReadPrice(),
+			TotalData:         0,
+			DataRead:          0,
 		}, balances)
 		if err != nil {
 			panic(err)
@@ -295,6 +297,8 @@ func AddMockBlobbers(
 			SuccessChallenges: 2,
 			WritePrice:        getMockBlobberWritePrice(),
 			ReadPrice:         getMockBlobberReadPrice(),
+			TotalData:         0,
+			DataRead:          0,
 		}, balances)
 		if err != nil {
 			panic(err)

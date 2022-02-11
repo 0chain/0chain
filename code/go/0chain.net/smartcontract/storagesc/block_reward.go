@@ -12,7 +12,22 @@ import (
 func (ssc *StorageSmartContract) blobberBlockRewards(
 	balances cstate.StateContextI,
 ) (err error) {
-	var conf *scConfig
+	var (
+		qualifyingBlobberIds []string
+		stakePools           []*stakePool
+		stakeTotals          []float64
+		totalQStake          float64
+		weight               []float64
+		totalWeight          float64
+		conf                 *scConfig
+	)
+
+	const (
+		alpha = 1
+		A     = 1
+		B     = 0
+	)
+
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get smart contract configurations: "+err.Error())
@@ -36,13 +51,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			"Error getting random partition: "+err.Error())
 	}
 
-	// filter out blobbers with stake too low to qualify for rewards
-	var qualifyingBlobberIds []string
-	var stakePools []*stakePool
-	var stakeTotals []float64
-	var totalQStake float64
-	var weight []float64
-	var totalWeight float64
 	for _, b := range blobberPartition {
 		var sp *stakePool
 		var blobber partitions.BlobberRewardNode

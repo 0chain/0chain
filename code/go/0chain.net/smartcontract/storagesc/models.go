@@ -364,6 +364,8 @@ type StorageNode struct {
 	Terms           Terms                  `json:"terms"`    // terms
 	Capacity        int64                  `json:"capacity"` // total blobber capacity
 	Used            int64                  `json:"used"`     // allocated capacity
+	DataWritten     int64                  `json:"dataWritten"`
+	DataRead        float64                `json:"dataRead"`
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
 	PublicKey       string                 `json:"-"`
 	SavedData       int64                  `json:"saved_data"`

@@ -18,6 +18,8 @@ type BlobberRewardNode struct {
 	SuccessChallenges int            `json:"success_challenges"`
 	WritePrice        state2.Balance `json:"write_price"`
 	ReadPrice         state2.Balance `json:"read_price"`
+	TotalData         int64          `json:"total_data"`
+	DataRead          float64        `json:"data_read"`
 }
 
 func (bn *BlobberRewardNode) Encode() []byte {
@@ -90,6 +92,8 @@ func (il *blobberRewardItemList) add(it PartitionItem) {
 		SuccessChallenges: brn.SuccessChallenges,
 		WritePrice:        brn.WritePrice,
 		ReadPrice:         brn.ReadPrice,
+		TotalData:         brn.TotalData,
+		DataRead:          brn.DataRead,
 	})
 	il.Changed = true
 }
@@ -104,12 +108,7 @@ func (il *blobberRewardItemList) update(it PartitionItem) error {
 			if err != nil {
 				return fmt.Errorf("decoding error: %v", err)
 			}
-			il.Items[i] = BlobberRewardNode{
-				Id:                it.Name(),
-				SuccessChallenges: newItem.SuccessChallenges,
-				WritePrice:        newItem.WritePrice,
-				ReadPrice:         newItem.ReadPrice,
-			}
+			il.Items[i] = newItem
 		}
 	}
 
