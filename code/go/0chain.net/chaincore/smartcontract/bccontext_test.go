@@ -46,19 +46,19 @@ func makeTestNode(typ int8, pk string) (*node.Node, error) {
 func TestBCContext_GetNodepoolInfo(t *testing.T) {
 	t.Parallel()
 
-	mn, err := makeTestNode(node.NodeTypeMiner, blsPublicKeys[0])
+	mn, err := makeTestNode(int8(node.NodeTypeMiner), blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 	node.RegisterNode(mn)
 
-	sn, err := makeTestNode(node.NodeTypeSharder, blsPublicKeys[1])
+	sn, err := makeTestNode(int8(node.NodeTypeSharder), blsPublicKeys[1])
 	if err != nil {
 		t.Fatal(err)
 	}
 	node.RegisterNode(sn)
 
-	bn, err := makeTestNode(node.NodeTypeBlobber, blsPublicKeys[2])
+	bn, err := makeTestNode(int8(node.NodeTypeBlobber), blsPublicKeys[2])
 	if err != nil {
 		t.Fatal(err)
 	}
