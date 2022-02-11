@@ -280,8 +280,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolLock(t, input, balances)
 	case "stake_pool_unlock":
 		resp, err = sc.stakePoolUnlock(t, input, balances)
-	case "pay_reward":
-		resp, err = sc.payReward(t, input, balances)
+	case "collect_reward":
+		resp, err = sc.collectReward(t, input, balances)
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(

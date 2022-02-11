@@ -8,21 +8,21 @@ import (
 	"0chain.net/core/common"
 )
 
-type PayRewardRequest struct {
+type CollectRewardRequest struct {
 	ProviderType Provider `json:"provider_type"`
 	PoolId       string   `json:"pool_id"`
 }
 
-func (spr *PayRewardRequest) Decode(p []byte) error {
+func (spr *CollectRewardRequest) Decode(p []byte) error {
 	return json.Unmarshal(p, spr)
 }
 
-func PayoutReward(
+func CollectReward(
 	client string,
 	input []byte,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
-	var prr PayRewardRequest
+	var prr CollectRewardRequest
 	if err := prr.Decode(input); err != nil {
 		return 0, common.NewErrorf("pay_reward_failed",
 			"can't decode request: %v", err)

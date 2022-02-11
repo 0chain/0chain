@@ -7,7 +7,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 )
 
-func (ssc *StorageSmartContract) payReward(
+func (ssc *StorageSmartContract) collectReward(
 	txn *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
