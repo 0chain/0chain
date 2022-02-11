@@ -108,8 +108,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				delegatesBal:      [][]state.Balance{{1, 0, 3}, {1, 6, 3}},
 			},
 			result: result{
-				blobberRewards:          []state.Balance{750, 250},
-				blobberDelegatesRewards: [][]state.Balance{{187, 0, 562}, {25, 150, 75}},
+				blobberRewards:          []state.Balance{356, 643},
+				blobberDelegatesRewards: [][]state.Balance{{89, 0, 267}, {64, 385, 192}},
 			},
 		},
 	}
