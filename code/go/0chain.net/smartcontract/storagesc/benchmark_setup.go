@@ -692,8 +692,11 @@ func SetMockConfig(
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
 	conf.BlockReward = &blockReward{
-		BlockReward:     state.Balance(viper.GetInt(sc.StorageBlockReward)),
-		ChallengePeriod: viper.GetInt64(sc.StorageBlockRewardChallengePeriod),
+		BlockReward:             state.Balance(viper.GetInt(sc.StorageBlockReward)),
+		ChallengePeriod:         viper.GetInt64(sc.StorageBlockRewardChallengePeriod),
+		BlockRewardChangePeriod: viper.GetInt64(sc.StorageBlockRewardChangePeriod),
+		BlockRewardChangeRatio:  viper.GetFloat64(sc.StorageBlockRewardChangeRatio),
+		BlobberWeight:           viper.GetFloat64(sc.StorageBlockRewardBlobberWeight),
 	}
 	conf.ExposeMpt = true
 

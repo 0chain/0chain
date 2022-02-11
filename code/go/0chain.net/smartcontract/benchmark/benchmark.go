@@ -170,6 +170,9 @@ const (
 
 	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
 	StorageBlockRewardChallengePeriod = SmartContract + StorageSc + BlockReward + "challenge_period"
+	StorageBlockRewardBlobberWeight   = SmartContract + StorageSc + BlockReward + "blobber_weight"
+	StorageBlockRewardChangePeriod    = SmartContract + StorageSc + BlockReward + "block_reward_change_period"
+	StorageBlockRewardChangeRatio     = SmartContract + StorageSc + BlockReward + "block_reward_change_ratio"
 
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
