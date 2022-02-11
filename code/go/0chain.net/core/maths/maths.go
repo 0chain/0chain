@@ -15,3 +15,12 @@ func GetGamma(A, B, alpha, X, R float64) float64 {
 	factor := math.Abs((alpha*X - R) / (alpha*X + R))
 	return A - B*factor
 }
+
+func GetZeta(i, k, mu, wp, rp float64) float64 {
+
+	if wp == 0 {
+		return 0
+	}
+
+	return i - (k * (rp / (rp + (mu * wp))))
+}
