@@ -25,9 +25,15 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	)
 
 	const (
+		// constants for gamma
 		alpha = 1
 		A     = 1
 		B     = 1
+
+		// constants for zeta
+		I  = 1
+		K  = 1
+		mu = 1
 	)
 
 	if conf, err = ssc.getConfig(balances, true); err != nil {
@@ -73,11 +79,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		stake := float64(sp.stake())
 
 		gamma := maths.GetGamma(A, B, alpha, blobber.TotalData, blobber.DataRead)
+		zeta := maths.GetZeta(I, K, mu, float64(blobber.WritePrice), float64(blobber.ReadPrice))
 		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.Id)
 		stakePools = append(stakePools, sp)
 		stakeTotals = append(stakeTotals, stake)
 		totalQStake += stake
-		blobberWeight := (gamma*float64(blobber.SuccessChallenges) + 1) * stake
+		blobberWeight := (gamma*zeta*float64(blobber.SuccessChallenges) + 1) * stake
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
 	}
