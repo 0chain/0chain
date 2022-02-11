@@ -374,6 +374,12 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("commit_blobber_read",
+			"cannot get config: %v", err)
+	}
+
 	var commitRead = &ReadConnection{}
 	if err = commitRead.Decode(input); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
@@ -488,6 +494,44 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 	details.ReadReward += value // stat
 	details.Spent += value      // reduce min lock demand left
+
+	startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
+
+	if blobber.RewardPartition.StartRound >= startRound {
+		part, err := getOngoingPassedBlobbersList(balances, startRound)
+		if err != nil {
+			return "", common.NewErrorf("commit_blobber_read",
+				"cannot fetch ongoing partition: %v", err)
+		}
+
+		item, err := part.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
+		if err != nil {
+			return "", common.NewErrorf("commit_blobber_read",
+				"cannot fetch blobber node item from partition: %v", err)
+		}
+
+		var brn partitions.BlobberRewardNode
+		err = brn.Decode(item.Encode())
+		if err != nil {
+			return "", common.NewError("commit_blobber_read",
+				"can't decode blobber reward item"+err.Error())
+		}
+
+		brn.DataRead = blobber.DataRead
+
+		err = part.UpdateItem(blobber.RewardPartition.Index, &brn, balances)
+		if err != nil {
+			return "", common.NewError("commit_blobber_read",
+				"error updating blobber reward item")
+		}
+
+		err = part.Save(balances)
+		if err != nil {
+			return "", common.NewError("commit_blobber_read",
+				"error saving ongoing blobber reward partition")
+		}
+
+	}
 
 	// save pools
 	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
@@ -608,8 +652,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	t *transaction.Transaction, input []byte, balances cstate.StateContextI) (
 	string, error) {
 
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewError("commit_connection_failed",
+			"malformed input: "+err.Error())
+	}
+
 	var commitConnection BlobberCloseConnection
-	err := json.Unmarshal(input, &commitConnection)
+	err = json.Unmarshal(input, &commitConnection)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"malformed input: "+err.Error())
@@ -680,7 +730,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	details.Stats.UsedSize += commitConnection.WriteMarker.Size
 	details.Stats.NumWrites++
 
-	blobber.DataWritten += commitConnection.WriteMarker.Size
+	blobber.BytesWritten += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
@@ -717,6 +767,44 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"moving tokens: %v", err)
+	}
+
+	startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
+
+	if blobber.RewardPartition.StartRound >= startRound {
+		part, err := getOngoingPassedBlobbersList(balances, startRound)
+		if err != nil {
+			return "", common.NewErrorf("commit_connection_failed",
+				"cannot fetch ongoing partition: %v", err)
+		}
+
+		item, err := part.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
+		if err != nil {
+			return "", common.NewErrorf("commit_connection_failed",
+				"cannot fetch blobber node item from partition: %v", err)
+		}
+
+		var brn partitions.BlobberRewardNode
+		err = brn.Decode(item.Encode())
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"can't decode blobber reward item"+err.Error())
+		}
+
+		brn.TotalData = sizeInGB(blobber.BytesWritten)
+
+		err = part.UpdateItem(blobber.RewardPartition.Index, &brn, balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error updating blobber reward item")
+		}
+
+		err = part.Save(balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error saving ongoing blobber reward partition")
+		}
+
 	}
 
 	// save allocation object

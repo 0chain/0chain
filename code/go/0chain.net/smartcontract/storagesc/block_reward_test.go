@@ -15,7 +15,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		numBlobbers       int
 		wp                []state.Balance
 		rp                []state.Balance
-		totalData         []int64
+		totalData         []float64
 		dataRead          []float64
 		successChallenges []int
 		delegatesBal      [][]state.Balance
@@ -86,7 +86,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				numBlobbers:       1,
 				wp:                []state.Balance{2},
 				rp:                []state.Balance{1},
-				totalData:         []int64{10},
+				totalData:         []float64{10},
 				dataRead:          []float64{2},
 				successChallenges: []int{10},
 				delegatesBal:      [][]state.Balance{{1, 0, 3}},
@@ -102,7 +102,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				numBlobbers:       2,
 				wp:                []state.Balance{3, 1},
 				rp:                []state.Balance{1, 0},
-				totalData:         []int64{10, 50},
+				totalData:         []float64{10, 50},
 				dataRead:          []float64{2, 15},
 				successChallenges: []int{5, 2},
 				delegatesBal:      [][]state.Balance{{1, 0, 3}, {1, 6, 3}},
