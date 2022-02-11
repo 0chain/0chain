@@ -378,8 +378,9 @@ func (sng StorageNodeGeolocation) validate() error {
 }
 
 type partitionLocation struct {
-	Index      int   `json:"index"`
-	StartRound int64 `json:"start_round"`
+	Index      int              `json:"index"`
+	StartRound int64            `json:"start_round"`
+	Timestamp  common.Timestamp `json:"timestamp"`
 }
 
 // StorageNode represents Blobber configurations.

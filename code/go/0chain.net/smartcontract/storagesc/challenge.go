@@ -513,6 +513,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			blobber.RewardPartition = partitionLocation{
 				Index:      partIndex,
 				StartRound: startRound,
+				Timestamp:  t.CreationDate,
 			}
 
 			_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)

@@ -77,7 +77,7 @@ func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
 }
 
 func (sc *mockStateContext) GetBlock() *block.Block {
-	return nil
+	return sc.ctx.GetBlock()
 }
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }

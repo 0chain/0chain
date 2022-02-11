@@ -444,7 +444,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
 
-	if blobber.RewardPartition.StartRound >= startRound {
+	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
 		part, err := getOngoingPassedBlobbersList(balances, startRound)
 		if err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
@@ -728,7 +728,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
 
-	if blobber.RewardPartition.StartRound >= startRound {
+	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
 		part, err := getOngoingPassedBlobbersList(balances, startRound)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
