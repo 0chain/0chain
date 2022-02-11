@@ -43,7 +43,7 @@ func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 
 func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]WriteMarker, error) {
 	var wm []WriteMarker
-	return wm, edb.Get().Debug().Model(&WriteMarker{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+	return wm, edb.Get().Model(&WriteMarker{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
 		Desc:   isDescending,
 	}).Scan(&wm).Error
@@ -56,11 +56,6 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]Writ
 		Where(&WriteMarker{AllocationID: allocationID}).
 		Find(&wms)
 	return &wms, result.Error
-}
-
-func (edb *EventDb) GetLatestWriteMarker() (WriteMarker, error) {
-	var wm WriteMarker
-	return wm, edb.Get().Model(&WriteMarker{}).Last(&wm).Error
 }
 
 func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {
