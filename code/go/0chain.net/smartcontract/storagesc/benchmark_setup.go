@@ -286,6 +286,7 @@ func AddMockBlobbers(
 			Id:                id,
 			SuccessChallenges: 2,
 			WritePrice:        getMockBlobberWritePrice(),
+			ReadPrice:         getMockBlobberReadPrice(),
 		}, balances)
 		if err != nil {
 			panic(err)
@@ -295,6 +296,7 @@ func AddMockBlobbers(
 			Id:                id,
 			SuccessChallenges: 2,
 			WritePrice:        getMockBlobberWritePrice(),
+			ReadPrice:         getMockBlobberReadPrice(),
 		}, balances)
 		if err != nil {
 			panic(err)
@@ -568,8 +570,8 @@ func AddMockWriteRedeems(
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:               state.Balance(0.1 * 1e10),
-		WritePrice:              state.Balance(0.1 * 1e10),
+		ReadPrice:               getMockBlobberReadPrice(),
+		WritePrice:              getMockBlobberWritePrice(),
 		MinLockDemand:           0.0007,
 		MaxOfferDuration:        10000 * viper.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
