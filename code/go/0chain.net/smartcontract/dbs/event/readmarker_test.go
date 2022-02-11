@@ -3,13 +3,10 @@ package event
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -115,67 +112,4 @@ func TestReadMarkers(t *testing.T) {
 	count, err := eventDb.CountReadMarkersFromQuery(query)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, count)
-}
-
-func TestLastReadMarker(t *testing.T) {
-	access := dbs.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewEventDb(access)
-	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
-	}
-
-	defer eventDb.Close()
-	err = eventDb.AutoMigrate()
-	if err != nil {
-		t.Errorf("Error while migrating")
-		return
-	}
-
-	defer eventDb.drop()
-	_, err = eventDb.GetLatestReadMarker("a", "b")
-	if !assert.Error(t, err, "Empty Readmarker should return an erro") {
-		return
-	}
-	want := ReadMarker{TransactionID: "transactionHash 9", BlobberID: "blobberID 9", ClientID: "someClientID", AllocationID: strconv.Itoa(9)}
-	insertMultipleReadMarker(t, eventDb)
-	got, err := eventDb.GetLatestReadMarker("someClientID", "blobberID 9")
-	if err != nil {
-		t.Errorf("Read marker should not return error %v", err)
-		return
-	}
-	got.CreatedAt = want.CreatedAt
-	got.UpdatedAt = want.UpdatedAt
-	got.ID = want.ID
-	assert.Equal(t, want, got, "Latest transaction should be returned")
-}
-
-func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {
-	for j := 0; j < 10; j++ {
-		transactionHash := fmt.Sprintf("transactionHash %v", j)
-		blobberID := fmt.Sprintf("blobberID %v", j)
-		err := eventDb.addOrOverwriteBlobber(Blobber{BlobberID: blobberID})
-		if !assert.NoError(t, err, "Error while writing blobber marker") {
-			return
-		}
-		err = eventDb.addTransaction(Transaction{Hash: transactionHash})
-		if !assert.NoError(t, err, "Error while writing blobber marker") {
-			return
-		}
-		for i := 0; i < 10; i++ {
-			err = eventDb.addOrOverwriteReadMarker(ReadMarker{TransactionID: transactionHash, BlobberID: blobberID, ClientID: "someClientID", AllocationID: strconv.Itoa(i)})
-			if !assert.NoError(t, err, "Error while writing read marker") {
-				return
-			}
-		}
-	}
 }

@@ -39,11 +39,6 @@ func (edb *EventDb) GetReadMarkersFromQuery(query *ReadMarker) (*[]ReadMarker, e
 	return &rms, result.Error
 }
 
-func (edb EventDb) GetLatestReadMarker(clientID, blobberID string) (ReadMarker, error) {
-	var rm ReadMarker
-	return rm, edb.Store.Get().Model(&ReadMarker{}).Where(&ReadMarker{ClientID: clientID, BlobberID: blobberID}).Last(&rm).Error
-}
-
 func (edb EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, err error) {
 
 	if query == nil {
