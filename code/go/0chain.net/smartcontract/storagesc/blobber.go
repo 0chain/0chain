@@ -444,6 +444,13 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	startRound := getStartRound(balances.GetBlock().Round, conf.BlockReward.ChallengePeriod)
 
+	if blobber.DRUpdateLastRound >= startRound {
+		blobber.DataReadLR += sizeRead
+	} else {
+		blobber.DataReadLR = sizeRead
+	}
+	blobber.DRUpdateLastRound = balances.GetBlock().Round
+
 	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
 		part, err := getOngoingPassedBlobbersList(balances, startRound)
 		if err != nil {
@@ -464,7 +471,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 				"can't decode blobber reward item"+err.Error())
 		}
 
-		brn.DataRead = blobber.DataRead
+		brn.DataRead = blobber.DataReadLR
 
 		err = part.UpdateItem(blobber.RewardPartition.Index, &brn, balances)
 		if err != nil {
