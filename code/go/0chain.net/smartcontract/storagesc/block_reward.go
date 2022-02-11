@@ -40,7 +40,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	bbr := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
-		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio)
+		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio, conf.BlockReward.BlobberWeight)
 
 	allBlobbers, err := getActivePassedBlobbersList(balances)
 	if err != nil {
@@ -113,8 +113,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	return nil
 }
 
-func getBlockReward(br state.Balance, currentRound, brChangePeriod int64, brChangeRatio float64) float64 {
+func getBlockReward(br state.Balance, currentRound, brChangePeriod int64, brChangeRatio, blobberWeight float64) float64 {
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound % brChangePeriod
-	return float64(br) * math.Pow(changeBalance, float64(changePeriods))
+	return float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
 }

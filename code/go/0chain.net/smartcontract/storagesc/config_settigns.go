@@ -75,8 +75,7 @@ const (
 	BlockRewardQualifyingStake
 	BlockRewardSharderWeight
 	BlockRewardMinerWeight
-	BlockRewardBlobberCapacityWeight
-	BlockRewardBlobberUsageWeight
+	BlockRewardBlobberWeight
 
 	ExposeMpt
 
@@ -133,8 +132,7 @@ var (
 		"block_reward.qualifying_stake",
 		"block_reward.sharder_ratio",
 		"block_reward.miner_ratio",
-		"block_reward.blobber_capacity_ratio",
-		"block_reward.blobber_usage_ratio",
+		"block_reward.blobber_ratio",
 
 		"expose_mpt",
 	}
@@ -187,12 +185,11 @@ var (
 		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
 		"max_delegates":                        {MaxDelegates, smartcontract.Int},
 
-		"block_reward.block_reward":           {BlockRewardBlockReward, smartcontract.StateBalance},
-		"block_reward.qualifying_stake":       {BlockRewardQualifyingStake, smartcontract.StateBalance},
-		"block_reward.sharder_ratio":          {BlockRewardSharderWeight, smartcontract.Float64},
-		"block_reward.miner_ratio":            {BlockRewardMinerWeight, smartcontract.Float64},
-		"block_reward.blobber_capacity_ratio": {BlockRewardBlobberCapacityWeight, smartcontract.Float64},
-		"block_reward.blobber_usage_ratio":    {BlockRewardBlobberUsageWeight, smartcontract.Float64},
+		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.StateBalance},
+		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.StateBalance},
+		"block_reward.sharder_ratio":    {BlockRewardSharderWeight, smartcontract.Float64},
+		"block_reward.miner_ratio":      {BlockRewardMinerWeight, smartcontract.Float64},
+		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
 
 		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
 	}
@@ -325,16 +322,11 @@ func (conf *Config) setFloat64(key string, change float64) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.MinerWeight = change
-	case BlockRewardBlobberCapacityWeight:
+	case BlockRewardBlobberWeight:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlobberCapacityWeight = change
-	case BlockRewardBlobberUsageWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
-		}
-		conf.BlockReward.BlobberUsageWeight = change
+		conf.BlockReward.BlobberWeight = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -538,10 +530,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.SharderWeight
 	case BlockRewardMinerWeight:
 		return conf.BlockReward.MinerWeight
-	case BlockRewardBlobberCapacityWeight:
-		return conf.BlockReward.BlobberCapacityWeight
-	case BlockRewardBlobberUsageWeight:
-		return conf.BlockReward.BlobberUsageWeight
+	case BlockRewardBlobberWeight:
+		return conf.BlockReward.BlobberWeight
 	case ExposeMpt:
 		return conf.ExposeMpt
 	default:
