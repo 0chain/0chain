@@ -78,10 +78,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 
 	if isDelayingBlock(not.Round) {
 		go func() {
-			for bl := range delayedBlock {
-				GetMinerChain().sendBlock(context.Background(), bl)
-				close(delayedBlock)
-			}
+			<-delayedBlock
 		}()
 	}
 
