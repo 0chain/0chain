@@ -12,6 +12,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -325,6 +326,7 @@ type Chainer interface {
 		fb *block.Block, err error)
 	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
+	GetEventDb() *event.EventDb
 }
 
 //

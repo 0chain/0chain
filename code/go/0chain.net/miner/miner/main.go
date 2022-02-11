@@ -398,7 +398,7 @@ func initHandlers(c chain.Chainer) {
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers(c)
-	client.SetupHandlers()
+	client.SetupHandlers(c)
 	transaction.SetupHandlers()
 	block.SetupHandlers()
 	miner.SetupHandlers()
