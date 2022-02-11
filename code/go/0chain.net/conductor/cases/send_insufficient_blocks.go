@@ -3,7 +3,7 @@ package cases
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -12,7 +12,7 @@ type (
 	//
 	//	Flow of this test case:
 	//		check make progress for an adversarial leader
-	//		(T0) Leader_0:  send Proposal0_0 for replica j , 0 <= j <1/2f
+	//		(T0) Leader_0:  send Proposal0_0 for replica j , 0 <= j < 1/3f
 	//		(T0) Leader_1:  send Proposal0_1
 	//		(T0 + δ + Δ) Replica_i: send Verification0_0
 	SendInsufficientProposals struct {
@@ -58,15 +58,15 @@ func (n *SendInsufficientProposals) Check(ctx context.Context) (success bool, er
 }
 
 func (n *SendInsufficientProposals) check() (success bool, err error) {
-	for _, bl := range n.res.blocks() {
-		if bl.Hash == n.firstGenBlockHash {
-			if !bl.Notarised {
-				err = errors.New("first generator's block was not notarised")
-			}
-			return bl.Notarised, err
-		}
+	if len(n.res.NotarisedBlocks) != 1 {
+		return false, fmt.Errorf("unexpected number of notarised blocks: %d, expected 1", len(n.res.NotarisedBlocks))
 	}
-	return false, errors.New("first generator's block is not found in reports")
+
+	if notBlockRank := n.res.NotarisedBlocks[0].Rank; notBlockRank != 1 {
+		return false, fmt.Errorf("unexpected notarised block rank: %d, expected 1", notBlockRank)
+	}
+
+	return true, nil
 }
 
 // Configure implements TestCase interface.
