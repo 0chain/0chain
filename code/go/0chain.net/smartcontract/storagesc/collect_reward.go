@@ -13,7 +13,7 @@ func (ssc *StorageSmartContract) collectReward(
 	balances cstate.StateContextI,
 ) (string, error) {
 
-	var prr stakepool.PayRewardRequest
+	var prr stakepool.CollectRewardRequest
 	if err := prr.Decode(input); err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
 			"can't decode request: %v", err)

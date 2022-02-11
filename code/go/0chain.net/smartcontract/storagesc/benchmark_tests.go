@@ -624,13 +624,13 @@ func BenchmarkTests(
 		},
 		{
 			name:     "storage.pay_reward",
-			endpoint: ssc.payReward,
+			endpoint: ssc.collectReward,
 			txn: &transaction.Transaction{
 				ClientID:   data.Clients[0],
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&stakepool.PayRewardRequest{
+				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
 					PoolId:       getMockBlobberStakePoolId(0, 0),
 					ProviderType: stakepool.Blobber,
 				})
