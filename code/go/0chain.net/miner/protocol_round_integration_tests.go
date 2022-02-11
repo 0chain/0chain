@@ -28,7 +28,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 
 func isMockingNotNotarisedBlockExtension(round int64) bool {
 	cfg := crpc.Client().State().ExtendNotNotarisedBlock
-	isConfigured := cfg != nil && cfg.OnRound == round
+	isConfigured := cfg != nil && cfg.OnRound == round+1
 	if !isConfigured {
 		return false
 	}
