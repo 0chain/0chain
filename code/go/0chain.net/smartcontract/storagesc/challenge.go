@@ -511,6 +511,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		if blobber.RewardPartition.StartRound != startRound ||
 			balances.GetBlock().Round == 0 {
 
+			var dataRead float64 = 0
+			if blobber.DRUpdateLastRound >= startRound {
+				dataRead = blobber.DataReadLR
+			}
+
 			partIndex, err := ongoingList.Add(
 				&partitions.BlobberRewardNode{
 					Id:                blobber.ID,
@@ -518,7 +523,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,
 					TotalData:         sizeInGB(blobber.BytesWritten),
-					DataRead:          blobber.DataRead,
+					DataRead:          dataRead,
 				}, balances)
 			if err != nil {
 				return "", common.NewError("verify_challenge",
