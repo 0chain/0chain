@@ -239,7 +239,9 @@ func (s *Server) UpdateStates(names []NodeName, update UpdateStateFunc) (
 	err error) {
 
 	for _, name := range names {
-		s.UpdateState(name, update)
+		if err := s.UpdateState(name, update); err != nil {
+			return err
+		}
 	}
 	return
 }
@@ -248,7 +250,9 @@ func (s *Server) UpdateAllStates(update UpdateStateFunc) (
 	err error) {
 
 	for name := range s.nodes {
-		s.UpdateState(name, update)
+		if err := s.UpdateState(name, update); err != nil {
+			return err
+		}
 	}
 	return
 }
@@ -413,7 +417,8 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 
 	select {
 	case x := <-ns.poll:
-		(*state) = (*x)
+		*state = *x
+		log.Printf("Conductor: got state, preparing for return, node id %s, state %#v", id, state) // todo
 	case <-s.quit:
 		return ErrShutdown
 	}

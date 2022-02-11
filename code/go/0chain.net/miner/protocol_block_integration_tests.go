@@ -8,6 +8,8 @@ import (
 	"errors"
 	"log"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -16,6 +18,7 @@ import (
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
+	"0chain.net/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -118,6 +121,13 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	}
 
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	if round == 30 {
+		logging.Logger.Warn("Conductor: testing",
+			zap.Any("node_type", nodeType),
+			zap.Any("type_rank", typeRank),
+			zap.Any("state", crpc.Client().State()),
+		)
+	} // todo rmv
 	return isTestingFunc(round, nodeType == generator, typeRank)
 }
 

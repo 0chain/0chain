@@ -77,7 +77,7 @@ func (s *State) Name(id NodeID) NodeName {
 
 func (s *State) copy() (cp *State) {
 	cp = new(State)
-	(*cp) = (*s)
+	*cp = *s
 	return
 
 }

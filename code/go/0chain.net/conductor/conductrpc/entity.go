@@ -5,7 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/conductor/conductrpc/stats"
+	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 )
 
@@ -86,9 +89,10 @@ func (e *Entity) pollState() {
 		}
 		var state, err = e.client.state(e.id)
 		if err != nil {
-			log.Printf("polling State: %v", err)
+			logging.Logger.Error("Conductor: error while polling state", zap.Error(err))
 			continue
 		}
+		logging.Logger.Info("Conductor: state is polled", zap.Any("state", state)) // todo
 		e.SetState(state)
 	}
 }

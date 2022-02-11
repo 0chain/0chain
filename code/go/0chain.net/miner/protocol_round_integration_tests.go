@@ -8,10 +8,13 @@ import (
 	"errors"
 	"log"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/core/logging"
 )
 
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
@@ -29,11 +32,18 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 func isMockingNotNotarisedBlockExtension(round int64) bool {
 	cfg := crpc.Client().State().ExtendNotNotarisedBlock
 	isConfigured := cfg != nil && cfg.OnRound == round+1
+	nodeType, typeRank := getNodeTypeAndTypeRank(round + 1)
+	if round == 29 {
+		logging.Logger.Info("Conductor: checking mocking",
+			zap.Any("node_type", nodeType),
+			zap.Any("type_rank", typeRank),
+			zap.Any("state", crpc.Client().State()),
+		)
+	} // todo rmv
 	if !isConfigured {
 		return false
 	}
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round + 1)
 	return nodeType == generator && typeRank == 0
 }
 
