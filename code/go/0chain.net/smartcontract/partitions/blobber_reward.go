@@ -18,7 +18,7 @@ type BlobberRewardNode struct {
 	SuccessChallenges int            `json:"success_challenges"`
 	WritePrice        state2.Balance `json:"write_price"`
 	ReadPrice         state2.Balance `json:"read_price"`
-	TotalData         int64          `json:"total_data"`
+	TotalData         float64        `json:"total_data"`
 	DataRead          float64        `json:"data_read"`
 }
 
