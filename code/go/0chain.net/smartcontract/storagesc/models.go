@@ -390,6 +390,8 @@ type StorageNode struct {
 	Terms           Terms                  `json:"terms"`    // terms
 	Capacity        int64                  `json:"capacity"` // total blobber capacity
 	Used            int64                  `json:"used"`     // allocated capacity
+	DataWritten     int64                  `json:"dataWritten"`
+	DataRead        float64                `json:"dataRead"`
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
 	PublicKey       string                 `json:"-" msg:"-"`
 	SavedData       int64                  `json:"saved_data"`
@@ -1286,7 +1288,7 @@ type ReadMarker struct {
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
 	ReadSize        int64            `json:"read_size"`
-	ReadSizeInGB    float64          `json:"read_size_in_gb`
+	ReadSizeInGB    float64          `json:"read_size_in_gb"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {

@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/partitions"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/smartcontract/partitions"
 
 	"go.uber.org/zap"
 
@@ -392,6 +393,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"blobber doesn't belong to allocation")
 	}
 
+	blobber, err := sc.getBlobber(details.BlobberID, balances)
+	if err != nil {
+		return "", common.NewError("commit_blobber_read",
+			"error fetching blobber object")
+	}
+
 	var (
 		sizeRead = sizeInGB(commitRead.ReadMarker.ReadSize)
 		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
@@ -439,6 +446,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err = rp.save(sc.ID, userID, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save read pool: %v", err)
+	}
+
+	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	if err != nil {
+		return "", common.NewErrorf("commit_blobber_read",
+			"can't save blobber: %v", err)
 	}
 
 	// save allocation
@@ -586,6 +599,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid signature for write marker")
 	}
 
+	blobber, err := sc.getBlobber(details.BlobberID, balances)
+	if err != nil {
+		return "", common.NewError("commit_connection_failed",
+			"error fetching blobber")
+	}
+
 	if details.AllocationRoot == commitConnection.AllocationRoot &&
 		details.LastWriteMarker != nil &&
 		details.LastWriteMarker.PreviousAllocationRoot ==
@@ -610,6 +629,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	details.LastWriteMarker = commitConnection.WriteMarker
 	details.Stats.UsedSize += commitConnection.WriteMarker.Size
 	details.Stats.NumWrites++
+
+	blobber.DataWritten += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
@@ -660,6 +681,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)
+	}
+
+	// save blobber
+	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"saving blobber object: %v", err)
 	}
 
 	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
