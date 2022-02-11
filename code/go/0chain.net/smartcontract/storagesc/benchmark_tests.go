@@ -623,7 +623,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage.pay_reward",
+			name:     "storage.collect_reward",
 			endpoint: ssc.collectReward,
 			txn: &transaction.Transaction{
 				ClientID:   data.Clients[0],
