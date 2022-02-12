@@ -258,6 +258,9 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 }
 
 func (an *AuthorizerNode) ToEvent() ([]byte, error) {
+	if an.Config == nil {
+		an.Config = new(AuthorizerConfig)
+	}
 	data, err := json.Marshal(&event.Authorizer{
 		Model:           gorm.Model{},
 		Fee:             an.Config.Fee,
