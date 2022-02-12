@@ -376,6 +376,37 @@ func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	require.NotNil(t, node.Staking.TokenLockInterface)
 }
 
+func Test_UpdateAuthorizerSettings(t *testing.T) {
+	ctx := MakeMockStateContext()
+
+	// Init
+	var data []byte
+	tr := CreateDefaultTransactionToZcnsc()
+	sc := CreateZCNSmartContract()
+
+	// Add
+	_, _ = sc.AddAuthorizer(tr, data, ctx)
+
+	// Get node and change its setting
+	node := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node)
+
+	node.Config.Fee = 111
+
+	cfg := &AuthorizerConfig{
+		Fee: 111,
+	}
+
+	node.UpdateConfig(cfg)
+	err := node.Save(ctx)
+	require.NoError(t, err)
+
+	// Get node and check its setting
+	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node.Config)
+	require.Equal(t, 111, node.Config.Fee)
+}
+
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {
 	node, err := GetAuthorizerNode(key, ctx)
 	require.NoError(t, err)

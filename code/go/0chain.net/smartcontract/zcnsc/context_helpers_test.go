@@ -259,6 +259,24 @@ func MakeMockStateContext() *mocks.StateContextI {
 			events[id] = authorizerNode
 		})
 
+	ctx.On(
+		"EmitEvent",
+		event.TypeStats,
+		event.TagUpdateAuthorizer,
+		mock.AnythingOfType("string"), // authorizerID
+		mock.AnythingOfType("string"), // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+			if err != nil {
+				panic(err)
+			}
+			if authorizerNode.ID != id {
+				panic("authorizerID must be equal to ID")
+			}
+			events[id] = authorizerNode
+		})
+
 	return ctx
 }
 
