@@ -41,8 +41,10 @@ const (
 	Deleting
 )
 
+var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting"}
+
 func (p PoolStatus) String() string {
-	return [...]string{"active", "pending", "inactive", "unstaking", "deleting"}[p]
+	return poolString[p]
 }
 
 func stakePoolKey(p Provider, id string) datastore.Key {
@@ -53,8 +55,7 @@ type StakePool struct {
 	Pools    map[string]*DelegatePool `json:"pools"`
 	Reward   state.Balance            `json:"rewards"`
 	Settings StakePoolSettings        `json:"settings"`
-	Minter   cstate.ApprovedMinters   `json:"minter"`
-	//mutex    sync.RWMutex             `json:"-"`
+	Minter   cstate.ApprovedMinter    `json:"minter"`
 }
 
 type StakePoolSettings struct {
@@ -94,8 +95,6 @@ func (sp *StakePool) Decode(input []byte) error {
 }
 
 func (sp *StakePool) OrderedPoolIds() []string {
-	//sp.mutex.Lock()
-	//defer sp.mutex.Unlock()
 	ids := make([]string, 0, len(sp.Pools))
 	for id := range sp.Pools {
 		ids = append(ids, id)
@@ -225,10 +224,10 @@ func (sp *StakePool) DistributeRewards(
 		return fmt.Errorf("no stake")
 	}
 
-	for _, id := range sp.OrderedPoolIds() {
-		ratio := float64(sp.Pools[id].Balance) / stake
-		sp.Pools[id].Reward += state.Balance(valueLeft * ratio)
-		reward.DelegateReward[id] = int64(sp.Pools[id].Reward)
+	for id, pool := range sp.Pools {
+		ratio := float64(pool.Balance) / stake
+		pool.Reward += state.Balance(valueLeft * ratio)
+		reward.DelegateReward[id] = int64(pool.Reward)
 	}
 	if err := reward.emit(balances); err != nil {
 		return err
@@ -237,11 +236,8 @@ func (sp *StakePool) DistributeRewards(
 }
 
 func (sp *StakePool) stake() (stake state.Balance) {
-	//sp.mutex.Lock()
-	//defer sp.mutex.Unlock()
-
-	for _, id := range sp.OrderedPoolIds() {
-		stake += sp.Pools[id].Balance
+	for _, pool := range sp.Pools {
+		stake += pool.Balance
 	}
 	return
 }

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
@@ -659,10 +661,11 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 // nodeWithVCPoolLock represents a MinerNode that use ViewChangeLock as tokenLockInterface
 // it is for decoding MinerNode bytes
 type nodeWithVCPoolLock struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*DelegatePoolWithVCPoolLock `json:"pending,omitempty"`
-	Active      map[string]*DelegatePoolWithVCPoolLock `json:"active,omitempty"`
-	Deleting    map[string]*DelegatePoolWithVCPoolLock `json:"deleting,omitempty"`
+	*SimpleNode         `json:"simple_miner"`
+	stakepool.StakePool `json:"stakepool.StakePool"`
+	//Pending     map[string]*DelegatePoolWithVCPoolLock `json:"pending,omitempty"`
+	//Active      map[string]*DelegatePoolWithVCPoolLock `json:"active,omitempty"`
+	//Deleting    map[string]*DelegatePoolWithVCPoolLock `json:"deleting,omitempty"`
 }
 
 func newNodeWithVCPoolLock() *nodeWithVCPoolLock {

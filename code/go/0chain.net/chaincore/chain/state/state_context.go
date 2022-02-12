@@ -14,10 +14,10 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-type ApprovedMinters int
+type ApprovedMinter int
 
 const (
-	MinterMiner ApprovedMinters = iota
+	MinterMiner ApprovedMinter = iota
 	MinterInterestPool
 	MinterStorage
 	MinterZcn
@@ -31,7 +31,7 @@ var (
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"} //zcn SC
 )
 
-func GetMinter(minter ApprovedMinters) (string, error) {
+func GetMinter(minter ApprovedMinter) (string, error) {
 	if int(minter) >= len(approvedMinters) {
 		return "", fmt.Errorf("invalid minter %v", minter)
 	}

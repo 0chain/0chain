@@ -119,8 +119,7 @@ func (sp *stakePool) stake() (stake state.Balance) {
 	return
 }
 
-// empty a delegate p
-//ool if possible, call update before the empty
+// empty a delegate pool if possible, call update before the empty
 func (sp *stakePool) empty(
 	sscID,
 	poolID,
@@ -130,6 +129,10 @@ func (sp *stakePool) empty(
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
 		return false, fmt.Errorf("no such delegate pool: %q", poolID)
+	}
+
+	if dp.DelegateID != clientID {
+		return false, errors.New("trying to unlock not by delegate pool owner")
 	}
 
 	// If insufficient funds in stake pool left after unlock,

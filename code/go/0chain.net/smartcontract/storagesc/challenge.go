@@ -111,7 +111,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	)
 
 	// part of this tokens goes to related validators
-	var validatorsReward = conf.ValidatorReward * float64(move)
+	var validatorsReward = conf.ValidatorReward * move
 	move -= validatorsReward
 
 	// for a case of a partial verification
@@ -247,7 +247,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	)
 
 	// part of this tokens goes to related validators
-	var validatorsReward = conf.ValidatorReward * float64(move)
+	var validatorsReward = conf.ValidatorReward * move
 	move -= validatorsReward
 
 	// validators' stake pools

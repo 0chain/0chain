@@ -1421,12 +1421,12 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberDetails {
 		// min lock demand rest
-		var paid float64 = 0.0
-		if lack := float64(d.MinLockDemand - d.Spent); lack > 0 {
+		var paid state.Balance = 0
+		if lack := d.MinLockDemand - d.Spent; lack > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
-				if pay > float64(aps[apIndex].Balance) {
-					pay = float64(aps[apIndex].Balance)
+				if pay > aps[apIndex].Balance {
+					pay = aps[apIndex].Balance
 				}
 				aps[apIndex].Balance -= state.Balance(pay)
 				if aps[apIndex].Balance == 0 {
@@ -1441,15 +1441,15 @@ func (sc *StorageSmartContract) finishAllocation(
 					"ammount was short by %v", d.BlobberID, lack)
 			}
 
-			err = sps[i].DistributeRewards(paid, d.BlobberID, stakepool.Blobber, balances)
+			err = sps[i].DistributeRewards(float64(paid), d.BlobberID, stakepool.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
 					"%v from alocation poosl %v, minlock demand %v spent %v error %v",
 					lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
 			}
 		}
-		d.Spent += state.Balance(paid)
-		d.FinalReward += state.Balance(paid)
+		d.Spent += paid
+		d.FinalReward += paid
 	}
 
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {
