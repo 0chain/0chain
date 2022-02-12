@@ -391,8 +391,6 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	node := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node)
 
-	node.Config.Fee = 111
-
 	cfg := &AuthorizerConfig{
 		Fee: 111,
 	}
