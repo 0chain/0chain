@@ -402,7 +402,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	// Get node and check its setting
 	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node.Config)
-	require.Equal(t, 111, node.Config.Fee)
+	require.Equal(t, 111, int64(node.Config.Fee))
 }
 
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {
