@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/chaincore/state"
+
 	"gorm.io/gorm"
 )
 
@@ -13,6 +15,9 @@ type Authorizer struct {
 	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
 	URL          string `json:"url"`
 
+	// Configuration
+	Fee state.Balance `json:"fee"`
+
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -21,11 +26,11 @@ type Authorizer struct {
 	LastHealthCheck int64 `json:"last_health_check"`
 
 	// stake_pool_settings
-	DelegateWallet string  `json:"delegate_wallet"`
-	MinStake       int64   `json:"min_stake"`
-	MaxStake       int64   `json:"max_stake"`
-	NumDelegates   int     `json:"num_delegates"`
-	ServiceCharge  float64 `json:"service_charge"`
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       state.Balance `json:"min_stake"`
+	MaxStake       state.Balance `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {

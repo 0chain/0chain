@@ -30,6 +30,7 @@ const (
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddAuthorizer
+	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker

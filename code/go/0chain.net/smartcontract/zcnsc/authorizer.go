@@ -70,7 +70,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err := common.NewError(code, msg)
+		err = common.NewError(code, msg)
 		Logger.Error("get global node", zap.Error(err))
 		return "", err
 	}
@@ -122,7 +122,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 
 	ev, err := authorizer.ToEvent()
 	if err != nil {
-		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		msg := fmt.Sprintf("error marshalling authorizer(authorizerID: %v) to event, err: %v", authorizerID, err)
 		err = common.NewError(code, msg)
 		Logger.Error("emitting event", zap.Error(err))
 		return "", err
@@ -222,5 +222,65 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	inputData []byte,
 	ctx cstate.StateContextI,
 ) (string, error) {
-	return "", nil
+	const (
+		code = "update_authorizer_settings"
+	)
+
+	gn, err := GetGlobalNode(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get global node, err: %v", err)
+		err = common.NewError(code, msg)
+		Logger.Error("get global node", zap.Error(err))
+		return "", err
+	}
+
+	in := &AuthorizerNode{}
+	if err = in.Decode(inputData); err != nil {
+		msg := fmt.Sprintf("decoding request: %v", err)
+		Logger.Error(msg, zap.Error(err))
+		err = common.NewError(code, msg)
+		return "", err
+	}
+
+	if in.Config.Fee < 0 || gn.Config.MaxFee < 0 {
+		msg := fmt.Sprintf("invalid negative Auth Config Fee: %v or GN Config MaxFee: %v", in.Config.Fee, gn.Config.MaxFee)
+		err = common.NewErrorf(code, msg)
+		Logger.Error(msg, zap.Error(err))
+		return "", err
+	}
+
+	if in.Config.Fee > gn.Config.MaxFee {
+		msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", in.Config.Fee, gn.Config.MaxFee)
+		err = common.NewErrorf(code, msg)
+		Logger.Error(msg, zap.Error(err))
+		return "", err
+	}
+
+	var an *AuthorizerNode
+	an, err = GetAuthorizerNode(in.ID, ctx)
+	if err != nil {
+		return "", common.NewError(code, err.Error())
+	}
+
+	an.UpdateConfig(in.Config)
+
+	err = an.Save(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", an.ID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("saving authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	ev, err := an.ToEvent()
+	if err != nil {
+		msg := fmt.Sprintf("error marshalling authorizer (authorizerID: %v) to event, err: %v", an.ID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("emitting event", zap.Error(err))
+		return "", err
+	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, an.ID, string(ev))
+
+	return string(an.Encode()), nil
 }

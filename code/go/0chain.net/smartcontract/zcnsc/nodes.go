@@ -175,6 +175,14 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 	}
 }
 
+func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) {
+	if an.Config == nil {
+		an.Config = new(AuthorizerConfig)
+	}
+
+	an.Config.Fee = cfg.Fee
+}
+
 func (an *AuthorizerNode) GetKey() string {
 	return fmt.Sprintf("%s:%s:%s", ADDRESS, AuthorizerNodeType, an.ID)
 }
@@ -252,6 +260,7 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 func (an *AuthorizerNode) ToEvent() ([]byte, error) {
 	data, err := json.Marshal(&event.Authorizer{
 		Model:           gorm.Model{},
+		Fee:             an.Config.Fee,
 		AuthorizerID:    an.ID,
 		URL:             an.URL,
 		Latitude:        0,
