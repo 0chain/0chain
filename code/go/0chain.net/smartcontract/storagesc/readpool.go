@@ -90,14 +90,14 @@ func (rp *readPool) movePartToBlobber(
 		return errors.New("no stake pools found")
 	}
 
-	for _, id := range sp.OrderedPoolIds() {
-		ratio := float64(sp.Pools[id].Balance) / stake
+	for _, pool := range sp.Pools {
+		ratio := float64(pool.Balance) / stake
 		move := float64(valueLeft) * ratio
 		if state.Balance(move) > ap.Balance {
 			return fmt.Errorf("allocation pool balance %v not enough to cover stake pool reward %v",
 				ap.Balance, blobberCharge)
 		}
-		sp.Pools[id].Reward += state.Balance(move)
+		pool.Reward += state.Balance(move)
 		ap.Balance -= state.Balance(move)
 	}
 
@@ -144,26 +144,25 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		}
 		var (
 			bp   = ap.Blobbers[bi]
-			move float64
+			move state.Balance
 		)
 		if value >= bp.Balance {
-			move, bp.Balance = float64(bp.Balance), 0
+			move, bp.Balance = bp.Balance, 0
 		} else {
-			move, bp.Balance = float64(value), bp.Balance-value
+			move, bp.Balance = value, bp.Balance-value
 		}
 
-		err = rp.movePartToBlobber(sscKey, ap, sp, move, balances)
+		err = rp.movePartToBlobber(sscKey, ap, sp, float64(move), balances)
 		if err != nil {
 			return // fatal, can't move, can't continue, rollback all
 		}
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
-			Balance: state.Balance(move),
+			Balance: move,
 		})
 
-		moved += state.Balance(move)
-		//sp.Rewards.Blobber += value
+		moved += move
 		if bp.Balance == 0 {
 			ap.Blobbers.removeByIndex(bi)
 		}
