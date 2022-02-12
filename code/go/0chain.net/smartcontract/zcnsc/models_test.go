@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
@@ -173,7 +175,7 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 	source := &AuthorizerNode{
 		Config: &AuthorizerConfig{
-			Fee: 222,
+			Fee: state.Balance(222),
 		},
 	}
 
@@ -181,7 +183,7 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 	err := target.Decode(source.Encode())
 	require.NoError(t, err)
 	require.NotNil(t, target.Staking)
-	require.Equal(t, 222, target.Config.Fee)
+	require.Equal(t, state.Balance(222), target.Config.Fee)
 }
 
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
