@@ -172,6 +172,9 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 				Owner:     ID,
 			},
 		},
+		Config: &AuthorizerConfig{
+			Fee: 0,
+		},
 	}
 }
 

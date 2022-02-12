@@ -217,11 +217,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	return response, err
 }
 
-func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
-	tran *transaction.Transaction,
-	inputData []byte,
-	ctx cstate.StateContextI,
-) (string, error) {
+func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(_ *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (string, error) {
 	const (
 		code = "update_authorizer_settings"
 	)
