@@ -56,7 +56,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
 		newEvents := edb.removeDuplicate(ctx, events)
-
+		fmt.Println(events)
 		edb.addEvents(ctx, newEvents)
 		for _, event := range newEvents {
 			var err error = nil
@@ -64,6 +64,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			case TypeStats:
 				err = edb.addStat(event)
 			case TypeError:
+				fmt.Println("came here")
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
 					Error:         event.Data,

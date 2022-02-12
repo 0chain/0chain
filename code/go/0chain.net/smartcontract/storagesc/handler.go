@@ -362,19 +362,21 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		allocationID = params.Get("allocation_id")
-		authTicket   = params.Get("auth_ticket")
+		allocationID       = params.Get("allocation_id")
+		authTicket         = params.Get("auth_ticket")
+		offsetString       = params.Get("offset")
+		limitString        = params.Get("limit")
+		isDescendingString = params.Get("is_descending")
+		limit              = -1
+		offset             = -1
+		isDescending       = false
 	)
-
-	if allocationID == "" && authTicket == "" {
-		return nil, common.NewErrInternal("Expecting params: allocation_id OR auth_ticket")
-	}
 
 	if balances.GetEventDB() == nil {
 		return nil, common.NewErrNoResource("db not initialized")
 	}
 
-	query := new(event.ReadMarker)
+	query := event.ReadMarker{}
 	if allocationID != "" {
 		query.AllocationID = allocationID
 	}
@@ -383,7 +385,31 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 		query.AuthTicket = authTicket
 	}
 
-	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQuery(query)
+	if offsetString != "" {
+		o, err := strconv.Atoi(offsetString)
+		if err != nil {
+			return nil, errors.New("offset is invalid")
+		}
+		offset = o
+	}
+
+	if limitString != "" {
+		l, err := strconv.Atoi(limitString)
+		if err != nil {
+			return nil, errors.New("limit is invalid")
+		}
+		limit = l
+	}
+
+	if isDescendingString != "" {
+		isD, err := strconv.ParseBool(isDescendingString)
+		if err != nil {
+			return nil, errors.New("is_descending is invalid")
+		}
+		isDescending = isD
+	}
+
+	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQueryPaginated(query, offset, limit, isDescending)
 	if err != nil {
 		return nil, common.NewErrInternal("can't get read markers", err.Error())
 	}

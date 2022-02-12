@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 )
@@ -25,18 +26,22 @@ type ReadMarker struct {
 	BlockNumber   int64   `json:"block_number"`
 }
 
-func (edb *EventDb) GetReadMarkersFromQuery(query *ReadMarker) (*[]ReadMarker, error) {
-
-	if query == nil {
-		return nil, common.NewError("get_read_markers", "empty query")
-	}
-
-	var rms []ReadMarker
-	result := edb.Store.Get().
+func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, offset, limit int, isDescending bool) ([]ReadMarker, error) {
+	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
-		Where(query).
-		Find(&rms)
-	return &rms, result.Error
+		Where(query)
+	if offset != -1 {
+		queryBuilder = queryBuilder.Offset(offset)
+	}
+	if limit != -1 {
+		queryBuilder = queryBuilder.Limit(limit)
+	}
+	queryBuilder.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   isDescending,
+	})
+	var rms []ReadMarker
+	return rms, queryBuilder.Scan(&rms).Error
 }
 
 func (edb EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, err error) {
