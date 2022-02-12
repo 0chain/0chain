@@ -196,8 +196,6 @@ func (an *AuthorizerNode) Encode() []byte {
 }
 
 func (an *AuthorizerNode) Decode(input []byte) error {
-	tokenlock := &TokenLock{}
-
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -244,11 +242,24 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 
 	staking, ok := objMap["staking"]
 	if ok {
+		tokenlock := &TokenLock{}
 		err = an.Staking.Decode(*staking, tokenlock)
 		if err != nil {
 			return err
 		}
 	}
+
+	rawCfg, ok := objMap["config"]
+	if ok {
+		var cfg = &AuthorizerConfig{}
+		err = json.Unmarshal(*rawCfg, cfg)
+		if err != nil {
+			return err
+		}
+
+		an.Config = cfg
+	}
+
 	return nil
 }
 

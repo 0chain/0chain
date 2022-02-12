@@ -170,6 +170,20 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 	require.Equal(t, int(target.Balance), 100)
 }
 
+func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
+	source := &AuthorizerNode{
+		Config: &AuthorizerConfig{
+			Fee: 222,
+		},
+	}
+
+	target := &AuthorizerNode{}
+	err := target.Decode(source.Encode())
+	require.NoError(t, err)
+	require.NotNil(t, target.Staking)
+	require.Equal(t, 222, target.Config.Fee)
+}
+
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
