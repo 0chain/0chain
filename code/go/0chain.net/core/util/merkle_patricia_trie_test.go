@@ -1128,6 +1128,7 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
+	mndb1 := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 
 	type fields struct {
@@ -1150,7 +1151,7 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 			fields: fields{
 				mutex:           &sync.RWMutex{},
 				Root:            mpt.root,
-				db:              nil,
+				db:              mndb1,
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
 			},
@@ -1171,8 +1172,8 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 			}
 
 			mpt.SetNodeDB(tt.args.ndb)
-
-			if !reflect.DeepEqual(tt.args.ndb, mpt.db) {
+			lndb := mpt.db.(*LevelNodeDB)
+			if !reflect.DeepEqual(tt.args.ndb, lndb.current) {
 				t.Errorf("SetNodeDB() setted = %v, want = %v", mpt.db, tt.args.ndb)
 			}
 		})
