@@ -176,7 +176,7 @@ type InfraHealth struct {
 	HeapAlloc             uint64 `json:"heap_alloc"`
 	MissingNodes          *int64 `json:"missing_nodes"`
 	StateMissingNodes     int64  `json:"state_missing_nodes"`
-	RedisCollection       int64  `json:"redis_collection"`
+	RedisCollection       *int64 `json:"redis_collection"`
 	IsLFBStateComputed    bool   `json:"is_lfb_state_computed"`
 	IsDKGProcessDisabled  bool   `json:"is_dkg_process_disabled"`
 	IsLFBStateInitialized bool   `json:"is_lfb_state_initialized"`
@@ -348,7 +348,7 @@ func (c *Chain) getInfraHealth() InfraHealth {
 		GoRoutines:            runtime.NumGoroutine(),
 		HeapAlloc:             mstats.HeapAlloc,
 		MissingNodes:          missingNodes,
-		RedisCollection:       *redisCollection,
+		RedisCollection:       redisCollection,
 		IsLFBStateComputed:    isLFBStateComputed,
 		IsLFBStateInitialized: isLFBStateInitialized,
 		IsDKGProcessDisabled:  isDKGProcessDisabled,
