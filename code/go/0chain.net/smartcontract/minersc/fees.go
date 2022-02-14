@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -19,11 +21,13 @@ import (
 )
 
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
-	for id, pool := range mn.Pending {
-		pool.Status = ACTIVE
-		mn.Active[id] = pool
-		mn.TotalStaked += int64(pool.Balance)
-		delete(mn.Pending, id)
+	for _, pool := range mn.Pools {
+		if pool.Status == stakepool.Pending {
+			pool.Status = stakepool.Active
+			mn.NumPending--
+			mn.NumActive++
+			mn.TotalStaked += int64(pool.Balance)
+		}
 	}
 }
 
@@ -86,46 +90,41 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 // unlock deleted pools
 func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {
-
-	for id := range mn.Deleting {
-		var pool = mn.Active[id]
-		if _, err = msc.emptyPool(mn, pool, round, balances); err != nil {
-			return common.NewError("pay_fees/unlock_deleted", err.Error())
+	for _, pool := range mn.Pools {
+		if pool.Status == stakepool.Deleting {
+			pool.Status = stakepool.Deleted
+			mn.NumActive--
 		}
-		delete(mn.Active, id)
-		delete(mn.Deleting, id)
 	}
 
 	return
 }
 
 // unlock all delegate pools of offline node
-func (msc *MinerSmartContract) unlockOffline(mn *MinerNode,
-	balances cstate.StateContextI) (err error) {
-
-	mn.Deleting = make(map[string]*sci.DelegatePool) // reset
-
-	// unlock all pending
-	for id, pool := range mn.Pending {
-		if _, err = msc.emptyPool(mn, pool, 0, balances); err != nil {
+func (msc *MinerSmartContract) unlockOffline(
+	mn *MinerNode,
+	balances cstate.StateContextI,
+) error {
+	for id, pool := range mn.Pools {
+		transfer := state.NewTransfer(ADDRESS, pool.DelegateID, pool.Balance)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
+		}
+		err := msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, balances)
+		if err != nil {
 			return common.NewError("pay_fees/unlock_offline", err.Error())
 		}
-		delete(mn.Pending, id)
+
+		pool.Status = stakepool.Deleted
+	}
+	mn.NumPending = 0
+	mn.NumActive = 0
+
+	if err := mn.save(balances); err != nil {
+		return err
 	}
 
-	// unlock all active
-	for id, pool := range mn.Active {
-		if _, err = msc.emptyPool(mn, pool, 0, balances); err != nil {
-			return common.NewError("pay_fees/unlock_offline", err.Error())
-		}
-		delete(mn.Active, id)
-	}
-
-	if err = mn.save(balances); err != nil {
-		return
-	}
-
-	return
+	return nil
 }
 
 func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
@@ -461,49 +460,53 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
 	node *MinerNode, gn *GlobalNode, isSharder bool,
 	balances cstate.StateContextI) (resp string, err error) {
-
-	if !gn.canMint() {
-		return // can't mint anymore
-	}
-
 	if value == 0 {
-		return // nothing to mint
+		return
 	}
 
 	if isSharder {
 		node.Stat.SharderRewards += value
+		err = node.StakePool.DistributeRewards(
+			float64(value), node.ID, stakepool.Sharder, balances,
+		)
 	} else {
 		node.Stat.GeneratorRewards += value
-	}
-
-	var totalStaked = node.TotalStaked
-
-	for _, pool := range node.orderedActivePools() {
-		var (
-			ratio    = float64(pool.Balance) / float64(totalStaked)
-			userMint = state.Balance(float64(value) * ratio)
+		err = node.StakePool.DistributeRewards(
+			float64(value), node.ID, stakepool.Miner, balances,
 		)
-
-		Logger.Info("mint delegate",
-			zap.Any("pool", pool),
-			zap.Any("mint", userMint))
-
-		if userMint == 0 {
-			continue // avoid insufficient minting
-		}
-
-		var mint = state.NewMint(ADDRESS, pool.DelegateID, userMint)
-		if err = balances.AddMint(mint); err != nil {
-			resp += fmt.Sprintf("pay_fee/minting - adding mint: %v", err)
-			continue
-		}
-		msc.addMint(gn, mint.Amount)
-		pool.AddRewards(userMint)
-
-		resp += string(mint.Encode())
 	}
+	return "", nil
+	/*
+		var totalStaked = node.TotalStaked
 
-	return resp, nil
+		//for _, pool := range node.orderedActivePools() {
+		for _, pool := range node.Pools{
+			var (
+				ratio    = float64(pool.Balance) / float64(totalStaked)
+				userMint = state.Balance(float64(value) * ratio)
+			)
+
+			Logger.Info("mint delegate",
+				zap.Any("pool", pool),
+				zap.Any("mint", userMint))
+
+			if userMint == 0 {
+				continue // avoid insufficient minting
+			}
+
+			var mint = state.NewMint(ADDRESS, pool.DelegateID, userMint)
+			if err = balances.AddMint(mint); err != nil {
+				resp += fmt.Sprintf("pay_fee/minting - adding mint: %v", err)
+				continue
+			}
+			msc.addMint(gn, mint.Amount)
+			pool.AddRewards(userMint)
+
+			resp += string(mint.Encode())
+		}
+
+		return resp, nil
+	*/
 }
 
 func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
