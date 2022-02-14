@@ -217,6 +217,11 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 
+	if mr.IsVerificationComplete() {
+		logging.Logger.Debug("verify block - received block for round with finished verification phase")
+		return nil
+	}
+
 	if !mr.IsVRFComplete() {
 		logging.Logger.Info("verify block - got block proposal before VRF is complete",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -260,16 +265,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	/* Since this is a notarized block, we are accepting it. */
-	b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
-	if err != nil {
-		logging.Logger.Error("verify block failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("miner", b.MinerID),
-			zap.Error(err))
-		return nil
-	}
-
+	b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
 	b = b1
 	mr = r1.(*Round)
 	logging.Logger.Info("verify block - added a notarizedBlockToRound, got notarized block with different RRS",
@@ -478,10 +474,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
-		logging.Logger.Error("process notarization - not added to round")
-		return fmt.Errorf("can't add already notarized block to round: %v", err)
-	}
+	mc.AddNotarizedBlockToRound(r, b)
 	mc.ProgressOnNotarization(r)
 
 	// update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
@@ -525,13 +518,20 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 }
 
 func (mc *Chain) ProgressOnNotarization(notRound *Round) {
-	if mc.GetCurrentRound() <= notRound.Number {
+	curNumber := mc.GetCurrentRound()
+	if curNumber <= notRound.Number {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", notRound.Number+1))
 		//notRound.CancelVerification()
 		//notRound.TryCancelBlockGeneration()
 		//TODO implement round centric context, that is cancelled when transition to the next happens
+		curRound := mc.GetMinerRound(curNumber)
 		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
+
+		if curRound != nil {
+			curRound.CancelVerification()
+			curRound.TryCancelBlockGeneration()
+		}
 	}
 }
 

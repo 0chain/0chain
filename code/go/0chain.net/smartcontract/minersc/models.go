@@ -222,8 +222,6 @@ type GlobalNode struct {
 	// MinStake boundary of SC.
 	MinStake state.Balance `json:"min_stake"`
 
-	// Stake interests.
-	InterestRate float64 `json:"interest_rate"`
 	// Reward rate.
 	RewardRate float64 `json:"reward_rate"`
 	// ShareRatio is miner/block sharders rewards ratio.
@@ -236,8 +234,6 @@ type GlobalNode struct {
 	Epoch int64 `json:"epoch"`
 	// RewardDeclineRate is ratio of epoch rewards declining.
 	RewardDeclineRate float64 `json:"reward_decline_rate"`
-	// InterestDeclineRate is ratio of epoch interests declining.
-	InterestDeclineRate float64 `json:"interest_decline_rate"`
 	// MaxMint is minting boundary for SC.
 	MaxMint state.Balance `json:"max_mint"`
 
@@ -267,14 +263,12 @@ func (gn *GlobalNode) readConfig() {
 	gn.MinS = config.SmartContractConfig.GetInt(pfx + SettingName[MinS])
 	gn.MaxDelegates = config.SmartContractConfig.GetInt(pfx + SettingName[MaxDelegates])
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
-	gn.InterestRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[InterestRate])
 	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
 	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
 	gn.BlockReward = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[BlockReward]) * 1e10)
 	gn.MaxCharge = config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
 	gn.Epoch = config.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
-	gn.InterestDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[InterestDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
 }
@@ -346,8 +340,6 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MaxDelegates, nil
 	case RewardRoundFrequency:
 		return gn.RewardRoundFrequency, nil
-	case InterestRate:
-		return gn.InterestRate, nil
 	case RewardRate:
 		return gn.RewardRate, nil
 	case ShareRatio:
@@ -360,8 +352,6 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.Epoch, nil
 	case RewardDeclineRate:
 		return gn.RewardDeclineRate, nil
-	case InterestDeclineRate:
-		return gn.InterestDeclineRate, nil
 	case MaxMint:
 		return gn.MaxMint, nil
 	case OwnerId:
@@ -535,20 +525,16 @@ func (gn *GlobalNode) canMint() bool {
 
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
-	var ir, rr = gn.InterestRate, gn.RewardRate
+	var rr = gn.RewardRate
 	// decline the value
 	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
-	gn.InterestRate = gn.InterestRate * (1.0 - gn.InterestDeclineRate)
 
 	// log about the epoch declining
 	Logger.Info("miner sc: epoch decline",
 		zap.Int64("round", gn.LastRound),
 		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
-		zap.Float64("interest_decline_rate", gn.InterestDeclineRate),
 		zap.Float64("prev_reward_rate", rr),
-		zap.Float64("prev_interest_rate", ir),
 		zap.Float64("new_reward_rate", gn.RewardRate),
-		zap.Float64("new_interest_rate", gn.InterestRate),
 	)
 }
 
@@ -647,7 +633,8 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
-
+	//Logger.Debug("saving miner node", zap.String("id", mn.ID),
+	//	zap.Int("pending", len(mn.Pending)), zap.Int("active", len(mn.Active)), zap.Int("size", len(mn.Encode())))
 	//Logger.Debug("MinerNode save successfully",
 	//	zap.String("path", encryption.Hash(mn.GetKey())),
 	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
@@ -664,7 +651,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	mn.ID = params.Get("id")
 
 	if mn.N2NHost == "" || mn.ID == "" {
-		return errors.New("BaseURL or ID is not specified")
+		return errors.New("URL or ID is not specified")
 	}
 	return nil
 }
@@ -847,6 +834,9 @@ type SimpleNode struct {
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+
+	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
+	Status int `json:"-"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

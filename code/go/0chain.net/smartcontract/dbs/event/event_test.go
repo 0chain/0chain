@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
 )
 
 func init() {
@@ -48,5 +49,51 @@ func (edb *EventDb) drop() error {
 	if err != nil {
 		return err
 	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Transaction{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Error{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Validator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Block{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ReadMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Miner{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Curator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

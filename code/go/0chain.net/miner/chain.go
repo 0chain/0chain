@@ -51,10 +51,15 @@ var (
 	ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
 
 	minerChain = &Chain{}
+
+	mcGuard sync.RWMutex
 )
 
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
+	mcGuard.Lock()
+	defer mcGuard.Unlock()
+
 	minerChain.Chain = c
 	minerChain.Config = c.Config
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
@@ -86,6 +91,8 @@ func SetupMinerChain(c *chain.Chain) {
 
 /*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
+	mcGuard.RLock()
+	defer mcGuard.RUnlock()
 	return minerChain
 }
 
@@ -262,7 +269,6 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 func (mc *Chain) SetPreviousBlock(r round.RoundI, b *block.Block, pb *block.Block) {
 	b.SetPreviousBlock(pb)
 	mc.SetRoundRank(r, b)
-	b.ComputeChainWeight()
 }
 
 // GetMinerRound - get the miner's version of the round.

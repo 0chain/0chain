@@ -23,25 +23,33 @@ var ErrStopIterator = common.NewError("stop_iterator", "Stop MPT Iteration")
 var MaxStateNodesForSync = 10000
 
 func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return context.DeadlineExceeded
-		default:
-		}
-
+	return common.RunWithRetries(ctx, 20, func() error {
 		err := c.GetBlockStateChange(b)
 		if err != nil {
 			logging.Logger.Info("can't get block state changes, retrying", zap.Error(err))
-			continue
 		}
-		return nil
-	}
+		return err
+	})
 }
 
 //GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	ts := time.Now()
+	if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
+		logging.Logger.Debug("block has the same state", zap.Any("block", b.Hash),
+			zap.Any("block_state_hash", b.ClientStateHash))
+		if !b.PrevBlock.IsStateComputed() {
+			return common.NewError("get_block_state_changes", "block is not changed but prev block state is not computed")
+		}
+		s := block.CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
+		b.SetClientState(s)
+		b.SetStateStatus(b.PrevBlock.GetStateStatus())
+
+		logging.Logger.Debug("get_block_state_changes - apply took",
+			zap.Int64("round", b.Round),
+			zap.Any("duration", time.Since(ts)))
+		return nil
+	}
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
 		return common.NewError("get block state changes", err.Error())
@@ -418,7 +426,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		default:
 		}
 		if bsc == nil {
-			logging.Logger.Error("get_block_state_change - could not get state changes from miners",
+			logging.Logger.Error("get_block_state_change - could not get state changes from remote",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			return nil, common.NewError("block_state_change_error",

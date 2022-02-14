@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strconv"
 
 	"0chain.net/core/common"
@@ -25,7 +26,7 @@ type BlockSummary struct {
 	ClientStateHash       util.Key      `json:"state_hash"`
 	ReceiptMerkleTreeRoot string        `json:"receipt_merkle_tree_root"`
 	NumTxns               int           `json:"num_txns"`
-	*MagicBlock           `json:"maigc_block,omitempty"`
+	*MagicBlock           `json:"maigc_block,omitempty" msgpack:"mb,omitempty"`
 }
 
 var blockSummaryEntityMetadata *datastore.EntityMetadataImpl
@@ -42,8 +43,9 @@ func SetupBlockSummaryEntity(store datastore.Store) {
 }
 
 /*SetupBlockSummaryDB - sets up the block summary database */
-func SetupBlockSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/blocksummary")
+func SetupBlockSummaryDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/blocksummary")
+	db, err := ememorystore.CreateDB(datadir)
 	if err != nil {
 		panic(err)
 	}

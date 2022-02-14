@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"0chain.net/core/common"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -28,6 +28,7 @@ type Phase int32
 const (
 	ShareVRF Phase = iota
 	Verify
+	//mb cancelled is better name
 	Notarize
 	Share
 	Complete
@@ -199,7 +200,7 @@ type Round struct {
 	// notarization is received. For a verifier, this is the block that is
 	// currently the best block received for verification. Once a round is
 	// finalized, this is the finalized block of the given round.
-	Block     *block.Block `json:"-"`
+	Block     *block.Block `json:"-" msgpack:"-"`
 	BlockHash string       `json:"block_hash"`
 	VRFOutput string       `json:"vrf_output"` // TODO: VRFOutput == rbooutput?
 
@@ -294,11 +295,7 @@ func (r *Round) GetVRFOutput() string {
 
 // AddNotarizedBlock - this will be concurrent as notarization is recognized by
 // verifying as well as notarization message from others.
-func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
-	if b.GetRoundRandomSeed() == 0 {
-		return nil, false, common.NewError("add_notarized_block", "block has no seed")
-	}
-
+func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -313,7 +310,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 			logging.Logger.Debug("add notarized block - block already exist, merge tickets",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return blk, false, nil
+			return blk, false
 		}
 		if blk.RoundRank == b.RoundRank {
 			found = i
@@ -340,11 +337,11 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool {
-		return rnb[i].ChainWeight > rnb[j].ChainWeight
+		return rnb[i].Weight() > rnb[j].Weight()
 	})
 	r.notarizedBlocks = rnb
 	logging.Logger.Debug("reached notarization", zap.Int64("round", b.Round))
-	return b, true, nil
+	return b, true
 }
 
 // UpdateNotarizedBlock updates the notarized block in the round
@@ -532,8 +529,10 @@ func SetupEntity(store datastore.Store) {
 }
 
 //SetupRoundSummaryDB - setup the round summary db
-func SetupRoundSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
+func SetupRoundSummaryDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/roundsummary")
+
+	db, err := ememorystore.CreateDB(datadir)
 	if err != nil {
 		panic(err)
 	}

@@ -1,6 +1,9 @@
 package event
 
 import (
+	"time"
+
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
 	"errors"
@@ -19,8 +22,10 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store: db,
+		Store:         db,
+		eventsChannel: make(chan events, 1000000),
 	}
+	go eventDb.addEventsWorker(common.GetRootContext())
 
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
@@ -30,10 +35,25 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
+	eventsChannel chan events
 }
 
+type events []Event
+
 func (edb *EventDb) AutoMigrate() error {
-	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}); err != nil {
+	if err := edb.Store.Get().AutoMigrate(
+		&Event{},
+		&Blobber{},
+		&WriteMarker{},
+		&Transaction{},
+		&Validator{},
+		&ReadMarker{},
+		&Block{},
+		&Error{},
+		&Miner{},
+		&Sharder{},
+		&Curator{},
+	); err != nil {
 		return err
 	}
 	return nil

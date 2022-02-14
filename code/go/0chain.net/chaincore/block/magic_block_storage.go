@@ -2,6 +2,7 @@ package block
 
 import (
 	"context"
+	"path/filepath"
 	"strconv"
 
 	"0chain.net/core/datastore"
@@ -32,8 +33,8 @@ func SetupMagicBlockData(store datastore.Store) {
 	datastore.RegisterEntityMetadata("magicblockdata", magicBlockMetadata)
 }
 
-func SetupMagicBlockDataDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/mb")
+func SetupMagicBlockDataDB(workdir string) {
+	db, err := ememorystore.CreateDB(filepath.Join(workdir, "data/rocksdb/mb"))
 	if err != nil {
 		panic(err)
 	}

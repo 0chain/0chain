@@ -2,11 +2,14 @@ package storagesc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/logging"
 
@@ -78,6 +81,63 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	return sn, err
 }
 
+// GetBlobberCountHandler returns Blobber count from its individual stored value.
+func (ssc *StorageSmartContract) GetBlobberCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	blobberCount, err := balances.GetEventDB().GetBlobberCount()
+	if err != nil {
+		return nil, fmt.Errorf("Error while geting the blobber count")
+	}
+	return map[string]int64{
+		"count": blobberCount,
+	}, nil
+}
+
+// GetBlobberTotalStakesHandler returns blobber total stake
+func (ssc *StorageSmartContract) GetBlobberTotalStakesHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberId()
+	if err != nil {
+		return nil, err
+	}
+	var total int64
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(blobber, balances)
+		if err != nil {
+			return nil, err
+		}
+		total += int64(sp.stake())
+	}
+	return map[string]int64{
+		"total": total,
+	}, nil
+}
+
+// GetBlobberLatitudeLongitudeHandler returns blobber latitude and longitude
+func (ssc *StorageSmartContract) GetBlobberLatitudeLongitudeHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return nil, fmt.Errorf("Unable to connect to eventdb database")
+	}
+	blobbers, err := balances.GetEventDB().GetAllBlobberLatLong()
+	if err != nil {
+		return nil, err
+	}
+	return blobbers, nil
+}
+
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
 // blobbers with zero capacity).
 func (ssc *StorageSmartContract) GetBlobbersHandler(
@@ -101,6 +161,110 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		sns.Nodes.add(&sn)
 	}
 	return sns, nil
+}
+
+func (msc *StorageSmartContract) GetTransactionByHashHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var transactionHash = params.Get("transaction_hash")
+	if len(transactionHash) == 0 {
+		return nil, errors.New("cannot find valid transaction: transaction_hash is empty")
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
+	return transaction, err
+}
+
+func (msc *StorageSmartContract) GetTransactionByFilterHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var (
+		clientID     = params.Get("client_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		blockHash    = params.Get("block_hash")
+	)
+	if offsetString == "" {
+		offsetString = "0"
+	}
+	if limitString == "" {
+		limitString = "10"
+	}
+	offset, err := strconv.Atoi(offsetString)
+	if err != nil {
+		return nil, errors.New("offset value was not valid")
+	}
+
+	limit, err := strconv.Atoi(limitString)
+	if err != nil {
+		return nil, errors.New("limitString value was not valid")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	if clientID != "" {
+		return balances.GetEventDB().GetTransactionByClientId(clientID, offset, limit)
+	}
+	if blockHash != "" {
+		return balances.GetEventDB().GetTransactionByBlockHash(blockHash, offset, limit)
+	}
+	return nil, errors.New("No filter selected")
+}
+
+func (msc *StorageSmartContract) GetWriteMarkerHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var (
+		offsetString       = params.Get("offset")
+		limitString        = params.Get("limit")
+		isDescendingString = params.Get("is_descending")
+	)
+	if offsetString == "" {
+		offsetString = "0"
+	}
+	if limitString == "" {
+		limitString = "10"
+	}
+	offset, err := strconv.Atoi(offsetString)
+	if err != nil {
+		return nil, errors.New("offset value was not valid")
+	}
+
+	limit, err := strconv.Atoi(limitString)
+	if err != nil {
+		return nil, errors.New("limitString value was not valid")
+	}
+	isDescending, err := strconv.ParseBool(isDescendingString)
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	return balances.GetEventDB().GetWriteMarkers(offset, limit, isDescending)
+}
+
+func (msc *StorageSmartContract) GetErrors(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	transactionHash := params.Get("transaction_hash")
+	if len(transactionHash) == 0 {
+		return nil, fmt.Errorf("cannot find valid transaction_hash: %v", transactionHash)
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	transaction, err := balances.GetEventDB().GetErrorByTransactionHash(transactionHash)
+	return &transaction, err
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
@@ -225,6 +389,125 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 }
 
+func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+		authTicket   = params.Get("auth_ticket")
+	)
+
+	if allocationID == "" && authTicket == "" {
+		return nil, common.NewErrInternal("Expecting params: allocation_id OR auth_ticket")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	query := new(event.ReadMarker)
+	if allocationID != "" {
+		query.AllocationID = allocationID
+	}
+
+	if authTicket != "" {
+		query.AuthTicket = authTicket
+	}
+
+	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQuery(query)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get read markers", err.Error())
+	}
+
+	return readMarkers, nil
+
+}
+
+func (ssc *StorageSmartContract) GetReadMarkersCount(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("Expecting params: allocation_id")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	query := new(event.ReadMarker)
+	if allocationID != "" {
+		query.AllocationID = allocationID
+	}
+
+	count, err := balances.GetEventDB().CountReadMarkersFromQuery(query)
+	if err != nil {
+		return nil, common.NewErrInternal("can't count read markers", err.Error())
+	}
+
+	return struct {
+		ReadMarkersCount int64 `json:"read_markers_count"`
+	}{
+		ReadMarkersCount: count,
+	}, nil
+
+}
+
+func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation id is empty")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get write markers", err.Error())
+	}
+
+	return writeMarkers, nil
+
+}
+
+func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		validatorID = params.Get("validator_id")
+	)
+
+	if validatorID == "" {
+		return nil, common.NewErrInternal("validator id is empty")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("Event db not initialized")
+	}
+
+	validator, err := balances.GetEventDB().GetValidatorByValidatorID(validatorID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get validator", err.Error())
+	}
+
+	return validator, nil
+
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
@@ -280,4 +563,24 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	}
 
 	return blobberChallengeObj.ChallengeMap[challengeID], nil
+}
+
+func (ssc *StorageSmartContract) GetBlockByHashHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	hash := params.Get("block_hash")
+	if len(hash) == 0 {
+		return nil, fmt.Errorf("cannot find valid block hash: %v", hash)
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	block, err := balances.GetEventDB().GetBlocksByHash(hash)
+	return &block, err
+}
+
+func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	block, err := balances.GetEventDB().GetBlocks()
+	return &block, err
 }

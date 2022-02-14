@@ -32,7 +32,7 @@ func init() {
 
 	block.SetupBlockSummaryEntity(ememorystore.GetStorageProvider())
 
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 
 	viper.Set("minio.enabled", true)
 }

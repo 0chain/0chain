@@ -3,10 +3,12 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"golang.org/x/net/context"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 
 	"gorm.io/gorm"
 )
@@ -64,7 +66,8 @@ func (edb *EventDb) exists(ctx context.Context, event Event) (bool, error) {
 	var count int64
 	result := edb.Store.Get().WithContext(ctx).
 		Model(&Event{}).
-		Where("tx_hash = ? AND index = ?", event.TxHash, event.Index).
+		Where("tx_hash = ? AND index = ? AND tag = ? AND type = ?", event.TxHash, event.Index, event.Tag,
+			event.Type).
 		Count(&count)
 	if result.Error != nil {
 		return false, fmt.Errorf("error counting events matching %v, error %v",

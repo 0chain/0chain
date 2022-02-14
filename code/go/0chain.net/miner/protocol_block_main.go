@@ -200,11 +200,15 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if b.CreationDate < b.PrevBlock.CreationDate {
 		b.CreationDate = b.PrevBlock.CreationDate
 	}
+
+	//we use this context for transaction aggregation phase only
+	cctx, _ := context.WithTimeout(ctx, mc.Config.BlockProposalMaxWaitTime())
+
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
-	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
 		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
 		go mc.deleteTxns(iterInfo.invalidTxns) // OK to do in background
@@ -221,12 +225,22 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		logging.Logger.Error("generate block (txn reinclusion check)",
 			zap.Any("round", b.Round), zap.Error(iterInfo.reInclusionErr))
 	}
-	if err != nil {
+
+	switch err {
+	case context.DeadlineExceeded:
+		logging.Logger.Debug("Slow block generation, stopping transaction collection and finishing the block")
+	case context.Canceled:
+		logging.Logger.Debug("Context cancelled, rejecting current block")
 		return err
+	default:
+		if err != nil {
+			return err
+		}
 	}
+
 	blockSize := iterInfo.idx
 	var reusedTxns int32
-	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() {
+	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() && err != context.DeadlineExceeded {
 		blocks := mc.GetUnrelatedBlocks(10, b)
 		rcount := 0
 		for _, ub := range blocks {
@@ -235,11 +249,12 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				rtxn := mc.txnToReuse(txn)
 				needsVerification := (ub.MinerID != node.Self.Underlying().GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
 				if needsVerification {
-					if err := rtxn.ValidateWrtTime(ctx, ub.CreationDate); err != nil {
+					//TODO remove context, since it is not used here
+					if err := rtxn.ValidateWrtTime(cctx, ub.CreationDate); err != nil {
 						continue
 					}
 				}
-				if txnProcessor(ctx, blockState, rtxn, iterInfo) {
+				if txnProcessor(cctx, blockState, rtxn, iterInfo) {
 					if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 						break
 					}
@@ -274,14 +289,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if config.DevConfiguration.IsFeeEnabled {
 		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
-			return err
+			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 
 	if config.DevConfiguration.IsBlockRewards {
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
-			return err
+			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 
@@ -289,7 +304,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
 		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, blockState, iterInfo.clients)
 		if err != nil {
-			return err
+			logging.Logger.Error("generate block (commit settings)", zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 
@@ -349,7 +364,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		zap.String("computed_state_hash", util.ToHex(blockState.GetRoot())),
 		zap.Int("changes", blockState.GetChangeCount()),
 		zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
 		zap.Int32("iteration_count", iterInfo.count))
 	block.StateSanityCheck(ctx, b)
 	b.ComputeTxnMap()

@@ -50,6 +50,8 @@ func init() {
 	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
+//iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,
+//returns this block
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
 	isIn := func(blocks []*block.Block, hash string) bool {
 		for _, b := range blocks {
@@ -434,28 +436,13 @@ type finalizeBlockWithReply struct {
 
 func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block, error) {
 	if r := c.GetRound(b.Round); r != nil {
-		var err error
-		_, r, err = c.AddNotarizedBlockToRound(r, b)
-		if err != nil {
-			return nil, nil, err
-		}
-
+		_, r = c.AddNotarizedBlockToRound(r, b)
 		return r, b, nil
 	}
 
-	currentRound := c.GetCurrentRound()
 	// create the round if it does not exist
 	r := c.RoundF.CreateRoundF(b.Round)
-	var err error
-	b, r, err = c.AddNotarizedBlockToRound(r, b)
-	if err != nil {
-		logging.Logger.Error("createRoundIfNotExist - add notarized block to round failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int64("current_round", currentRound),
-			zap.Error(err))
-		return nil, nil, err
-	}
+	b, r = c.AddNotarizedBlockToRound(r, b)
 
 	// Add the round if chain does not have it
 	r = c.AddRound(r)
@@ -484,15 +471,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 		zap.Int64("round", rn),
 		zap.String("block", nb.Hash))
 	// This is a notarized block. So, use this method to sync round info with the notarized block.
-	_, _, err = c.AddNotarizedBlockToRound(r, nb)
-	if err != nil {
-		logging.Logger.Error("get notarized block for round failed",
-			zap.Int64("round", rn),
-			zap.String("block", nb.Hash),
-			zap.String("miner", nb.MinerID),
-			zap.Error(err))
-		return nil
-	}
+	c.AddNotarizedBlockToRound(r, nb)
 
 	// TODO: this may not be the best round block or the best chain weight
 	// block. Do we do that extra work?
