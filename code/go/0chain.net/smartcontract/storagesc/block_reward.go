@@ -48,7 +48,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	bbr := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
 		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio, conf.BlockReward.BlobberWeight)
 
-	allBlobbers, err := getActivePassedBlobbersList(balances, conf.BlockReward.ChallengePeriod)
+	allBlobbers, err := getActivePassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())

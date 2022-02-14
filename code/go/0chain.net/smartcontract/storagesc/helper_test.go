@@ -375,7 +375,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		BlockReward:             1000,
 		BlockRewardChangePeriod: 1000,
 		BlockRewardChangeRatio:  0.1,
-		ChallengePeriod:         30,
+		TriggerPeriod:           30,
 		BlobberWeight:           0.5,
 	}
 
