@@ -691,7 +691,7 @@ func SetMockConfig(
 	}
 	conf.BlockReward = &blockReward{
 		BlockReward:             state.Balance(viper.GetInt(sc.StorageBlockReward)),
-		ChallengePeriod:         viper.GetInt64(sc.StorageBlockRewardChallengePeriod),
+		TriggerPeriod:           viper.GetInt64(sc.StorageBlockRewardTriggerPeriod),
 		BlockRewardChangePeriod: viper.GetInt64(sc.StorageBlockRewardChangePeriod),
 		BlockRewardChangeRatio:  viper.GetFloat64(sc.StorageBlockRewardChangeRatio),
 		BlobberWeight:           viper.GetFloat64(sc.StorageBlockRewardBlobberWeight),

@@ -56,7 +56,7 @@ type blockReward struct {
 	SharderWeight           float64       `json:"sharder_weight"`
 	MinerWeight             float64       `json:"miner_weight"`
 	BlobberWeight           float64       `json:"blobber_weight"`
-	ChallengePeriod         int64         `json:"challenge_period"`
+	TriggerPeriod           int64         `json:"trigger_period"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
@@ -442,7 +442,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
 	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_weight")
 	conf.BlockReward.BlobberWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
-	conf.BlockReward.ChallengePeriod = scc.GetInt64(pfx + "block_reward.challenge_period")
+	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),

@@ -168,11 +168,11 @@ const (
 	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
 	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 
-	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
-	StorageBlockRewardChallengePeriod = SmartContract + StorageSc + BlockReward + "challenge_period"
-	StorageBlockRewardBlobberWeight   = SmartContract + StorageSc + BlockReward + "blobber_weight"
-	StorageBlockRewardChangePeriod    = SmartContract + StorageSc + BlockReward + "block_reward_change_period"
-	StorageBlockRewardChangeRatio     = SmartContract + StorageSc + BlockReward + "block_reward_change_ratio"
+	StorageBlockReward              = SmartContract + StorageSc + BlockReward + "block_reward"
+	StorageBlockRewardTriggerPeriod = SmartContract + StorageSc + BlockReward + "trigger_period"
+	StorageBlockRewardBlobberWeight = SmartContract + StorageSc + BlockReward + "blobber_weight"
+	StorageBlockRewardChangePeriod  = SmartContract + StorageSc + BlockReward + "block_reward_change_period"
+	StorageBlockRewardChangeRatio   = SmartContract + StorageSc + BlockReward + "block_reward_change_ratio"
 
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"

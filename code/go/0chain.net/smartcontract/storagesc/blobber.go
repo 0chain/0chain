@@ -494,7 +494,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	details.ReadReward += value // stat
 	details.Spent += value      // reduce min lock demand left
 
-	rewardRound := balances.GetCurrentRewardRound(conf.BlockReward.ChallengePeriod)
+	rewardRound := balances.GetCurrentRewardRound(conf.BlockReward.TriggerPeriod)
 
 	if blobber.LastRoundDataReadUpdated >= rewardRound {
 		blobber.DataReadLastRound += sizeRead
@@ -504,7 +504,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	blobber.LastRoundDataReadUpdated = balances.GetBlock().Round
 
 	if blobber.RewardPartition.StartRound >= rewardRound && blobber.RewardPartition.Timestamp > 0 {
-		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.ChallengePeriod)
+		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
 				"cannot fetch ongoing partition: %v", err)
@@ -775,10 +775,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	startRound := balances.GetCurrentRewardRound(conf.BlockReward.ChallengePeriod)
+	startRound := balances.GetCurrentRewardRound(conf.BlockReward.TriggerPeriod)
 
 	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
-		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.ChallengePeriod)
+		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch ongoing partition: %v", err)

@@ -125,7 +125,7 @@ smart_contracts:
       block_reward_change_period: 10000
       block_reward_change_ratio: 0.1
       blobber_weight: 0.5
-      challenge_period: 30
+      trigger_period: 30
   interestpoolsc:
     min_lock: 10
     apr: 0.1

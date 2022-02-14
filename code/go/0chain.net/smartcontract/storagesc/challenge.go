@@ -371,9 +371,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	rewardRound := balances.GetCurrentRewardRound(conf.BlockReward.ChallengePeriod)
+	rewardRound := balances.GetCurrentRewardRound(conf.BlockReward.TriggerPeriod)
 
-	ongoingList, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.ChallengePeriod)
+	ongoingList, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
 		return "", common.NewError("verify_challenge",
 			"cannot get ongoing partition: "+err.Error())
