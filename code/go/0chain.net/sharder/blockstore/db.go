@@ -32,7 +32,7 @@ const (
 
 // redis constant values
 const (
-	DefaultHostRedisDB     = "localhost"
+	DefaultHostRedisDB     = "redis"
 	DefaultPortRedisDB     = "6379"
 	DefaultPasswordRedisDB = ""
 	DefaultNumberRedisDB   = 0

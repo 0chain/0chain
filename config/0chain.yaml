@@ -150,7 +150,7 @@ storage:
   
   storage_type: 3
   redis:
-    host: "localhost"
+    host: "redis"
     port: "6379"
     password: ""
     numberDB: "0"

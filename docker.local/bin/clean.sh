@@ -21,6 +21,7 @@ do
   rm -rf docker.local/sharder"$i"/data/cassandra/*
   echo "deleting sharder$i rocksdb db"
   rm -rf docker.local/sharder"$i"/data/rocksdb/*
+  rm -rf docker.local/sharder"$i"/data/redis/state/*
 done
 
 for i in $(seq 1 4)
