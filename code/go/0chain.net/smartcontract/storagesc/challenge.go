@@ -518,7 +518,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 			partIndex, err := ongoingList.Add(
 				&partitions.BlobberRewardNode{
-					Id:                blobber.ID,
+					ID:                blobber.ID,
 					SuccessChallenges: 0,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,

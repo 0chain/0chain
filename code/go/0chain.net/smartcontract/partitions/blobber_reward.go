@@ -14,7 +14,7 @@ import (
 //------------------------------------------------------------------------------
 
 type BlobberRewardNode struct {
-	Id                string         `json:"id"`
+	ID                string         `json:"id"`
 	SuccessChallenges int            `json:"success_challenges"`
 	WritePrice        state2.Balance `json:"write_price"`
 	ReadPrice         state2.Balance `json:"read_price"`
@@ -39,7 +39,7 @@ func (bn *BlobberRewardNode) Data() string {
 }
 
 func (bn *BlobberRewardNode) Name() string {
-	return bn.Id
+	return bn.ID
 }
 
 //------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ func (il *blobberRewardItemList) add(it PartitionItem) {
 	var brn BlobberRewardNode
 	brn.Decode(it.Encode())
 	il.Items = append(il.Items, BlobberRewardNode{
-		Id:                it.Name(),
+		ID:                it.Name(),
 		SuccessChallenges: brn.SuccessChallenges,
 		WritePrice:        brn.WritePrice,
 		ReadPrice:         brn.ReadPrice,

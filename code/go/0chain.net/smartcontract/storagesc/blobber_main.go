@@ -47,7 +47,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		}
 		_, err = allBlobbersList.Add(
 			&partitions.BlobberNode{
-				Id:  blobber.ID,
+				ID:  blobber.ID,
 				Url: blobber.BaseURL,
 			}, balances)
 		if err != nil {
