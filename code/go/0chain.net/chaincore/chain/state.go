@@ -429,12 +429,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	sctx.SetStateContext(fs)
 	fs.Balance -= amount
-	if fs.Balance == 0 {
-		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
-		//_, err = clientState.Delete(util.Path(fromClient))
-	} else {
-		_, err = clientState.Insert(util.Path(fromClient), fs)
-	}
+	_, err = clientState.Insert(util.Path(fromClient), fs)
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {

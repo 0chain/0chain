@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -387,10 +386,11 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 - applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
 */
 func (t *Transaction) DebugTxn() bool {
-	if !config.Development() {
-		return false
-	}
-	return strings.Index(t.TransactionData, "debug") >= 0
+	//if !config.Development() {
+	//	return false
+	//}
+	//return strings.Index(t.TransactionData, "debug") >= 0
+	return true
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */
