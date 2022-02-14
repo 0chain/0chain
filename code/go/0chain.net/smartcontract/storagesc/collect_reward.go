@@ -7,6 +7,8 @@ import (
 	"0chain.net/smartcontract/stakepool"
 )
 
+// collectReward mints tokens for delegate rewards.
+// The minted tokens are transferred the user's wallet.
 func (ssc *StorageSmartContract) collectReward(
 	txn *transaction.Transaction,
 	input []byte,

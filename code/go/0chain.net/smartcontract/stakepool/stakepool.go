@@ -51,6 +51,7 @@ func stakePoolKey(p Provider, id string) datastore.Key {
 	return datastore.Key(p.String() + ":stakepool:" + id)
 }
 
+// StakePool holds delegate information for an 0chain providers
 type StakePool struct {
 	Pools    map[string]*DelegatePool `json:"pools"`
 	Reward   state.Balance            `json:"rewards"`
@@ -71,9 +72,7 @@ type DelegatePool struct {
 	Reward       state.Balance `json:"reward"`
 	Status       PoolStatus    `json:"status"`
 	RoundCreated int64         `json:"round_created"` // used for cool down
-	// todo remove this field. It is only need for stats so
-	// should be removed once the event database StakePool table is working
-	DelegateID string `json:"delegateID"`
+	DelegateID   string        `json:"delegateID"`
 }
 
 func NewStakePool() *StakePool {
