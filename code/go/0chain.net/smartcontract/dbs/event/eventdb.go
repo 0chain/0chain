@@ -1,13 +1,12 @@
 package event
 
 import (
+	"errors"
 	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
-	"errors"
-	"time"
 )
 
 const (
