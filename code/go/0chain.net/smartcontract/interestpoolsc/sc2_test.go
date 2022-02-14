@@ -369,10 +369,12 @@ func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme     
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
-func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
-func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
+func (sc *mockStateContext) GetCurrentRewardRound(period int64) int64                  { return 0 }
+func (sc *mockStateContext) GetPreviousRewardRound(period int64) int64                 { return 0 }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {
 		return 0, util.ErrValueNotPresent
