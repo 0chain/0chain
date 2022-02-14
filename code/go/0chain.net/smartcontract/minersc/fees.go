@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sort"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -21,13 +19,11 @@ import (
 )
 
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
-	for _, pool := range mn.Pools {
-		if pool.Status == stakepool.Pending {
-			pool.Status = stakepool.Active
-			mn.NumPending--
-			mn.NumActive++
-			mn.TotalStaked += int64(pool.Balance)
-		}
+	for id, pool := range mn.Pending {
+		pool.Status = ACTIVE
+		mn.Active[id] = pool
+		mn.TotalStaked += int64(pool.Balance)
+		delete(mn.Pending, id)
 	}
 }
 
@@ -90,41 +86,46 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 // unlock deleted pools
 func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {
-	for _, pool := range mn.Pools {
-		if pool.Status == stakepool.Deleting {
-			pool.Status = stakepool.Deleted
-			mn.NumActive--
+
+	for id := range mn.Deleting {
+		var pool = mn.Active[id]
+		if _, err = msc.emptyPool(mn, pool, round, balances); err != nil {
+			return common.NewError("pay_fees/unlock_deleted", err.Error())
 		}
+		delete(mn.Active, id)
+		delete(mn.Deleting, id)
 	}
 
 	return
 }
 
 // unlock all delegate pools of offline node
-func (msc *MinerSmartContract) unlockOffline(
-	mn *MinerNode,
-	balances cstate.StateContextI,
-) error {
-	for id, pool := range mn.Pools {
-		transfer := state.NewTransfer(ADDRESS, pool.DelegateID, pool.Balance)
-		if err := balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
-		}
-		err := msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, balances)
-		if err != nil {
+func (msc *MinerSmartContract) unlockOffline(mn *MinerNode,
+	balances cstate.StateContextI) (err error) {
+
+	mn.Deleting = make(map[string]*sci.DelegatePool) // reset
+
+	// unlock all pending
+	for id, pool := range mn.Pending {
+		if _, err = msc.emptyPool(mn, pool, 0, balances); err != nil {
 			return common.NewError("pay_fees/unlock_offline", err.Error())
 		}
-
-		pool.Status = stakepool.Deleted
-	}
-	mn.NumPending = 0
-	mn.NumActive = 0
-
-	if err := mn.save(balances); err != nil {
-		return err
+		delete(mn.Pending, id)
 	}
 
-	return nil
+	// unlock all active
+	for id, pool := range mn.Active {
+		if _, err = msc.emptyPool(mn, pool, 0, balances); err != nil {
+			return common.NewError("pay_fees/unlock_offline", err.Error())
+		}
+		delete(mn.Active, id)
+	}
+
+	if err = mn.save(balances); err != nil {
+		return
+	}
+
+	return
 }
 
 func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,

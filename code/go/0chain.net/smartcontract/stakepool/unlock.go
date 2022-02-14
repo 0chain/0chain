@@ -32,7 +32,7 @@ func (sp *StakePool) UnlockPool(
 		return 0, fmt.Errorf("can't find pool: %v", poolId)
 	}
 
-	dp.Status = Deleted
+	dp.Status = Deleting
 	amount, err := sp.MintRewards(
 		txn.ClientID, poolId, providerId, providerType, usp, balances,
 	)
