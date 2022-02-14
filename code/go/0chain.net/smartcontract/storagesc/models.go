@@ -24,13 +24,13 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 var (
-	ALL_BLOBBERS_KEY            = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_BLOBBERS_PARTITION_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_partition"))
-	ALL_VALIDATORS_KEY          = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY         = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY           = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
-	ONGOING_PASSED_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("ongoing_passed_blobbers")) //for ongoing period
-	ACTIVE_PASSED_BLOBBERS_KEY  = datastore.Key(ADDRESS + encryption.Hash("active_passed_blobbers"))  // for previous period
+	ALL_BLOBBERS_KEY           = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+	ALL_BLOBBERS_PARTITION_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_partition"))
+	ALL_VALIDATORS_KEY         = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+	ALL_ALLOCATIONS_KEY        = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+	STORAGE_STATS_KEY          = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ACTIVE_PASSED_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("active_passed_blobbers")) // for previous period
+	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("active_passed_blobbers")
 )
 
 type ClientAllocation struct {

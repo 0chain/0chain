@@ -78,6 +78,8 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
+	GetCurrentRewardRound(period int64) int64
+	GetPreviousRewardRound(period int64) int64
 }
 
 //StateContext - a context object used to manipulate global state
@@ -322,4 +324,14 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 func (sc *StateContext) SetStateContext(s *state.State) error {
 	s.SetRound(sc.block.Round)
 	return s.SetTxnHash(sc.txn.Hash)
+}
+
+func (sc *StateContext) GetCurrentRewardRound(period int64) int64 {
+	extra := sc.block.Round % period
+	return sc.block.Round - extra
+}
+
+func (sc *StateContext) GetPreviousRewardRound(period int64) int64 {
+	orr := sc.GetCurrentRewardRound(period)
+	return orr - period
 }

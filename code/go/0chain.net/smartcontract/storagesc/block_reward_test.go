@@ -28,7 +28,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 	setupRewards := func(t *testing.T, p params, sc *StorageSmartContract) {
 		setConfig(t, balances)
-		allBR, err := getActivePassedBlobbersList(balances)
+		allBR, err := getActivePassedBlobbersList(balances, 1)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
@@ -69,8 +69,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 			}
 		}
-
-		_, err := balances.DeleteTrieNode(ACTIVE_PASSED_BLOBBERS_KEY)
+		_, err := balances.DeleteTrieNode(BlobberRewardKey(balances.GetBlock().Round))
 		require.NoError(t, err)
 	}
 
