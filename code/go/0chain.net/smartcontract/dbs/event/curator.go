@@ -9,11 +9,9 @@ import (
 
 type Curator struct {
 	gorm.Model
-
-	// Foreign Key
-	AllocationID string `json:"allocation_id"`
-
-	CuratorID string `json:"curator_id" gorm:"uniqueIndex"`
+	CuratorID    string     `json:"curator_id" gorm:"uniqueIndex"`
+	AllocationID string     `json:"allocation_id"` // Foreign Key
+	Allocation   Allocation `json:"-" gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (edb *EventDb) overwriteCurator(c Curator) error {
@@ -25,6 +23,26 @@ func (edb *EventDb) overwriteCurator(c Curator) error {
 			"curator_id":    c.CuratorID,
 		})
 	return result.Error
+}
+
+//GetCuratorsByAllocationID returns an array of curator ID
+//from curators table matching the given allocation ID
+func (edb *EventDb) GetCuratorsByAllocationID(allocationID string) ([]string, error) {
+	var curators []Curator
+	curatorIDs := make([]string, 0)
+	result := edb.Store.Get().Model(&Curator{}).
+		Where(&Curator{AllocationID: allocationID}).
+		Find(&curators)
+
+	if result.Error != nil {
+		return curatorIDs, result.Error
+	}
+
+	for _, curator := range curators {
+		curatorIDs = append(curatorIDs, curator.CuratorID)
+	}
+
+	return curatorIDs, nil
 }
 
 func (edb *EventDb) addOrOverwriteCurator(c Curator) error {

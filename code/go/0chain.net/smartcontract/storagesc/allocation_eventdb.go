@@ -11,7 +11,6 @@ import (
 )
 
 func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
-
 	var (
 		storageNodes         []*StorageNode
 		blobberDetails       []*BlobberAllocation
@@ -23,13 +22,13 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		blobberMap = make(map[string]*BlobberAllocation)
 	)
 
-	/* curators will be fetched from curators table
-	SELECT curator_id from curators where allocation_id=?
-	*/
-	//var curators []string
+	curators, err := eventDb.GetCuratorsByAllocationID(alloc.AllocationID)
+	if err != nil {
+		return nil, fmt.Errorf("error finding curators: %v", err)
+	}
 
 	var allocTerms []event.AllocationTerm
-	err := json.Unmarshal([]byte(alloc.Terms), &allocTerms)
+	err = json.Unmarshal([]byte(alloc.Terms), &allocTerms)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling allocation terms: %v", err)
 	}
@@ -123,7 +122,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		MovedBack:               alloc.MovedBack,
 		MovedToValidators:       alloc.MovedToValidators,
 		TimeUnit:                time.Duration(alloc.TimeUnit),
-		//Curators:                curators,
+		Curators:                curators,
 	}
 
 	return sa, nil
