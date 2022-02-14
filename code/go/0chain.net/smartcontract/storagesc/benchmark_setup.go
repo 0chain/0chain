@@ -269,11 +269,11 @@ func AddMockBlobbers(
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
-	activePart, err := getActivePassedBlobbersList(balances)
+	activePart, err := getActivePassedBlobbersList(balances, 1)
 	if err != nil {
 		panic(err)
 	}
-	ongPart, err := getOngoingPassedBlobbersList(balances, 0)
+	ongPart, err := getOngoingPassedBlobbersList(balances, 1)
 	if err != nil {
 		panic(err)
 	}

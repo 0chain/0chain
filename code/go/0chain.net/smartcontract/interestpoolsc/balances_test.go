@@ -53,12 +53,14 @@ func (tb *testBalances) GetBlockSharders(*block.Block) []string {
 }
 
 // stubs
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI       { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction { return nil }
-func (tb *testBalances) Validate() error                          { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI        { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction  { return nil }
+func (tb *testBalances) Validate() error                           { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                   { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error        { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer           { return nil }
+func (tb *testBalances) GetCurrentRewardRound(period int64) int64  { return 0 }
+func (tb *testBalances) GetPreviousRewardRound(period int64) int64 { return 0 }
 func (tb *testBalances) AddSignedTransfer(_ *state.SignedTransfer) {
 }
 func (tb *testBalances) GetEventDB() *event.EventDb { return nil }

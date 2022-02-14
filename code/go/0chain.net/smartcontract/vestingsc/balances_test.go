@@ -53,6 +53,8 @@ func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)                  
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
+func (tb *testBalances) GetCurrentRewardRound(period int64) int64  { return 0 }
+func (tb *testBalances) GetPreviousRewardRound(period int64) int64 { return 0 }
 
 func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()

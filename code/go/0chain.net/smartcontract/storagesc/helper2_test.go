@@ -49,6 +49,9 @@ func (sc *mockStateContext) Validate() error                             { retur
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
+func (sc *mockStateContext) GetCurrentRewardRound(period int64) int64  { return 0 }
+func (sc *mockStateContext) GetPreviousRewardRound(period int64) int64 { return 0 }
+
 func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
