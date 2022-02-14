@@ -10,6 +10,7 @@ done
 
 for i in $(seq 1 4)
 do
+  mkdir -p docker.local/sharder"$i"/data/redis/state
   mkdir -p docker.local/sharder"$i"/data/blocks
   mkdir -p docker.local/sharder"$i"/data/rocksdb
   mkdir -p docker.local/sharder"$i"/data/cassandra
