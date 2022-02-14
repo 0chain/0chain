@@ -121,6 +121,7 @@ func TestFindTransactionByHash(t *testing.T) {
 }
 
 func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
+	require.Equal(t, limit, len(gotTr), "Not all transactions were returned")
 	i := 0
 	for i = offset; i < limit; i++ {
 		tr := Transaction{
@@ -133,7 +134,6 @@ func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
 		tr.UpdatedAt = gotTr[i].UpdatedAt
 		require.Equal(t, tr, gotTr[i], "Transaction not matching")
 	}
-	require.Equal(t, len(gotTr), limit, "Not all transactions were returned")
 }
 
 func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
