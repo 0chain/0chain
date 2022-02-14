@@ -110,13 +110,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		}
 	}
 
-	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"saving configurations: "+err.Error())
-	}
-
 	return nil
 }
 
