@@ -33,7 +33,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
 			_, err = allBR.Add(&partitions.BlobberRewardNode{
-				Id:                bID,
+				ID:                bID,
 				SuccessChallenges: p.successChallenges[i],
 				WritePrice:        p.wp[i],
 				ReadPrice:         p.rp[i],

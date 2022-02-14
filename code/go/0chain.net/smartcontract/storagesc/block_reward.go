@@ -80,7 +80,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		gamma := maths.GetGamma(A, B, alpha, blobber.TotalData, blobber.DataRead)
 		zeta := maths.GetZeta(I, K, mu, float64(blobber.WritePrice), float64(blobber.ReadPrice))
-		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.Id)
+		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.ID)
 		stakePools = append(stakePools, sp)
 		stakeTotals = append(stakeTotals, stake)
 		totalQStake += stake

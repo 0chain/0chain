@@ -13,7 +13,7 @@ import (
 //------------------------------------------------------------------------------
 
 type BlobberNode struct {
-	Id  string `json:"id"`
+	ID  string `json:"id"`
 	Url string `json:"url"`
 }
 
@@ -34,7 +34,7 @@ func (bn *BlobberNode) Data() string {
 }
 
 func (bn *BlobberNode) Name() string {
-	return bn.Id
+	return bn.ID
 }
 
 //------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ func (il *blobberItemList) get(key datastore.Key, balances state.StateContextI) 
 
 func (il *blobberItemList) add(it PartitionItem) {
 	il.Items = append(il.Items, BlobberNode{
-		Id:  it.Name(),
+		ID:  it.Name(),
 		Url: it.Data(),
 	})
 	il.Changed = true
@@ -93,7 +93,7 @@ func (il *blobberItemList) update(it PartitionItem) error {
 		if il.Items[i].Name() == it.Name() {
 			found = true
 			il.Items[i] = BlobberNode{
-				Id:  it.Name(),
+				ID:  it.Name(),
 				Url: it.Data(),
 			}
 		}

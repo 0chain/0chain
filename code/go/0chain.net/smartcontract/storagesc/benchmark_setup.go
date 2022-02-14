@@ -283,7 +283,7 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 
 		partIndex, err := activePart.Add(&partitions.BlobberRewardNode{
-			Id:                id,
+			ID:                id,
 			SuccessChallenges: 2,
 			WritePrice:        getMockBlobberWritePrice(),
 			ReadPrice:         getMockBlobberReadPrice(),
@@ -295,7 +295,7 @@ func AddMockBlobbers(
 		}
 
 		_, err = ongPart.Add(&partitions.BlobberRewardNode{
-			Id:                id,
+			ID:                id,
 			SuccessChallenges: 2,
 			WritePrice:        getMockBlobberWritePrice(),
 			ReadPrice:         getMockBlobberReadPrice(),
