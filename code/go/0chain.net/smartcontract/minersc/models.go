@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
@@ -584,17 +586,20 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 
 // MinerNode struct that holds information about the registering miner.
 type MinerNode struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
-	Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
-	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
+	*SimpleNode          `json:"simple_miner"`
+	*stakepool.StakePool `json:"stake_pool"`
+	NumPending           int `json:"pending"`
+	NumActive            int `json:"active"`
+	//Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
+	//Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
+	//Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
 }
 
 func NewMinerNode() *MinerNode {
-	mn := &MinerNode{SimpleNode: &SimpleNode{}}
-	mn.Pending = make(map[string]*sci.DelegatePool)
-	mn.Active = make(map[string]*sci.DelegatePool)
-	mn.Deleting = make(map[string]*sci.DelegatePool)
+	mn := &MinerNode{
+		SimpleNode: &SimpleNode{},
+		StakePool:  stakepool.NewStakePool(),
+	}
 	return mn
 }
 
@@ -620,11 +625,11 @@ func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
 }
 
 func (mn *MinerNode) numDelegates() int {
-	return len(mn.Pending) + len(mn.Active)
+	return mn.NumPending + mn.NumActive
 }
 
 func (mn *MinerNode) numActiveDelegates() int {
-	return len(mn.Active)
+	return mn.NumActive
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
@@ -700,23 +705,23 @@ func (mn *MinerNode) Decode(input []byte) error {
 	if err := json.Unmarshal(input, n); err != nil {
 		return err
 	}
+	/*
+		mn.SimpleNode = n.SimpleNode
+		mn.Pending = make(map[string]*sci.DelegatePool, len(n.Pending))
+		for k, pl := range n.Pending {
+			mn.Pending[k] = pl.ToDelegatePool()
+		}
 
-	mn.SimpleNode = n.SimpleNode
-	mn.Pending = make(map[string]*sci.DelegatePool, len(n.Pending))
-	for k, pl := range n.Pending {
-		mn.Pending[k] = pl.ToDelegatePool()
-	}
+		mn.Active = make(map[string]*sci.DelegatePool, len(n.Active))
+		for k, pl := range n.Active {
+			mn.Active[k] = pl.ToDelegatePool()
+		}
 
-	mn.Active = make(map[string]*sci.DelegatePool, len(n.Active))
-	for k, pl := range n.Active {
-		mn.Active[k] = pl.ToDelegatePool()
-	}
-
-	mn.Deleting = make(map[string]*sci.DelegatePool, len(n.Deleting))
-	for k, pl := range n.Deleting {
-		mn.Deleting[k] = pl.ToDelegatePool()
-	}
-
+		mn.Deleting = make(map[string]*sci.DelegatePool, len(n.Deleting))
+		for k, pl := range n.Deleting {
+			mn.Deleting[k] = pl.ToDelegatePool()
+		}
+	*/
 	return nil
 }
 
@@ -728,6 +733,7 @@ func (mn *MinerNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
+/*
 func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 	var keys []string
 	for k := range mn.Active {
@@ -740,7 +746,7 @@ func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 	}
 	return
 }
-
+*/
 // NodeType used in pools statistic.
 type NodeType int
 

@@ -39,6 +39,7 @@ const (
 	Inactive
 	Unstaking
 	Deleting
+	Deleted
 )
 
 var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting"}
@@ -169,7 +170,7 @@ func (sp *StakePool) MintRewards(
 		},
 		PoolId: poolId,
 	}
-	if dPool.Status == Deleting {
+	if dPool.Status == Deleted {
 		delete(sp.Pools, poolId)
 		err := dpId.emit(event.TagRemoveDelegatePool, balances)
 		if err != nil {
