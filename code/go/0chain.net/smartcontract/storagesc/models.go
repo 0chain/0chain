@@ -325,17 +325,19 @@ type rewardPartitionLocation struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID              string                 `json:"id"`
-	BaseURL         string                 `json:"url"`
-	Geolocation     StorageNodeGeolocation `json:"geolocation"`
-	Terms           Terms                  `json:"terms"`       // terms
-	Capacity        int64                  `json:"capacity"`    // total blobber capacity
-	Used            int64                  `json:"used"`        // allocated capacity
-	BytesWritten    int64                  `json:"dataWritten"` // in bytes
-	DataRead        float64                `json:"dataRead"`    // in GB
-	LastHealthCheck common.Timestamp       `json:"last_health_check"`
-	PublicKey       string                 `json:"-"`
-	SavedData       int64                  `json:"saved_data"`
+	ID                       string                 `json:"id"`
+	BaseURL                  string                 `json:"url"`
+	Geolocation              StorageNodeGeolocation `json:"geolocation"`
+	Terms                    Terms                  `json:"terms"`       // terms
+	Capacity                 int64                  `json:"capacity"`    // total blobber capacity
+	Used                     int64                  `json:"used"`        // allocated capacity
+	BytesWritten             int64                  `json:"dataWritten"` // in bytes
+	DataRead                 float64                `json:"dataRead"`    // in GB
+	LastHealthCheck          common.Timestamp       `json:"last_health_check"`
+	PublicKey                string                 `json:"-"`
+	SavedData                int64                  `json:"saved_data"`
+	DataReadLastRound        float64                `json:"data_read_last_round"`         // in GB
+	LastRoundDataReadUpdated int64                  `json:"last_round_data_read_updated"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 	RewardPartition   rewardPartitionLocation     `json:"reward_partition"`
