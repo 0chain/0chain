@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
@@ -17,13 +20,12 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	"github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -1114,6 +1116,21 @@ func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 			zap.Int64("round", rn))
 		return // terminated
 	}
+
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		for {
+			if !crpc.Client().State().IsLock {
+				wg.Done()
+				break
+			}
+
+			<-time.NewTimer(time.Microsecond * 200).C
+		}
+	}(wg)
+	wg.Wait()
+
 	//TODO start if not started, atm we  resend vrf share here
 	nr := mc.StartNextRound(ctx, r)
 	mc.SetCurrentRound(nr.Number)

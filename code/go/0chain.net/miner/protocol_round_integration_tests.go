@@ -8,42 +8,40 @@ import (
 	"errors"
 	"log"
 
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/core/logging"
 )
 
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
+	cfg := crpc.Client().State().ExtendNotNotarisedBlock
+	cfg.Lock()
 	if isMockingNotNotarisedBlockExtension(r.GetRoundNumber()) {
-		if bl, err := configureNotNotarisedBlockExtensionTest(r); err != nil {
-			log.Printf("Conductor: NotNotarisedBlockExtension: error while configuring test case: %v", err)
-		} else {
-			return bl
+		bl, err := configureNotNotarisedBlockExtensionTest(r)
+		if err != nil {
+			log.Panicf("Conductor: NotNotarisedBlockExtension: error while configuring test case: %v", err)
 		}
+
+		cfg.Configured = true
+
+		cfg.Unlock()
+		return bl
 	}
+	cfg.Unlock()
 
 	return mc.getBlockToExtend(ctx, r)
 }
 
 func isMockingNotNotarisedBlockExtension(round int64) bool {
 	cfg := crpc.Client().State().ExtendNotNotarisedBlock
-	isConfigured := cfg != nil && cfg.OnRound == round+1
-	nodeType, typeRank := getNodeTypeAndTypeRank(round + 1)
-	if round == 29 {
-		logging.Logger.Info("Conductor: checking mocking",
-			zap.Any("node_type", nodeType),
-			zap.Any("type_rank", typeRank),
-			zap.Any("state", crpc.Client().State()),
-		)
-	} // todo rmv
+
+	isConfigured := cfg != nil && cfg.OnRound == round+1 && !cfg.Configured
 	if !isConfigured {
 		return false
 	}
 
+	nodeType, typeRank := getNodeTypeAndTypeRank(round + 1)
 	return nodeType == generator && typeRank == 0
 }
 

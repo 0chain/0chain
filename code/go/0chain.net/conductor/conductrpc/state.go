@@ -14,8 +14,11 @@ type State struct {
 	// Nodes maps NodeID -> NodeName.
 	Nodes map[NodeID]NodeName
 
-	IsMonitor  bool // send monitor events (round, phase, etc)
-	IsLock     bool // node locked
+	IsMonitor bool // send monitor events (round, phase, etc)
+
+	//isLockMu sync.Mutex todo
+	IsLock bool // node locked
+
 	IsRevealed bool // revealed shares
 	// Failure emulation
 	GeneratorsFailureRoundNumber Round // all generators fail on start of this round
@@ -75,6 +78,13 @@ func (s *State) Name(id NodeID) NodeName {
 	return s.Nodes[id] // id -> name (or empty string)
 }
 
+//func (s *State) IsLock() bool {
+//	s.isLockMu.Lock()
+//	defer s.isLockMu.Unlock()
+//
+//	return s.IsLock
+//} todo
+
 func (s *State) copy() (cp *State) {
 	cp = new(State)
 	*cp = *s
@@ -83,9 +93,7 @@ func (s *State) copy() (cp *State) {
 }
 
 func (s *State) send(poll chan *State) {
-	go func(state *State) {
-		poll <- state
-	}(s.copy())
+	poll <- s.copy()
 }
 
 type IsGoodOrBad interface {
