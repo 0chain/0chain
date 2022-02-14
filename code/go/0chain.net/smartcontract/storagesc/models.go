@@ -343,7 +343,7 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
-type partitionLocation struct {
+type rewardPartitionLocation struct {
 	Index      int              `json:"index"`
 	StartRound int64            `json:"start_round"`
 	Timestamp  common.Timestamp `json:"timestamp"`
@@ -364,7 +364,7 @@ type StorageNode struct {
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	RewardPartition   partitionLocation           `json:"reward_partition"`
+	RewardPartition   rewardPartitionLocation     `json:"reward_partition"`
 }
 
 // validate the blobber configurations

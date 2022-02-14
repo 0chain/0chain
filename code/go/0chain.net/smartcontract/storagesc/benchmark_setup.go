@@ -319,7 +319,7 @@ func AddMockBlobbers(
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			RewardPartition: partitionLocation{
+			RewardPartition: rewardPartitionLocation{
 				Index:      partIndex,
 				StartRound: 0,
 			},
