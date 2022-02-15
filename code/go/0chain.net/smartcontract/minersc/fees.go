@@ -457,9 +457,12 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	return state.Balance(totalMaxFee)
 }
 
-func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
-	node *MinerNode, gn *GlobalNode, isSharder bool,
-	balances cstate.StateContextI) (resp string, err error) {
+func (msc *MinerSmartContract) payStakeHolders(
+	value state.Balance,
+	node *MinerNode,
+	isSharder bool,
+	balances cstate.StateContextI,
+) (resp string, err error) {
 	if value == 0 {
 		return
 	}
@@ -476,79 +479,6 @@ func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
 		)
 	}
 	return "", nil
-	/*
-		var totalStaked = node.TotalStaked
-
-		//for _, pool := range node.orderedActivePools() {
-		for _, pool := range node.Pools{
-			var (
-				ratio    = float64(pool.Balance) / float64(totalStaked)
-				userMint = state.Balance(float64(value) * ratio)
-			)
-
-			Logger.Info("mint delegate",
-				zap.Any("pool", pool),
-				zap.Any("mint", userMint))
-
-			if userMint == 0 {
-				continue // avoid insufficient minting
-			}
-
-			var mint = state.NewMint(ADDRESS, pool.DelegateID, userMint)
-			if err = balances.AddMint(mint); err != nil {
-				resp += fmt.Sprintf("pay_fee/minting - adding mint: %v", err)
-				continue
-			}
-			msc.addMint(gn, mint.Amount)
-			pool.AddRewards(userMint)
-
-			resp += string(mint.Encode())
-		}
-
-		return resp, nil
-	*/
-}
-
-func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
-	node *MinerNode, isSharder bool,
-	balances cstate.StateContextI) (resp string, err error) {
-
-	if value == 0 {
-		return // nothing to pay
-	}
-
-	if isSharder {
-		node.Stat.SharderFees += value
-	} else {
-		node.Stat.GeneratorFees += value
-	}
-
-	var totalStaked = node.TotalStaked
-
-	for _, pool := range node.orderedActivePools() {
-		var (
-			ratio   = float64(pool.Balance) / float64(totalStaked)
-			userFee = state.Balance(float64(value) * ratio)
-		)
-
-		Logger.Info("pay delegate",
-			zap.Any("pool", pool),
-			zap.Any("fee", userFee))
-
-		if userFee == 0 {
-			continue // avoid insufficient transfer
-		}
-
-		var transfer = state.NewTransfer(ADDRESS, pool.DelegateID, userFee)
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", fmt.Errorf("adding transfer: %v", err)
-		}
-
-		pool.AddRewards(userFee)
-		resp += string(transfer.Encode())
-	}
-
-	return resp, nil
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
