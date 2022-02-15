@@ -4,6 +4,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/utils"
 	"github.com/stretchr/testify/require"
 	"strconv"
 	"testing"
@@ -27,8 +28,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 
 	setupRewards := func(t *testing.T, p params, sc *StorageSmartContract) {
-		setConfig(t, balances)
-		allBR, err := getActivePassedBlobbersList(balances, 1)
+		conf := setConfig(t, balances)
+		allBR, err := getActivePassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
@@ -57,6 +58,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 
 	compareResult := func(t *testing.T, p params, r result, ssc *StorageSmartContract) {
+		conf, err := ssc.getConfig(balances, false)
+		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
 			sp, err := ssc.getStakePool(bID, balances)
@@ -69,7 +72,10 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 			}
 		}
-		_, err := balances.DeleteTrieNode(BlobberRewardKey(balances.GetBlock().Round))
+		_, err = balances.DeleteTrieNode(
+			BlobberRewardKey(
+				utils.GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
+		)
 		require.NoError(t, err)
 	}
 
