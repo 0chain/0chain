@@ -311,7 +311,7 @@ func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
 	for pool := 0; pool < numWorkers; pool++ {
 		go func(poolID int) {
 			for bInput := range inputChan {
-				logging.Logger.Info("fet_blobber worker processing blobber_id",
+				logging.Logger.Info("fetch_blobber worker processing blobber_id",
 					zap.Int("worker_id", poolID),
 					zap.String("blobber_id", bInput.blobberID))
 				blobber, err := sc.getBlobber(bInput.blobberID, balances)
