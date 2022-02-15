@@ -2,6 +2,9 @@ package cases
 
 import (
 	"0chain.net/conductor/cases"
+
+	"sync"
+
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -9,6 +12,10 @@ type (
 	// SendInsufficientProposals represents TestCaseConfigurator implementation.
 	SendInsufficientProposals struct {
 		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
+
+		Sent bool
+
+		mu sync.Mutex
 	}
 )
 
@@ -39,4 +46,18 @@ func (n *SendInsufficientProposals) Name() string {
 // Decode implements MapDecoder interface.
 func (n *SendInsufficientProposals) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
+}
+
+func (n *SendInsufficientProposals) Lock() {
+	if n == nil {
+		return
+	}
+	n.mu.Lock()
+}
+
+func (n *SendInsufficientProposals) Unlock() {
+	if n == nil {
+		return
+	}
+	n.mu.Unlock()
 }
