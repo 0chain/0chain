@@ -72,7 +72,7 @@ type DelegatePool struct {
 	Reward       state.Balance `json:"reward"`
 	Status       PoolStatus    `json:"status"`
 	RoundCreated int64         `json:"round_created"` // used for cool down
-	DelegateID   string        `json:"delegateID"`
+	DelegateID   string        `json:"delegate_id"`
 }
 
 func NewStakePool() *StakePool {
