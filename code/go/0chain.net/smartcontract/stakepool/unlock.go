@@ -6,12 +6,11 @@ import (
 	"0chain.net/chaincore/state"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 )
 
 func (sp *StakePool) UnlockPool(
-	txn *transaction.Transaction,
+	clientId string,
 	providerType Provider,
 	providerId datastore.Key,
 	poolId datastore.Key,
@@ -31,7 +30,16 @@ func (sp *StakePool) UnlockPool(
 	if !ok {
 		return 0, fmt.Errorf("can't find pool: %v", poolId)
 	}
+	minter, err := cstate.GetMinter(sp.Minter)
+	if err != nil {
+		return 0, fmt.Errorf("can't find minter: %v", err)
+	}
+	transfer := state.NewTransfer(minter, txn.ClientID, dp.Balance)
+	if err := balances.AddTransfer(transfer); err != nil {
+		return 0, err
+	}
 
+	dp.Balance = 0
 	dp.Status = Deleted
 	amount, err := sp.MintRewards(
 		txn.ClientID, poolId, providerId, providerType, usp, balances,

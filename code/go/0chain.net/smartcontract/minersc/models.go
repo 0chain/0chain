@@ -615,15 +615,6 @@ func (mn *MinerNode) GetKey() datastore.Key {
 	return datastore.Key(ADDRESS + mn.ID)
 }
 
-// calculate service charge from fees
-func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
-	charge, rest state.Balance) {
-
-	charge = state.Balance(float64(fees) * mn.ServiceCharge)
-	rest = fees - charge
-	return
-}
-
 func (mn *MinerNode) numDelegates() int {
 	return mn.NumPending + mn.NumActive
 }
@@ -967,6 +958,7 @@ type userPools struct {
 	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
 }
 
+/*
 func newUserPools() (ups *userPools) {
 	ups = new(userPools)
 	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
@@ -1034,7 +1026,7 @@ func (un *UserNode) GetHash() string {
 func (un *UserNode) GetHashBytes() []byte {
 	return encryption.RawHash(un.Encode())
 }
-
+*/
 type deletePool struct {
 	MinerID string `json:"id"`
 	PoolID  string `json:"pool_id"`

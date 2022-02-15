@@ -369,37 +369,23 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
 		minerr, sharderr = gn.splitByShareRatio(blockReward)
-		charger, restr   = mn.splitByServiceCharge(minerr)
 		// fees         -- total fees for the mb
 		fees             = msc.sumFee(mb, true)
 		minerf, sharderf = gn.splitByShareRatio(fees)
-		chargef, restf   = mn.splitByServiceCharge(minerf)
 		// intermediate response
 		iresp string
 	)
 
 	if mn.numActiveDelegates() == 0 {
-		iresp, err = msc.payNode(charger+restr, chargef+restf, mn, gn, balances)
-		if err != nil {
-			return "", err
-		}
-		resp += iresp
+		return "", common.NewErrorf("pay_fees",
+			"miner %v has no delegates", mn.ID)
 	} else {
-		iresp, err = msc.payNode(charger, chargef, mn, gn, balances)
-		if err != nil {
+		mn.Stat.GeneratorRewards += minerr + minerf
+		if err := mn.StakePool.DistributeRewards(
+			float64(minerr+minerf), mn.ID, stakepool.Miner, balances,
+		); err != nil {
 			return "", err
 		}
-		resp += iresp
-		iresp, err = msc.mintStakeHolders(restr, mn, gn, false, balances)
-		if err != nil {
-			return "", err
-		}
-		resp += iresp
-		iresp, err = msc.payStakeHolders(restf, mn, false, balances)
-		if err != nil {
-			return "", err
-		}
-		resp += iresp
 	}
 	// pay and mint rest for mb sharders
 	iresp, err = msc.payShardersAndDelegates(sharderf, sharderr, mb, gn, balances)
@@ -529,39 +515,14 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 
 	// part for every sharder
 	for _, sh := range sharders {
-		var sresp string
-		if sh.numActiveDelegates() > 0 {
-			var delegateBr = state.Balance(float64(partm) * (1 - sh.ServiceCharge))
-			var delegateFees = state.Balance(float64(partf) * (1 - sh.ServiceCharge))
-			var sharderBR = state.Balance(float64(partm) * sh.ServiceCharge)
-			var sharderFees = state.Balance(float64(partf) * sh.ServiceCharge)
-
-			sresp, err = msc.payNode(sharderBR, sharderFees, sh, gn, balances)
-			if err != nil {
-				return "", err
-			}
-			resp += sresp
-
-			sresp, err = msc.payStakeHolders(delegateFees, sh, true, balances)
-			if err != nil {
-				return "", common.NewErrorf("pay_fees/pay_sharders",
-					"paying block sharder fees: %v", err)
-			}
-
-			resp += sresp
-
-			sresp, err = msc.mintStakeHolders(delegateBr, sh, gn, true, balances)
-			if err != nil {
-				return "", common.NewErrorf("pay_fees/mint_sharders",
-					"minting block sharder reward: %v", err)
-			}
-			resp += sresp
+		if sh.numActiveDelegates() == 0 {
+			return "", common.NewErrorf("pay_fees",
+				"sharder %v has no delegates", sh.ID)
 		} else {
-			sresp, err = msc.payNode(partm, partf, sh, gn, balances)
-			if err != nil {
-				return "", err
-			}
-			resp += sresp
+			sh.Stat.SharderRewards += partf + partm
+			err = sh.StakePool.DistributeRewards(
+				float64(partf+partm), sh.ID, stakepool.Sharder, balances,
+			)
 		}
 
 		if err = sh.save(balances); err != nil {

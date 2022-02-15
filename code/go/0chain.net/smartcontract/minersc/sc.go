@@ -212,6 +212,7 @@ func getGlobalNode(
 	return gn, nil
 }
 
+/*
 func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
 	un := NewUserNode()
 	un.ID = id
@@ -228,3 +229,4 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	}
 	return un, nil
 }
+*/

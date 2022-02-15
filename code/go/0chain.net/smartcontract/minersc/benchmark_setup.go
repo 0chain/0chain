@@ -3,12 +3,12 @@ package minersc
 import (
 	"strconv"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -59,23 +59,17 @@ func AddMockNodes(
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
-			pool := sci.DelegatePool{
-				ZcnLockingPool: &tokenpool.ZcnLockingPool{
-					ZcnPool: tokenpool.ZcnPool{
-						TokenPool: tokenpool.TokenPool{
-							ID:      getMinerDelegatePoolId(i, dId, nodeType),
-							Balance: 100 * 1e10,
-						},
-					},
-				},
-				PoolStats: &sci.PoolStats{},
+			pool := stakepool.DelegatePool{
+				Balance:    100 * 1e10,
+				Reward:     0.3 * 1e10,
+				DelegateID: clients[dId],
 			}
-
-			pool.DelegateID = clients[dId]
 			if i < numActive {
-				newNode.Active[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+				pool.Status = stakepool.Active
+				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			} else {
-				newNode.Pending[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+				pool.Status = stakepool.Pending
+				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			}
 		}
 		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)

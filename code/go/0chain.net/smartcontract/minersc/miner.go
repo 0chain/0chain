@@ -3,8 +3,9 @@ package minersc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -179,50 +180,36 @@ func (msc *MinerSmartContract) deleteNode(
 ) (*MinerNode, error) {
 	var err error
 	deleteNode.Delete = true
+	var nodeType stakepool.Provider
+	if deleteNode.NodeType == NodeTypeMiner {
+		nodeType = stakepool.Miner
+	} else {
+		nodeType = stakepool.Sharder
+	}
 
-	// deleting pending pools
-	for key, pool := range deleteNode.Pending {
-		var un *UserNode
-		if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
-			return nil, fmt.Errorf("getting user node: %v", err)
-		}
-
-		var transfer *state.Transfer
-		transfer, _, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
-		if err != nil {
-			return nil, fmt.Errorf("error emptying delegate pool: %v", err)
-		}
-
-		if err = balances.AddTransfer(transfer); err != nil {
-			return nil, fmt.Errorf("adding transfer: %v", err)
-		}
-
-		if err := un.deletePool(deleteNode.ID, key); err != nil {
-			return nil, fmt.Errorf("deleting pool: %v", err)
-		}
-		delete(deleteNode.Pending, key)
-
-		if err = un.save(balances); err != nil {
-			return nil, fmt.Errorf("saving user node%s: %v", un.ID, err)
+	for key, pool := range deleteNode.Pools {
+		switch pool.Status {
+		case stakepool.Pending:
+			_, err := deleteNode.UnlockPool(
+				pool.DelegateID, nodeType, deleteNode.ID, key, balances)
+			if err != nil {
+				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
+			}
+		case stakepool.Active:
+			pool.Status = stakepool.Deleting
+			//pool.TokenLockInterface = &ViewChangeLock{
+			//	Owner:               pool.DelegateID,
+			//	DeleteViewChangeSet: true,
+			//	DeleteVC:            gn.ViewChange,
+			//}
+		case stakepool.Deleting:
+		case stakepool.Deleted:
+		default:
+			return nil, fmt.Errorf(
+				"unrecognised stakepool status: %v", pool.Status.String())
 		}
 	}
 
-	// deleting active pools
-	for key, pool := range deleteNode.Active {
-		if pool.Status == DELETING {
-			continue
-		}
-
-		pool.Status = DELETING // mark as deleting
-		pool.TokenLockInterface = &ViewChangeLock{
-			Owner:               pool.DelegateID,
-			DeleteViewChangeSet: true,
-			DeleteVC:            gn.ViewChange,
-		}
-		deleteNode.Deleting[key] = pool // add to deleting
-	}
-
-	// set node type -- miner
 	if err = deleteNode.save(balances); err != nil {
 		return nil, fmt.Errorf("saving node %v", err.Error())
 	}

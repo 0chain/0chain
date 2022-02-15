@@ -148,14 +148,6 @@ func (sp *stakePool) empty(
 		sp.TotalUnStake -= dp.Balance
 	}
 
-	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
-	if err := balances.AddTransfer(transfer); err != nil {
-		return false, err
-	}
-
-	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = stakepool.Deleting
-
 	return true, nil
 }
 
@@ -539,7 +531,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockPool(t, stakepool.Blobber, spr.BlobberID, spr.PoolID, balances)
+	amount, err := sp.UnlockPool(t.ClientID, stakepool.Blobber, spr.BlobberID, spr.PoolID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

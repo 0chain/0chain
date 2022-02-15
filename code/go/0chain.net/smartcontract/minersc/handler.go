@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -30,10 +32,18 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
 
-	var (
-		clientID = params.Get("client_id")
-		un       *UserNode
-	)
+	clientID := params.Get("client_id")
+	//un       *UserNode
+
+	minerPools, err := stakepool.GetUserStakePool(stakepool.Miner, clientID, balances)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get user miner stake pools", err.Error())
+	}
+	sharderPools, err := stakepool.GetUserStakePool(stakepool.Sharder, clientID, balances)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get user miner stake pools", err.Error())
+	}
+
 	if un, err = msc.getUserNode(clientID, balances); err != nil {
 		return nil, common.NewErrInternal("can't get user node", err.Error())
 	}
