@@ -1,16 +1,21 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"context"
-	"encoding/json"
+	"github.com/guregu/null"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -222,4 +227,62 @@ func TestMiners(t *testing.T) {
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.Error(t, err)
 
+}
+
+func TestGetMiners(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer eventDb.drop()
+	assert.NoError(t, err, "error while migrating database")
+	createMiners(t, eventDb, 10)
+
+	t.Run("Inactive miners should be returned", func(t *testing.T) {
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
+		assert.NoError(t, err, "Error should not be returned")
+		for _, miner := range miners {
+			assert.Equal(t, false, miner.Active, "Miner is active")
+		}
+		assert.Equal(t, 5, len(miners), "All miners were not returned")
+	})
+	t.Run("Active miners should be returned", func(t *testing.T) {
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
+		assert.NoError(t, err, "Error should not be returned")
+		for _, miner := range miners {
+			assert.Equal(t, true, miner.Active, "Miner is not active")
+		}
+		assert.Equal(t, 5, len(miners), "All miners were not returned")
+	})
+}
+
+func createMiners(t *testing.T, eventDb *EventDb, count int) {
+	for i := 0; i < count; i++ {
+		m := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
+		err := eventDb.addOrOverwriteMiner(m)
+		assert.NoError(t, err, "inserting miners failed")
+	}
+}
+
+func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
+	for i := offset; i < offset+limit; i++ {
+		want := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
+		want.CreatedAt = miners[i].CreatedAt
+		want.ID = miners[i].ID
+		want.UpdatedAt = miners[i].UpdatedAt
+		assert.Equal(t, want, miners[i], "Miners did not match")
+	}
 }
