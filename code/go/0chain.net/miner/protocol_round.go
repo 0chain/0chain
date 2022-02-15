@@ -840,6 +840,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
+			b.SetVerificationStatus(block.VerificationFailed)
 			logging.Logger.Debug("verifyAndSend - got error on verify round block",
 				zap.String("phase", round.GetPhaseName(r.GetPhase())), zap.Error(err))
 			switch err {
@@ -1032,6 +1033,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 
 	if !mc.getBlockNotarizationResultSync(ctx, b.PrevHash) {
+		b.SetVerificationStatus(block.VerificationFailed)
 		return nil, common.NewError("verify_round_block", "Verification tickets of previous block are not valid")
 	}
 
