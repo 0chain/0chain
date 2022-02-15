@@ -79,8 +79,6 @@ func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, strin
 func (tb *testBalances) EmitError(error)                                           {}
 func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
-func (tb *testBalances) GetCurrentRewardRound(period int64) int64                  { return 0 }
-func (tb *testBalances) GetPreviousRewardRound(period int64) int64                 { return 0 }
 func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 	datastore.Key, error) {
 
