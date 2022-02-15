@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -119,9 +120,8 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 	return count, res.Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(params map[string]interface{}) ([]Blobber, error) {
-	var blobbers []Blobber
-	dbStore := edb.Store.Get()
+func (edb *EventDb) GetBlobbersFromParams(params map[string]interface{}, dur time.Duration) ([]string, error) {
+	dbStore := edb.Store.Get().Model(&Blobber{})
 
 	if maxChallengeTime, _ := params["max_challenge_time"].(int); maxChallengeTime != 0 {
 		dbStore = dbStore.Where("challenge_completion_time > ?", maxChallengeTime)
@@ -141,12 +141,15 @@ func (edb *EventDb) GetBlobbersFromParams(params map[string]interface{}) ([]Blob
 		dbStore = dbStore.Where("used < ?", capacityUsed)
 	}
 
-	result := dbStore.Select("id").Find(&blobbers)
+	dbStore = dbStore.Where("max_offer_duration < ?", dur.String())
+
+	var blobberIDs []string
+	result := dbStore.Select("blobber_id").Find(&blobberIDs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving blobbers, error %v", result.Error)
 	}
 
-	return blobbers, nil
+	return blobberIDs, nil
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
