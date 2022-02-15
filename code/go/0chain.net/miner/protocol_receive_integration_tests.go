@@ -23,7 +23,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	}
 
 	wg := new(sync.WaitGroup)
-	if isBreakingSingleBlock(msg.BlockVerificationTicket.Round) {
+	if isBreakingSingleBlock(msg.BlockVerificationTicket.Round, msg.BlockVerificationTicket.BlockID) {
 		wg.Add(1)
 
 		go func() {
@@ -65,11 +65,21 @@ func isIgnoringVerificationTicket(round int64) bool {
 	return ignoring
 }
 
-func isBreakingSingleBlock(roundNum int64) bool {
+func isBreakingSingleBlock(roundNum int64, blockHash string) bool {
 	mc := GetMinerChain()
 
 	currRound := mc.GetRound(roundNum)
 	if !currRound.IsRanksComputed() {
+		return false
+	}
+
+	generator0Block := false
+	for _, bl := range currRound.GetProposedBlocks() {
+		if bl.Hash == blockHash && bl.RoundRank == 0 {
+			generator0Block = true
+		}
+	}
+	if !generator0Block {
 		return false
 	}
 
