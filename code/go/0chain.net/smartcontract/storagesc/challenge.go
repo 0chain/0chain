@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/smartcontract/stakepool"
@@ -31,7 +32,12 @@ import (
 const passedBlobbersPartitionSize = 50
 
 func BlobberRewardKey(round int64) datastore.Key {
-	return BLOBBER_REWARD_KEY + ":round:" + strconv.Itoa(int(round))
+	var sb strings.Builder
+	sb.WriteString(BLOBBER_REWARD_KEY)
+	sb.WriteString(":round:")
+	sb.WriteString(strconv.Itoa(int(round)))
+
+	return sb.String()
 }
 
 // getActivePassedBlobbersList gets blobbers passed challenge from last challenge period
