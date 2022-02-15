@@ -41,8 +41,6 @@ func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, s
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
 func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
-func (sc *mockStateContext) GetCurrentRewardRound(period int64) int64                  { return 0 }
-func (sc *mockStateContext) GetPreviousRewardRound(period int64) int64                 { return 0 }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }

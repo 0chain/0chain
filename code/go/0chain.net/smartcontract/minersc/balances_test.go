@@ -116,8 +116,6 @@ func (tb *testBalances) GetEvents() []event.Event                               
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) GetCurrentRewardRound(period int64) int64  { return 0 }
-func (tb *testBalances) GetPreviousRewardRound(period int64) int64 { return 0 }
 func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
 	return "", nil
 }
