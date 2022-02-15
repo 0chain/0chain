@@ -755,8 +755,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// adjust the expiration if changed, boundaries has already checked
 	var prevExpiration = alloc.Expiration
-	alloc.Expiration += uar.Expiration // new expiration
-	alloc.Size += uar.Size             // new size
+	alloc.Size += uar.Size // new size
 
 	// 1. update terms
 	for i, details := range alloc.BlobberDetails {
@@ -888,8 +887,6 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		odr = alloc.Expiration - t.CreationDate
 	)
 
-	// adjust the expiration if changed, boundaries has already checked
-	alloc.Expiration += uar.Expiration
 	alloc.Size += uar.Size
 
 	// 1. update terms
@@ -1060,26 +1057,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	// adjust expiration
-	var newExpiration = alloc.Expiration + request.Expiration
-
+	if request.Expiration != 0 && alloc.Expiration > t.CreationDate {
+		return "", common.NewError("allocation_updating_failed", "allocation duration can't be changed")
+	}
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
 
-	// close allocation now
-	if newExpiration <= t.CreationDate {
-		return sc.closeAllocation(t, alloc, balances)
-	}
-
 	// an allocation can't be shorter than configured in SC
-	// (prevent allocation shortening for entire period)
-	if request.Expiration < 0 &&
-		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
-
-		return "", common.NewError("allocation_updating_failed",
-			"allocation duration becomes too short")
-	}
-
 	if request.Size < 0 && alloc.Size+request.Size < conf.MinAllocSize {
 		return "", common.NewError("allocation_updating_failed",
 			"allocation size becomes too small")
