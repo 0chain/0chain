@@ -4,11 +4,12 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
 	"math"
 	"math/rand"
-	"time"
+	"strconv"
 )
 
 func (ssc *StorageSmartContract) blobberBlockRewards(
@@ -54,9 +55,16 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			"cannot get all blobbers list: "+err.Error())
 	}
 
-	random := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
+	var randomSeed uint64
+	randomSeed, err = strconv.ParseUint(hashString[0:16], 16, 64)
+	if err != nil {
+		return common.NewError("blobber_block_rewards_failed",
+			"error in creating seed"+err.Error())
+	}
+	r := rand.New(rand.NewSource(int64(randomSeed)))
 
-	blobberPartition, err := allBlobbers.GetRandomSlice(random, balances)
+	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"Error getting random partition: "+err.Error())
