@@ -19,12 +19,11 @@ import (
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
 	if isIgnoringVerificationTicket(msg.BlockVerificationTicket.Round) {
-		crpc.Client().State().VerifyingNonExistentBlock.IgnoredVerificationTicketsNum++
 		return
 	}
 
 	wg := new(sync.WaitGroup)
-	if isBreakingSingleBlock(msg.BlockVerificationTicket.Round, msg.BlockVerificationTicket.VerifierID) {
+	if isBreakingSingleBlock(msg.BlockVerificationTicket.Round, msg.BlockVerificationTicket.BlockID) {
 		wg.Add(1)
 
 		go func() {
@@ -47,6 +46,10 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 
 func isIgnoringVerificationTicket(round int64) bool {
 	testCfg := crpc.Client().State().VerifyingNonExistentBlock
+
+	testCfg.Lock()
+	defer testCfg.Unlock()
+
 	if testCfg == nil || round != testCfg.OnRound {
 		return false
 	}
@@ -55,27 +58,42 @@ func isIgnoringVerificationTicket(round int64) bool {
 	mc := GetMinerChain()
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
 	isFirstRankedReplica := nodeType == replica && typeRank == 0
-	return isFirstRankedReplica && testCfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
+	ignoring := isFirstRankedReplica && testCfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
+	if ignoring {
+		testCfg.IgnoredVerificationTicketsNum++
+	}
+	return ignoring
 }
 
-func isBreakingSingleBlock(roundNum int64, verTicketFromMiner string) bool {
+func isBreakingSingleBlock(roundNum int64, blockHash string) bool {
 	mc := GetMinerChain()
 
 	currRound := mc.GetRound(roundNum)
 	if !currRound.IsRanksComputed() {
 		return false
 	}
-	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
-	testCfg := crpc.Client().State().BreakingSingleBlock
-	shouldTest := testCfg != nil && testCfg.OnRound == roundNum && isFirstGenerator
-	if !shouldTest {
+
+	generator0Block := false
+	for _, bl := range currRound.GetProposedBlocks() {
+		if bl.Hash == blockHash && bl.RoundRank == 0 {
+			generator0Block = true
+		}
+	}
+	if !generator0Block {
 		return false
 	}
 
-	genNum := mc.GetGeneratorsNumOfRound(roundNum)
-	rankedMiners := currRound.GetMinersByRank(mc.GetMiners(roundNum).CopyNodes())
-	replicators := rankedMiners[genNum:]
-	return len(replicators) != 0 && replicators[0].ID == verTicketFromMiner
+	testCfg := crpc.Client().State().BreakingSingleBlock
+
+	testCfg.Lock()
+	defer testCfg.Unlock()
+
+	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
+	breaking := testCfg != nil && testCfg.OnRound == roundNum && isFirstGenerator && !testCfg.Sent
+	if breaking {
+		testCfg.Sent = true
+	}
+	return breaking
 }
 
 func sendBreakingBlock(blockHash string) (sentBlockHash string, err error) {
@@ -203,12 +221,12 @@ func isIgnoringNotarisation(round int64) bool {
 }
 
 func obtainNotarisationIfNeeded(not *Notarization) {
-	cfg := crpc.Client().State().ResendNotarisation
+	testCfg := crpc.Client().State().ResendNotarisation
 
-	cfg.Lock()
-	defer cfg.Unlock()
+	testCfg.Lock()
+	defer testCfg.Unlock()
 
-	if cfg == nil || not.Round != cfg.OnRound-2 || cfg.Notarisation != nil {
+	if testCfg == nil || not.Round != testCfg.OnRound-2 || testCfg.Notarisation != nil {
 		return
 	}
 
@@ -223,13 +241,13 @@ func obtainNotarisationIfNeeded(not *Notarization) {
 }
 
 func resendNotarisationIfNeeded(round int64) {
-	cfg := crpc.Client().State().ResendNotarisation
+	testCfg := crpc.Client().State().ResendNotarisation
 
-	cfg.Lock()
-	defer cfg.Unlock()
+	testCfg.Lock()
+	defer testCfg.Unlock()
 
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
-	resending := cfg != nil && round == cfg.OnRound-1 && nodeType == replica && typeRank == 0 && !cfg.Resent
+	resending := testCfg != nil && round == testCfg.OnRound-1 && nodeType == replica && typeRank == 0 && !testCfg.Resent
 	if !resending {
 		return
 	}
@@ -243,7 +261,7 @@ func resendNotarisationIfNeeded(round int64) {
 	miners := GetMinerChain().GetMagicBlock(round).Miners
 	miners.SendAll(context.Background(), BlockNotarizationSender(not))
 
-	cfg.Resent = true
+	testCfg.Resent = true
 }
 
 func configureBlockStateChangeRequestorTestCaseIfNeeded(not *Notarization) {
