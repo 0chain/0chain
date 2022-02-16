@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"github.com/guregu/null"
 
 	cstate "0chain.net/chaincore/chain/state"
 
@@ -81,11 +82,44 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 }
 
 func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allMinersList, err := msc.GetMinersList(balances)
+	var (
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		activeString = params.Get("active")
+		offset       = -1
+		limit        = -1
+		err          error
+	)
+	if offsetString != "" {
+		offset, err = strconv.Atoi(offsetString)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if limitString != "" {
+		limit, err = strconv.Atoi(limitString)
+		if err != nil {
+			return nil, err
+		}
+	}
+	filter := event.MinerQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
+		if err != nil {
+			return nil, err
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get miners. no db connection")
+	}
+
+	miners, err := balances.GetEventDB().GetMinersWithFiltersAndPagination(filter, offset, limit)
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners list", err.Error())
 	}
-	return allMinersList, nil
+	return miners, nil
 }
 
 func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -131,11 +165,44 @@ func (msc *MinerSmartContract) GetMinersStateHandler(ctx context.Context, params
 const cantGetShardersListMsg = "can't get sharders list"
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := getAllShardersList(balances)
-	if err != nil {
-		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
+	var (
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		activeString = params.Get("active")
+		offset       = -1
+		limit        = -1
+		err          error
+	)
+	if offsetString != "" {
+		offset, err = strconv.Atoi(offsetString)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return allShardersList, nil
+	if limitString != "" {
+		limit, err = strconv.Atoi(limitString)
+		if err != nil {
+			return nil, err
+		}
+	}
+	filter := event.SharderQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
+		if err != nil {
+			return nil, err
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get miners. no db connection")
+	}
+
+	miners, err := balances.GetEventDB().GetShardersWithFilterAndPagination(filter, offset, limit)
+	if err != nil {
+		return "", common.NewErrInternal("can't get miners list", err.Error())
+	}
+	return miners, nil
 }
 
 func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
