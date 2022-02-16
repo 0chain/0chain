@@ -80,28 +80,33 @@ func (c *Chain) BlockStateChangeHandler(ctx context.Context, r *http.Request) (i
 
 	minerInformer := createMinerInformer(r)
 	requestorID := r.Header.Get(node.HeaderNodeID)
+	selfInfo := cases.SelfInfo{
+		IsSharder: node.Self.Type == node.NodeTypeSharder,
+		ID:        node.Self.ID,
+		SetIndex:  node.Self.SetIndex,
+	}
 
 	cfg.Lock()
 	defer cfg.Unlock()
 
 	switch {
-	case cfg.IgnoringRequestsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound) && cfg.Ignored < 1:
+	case cfg.IgnoringRequestsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo) && cfg.Ignored < 1:
 		cfg.Ignored++
 		return nil, fmt.Errorf("%w: conductor expected error", common.ErrInternal)
 
-	case cfg.ChangedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.ChangedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return changeMPTNode(r)
 
-	case cfg.DeletedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.DeletedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return deleteMPTNode(ctx, r)
 
-	case cfg.AddedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.AddedMPTNodeBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return addMPTNode(r)
 
-	case cfg.PartialStateFromAnotherBlockBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.PartialStateFromAnotherBlockBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return changePartialState(ctx, r)
 
-	case cfg.CorrectResponseBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.CorrectResponseBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		fallthrough
 
 	default:
@@ -109,18 +114,22 @@ func (c *Chain) BlockStateChangeHandler(ctx context.Context, r *http.Request) (i
 	}
 }
 
-func createMinerInformer(r *http.Request) cases.MinerInformer {
+func createMinerInformer(r *http.Request) *cases.MinerInformer {
 	sChain := GetServerChain()
 	bl, err := sChain.getNotarizedBlock(context.Background(), r.FormValue("round"), r.FormValue("block"))
 	if err != nil {
 		return nil
 	}
+
 	miners := sChain.GetMiners(bl.Round)
 
 	roundI := round.NewRound(bl.Round)
 	roundI.SetRandomSeed(bl.RoundRandomSeed, len(miners.Nodes))
 
-	return cases.NewMinerInformer(roundI, miners, sChain.GetGeneratorsNum())
+	return cases.NewMinerInformer(
+		NewRanker(roundI, miners),
+		sChain.GetGeneratorsNum(),
+	)
 }
 
 func changeMPTNode(r *http.Request) (*block.StateChange, error) {
