@@ -41,6 +41,7 @@ type Config interface {
 	OwnerID() datastore.Key
 	BlockSize() int32
 	MinBlockSize() int32
+	MaxBlockCost() int
 	MaxByteSize() int64
 	MinGenerators() int
 	GeneratorsPercent() float64
@@ -295,6 +296,13 @@ func (c *ConfigImpl) DbsEvents() dbs.DbAccess {
 	return c.conf.DbsEvents
 }
 
+func (c *ConfigImpl) MaxBlockCost() int {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.MaxBlockCost
+}
+
 // HealthCheckCycleScan -
 type HealthCheckCycleScan struct {
 	Settle time.Duration `json:"settle"`
@@ -318,6 +326,7 @@ type ConfigData struct {
 	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
 	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
 	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have
+	MaxBlockCost         int           `json:"max_block_cost"`          // multiplier of soft timeouts to restart a round
 	MaxByteSize          int64         `json:"max_byte_size"`           // Max number of bytes a block can have
 	MinGenerators        int           `json:"min_generators"`          // Min number of block generators.
 	GeneratorsPercent    float64       `json:"generators_percent"`      // Percentage of all miners
@@ -363,6 +372,7 @@ func (c *ConfigImpl) FromViper() {
 	conf := c.conf
 	conf.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	conf.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
+	conf.MaxBlockCost = viper.GetInt("server_chain.block.max_block_cost")
 	conf.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
 	conf.MinGenerators = viper.GetInt("server_chain.block.min_generators")
 	conf.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
@@ -459,6 +469,10 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 		return err
 	}
 	conf.BlockSize, err = cf.GetInt32(minersc.BlockMaxSize)
+	if err != nil {
+		return err
+	}
+	conf.MaxBlockCost, err = cf.GetInt(minersc.BlockMaxCost)
 	if err != nil {
 		return err
 	}

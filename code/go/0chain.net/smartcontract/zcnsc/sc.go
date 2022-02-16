@@ -1,8 +1,11 @@
 package zcnsc
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
+	"go.uber.org/zap"
+	"math"
 	"net/url"
 
 	"github.com/rcrowley/go-metrics"
@@ -67,6 +70,25 @@ func (zcn *ZCNSmartContract) GetExecutionStats() map[string]interface{} {
 
 func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
 	return zcn.SmartContract.HandlerStats(ctx, params)
+}
+
+func (zcn *ZCNSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) int {
+	node, err := GetGlobalNode(balances)
+	if err != nil {
+		logging.Logger.Error("can't get global node")
+		return math.MaxInt32
+	}
+	if node.Cost == nil {
+		logging.Logger.Error("can't get cost")
+		return math.MaxInt32
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32
+	}
+
+	return cost
 }
 
 // Execute ...

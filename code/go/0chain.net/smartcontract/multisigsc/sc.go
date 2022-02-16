@@ -63,7 +63,11 @@ func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	ms.SmartContract = sc
 }
 
-func (ms MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {
+func (ms *MultiSigSmartContract) GetCost(t *transaction.Transaction, funcName string, balances state.StateContextI) int {
+	return 0
+}
+
+func (ms *MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {
 	if LogTimingInfo {
 		start := time.Now().UnixNano()
 		defer printTimeTaken(start)

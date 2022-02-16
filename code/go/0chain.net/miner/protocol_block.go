@@ -282,6 +282,16 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 	logging.Logger.Debug("ValidateTransactions finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
+	logging.Logger.Debug("ValidateBlockCost", zap.String("block", b.Hash))
+	cost := 0
+	for _, txn := range b.Txns {
+		cost += mc.EstimateTransactionCost(ctx, b, mc.GetLatestFinalizedBlock().ClientState, txn)
+		if cost > mc.Config.MaxBlockCost() {
+			return nil, block.ErrCostTooBig
+		}
+	}
+	logging.Logger.Debug("ValidateBlockCost", zap.Int("calculated cost", cost))
+
 	logging.Logger.Debug("ComputeState", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.ComputeState(ctx, b); err != nil {

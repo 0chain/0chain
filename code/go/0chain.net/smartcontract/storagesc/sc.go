@@ -1,8 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
+	"go.uber.org/zap"
+	"math"
 	"net/url"
 
 	"0chain.net/chaincore/smartcontract"
@@ -43,6 +46,24 @@ func (ipsc *StorageSmartContract) GetHandlerStats(ctx context.Context, params ur
 
 func (ipsc *StorageSmartContract) GetExecutionStats() map[string]interface{} {
 	return ipsc.SmartContractExecutionStats
+}
+
+func (ipsc *StorageSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) int {
+	conf, err := ipsc.getConfig(balances, true)
+	if err != nil {
+		logging.Logger.Error("can't get global node")
+		return math.MaxInt32
+	}
+	if conf.Cost == nil {
+		logging.Logger.Error("can't get cost")
+		return math.MaxInt32
+	}
+	cost, ok := conf.Cost[funcName]
+	if !ok {
+		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32
+	}
+	return cost
 }
 
 func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {

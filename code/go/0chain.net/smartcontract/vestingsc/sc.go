@@ -2,8 +2,11 @@ package vestingsc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
+	"go.uber.org/zap"
+	"math"
 	"net/url"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -49,6 +52,24 @@ func (vsc *VestingSmartContract) GetAddress() string {
 
 func (vsc *VestingSmartContract) GetRestPoints() RestPoints {
 	return vsc.RestHandlers
+}
+
+func (vsc *VestingSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) int {
+	node, err := vsc.getConfig(balances)
+	if err != nil {
+		logging.Logger.Error("can't get global node")
+		return math.MaxInt32
+	}
+	if node.Cost == nil {
+		logging.Logger.Error("can't get cost")
+		return math.MaxInt32
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32
+	}
+	return cost
 }
 
 func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,

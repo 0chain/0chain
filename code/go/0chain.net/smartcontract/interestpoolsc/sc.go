@@ -1,8 +1,11 @@
 package interestpoolsc
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
+	"go.uber.org/zap"
+	"math"
 	"net/url"
 	"time"
 
@@ -57,6 +60,24 @@ func (ipsc *InterestPoolSmartContract) GetExecutionStats() map[string]interface{
 
 func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
 	return ipsc.RestHandlers
+}
+
+func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) int {
+	node := ipsc.getGlobalNode(balances, funcName)
+	if node == nil {
+		logging.Logger.Error("can't get global node")
+		return math.MaxInt32
+	}
+	if node.Cost == nil {
+		logging.Logger.Error("can't get cost")
+		return math.MaxInt32
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32
+	}
+	return cost
 }
 
 func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
@@ -174,6 +195,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
 	gn.OwnerId = conf.GetString(pfx + "owner_id")
+	gn.Cost = conf.GetStringMapInt(pfx + "cost")
 	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}

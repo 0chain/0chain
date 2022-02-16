@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
+	"math"
 	"net/url"
 	"strconv"
 	"sync"
@@ -85,6 +87,28 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return msc.RestHandlers
+}
+
+func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) int {
+	node, err := getGlobalNode(balances)
+	if err != nil {
+		Logger.Error("can't get global node")
+		return math.MaxInt32
+	}
+	if node.Cost == nil {
+		Logger.Error("can't get cost")
+		return math.MaxInt32
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		for f, _ := range node.Cost {
+			Logger.Debug("keys", zap.String("func", f))
+
+		}
+		Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32
+	}
+	return cost
 }
 
 //setSC setting up smartcontract. implementing the interface

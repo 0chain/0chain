@@ -3,6 +3,7 @@ package faucetsc
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	sc "0chain.net/smartcontract"
 	metrics "github.com/rcrowley/go-metrics"
@@ -57,6 +58,24 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 	return fc.SmartContract.RestHandlers
 }
 
+func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) int {
+	node, err := fc.getGlobalVariables(t, balances)
+	if err != nil {
+		logging.Logger.Error("can't get global node", zap.Error(err))
+		return math.MaxInt32
+	}
+	if node.Cost == nil {
+		logging.Logger.Error("can't get cost")
+		return math.MaxInt32
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32
+	}
+	return cost
+}
+
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
@@ -87,7 +106,7 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	if state.Balance(gn.PourAmount)+gn.Used > gn.GlobalLimit {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)", t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
 	}
-	Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
+	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
 }
 

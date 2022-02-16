@@ -31,6 +31,7 @@ const (
 	MaxDestinations
 	MaxDescriptionLength
 	OwnerId
+	Cost
 )
 
 var (
@@ -41,6 +42,7 @@ var (
 		"max_destinations",
 		"max_description_length",
 		"owner_id",
+		"cost",
 	}
 )
 
@@ -49,12 +51,13 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type config struct {
-	MinLock              state.Balance `json:"min_lock"`
-	MinDuration          time.Duration `json:"min_duration"`
-	MaxDuration          time.Duration `json:"max_duration"`
-	MaxDestinations      int           `json:"max_destinations"`
-	MaxDescriptionLength int           `json:"max_description_length"`
-	OwnerId              datastore.Key `json:"owner_id"`
+	MinLock              state.Balance  `json:"min_lock"`
+	MinDuration          time.Duration  `json:"min_duration"`
+	MaxDuration          time.Duration  `json:"max_duration"`
+	MaxDestinations      int            `json:"max_destinations"`
+	MaxDescriptionLength int            `json:"max_description_length"`
+	OwnerId              datastore.Key  `json:"owner_id"`
+	Cost                 map[string]int `json:"cost"`
 }
 
 func (c *config) validate() (err error) {
@@ -149,6 +152,7 @@ func (conf *config) getConfigMap() smartcontract.StringMap {
 	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", conf.MaxDestinations)
 	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", conf.MaxDescriptionLength)
 	sMap.Fields[Settings[OwnerId]] = fmt.Sprintf("%v", conf.OwnerId)
+	sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", conf.Cost)
 	return sMap
 }
 
@@ -215,6 +219,7 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
 	conf.OwnerId = scconf.GetString(prefix + "owner_id")
+	conf.Cost = scconf.GetStringMapInt(prefix + "cost")
 
 	err = conf.validate()
 	if err != nil {

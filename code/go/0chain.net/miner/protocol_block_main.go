@@ -128,6 +128,8 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
+	//accumulated transaction cost
+	cost int
 }
 
 func newTxnIterInfo(blockSize int32) *TxnIterInfo {
@@ -158,6 +160,12 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
+		cost := mc.EstimateTransactionCost(ctx, mc.GetLatestFinalizedBlock(), mc.GetLatestFinalizedBlock().ClientState, txn)
+		if tii.cost+cost >= mc.Config.MaxBlockCost() {
+			logging.Logger.Debug("generate block (too big cost, skipping)")
+			return true
+		}
+
 		if txnProcessor(ctx, bState, txn, tii) {
 			if tii.idx >= mc.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
