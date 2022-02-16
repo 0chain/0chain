@@ -99,25 +99,30 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 
 	minerInformer := createMinerInformer(r)
 	requestorID := r.Header.Get(node.HeaderNodeID)
+	selfInfo := cases.SelfInfo{
+		IsSharder: node.Self.Type == node.NodeTypeSharder,
+		ID:        node.Self.ID,
+		SetIndex:  node.Self.SetIndex,
+	}
 
 	cfg.Lock()
 	defer cfg.Unlock()
 
 	switch {
-	case cfg.IgnoringRequestsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound) && cfg.Ignored < 1:
+	case cfg.IgnoringRequestsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo) && cfg.Ignored < 1:
 		cfg.Ignored++
 		return nil, fmt.Errorf("%w: conductor expected error", common.ErrInternal)
 
-	case cfg.ValidBlockWithChangedHashBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.ValidBlockWithChangedHashBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return validBlockWithChangedHash(r)
 
-	case cfg.InvalidBlockWithChangedHashBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.InvalidBlockWithChangedHashBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return invalidBlockWithChangedHash(r)
 
-	case cfg.BlockWithoutVerTicketsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.BlockWithoutVerTicketsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return blockWithoutVerTickets(r)
 
-	case cfg.CorrectResponseBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound):
+	case cfg.CorrectResponseBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		fallthrough
 
 	default:
@@ -125,7 +130,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 	}
 }
 
-func createMinerInformer(r *http.Request) cases.MinerInformer {
+func createMinerInformer(r *http.Request) *cases.MinerInformer {
 	mChain := GetMinerChain()
 	bl, err := getNotarizedBlock(context.Background(), r)
 	if err != nil {
@@ -136,7 +141,10 @@ func createMinerInformer(r *http.Request) cases.MinerInformer {
 	roundI := round.NewRound(bl.Round)
 	roundI.SetRandomSeed(bl.RoundRandomSeed, len(miners.Nodes))
 
-	return cases.NewMinerInformer(roundI, miners, mChain.GetGeneratorsNum())
+	return cases.NewMinerInformer(
+		chain.NewRanker(roundI, miners),
+		mChain.GetGeneratorsNum(),
+	)
 }
 
 func validBlockWithChangedHash(r *http.Request) (*block.Block, error) {

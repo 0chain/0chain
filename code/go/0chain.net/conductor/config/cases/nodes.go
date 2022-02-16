@@ -2,8 +2,6 @@ package cases
 
 import (
 	"strconv"
-
-	"0chain.net/chaincore/node"
 )
 
 type (
@@ -39,6 +37,13 @@ type (
 	//
 	// Example: "sharder-1".
 	Sharder string
+
+	// SelfInfo represents summary of the self node.
+	SelfInfo struct {
+		IsSharder bool
+		ID        string
+		SetIndex  int
+	}
 )
 
 // IsActingOnTestRequestor checks with MinerInformer help response to the requestor or not.
@@ -48,7 +53,7 @@ type (
 //		requestor must be Replica0;
 //		round must be equal to the expected round;
 //		requested node should be in the Nodes list.
-func (n *Nodes) IsActingOnTestRequestor(informer MinerInformer, requestorID string, expectedRound int64) bool {
+func (n *Nodes) IsActingOnTestRequestor(informer *MinerInformer, requestorID string, expectedRound int64, selfInfo SelfInfo) bool {
 	if informer == nil || expectedRound != informer.GetRoundNumber() || !informer.Contains(requestorID) {
 		return false
 	}
@@ -58,13 +63,13 @@ func (n *Nodes) IsActingOnTestRequestor(informer MinerInformer, requestorID stri
 		return false
 	}
 
-	if node.Self.Type == node.NodeTypeSharder {
-		selfName := "sharder-" + strconv.Itoa(node.Self.SetIndex)
+	if selfInfo.IsSharder {
+		selfName := "sharder-" + strconv.Itoa(selfInfo.SetIndex)
 		return n.Sharders.Contains(selfName)
 	}
 
 	// node type miner
-	return n.Miners.Contains(informer.IsGenerator(node.Self.ID), informer.GetTypeRank(node.Self.ID))
+	return n.Miners.Contains(informer.IsGenerator(selfInfo.ID), informer.GetTypeRank(selfInfo.ID))
 }
 
 // Num returns number of all nodes contained by Nodes.
@@ -97,15 +102,14 @@ func (s Sharders) Contains(name string) bool {
 }
 
 type (
-	minerInformer struct {
+	MinerInformer struct {
 		Ranker
-		miners *node.Pool
 		genNum int
 	}
 
 	// Ranker represents interface for ranking miners on round.
 	Ranker interface {
-		// GetMinerRank return rank of the miner.
+		// GetMinerRankByID return rank of the miner.
 		//
 		// 	Explaining type rank example:
 		//		Generators num = 2
@@ -114,56 +118,30 @@ type (
 		// 		Generator1:	rank = 1; rank = 1.
 		// 		Replica0:	rank = 2; rank = 2.
 		// 		Replica0:	rank = 3; rank = 3.
-		GetMinerRank(miner *node.Node) int
+		GetMinerRankByID(minerID string) int
 
 		GetRoundNumber() int64
+
+		HasNode(id string) bool
 	}
-
-	MinerInformer interface {
-		IsGenerator(minerID string) bool
-
-		// GetTypeRank returns miner's type rank.
-		//
-		// 	Explaining type rank example:
-		//		Generators num = 2
-		// 		len(miners) = 4
-		// 		Generator0:	rank = 0; typeRank = 0; isGenerator = true.
-		// 		Generator1:	rank = 1; typeRank = 1; isGenerator = true.
-		// 		Replica0:	rank = 2; typeRank = 0; isGenerator = false.
-		// 		Replica0:	rank = 3; typeRank = 1; isGenerator = false.
-		GetTypeRank(minerID string) int
-
-		Contains(minerID string) bool
-
-		GetRoundNumber() int64
-	}
-)
-
-var (
-	// Ensure minerInformer implements MinerInformer interface.
-	_ MinerInformer = (*minerInformer)(nil)
 )
 
 // NewMinerInformer creates initialized MinerInformer impementation.
-func NewMinerInformer(ranker Ranker, miners *node.Pool, genNum int) MinerInformer {
-	return &minerInformer{
+func NewMinerInformer(ranker Ranker, genNum int) *MinerInformer {
+	return &MinerInformer{
 		Ranker: ranker,
-		miners: miners,
 		genNum: genNum,
 	}
 }
 
 // IsGenerator implements MinerInformer interface.
-func (mi *minerInformer) IsGenerator(minerID string) bool {
-	miner := mi.miners.GetNode(minerID)
-	minerRank := mi.Ranker.GetMinerRank(miner)
-	return minerRank < mi.genNum
+func (mi *MinerInformer) IsGenerator(minerID string) bool {
+	return mi.Ranker.GetMinerRankByID(minerID) < mi.genNum
 }
 
 // GetTypeRank implements MinerInformer interface.
-func (mi *minerInformer) GetTypeRank(minerID string) int {
-	miner := mi.miners.GetNode(minerID)
-	minerRank := mi.Ranker.GetMinerRank(miner)
+func (mi *MinerInformer) GetTypeRank(minerID string) int {
+	minerRank := mi.Ranker.GetMinerRankByID(minerID)
 	isGenerator := minerRank < mi.genNum
 	typeRank := minerRank
 	if !isGenerator {
@@ -173,11 +151,11 @@ func (mi *minerInformer) GetTypeRank(minerID string) int {
 }
 
 // Contains implements MinerInformer interface.
-func (mi *minerInformer) Contains(minerID string) bool {
-	return mi.miners.HasNode(minerID)
+func (mi *MinerInformer) Contains(minerID string) bool {
+	return mi.Ranker.HasNode(minerID)
 }
 
 // GetRoundNumber implements MinerInformer interface.
-func (mi *minerInformer) GetRoundNumber() int64 {
+func (mi *MinerInformer) GetRoundNumber() int64 {
 	return mi.Ranker.GetRoundNumber()
 }
