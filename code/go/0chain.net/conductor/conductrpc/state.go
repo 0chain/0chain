@@ -83,9 +83,7 @@ func (s *State) copy() (cp *State) {
 }
 
 func (s *State) send(poll chan *State) {
-	go func(state *State) {
-		poll <- state
-	}(s.copy())
+	poll <- s.copy()
 }
 
 type IsGoodOrBad interface {

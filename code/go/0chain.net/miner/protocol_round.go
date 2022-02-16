@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
@@ -22,8 +25,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	"github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -1128,7 +1129,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	return true
 }
 
-func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
+func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, beforeStartNextRound func()) {
 	r.SetPhase(round.Complete)
 	var rn = r.GetRoundNumber()
 	if !mc.waitNotAhead(ctx, rn) {
@@ -1136,6 +1137,9 @@ func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 			zap.Int64("round", rn))
 		return // terminated
 	}
+
+	beforeStartNextRound()
+
 	//TODO start if not started, atm we  resend vrf share here
 	nr := mc.StartNextRound(ctx, r)
 	mc.SetCurrentRound(nr.Number)

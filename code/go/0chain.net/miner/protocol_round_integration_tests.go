@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -15,20 +16,28 @@ import (
 )
 
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
+	cfg := crpc.Client().State().ExtendNotNotarisedBlock
+	cfg.Lock()
 	if isMockingNotNotarisedBlockExtension(r.GetRoundNumber()) {
-		if bl, err := configureNotNotarisedBlockExtensionTest(r); err != nil {
-			log.Printf("Conductor: NotNotarisedBlockExtension: error while configuring test case: %v", err)
-		} else {
-			return bl
+		bl, err := configureNotNotarisedBlockExtensionTest(r)
+		if err != nil {
+			log.Panicf("Conductor: NotNotarisedBlockExtension: error while configuring test case: %v", err)
 		}
+
+		cfg.Configured = true
+
+		cfg.Unlock()
+		return bl
 	}
+	cfg.Unlock()
 
 	return mc.getBlockToExtend(ctx, r)
 }
 
 func isMockingNotNotarisedBlockExtension(round int64) bool {
 	cfg := crpc.Client().State().ExtendNotNotarisedBlock
-	isConfigured := cfg != nil && cfg.OnRound == round+1
+
+	isConfigured := cfg != nil && cfg.OnRound == round+1 && !cfg.Configured
 	if !isConfigured {
 		return false
 	}
@@ -144,4 +153,18 @@ func isTestingSendDifferentBlocks(minerRound *Round) bool {
 	return (shouldTestFromAllGen || shouldTestFromFirstGen) &&
 		minerRound.GetTimeoutCount() == 1 &&
 		minerRound.GetSoftTimeoutCount() == 0
+}
+
+func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
+	mc.moveToNextRoundNotAheadImpl(ctx, r, lockChainIfConfigured)
+}
+
+func lockChainIfConfigured() {
+	for {
+		if !crpc.Client().State().IsLock {
+			break
+		}
+
+		<-time.NewTimer(time.Microsecond * 200).C
+	}
 }
