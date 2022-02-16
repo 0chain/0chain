@@ -706,7 +706,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		zap.String("computed_state_hash", util.ToHex(blockState.GetRoot())),
 		zap.Int("changes", blockState.GetChangeCount()),
 		zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
 		zap.Int32("iteration_count", iterInfo.count))
 	block.StateSanityCheck(ctx, b)
 	b.ComputeTxnMap()
