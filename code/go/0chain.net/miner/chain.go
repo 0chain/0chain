@@ -269,7 +269,6 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 func (mc *Chain) SetPreviousBlock(r round.RoundI, b *block.Block, pb *block.Block) {
 	b.SetPreviousBlock(pb)
 	mc.SetRoundRank(r, b)
-	b.ComputeChainWeight()
 }
 
 // GetMinerRound - get the miner's version of the round.

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 sharderCount=1
 minerCount=3
 blobberCount=1
@@ -13,6 +11,14 @@ do
     esac
 done
 
+if [ "$(uname)" == "Darwin" ]; then
+    # Do something under Mac OS X platform  
+    brew install gnu-sed
+    alias sed='gsed'
+    brew install jq
+else
+    sudo apt install jq -y
+fi
 git clone https://github.com/0chain/0chain.git
 git clone https://github.com/0chain/blobber.git
 git clone https://github.com/0chain/0dns.git
@@ -81,21 +87,21 @@ do
     printf "  - http://localhost:%d\n" $(($i+7170)) >> $HOME/.zcn/network.yaml
 done
 
-for i in {1...4}
+for i in {1..4}
 do
 echo "Waiting for 30 seconds"
 sleep 30
-if ./zbox register | grep -q 'Wallet registered'; then # If something is wrong check this condition.
+./zbox register | grep 'Wallet registered' &> /dev/null
+if [ $? == 0 ]; then # If something is wrong check this condition.
     echo "Wallet registered"
-    break
+    break;
 fi
 done
-sudo apt install jq -y
 client_id=$(jq ".client_id" $HOME/.zcn/wallet.json -r)
 
 cd ../blobber
 sed -i "s/delegate_wallet: '2f34516ed8c567089b7b5572b12950db34a62a07e16770da14b15b170d0d60a9'/delegate_wallet: '$client_id'/g" config/0chain_blobber.yaml
-sed -i "s/delegate_wallet: '2f34516ed8c567089b7b5572b12950db34a62a07e16770da14b15b170d0d60a9'/delegate_wallet: '$client_id'/g" config/0chain_validator.yaml
+sed -i "s/delegate_wallet: '86b147de5be951a5ab0c6b1732596686185c5e11c3bdf76a112183f828f39ba1'/delegate_wallet: '$client_id'/g" config/0chain_validator.yaml
 sudo chmod -R a+wxr ./docker.local/blobber*/*
 cd docker.local
 for i in $(seq 1 $blobberCount)
