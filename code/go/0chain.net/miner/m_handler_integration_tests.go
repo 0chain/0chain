@@ -101,7 +101,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 	requestorID := r.Header.Get(node.HeaderNodeID)
 
 	cfg.Lock()
-	cfg.Unlock()
+	defer cfg.Unlock()
 
 	switch {
 	case cfg.IgnoringRequestsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound) && cfg.Ignored < 1:

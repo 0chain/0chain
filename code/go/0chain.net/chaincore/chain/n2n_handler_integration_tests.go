@@ -29,7 +29,7 @@ func SetupX2MRequestors() {
 
 	if crpc.Client().State().ClientStatsCollectorEnabled {
 		BlockStateChangeRequestor = BlockStateChangeRequestorStats(BlockStateChangeRequestor)
-		MinerNotarizedBlockRequestor = middleware.MinerNotarisedBlockRequestor(MinerNotarizedBlockRequestor)
+		MinerNotarizedBlockRequestor = MinerNotarisedBlockRequestor(MinerNotarizedBlockRequestor)
 	}
 }
 
@@ -45,6 +45,26 @@ func BlockStateChangeRequestorStats(requestor node.EntityRequestor) node.EntityR
 			Block:  urlParams.Get("block"),
 		}
 		if err := crpc.Client().AddBlockStateChangeRequestorStats(rs); err != nil {
+			log.Panicf("Conductor: error while adding client stats: %v", err)
+		}
+
+		return requestor(urlParams, handler)
+	}
+}
+
+func MinerNotarisedBlockRequestor(requestor node.EntityRequestor) node.EntityRequestor {
+	return func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) node.SendHandler {
+		if !crpc.Client().State().ClientStatsCollectorEnabled {
+			return requestor(urlParams, handler)
+		}
+
+		rNum, _ := strconv.Atoi(urlParams.Get("round"))
+		rs := &stats.MinerNotarisedBlockRequest{
+			NodeID: node.Self.ID,
+			Round:  rNum,
+			Block:  urlParams.Get("block"),
+		}
+		if err := crpc.Client().AddMinerNotarisedBlockRequestorStats(rs); err != nil {
 			log.Panicf("Conductor: error while adding client stats: %v", err)
 		}
 

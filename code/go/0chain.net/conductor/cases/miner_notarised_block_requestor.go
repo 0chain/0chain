@@ -131,7 +131,7 @@ func (n *MinerNotarisedBlockRequestor) check() (success bool, err error) {
 	}
 }
 
-func (n *MinerNotarisedBlockRequestor) checkRetryRequesting(expectedNumRequests int, checkFinalisation bool) (success bool, err error) {
+func (n *MinerNotarisedBlockRequestor) checkRetryRequesting(minRequests int, checkFinalisation bool) (success bool, err error) {
 	replica0 := n.roundInfo.getNodeID(false, 0)
 	replica0Stats, ok := n.clientStats.MinerNotarisedBlock[replica0]
 	if !ok {
@@ -144,8 +144,8 @@ func (n *MinerNotarisedBlockRequestor) checkRetryRequesting(expectedNumRequests 
 
 	notBlock := n.roundInfo.NotarisedBlocks[0]
 	numReports := replica0Stats.CountWithHash(notBlock.Hash)
-	if numReports != expectedNumRequests {
-		return false, fmt.Errorf("wrong reports count: %d; epected %d", numReports, expectedNumRequests)
+	if numReports < minRequests {
+		return false, fmt.Errorf("wrong reports count: %d; min %d", numReports, minRequests)
 	}
 
 	if checkFinalisation && !n.roundInfo.IsFinalised {
