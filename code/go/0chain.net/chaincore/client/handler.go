@@ -40,7 +40,9 @@ func WithEmitEventHandler(c Chainer, handler datastore.JSONEntityReqResponderF, 
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		ctx = memorystore.WithEntityConnection(ctx, entityMetadata)
 		defer memorystore.Close(ctx)
-		c.GetEventDb().AddEvents(ctx, []event.Event{})
+		if c.GetEventDb() != nil {
+			c.GetEventDb().AddEvents(ctx, []event.Event{})
+		}
 		return handler(ctx, entity)
 	}
 }
