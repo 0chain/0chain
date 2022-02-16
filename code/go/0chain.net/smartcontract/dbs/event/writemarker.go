@@ -3,7 +3,9 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type WriteMarker struct {
@@ -37,6 +39,14 @@ func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	}
 
 	return &wm, nil
+}
+
+func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]WriteMarker, error) {
+	var wm []WriteMarker
+	return wm, edb.Get().Model(&WriteMarker{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   isDescending,
+	}).Scan(&wm).Error
 }
 
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]WriteMarker, error) {
