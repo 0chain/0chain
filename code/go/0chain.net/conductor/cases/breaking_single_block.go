@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
-
-	"0chain.net/chaincore/block"
 )
 
 type (
@@ -74,7 +72,7 @@ func (n *BreakingSingleBlock) check() (success bool, err error) {
 			case bi.Notarised:
 				return false, errors.New("second sent block must be not notarised")
 
-			case bi.VerificationStatus != block.VerificationFailed:
+			case bi.VerificationStatus == BlocksVerificationSuccessful:
 				return false, errors.New("second sent block verification must be failed")
 			}
 		}

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
 	"0chain.net/conductor/config/cases"
+	"0chain.net/conductor/dirs"
 )
 
 //
@@ -74,6 +77,27 @@ func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 		log.Printf("Cleanup_BC: do cleanup result %v", err)
 	}
 	return err
+}
+
+// SaveLogs copies current execution logs contained in the "workDir/node-n/log" to the
+// "docker.local/conductor.backup-logs/testCaseName".
+func (r *Runner) SaveLogs() error {
+	now := time.Now().Format(time.RFC822)
+	for _, node := range r.conf.Nodes {
+		var (
+			source       = filepath.Join(node.WorkDir, "log")
+			testCaseName = strings.Replace(r.currTestCaseName, " ", "_", -1) + "_" + now
+			destination  = filepath.Join("docker.local", "conductor.backup_logs", testCaseName, string(node.Name))
+		)
+		if err := os.MkdirAll(destination, 0755); err != nil {
+			return err
+		}
+		if err := dirs.CopyDir(source, destination); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // set additional environment variables
@@ -811,6 +835,7 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 	}
 
 	r.server.CurrentTest = configurator.TestCase()
+	r.currTestCaseName = configurator.Name()
 
 	return nil
 }

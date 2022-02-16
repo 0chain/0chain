@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/core/metric"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/metric"
 	"0chain.net/core/util"
 )
 
@@ -16,7 +16,6 @@ type Info struct {
 	FinalizedCount  int64      `json:"finalized_blocks_count"`
 	BlockHash       string     `json:"block_hash"`
 	ClientStateHash util.Key   `json:"client_state_hash"`
-	ChainWeight     float64    `json:"chain_weight"`
 }
 
 //GetKey - implements Metric interface
@@ -45,7 +44,6 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 		FinalizedRound:  b.Round,
 		BlockHash:       b.Hash,
 		ClientStateHash: b.ClientStateHash,
-		ChainWeight:     b.ChainWeight,
 		FinalizedCount:  SteadyStateFinalizationTimer.Count(),
 	}
 	t := time.Now()

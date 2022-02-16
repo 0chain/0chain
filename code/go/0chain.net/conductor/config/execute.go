@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
+
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config/cases"
-	"github.com/mitchellh/mapstructure"
 )
 
 // Executor used by a Flow to perform a flow directive.
@@ -98,6 +99,8 @@ type Executor interface {
 
 	// GetClientStatsCollector returns current client stats collector.
 	GetClientStatsCollector() *stats.NodesClientStats
+
+	SaveLogs() error
 
 	// ConfigureTestCase runs cases.TestCase's configuring with cases.TestCaseConfigurator configuration.
 	ConfigureTestCase(cases.TestCaseConfigurator) error

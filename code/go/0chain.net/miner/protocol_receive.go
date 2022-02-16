@@ -263,16 +263,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	/* Since this is a notarized block, we are accepting it. */
-	b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
-	if err != nil {
-		logging.Logger.Error("verify block failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("miner", b.MinerID),
-			zap.Error(err))
-		return nil
-	}
-
+	b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
 	b = b1
 	mr = r1.(*Round)
 	logging.Logger.Info("verify block - added a notarizedBlockToRound, got notarized block with different RRS",
@@ -479,10 +470,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
-		logging.Logger.Error("process notarization - not added to round")
-		return fmt.Errorf("can't add already notarized block to round: %v", err)
-	}
+	mc.AddNotarizedBlockToRound(r, b)
 	mc.ProgressOnNotarization(r)
 
 	// update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)

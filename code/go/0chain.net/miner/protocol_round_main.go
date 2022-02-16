@@ -22,3 +22,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 	mc.handleRoundTimeout(ctx, round)
 }
+
+func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
+	mc.moveToNextRoundNotAheadImpl(ctx, r, func() {})
+}
