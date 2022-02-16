@@ -1,12 +1,15 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+
+	"0chain.net/smartcontract/stakepool"
+
+	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -111,32 +114,30 @@ func (cp *challengePool) moveToWritePool(
 	return
 }
 
-func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
-	validatos []datastore.Key, vsps []*stakePool,
-	balances cstate.StateContextI) (moved state.Balance, err error) {
-
-	if len(validatos) == 0 || reward == 0 {
-		return // nothing to move, or nothing to move to
+func (cp *challengePool) moveToValidators(sscKey string, reward float64,
+	validatos []datastore.Key,
+	vsps []*stakePool,
+	balances cstate.StateContextI,
+) error {
+	if len(validatos) == 0 || reward == 0.0 {
+		return nil // nothing to move, or nothing to move to
 	}
 
-	var oneReward = state.Balance(float64(reward) / float64(len(validatos)))
+	var oneReward = reward / float64(len(validatos))
 
 	for i, sp := range vsps {
-		if cp.Balance < oneReward {
-			return 0, fmt.Errorf("not enough tokens in challenge pool: %v < %v",
+		if float64(cp.Balance) < oneReward {
+			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
-		var oneMove state.Balance
-		oneMove, err = transferReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
-		sp.Rewards.Validator += oneMove
+		err := sp.DistributeRewards(oneReward, validatos[i], stakepool.Validator, balances)
 		if err != nil {
-			return 0, fmt.Errorf("moving to validator %s: %v",
+			return fmt.Errorf("moving to validator %s: %v",
 				validatos[i], err)
 		}
-		moved += oneMove
 	}
-
-	return
+	cp.ZcnPool.Balance -= state.Balance(reward)
+	return nil
 }
 
 func (cp *challengePool) stat(alloc *StorageAllocation) (
