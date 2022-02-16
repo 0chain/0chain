@@ -246,18 +246,13 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	if isSendingInsufficientProposals(b.Round) {
-		sendInsufficientProposals(ctx, b)
-
-		if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
-			log.Panicf("Condutor: error while configuring test case: %v", err)
-		}
+	if sent := sendInsufficientProposalsIfNeeded(ctx, b); sent == true {
 		return
 	}
 
 	if isDelayingBlock(b.Round) {
 		delayedBlock <- b
-		return
+		ctx = context.Background()
 	}
 
 	mc.sendBlock(ctx, b)
@@ -368,12 +363,28 @@ func createDataTxn(data string) (*transaction.Transaction, error) {
 	return txn, nil
 }
 
-func isSendingInsufficientProposals(r int64) bool {
-	currRound := GetMinerChain().GetRound(r)
-	isGenerator0 := currRound.GetMinerRank(node.Self.Node) == 0
+func sendInsufficientProposalsIfNeeded(ctx context.Context, b *block.Block) (sent bool) {
 	testCfg := crpc.Client().State().SendInsufficientProposals
+
+	testCfg.Lock()
+	defer testCfg.Unlock()
+
+	currRound := GetMinerChain().GetRound(b.Round)
+	isGenerator0 := currRound.GetMinerRank(node.Self.Node) == 0
 	// we need to send insufficient proposals on configured round with 0 timeout count from Generator0
-	return testCfg != nil && testCfg.OnRound == r && isGenerator0 && currRound.GetTimeoutCount() == 0
+	sending := testCfg != nil && testCfg.OnRound == b.Round && isGenerator0 && !testCfg.Sent
+	if !sending {
+		return false
+	}
+
+	sendInsufficientProposals(ctx, b)
+	testCfg.Sent = true
+
+	if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
+		log.Panicf("Condutor: error while configuring test case: %v", err)
+	}
+
+	return true
 }
 
 func sendInsufficientProposals(ctx context.Context, b *block.Block) {
@@ -382,7 +393,7 @@ func sendInsufficientProposals(ctx context.Context, b *block.Block) {
 	var (
 		currRound    = mc.GetRound(b.Round)
 		miners       = mc.GetMagicBlock(b.Round).Miners.CopyNodes()
-		sendCount    = len(miners) / 3
+		sendCount    = (len(miners) / 3) - 1
 		minersToSend = make([]*node.Node, 0, sendCount)
 	)
 	for ind := 0; len(minersToSend) < sendCount && ind < len(miners); ind++ {

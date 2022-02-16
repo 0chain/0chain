@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -358,6 +359,16 @@ func init() {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
 		return ex.Challenges(&cs)
+	})
+
+	register(saveLogsDirectiveName, func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.SaveLogs(); err != nil {
+			log.Printf("Warning, logs are not saved, err: %v", err)
+		}
+
+		return nil
 	})
 
 	// checks

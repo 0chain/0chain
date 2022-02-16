@@ -7,8 +7,8 @@ import (
 	"context"
 	"net/http"
 
+	"0chain.net/chaincore/chain"
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/conductor/conductrpc/stats/middleware"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
@@ -18,9 +18,9 @@ import (
 func SetupHandlers() {
 	handlers := handlersMap()
 
-	handlers[getBlockV1Pattern] = middleware.BlockStats(
+	handlers[getBlockV1Pattern] = chain.BlockStats(
 		handlers[getBlockV1Pattern],
-		middleware.BlockStatsConfigurator{
+		chain.BlockStatsConfigurator{
 			HashKey: "block",
 			Handler: getBlockV1Pattern,
 		},

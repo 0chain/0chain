@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
-	"0chain.net/chaincore/block"
 )
 
 type (
@@ -65,13 +63,13 @@ func (n *NotNotarisedBlockExtension) check() (success bool, err error) {
 	for _, b := range n.result.blocks() {
 		prevBlockHash, status := b.PrevHash, b.VerificationStatus
 		switch {
-		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationSuccessful:
+		case prevBlockHash == n.mockedBlockHashToExtend && status == BlocksVerificationSuccessful:
 			return false, fmt.Errorf("block with %s previous block hash has unexpected status: %d", prevBlockHash, status)
 
-		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationFailed:
+		case prevBlockHash == n.mockedBlockHashToExtend && status == BlocksVerificationFailed:
 			return true, nil
 
-		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationPending:
+		case prevBlockHash == n.mockedBlockHashToExtend && status == BlocksVerificationPending:
 			return false, errors.New("checked block has verification pending status")
 		}
 	}

@@ -3,13 +3,16 @@ package chain
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
 
-	"errors"
+	metrics "github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
@@ -22,8 +25,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
-	metrics "github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 //SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
@@ -217,6 +218,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		default:
 			if err != nil {
 				sctx.EmitError(err)
+
+				if strings.Contains(err.Error(), "node not found") {
+					logging.Logger.Error("Error executing the SC, internal error",
+						zap.Error(err),
+						zap.String("block", b.Hash),
+						zap.String("begin client state", util.ToHex(startRoot)),
+						zap.String("prev block", b.PrevBlock.Hash),
+						zap.Duration("time_spent", time.Since(t)),
+						zap.Any("txn", txn))
+					return events, err
+				}
+
 				logging.Logger.Debug("Error executing the SC, chargeable error",
 					zap.Error(err),
 					zap.String("block", b.Hash),

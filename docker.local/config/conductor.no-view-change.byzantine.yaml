@@ -40,58 +40,87 @@ tests:
     flow:
       - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_not_notarised_block_extension_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: {}
 
   - name: "send different blocks from first generator"
     flow:
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_first_generator_test_case:
           test_report:
-            round: 30
+            round: 50
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "send different blocks from all generators"
     flow:
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_all_generators_test_case:
           test_report:
-            round: 30
+            round: 50
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "breaking single block"
     flow:
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_breaking_single_block:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "send insufficient proposals"
     flow:
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_insufficient_proposals_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "verifying non existent block"
     flow:
@@ -100,56 +129,70 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_verifying_non_existent_block_test_case:
           test_report:
-            round: 30
+            round: 50
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "notarising non existent block"
     flow:
-      - set_monitor: "sharder-1"
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_notarising_non_existent_block_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 1
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "resend proposed block"
     flow:
-      - set_monitor: "sharder-1"
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_resend_proposed_block_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: true
             by_node_with_type_rank: 1
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "resend notarisation"
     flow:
-      - set_monitor: "sharder-1"
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_resend_notarisation_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "bad timeout VRF share"
     flow:
@@ -158,25 +201,30 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_bad_timeout_vrfs_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+          allow_beyond: true
+      - save_logs: { }
 
   - name: "half nodes down"
     flow:
-      - set_monitor: "sharder-1"
+      - set_monitor: "miner-1"
       - cleanup_bc: { }
-      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_half_nodes_down_test_case:
           test_report:
-            round: 30
+            round: 50
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack BlockStateChangeRequestor: neither node reply"
     flow:
@@ -185,7 +233,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_block_state_change_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: true
             by_node_with_type_rank: 0
 
@@ -209,9 +257,11 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack BlockStateChangeRequestor: only one node replies"
     flow:
@@ -220,7 +270,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_block_state_change_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -246,9 +296,11 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack BlockStateChangeRequestor: one node sends state change with changed mpt node"
     flow:
@@ -257,7 +309,7 @@ tests:
         - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
         - configure_block_state_change_requestor_test_case:
             test_report:
-              round: 30
+              round: 50
               by_generator: false
               by_node_with_type_rank: 0
 
@@ -283,9 +335,11 @@ tests:
 
         - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
         - wait_round:
-            round: 50
+            round: 70
+            allow_beyond: true
         - make_test_case_check:
             wait_time: 5m
+        - save_logs: { }
 
   - name: "attack BlockStateChangeRequestor: one node sends state change with deleted mpt node"
     flow:
@@ -294,7 +348,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_block_state_change_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -320,9 +374,11 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack BlockStateChangeRequestor: one node sends state change with added mpt node"
     flow:
@@ -331,7 +387,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_block_state_change_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -357,9 +413,11 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack BlockStateChangeRequestor: one node sends partial state from another block"
     flow:
@@ -368,7 +426,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_block_state_change_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -394,9 +452,11 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack MinerNotarisedBlockRequestor: neither node reply"
     flow:
@@ -405,7 +465,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_miner_notarised_block_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: true
             by_node_with_type_rank: 0
 
@@ -429,9 +489,11 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack MinerNotarisedBlockRequestor: only one node replies"
     flow:
@@ -440,7 +502,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_miner_notarised_block_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -465,9 +527,11 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack MinerNotarisedBlockRequestor: only one node sends valid block (with changed hash)"
     flow:
@@ -476,7 +540,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_miner_notarised_block_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -502,9 +566,11 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack MinerNotarisedBlockRequestor: only one node sends invalid block (with changed hash)"
     flow:
@@ -513,7 +579,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_miner_notarised_block_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -538,9 +604,11 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }
 
   - name: "attack MinerNotarisedBlockRequestor: only one node sends block without verification tickets"
     flow:
@@ -549,7 +617,7 @@ tests:
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_miner_notarised_block_requestor_test_case:
           test_report:
-            round: 30
+            round: 50
             by_generator: false
             by_node_with_type_rank: 0
 
@@ -574,6 +642,8 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 50
+          round: 70
+          allow_beyond: true
       - make_test_case_check:
           wait_time: 5m
+      - save_logs: { }

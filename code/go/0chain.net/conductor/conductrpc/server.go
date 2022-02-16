@@ -3,6 +3,7 @@ package conductrpc
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/rpc"
 	"strings"
@@ -424,10 +425,12 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 //
 
 func (s *Server) ConfigureTestCase(blob []byte, _ *struct{}) error {
+	log.Printf("configuring test case: %s", string(blob))
 	return s.CurrentTest.Configure(blob)
 }
 
 func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
+	log.Printf("adding result to the test case: %s", string(blob))
 	return s.CurrentTest.AddResult(blob)
 }
 
