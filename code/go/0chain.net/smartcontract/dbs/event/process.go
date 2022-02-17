@@ -46,13 +46,6 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
-
-	//TagStakePoolBalance
-	//TagRemoveDelegatePool
-	//TagEmptyDelegatePool
-	//TagAddOrOverwriteStakePool
-
-	TagBlobberSlash
 	TagAddOrOverwriteDelegatePool
 	TagStakePoolReward
 	TagUpdateDelegatePool
@@ -242,10 +235,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.rewardUpdate(spu)
-	//case TagBlobberSlash:
-	//	return nil // todo
-	//case TagEmptyDelegatePool:
-	//	return nil // todo
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
