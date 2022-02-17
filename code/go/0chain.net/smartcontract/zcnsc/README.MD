@@ -1,6 +1,36 @@
 ZCNSC SC
 ==========
 
+Deployments
+===================
+- Ropsten
+- Rinkeby
+- Goerli
+- Polygon/Matic
+
+## Ropsten
+
+### Owner
+
+0x860FA46F170a87dF44D7bB867AA4a5D2813127c1
+
+Others:
+
+Owner2: 0x96b6aF9396Eb48B7F4AFD4181c04d95382df5dD6  
+Owner3: 0xfcb57642c15d2251cd7a2fd0eb692e6f8bd95874
+
+#### Summary:
+
+| Contract | Address     |
+|----------|-------|
+| Token   | 0x930E1BE76461587969Cb7eB9BFe61166b1E70244 |
+| Authorizer | 0xFE20Ce9fBe514397427d20C91CB657a4478A0FFa  |
+| Bridge | 0xF26B52df8c6D9b9C20bfD7819Bed75a75258c7dB  |
+
+
+Documentation
+=============
+
 ZCNSC SC converts token from native ZCN network to Ethereum wrapped WZCN token
 and in reverse order converts from wrapped Ethereum WZCN token to native ZCN token
 
