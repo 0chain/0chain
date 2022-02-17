@@ -248,7 +248,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	blockSize := iterInfo.idx
 	var reusedTxns int32
-	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() && err != context.DeadlineExceeded {
+	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() &&
+		err != context.DeadlineExceeded && iterInfo.cost < mc.Config.MaxBlockCost() {
 		blocks := mc.GetUnrelatedBlocks(10, b)
 		rcount := 0
 		for _, ub := range blocks {
