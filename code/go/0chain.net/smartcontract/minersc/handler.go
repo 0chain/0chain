@@ -119,7 +119,15 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners list", err.Error())
 	}
-	return miners, nil
+	minersArr := make([]interface{}, len(miners))
+	for i, miner := range miners {
+		minersArr[i] = map[string]interface{}{
+			"simple_miner": miner,
+		}
+	}
+	return map[string]interface{}{
+		"Nodes": minersArr,
+	}, nil
 }
 
 func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
