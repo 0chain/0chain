@@ -78,11 +78,9 @@ func (sp *StakePool) LockPool(
 	}
 
 	if err := dp.emitNew(
-		txn.ClientID,
 		newPoolId,
 		providerId,
 		providerType,
-		status,
 		balances,
 	); err != nil {
 		return err

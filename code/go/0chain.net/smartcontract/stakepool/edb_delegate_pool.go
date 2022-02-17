@@ -1,0 +1,61 @@
+package stakepool
+
+import (
+	"encoding/json"
+
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+)
+
+type DelegatePoolUpdate dbs.DelegatePoolUpdate
+
+func newDelegatePoolUpdate(pId string, pType Provider) *DelegatePoolUpdate {
+	var spu DelegatePoolUpdate
+	spu.ProviderId = pId
+	spu.ProviderType = int(pType)
+	spu.Updates = make(map[string]interface{})
+	return &spu
+}
+
+func (dp DelegatePool) emitNew(
+	poolId, providerId string,
+	providerType Provider,
+	balances cstate.StateContextI,
+) error {
+	data, err := json.Marshal(&event.DelegatePool{
+		PoolID:       poolId,
+		ProviderType: int(providerType),
+		ProviderID:   providerId,
+		DelegateID:   dp.DelegateID,
+
+		Status:       int(dp.Status),
+		RoundCreated: balances.GetBlock().Round,
+	})
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagAddOrOverwriteDelegatePool,
+		providerId,
+		string(data),
+	)
+	return nil
+}
+
+func (dpu DelegatePoolUpdate) emit(
+	balances cstate.StateContextI,
+) error {
+	data, err := json.Marshal(&dpu)
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagUpdateDelegatePool,
+		dpu.PoolId,
+		string(data),
+	)
+	return nil
+}

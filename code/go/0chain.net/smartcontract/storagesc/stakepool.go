@@ -196,7 +196,6 @@ func (sp *stakePool) slash(
 	// the move is total movements, but it should be divided by all
 	// related stake holders, that can loose some tokens due to
 	// division error;
-
 	var ap = wp.allocPool(alloc.ID, until)
 	if ap == nil {
 		ap = new(allocationPool)
@@ -210,7 +209,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = (float64(slash) / float64(sp.stake()))
-
+	edbSlash := stakepool.NewStakePoolReward(blobID, stakepool.Blobber)
 	for id, dp := range sp.Pools {
 		var dpSlash = state.Balance(float64(dp.Balance) * ratio)
 		if dpSlash == 0 {
@@ -219,9 +218,11 @@ func (sp *stakePool) slash(
 		dp.Balance -= dpSlash
 		ap.Balance += dpSlash
 
-		// todo clean up event when stakePool table added
-		balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteStakePool, id, "one")
 		move += dpSlash
+		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
+	}
+	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
+		return 0, err
 	}
 
 	// move
@@ -412,27 +413,6 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 		return nil, fmt.Errorf("unexpected error: %v", err)
 	}
 
-	if err == util.ErrValueNotPresent {
-		sp, err = newStakePool(), nil
-		sp.Settings.DelegateWallet = settings.DelegateWallet
-		sp.Settings.MinStake = settings.MinStake
-		sp.Settings.MaxStake = settings.MaxStake
-		sp.Settings.ServiceCharge = settings.ServiceCharge
-		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
-		sp.Minter = chainstate.MinterStorage
-		if err := sp.EmitNew(providerId, providerType, balances); err != nil {
-			return nil, err
-		}
-		return sp, err
-	}
-
-	sp.Settings.MinStake = settings.MinStake
-	sp.Settings.MaxStake = settings.MaxStake
-	sp.Settings.ServiceCharge = settings.ServiceCharge
-	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
-	if err := sp.EmitUpdate(providerId, providerType, balances); err != nil {
-		return nil, err
-	}
 	return sp, nil
 }
 
