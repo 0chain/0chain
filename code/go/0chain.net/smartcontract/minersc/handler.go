@@ -206,11 +206,19 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 		return nil, common.NewErrInternal("can't get miners. no db connection")
 	}
 
-	miners, err := balances.GetEventDB().GetShardersWithFilterAndPagination(filter, offset, limit)
+	sharders, err := balances.GetEventDB().GetShardersWithFilterAndPagination(filter, offset, limit)
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners list", err.Error())
 	}
-	return miners, nil
+	shardersArr := make([]interface{}, len(sharders))
+	for i, sharder := range sharders {
+		shardersArr[i] = map[string]interface{}{
+			"simple_miner": sharder,
+		}
+	}
+	return map[string]interface{}{
+		"Nodes": shardersArr,
+	}, nil
 }
 
 func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
