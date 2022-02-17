@@ -69,6 +69,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, balances cstate.StateContextI) e
 		MaxStake:                int64(sn.StakePoolSettings.MaxStake),
 		NumDelegates:            sn.StakePoolSettings.NumDelegates,
 		ServiceCharge:           sn.StakePoolSettings.ServiceCharge,
+		SavedData:               sn.SavedData,
 	})
 	if err != nil {
 		return fmt.Errorf("marshalling blobber: %v", err)
