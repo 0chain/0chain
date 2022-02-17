@@ -4,22 +4,25 @@ ZCNSC SC
 Deployments
 ===================
 - Ropsten
-- Rinkeby
 - Goerli
 - Polygon/Matic
 
 ## Ropsten
+0Chain WToken **(NCNW)**    
+Max Total Supply:  
+100,000,000 NCNW
+
+Code verified
 
 ### Owner
 
-0x860FA46F170a87dF44D7bB867AA4a5D2813127c1
-
-Others:
-
+0x860FA46F170a87dF44D7bB867AA4a5D2813127c1  
 Owner2: 0x96b6aF9396Eb48B7F4AFD4181c04d95382df5dD6  
-Owner3: 0xfcb57642c15d2251cd7a2fd0eb692e6f8bd95874
+Owner3: 0xfcb57642c15d2251cd7a2fd0eb692e6f8bd95874  
 
 #### Summary:
+
+https://ropsten.etherscan.io/token/0x930E1BE76461587969Cb7eB9BFe61166b1E70244
 
 | Contract | Address     |
 |----------|-------|
@@ -27,6 +30,48 @@ Owner3: 0xfcb57642c15d2251cd7a2fd0eb692e6f8bd95874
 | Authorizer | 0xFE20Ce9fBe514397427d20C91CB657a4478A0FFa  |
 | Bridge | 0xF26B52df8c6D9b9C20bfD7819Bed75a75258c7dB  |
 
+
+## Goerli
+Code verified
+
+0Chain Token **(ZCN)**  
+Max Total Supply:  
+500,000,000 ZCN
+
+### Owner
+
+0x860FA46F170a87dF44D7bB867AA4a5D2813127c1
+
+#### Summary:
+
+https://goerli.etherscan.io/token/0xA839639D94655C4a42CBb3070242f0947C80CeFB
+
+| Contract | Address     |
+|----------|-------|
+| Token   | 0xA839639D94655C4a42CBb3070242f0947C80CeFB |
+| Authorizer | 0xd37F574927f88566Fe9AE8623Fbb5F85a96b2DdB  |
+| Bridge | 0x0aCF4697B058E2Cd5B99a1f1542B75b7319e08Cf  |
+
+
+## Polygon
+Code verified
+
+0Chain Token **(ZCN)**  
+Total Supply:  
+500,000,000 ZCN
+
+#### Summary:
+
+https://mumbai.polygonscan.com/token/0x5ce9b8725c64b4e31491811c229ea2fe6545d4b0
+https://mumbai.polygonscan.com/address/0xA839639D94655C4a42CBb3070242f0947C80CeFB
+https://mumbai.polygonscan.com/address/0xd37F574927f88566Fe9AE8623Fbb5F85a96b2DdB
+
+
+| Contract | Address     |
+|----------|-------|
+| Token   | 0x5ce9b8725c64b4e31491811c229ea2fe6545d4b0 |
+| Authorizer | 0xA839639D94655C4a42CBb3070242f0947C80CeFB  |
+| Bridge | 0xd37F574927f88566Fe9AE8623Fbb5F85a96b2DdB  |
 
 Documentation
 =============
