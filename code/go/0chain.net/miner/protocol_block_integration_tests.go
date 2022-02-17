@@ -317,7 +317,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	b.SetStateStatus(block.StateSuccessful)
 	logging.Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
+		zap.Int32("iteration_count", count))
 	block.StateSanityCheck(ctx, b)
 	b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))

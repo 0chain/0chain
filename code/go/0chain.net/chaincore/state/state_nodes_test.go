@@ -1,4 +1,4 @@
-package state_test
+package state
 
 import (
 	"context"
@@ -8,12 +8,13 @@ import (
 	"strconv"
 	"testing"
 
-	. "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/mocks"
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 func init() {
@@ -267,8 +268,8 @@ func TestNodes_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	nodes := makeTestStateNodes()
-	data := make(map[string]interface{})
-	blob, err := nodes.MartialStateNodes(data)
+	//data := make(map[string]interface{})
+	blob, err := json.Marshal(nodes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,13 +372,13 @@ func TestNodes_MartialStateNodes(t *testing.T) {
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
 			}
-			got, err := ns.MartialStateNodes(tt.args.data)
+			got, err := json.Marshal(ns)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("MartialStateNodes() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("martialStateNodesJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MartialStateNodes() got = %v, want %v", got, tt.want)
+				t.Errorf("martialStateNodesJSON() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -517,12 +518,24 @@ func TestNodes_UnmarshalStateNodes(t *testing.T) {
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
 			}
-			if err := ns.UnmarshalStateNodes(tt.args.obj); (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalStateNodes() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ns.unmarshalStateNodesJSON(tt.args.obj); (err != nil) != tt.wantErr {
+				t.Errorf("unmarshalStateNodesJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {
 				assert.Equal(t, tt.want, ns)
 			}
 		})
 	}
+}
+
+func TestStateNodesMarshalMsgpack(t *testing.T) {
+	nodes := makeTestStateNodes()
+	d, err := msgpack.Marshal(nodes)
+	require.NoError(t, err)
+
+	nd := &Nodes{}
+	err = msgpack.Unmarshal(d, nd)
+	require.NoError(t, err)
+
+	require.Equal(t, nodes, nd)
 }

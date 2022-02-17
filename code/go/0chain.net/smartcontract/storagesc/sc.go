@@ -121,6 +121,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/transactions"] = ssc.GetTransactionByFilterHandler
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
+	ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 	// blobber aggregated saved data
 	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
@@ -281,8 +282,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolLock(t, input, balances)
 	case "stake_pool_unlock":
 		resp, err = sc.stakePoolUnlock(t, input, balances)
-	case "stake_pool_pay_interests":
-		resp, err = sc.stakePoolPayInterests(t, input, balances)
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(
