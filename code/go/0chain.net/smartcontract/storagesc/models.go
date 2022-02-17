@@ -313,6 +313,7 @@ type StorageNode struct {
 	Used            int64                  `json:"used"`     // allocated capacity
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
 	PublicKey       string                 `json:"-"`
+	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
