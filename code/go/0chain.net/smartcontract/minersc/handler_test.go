@@ -154,13 +154,13 @@ smart_contracts:
 				require.EqualValues(t, test.want.msg, err.Error())
 				return
 			}
-			ourputMap, ok := result.(smartcontract.StringMap)
+			outputMap, ok := result.(smartcontract.StringMap)
 			require.True(t, ok)
 			for key, value := range test.want.output {
-				if value != ourputMap.Fields[key] {
-					fmt.Println("key", key, "value", value, "output", ourputMap.Fields[key])
+				if value != outputMap.Fields[key] {
+					fmt.Println("key", key, "value", value, "output", outputMap.Fields[key])
 				}
-				//require.EqualValues(t, value, ourputMap.Fields[key], key)
+				//require.EqualValues(t, value, outputMap.Fields[key], key)
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})

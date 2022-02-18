@@ -358,6 +358,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MaxMint, nil
 	case OwnerId:
 		return gn.OwnerId, nil
+	case CooldownPeriod:
+		return gn.CooldownPeriod, nil
 	default:
 		return nil, errors.New("Setting not implemented")
 	}
