@@ -41,6 +41,13 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", common.NewError("add_validator_failed",
 				"Failed to get validator."+err.Error())
 		}
+
+		_, err = sc.getBlobber(newValidator.ID, balances)
+		if err != nil {
+			return "", common.NewError("add_validator_failed",
+				"failed to fetch blobber: "+err.Error())
+		}
+
 		allValidatorsList, err := getValidatorsList(balances)
 		if err != nil {
 			return "", common.NewError("add_validator_failed",
