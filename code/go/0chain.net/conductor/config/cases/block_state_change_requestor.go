@@ -3,9 +3,10 @@ package cases
 import (
 	"sync"
 
+	"github.com/mitchellh/mapstructure"
+
 	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
-	"github.com/mitchellh/mapstructure"
 )
 
 type (
@@ -55,13 +56,13 @@ func NewBlockStateChangeRequestor(statsCollector *stats.NodesClientStats) *Block
 
 // TestCase implements TestCaseConfigurator interface.
 func (n *BlockStateChangeRequestor) TestCase() cases.TestCase {
-	return cases.NewBlockStateChangeRequestor(n.statsCollector, n.getType())
+	return cases.NewBlockStateChangeRequestor(n.statsCollector, n.GetType())
 }
 
 // Name implements TestCaseConfigurator interface.
 func (n *BlockStateChangeRequestor) Name() string {
 	postfix := ""
-	switch n.getType() {
+	switch n.GetType() {
 	case cases.BSCRNoReplies:
 		postfix = "neither node reply"
 
@@ -91,7 +92,7 @@ func (n *BlockStateChangeRequestor) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
 
-func (n *BlockStateChangeRequestor) getType() cases.BlockStateChangeRequestorCaseType {
+func (n *BlockStateChangeRequestor) GetType() cases.BlockStateChangeRequestorCaseType {
 	switch {
 	case !n.IgnoringRequestsBy.IsEmpty() &&
 		n.CorrectResponseBy.IsEmpty() && n.ChangedMPTNodeBy.IsEmpty() && n.DeletedMPTNodeBy.IsEmpty() &&

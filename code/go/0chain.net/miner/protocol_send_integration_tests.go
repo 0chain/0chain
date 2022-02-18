@@ -414,7 +414,7 @@ func sendInsufficientProposals(ctx context.Context, b *block.Block) {
 
 func isDelayingBlock(round int64) bool {
 	cfg := crpc.Client().State().ResendProposedBlock
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
 	// we need to delay block from the Generator0 on configured round
 	return cfg != nil && cfg.OnRound == round && nodeType == generator && typeRank == 0
 }

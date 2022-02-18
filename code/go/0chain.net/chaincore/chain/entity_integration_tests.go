@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package chain
@@ -8,6 +9,9 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
 	"0chain.net/core/logging"
+
+	"context"
+
 	"go.uber.org/zap"
 )
 
@@ -48,3 +52,7 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
 	return false // is not
 }
+
+func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {} // disable deleting rounds
+
+func (c *Chain) DeleteRoundsBelow(roundNumber int64) {} // disable deleting rounds

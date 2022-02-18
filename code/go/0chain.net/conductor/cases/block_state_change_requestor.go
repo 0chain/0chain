@@ -130,14 +130,14 @@ func (n *BlockStateChangeRequestor) check() (success bool, err error) {
 	case BSCRChangeNode:
 		fallthrough
 
+	case BSCRAnotherPartialState:
+		return n.checkRetryRequesting(2)
+
 	case BSCRAddNode:
 		fallthrough
 
-	case BSCRAnotherPartialState:
-		fallthrough
-
 	case BSCRDeleteNode:
-		return n.checkRetryRequesting(2)
+		return n.checkRetryRequesting(1)
 
 	default:
 		panic("unknown case type")

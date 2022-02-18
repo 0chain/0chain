@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
@@ -42,7 +43,7 @@ func isMockingNotNotarisedBlockExtension(round int64) bool {
 		return false
 	}
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round + 1)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round + 1)
 	return nodeType == generator && typeRank == 0
 }
 
@@ -128,7 +129,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 
 	minerRound := mc.GetMinerRound(round)
 	if isTestingHalfNodesDown(minerRound) || isTestingSendDifferentBlocks(minerRound) {
-		if err := addRoundInfoResult("", minerRound); err != nil {
+		if err := chain.AddRoundInfoResult(minerRound); err != nil {
 			log.Panicf("Conductor: error while adding test case result: %v", err)
 		}
 	}

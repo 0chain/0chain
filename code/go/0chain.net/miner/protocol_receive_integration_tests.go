@@ -9,12 +9,16 @@ import (
 	"log"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	cfg "0chain.net/conductor/config/cases"
+	"0chain.net/core/logging"
 )
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
@@ -56,7 +60,7 @@ func isIgnoringVerificationTicket(round int64) bool {
 
 	// we need to ignore msg by the first ranked replica and for the 1/3 (of miners count) tickets
 	mc := GetMinerChain()
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
 	isFirstRankedReplica := nodeType == replica && typeRank == 0
 	ignoring := isFirstRankedReplica && testCfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
 	if ignoring {
@@ -70,6 +74,7 @@ func isBreakingSingleBlock(roundNum int64, blockHash string) bool {
 
 	currRound := mc.GetRound(roundNum)
 	if !currRound.IsRanksComputed() {
+		logging.Logger.Warn("Conductor: can't compute round ranks", zap.Int64("round", roundNum))
 		return false
 	}
 
@@ -160,7 +165,7 @@ func isIgnoringProposal(round int64) bool {
 		return false
 	}
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
 	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
@@ -171,7 +176,7 @@ func resendProposedBlockIfNeeded(b *block.Block) {
 	defer testCfg.Unlock()
 
 	var (
-		nodeType, typeRank = getNodeTypeAndTypeRank(b.Round)
+		nodeType, typeRank = chain.GetNodeTypeAndTypeRank(b.Round)
 		resending          = testCfg != nil && testCfg.IsTesting(b.Round, nodeType == generator, typeRank) && !testCfg.Resent
 	)
 	if !resending {
@@ -219,7 +224,7 @@ func isIgnoringNotarisation(round int64) bool {
 		return false
 	}
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
 	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
@@ -249,7 +254,7 @@ func resendNotarisationIfNeeded(round int64) {
 	testCfg.Lock()
 	defer testCfg.Unlock()
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
 	resending := testCfg != nil && round == testCfg.OnRound-1 && nodeType == replica && typeRank == 0 && !testCfg.Resent
 	if !resending {
 		return
@@ -274,7 +279,7 @@ func configureBlockStateChangeRequestorTestCaseIfNeeded(not *Notarization) {
 	defer testCfg.Unlock()
 
 	var (
-		nodeType, typeRank = getNodeTypeAndTypeRank(not.Round)
+		nodeType, typeRank = chain.GetNodeTypeAndTypeRank(not.Round)
 		configuring        = testCfg != nil && testCfg.OnRound == not.Round &&
 			nodeType == replica && typeRank == 0 && !testCfg.Configured
 	)
@@ -294,7 +299,7 @@ func configureBlockStateChangeRequestorTestCaseIfNeeded(not *Notarization) {
 
 func getNotarisationInfo(not *Notarization) *cases.NotarisationInfo {
 	return &cases.NotarisationInfo{
-		VerificationTickets: getVerificationTicketsInfo(not.VerificationTickets),
+		VerificationTickets: chain.GetVerificationTicketsInfo(not.VerificationTickets),
 		BlockID:             not.BlockID,
 		Round:               not.Round,
 	}
@@ -304,31 +309,3 @@ const (
 	generator = iota
 	replica
 )
-
-// getNodeTypeAndTypeRank returns node type and type rank.
-// If round is not started or rank is not computed, returns -1;-1.
-//
-// 	Explaining type rank example:
-//		Generators num = 2
-// 		len(miners) = 4
-// 		Generator0:	rank = 0; typeRank = 0.
-// 		Generator1:	rank = 1; typeRank = 1.
-// 		Replica0:	rank = 2; typeRank = 0.
-// 		Replica1:	rank = 3; typeRank = 1.
-func getNodeTypeAndTypeRank(round int64) (nodeType, typeRank int) {
-	mc := GetMinerChain()
-
-	roundI := mc.GetRound(round)
-	if roundI == nil || !roundI.IsRanksComputed() {
-		return -1, -1
-	}
-
-	genNum := mc.GetGeneratorsNumOfRound(round)
-	isGenerator := mc.IsRoundGenerator(roundI, node.Self.Node)
-	nodeType, typeRank = generator, roundI.GetMinerRank(node.Self.Node)
-	if !isGenerator {
-		nodeType = replica
-		typeRank = typeRank - genNum
-	}
-	return nodeType, typeRank
-}
