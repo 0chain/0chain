@@ -44,12 +44,8 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 		return nil, common.NewErrInternal("can't get user miner stake pools", err.Error())
 	}
 
-	if un, err = msc.getUserNode(clientID, balances); err != nil {
-		return nil, common.NewErrInternal("can't get user node", err.Error())
-	}
-
 	var ups = newUserPools()
-	for nodeID, poolIDs := range un.Pools {
+	for nodeID, poolIDs := range minerPools.Pools {
 		var mn *MinerNode
 		if mn, err = getMinerNode(nodeID, balances); err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
@@ -58,11 +54,24 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
 		}
 		for _, id := range poolIDs {
-			var dp, ok = mn.Pending[id]
+			var dp, ok = mn.Pools[id]
 			if ok {
 				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
 			}
-			if dp, ok = mn.Active[id]; ok {
+		}
+	}
+
+	for nodeID, poolIDs := range sharderPools.Pools {
+		var mn *MinerNode
+		if mn, err = getMinerNode(nodeID, balances); err != nil {
+			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
+		}
+		if ups.Pools[mn.NodeType.String()] == nil {
+			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
+		}
+		for _, id := range poolIDs {
+			var dp, ok = mn.Pools[id]
+			if ok {
 				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
 			}
 		}
@@ -341,11 +350,7 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
 	}
 
-	if pool, ok := sn.Pending[poolID]; ok {
-		return pool, nil
-	} else if pool, ok = sn.Active[poolID]; ok {
-		return pool, nil
-	} else if pool, ok = sn.Deleting[poolID]; ok {
+	if pool, ok := sn.Pools[poolID]; ok {
 		return pool, nil
 	}
 

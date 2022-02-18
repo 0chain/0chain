@@ -590,9 +590,6 @@ type MinerNode struct {
 	*stakepool.StakePool `json:"stake_pool"`
 	NumPending           int `json:"pending"`
 	NumActive            int `json:"active"`
-	//Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
-	//Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
-	//Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
 }
 
 func NewMinerNode() *MinerNode {
@@ -673,15 +670,6 @@ func newNodeWithVCPoolLock() *nodeWithVCPoolLock {
 type DelegatePoolWithVCPoolLock struct {
 	*sci.PoolStats              `json:"stats"`
 	*ZcnTokenPoolWithVCPoolLock `json:"pool"`
-}
-
-// ToDelegatePool converts the pool struct to *DelegatePool
-func (dpl *DelegatePoolWithVCPoolLock) ToDelegatePool() *sci.DelegatePool {
-	dp := sci.NewDelegatePool()
-	dp.PoolStats = dpl.PoolStats
-	dp.ZcnPool = dpl.ZcnPool
-	dp.TokenLockInterface = dpl.ViewChangeLock
-	return dp
 }
 
 // ZcnTokenPoolWithVCPoolLock represents the struct for decoding pool in DelegatePool
@@ -932,24 +920,19 @@ func (ps *poolStat) decode(input []byte) error {
 }
 
 type delegatePoolStat struct {
-	ID           datastore.Key `json:"id"`            // pool ID
-	Balance      state.Balance `json:"balance"`       //
-	InterestPaid state.Balance `json:"interest_paid"` //
-	RewardPaid   state.Balance `json:"reward_paid"`   //
-	Status       string        `json:"status"`        //
-	High         state.Balance `json:"high"`          // }
-	Low          state.Balance `json:"low"`           // }
+	ID         datastore.Key `json:"id"`      // pool ID
+	Balance    state.Balance `json:"balance"` //
+	Reward     state.Balance `json:"reward"`
+	RewardPaid state.Balance `json:"reward_paid"` //
+	Status     string        `json:"status"`      //
 }
 
-func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {
+func newDelegatePoolStat(dp *stakepool.DelegatePool) (dps *delegatePoolStat) {
 	dps = new(delegatePoolStat)
-	dps.ID = dp.ID
+	dps.ID = dp.DelegateID
+	dps.Reward = dp.Reward
 	dps.Balance = dp.Balance
-	dps.InterestPaid = dp.InterestPaid
-	dps.RewardPaid = dp.RewardPaid
-	dps.Status = dp.Status
-	dps.High = dp.High
-	dps.Low = dp.Low
+	dps.Status = dp.Status.String()
 	return
 }
 
@@ -958,13 +941,13 @@ type userPools struct {
 	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
 }
 
-/*
 func newUserPools() (ups *userPools) {
 	ups = new(userPools)
 	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
 	return
 }
 
+/*
 // UserNode keeps references to all user's pools.
 type UserNode struct {
 	ID    string                            `json:"id"`       // client ID
@@ -1061,6 +1044,7 @@ func (pn *PhaseNode) Decode(input []byte) error {
 	return json.Unmarshal(input, pn)
 }
 
+/*
 func HasPool(pools map[string]*sci.DelegatePool, poolID datastore.Key) bool {
 	pool := pools[poolID]
 	return pool != nil
@@ -1103,7 +1087,7 @@ func DecodeDelegatePools(pools map[string]*sci.DelegatePool,
 	}
 	return nil
 }
-
+*/
 type DKGMinerNodes struct {
 	MinN     int     `json:"min_n"`
 	MaxN     int     `json:"max_n"`

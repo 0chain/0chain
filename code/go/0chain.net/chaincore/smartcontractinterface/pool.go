@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 )
 
 type PoolStats struct {
@@ -50,6 +49,7 @@ func (ps *PoolStats) Decode(input []byte) error {
 	return json.Unmarshal(input, ps)
 }
 
+/*
 type DelegatePool struct {
 	*PoolStats                `json:"stats"`
 	*tokenpool.ZcnLockingPool `json:"pool"`
@@ -88,3 +88,4 @@ func (dp *DelegatePool) Decode(input []byte, tokenlock tokenpool.TokenLockInterf
 	}
 	return nil
 }
+*/
