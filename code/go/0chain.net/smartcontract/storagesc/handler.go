@@ -394,14 +394,14 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		allocationID       = params.Get("allocation_id")
-		authTicket         = params.Get("auth_ticket")
-		offsetString       = params.Get("offset")
-		limitString        = params.Get("limit")
-		isDescendingString = params.Get("is_descending")
-		limit              = -1
-		offset             = -1
-		isDescending       = false
+		allocationID = params.Get("allocation_id")
+		authTicket   = params.Get("auth_ticket")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		sortString   = params.Get("sort")
+		limit        = -1
+		offset       = -1
+		isDescending = false
 	)
 
 	if balances.GetEventDB() == nil {
@@ -433,12 +433,15 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 		limit = l
 	}
 
-	if isDescendingString != "" {
-		isD, err := strconv.ParseBool(isDescendingString)
-		if err != nil {
-			return nil, errors.New("is_descending is invalid")
+	if sortString != "" {
+		switch sortString {
+		case "desc":
+			isDescending = true
+		case "asc":
+			isDescending = false
+		default:
+			return nil, errors.New("sort value is invalid")
 		}
-		isDescending = isD
 	}
 
 	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQueryPaginated(query, offset, limit, isDescending)
