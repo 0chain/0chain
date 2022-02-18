@@ -112,7 +112,7 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
-	# cooldown_period is round unit to prevent from DDOS attack
+    # cooldown_period is round unit to prevent from DDOS attack
     cooldown_period: 5
 `),
 			},
