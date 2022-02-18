@@ -248,6 +248,7 @@ type GlobalNode struct {
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64         `json:"reward_round_frequency"`
 	OwnerId              datastore.Key `json:"owner_id"`
+	CooldownPeriod       int64         `json:"cooldown_period"`
 }
 
 func (gn *GlobalNode) readConfig() {
@@ -271,6 +272,7 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
+	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
 }
 
 func (gn *GlobalNode) validate() error {

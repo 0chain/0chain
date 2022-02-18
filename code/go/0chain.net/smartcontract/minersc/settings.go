@@ -39,6 +39,7 @@ const (
 	RewardDeclineRate
 	MaxMint
 	OwnerId
+	CooldownPeriod
 )
 
 var (
@@ -62,6 +63,7 @@ var (
 		"reward_decline_rate",
 		"max_mint",
 		"owner_id",
+		"cooldown_period",
 	}
 	NumberOfSettings = len(SettingName)
 
@@ -88,6 +90,7 @@ var (
 		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
 		"owner_id":               {OwnerId, smartcontract.Key},
+		"cooldown_period":        {CooldownPeriod, smartcontract.Int64},
 	}
 )
 
