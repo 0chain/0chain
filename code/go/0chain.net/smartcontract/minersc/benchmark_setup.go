@@ -19,7 +19,7 @@ import (
 
 func AddMockNodes(
 	clients []string,
-	nodeType NodeType,
+	nodeType stakepool.Provider,
 	balances cstate.StateContextI,
 ) []string {
 	var (
@@ -33,7 +33,7 @@ func AddMockNodes(
 		key          string
 	)
 
-	if nodeType == NodeTypeMiner {
+	if nodeType == stakepool.Miner {
 		numActive = viper.GetInt(benchmark.NumActiveMiners)
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
@@ -80,7 +80,7 @@ func AddMockNodes(
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
 	}
-	if nodeType == NodeTypeMiner {
+	if nodeType == stakepool.Miner {
 		dkgMiners := NewDKGMinerNodes()
 		dkgMiners.SimpleNodes = nodeMap
 		dkgMiners.T = viper.GetInt(benchmark.InternalT)
@@ -111,38 +111,32 @@ func AddNodeDelegates(
 	clients, miners, sharders []string,
 	balances cstate.StateContextI,
 ) {
-	var cns = make(map[string]UserNode)
 	for i := range miners {
-		AddUserNodesForNode(i, NodeTypeMiner, miners, clients, cns)
+		AddUserNodesForNode(i, stakepool.Miner, miners, clients, balances)
 	}
 	for i := range sharders {
-		AddUserNodesForNode(i, NodeTypeSharder, sharders, clients, cns)
-	}
-	for _, un := range cns {
-		_, _ = balances.InsertTrieNode(un.GetKey(), &un)
+		AddUserNodesForNode(i, stakepool.Sharder, sharders, clients, balances)
 	}
 }
 
 func AddUserNodesForNode(
 	nodeIndex int,
-	nodeType NodeType,
+	nodeType stakepool.Provider,
 	nodes []string,
-	clients []string, cns map[string]UserNode,
+	clients []string,
+	balances cstate.StateContextI,
 ) {
 	var numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 	for j := 0; j < numDelegates; j++ {
 		delegate := (nodeIndex + j) % len(nodes)
-		var un UserNode
-		un, ok := cns[clients[delegate]]
-		if !ok {
-			un = UserNode{
-				ID:    clients[delegate],
-				Pools: make(map[datastore.Key][]datastore.Key),
-			}
+		un := stakepool.UserStakePools{
+			Pools: make(map[datastore.Key][]datastore.Key),
 		}
-		un.Pools[nodes[nodeIndex]] = append(un.Pools[nodes[nodeIndex]],
-			getMinerDelegatePoolId(nodeIndex, delegate, nodeType))
-		cns[clients[delegate]] = un
+		un.Pools[nodes[nodeIndex]] = append(
+			un.Pools[nodes[nodeIndex]],
+			getMinerDelegatePoolId(nodeIndex, delegate, nodeType),
+		)
+		_, _ = balances.InsertTrieNode(stakepool.UserStakePoolsKey(nodeType, clients[delegate]), &un)
 	}
 }
 
@@ -208,11 +202,11 @@ func AddPhaseNode(balances cstate.StateContextI) {
 	}
 }
 
-func getMinerDelegatePoolId(miner, delegate int, nodeType NodeType) string {
+func getMinerDelegatePoolId(miner, delegate int, nodeType stakepool.Provider) string {
 	return encryption.Hash("delegate pool" +
 		strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType)))
 }
 
-func GetMockNodeId(index int, nodeType NodeType) string {
+func GetMockNodeId(index int, nodeType stakepool.Provider) string {
 	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
 }

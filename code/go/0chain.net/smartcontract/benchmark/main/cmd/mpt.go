@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/hex"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -59,8 +61,8 @@ func getBalances(
 		PrevBlock: &block.Block{},
 	}
 	bk.Round = 2
-	bk.MinerID = minersc.GetMockNodeId(0, minersc.NodeTypeMiner)
-	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, minersc.NodeTypeMiner))
+	bk.MinerID = minersc.GetMockNodeId(0, stakepool.Miner)
+	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, stakepool.Miner))
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
@@ -155,9 +157,9 @@ func setUpMpt(
 	log.Println("added allocations")
 	storagesc.SaveMockStakePools(stakePools, balances)
 	log.Println("added stake pools")
-	miners := minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
+	miners := minersc.AddMockNodes(clients, stakepool.Miner, balances)
 	log.Println("added miners")
-	sharders := minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
+	sharders := minersc.AddMockNodes(clients, stakepool.Sharder, balances)
 	log.Println("added sharders")
 	minersc.AddNodeDelegates(clients, miners, sharders, balances)
 	log.Println("adding miners and sharders delegates")

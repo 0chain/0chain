@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -48,7 +50,7 @@ func BenchmarkRestTests(
 			endpoint: msc.GetNodepoolHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, NodeTypeMiner))
+				values.Set("id", GetMockNodeId(0, stakepool.Miner))
 				values.Set("n2n_host", "n2n_host")
 				return values
 			}(),
@@ -103,7 +105,7 @@ func BenchmarkRestTests(
 			endpoint: msc.nodeStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, NodeTypeMiner))
+				values.Set("id", GetMockNodeId(0, stakepool.Miner))
 				return values
 			}(),
 		},
@@ -112,8 +114,8 @@ func BenchmarkRestTests(
 			endpoint: msc.nodePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, NodeTypeMiner))
-				values.Set("pool_id", getMinerDelegatePoolId(0, 0, NodeTypeMiner))
+				values.Set("id", GetMockNodeId(0, stakepool.Miner))
+				values.Set("pool_id", getMinerDelegatePoolId(0, 0, stakepool.Miner))
 				return values
 			}(),
 		},

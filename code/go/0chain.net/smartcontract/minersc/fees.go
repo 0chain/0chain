@@ -9,7 +9,6 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -32,41 +31,26 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 }
 
 // LRU cache in action.
-func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
-	poolID string, balances cstate.StateContextI) (err error) {
+func (msc *MinerSmartContract) deletePoolFromUserNode(
+	delegateID, nodeID,
+	poolID string,
+	providerType stakepool.Provider,
+	balances cstate.StateContextI,
+) error {
 
-	var un *UserNode
-	if un, err = msc.getUserNode(delegateID, balances); err != nil {
+	usp, err := stakepool.GetUserStakePool(providerType, delegateID, balances)
+	if err != nil {
 		return fmt.Errorf("getting user node: %v", err)
 	}
-
-	var pools, ok = un.Pools[nodeID]
-	if !ok {
-		return // not found (invalid state?)
-	}
-
-	var i int
-	for _, id := range pools {
-		if id == poolID {
-			continue
-		}
-		pools[i], i = id, i+1
-	}
-	pools = pools[:i]
-
-	if len(pools) == 0 {
-		delete(un.Pools, nodeID) // delete empty
-	} else {
-		un.Pools[nodeID] = pools // update
-	}
-
-	if err = un.save(balances); err != nil {
+	usp.Del(nodeID, poolID)
+	if err := usp.Save(stakepool.Blobber, delegateID, balances); err != nil {
 		return fmt.Errorf("saving user node: %v", err)
 	}
 
-	return
+	return nil
 }
 
+/*
 func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 	pool *sci.DelegatePool, _ int64, balances cstate.StateContextI) (
 	resp string, err error) {
@@ -86,7 +70,7 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 	err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, pool.ID, balances)
 	return
 }
-
+*/
 // unlock deleted pools
 func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {
@@ -110,7 +94,12 @@ func (msc *MinerSmartContract) unlockOffline(
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
 		}
-		err := msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, balances)
+		var err error
+		if mn.NodeType == NodeTypeMiner {
+			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, stakepool.Miner, balances)
+		} else {
+			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, stakepool.Sharder, balances)
+		}
 		if err != nil {
 			return common.NewError("pay_fees/unlock_offline", err.Error())
 		}

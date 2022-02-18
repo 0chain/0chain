@@ -17,13 +17,13 @@ func (sp *StakePool) UnlockPool(
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
 	var usp *UserStakePools
-	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
+	usp, err := getOrCreateUserStakePool(providerType, clientId, balances)
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}
 	foundProvider := usp.Find(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
-		return 0, fmt.Errorf("user %v does not own stake pool %v", txn.ClientID, poolId)
+		return 0, fmt.Errorf("user %v does not own stake pool %v", clientId, poolId)
 	}
 
 	dp, ok := sp.Pools[poolId]
@@ -34,7 +34,7 @@ func (sp *StakePool) UnlockPool(
 	if err != nil {
 		return 0, fmt.Errorf("can't find minter: %v", err)
 	}
-	transfer := state.NewTransfer(minter, txn.ClientID, dp.Balance)
+	transfer := state.NewTransfer(minter, clientId, dp.Balance)
 	if err := balances.AddTransfer(transfer); err != nil {
 		return 0, err
 	}
@@ -42,7 +42,7 @@ func (sp *StakePool) UnlockPool(
 	dp.Balance = 0
 	dp.Status = Deleted
 	amount, err := sp.MintRewards(
-		txn.ClientID, poolId, providerId, providerType, usp, balances,
+		clientId, poolId, providerId, providerType, usp, balances,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)

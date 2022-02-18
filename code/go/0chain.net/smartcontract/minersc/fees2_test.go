@@ -317,7 +317,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			ServiceCharge:  zChainYaml.ServiceCharge,
 			DelegateWallet: minerID,
 		},
-		Active: make(map[string]*sci.DelegatePool),
 	}
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
@@ -335,7 +334,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 				ServiceCharge:  zChainYaml.ServiceCharge,
 				DelegateWallet: sharderIDs[i],
 			},
-			Active: make(map[string]*sci.DelegatePool),
 		})
 	}
 
