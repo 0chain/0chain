@@ -71,15 +71,13 @@ func configureConfig() (configured *config) {
 	configpkg.SmartContractConfig.Set(pfx+"max_destinations", 2)
 	configpkg.SmartContractConfig.Set(pfx+"max_description_length", 20)
 	configpkg.SmartContractConfig.Set(pfx+"owner_id", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	//configpkg.SmartContractConfig.Set(pfx+"cost", map[string]int{"1":1, "2":2, "3":3})
+	configpkg.SmartContractConfig.Set(pfx+"cost", "{\"1\":1, \"2\":2, \"3\":3}")
 
 	return &config{
 		100e10,
 		1 * time.Second, 10 * time.Hour,
 		2, 20, "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
-		nil,
-		//map[string]int{"1": 1, "2": 2, "3": 3},
-
+		map[string]int{"1": 1, "2": 2, "3": 3},
 	}
 }
 
@@ -158,7 +156,7 @@ func TestUpdateConfig(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			scConfigKey(vsc.ID),
-			&conf,
+			mock.Anything,
 		).Return("", nil).Once()
 
 		return args{
@@ -185,7 +183,7 @@ func TestUpdateConfig(t *testing.T) {
 					Settings[MaxDestinations]:      "0",
 					Settings[MaxDescriptionLength]: "17",
 					Settings[OwnerId]:              "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
-					//Settings[Cost]: "{\"1\":1, \"2\":2, \"3\":3}",
+					Settings[Cost]:                 "{\"1\":1, \"2\":2, \"3\":3}",
 				},
 			},
 		},

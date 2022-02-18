@@ -135,6 +135,8 @@ func (conf *config) update(changes *smartcontract.StringMap) error {
 			} else {
 				conf.OwnerId = value
 			}
+		case Settings[Cost]:
+
 		default:
 			return fmt.Errorf("config setting %s not found", key)
 		}
