@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/stretchr/testify/mock"
@@ -100,8 +102,10 @@ func TestSelectBlobbers(t *testing.T) {
 		for i := 0; i < args.numBlobbers; i++ {
 			sNodes.Nodes.add(makeMockBlobber(i))
 			sp := stakePool{
-				Pools: map[string]*delegatePool{
-					mockPoolId: {},
+				StakePool: stakepool.StakePool{
+					Pools: map[string]*stakepool.DelegatePool{
+						mockPoolId: {},
+					},
 				},
 			}
 			sp.Pools[mockPoolId].Balance = mockStatke
@@ -349,8 +353,10 @@ func TestExtendAllocation(t *testing.T) {
 					},
 				})
 				sp := stakePool{
-					Pools: map[string]*delegatePool{
-						mockPoolId: {},
+					StakePool: stakepool.StakePool{
+						Pools: map[string]*stakepool.DelegatePool{
+							mockPoolId: {},
+						},
 					},
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
@@ -1008,7 +1014,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	var (
 		sp1, sp2 = newStakePool(), newStakePool()
-		dp1, dp2 = new(delegatePool), new(delegatePool)
+		dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
 	)
 	dp1.Balance, dp2.Balance = 20e10, 20e10
 	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
@@ -1241,7 +1247,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	var (
 		sp1, sp2 = newStakePool(), newStakePool()
-		dp1, dp2 = new(delegatePool), new(delegatePool)
+		dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
 	)
 	dp1.Balance, dp2.Balance = 20e10, 20e10
 	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
