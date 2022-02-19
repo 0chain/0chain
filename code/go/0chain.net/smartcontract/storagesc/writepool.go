@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -362,6 +363,19 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
+	if balances.GetEventDB() != nil {
+		data, err := writePoolToEventReadPool(ap, t)
+		if err != nil {
+			return "", err
+		}
+		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+			{
+				Type: int(event.TypeStats),
+				Tag:  int(event.TagAddWriteAllocationPool),
+				Data: data,
+			},
+		})
+	}
 	// save new linked allocation pool
 	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	if err != nil {
@@ -369,6 +383,26 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"saving allocation: %v", err)
 	}
 	return
+}
+
+func writePoolToEventReadPool(writePool allocationPool, t *transaction.Transaction) (string, error) {
+	writeAllocation := event.WriteAllocationPool{
+		AllocationId:  writePool.AllocationID,
+		TransactionId: t.Hash,
+		UserID:        t.ToClientID,
+		Balance:       int64(writePool.Balance),
+	}
+	writeAllocation.Blobbers = make([]event.BlobberPool, len(writePool.Blobbers))
+	for i, blobber := range writePool.Blobbers {
+		writeAllocation.Blobbers[i] = event.BlobberPool{
+			Balance: int64(blobber.Balance),
+		}
+	}
+	data, err := json.Marshal(writeAllocation)
+	if err != nil {
+		return "", common.NewError("readPool marshal error ", err.Error())
+	}
+	return string(data), nil
 }
 
 // unlock tokens if expired
@@ -440,6 +474,20 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
+	}
+
+	if balances.GetEventDB() != nil {
+		data, err := writePoolToEventReadPool(*ap, t)
+		if err != nil {
+			return "", err
+		}
+		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+			{
+				Type: int(event.TypeStats),
+				Tag:  int(event.TagAddWriteAllocationPool),
+				Data: data,
+			},
+		})
 	}
 
 	// save write pools

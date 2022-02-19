@@ -47,6 +47,7 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagAddReadAllocationPool
+	TagAddWriteAllocationPool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -217,6 +218,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addReadAllocationPool(readAllocationPool)
+	case TagAddWriteAllocationPool:
+		var writeAllocationPool WriteAllocationPool
+		err := json.Unmarshal([]byte(event.Data), &writeAllocationPool)
+		if err != nil {
+			return err
+		}
+		return edb.addWriteAllocationPool(writeAllocationPool)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
