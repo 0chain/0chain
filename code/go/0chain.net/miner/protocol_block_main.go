@@ -316,6 +316,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				}
 			}
 		}
+		blockSize += int32(rcount)
 		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
 	}
 	//reuse current transactions here
