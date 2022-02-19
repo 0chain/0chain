@@ -354,6 +354,7 @@ type ConfigData struct {
 	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 
 	DbsEvents dbs.DbAccess `json:"dbs_event"`
+	TxnExempt []string     `json:"txn_exempt"`
 }
 
 func (c *ConfigImpl) FromViper() {
@@ -373,6 +374,7 @@ func (c *ConfigImpl) FromViper() {
 	conf.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
+	conf.TxnExempt = viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
 
 	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
