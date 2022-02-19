@@ -423,12 +423,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	ap.AllocationID = lr.AllocationID
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
 	ap.Blobbers = bps
-	erp := readPoolToEventReadPool(ap, t)
-	data, err := json.Marshal(erp)
-	if err != nil {
-		return "", common.NewError("readPool marshal error ", err.Error())
-	}
 	if balances.GetEventDB() != nil {
+		data, err := readPoolToEventReadPool(ap, t)
+		if err != nil {
+			return "", err
+		}
 		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
 			{
 				Type: int(event.TypeStats),
@@ -470,7 +469,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	return
 }
 
-func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction) event.ReadAllocationPool {
+func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction) (string, error) {
 	readAllocation := event.ReadAllocationPool{
 		AllocationId:  readPool.AllocationID,
 		TransactionId: t.Hash,
@@ -483,7 +482,11 @@ func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction
 			Balance: int64(blobber.Balance),
 		}
 	}
-	return readAllocation
+	data, err := json.Marshal(readAllocation)
+	if err != nil {
+		return "", common.NewError("readPool marshal error ", err.Error())
+	}
+	return string(data), nil
 }
 
 // unlock tokens if expired
@@ -531,7 +534,19 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
-
+	if balances.GetEventDB() != nil {
+		data, err := readPoolToEventReadPool(*ap, t)
+		if err != nil {
+			return "", err
+		}
+		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+			{
+				Type: int(event.TypeStats),
+				Tag:  int(event.TagAddReadAllocationPool),
+				Data: string(data),
+			},
+		})
+	}
 	// save read pools
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
