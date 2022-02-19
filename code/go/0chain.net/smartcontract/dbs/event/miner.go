@@ -13,27 +13,27 @@ import (
 
 type Miner struct {
 	gorm.Model
-	MinerID           string           `json:"id",gorm:"uniqueIndex"`
-	N2NHost           string           `json:"n2n_host,gorm:"column:n2n_host"`
-	Host              string           `json:"host"`
-	Port              int              `json:"port"`
-	Path              string           `json:"path"`
-	PublicKey         string           `json:"public_key"`
-	ShortName         string           `json:"short_name"`
-	BuildTag          string           `json:"build_tag"`
-	TotalStaked       state.Balance    `json:"total_stake"`
-	Delete            bool             `json:"delete"`
-	DelegateWallet    string           `json:"delegate_wallet"`
-	ServiceCharge     float64          `json:"service_charge"`
-	NumberOfDelegates int              `json:"number_of_delegates"`
-	MinStake          state.Balance    `json:"min_stake"`
-	MaxStake          state.Balance    `json:"max_stake"`
-	LastHealthCheck   common.Timestamp `json:"last_health_check"`
-	Rewards           state.Balance    `json:"rewards"`
-	Fees              state.Balance    `json:"fees"`
-	Active            bool             `json:"active"`
-	Longitude         int64            `json:"longitude"`
-	Latitude          int64            `json:"latitude"`
+	MinerID           string `gorm:"uniqueIndex"`
+	N2NHost           string `gorm:"column:n2n_host"`
+	Host              string
+	Port              int
+	Path              string
+	PublicKey         string
+	ShortName         string
+	BuildTag          string
+	TotalStaked       state.Balance
+	Delete            bool
+	DelegateWallet    string
+	ServiceCharge     float64
+	NumberOfDelegates int
+	MinStake          state.Balance
+	MaxStake          state.Balance
+	LastHealthCheck   common.Timestamp
+	Rewards           state.Balance
+	Fees              state.Balance
+	Active            bool
+	Longitude         int64
+	Latitude          int64
 }
 
 func (edb *EventDb) GetMiner(id string) (*Miner, error) {
