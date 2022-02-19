@@ -44,8 +44,11 @@ func (zcn *ZCNSmartContract) InitSC() {}
 // SetSC ...
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
+	// REST
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
-	zcn.SmartContract.RestHandlers["/getConfig"] = zcn.GetConfig
+	zcn.SmartContract.RestHandlers["/getGlobalConfig"] = zcn.GetGlobalConfig
+	zcn.SmartContract.RestHandlers["/getAuthorizer"] = zcn.GetAuthorizer
+	// Smart contracts
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
 	zcn.SmartContractExecutionStats[UpdateGlobalConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateGlobalConfigFunc), nil)
 	zcn.SmartContractExecutionStats[UpdateAuthorizerConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateAuthorizerConfigFunc), nil)
@@ -75,25 +78,20 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 }
 
 // Execute ...
-func (zcn *ZCNSmartContract) Execute(
-	trans *transaction.Transaction,
-	funcName string,
-	inputData []byte,
-	balances cstate.StateContextI,
-) (string, error) {
+func (zcn *ZCNSmartContract) Execute(trans *transaction.Transaction, funcName string, input []byte, ctx cstate.StateContextI) (string, error) {
 	switch funcName {
 	case MintFunc:
-		return zcn.Mint(trans, inputData, balances)
+		return zcn.Mint(trans, input, ctx)
 	case BurnFunc:
-		return zcn.Burn(trans, inputData, balances)
+		return zcn.Burn(trans, input, ctx)
 	case AddAuthorizerFunc:
-		return zcn.AddAuthorizer(trans, inputData, balances)
+		return zcn.AddAuthorizer(trans, input, ctx)
 	case DeleteAuthorizerFunc:
-		return zcn.DeleteAuthorizer(trans, inputData, balances)
+		return zcn.DeleteAuthorizer(trans, input, ctx)
 	case UpdateGlobalConfigFunc:
-		return zcn.UpdateGlobalConfig(trans, inputData, balances)
+		return zcn.UpdateGlobalConfig(trans, input, ctx)
 	case UpdateAuthorizerConfigFunc:
-		return zcn.UpdateAuthorizerConfig(trans, inputData, balances)
+		return zcn.UpdateAuthorizerConfig(trans, input, ctx)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}

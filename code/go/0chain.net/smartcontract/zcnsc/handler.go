@@ -20,11 +20,18 @@ type AuthorizerNodeResponse struct {
 	URL string `json:"url"`
 }
 
-func (zcn *ZCNSmartContract) GetConfig(
-	_ context.Context,
-	_ url.Values,
-	ctx cState.StateContextI,
-) (interface{}, error) {
+func (zcn *ZCNSmartContract) GetAuthorizer(_ context.Context, params url.Values, ctx cState.StateContextI) (interface{}, error) {
+	id := params.Get("id")
+
+	auth, err := ctx.GetEventDB().GetAuthorizer(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id)
+	}
+
+	return auth, nil
+}
+
+func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
 	gn, err := GetGlobalNode(ctx)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, common.NewError("get config handler", err.Error())
@@ -42,11 +49,7 @@ func (zcn *ZCNSmartContract) GetConfig(
 
 // GetAuthorizerNodes returns all authorizers from eventDB
 // which is used to assign jobs to all or a part of authorizers
-func (zcn *ZCNSmartContract) GetAuthorizerNodes(
-	_ context.Context,
-	_ url.Values,
-	ctx cState.StateContextI,
-) (interface{}, error) {
+func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
 	if ctx.GetEventDB() == nil {
 		return nil, errors.New("eventsDB not initialized")
 	}
