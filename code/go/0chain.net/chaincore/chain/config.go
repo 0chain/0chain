@@ -69,6 +69,7 @@ type Config interface {
 	DbsEvents() dbs.DbAccess
 	FromViper()
 	Update(configMap *minersc.GlobalSettings) error
+	TxnExempt() map[string]bool
 }
 
 type ConfigImpl struct {
@@ -295,6 +296,13 @@ func (c *ConfigImpl) DbsEvents() dbs.DbAccess {
 	return c.conf.DbsEvents
 }
 
+func (c *ConfigImpl) TxnExempt() map[string]bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.TxnExempt
+}
+
 // HealthCheckCycleScan -
 type HealthCheckCycleScan struct {
 	Settle time.Duration `json:"settle"`
@@ -353,8 +361,8 @@ type ConfigData struct {
 	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
 	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 
-	DbsEvents dbs.DbAccess `json:"dbs_event"`
-	TxnExempt []string     `json:"txn_exempt"`
+	DbsEvents dbs.DbAccess    `json:"dbs_event"`
+	TxnExempt map[string]bool `json:"txn_exempt"`
 }
 
 func (c *ConfigImpl) FromViper() {
@@ -374,7 +382,10 @@ func (c *ConfigImpl) FromViper() {
 	conf.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
-	conf.TxnExempt = viper.GetStringSlice("server_chain.transaction.exempt")
+	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
+	for i := range txnExp {
+		conf.TxnExempt[txnExp[i]] = true
+	}
 	conf.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
 
 	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
