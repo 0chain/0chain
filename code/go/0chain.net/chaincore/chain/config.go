@@ -576,6 +576,14 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 	if err != nil {
 		return err
 	}
+	if txnsExempted, err := cf.GetStrings(minersc.TransactionExempt); err != nil {
+		return err
+	} else {
+		conf.TxnExempt = make(map[string]bool)
+		for i := range txnsExempted {
+			conf.TxnExempt[txnsExempted[i]] = true
+		}
+	}
 	return nil
 }
 
