@@ -172,6 +172,47 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 	require.Equal(t, int(target.Balance), 100)
 }
 
+func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {
+	type PartialState struct {
+		ID     string            `json:"id"`
+		Config *AuthorizerConfig `json:"config"`
+	}
+
+	target := &AuthorizerNode{}
+	source := &PartialState{
+		Config: &AuthorizerConfig{
+			Fee: state.Balance(222),
+		},
+	}
+
+	bytes, err := json.Marshal(source)
+	require.NoError(t, err)
+
+	err = json.Unmarshal(bytes, target)
+	require.NoError(t, err)
+
+	require.Equal(t, state.Balance(222), target.Config.Fee)
+}
+
+func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
+	type PartialState struct {
+		ID     string            `json:"id"`
+		Config *AuthorizerConfig `json:"config"`
+	}
+
+	source := &AuthorizerNode{
+		Config: &AuthorizerConfig{
+			Fee: state.Balance(222),
+		},
+	}
+
+	target := &PartialState{}
+	err := json.Unmarshal(source.Encode(), target)
+
+	require.NoError(t, err)
+	require.Equal(t, state.Balance(222), target.Config.Fee)
+}
+
 func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 	source := &AuthorizerNode{
 		Config: &AuthorizerConfig{
