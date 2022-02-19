@@ -3,6 +3,7 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -513,7 +514,11 @@ func getStringMapFromViper() map[string]string {
 		if _, ok := GlobalSettingsIgnored[key]; ok {
 			continue
 		}
-		globals[key] = viper.GetString(key)
+		if key == "server_chain.transaction.exempt" {
+			globals[key] = strings.Join(viper.GetStringSlice(key), ",")
+		} else {
+			globals[key] = viper.GetString(key)
+		}
 	}
 	return globals
 }
