@@ -98,7 +98,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Capacity = c.cap
 	sn.Used = 0
 	sn.LastHealthCheck = 0
-	sn.StakePoolSettings.NumDelegates = 100
+	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
@@ -115,7 +115,7 @@ func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
 	vn.BaseURL = getValidatorURL(c.id)
-	vn.StakePoolSettings.NumDelegates = 100
+	vn.StakePoolSettings.MaxNumDelegates = 100
 	vn.StakePoolSettings.MinStake = 0
 	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
@@ -418,8 +418,8 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 }
 
 func stakePoolTotal(sp *stakePool) (total state.Balance) {
-	for _, pool := range sp.orderedPools() {
-		total += pool.Balance
+	for _, id := range sp.OrderedPoolIds() {
+		total += sp.Pools[id].Balance
 	}
 	return
 }

@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
@@ -46,33 +47,9 @@ func Test_stakePool_save(t *testing.T) {
 	assert.NotZero(t, balances.tree[stakePoolKey(ADDRESS, blobID)])
 }
 
-func Test_stakePool_fill(t *testing.T) {
-	const (
-		clientID = "client_id"
-	)
-
-	var (
-		sp       = newStakePool()
-		balances = newTestBalances(t, false)
-		tx       = transaction.Transaction{
-			ClientID:   clientID,
-			ToClientID: ADDRESS,
-			Value:      90,
-		}
-		err error
-	)
-
-	balances.setTransaction(t, &tx)
-	balances.balances[clientID] = 100e10
-
-	_, _, err = sp.dig(&tx, balances)
-	require.NoError(t, err)
-	assert.Equal(t, state.Balance(90), sp.stake())
-}
-
 type mockStakePool struct {
 	zcnAmount float64
-	MintAt    common.Timestamp
+	MintAt    int64
 }
 
 const (
@@ -175,19 +152,13 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	var stakePool = newStakePool()
 	for i, stake := range delegates {
 		var id = strconv.Itoa(i)
-		stakePool.Pools["pool"+id] = &delegatePool{
-			DelegateID: strconv.Itoa(i),
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      id,
-					Balance: zcnToBalance(stake.zcnAmount),
-				},
-			},
-			MintAt: stake.MintAt,
+		stakePool.Pools["pool"+id] = &stakepool.DelegatePool{
+			Balance:      zcnToBalance(stake.zcnAmount),
+			RoundCreated: stake.MintAt,
 		}
 	}
-	var usp = newUserStakePools()
-	require.NoError(t, usp.save(ssc.ID, txn.ClientID, ctx))
+	var usp = stakepool.NewUserStakePools()
+	require.NoError(t, usp.Save(stakepool.Blobber, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
@@ -197,8 +168,8 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 	newStakePool, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
-	var newUsp *userStakePools
-	newUsp, err = ssc.getOrCreateUserStakePool(txn.ClientID, ctx)
+	var newUsp *stakepool.UserStakePools
+	newUsp, err = stakepool.GetUserStakePool(stakepool.Blobber, txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)
@@ -207,15 +178,14 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 }
 
 func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, newStakePool stakePool,
-	newUsp userStakePools, ctx cstate.StateContextI) {
+	newUsp stakepool.UserStakePools, ctx cstate.StateContextI) {
 	for _, transfer := range ctx.GetTransfers() {
 		require.EqualValues(t, f.value, int64(transfer.Amount))
 		require.EqualValues(t, storageScId, transfer.ToClientID)
 		require.EqualValues(t, clientId, transfer.ClientID)
 		txPool, ok := newStakePool.Pools[transactionHash]
 		require.True(t, ok)
-		require.EqualValues(t, clientId, txPool.DelegateID)
-		require.EqualValues(t, f.now, txPool.MintAt)
+		require.EqualValues(t, f.now, txPool.RoundCreated)
 	}
 
 	pools, ok := newUsp.Pools[blobberId]
