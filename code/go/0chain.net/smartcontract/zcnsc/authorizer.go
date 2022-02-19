@@ -258,7 +258,13 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(_ *transaction.Transaction, 
 		return "", common.NewError(code, err.Error())
 	}
 
-	an.UpdateConfig(in.Config)
+	err = an.UpdateConfig(in.Config)
+	if err != nil {
+		msg := fmt.Sprintf("error updating config for authorizer(authorizerID: %v), err: %v", an.ID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("updating settings", zap.Error(err))
+		return "", err
+	}
 
 	err = an.Save(ctx)
 	if err != nil {

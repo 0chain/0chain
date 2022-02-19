@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -178,12 +179,26 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 	}
 }
 
-func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) {
-	if an.Config == nil {
-		an.Config = new(AuthorizerConfig)
+func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
+	if cfg == nil {
+		return errors.New("config not initialized")
 	}
 
-	an.Config.Fee = cfg.Fee
+	updatedCfg := &AuthorizerConfig{}
+
+	bytes, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &updatedCfg)
+	if err != nil {
+		return err
+	}
+
+	an.Config = updatedCfg
+
+	return nil
 }
 
 func (an *AuthorizerNode) GetKey() string {
