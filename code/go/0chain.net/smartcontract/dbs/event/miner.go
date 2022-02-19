@@ -3,7 +3,6 @@ package event
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -12,15 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-type Model struct {
-	ID        uint           `gorm:"primarykey",json:"-"`
-	CreatedAt time.Time      `json:"-"`
-	UpdatedAt time.Time      `json:"-"`
-	DeletedAt gorm.DeletedAt `gorm:"index",json:"-"`
-}
-
 type Miner struct {
-	Model
+	gorm.Model
 	MinerID           string           `json:"id",gorm:"uniqueIndex"`
 	N2NHost           string           `json:"n2n_host,gorm:"column:n2n_host"`
 	Host              string           `json:"host"`

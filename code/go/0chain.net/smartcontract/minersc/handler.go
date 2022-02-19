@@ -122,7 +122,29 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	minersArr := make([]interface{}, len(miners))
 	for i, miner := range miners {
 		minersArr[i] = map[string]interface{}{
-			"simple_miner": miner,
+			"simple_miner": MinerView{
+				MinerID:           miner.MinerID,
+				N2NHost:           miner.N2NHost,
+				Host:              miner.Host,
+				Port:              miner.Port,
+				Path:              miner.Path,
+				PublicKey:         miner.PublicKey,
+				ShortName:         miner.ShortName,
+				BuildTag:          miner.BuildTag,
+				TotalStaked:       miner.TotalStaked,
+				Delete:            miner.Delete,
+				DelegateWallet:    miner.DelegateWallet,
+				ServiceCharge:     miner.ServiceCharge,
+				NumberOfDelegates: miner.NumberOfDelegates,
+				MinStake:          miner.MinStake,
+				MaxStake:          miner.MaxStake,
+				LastHealthCheck:   miner.LastHealthCheck,
+				Rewards:           miner.Rewards,
+				Fees:              miner.Fees,
+				Active:            miner.Active,
+				Longitude:         miner.Longitude,
+				Latitude:          miner.Latitude,
+			},
 		}
 	}
 	return map[string]interface{}{
@@ -213,7 +235,29 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 	shardersArr := make([]interface{}, len(sharders))
 	for i, sharder := range sharders {
 		shardersArr[i] = map[string]interface{}{
-			"simple_miner": sharder,
+			"simple_miner": SharderView{
+				SharderID:         sharder.SharderID,
+				N2NHost:           sharder.N2NHost,
+				Host:              sharder.Host,
+				Port:              sharder.Port,
+				Path:              sharder.Path,
+				PublicKey:         sharder.PublicKey,
+				ShortName:         sharder.ShortName,
+				BuildTag:          sharder.BuildTag,
+				TotalStaked:       sharder.TotalStaked,
+				Delete:            sharder.Delete,
+				DelegateWallet:    sharder.DelegateWallet,
+				ServiceCharge:     sharder.ServiceCharge,
+				NumberOfDelegates: sharder.NumberOfDelegates,
+				MinStake:          sharder.MinStake,
+				MaxStake:          sharder.MaxStake,
+				LastHealthCheck:   sharder.LastHealthCheck,
+				Rewards:           sharder.Rewards,
+				Fees:              sharder.Fees,
+				Active:            sharder.Active,
+				Longitude:         sharder.Longitude,
+				Latitude:          sharder.Latitude,
+			},
 		}
 	}
 	return map[string]interface{}{

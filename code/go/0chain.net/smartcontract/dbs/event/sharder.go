@@ -13,7 +13,7 @@ import (
 )
 
 type Sharder struct {
-	Model
+	gorm.Model
 	SharderID         string           `json:"id",gorm:"uniqueIndex"`
 	N2NHost           string           `json:"n2n_host",gorm:"column:n2n_host"`
 	Host              string           `json:"host"`
