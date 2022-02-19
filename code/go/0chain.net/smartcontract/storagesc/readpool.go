@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -422,7 +423,20 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	ap.AllocationID = lr.AllocationID
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
 	ap.Blobbers = bps
-
+	erp := readPoolToEventReadPool(ap, t)
+	data, err := json.Marshal(erp)
+	if err != nil {
+		return "", common.NewError("readPool marshal error ", err.Error())
+	}
+	if balances.GetEventDB() != nil {
+		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+			{
+				Type: int(event.TypeStats),
+				Tag:  int(event.TagAddReadAllocationPool),
+				Data: string(data),
+			},
+		})
+	}
 	if !lr.MintTokens {
 		var transfer *state.Transfer
 		if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
@@ -454,6 +468,22 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	}
 
 	return
+}
+
+func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction) event.ReadAllocationPool {
+	readAllocation := event.ReadAllocationPool{
+		AllocationId:  readPool.AllocationID,
+		TransactionId: t.Hash,
+		UserID:        t.ToClientID,
+		Balance:       int64(readPool.Balance),
+	}
+	readAllocation.Blobbers = make([]event.BlobberPool, len(readPool.Blobbers))
+	for i, blobber := range readPool.Blobbers {
+		readAllocation.Blobbers[i] = event.BlobberPool{
+			Balance: int64(blobber.Balance),
+		}
+	}
+	return readAllocation
 }
 
 // unlock tokens if expired

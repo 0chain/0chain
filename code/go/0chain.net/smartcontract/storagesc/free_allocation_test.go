@@ -288,7 +288,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
 			mockAllBlobbers, nil,
 		).Once()
-
+		balances.On("GetEventDB").Return(nil)
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
 				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),

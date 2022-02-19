@@ -46,6 +46,7 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
+	TagAddReadAllocationPool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -209,6 +210,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.removeCurator(c)
+	case TagAddReadAllocationPool:
+		var readAllocationPool ReadAllocationPool
+		err := json.Unmarshal([]byte(event.Data), &readAllocationPool)
+		if err != nil {
+			return err
+		}
+		return edb.addReadAllocationPool(readAllocationPool)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
