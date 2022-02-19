@@ -19,7 +19,7 @@ func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator {
 		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
 		MinStake:       vn.StakePoolSettings.MinStake,
 		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.NumDelegates,
+		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  vn.StakePoolSettings.ServiceCharge,
 	}
 }
