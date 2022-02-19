@@ -219,6 +219,38 @@ func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	return nil, errors.New("No filter selected")
 }
 
+func (msc *StorageSmartContract) GetWriteMarkerHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var (
+		offsetString       = params.Get("offset")
+		limitString        = params.Get("limit")
+		isDescendingString = params.Get("is_descending")
+	)
+	if offsetString == "" {
+		offsetString = "0"
+	}
+	if limitString == "" {
+		limitString = "10"
+	}
+	offset, err := strconv.Atoi(offsetString)
+	if err != nil {
+		return nil, errors.New("offset value was not valid")
+	}
+
+	limit, err := strconv.Atoi(limitString)
+	if err != nil {
+		return nil, errors.New("limitString value was not valid")
+	}
+	isDescending, err := strconv.ParseBool(isDescendingString)
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	return balances.GetEventDB().GetWriteMarkers(offset, limit, isDescending)
+}
+
 func (msc *StorageSmartContract) GetErrors(
 	ctx context.Context,
 	params url.Values,
@@ -551,4 +583,22 @@ func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.
 	}
 	block, err := balances.GetEventDB().GetBlocks()
 	return &block, err
+}
+
+func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate.StateContextI) (int64, error) {
+	if ssc != nil {
+		storageNodes, err := ssc.getBlobbersList(balances)
+		if err != nil {
+			return 0, fmt.Errorf("error from getBlobbersList in GetTotalData: %v", err)
+		}
+
+		var totalSavedData int64
+		for _, sn := range storageNodes.Nodes {
+			totalSavedData += sn.SavedData
+		}
+
+		return totalSavedData, nil
+	}
+
+	return 0, fmt.Errorf("storageSmartContract is nil")
 }
