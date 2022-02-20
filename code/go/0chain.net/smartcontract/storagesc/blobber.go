@@ -7,14 +7,14 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 )
 
 const blobberHealthTime = 60 * 60 // 1 Hour
@@ -107,10 +107,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// update the list
 	blobbers.Nodes.add(blobber)
 
-	if err := emitAddOrOverwriteBlobber(blobber, balances); err != nil {
-		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
-	}
-
 	// update statistics
 	sc.statIncr(statUpdateBlobber)
 
@@ -126,6 +122,10 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
+	}
+
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
@@ -652,8 +652,15 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	storageNode.SavedData += alloc.Stats.UsedSize
 	// emit blobber update event
-	if err = emitAddOrOverwriteBlobber(storageNode, balances); err != nil {
-		logging.Logger.Error("error emitting blobber", zap.Any("blobber", storageNode.ID), zap.Error(err))
+
+	var sp *stakePool
+	if sp, err = sc.getStakePool(storageNode.ID, balances); err != nil {
+		return "", common.NewError("commit_connection_failed",
+			"can't get stake pool")
+	}
+	if err = emitAddOrOverwriteBlobber(storageNode, sp, balances); err != nil {
+		logging.Logger.Error("error emitting blobber",
+			zap.Any("blobber", storageNode.ID), zap.Error(err))
 	}
 
 	// check time boundaries
