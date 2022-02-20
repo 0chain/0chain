@@ -15,10 +15,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-type AuthorizerNodeResponse struct {
+// Models
+
+type authorizerNode struct {
 	ID  string `json:"id"`
 	URL string `json:"url"`
 }
+
+type authorizerNodeResponse struct {
+	Nodes []*authorizerNode `json:"nodes"`
+}
+
+// Handlers
 
 func (zcn *ZCNSmartContract) GetAuthorizer(_ context.Context, params url.Values, ctx cState.StateContextI) (interface{}, error) {
 	id := params.Get("id")
@@ -64,17 +72,19 @@ func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list")
 	}
 
-	var nodes []*AuthorizerNodeResponse
+	resp := &authorizerNodeResponse{}
 	for _, authorizer := range authorizers {
 		node := authorizerToAuthorizerNode(&authorizer)
-		nodes = append(nodes, node)
+		resp.Nodes = append(resp.Nodes, node)
 	}
 
-	return nodes, nil
+	return resp, nil
 }
 
-func authorizerToAuthorizerNode(ev *event.Authorizer) *AuthorizerNodeResponse {
-	return &AuthorizerNodeResponse{
+// Helpers
+
+func authorizerToAuthorizerNode(ev *event.Authorizer) *authorizerNode {
+	return &authorizerNode{
 		ID:  ev.AuthorizerID,
 		URL: ev.URL,
 	}
