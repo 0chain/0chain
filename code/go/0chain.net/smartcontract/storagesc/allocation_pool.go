@@ -1,17 +1,19 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"sort"
+	"time"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"sort"
-	"time"
+	"0chain.net/smartcontract/stakepool"
 )
 
 //
@@ -156,7 +158,7 @@ func newAllocationPool(
 ) (*allocationPool, error) {
 	var err error
 	if !mintNewTokens {
-		if err = checkFill(t, balances); err != nil {
+		if err = stakepool.CheckClientBalance(t, balances); err != nil {
 			return nil, err
 		}
 	}

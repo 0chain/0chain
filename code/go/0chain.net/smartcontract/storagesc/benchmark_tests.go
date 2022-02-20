@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -616,6 +618,21 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					BlobberID: getMockBlobberId(0),
 					PoolID:    getMockBlobberStakePoolId(0, 0),
+				})
+				return bytes
+			}(),
+		},
+		{
+			name:     "storage.collect_reward",
+			endpoint: ssc.collectReward,
+			txn: &transaction.Transaction{
+				ClientID:   data.Clients[0],
+				ToClientID: ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
+					PoolId:       getMockBlobberStakePoolId(0, 0),
+					ProviderType: stakepool.Blobber,
 				})
 				return bytes
 			}(),
