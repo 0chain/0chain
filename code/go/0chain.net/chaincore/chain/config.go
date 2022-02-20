@@ -383,6 +383,7 @@ func (c *ConfigImpl) FromViper() {
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
+	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
 		conf.TxnExempt[txnExp[i]] = true
 	}
