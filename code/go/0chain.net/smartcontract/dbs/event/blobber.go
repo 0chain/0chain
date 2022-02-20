@@ -29,6 +29,7 @@ type Blobber struct {
 	Used            int64 `json:"used"`              // allocated capacity
 	TotalDataStored int64 `json:"total_data_stored"` // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
+	SavedData       int64 `json:"saved_data"`
 
 	// stake_pool_settings
 	DelegateWallet string  `json:"delegate_wallet"`
@@ -162,6 +163,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"unstake_total":             blobber.UnstakeTotal,
 			"reward":                    blobber.Reward,
 			"total_service_charge":      blobber.TotalServiceCharge,
+			"saved_data":                blobber.SavedData,
 		})
 	return result.Error
 }

@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
+	"go.uber.org/zap"
 
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
-
+	"0chain.net/smartcontract/stakepool"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -639,6 +640,21 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
+
+	// Update saved_data on storage node
+	var storageNode *StorageNode
+	for _, b := range alloc.Blobbers {
+		if b.ID == commitConnection.WriteMarker.BlobberID {
+			storageNode = b
+			break
+		}
+	}
+
+	storageNode.SavedData += alloc.Stats.UsedSize
+	// emit blobber update event
+	if err = emitAddOrOverwriteBlobber(storageNode, balances); err != nil {
+		logging.Logger.Error("error emitting blobber", zap.Any("blobber", storageNode.ID), zap.Error(err))
+	}
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {

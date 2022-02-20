@@ -260,7 +260,10 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.NumberOfDelegates = viper.GetInt("number_of_delegates")
 	mn.MinStake = state.Balance(viper.GetFloat64("min_stake") * 1e10)
 	mn.MaxStake = state.Balance(viper.GetFloat64("max_stake") * 1e10)
-
+	mn.Geolocation = minersc.SimpleNodeGeolocation{
+		Latitude:  viper.GetFloat64("latitude"), // are these good to be added in 0chain.yaml?
+		Longitude: viper.GetFloat64("longitude"),
+	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
 		scData.Name = scNameAddMiner

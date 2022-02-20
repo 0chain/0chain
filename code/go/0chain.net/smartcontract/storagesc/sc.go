@@ -124,6 +124,8 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
 	ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
+	// blobber aggregated saved data
+	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }
 
 func (ssc *StorageSmartContract) GetName() string {
