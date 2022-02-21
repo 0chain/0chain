@@ -47,8 +47,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Miner{},
 		&Sharder{},
 		&Curator{},
-		&ReadAllocationPool{},
-		&WriteAllocationPool{},
+		&AllocationPool{},
+		&BlobberPool{},
 	); err != nil {
 		return err
 	}

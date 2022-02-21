@@ -95,5 +95,15 @@ func (edb *EventDb) drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&AllocationPool{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -373,7 +373,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
 			{
 				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddWriteAllocationPool),
+				Tag:  int(event.TagAddAllocationPool),
 				Data: data,
 			},
 		})
@@ -388,16 +388,19 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 }
 
 func writePoolToEventReadPool(writePool allocationPool, t *transaction.Transaction) (string, error) {
-	writeAllocation := event.WriteAllocationPool{
-		AllocationId:  writePool.AllocationID,
+	writeAllocation := event.AllocationPool{
+		AllocationID:  writePool.AllocationID,
 		TransactionId: t.Hash,
 		UserID:        t.ToClientID,
 		Balance:       int64(writePool.Balance),
+		IsWritePool:   true,
 	}
 	writeAllocation.Blobbers = make([]event.BlobberPool, len(writePool.Blobbers))
 	for i, blobber := range writePool.Blobbers {
 		writeAllocation.Blobbers[i] = event.BlobberPool{
-			Balance: int64(blobber.Balance),
+			AllocationPoolID: writePool.AllocationID,
+			Balance:          int64(blobber.Balance),
+			BlobberID:        blobber.BlobberID,
 		}
 	}
 	data, err := json.Marshal(writeAllocation)
@@ -486,7 +489,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
 			{
 				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddWriteAllocationPool),
+				Tag:  int(event.TagAddAllocationPool),
 				Data: data,
 			},
 		})
