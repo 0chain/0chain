@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 )
@@ -78,12 +76,12 @@ func (edb *EventDb) updateReward(reward int64, dp DelegatePool) error {
 	return nil
 }
 
-func (edb *EventDb) GetDelegatePools(id string, pType stakepool.Provider) ([]DelegatePool, error) {
+func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
 		Where(&DelegatePool{
-			ProviderType: int(pType),
+			ProviderType: pType,
 			ProviderID:   id,
 		}).
 		Not(&DelegatePool{Status: int(dbs.Deleted)}).
@@ -94,12 +92,12 @@ func (edb *EventDb) GetDelegatePools(id string, pType stakepool.Provider) ([]Del
 	return dps, nil
 }
 
-func (edb *EventDb) GetUserDelegatePools(userId string, pType stakepool.Provider) ([]DelegatePool, error) {
+func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
 		Where(&DelegatePool{
-			ProviderType: int(pType),
+			ProviderType: pType,
 			DelegateID:   userId,
 		}).
 		Not(&DelegatePool{Status: int(dbs.Deleted)}).

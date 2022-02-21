@@ -622,7 +622,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(
 		return nil, errors.New("blobber not found in event database")
 	}
 
-	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, stakepool.Blobber)
+	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, int(stakepool.Blobber))
 
 	return spStats(*blobber, delegatePools), nil
 }
@@ -670,7 +670,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 ) (resp interface{}, err error) {
 	clientID := datastore.Key(params.Get("client_id"))
 
-	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, stakepool.Blobber)
+	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Blobber))
 	if err != nil {
 		return nil, errors.New("blobber not found in event database")
 	}
