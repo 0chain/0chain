@@ -20,7 +20,16 @@ func (c *Chain) FinalizeRound(r round.RoundI) {
 	c.FinalizeRoundImpl(r)
 
 	if isTestingOnUpdateFinalizedBlock(r) {
-		if err := AddRoundInfoResult(r); err != nil {
+		finalisedBlockHash := ""
+		if r.IsFinalized() {
+			roundImpl, ok := r.(*round.Round)
+			if !ok {
+				panic("unexpected type")
+			}
+			finalisedBlockHash = roundImpl.BlockHash
+		}
+
+		if err := AddRoundInfoResult(r, finalisedBlockHash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
@@ -75,8 +84,8 @@ func GetNodeTypeAndTypeRank(roundNum int64) (nodeType, typeRank int) {
 	}
 	return nodeType, typeRank
 }
-func AddRoundInfoResult(r round.RoundI) error {
-	res := roundInfo(r.GetRoundNumber())
+func AddRoundInfoResult(r round.RoundI, finalisedBlockHash string) error {
+	res := roundInfo(r.GetRoundNumber(), finalisedBlockHash)
 	blob, err := res.Encode()
 	if err != nil {
 		return err
@@ -84,7 +93,7 @@ func AddRoundInfoResult(r round.RoundI) error {
 	return crpc.Client().AddTestCaseResult(blob)
 }
 
-func roundInfo(rNum int64) *cases.RoundInfo {
+func roundInfo(rNum int64, finalisedBlockHash string) *cases.RoundInfo {
 	sCh := GetServerChain()
 
 	miners := sCh.GetMiners(rNum).CopyNodes()
@@ -103,16 +112,6 @@ func roundInfo(rNum int64) *cases.RoundInfo {
 	notBlocksInfo := make([]*cases.BlockInfo, 0, len(notBlocks))
 	for _, b := range notBlocks {
 		notBlocksInfo = append(notBlocksInfo, getBlockInfo(b))
-	}
-
-	finalisedBlockHash := ""
-	if roundI.IsFinalized() {
-		roundImpl, ok := roundI.(*round.Round)
-		if !ok {
-			panic("unexpected type")
-		}
-
-		finalisedBlockHash = roundImpl.BlockHash
 	}
 
 	return &cases.RoundInfo{

@@ -129,7 +129,11 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 
 	minerRound := mc.GetMinerRound(round)
 	if isTestingHalfNodesDown(minerRound) || isTestingSendDifferentBlocks(minerRound) {
-		if err := chain.AddRoundInfoResult(minerRound); err != nil {
+		finalisedBlockHash := ""
+		if minerRound.IsFinalized() {
+			finalisedBlockHash = minerRound.BlockHash
+		}
+		if err := chain.AddRoundInfoResult(minerRound, finalisedBlockHash); err != nil {
 			log.Panicf("Conductor: error while adding test case result: %v", err)
 		}
 	}

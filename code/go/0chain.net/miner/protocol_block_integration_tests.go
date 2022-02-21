@@ -83,7 +83,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.updateFinalizedBlock(ctx, b)
 
 	if isTestingOnUpdateFinalizedBlock(b.Round) {
-		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round)); err != nil {
+		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
