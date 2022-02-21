@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
@@ -156,4 +157,11 @@ func TestPoolScorer(t *testing.T) {
 func computeScore(np *Pool, hash string) {
 	ps := NewHashPoolScorer(encryption.NewXORHashScorer())
 	_ = ps.ScoreHashString(np, hash)
+}
+
+func TestNodeTypeNames(t *testing.T) {
+	require.Equal(t, 3, len(NodeTypeNames))
+	require.Equal(t, "Miner", NodeTypeNames[NodeTypeMiner].Value)
+	require.Equal(t, "Sharder", NodeTypeNames[NodeTypeSharder].Value)
+	require.Equal(t, "Blobber", NodeTypeNames[NodeTypeBlobber].Value)
 }

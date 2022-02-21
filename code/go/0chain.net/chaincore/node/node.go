@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -105,6 +106,15 @@ var (
 )
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
+
+func GetNodeTypeName(n *Node) (typename string, err error) {
+	if n.Type < 0 || int(n.Type) >= len(NodeTypeNames) {
+		err = errors.New(fmt.Sprintf("unknown_node_type %v", n.Type))
+	} else {
+		typename = NodeTypeNames[n.Type].Value
+	}
+	return
+}
 
 /*Node - a struct holding the node information */
 type Node struct {
