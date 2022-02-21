@@ -377,19 +377,21 @@ func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
 }
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
-	balances chainstate.StateContextI) (sp *stakePool, err error) {
-
-	var poolb []byte
-	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
-		return
+func (ssc *StorageSmartContract) getStakePool(
+	blobberID datastore.Key,
+	balances chainstate.StateContextI,
+) (*stakePool, error) {
+	sp := newStakePool()
+	poolb, err := ssc.getStakePoolBytes(blobberID, balances)
+	if err != nil {
+		return sp, err
 	}
-	sp = newStakePool()
+
 	err = sp.Decode(poolb)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return
+	return sp, nil
 }
 
 // initial or successive method should be used by add_blobber/add_validator
