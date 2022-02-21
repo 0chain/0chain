@@ -847,6 +847,9 @@ type SimpleNode struct {
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
 	Status int `json:"-"`
+
+	//LastSettingUpdateRound will be set to round number when settings were updated
+	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

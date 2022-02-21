@@ -134,6 +134,8 @@ func (gn *GlobalNode) setInt64(key string, change int64) error {
 		gn.RewardRoundFrequency = change
 	case Epoch:
 		gn.Epoch = change
+	case CooldownPeriod:
+		gn.CooldownPeriod = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
