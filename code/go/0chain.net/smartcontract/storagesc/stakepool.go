@@ -377,21 +377,19 @@ func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
 }
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(
-	blobberID datastore.Key,
-	balances chainstate.StateContextI,
-) (*stakePool, error) {
-	sp := newStakePool()
-	poolb, err := ssc.getStakePoolBytes(blobberID, balances)
-	if err != nil {
-		return sp, err
-	}
+func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
+	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
+	var poolb []byte
+	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
+		return
+	}
+	sp = newStakePool()
 	err = sp.Decode(poolb)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return sp, nil
+	return
 }
 
 // initial or successive method should be used by add_blobber/add_validator
@@ -411,10 +409,19 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 
 	// the stake pool can be created by related validator
 	sp, err := ssc.getStakePool(providerId, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, fmt.Errorf("unexpected error: %v", err)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, fmt.Errorf("unexpected error: %v", err)
+		}
+		sp = newStakePool()
+		sp.Settings.DelegateWallet = settings.DelegateWallet
+		sp.Minter = chainstate.MinterStorage
 	}
 
+	sp.Settings.MinStake = settings.MinStake
+	sp.Settings.MaxStake = settings.MaxStake
+	sp.Settings.ServiceCharge = settings.ServiceCharge
+	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	return sp, nil
 }
 
