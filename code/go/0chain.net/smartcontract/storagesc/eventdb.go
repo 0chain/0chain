@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/core/common"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -40,12 +42,12 @@ func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 		Capacity:        blobber.Capacity,
 		Used:            blobber.Used,
 		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-		StakePoolSettings: stakePoolSettings{
-			DelegateWallet: blobber.DelegateWallet,
-			MinStake:       state.Balance(blobber.MinStake),
-			MaxStake:       state.Balance(blobber.MaxStake),
-			NumDelegates:   blobber.NumDelegates,
-			ServiceCharge:  blobber.ServiceCharge,
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  blobber.DelegateWallet,
+			MinStake:        state.Balance(blobber.MinStake),
+			MaxStake:        state.Balance(blobber.MaxStake),
+			MaxNumDelegates: blobber.NumDelegates,
+			ServiceCharge:   blobber.ServiceCharge,
 		},
 	}, nil
 }
@@ -67,7 +69,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, balances cstate.StateContextI) e
 		DelegateWallet:          sn.StakePoolSettings.DelegateWallet,
 		MinStake:                int64(sn.StakePoolSettings.MaxStake),
 		MaxStake:                int64(sn.StakePoolSettings.MaxStake),
-		NumDelegates:            sn.StakePoolSettings.NumDelegates,
+		NumDelegates:            sn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:           sn.StakePoolSettings.ServiceCharge,
 		SavedData:               sn.SavedData,
 	})
@@ -96,7 +98,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"delegate_wallet":           sn.StakePoolSettings.DelegateWallet,
 			"min_stake":                 int64(sn.StakePoolSettings.MaxStake),
 			"max_stake":                 int64(sn.StakePoolSettings.MaxStake),
-			"num_delegates":             sn.StakePoolSettings.NumDelegates,
+			"num_delegates":             sn.StakePoolSettings.MaxNumDelegates,
 			"service_charge":            sn.StakePoolSettings.ServiceCharge,
 		},
 	})

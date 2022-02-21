@@ -2,7 +2,7 @@ version: 1.0
 
 logging:
   level: "debug"
-  console: true # printing log to console is only supported in development mode
+  console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
 
@@ -158,6 +158,10 @@ min_stake: 0.0 # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake
 max_stake: 100.0 # tokens
+# latitude is miner/sharder latitude geolocation
+latitude: 28.644800
+# longitude is miner/sharder longitude geolocation
+longitude: 77.216721
 
 minio:
   enabled: false # Enable or disable minio backup, Do not enable with deep scan ON

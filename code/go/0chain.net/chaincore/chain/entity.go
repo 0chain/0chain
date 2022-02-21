@@ -904,7 +904,7 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 }
 
 /*ChainHasTransaction - indicates if this chain has the transaction */
-func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
+func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
 	visited := 0
 	for cb := b; cb != nil; pb, cb = cb, c.GetLocalPreviousBlock(ctx, cb) {
