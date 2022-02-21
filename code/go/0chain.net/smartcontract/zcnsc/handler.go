@@ -120,7 +120,7 @@ func ToAuthorizerResponse(authorizer *event.Authorizer) (*authorizerResponse, er
 func ToNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
 	var (
 		resp       = &authorizerNodesResponse{}
-		authorizer *event.Authorizer
+		authorizer event.Authorizer
 	)
 
 	for _, authorizer = range events {
@@ -130,7 +130,7 @@ func ToNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
 	return resp
 }
 
-func ToNode(ev *event.Authorizer) *authorizerNode {
+func ToNode(ev event.Authorizer) *authorizerNode {
 	return &authorizerNode{
 		ID:  ev.AuthorizerID,
 		URL: ev.URL,
