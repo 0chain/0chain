@@ -3,8 +3,12 @@
 package chain
 
 import (
+	"context"
+
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
 	"0chain.net/core/logging"
@@ -47,4 +51,12 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 	}
 
 	return false // is not
+}
+
+func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
+	state := crpc.Client().State()
+	if state.DoubleSpendTransactionHash == txn.Hash {
+		return false, nil
+	}
+	return c.chainHasTransaction(ctx, b, txn)
 }

@@ -40,6 +40,7 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	return
 }
 
+func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	bsh chain.BlockStateHandler, waitOver bool) error {
 

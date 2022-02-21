@@ -27,6 +27,7 @@ type State struct {
 	CompetingBlock              *config.Bad
 	SignOnlyCompetingBlocks     *config.Bad
 	DoubleSpendTransaction      *config.Bad
+	DoubleSpendTransactionHash  string // internal variable to ignore this transaction in ChainHasTransaction()
 	WrongBlockSignHash          *config.Bad
 	WrongBlockSignKey           *config.Bad
 	WrongBlockHash              *config.Bad
