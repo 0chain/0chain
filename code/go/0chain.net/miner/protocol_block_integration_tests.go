@@ -7,15 +7,19 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math/rand"
+
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -200,4 +204,19 @@ func isIgnoringGenerateBlock(rNum int64) bool {
 	nodeType, typeRank := getNodeTypeAndTypeRank(rNum)
 	// we need to ignore generating block phase on configured round and on the Generator1 node
 	return cfg != nil && cfg.OnRound == rNum && nodeType == generator && typeRank == 1
+}
+
+func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
+	// inject double-spend transaction if configured
+	pb := b.PrevBlock
+	state := crpc.Client().State()
+	selfKey := node.Self.GetKey()
+	isDoubleSpend := state.DoubleSpendTransaction.IsBy(state, selfKey) && pb != nil && len(pb.Txns) > 0 && !hasDST(b.Txns, pb.Txns)
+	if !isDoubleSpend {
+		return
+	}
+	dstxn := pb.Txns[rand.Intn(len(pb.Txns))]     // a random one from the previous block
+	state.DoubleSpendTransactionHash = dstxn.Hash // exclude the duplicate transactio from checks
+	logging.Logger.Info("injecting double-spend transaction", zap.String("hash", dstxn.Hash))
+	txnIterHandler(ctx, dstxn) // inject double-spend transaction
 }
