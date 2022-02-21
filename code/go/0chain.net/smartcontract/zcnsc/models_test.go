@@ -243,6 +243,31 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	require.Equal(t, int64(target.Staking.Balance), tr.Value)
 }
 
+func Test_AuthorizerNodeSerialization(t *testing.T) {
+	source := &AuthorizerNode{
+		ID:        "aaa",
+		PublicKey: "bbb",
+		Staking: &tokenpool.ZcnLockingPool{
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					ID:      "ccc",
+					Balance: 111,
+				},
+			},
+			TokenLockInterface: nil,
+		},
+		URL: "ddd",
+		Config: &AuthorizerConfig{
+			Fee: 222,
+		},
+	}
+
+	target := &AuthorizerNode{}
+
+	err := target.Decode(source.Encode())
+	require.NoError(t, err)
+}
+
 func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	type AuthorizerConfigSource struct {
 		Fee string `json:"fee"`

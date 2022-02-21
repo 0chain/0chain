@@ -44,7 +44,7 @@ func (n *Authorizer) Verify(sig, hash string) (bool, error) {
 }
 
 func CreateDefaultTransactionToZcnsc() *transaction.Transaction {
-	return CreateAddAuthorizerTransaction(defaultClient, MakeMockStateContext(), tokens)
+	return NewAddAuthorizerTransaction(defaultClient, MakeMockStateContext(), tokens)
 }
 
 func addTransactionData(tr *transaction.Transaction, methodName string, input []byte) {
@@ -57,7 +57,7 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI, amount float64) *transaction.Transaction {
+func NewAddAuthorizerTransaction(fromClient string, ctx state.StateContextI, amount float64) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 
@@ -168,7 +168,7 @@ func createUserNode(id string, nonce int64) *UserNode {
 
 //
 //func CreateMockAuthorizer(clientId string, ctx state.StateContextI) (*AuthorizerNode, error) {
-//	tr := CreateAddAuthorizerTransaction(clientId, ctx, 100)
+//	tr := NewAddAuthorizerTransaction(clientId, ctx, 100)
 //	authorizerNode := NewAuthorizer(clientId, tr.PublicKey, "https://localhost:9876")
 //	_, _, err := authorizerNode.Staking.DigPool(tr.Hash, tr)
 //	return authorizerNode, err

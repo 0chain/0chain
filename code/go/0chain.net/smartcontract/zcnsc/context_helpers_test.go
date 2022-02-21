@@ -285,7 +285,7 @@ func createTestAuthorizer(ctx *mocks.StateContextI, id string) *Authorizer {
 	_ = scheme.GenerateKeys()
 
 	node := NewAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
-	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
+	tr := NewAddAuthorizerTransaction(defaultClient, ctx, 100)
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 
 	authorizers[node.GetKey()] = &Authorizer{

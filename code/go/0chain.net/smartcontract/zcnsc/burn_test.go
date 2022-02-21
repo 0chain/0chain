@@ -128,7 +128,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 
 	payload := createBurnPayload()
 	contract := CreateZCNSmartContract()
-	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 10)
+	tr := NewAddAuthorizerTransaction(defaultClient, ctx, 10)
 
 	node, err := GetUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)

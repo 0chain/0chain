@@ -41,7 +41,7 @@ func Test_FuzzyMintTest(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, client := range clients {
-		transaction := CreateAddAuthorizerTransaction(client, ctx, tokens)
+		transaction := NewAddAuthorizerTransaction(client, ctx, tokens)
 
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 

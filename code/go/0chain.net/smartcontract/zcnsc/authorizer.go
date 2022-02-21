@@ -3,6 +3,8 @@ package zcnsc
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -18,6 +20,7 @@ import (
 // Either PK or inputData must be present
 // balances have `GetTriedNode` implemented to get nodes
 // ContractMap contains all the SC addresses
+// ClientID is an authorizerID - used to search for authorizer
 // ToClient is an SC address
 func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (string, error) {
 	const (
@@ -25,12 +28,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	)
 
 	var (
-		publicKey    = tran.PublicKey  // authorizer public key
-		authorizerID = tran.ClientID   // sender address
-		recipientID  = tran.ToClientID // smart contract address
-		authorizer   *AuthorizerNode
-		err          error
+		authorizerPublicKey = tran.PublicKey // authorizer public key
+		authorizerURL       = ""
+		authorizerID        = tran.ClientID   // sender address
+		recipientID         = tran.ToClientID // smart contract address
+		authorizer          *AuthorizerNode
+		err                 error
 	)
+
+	if authorizerID == "" {
+		msg := "authorizerID is empty"
+		err = common.NewError(code, msg)
+		Logger.Error(msg, zap.Error(err))
+		return "", err
+	}
 
 	if inputData == nil {
 		msg := "input data is nil"
@@ -55,15 +66,22 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	publicKey = params.PublicKey
+	authorizerPublicKey = params.PublicKey
+	authorizerURL = params.URL
 
 	// Check existing Authorizer
 
 	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
-	if err == nil {
+	if err == nil && authorizer != nil {
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(code, msg)
 		Logger.Warn("get authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	if err != nil && authorizer == nil {
+		err = errors.Wrap(err, "error while looking for authorizer node")
+		Logger.Error("failed to find au", zap.Error(err))
 		return "", err
 	}
 
@@ -85,9 +103,9 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 
 	// Create Authorizer instance
 
-	authorizer = NewAuthorizer(authorizerID, publicKey, params.URL)
+	authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
 
-	//Dig pool for authorizer
+	// Dig pool for authorizer
 
 	transfer, response, err := authorizer.Staking.DigPool(tran.Hash, tran)
 	if err != nil {
