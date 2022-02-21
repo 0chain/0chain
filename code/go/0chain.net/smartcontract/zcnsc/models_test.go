@@ -243,6 +243,39 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	require.Equal(t, int64(target.Staking.Balance), tr.Value)
 }
 
+func Test_UpdateAuthorizerConfigTest(t *testing.T) {
+	type AuthorizerConfigSource struct {
+		Fee string `json:"fee"`
+	}
+
+	type AuthorizerNodeSource struct {
+		ID     string                  `json:"id"`
+		Config *AuthorizerConfigSource `json:"config"`
+	}
+
+	source := &AuthorizerNodeSource{
+		ID: "12345678",
+		Config: &AuthorizerConfigSource{
+			Fee: "999",
+		},
+	}
+	target := &AuthorizerNode{}
+
+	bytes, err := json.Marshal(source)
+	require.NoError(t, err)
+
+	err = target.Decode(bytes)
+	require.NoError(t, err)
+
+	err = target.Decode(bytes)
+	require.NoError(t, err)
+
+	require.Equal(t, "", target.URL)
+	require.Equal(t, "", target.PublicKey)
+	require.Equal(t, "12345678", target.ID)
+	require.Equal(t, state.Balance(999), target.Config.Fee)
+}
+
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, error) {
 	node := CreateSmartContractGlobalNode()
 	node.Config.MinBurnAmount = 111

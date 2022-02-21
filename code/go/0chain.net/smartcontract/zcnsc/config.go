@@ -31,10 +31,6 @@ const (
 	OwnerID            = "owner_id"
 )
 
-type AuthorizerConfig struct {
-	Fee state.Balance `json:"fee"`
-}
-
 // ZCNSConfig config both for GlobalNode and AuthorizerNode
 type ZCNSConfig struct {
 	MinMintAmount      state.Balance `json:"min_mint_amount"`

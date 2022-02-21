@@ -142,6 +142,42 @@ func (gn *GlobalNode) Save(balances cstate.StateContextI) (err error) {
 	return
 }
 
+// ----- AuthorizerConfig --------------------
+
+type AuthorizerConfig struct {
+	Fee state.Balance `json:"fee"`
+}
+
+func (c *AuthorizerConfig) Decode(input []byte) (err error) {
+	const (
+		Fee = "fee"
+	)
+
+	var objMap map[string]*json.RawMessage
+	err = json.Unmarshal(input, &objMap)
+	if err != nil {
+		return err
+	}
+
+	fee, ok := objMap[Fee]
+	if ok {
+		var feeStr *string
+		err = json.Unmarshal(*fee, &feeStr)
+		if err != nil {
+			return err
+		}
+
+		var balance, err = strconv.ParseInt(*feeStr, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		c.Fee = state.Balance(balance)
+	}
+
+	return nil
+}
+
 // ----- AuthorizerNode --------------------
 
 type AuthorizerNode struct {
@@ -267,7 +303,7 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 	rawCfg, ok := objMap["config"]
 	if ok {
 		var cfg = &AuthorizerConfig{}
-		err = json.Unmarshal(*rawCfg, &cfg)
+		err = cfg.Decode(*rawCfg)
 		if err != nil {
 			return err
 		}
