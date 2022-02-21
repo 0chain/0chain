@@ -268,7 +268,7 @@ func (sp *stakePool) capacity(now common.Timestamp,
 }
 
 // update the pool to get the stat
-func (sp *stakePool) stat(conf *scConfig, sscKey string,
+func (sp *stakePool) stat(_ *scConfig, _ string,
 	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
@@ -302,7 +302,7 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	}
 
 	// rewards
-	stat.Rewards.Charge = sp.Reward // total for all time
+	//	stat.Rewards.Charge = sp.Reward // total for all time
 	//stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
 	//stat.Rewards.Validator = sp.Rewards.Validator // total for all time
 
@@ -321,10 +321,13 @@ type delegatePoolStat struct {
 	ID         datastore.Key `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance
 	DelegateID datastore.Key `json:"delegate_id"` // wallet
-	Rewards    state.Balance `json:"rewards"`     // total for all time
-	Penalty    state.Balance `json:"penalty"`     // total for all time
+	Rewards    state.Balance `json:"rewards"`     // current
 	UnStake    bool          `json:"unstake"`     // want to unstake
 
+	TotalReward  state.Balance `json:"total_reward"`
+	TotalPenalty state.Balance `json:"total_penalty"`
+	Status       string        `json:"status"`
+	RoundCreated int64         `json:"round_created"`
 }
 
 type stakePoolStat struct {
@@ -342,7 +345,7 @@ type stakePoolStat struct {
 	Delegate []delegatePoolStat `json:"delegate"`
 	Penalty  state.Balance      `json:"penalty"` // total for all
 	// rewards
-	Rewards rewardsStat `json:"rewards"`
+	Rewards state.Balance `json:"rewards"`
 
 	// Settings of the stake pool
 	Settings stakepool.StakePoolSettings `json:"settings"`
@@ -549,7 +552,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 const cantGetStakePoolMsg = "can't get related stake pool"
 
 // statistic for all locked tokens of a stake pool
-func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getStakePoolStatHandlerDepreciated(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 
@@ -581,7 +584,7 @@ type userPoolStat struct {
 
 // user oriented statistic
 // todo get from event database
-func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getUserStakePoolStatHandlerDeprecitated(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 
