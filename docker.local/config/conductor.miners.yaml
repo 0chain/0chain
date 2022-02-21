@@ -341,5 +341,5 @@ tests:
           by: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           round: 110
-          timeout: "5m" # moves very slow, but moves
+          timeout: "6m" # moves very slow, but moves
 
