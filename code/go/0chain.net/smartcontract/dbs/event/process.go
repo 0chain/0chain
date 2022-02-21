@@ -46,6 +46,12 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
+	TagStakePoolReward
+	TagStakePoolBalance
+	TagAddOrOverwriteStakePool
+	TagAddOrOverwriteDelegatePool
+	TagRemoveDelegatePool
+	TagEmptyDelegatePool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -208,6 +214,14 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.removeCurator(c)
+	case TagAddOrOverwriteStakePool:
+		return nil // todo
+	case TagAddOrOverwriteDelegatePool:
+		return nil // todo
+	case TagRemoveDelegatePool:
+		return nil // todo
+	case TagEmptyDelegatePool:
+		return nil // todo
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
