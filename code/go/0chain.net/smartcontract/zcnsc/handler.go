@@ -16,11 +16,6 @@ import (
 
 // Models
 
-type (
-	AuthorizerEvent  event.Authorizer
-	AuthorizerEvents []event.Authorizer
-)
-
 type authorizerResponse struct {
 	AuthorizerID string `json:"id"`
 	URL          string `json:"url"`
@@ -62,7 +57,7 @@ func (zcn *ZCNSmartContract) GetAuthorizer(_ context.Context, params url.Values,
 		return nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id)
 	}
 
-	return ToResponse(ev)
+	return ToAuthorizerResponse(ev)
 }
 
 func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
@@ -86,7 +81,7 @@ func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ct
 func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
 	var (
 		err    error
-		events AuthorizerEvents
+		events []event.Authorizer
 	)
 
 	if ctx.GetEventDB() == nil {
@@ -102,12 +97,12 @@ func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list")
 	}
 
-	return events.ToResponse(), nil
+	return ToNodeResponse(events), nil
 }
 
 // Helpers
 
-func ToResponse(authorizer *event.Authorizer) (*authorizerResponse, error) {
+func ToAuthorizerResponse(authorizer *event.Authorizer) (*authorizerResponse, error) {
 	bytes, err := json.Marshal(authorizer)
 	if err != nil {
 		return nil, err
@@ -122,20 +117,20 @@ func ToResponse(authorizer *event.Authorizer) (*authorizerResponse, error) {
 	return resp, nil
 }
 
-func (events AuthorizerEvents) ToResponse() *authorizerNodesResponse {
+func ToNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
 	var (
 		resp       = &authorizerNodesResponse{}
-		authorizer AuthorizerEvent
+		authorizer *event.Authorizer
 	)
 
 	for _, authorizer = range events {
-		resp.Nodes = append(resp.Nodes, authorizer.ToNode())
+		resp.Nodes = append(resp.Nodes, ToNode(authorizer))
 	}
 
 	return resp
 }
 
-func (ev AuthorizerEvent) ToNode() *authorizerNode {
+func ToNode(ev *event.Authorizer) *authorizerNode {
 	return &authorizerNode{
 		ID:  ev.AuthorizerID,
 		URL: ev.URL,
