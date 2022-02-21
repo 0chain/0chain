@@ -4,15 +4,17 @@
 package chain
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/conductor/config"
-	"0chain.net/core/logging"
-
 	"context"
 
 	"go.uber.org/zap"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/transaction"
+	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/config"
+	"0chain.net/core/logging"
 )
 
 var myFailingRound int64 // once set, we ignore all restarts for that round
@@ -56,3 +58,11 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {} // disable deleting rounds
 
 func (c *Chain) DeleteRoundsBelow(roundNumber int64) {} // disable deleting rounds
+
+func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
+	state := crpc.Client().State()
+	if state.DoubleSpendTransactionHash == txn.Hash {
+		return false, nil
+	}
+	return c.chainHasTransaction(ctx, b, txn)
+}
