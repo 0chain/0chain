@@ -34,7 +34,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", common.NewError("update_sharder_settings", err.Error())
 	}
 
-	if balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
+	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
 		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
 	}
 
