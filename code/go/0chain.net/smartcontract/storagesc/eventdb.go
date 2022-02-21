@@ -3,54 +3,12 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-
-	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/core/common"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/dbs/event"
 )
-
-func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
-	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
-	if err != nil {
-		return StorageNode{}, err
-	}
-	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
-	if err != nil {
-		return StorageNode{}, err
-	}
-	return StorageNode{
-		ID:      blobber.BlobberID,
-		BaseURL: blobber.BaseURL,
-		Geolocation: StorageNodeGeolocation{
-			Latitude:  blobber.Latitude,
-			Longitude: blobber.Longitude,
-		},
-		Terms: Terms{
-			ReadPrice:               state.Balance(blobber.ReadPrice),
-			WritePrice:              state.Balance(blobber.WritePrice),
-			MinLockDemand:           blobber.MinLockDemand,
-			MaxOfferDuration:        maxOfferDuration,
-			ChallengeCompletionTime: challengeCompletionTime,
-		},
-		Capacity:        blobber.Capacity,
-		Used:            blobber.Used,
-		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  blobber.DelegateWallet,
-			MinStake:        state.Balance(blobber.MinStake),
-			MaxStake:        state.Balance(blobber.MaxStake),
-			MaxNumDelegates: blobber.NumDelegates,
-			ServiceCharge:   blobber.ServiceCharge,
-		},
-	}, nil
-}
 
 func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,

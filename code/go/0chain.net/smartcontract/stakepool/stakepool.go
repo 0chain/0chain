@@ -133,6 +133,22 @@ func (sp *StakePool) Save(
 	return err
 }
 
+func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) error {
+	minter, err := cstate.GetMinter(sp.Minter)
+	if err != nil {
+		return err
+	}
+	if err := balances.AddMint(&state.Mint{
+		Minter:     minter,
+		ToClientID: sp.Settings.DelegateWallet,
+		Amount:     sp.Reward,
+	}); err != nil {
+		return fmt.Errorf("minting rewards: %v", err)
+	}
+	sp.Reward = 0
+	return nil
+}
+
 func (sp *StakePool) MintRewards(
 	clientId,
 	poolId, providerId string,
@@ -140,6 +156,11 @@ func (sp *StakePool) MintRewards(
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
+	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
+		if err := sp.MintServiceCharge(balances); err != nil {
+			return 0, err
+		}
+	}
 
 	dPool, ok := sp.Pools[poolId]
 	if !ok {

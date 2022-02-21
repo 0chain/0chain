@@ -9,16 +9,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-type StakePoolReward dbs.StakePoolReward
-
-func NewStakePoolReward(pId string, pType Provider) *StakePoolReward {
-	var spu StakePoolReward
-	spu.ProviderId = pId
-	spu.ProviderType = int(pType)
-	spu.DelegateRewards = make(map[string]int64)
-	return &spu
-}
-
 /*
 type EdbStakePool struct {
 	ProviderId   string `json:"provider_id"`
@@ -60,6 +50,17 @@ func (sp StakePool) EmitNew(
 	return nil
 }
 */
+
+type StakePoolReward dbs.StakePoolReward
+
+func NewStakePoolReward(pId string, pType Provider) *StakePoolReward {
+	var spu StakePoolReward
+	spu.ProviderId = pId
+	spu.ProviderType = int(pType)
+	spu.DelegateRewards = make(map[string]int64)
+	return &spu
+}
+
 func (spu StakePoolReward) Emit(
 	tag event.EventTag,
 	balances cstate.StateContextI,

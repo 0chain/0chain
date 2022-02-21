@@ -14,7 +14,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
 )
 
 const blobberHealthTime = 60 * 60 // 1 Hour
@@ -124,17 +123,13 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
 
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
-		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
-	}
-
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
-	if err := sp.EmitUpdate(blobber.ID, stakepool.Blobber, balances); err != nil {
-		return err
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 
 	// save stake pool
