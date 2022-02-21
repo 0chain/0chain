@@ -518,14 +518,6 @@ func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// mc.SendNotarization(ctx, b)
 }
 
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
-	bsh chain.BlockStateHandler, waitOver bool) error {
-
-	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
-	})
-}
-
 type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *TxnIterInfo) bool
 
 func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
