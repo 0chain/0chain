@@ -45,18 +45,18 @@ func Test_config_validate(t *testing.T) {
 		{config{-1, 0, 0, 0, 0, ""}, "invalid min_lock (<= 0)"},
 		{config{0, 0, 0, 0, 0, ""}, "invalid min_lock (<= 0)"},
 		// min duration
-		{config{1, s(-1), 0, 0, 0, ""}, "invalid min_duration (< 1s)"},
-		{config{1, s(0), 0, 0, 0, ""}, "invalid min_duration (< 1s)"},
+		{config{1, int64(s(-1)), 0, 0, 0, ""}, "invalid min_duration (< 1s)"},
+		{config{1, int64(s(0)), 0, 0, 0, ""}, "invalid min_duration (< 1s)"},
 		// max duration
-		{config{1, s(1), s(0), 0, 0, ""},
+		{config{1, int64(s(1)), int64(s(0)), 0, 0, ""},
 			"invalid max_duration: less or equal to min_duration"},
-		{config{1, s(1), s(1), 0, 0, ""},
+		{config{1, int64(s(1)), int64(s(1)), 0, 0, ""},
 			"invalid max_duration: less or equal to min_duration"},
 		// max_destinations
-		{config{1, s(1), s(2), 0, 0, ""}, "invalid max_destinations (< 1)"},
+		{config{1, int64(s(1)), int64(s(2)), 0, 0, ""}, "invalid max_destinations (< 1)"},
 		// max_description_length
-		{config{1, s(1), s(2), 1, 0, ""}, "invalid max_description_length (< 1)"},
-		{config{1, s(1), s(2), 1, 1, ""}, "owner_id is not set or empty"},
+		{config{1, int64(s(1)), int64(s(2)), 1, 0, ""}, "invalid max_description_length (< 1)"},
+		{config{1, int64(s(1)), int64(s(2)), 1, 1, ""}, "owner_id is not set or empty"},
 	} {
 		requireErrMsg(t, tt.config.validate(), tt.err)
 	}
@@ -74,7 +74,7 @@ func configureConfig() (configured *config) {
 
 	return &config{
 		100e10,
-		1 * time.Second, 10 * time.Hour,
+		int64(1 * time.Second), int64(10 * time.Hour),
 		2, 20, "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
 	}
 }
@@ -128,7 +128,8 @@ func TestUpdateConfig(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 		prevConf := configureConfig()
-		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(prevConf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(vsc.ID),
+			mockSetValue(prevConf)).Return(nil).Once()
 		var conf config
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
@@ -136,10 +137,12 @@ func TestUpdateConfig(t *testing.T) {
 			conf.MinLock = state.Balance(fValue * 1e10)
 		}
 		if value, ok := p.input[Settings[MinDuration]]; ok {
-			conf.MinDuration, err = time.ParseDuration(value)
+			minDur, _ := time.ParseDuration(value)
+			conf.MinDuration = int64(minDur)
 		}
 		if value, ok := p.input[Settings[MaxDuration]]; ok {
-			conf.MaxDuration, err = time.ParseDuration(value)
+			maxDur, _ := time.ParseDuration(value)
+			conf.MaxDuration = int64(maxDur)
 		}
 		if value, ok := p.input[Settings[MaxDestinations]]; ok {
 			conf.MaxDestinations, err = strconv.Atoi(value)

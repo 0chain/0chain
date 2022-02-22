@@ -105,7 +105,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				client         = newClient(100000*x10, balances)
 				tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
-				conf *scConfig
+				conf *Config
 				err  error
 			)
 
@@ -148,7 +148,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 					nar.ReadPriceRange = PriceRange{1e10, 10e10}
 					nar.WritePriceRange = PriceRange{2e10, 20e10}
 					nar.Size = 1 * KB // 2 GB
-					nar.MaxChallengeCompletionTime = 200 * time.Hour
+					nar.MaxChallengeCompletionTime = int64(200 * time.Hour)
 
 					input = mustEncode(b, nar)                        //
 					tx = newTransaction(client.id, ADDRESS, 1e10, tp) //
@@ -184,7 +184,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 
 		tx    *transaction.Transaction
 		blobs []*Client
-		conf  *scConfig
+		conf  *Config
 		err   error
 	)
 
@@ -225,7 +225,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 1 * KB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
+		nar.MaxChallengeCompletionTime = int64(200 * time.Hour)
 
 		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
 			balances)
@@ -284,10 +284,8 @@ func Benchmark_generateChallenges(b *testing.B) {
 				{
 					// revert the stats to allow generation
 					tp += 1
-					var statsb util.Serializable
-					statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID))
+					err = balances.GetTrieNode(stats.GetKey(ssc.ID), &stats)
 					require.NoError(b, err)
-					require.NoError(b, stats.Decode(statsb.Encode()))
 					stats.LastChallengedSize = 0
 					stats.LastChallengedTime = 0
 					_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
@@ -327,7 +325,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 		tx    *transaction.Transaction
 		blobs []*Client
-		conf  *scConfig
+		conf  *Config
 		err   error
 	)
 
@@ -374,7 +372,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 1 * KB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
+		nar.MaxChallengeCompletionTime = int64(200 * time.Hour)
 
 		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
 			balances)

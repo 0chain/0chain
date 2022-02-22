@@ -9,8 +9,8 @@ type (
 	// CollectionMemberField describes an entity with a list of
 	// EntityCollection that will automatically put that entity into the list.
 	CollectionMemberField struct {
-		EntityCollection *EntityCollection `json:"-" msgpack:"-"`
-		CollectionScore  int64             `json:"-" msgpack:"-"`
+		EntityCollection *EntityCollection `json:"-" msgpack:"-" msg:"-"`
+		CollectionScore  int64             `json:"-" msgpack:"-" mspg:"-"`
 
 		mutex sync.RWMutex
 	}

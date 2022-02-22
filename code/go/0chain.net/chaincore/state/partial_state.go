@@ -23,7 +23,7 @@ type PartialState struct {
 	Hash      util.Key    `json:"root"`
 	Version   string      `json:"version"`
 	StartRoot util.Key    `json:"start"`
-	Nodes     []util.Node `json:"-" msgpack:"-"`
+	Nodes     []util.Node `json:"-" msgpack:"-" msg:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
 }

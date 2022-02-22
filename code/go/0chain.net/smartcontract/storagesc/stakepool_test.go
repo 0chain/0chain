@@ -72,7 +72,7 @@ type splResponse struct {
 
 func TestStakePoolLock(t *testing.T) {
 	var err error
-	scYaml = &scConfig{
+	scYaml = &Config{
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
@@ -125,7 +125,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -134,7 +133,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 		),
 		clientBalance: state.Balance(clientBalance),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -205,6 +204,6 @@ type formulaeStakePoolLock struct {
 	value         int64
 	clientBalance int64
 	delegates     []mockStakePool
-	scYaml        scConfig
+	scYaml        Config
 	now           common.Timestamp
 }

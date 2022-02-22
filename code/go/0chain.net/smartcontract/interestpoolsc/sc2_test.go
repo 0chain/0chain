@@ -264,7 +264,6 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -273,7 +272,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			nil,
 		),
 		clientStartBalance: zcnToBalance(startBalance),
-		store:              make(map[datastore.Key]util.Serializable),
+		store:              make(map[datastore.Key]util.MPTSerializable),
 	}
 	var globalNode = &GlobalNode{
 		ID: storageScId,
@@ -283,7 +282,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			MinLock:     state.Balance(scYml.minLock),
 			APR:         scYml.apr,
 		},
-		MinLockPeriod: scYml.minLockPeriod,
+		MinLockPeriod: int64(scYml.minLockPeriod),
 	}
 
 	output, err := isc.lock(txn, userNode, globalNode, input, ctx)
@@ -294,9 +293,12 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 	var response = &lockResponse{}
 	require.NoError(t, json.Unmarshal([]byte(output), response))
 
-	var newUserNode = isc.getUserNode(userNode.ClientID, ctx)
+	newUserNode, err := isc.getUserNode(userNode.ClientID, ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	return response, newUserNode, globalNode, err
+	return response, newUserNode, globalNode, nil
 }
 
 func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolStats *poolStat, now common.Timestamp) (
@@ -319,7 +321,6 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -327,7 +328,7 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 			nil,
 			nil,
 		),
-		store: make(map[datastore.Key]util.Serializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 	}
 
 	output, err := isc.unlock(txn, userNode, globalNode, input, ctx)
@@ -337,7 +338,8 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 
 	var response = &unlockResponse{}
 	require.NoError(t, json.Unmarshal([]byte(output), response))
-	var newUserNode = isc.getUserNode(userNode.ClientID, ctx)
+	newUserNode, err := isc.getUserNode(userNode.ClientID, ctx)
+	require.NoError(t, err)
 
 	var transfers = ctx.ctx.GetTransfers()
 	require.Len(t, transfers, 1)
@@ -350,7 +352,7 @@ const x10 = 10 * 1000 * 1000 * 1000
 type mockStateContext struct {
 	ctx                cstate.StateContext
 	clientStartBalance state.Balance
-	store              map[datastore.Key]util.Serializable
+	store              map[datastore.Key]util.MPTSerializable
 }
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block               { return nil }
@@ -379,11 +381,22 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, er
 }
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-	return sc.store[key], nil
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	n, ok := sc.store[key]
+	if !ok {
+		return util.ErrValueNotPresent
+	}
+
+	b, err := n.MarshalMsg(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = v.UnmarshalMsg(b)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
 }

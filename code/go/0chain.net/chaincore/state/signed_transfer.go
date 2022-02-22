@@ -12,8 +12,8 @@ import (
 type SignedTransfer struct {
 	Transfer
 	SchemeName string
-	PublicKey string
-	Sig string
+	PublicKey  string
+	Sig        string
 }
 
 func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {
@@ -68,7 +68,7 @@ func (st SignedTransfer) verifyPublicKey() error {
 		return common.NewError("invalid_public_key", "invalid public key format")
 	}
 
-	if encryption.Hash(publicKeyBytes) != st.Transfer.ClientID {
+	if encryption.Hash(publicKeyBytes) != string(st.Transfer.ClientID) {
 		return common.NewError("wrong_public_key", "public key does not match client id")
 	}
 

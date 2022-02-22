@@ -24,6 +24,8 @@ const (
 	NumberOfTypes
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 var ConfigTypeName = []string{
 	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance",
 }

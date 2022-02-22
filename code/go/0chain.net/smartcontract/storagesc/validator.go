@@ -36,13 +36,13 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID))
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("add_validator_failed",
-				"Failed to get validator."+err.Error())
-		}
 
+	tmp := &ValidationNode{}
+	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
+	switch err {
+	case nil:
+		sc.statIncr(statUpdateValidator)
+	case util.ErrValueNotPresent:
 		_, err = sc.getBlobber(newValidator.ID, balances)
 		if err != nil {
 			return "", common.NewError("add_validator_failed",
@@ -72,11 +72,12 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 		sc.statIncr(statAddValidator)
 		sc.statIncr(statNumberOfValidators)
-	} else {
-		sc.statIncr(statUpdateValidator)
+	default:
+		return "", common.NewError("add_validator_failed",
+			"Failed to get validator."+err.Error())
 	}
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("add_vaidator",
 			"can't get SC configurations: %v", err)

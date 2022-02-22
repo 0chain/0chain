@@ -14,6 +14,8 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 //ErrNodeNotFound - to indicate that a node is not present in the pool
 var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not found")
 
@@ -30,8 +32,8 @@ type Pool struct {
 	Type int8 `json:"type"`
 
 	// ---------------------------------------------
-	mmx      sync.RWMutex     `json:"-" msgpack:"-"`
-	Nodes    []*Node          `json:"-" msgpack:"-"`
+	mmx      sync.RWMutex     `json:"-" msgpack:"-" msg:"-"`
+	Nodes    []*Node          `json:"-" msgpack:"-" msg:"-"`
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
@@ -189,7 +191,7 @@ func (np *Pool) ComputeNetworkStats() {
 	switch np.Type {
 	case NodeTypeMiner:
 		info := Self.Underlying().GetNodeInfo()
-		info.MinersMedianNetworkTime = mt
+		info.MinersMedianNetworkTime = int64(mt)
 		Self.Underlying().SetNodeInfo(&info)
 	}
 }

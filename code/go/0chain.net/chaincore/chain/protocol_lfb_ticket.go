@@ -77,8 +77,8 @@ type LFBTicket struct {
 	SharderID string   `json:"sharder_id"` // sender
 	LFBHash   string   `json:"lfb_hash"`   // LFB hash
 	Sign      string   `json:"sign"`       // ticket signature
-	Senders   []string `json:"-"`          // internal
-	IsOwn     bool     `json:"-"`          // is own
+	Senders   []string `json:"-" msg:"-"`  // internal
+	IsOwn     bool     `json:"-" msg:"-"`  // is own
 }
 
 func (lfbt *LFBTicket) addSender(sharder string) {

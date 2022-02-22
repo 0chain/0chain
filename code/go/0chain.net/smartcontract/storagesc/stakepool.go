@@ -13,6 +13,7 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -20,6 +21,108 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 )
+
+//msgp:ignore offerPool unlockResponse stakePoolStat stakePoolRequest userPoolStat
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
+// A UserStakePools collects stake pools references for a user.
+type UserStakePools struct {
+	// Pools is map blobber_id -> []pool_id.
+	Pools map[string][]string `json:"pools"`
+}
+
+func newUserStakePools() (usp *UserStakePools) {
+	usp = new(UserStakePools)
+	usp.Pools = make(map[datastore.Key][]datastore.Key)
+	return
+}
+
+// add or overwrite
+func (usp *UserStakePools) add(blobberID, poolID datastore.Key) {
+	usp.Pools[blobberID] = append(usp.Pools[blobberID], poolID)
+}
+
+// delete by id
+func (usp *UserStakePools) del(blobberID, poolID datastore.Key) (empty bool) {
+	var (
+		list = usp.Pools[blobberID]
+		i    int
+	)
+	for _, id := range list {
+		if id == poolID {
+			continue
+		}
+		list[i], i = id, i+1
+	}
+	list = list[:i]
+	if len(list) == 0 {
+		delete(usp.Pools, blobberID) // delete empty
+	} else {
+		usp.Pools[blobberID] = list // update
+	}
+	return len(usp.Pools) == 0
+}
+
+func (usp *UserStakePools) Encode() []byte {
+	var p, err = json.Marshal(usp)
+	if err != nil {
+		panic(err) // must never happen
+	}
+	return p
+}
+
+func (usp *UserStakePools) Decode(p []byte) error {
+	return json.Unmarshal(p, usp)
+}
+
+// save the user stake pools
+func (usp *UserStakePools) save(scKey, clientID datastore.Key,
+	balances chainstate.StateContextI) (err error) {
+
+	_, err = balances.InsertTrieNode(userStakePoolsKey(scKey, clientID), usp)
+	return
+}
+
+// remove the entire user stake pools node
+func (usp *UserStakePools) remove(scKey, clientID datastore.Key,
+	balances chainstate.StateContextI) (err error) {
+
+	_, err = balances.DeleteTrieNode(userStakePoolsKey(scKey, clientID))
+	return
+}
+
+func userStakePoolsKey(scKey, clientID datastore.Key) datastore.Key {
+	return datastore.Key(scKey + ":stakepool:userpools:" + clientID)
+}
+
+// offerPool represents stake tokens of a blobber locked
+// for an allocation, it required for cases where blobber
+// changes terms or changes its capacity including reducing
+// the capacity to zero; it implemented not as a token
+// pool, but as set or values
+type offerPool struct {
+	Lock   state.Balance    `json:"lock"`   // offer stake
+	Expire common.Timestamp `json:"expire"` // offer expiration
+}
+
+// stake pool internal rewards information
+type stakePoolRewards struct {
+	Charge    state.Balance `json:"charge"`    // blobber charge
+	Blobber   state.Balance `json:"blobber"`   // blobber stake holders reward
+	Validator state.Balance `json:"validator"` // validator stake holders reward
+}
+
+// delegatePool
+type delegatePool struct {
+	tokenpool.ZcnPool `json:"pool"`    // the pool
+	MintAt            common.Timestamp `json:"mint_at"`     // last mint time
+	DelegateID        string           `json:"delegate_id"` // user
+	Rewards           state.Balance    `json:"rewards"`     // total
+	Penalty           state.Balance    `json:"penalty"`     // total
+	UnStake           bool             `json:"unstake"`     // want to unstake
+}
+
+// stake pool settings
 
 type stakePoolSettings struct {
 	// DelegateWallet for pool owner.
@@ -38,7 +141,7 @@ type stakePoolSettings struct {
 
 func validateStakePoolSettings(
 	sps stakepool.StakePoolSettings,
-	conf *scConfig,
+	conf *Config,
 ) error {
 	err := conf.validateStakeRange(sps.MinStake, sps.MaxStake)
 	if err != nil {
@@ -170,10 +273,10 @@ func (sp *stakePool) extendOffer(delta state.Balance) (err error) {
 	return
 }
 
-type stakePoolUpdateInfo struct {
-	stake  state.Balance // stake of all delegate pools
-	offers state.Balance // offers stake
-}
+//type stakePoolUpdateInfo struct {
+//	stake  state.Balance // stake of all delegate pools
+//	offers state.Balance // offers stake
+//}
 
 // slash represents blobber penalty; it returns number of tokens moved in
 // reality, with regards to division errors
@@ -267,7 +370,7 @@ func (sp *stakePool) capacity(now common.Timestamp,
 }
 
 // update the pool to get the stat
-func (sp *stakePool) stat(conf *scConfig, sscKey string,
+func (sp *stakePool) stat(conf *Config, sscKey string,
 	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
@@ -317,9 +420,9 @@ type rewardsStat struct {
 }
 
 type delegatePoolStat struct {
-	ID         datastore.Key `json:"id"`          // blobber ID
+	ID         string        `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance
-	DelegateID datastore.Key `json:"delegate_id"` // wallet
+	DelegateID string        `json:"delegate_id"` // wallet
 	Rewards    state.Balance `json:"rewards"`     // total for all time
 	Penalty    state.Balance `json:"penalty"`     // total for all time
 	UnStake    bool          `json:"unstake"`     // want to unstake
@@ -327,7 +430,7 @@ type delegatePoolStat struct {
 }
 
 type stakePoolStat struct {
-	ID      datastore.Key `json:"pool_id"` // pool ID
+	ID      string        `json:"pool_id"` // pool ID
 	Balance state.Balance `json:"balance"` // total balance
 	Unstake state.Balance `json:"unstake"` // total unstake amount
 
@@ -363,32 +466,17 @@ func (stat *stakePoolStat) decode(input []byte) error {
 // smart contract methods
 //
 
-// getStakePoolBytes of a blobber
-func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
-		return
-	}
 	sp = newStakePool()
-	err = sp.Decode(poolb)
+	err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID), sp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+
+	return sp, nil
 }
 
 // initial or successive method should be used by add_blobber/add_validator
@@ -396,7 +484,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 
 // get existing stake pool or create new one not saving it
 func (ssc *StorageSmartContract) getOrUpdateStakePool(
-	conf *scConfig,
+	conf *Config,
 	providerId datastore.Key,
 	providerType stakepool.Provider,
 	settings stakepool.StakePoolSettings,
@@ -437,8 +525,8 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 }
 
 type stakePoolRequest struct {
-	BlobberID datastore.Key `json:"blobber_id,omitempty"`
-	PoolID    datastore.Key `json:"pool_id,omitempty"`
+	BlobberID string `json:"blobber_id,omitempty"`
+	PoolID    string `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
@@ -460,7 +548,7 @@ type unlockResponse struct {
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get SC configurations: %v", err)
@@ -566,7 +654,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 
 	var (
 		blobberID = datastore.Key(params.Get("blobber_id"))
-		conf      *scConfig
+		conf      *Config
 		blobber   *StorageNode
 		sp        *stakePool
 	)
@@ -587,7 +675,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 }
 
 type userPoolStat struct {
-	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
+	Pools map[string][]*delegatePoolStat `json:"pools"`
 }
 
 // user oriented statistic

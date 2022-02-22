@@ -82,10 +82,14 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
 	}
 	if state.Balance(gn.PourAmount)+un.Used > gn.PeriodicLimit {
-		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)", t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
+		return false, common.NewError("invalid_request",
+			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
+				t.Value, un.Used, gn.PeriodicLimit, time.Duration(gn.IndividualReset).String()))
 	}
 	if state.Balance(gn.PourAmount)+gn.Used > gn.GlobalLimit {
-		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)", t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
+		return false, common.NewError("invalid_request",
+			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
+				t.Value, gn.Used, gn.GlobalLimit, time.Duration(gn.GlobalReset).String()))
 	}
 	Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
@@ -175,14 +179,12 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 
 func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
 	un := &UserNode{ID: id}
-	us, err := balances.GetTrieNode(un.GetKey(globalKey))
+	err := balances.GetTrieNode(un.GetKey(globalKey), un)
 	if err != nil {
-		return un, err
+		return nil, err
 	}
-	if err := un.Decode(us.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return un, err
+
+	return un, nil
 }
 
 func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode, balances c_state.StateContextI) *UserNode {
@@ -191,7 +193,8 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
-	if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.IndividualReset || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.GlobalReset {
+	if common.ToTime(t.CreationDate).Sub(un.StartTime) >= time.Duration(gn.IndividualReset) ||
+		common.ToTime(t.CreationDate).Sub(un.StartTime) >= time.Duration(gn.GlobalReset) {
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
@@ -200,30 +203,26 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
-	gv, err := balances.GetTrieNode(gn.GetKey())
-	if err != nil {
+	err := balances.GetTrieNode(gn.GetKey(), gn)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		if gn.FaucetConfig == nil {
+			gn.FaucetConfig = getConfig()
+		}
 		return gn, err
+	default:
+		return nil, err
 	}
-	if err := gn.Decode(gv.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	if gn.FaucetConfig == nil {
-		gn.FaucetConfig = getConfig()
-	}
-	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil {
 		return nil, err
-	}
-	if gn.FaucetConfig == nil {
-		gn.FaucetConfig = getConfig()
 	}
 
 	if err == nil {
-		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
+		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= time.Duration(gn.GlobalReset) {
 			gn.StartTime = common.ToTime(t.CreationDate)
 			gn.Used = 0
 		}

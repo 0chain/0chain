@@ -1,9 +1,10 @@
 package interestpoolsc
 
 import (
-	"0chain.net/core/datastore"
 	"reflect"
 	"testing"
+
+	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/state"
 )

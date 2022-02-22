@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore StorageAllocation BlobberChallenge
+//go:generate msgp -io=false -tests=false -v
+
 var (
 	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
 	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
@@ -58,7 +61,7 @@ func (sn *ClientAllocation) GetHashBytes() []byte {
 }
 
 type Allocations struct {
-	List sortedList
+	List SortedList
 }
 
 func (a *Allocations) has(id string) (ok bool) {
@@ -95,7 +98,7 @@ type ChallengeResponse struct {
 type BlobberChallenge struct {
 	BlobberID                string                       `json:"blobber_id"`
 	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-"`
+	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
 	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
 }
 
@@ -126,6 +129,29 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 		sn.ChallengeMap[challenge.ID] = challenge
 	}
 	return nil
+}
+
+type BlobberChallengeDecode BlobberChallenge
+
+func (sn *BlobberChallenge) MarshalMsg(o []byte) ([]byte, error) {
+	d := BlobberChallengeDecode(*sn)
+	return d.MarshalMsg(o)
+}
+
+func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &BlobberChallengeDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*sn = BlobberChallenge(*d)
+
+	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeMap[challenge.ID] = challenge
+	}
+	return o, nil
 }
 
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
@@ -162,7 +188,7 @@ type StorageChallenge struct {
 type ValidationNode struct {
 	ID                string                      `json:"id"`
 	BaseURL           string                      `json:"url"`
-	PublicKey         string                      `json:"-"`
+	PublicKey         string                      `json:"-" msg:"-"`
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
@@ -229,9 +255,9 @@ type Terms struct {
 	// user never write something to the blobber.
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
-	MaxOfferDuration time.Duration `json:"max_offer_duration"`
+	MaxOfferDuration int64 `json:"max_offer_duration"`
 	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+	ChallengeCompletionTime int64 `json:"challenge_completion_time"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
@@ -244,7 +270,7 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
 }
 
 // validate a received terms
-func (t *Terms) validate(conf *scConfig) (err error) {
+func (t *Terms) validate(conf *Config) (err error) {
 	if t.ReadPrice < 0 {
 		return errors.New("negative read_price")
 	}
@@ -312,14 +338,14 @@ type StorageNode struct {
 	Capacity        int64                  `json:"capacity"` // total blobber capacity
 	Used            int64                  `json:"used"`     // allocated capacity
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
-	PublicKey       string                 `json:"-"`
+	PublicKey       string                 `json:"-" msg:"-"`
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
 // validate the blobber configurations
-func (sn *StorageNode) validate(conf *scConfig) (err error) {
+func (sn *StorageNode) validate(conf *Config) (err error) {
 	if err = sn.Terms.validate(conf); err != nil {
 		return
 	}
@@ -357,7 +383,7 @@ func (sn *StorageNode) Decode(input []byte) error {
 }
 
 type StorageNodes struct {
-	Nodes sortedBlobbers
+	Nodes SortedBlobbers
 }
 
 func (sn *StorageNodes) Decode(input []byte) error {
@@ -567,46 +593,48 @@ type StorageAllocation struct {
 	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
-	BlobberMap        map[string]*BlobberAllocation `json:"-"`
+	BlobberMap        map[string]*BlobberAllocation `json:"-" msg:"-"`
 	IsImmutable       bool                          `json:"is_immutable"`
 
 	// Requested ranges.
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	ReadPriceRange             PriceRange `json:"read_price_range"`
+	WritePriceRange            PriceRange `json:"write_price_range"`
+	MaxChallengeCompletionTime int64      `json:"max_challenge_completion_time"`
 
 	//AllocationPools allocationPools `json:"allocation_pools"`
 	WritePoolOwners []string `json:"write_pool_owners"`
 
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+	ChallengeCompletionTime int64 `json:"challenge_completion_time"`
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
 	// Finalized is true where allocation has been finalized.
-	Finalized bool `json:"finalized,omitempty"`
+	Finalized bool `json:"finalized,omitempty" msg:"finalized,omitempty"`
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
-	Canceled bool `json:"canceled,omitempty"`
+	Canceled bool `json:"canceled,omitempty" msg:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-"`
+	UsedSize int64 `json:"-" msg:"-"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
+	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty" msg:"moved_to_challenge,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack state.Balance `json:"moved_back,omitempty"`
+	MovedBack state.Balance `json:"moved_back,omitempty" msg:"moved_back,omitempty"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
-	MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
+	MovedToValidators state.Balance `json:"moved_to_validators,omitempty" msg:"moved_to_validators,omitempty"`
 
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
-	TimeUnit time.Duration `json:"time_unit"`
+	TimeUnit int64 `json:"time_unit"`
 
 	Curators []string `json:"curators"`
 }
+
+type StorageAllocationDecode StorageAllocation
 
 // The restMinLockDemand returns number of tokens required as min_lock_demand;
 // if a blobber receive write marker, then some token moves to related
@@ -675,7 +703,7 @@ func (sa *StorageAllocation) getAllocationPools(
 }
 
 func (sa *StorageAllocation) validate(now common.Timestamp,
-	conf *scConfig) (err error) {
+	conf *Config) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
 		return errors.New("invalid read_price range")
@@ -687,7 +715,7 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 		return errors.New("insufficient allocation size")
 	}
 	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
-	if dur < conf.MinAllocDuration {
+	if int64(dur) < conf.MinAllocDuration {
 		return errors.New("insufficient allocation duration")
 	}
 
@@ -720,7 +748,7 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 List:
 	for _, b := range list {
 		// filter by max offer duration
-		if b.Terms.MaxOfferDuration < dur {
+		if time.Duration(b.Terms.MaxOfferDuration) < dur {
 			continue
 		}
 		// filter by read price
@@ -840,7 +868,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 
 // Until returns allocation expiration.
 func (sa *StorageAllocation) Until() common.Timestamp {
-	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
+	return sa.Expiration + toSeconds(time.Duration(sa.ChallengeCompletionTime))
 }
 
 // The durationInTimeUnits returns given duration (represented as
@@ -981,6 +1009,30 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 func (sn *StorageAllocation) Encode() []byte {
 	buff, _ := json.Marshal(sn)
 	return buff
+}
+
+func (sn *StorageAllocation) MarshalMsg(o []byte) ([]byte, error) {
+	d := StorageAllocationDecode(*sn)
+	return d.MarshalMsg(o)
+}
+
+func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &StorageAllocationDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*sn = StorageAllocation(*d)
+
+	sn.BlobberMap = make(map[string]*BlobberAllocation)
+	for _, blobberAllocation := range sn.BlobberDetails {
+		if blobberAllocation.Stats != nil {
+			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+		}
+		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
+	}
+	return o, nil
 }
 
 type BlobberCloseConnection struct {

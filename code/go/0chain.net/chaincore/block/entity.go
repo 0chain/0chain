@@ -145,24 +145,24 @@ type Block struct {
 	Signature string `json:"signature"`
 
 	ChainID   datastore.Key `json:"chain_id"`
-	RoundRank int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
-	PrevBlock *Block        `json:"-" msgpack:"-"`
+	RoundRank int           `json:"-" msgpack:"-" msg:"-"` // rank of the block in the round it belongs to
+	PrevBlock *Block        `json:"-" msgpack:"-" msg:"-"`
 	Events    []event.Event
 
-	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
-	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
+	TxnsMap   map[string]bool `json:"-" msgpack:"-" msg:"-"`
+	mutexTxns sync.RWMutex    `json:"-" msgpack:"-" msg:"-"`
 
-	ClientState           util.MerklePatriciaTrieI `json:"-" msgpack:"-"`
+	ClientState           util.MerklePatriciaTrieI `json:"-" msgpack:"-" msg:"-"`
 	stateStatus           int8
-	stateStatusMutex      sync.RWMutex `json:"-" msgpack:"-"`
-	stateMutex            sync.RWMutex `json:"-" msgpack:"-"`
+	stateStatusMutex      sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
+	stateMutex            sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-"`
+	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
-	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
-	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
+	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-" msg:"-"`
+	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty" msg:"mb,omitempty"`
 }
 
 // NewBlock - create a new empty block

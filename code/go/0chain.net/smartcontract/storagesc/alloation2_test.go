@@ -37,10 +37,10 @@ const (
 func TestNewAllocation(t *testing.T) {
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
-	scYaml = &scConfig{
+	scYaml = &Config{
 		MinAllocSize:               1027,
-		MinAllocDuration:           5 * time.Minute,
-		MaxChallengeCompletionTime: 30 * time.Minute,
+		MinAllocDuration:           int64(5 * time.Minute),
+		MaxChallengeCompletionTime: int64(30 * time.Minute),
 		MaxStake:                   zcnToBalance(100.0),
 	}
 	var blobberYaml = mockBlobberYaml{
@@ -55,7 +55,7 @@ func TestNewAllocation(t *testing.T) {
 		Size:                       scYaml.MinAllocSize,
 		DataShards:                 3,
 		ParityShards:               5,
-		Expiration:                 common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
+		Expiration:                 common.Timestamp(time.Duration(scYaml.MinAllocDuration).Seconds()) + now,
 		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
@@ -65,13 +65,13 @@ func TestNewAllocation(t *testing.T) {
 		Capacity: 536870912,
 		Used:     73,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
+			MaxOfferDuration:        int64(1000 * scYaml.MinAllocDuration),
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
-	var blobbers = new(sortedBlobbers)
+	var blobbers = new(SortedBlobbers)
 	var stake = int64(scYaml.MaxStake)
 	var writePrice = blobberYaml.writePrice
 	for i := 0; i < request.DataShards+request.ParityShards+4; i++ {
@@ -111,13 +111,13 @@ func TestNewAllocation(t *testing.T) {
 func TestCancelAllocationRequest(t *testing.T) {
 	var blobberStakePools = [][]mockStakePool{}
 	var challenges = [][]common.Timestamp{}
-	var scYaml = scConfig{
+	var scYaml = Config{
 		MaxMint:                         zcnToBalance(4000000.0),
 		StakePool:                       &stakePoolConfig{},
 		BlobberSlash:                    0.1,
 		ValidatorReward:                 0.025,
-		MaxChallengeCompletionTime:      30 * time.Minute,
-		TimeUnit:                        720 * time.Hour,
+		MaxChallengeCompletionTime:      int64(30 * time.Minute),
+		TimeUnit:                        int64(720 * time.Hour),
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
 	}
@@ -132,9 +132,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
+			MaxOfferDuration:        1000 * int64(scYaml.MinAllocDuration),
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -151,7 +151,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		Size:     4560,
 		UsedSize: 456,
 	}
-	var blobbers = new(sortedBlobbers)
+	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
 	var extraBlobbers = 0
@@ -175,7 +175,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 			allocation.BlobberDetails = append(allocation.BlobberDetails, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
 				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+					ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
 				},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
@@ -232,12 +232,12 @@ func TestCancelAllocationRequest(t *testing.T) {
 func TestFinalizeAllocation(t *testing.T) {
 	var now = common.Timestamp(300)
 	var blobberStakePools = [][]mockStakePool{}
-	var scYaml = scConfig{
+	var scYaml = Config{
 		MaxMint:                         zcnToBalance(4000000.0),
 		BlobberSlash:                    0.1,
 		ValidatorReward:                 0.025,
-		MaxChallengeCompletionTime:      30 * time.Minute,
-		TimeUnit:                        720 * time.Hour,
+		MaxChallengeCompletionTime:      int64(30 * time.Minute),
+		TimeUnit:                        int64(720 * time.Hour),
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
 	}
@@ -250,9 +250,9 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
+			MaxOfferDuration:        1000 * int64(scYaml.MinAllocDuration),
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -269,7 +269,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		Size: 4560,
 	}
 	allocation.UsedSize = 41 * int64(allocation.DataShards+allocation.ParityShards)
-	var blobbers = new(sortedBlobbers)
+	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
 	var extraBlobbers = 0
@@ -293,7 +293,7 @@ func TestFinalizeAllocation(t *testing.T) {
 			allocation.BlobberDetails = append(allocation.BlobberDetails, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
 				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+					ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
 				},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
@@ -320,7 +320,7 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	t.Run(ErrFinalizedTooSoon, func(t *testing.T) {
 		var allocationExpired = allocation
-		allocationExpired.Expiration = now - toSeconds(allocation.ChallengeCompletionTime) + 1
+		allocationExpired.Expiration = now - toSeconds(time.Duration(allocation.ChallengeCompletionTime)) + 1
 
 		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
 			otherWritePools, challengePoolBalance, blobberOffer, wpBalance, thisExpires, now)
@@ -333,9 +333,9 @@ func TestFinalizeAllocation(t *testing.T) {
 func testCancelAllocation(
 	t *testing.T,
 	sAllocation StorageAllocation,
-	blobbers sortedBlobbers,
+	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
-	scYaml scConfig,
+	scYaml Config,
 	otherWritePools int,
 	challengePoolBalance int64,
 	challenges [][]common.Timestamp,
@@ -388,7 +388,7 @@ func testCancelAllocation(
 	require.NoError(t, err)
 	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
-	var newScYaml = &scConfig{}
+	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
@@ -414,9 +414,9 @@ func testCancelAllocation(
 func testFinalizeAllocation(
 	t *testing.T,
 	sAllocation StorageAllocation,
-	blobbers sortedBlobbers,
+	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
-	scYaml scConfig,
+	scYaml Config,
 	otherWritePools int,
 	challengePoolBalance int64,
 	blobberOffer int64,
@@ -452,7 +452,7 @@ func testFinalizeAllocation(
 	require.NoError(t, err)
 	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
-	var newScYaml = &scConfig{}
+	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
@@ -478,7 +478,7 @@ func testFinalizeAllocation(
 func confirmFinalizeAllocation(
 	t *testing.T,
 	f formulaeFinalizeAllocation,
-	scYaml scConfig,
+	scYaml Config,
 	_ StorageNodes,
 	challengePool challengePool,
 	allocationWritePool writePool,
@@ -528,9 +528,9 @@ func confirmFinalizeAllocation(
 func setupMocksFinishAllocation(
 	t *testing.T,
 	sAllocation StorageAllocation,
-	blobbers sortedBlobbers,
+	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
-	scYaml scConfig,
+	scYaml Config,
 	otherWritePools int,
 	challengePoolBalance state.Balance,
 	blobberOffer int64,
@@ -550,7 +550,6 @@ func setupMocksFinishAllocation(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -559,7 +558,7 @@ func setupMocksFinishAllocation(
 			nil,
 		),
 		clientBalance: zcnToBalance(3.1),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[string]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -660,10 +659,10 @@ func setupMocksFinishAllocation(
 
 type formulaeFinalizeAllocation struct {
 	t                    *testing.T
-	scYaml               scConfig
+	scYaml               Config
 	now                  common.Timestamp
 	allocation           StorageAllocation
-	blobbers             sortedBlobbers
+	blobbers             SortedBlobbers
 	bStakes              [][]mockStakePool
 	challengePoolBalance int64
 	challengeCreation    [][]common.Timestamp
@@ -758,7 +757,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
 	f._passRates = []float64{}
-	var deadline = f.now - toSeconds(blobberYaml.challengeCompletionTime)
+	var deadline = f.now - toSeconds(time.Duration(blobberYaml.challengeCompletionTime))
 
 	for i, details := range f.allocation.BlobberDetails {
 		var successful = float64(details.Stats.SuccessChallenges)
@@ -797,8 +796,8 @@ func (f *formulaeFinalizeAllocation) setFinilizationPassRates() {
 	}
 }
 
-func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sortedBlobbers,
-	scYaml scConfig, blobberYaml mockBlobberYaml, stakes blobberStakes,
+func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers SortedBlobbers,
+	scYaml Config, blobberYaml mockBlobberYaml, stakes blobberStakes,
 ) (err error) {
 	require.EqualValues(t, len(blobbers), len(stakes))
 	var f = formulaeCommitNewAllocation{
@@ -822,7 +821,6 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -831,7 +829,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 			nil,
 		),
 		clientBalance: zcnToBalance(3),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[string]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -867,7 +865,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 
 	allBlobbersList, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
-	var individualBlobbers = sortedBlobbers{}
+	var individualBlobbers = SortedBlobbers{}
 	for _, blobber := range allBlobbersList.Nodes {
 		var b *StorageNode
 		b, err = ssc.getBlobber(blobber.ID, ctx)
@@ -893,10 +891,10 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 }
 
 type formulaeCommitNewAllocation struct {
-	scYaml      scConfig
+	scYaml      Config
 	blobberYaml mockBlobberYaml
 	request     newAllocationRequest
-	blobbers    sortedBlobbers
+	blobbers    SortedBlobbers
 	stakes      blobberStakes
 }
 
@@ -952,11 +950,11 @@ func (f formulaeCommitNewAllocation) offerExpiration() common.Timestamp {
 	var expiration = f.request.Expiration
 	var challangeTime = f.request.MaxChallengeCompletionTime
 
-	return expiration + toSeconds(challangeTime)
+	return expiration + toSeconds(time.Duration(challangeTime))
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
-	blobbers1, blobbers2 sortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
+	blobbers1, blobbers2 SortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
 ) {
 	var transfers = ctx.GetTransfers()
 	require.Len(t, transfers, 1)

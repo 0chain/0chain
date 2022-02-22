@@ -206,19 +206,18 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 	*PhaseNode, error) {
 
 	pn := &PhaseNode{}
-	phaseNodeBytes, err := statectx.GetTrieNode(pn.GetKey())
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-	if phaseNodeBytes == nil {
+	err := statectx.GetTrieNode(pn.GetKey(), pn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		pn.Phase = Start
 		pn.CurrentRound = statectx.GetBlock().Round
 		pn.StartRound = statectx.GetBlock().Round
 		return pn, nil
 	}
-	if err := pn.Decode(phaseNodeBytes.Encode()); err != nil {
-		return nil, err
-	}
+
 	pn.CurrentRound = statectx.GetBlock().Round
 	return pn, nil
 }

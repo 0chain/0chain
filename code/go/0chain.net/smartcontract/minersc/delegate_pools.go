@@ -39,7 +39,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	case nil:
 	case util.ErrValueNotPresent:
 		return "", common.NewErrorf("delegate_pool_add",
-			"miner not found or genesis miner used")
+			"miner not found or genesis miner used, id: %v", dp.MinerID)
 	default:
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)

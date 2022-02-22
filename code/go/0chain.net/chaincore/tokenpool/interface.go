@@ -5,16 +5,18 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type TokenPoolTransferResponse struct {
-	TxnHash    datastore.Key `json:"txn_hash,omitempty"`
-	FromPool   datastore.Key `json:"from_pool,omitempty"`
-	ToPool     datastore.Key `json:"to_pool,omitempty"`
+	TxnHash    string        `json:"txn_hash,omitempty"`
+	FromPool   string        `json:"from_pool,omitempty"`
+	ToPool     string        `json:"to_pool,omitempty"`
 	Value      state.Balance `json:"value,omitempty"`
-	FromClient datastore.Key `json:"from_client,omitempty"`
-	ToClient   datastore.Key `json:"to_client,omitempty"`
+	FromClient string        `json:"from_client,omitempty"`
+	ToClient   string        `json:"to_client,omitempty"`
 }
 
 func (p *TokenPoolTransferResponse) Encode() []byte {
@@ -30,20 +32,22 @@ func (p *TokenPoolTransferResponse) Decode(input []byte) error {
 type TokenPoolI interface {
 	GetBalance() state.Balance
 	SetBalance(value state.Balance)
-	GetID() datastore.Key
-	DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
+	GetID() string
+	DigPool(id string, txn *transaction.Transaction) (*state.Transfer, string, error)
 	FillPool(txn *transaction.Transaction) (*state.Transfer, string, error)
 	TransferTo(op TokenPoolI, value state.Balance, entity interface{}) (*state.Transfer, string, error)
-	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, entity interface{}) (*state.Transfer, string, error)
-	EmptyPool(fromClientID, toClientID datastore.Key, entity interface{}) (*state.Transfer, string, error)
+	DrainPool(fromClientID, toClientID string, value state.Balance, entity interface{}) (*state.Transfer, string, error)
+	EmptyPool(fromClientID, toClientID string, entity interface{}) (*state.Transfer, string, error)
 }
 
 type TokenPool struct {
-	ID      datastore.Key `json:"id"`
+	ID      string        `json:"id"`
 	Balance state.Balance `json:"balance"`
 }
 
+//go:generate mockery --case underscore -name TokenLockInterface -inpkg -testonly
 type TokenLockInterface interface {
+	util.MPTSerializableSize
 	IsLocked(entity interface{}) bool
 	LockStats(entity interface{}) []byte
 }

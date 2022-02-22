@@ -24,14 +24,11 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 
 	alloc = new(StorageAllocation)
 	alloc.ID = allocID
-	var allocb util.Serializable
-	if allocb, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err != nil {
+	err = balances.GetTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
 		return nil, err
 	}
-	err = alloc.Decode(allocb.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+
 	return
 }
 
@@ -41,14 +38,15 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	allocationList := &Allocations{}
 	var clientAlloc ClientAllocation
 	clientAlloc.ClientID = clientID
-	allocationListBytes, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID))
-	if allocationListBytes == nil {
+	err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), &clientAlloc)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		return allocationList, nil
 	}
-	err = json.Unmarshal(allocationListBytes.Encode(), &clientAlloc)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, "failed to retrieve existing allocations list")
-	}
+
 	return clientAlloc.Allocations, nil
 }
 
@@ -57,16 +55,16 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 
 	allocationList := &Allocations{}
 
-	allocationListBytes, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY)
-	if allocationListBytes == nil {
+	err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY, allocationList)
+	switch err {
+	case util.ErrValueNotPresent:
+		return &Allocations{}, nil
+	case nil:
 		return allocationList, nil
-	}
-	err = json.Unmarshal(allocationListBytes.Encode(), allocationList)
-	if err != nil {
+	default:
 		return nil, common.NewError("getAllAllocationsList_failed",
 			"Failed to retrieve existing allocations list")
 	}
-	return allocationList, nil
 }
 
 func (sc *StorageSmartContract) removeUserAllocation(
@@ -136,7 +134,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"Failed to get allocation list: %v", err)
 	}
 
-	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err == nil {
+	ta := &StorageAllocation{}
+	if err = balances.GetTrieNode(alloc.GetKey(sc.ID), ta); err == nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
@@ -176,7 +175,7 @@ type newAllocationRequest struct {
 	PreferredBlobbers          []string         `json:"preferred_blobbers"`
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
+	MaxChallengeCompletionTime int64            `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
 }
 
@@ -193,7 +192,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.PreferredBlobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
-	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
+	sa.MaxChallengeCompletionTime = int64(nar.MaxChallengeCompletionTime)
 	sa.DiverseBlobbers = nar.DiversifyBlobbers
 	return
 }
@@ -292,7 +291,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (string, error) {
-	var conf *scConfig
+	var conf *Config
 	var err error
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
@@ -311,7 +310,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 func (sc *StorageSmartContract) newAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
+	conf *Config,
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -426,7 +425,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, int64, error) {
 	var err error
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return nil, 0, fmt.Errorf("can't get config: %v", err)
 	}
@@ -496,7 +495,7 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(
-	conf *scConfig,
+	conf *Config,
 	alloc *StorageAllocation,
 ) (err error) {
 	if uar.SetImmutable && alloc.IsImmutable {
@@ -570,7 +569,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	resp string, err error) {
 
 	if alloc.Expiration-t.CreationDate <
-		toSeconds(alloc.ChallengeCompletionTime) {
+		toSeconds(time.Duration(alloc.ChallengeCompletionTime)) {
 		return "", common.NewError("allocation_closing_failed",
 			"doesn't need to close allocation is about to expire")
 	}
@@ -785,13 +784,13 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		details.Size = size // new size
 
-		if uar.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
+		if uar.Expiration > toSeconds(time.Duration(b.Terms.MaxOfferDuration)) {
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s doesn't allow so long offers", b.ID)
 		}
 
-		if b.Terms.ChallengeCompletionTime > cct {
-			cct = b.Terms.ChallengeCompletionTime // seek max CCT
+		if b.Terms.ChallengeCompletionTime > int64(cct) {
+			cct = time.Duration(b.Terms.ChallengeCompletionTime) // seek max CCT
 		}
 
 		// since, new terms is weighted average based on previous terms and
@@ -830,7 +829,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	}
 
 	// update max challenge_completion_time
-	alloc.ChallengeCompletionTime = cct
+	alloc.ChallengeCompletionTime = int64(cct)
 
 	var until = alloc.Until()
 	wps, err := alloc.getAllocationPools(sc, balances)
@@ -966,7 +965,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, false); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
@@ -977,7 +976,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
+	conf *Config,
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -1076,7 +1075,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// an allocation can't be shorter than configured in SC
 	// (prevent allocation shortening for entire period)
 	if request.Expiration < 0 &&
-		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
+		newExpiration-t.CreationDate < toSeconds(time.Duration(conf.MinAllocDuration)) {
 
 		return "", common.NewError("allocation_updating_failed",
 			"allocation duration becomes too short")
@@ -1230,7 +1229,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			if c.Response != nil || c.AllocationID != alloc.ID {
 				continue // already accepted, already rewarded/penalized
 			}
-			var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
+			var expire = c.Created + toSeconds(time.Duration(d.Terms.ChallengeCompletionTime))
 			if expire < now {
 				d.Stats.FailedChallenges++
 			} else {

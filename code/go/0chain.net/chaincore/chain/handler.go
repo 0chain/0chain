@@ -430,20 +430,17 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	} else if snt == node.NodeTypeSharder {
 		var (
-			lfb       = c.GetLatestFinalizedBlock()
-			seri, err = c.GetBlockStateNode(lfb, minersc.PhaseKey)
+			lfb = c.GetLatestFinalizedBlock()
+			pn  minersc.PhaseNode
+			err = c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
 
 			phase    minersc.Phase = minersc.Unknown
 			restarts int64         = -1
-
-			pn minersc.PhaseNode
 		)
 
 		if err == nil {
-			if err = pn.Decode(seri.Encode()); err == nil {
-				phase = pn.Phase
-				restarts = pn.Restarts
-			}
+			phase = pn.Phase
+			restarts = pn.Restarts
 		}
 
 		fmt.Fprintf(w, "<tr class='active'>")
@@ -825,14 +822,13 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 	dkgi.CMB = cmb
 
 	var (
-		lfb  = c.GetLatestFinalizedBlock()
-		seri util.Serializable
+		lfb = c.GetLatestFinalizedBlock()
 	)
 
 	type keySeri struct {
-		name string            // for errors
-		key  string            // key
-		inst util.Serializable // instance
+		name string               // for errors
+		key  string               // key
+		inst util.MPTSerializable // instance
 	}
 
 	for _, ks := range []keySeri{
@@ -845,16 +841,14 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		{"gsos", minersc.GroupShareOrSignsKey, dkgi.GSoS},
 		{"MB", minersc.MagicBlockKey, dkgi.MB},
 	} {
-		seri, err = c.GetBlockStateNode(lfb, ks.key)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
-		}
-		if err == util.ErrValueNotPresent {
+		err = c.GetBlockStateNode(lfb, ks.key, ks.inst)
+		if err != nil {
+			if err != util.ErrValueNotPresent {
+				return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
+			}
+
 			err = nil // reset the error and leave the value blank
 			continue
-		}
-		if err = ks.inst.Decode(seri.Encode()); err != nil {
-			return nil, fmt.Errorf("can't decode %s node: %v", ks.name, err)
 		}
 	}
 

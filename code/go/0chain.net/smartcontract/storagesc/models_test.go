@@ -1,9 +1,10 @@
 package storagesc
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/common"
 
@@ -25,11 +26,11 @@ func TestStorageAllocation_validate(t *testing.T) {
 	var (
 		now   common.Timestamp = 150
 		alloc StorageAllocation
-		conf  scConfig
+		conf  Config
 	)
 
 	conf.MinAllocSize = 10 * 1024
-	conf.MinAllocDuration = 48 * time.Hour
+	conf.MinAllocDuration = int64(48 * time.Hour)
 
 	alloc.ReadPriceRange = PriceRange{Min: 20, Max: 10}
 	requireErrMsg(t, alloc.validate(now, &conf), errMsg1)
@@ -73,12 +74,12 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	list = []*StorageNode{
 		&StorageNode{Terms: Terms{
-			MaxOfferDuration:        8 * time.Second,
-			ChallengeCompletionTime: 10 * time.Second,
+			MaxOfferDuration:        int64(8 * time.Second),
+			ChallengeCompletionTime: int64(10 * time.Second),
 		}},
 		&StorageNode{Terms: Terms{
-			MaxOfferDuration:        6 * time.Second,
-			ChallengeCompletionTime: 20 * time.Second,
+			MaxOfferDuration:        int64(6 * time.Second),
+			ChallengeCompletionTime: int64(20 * time.Second),
 		}},
 	}
 
@@ -110,11 +111,11 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
 
 	// 5. filter all by max CCT
-	alloc.MaxChallengeCompletionTime = 5 * time.Second
+	alloc.MaxChallengeCompletionTime = int64(5 * time.Second)
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
 
 	// accept one
-	alloc.MaxChallengeCompletionTime = 30 * time.Second
+	alloc.MaxChallengeCompletionTime = int64(30 * time.Second)
 	list[0].Capacity, list[0].Used = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
 

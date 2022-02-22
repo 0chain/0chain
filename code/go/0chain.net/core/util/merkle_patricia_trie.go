@@ -88,9 +88,9 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 }
 
 /*GetNodeValue - get the value for a given path */
-func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
+func (mpt *MerklePatriciaTrie) GetNodeValue(path Path, v MPTSerializable) error {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return nil, fmt.Errorf("invalid hex path: path=%q, err=%v", string(path), err)
+		return fmt.Errorf("invalid hex path: path=%q, err=%v", string(path), err)
 	}
 
 	mpt.mutex.RLock()
@@ -98,34 +98,40 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 
 	rootKey := []byte(mpt.root)
 	if len(rootKey) == 0 {
-		return nil, ErrValueNotPresent
+		return ErrValueNotPresent
 	}
 
 	rootNode, err := mpt.db.GetNode(rootKey)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if rootNode == nil {
-		return nil, ErrNodeNotFound
+		return ErrNodeNotFound
 	}
-	v, err := mpt.getNodeValue(path, rootNode)
-	if err != nil {
-		return nil, err
-	}
-	if v == nil { // This can happen if path given is partial that aligns with a full node that has no value
-		return nil, ErrValueNotPresent
-	}
-	return v, err
+
+	return mpt.getNodeValue(path, rootNode, v)
+
+	//if err != nil {
+	//	return err
+	//}
+	//if v == nil { // This can happen if path given is partial that aligns with a full node that has no value
+	//	return ErrValueNotPresent
+	//}
+	//return v, err
 }
 
 /*Insert - inserts (updates) a value into this trie and updates the trie all the way up and produces a new root */
-func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error) {
+func (mpt *MerklePatriciaTrie) Insert(path Path, value MPTSerializable) (Key, error) {
 	if value == nil {
 		Logger.Debug("Insert nil value, delete data on path:",
 			zap.String("path", string(path)))
 		return mpt.Delete(path)
 	}
-	eval := value.Encode()
+	eval, err := value.MarshalMsg(nil)
+	if err != nil {
+		return nil, err
+	}
+
 	if eval == nil || len(eval) == 0 {
 		Logger.Debug("Insert encoded nil value, delete data on path:",
 			zap.String("path", string(path)))
@@ -135,7 +141,6 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	valueCopy := &SecureSerializableValue{eval}
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
-	var err error
 	var newRootHash Key
 	if mpt.root == nil {
 		_, newRootHash, err = mpt.insertLeaf(nil, valueCopy, Path(""), path)
@@ -297,20 +302,33 @@ func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 	return mpt.pp(w, mpt.root, 0, false)
 }
 
-func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable, error) {
+func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node, v MPTSerializable) error {
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
-			return nodeImpl.GetValue(), nil
+			d := nodeImpl.GetValueBytes()
+			if len(d) == 0 {
+				return ErrValueNotPresent
+			}
+
+			_, err := v.UnmarshalMsg(d)
+			return err
 		}
-		return nil, ErrValueNotPresent
+		return ErrValueNotPresent
 	case *FullNode:
 		if len(path) == 0 {
-			return nodeImpl.GetValue(), nil
+			d := nodeImpl.GetValueBytes()
+			if len(d) == 0 {
+				return ErrValueNotPresent
+			}
+
+			_, err := v.UnmarshalMsg(d)
+			return err
+			//return nodeImpl.GetValue(), nil
 		}
 		ckey := nodeImpl.GetChild(path[0])
 		if ckey == nil {
-			return nil, ErrValueNotPresent
+			return ErrValueNotPresent
 		}
 
 		nnode, err := mpt.db.GetNode(ckey)
@@ -322,13 +340,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 					zap.String("key", ToHex(ckey)),
 					zap.Error(err))
 			}
-			return nil, ErrNodeNotFound
+			return ErrNodeNotFound
 		}
-		return mpt.getNodeValue(path[1:], nnode)
+		return mpt.getNodeValue(path[1:], nnode, v)
 	case *ExtensionNode:
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if len(prefix) == 0 {
-			return nil, ErrValueNotPresent
+			return ErrValueNotPresent
 		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.db.GetNode(nodeImpl.NodeKey)
@@ -336,17 +354,17 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 				if err != nil {
 					Logger.Error("extension node get node failed", zap.Error(err))
 				}
-				return nil, ErrNodeNotFound
+				return ErrNodeNotFound
 			}
-			return mpt.getNodeValue(path[len(prefix):], nnode)
+			return mpt.getNodeValue(path[len(prefix):], nnode, v)
 		}
-		return nil, ErrValueNotPresent
+		return ErrValueNotPresent
 	default:
 		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
-func (mpt *MerklePatriciaTrie) insert(value Serializable, key Key, prefix, path Path) (Node, Key, error) {
+func (mpt *MerklePatriciaTrie) insert(value MPTSerializable, key Key, prefix, path Path) (Node, Key, error) {
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		return nil, nil, err
@@ -358,7 +376,7 @@ func (mpt *MerklePatriciaTrie) insert(value Serializable, key Key, prefix, path 
 
 }
 
-func (mpt *MerklePatriciaTrie) insertLeaf(oldNode Node, value Serializable, prefix, path Path) (Node, Key, error) {
+func (mpt *MerklePatriciaTrie) insertLeaf(oldNode Node, value MPTSerializable, prefix, path Path) (Node, Key, error) {
 	return mpt.insertNode(oldNode, NewLeafNode(prefix, path, mpt.Version, value))
 }
 
@@ -380,7 +398,7 @@ func (mpt *MerklePatriciaTrie) delete(key Key, prefix, path Path) (Node, Key, er
 	return mpt.deleteAtNode(node, prefix, path)
 }
 
-func (mpt *MerklePatriciaTrie) insertAtNode(value Serializable, node Node, prefix, path Path) (Node, Key, error) {
+func (mpt *MerklePatriciaTrie) insertAtNode(value MPTSerializable, node Node, prefix, path Path) (Node, Key, error) {
 	var err error
 	switch nodeImpl := node.(type) {
 	case *FullNode:
@@ -659,7 +677,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, prefix, path Path) (Node,
 	}
 }
 
-func (mpt *MerklePatriciaTrie) insertAfterPathTraversal(value Serializable, node Node) (Node, Key, error) {
+func (mpt *MerklePatriciaTrie) insertAfterPathTraversal(value MPTSerializable, node Node) (Node, Key, error) {
 	switch nodeImpl := node.(type) {
 	case *FullNode:
 		// The value of the branch needs to be updated

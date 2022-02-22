@@ -67,7 +67,7 @@ func (d *EntityCollection) GetCollectionName(parent Key) string {
 
 	name := d.CollectionName
 	if !IsEmpty(parent) {
-		name += ":" + parent
+		name += ":" + string(parent)
 	}
 
 	return name

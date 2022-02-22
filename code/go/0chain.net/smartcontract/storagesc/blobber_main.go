@@ -1,4 +1,6 @@
+//go:build !integration_tests
 // +build !integration_tests
+
 // todo: it's a legacy ugly approach; refactor later
 
 package storagesc
@@ -14,7 +16,7 @@ import (
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check for duplicates

@@ -16,7 +16,7 @@ type proofOfBurn struct {
 	ReceivingClientID string                    `json:"receiving_client_id"` // 0ZCN address
 	Nonce             int64                     `json:"nonce"`
 	Signature         string                    `json:"signature"`
-	Scheme            benchmark.SignatureScheme `json:"-"`
+	Scheme            benchmark.SignatureScheme `json:"-" msg:"-"`
 }
 
 func (pb *proofOfBurn) Hash() string {
