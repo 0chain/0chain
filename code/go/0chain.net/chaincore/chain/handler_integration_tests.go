@@ -65,7 +65,6 @@ func SetupHandlers(c Chainer) {
 			hMap[getBlockV1Pattern],
 			BlockStatsConfigurator{
 				HashKey: "block",
-				Handler: getBlockV1Pattern,
 			},
 		)
 	}
@@ -77,7 +76,6 @@ type (
 	// BlockStatsConfigurator contains needed for the BlockStats middleware information.
 	BlockStatsConfigurator struct {
 		HashKey      string
-		Handler      string
 		SenderHeader string
 	}
 )
@@ -103,7 +101,6 @@ func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStats
 			NodeID:   node.Self.ID,
 			Hash:     r.FormValue(cfg.HashKey),
 			Round:    roundNum,
-			Handler:  cfg.Handler,
 			SenderID: r.Header.Get(cfg.SenderHeader),
 		}
 		if err := crpc.Client().AddBlockServerStats(ss); err != nil {

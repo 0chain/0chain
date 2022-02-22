@@ -161,6 +161,9 @@ func isIgnoringProposal(round int64) bool {
 	case state.MinerNotarisedBlockRequestor != nil:
 		testCfg = state.MinerNotarisedBlockRequestor
 
+	case state.FBRequestor != nil:
+		testCfg = state.FBRequestor
+
 	default:
 		return false
 	}
