@@ -112,6 +112,7 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 	var dp = DelegatePool{
 		ProviderID:   updates.ProviderId,
 		ProviderType: updates.ProviderType,
+		PoolID:       updates.PoolId,
 	}
 	exists, err := dp.exists(edb)
 

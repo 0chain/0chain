@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/core/datastore"
 
 	"0chain.net/smartcontract/stakepool"
@@ -612,19 +614,31 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	blobberID := datastore.Key(params.Get("blobber_id"))
-
+	logging.Logger.Info("piers getStakePoolStatHandler",
+		zap.String("blobber_id", blobberID))
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
 	}
 
 	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
 	if err != nil {
+		logging.Logger.Info("piers getStakePoolStatHandler GetBlobber",
+			zap.Error(err))
 		return nil, errors.New("blobber not found in event database")
 	}
 
 	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, int(stakepool.Blobber))
+	if err != nil {
+		logging.Logger.Info("piers getStakePoolStatHandler GetDelegatePools",
+			zap.Error(err))
+		return "", common.NewErrInternal("can't find user stake pool", err.Error())
+	}
 
-	return spStats(*blobber, delegatePools), nil
+	stats := spStats(*blobber, delegatePools)
+	logging.Logger.Info("piers getUserStakePoolStatHandler",
+		zap.Any("spStats", stats))
+	return stats, nil
+	//return spStats(*blobber, delegatePools), nil
 }
 
 func spStats(
@@ -669,7 +683,8 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
 	clientID := datastore.Key(params.Get("client_id"))
-
+	logging.Logger.Info("piers getUserStakePoolStatHandler",
+		zap.String("client_id", clientID))
 	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Blobber))
 	if err != nil {
 		return nil, errors.New("blobber not found in event database")

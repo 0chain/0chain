@@ -21,13 +21,11 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 	}
 
 	for _, dp := range dps {
-		reward, ok := spu.DelegateRewards[dp.PoolID]
-		if !ok || reward == 0 {
-			continue
-		}
-		err := edb.updateReward(reward, dp)
-		if err != nil {
-			return err
+		if reward, ok := spu.DelegateRewards[dp.PoolID]; ok {
+			err := edb.updateReward(reward, dp)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
