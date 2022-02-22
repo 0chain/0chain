@@ -81,11 +81,11 @@ type MinerQuery struct {
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, offset, limit int) ([]Miner, error) {
 	var miners []Miner
-	query := edb.Get().Debug().Model(&Miner{}).Where(&filter)
-	if offset != -1 {
+	query := edb.Get().Model(&Miner{}).Where(&filter)
+	if offset > 0 {
 		query = query.Offset(offset)
 	}
-	if limit != -1 {
+	if limit > 0 {
 		query = query.Limit(limit)
 	}
 	return miners, query.Scan(&miners).Error

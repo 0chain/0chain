@@ -86,8 +86,8 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 		offsetString = params.Get("offset")
 		limitString  = params.Get("limit")
 		activeString = params.Get("active")
-		offset       = -1
-		limit        = -1
+		offset       = 0
+		limit        = 0
 		err          error
 	)
 	if offsetString != "" {
@@ -119,33 +119,9 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners list", err.Error())
 	}
-	minersArr := make([]interface{}, len(miners))
+	minersArr := make([]MinerNode, len(miners))
 	for i, miner := range miners {
-		minersArr[i] = map[string]interface{}{
-			"simple_miner": MinerView{
-				MinerID:           miner.MinerID,
-				N2NHost:           miner.N2NHost,
-				Host:              miner.Host,
-				Port:              miner.Port,
-				Path:              miner.Path,
-				PublicKey:         miner.PublicKey,
-				ShortName:         miner.ShortName,
-				BuildTag:          miner.BuildTag,
-				TotalStaked:       miner.TotalStaked,
-				Delete:            miner.Delete,
-				DelegateWallet:    miner.DelegateWallet,
-				ServiceCharge:     miner.ServiceCharge,
-				NumberOfDelegates: miner.NumberOfDelegates,
-				MinStake:          miner.MinStake,
-				MaxStake:          miner.MaxStake,
-				LastHealthCheck:   miner.LastHealthCheck,
-				Rewards:           miner.Rewards,
-				Fees:              miner.Fees,
-				Active:            miner.Active,
-				Longitude:         miner.Longitude,
-				Latitude:          miner.Latitude,
-			},
-		}
+		minersArr[i] = minerTableToMinerNode(miner)
 	}
 	return map[string]interface{}{
 		"Nodes": minersArr,
@@ -199,8 +175,8 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 		offsetString = params.Get("offset")
 		limitString  = params.Get("limit")
 		activeString = params.Get("active")
-		offset       = -1
-		limit        = -1
+		offset       = 0
+		limit        = 0
 		err          error
 	)
 	if offsetString != "" {
@@ -232,33 +208,9 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners list", err.Error())
 	}
-	shardersArr := make([]interface{}, len(sharders))
+	shardersArr := make([]MinerNode, len(sharders))
 	for i, sharder := range sharders {
-		shardersArr[i] = map[string]interface{}{
-			"simple_miner": SharderView{
-				SharderID:         sharder.SharderID,
-				N2NHost:           sharder.N2NHost,
-				Host:              sharder.Host,
-				Port:              sharder.Port,
-				Path:              sharder.Path,
-				PublicKey:         sharder.PublicKey,
-				ShortName:         sharder.ShortName,
-				BuildTag:          sharder.BuildTag,
-				TotalStaked:       sharder.TotalStaked,
-				Delete:            sharder.Delete,
-				DelegateWallet:    sharder.DelegateWallet,
-				ServiceCharge:     sharder.ServiceCharge,
-				NumberOfDelegates: sharder.NumberOfDelegates,
-				MinStake:          sharder.MinStake,
-				MaxStake:          sharder.MaxStake,
-				LastHealthCheck:   sharder.LastHealthCheck,
-				Rewards:           sharder.Rewards,
-				Fees:              sharder.Fees,
-				Active:            sharder.Active,
-				Longitude:         sharder.Longitude,
-				Latitude:          sharder.Latitude,
-			},
-		}
+		shardersArr[i] = sharderTableToSharderNode(sharder)
 	}
 	return map[string]interface{}{
 		"Nodes": shardersArr,

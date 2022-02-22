@@ -1,17 +1,18 @@
 package minersc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"encoding/json"
-	"fmt"
 )
 
-func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
+func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
@@ -41,7 +42,7 @@ func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 		Status:          status,
 	}
 
-	return &MinerNode{
+	return MinerNode{
 		SimpleNode: &msn,
 	}
 

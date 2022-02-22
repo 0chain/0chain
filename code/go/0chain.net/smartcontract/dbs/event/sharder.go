@@ -209,10 +209,10 @@ type SharderQuery struct {
 func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, offset, limit int) ([]Sharder, error) {
 	var sharders []Sharder
 	query := edb.Get().Model(&Sharder{}).Where(&filter)
-	if offset != -1 {
+	if offset > 0 {
 		query = query.Offset(offset)
 	}
-	if limit != -1 {
+	if limit > 0 {
 		query = query.Limit(limit)
 	}
 	return sharders, query.Scan(&sharders).Error
