@@ -33,26 +33,18 @@ type Sharder struct {
 	Rewards           state.Balance
 	Fees              state.Balance
 	Active            bool
-	Longitude         int64
-	Latitude          int64
+	Longitude         float64
+	Latitude          float64
 }
 
-func (edb *EventDb) GetSharder(id string) (*Sharder, error) {
+func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 
 	var sharder Sharder
 
-	result := edb.Store.Get().
+	return sharder, edb.Store.Get().
 		Model(&Sharder{}).
 		Where(&Sharder{SharderID: id}).
-		First(&sharder)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving sharder %v, error %v",
-			id, result.Error)
-	}
-
-	return &sharder, nil
-
+		First(&sharder).Error
 }
 
 func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {

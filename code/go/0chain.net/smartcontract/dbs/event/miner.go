@@ -32,26 +32,17 @@ type Miner struct {
 	Rewards           state.Balance
 	Fees              state.Balance
 	Active            bool
-	Longitude         int64
-	Latitude          int64
+	Longitude         float64
+	Latitude          float64
 }
 
-func (edb *EventDb) GetMiner(id string) (*Miner, error) {
+func (edb *EventDb) GetMiner(id string) (Miner, error) {
 
 	var miner Miner
-
-	result := edb.Store.Get().
+	return miner, edb.Store.Get().
 		Model(&Miner{}).
 		Where(&Miner{MinerID: id}).
-		First(&miner)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving miner %v, error %v",
-			id, result.Error)
-	}
-
-	return &miner, nil
-
+		First(&miner).Error
 }
 
 type MinerQuery struct {
@@ -75,8 +66,8 @@ type MinerQuery struct {
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool
-	Longitude         null.Int
-	Latitude          null.Int
+	Longitude         null.Float
+	Latitude          null.Float
 }
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, offset, limit int) ([]Miner, error) {

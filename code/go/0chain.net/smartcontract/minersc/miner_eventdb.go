@@ -38,6 +38,11 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 			GeneratorRewards: edbMiner.Rewards,
 			GeneratorFees:    edbMiner.Fees,
 		},
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbMiner.Latitude,
+			Longitude: edbMiner.Longitude,
+		},
+		NodeType:        NodeTypeMiner,
 		LastHealthCheck: edbMiner.LastHealthCheck,
 		Status:          status,
 	}
@@ -70,8 +75,8 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		Rewards:           mn.Stat.GeneratorRewards,
 		Fees:              mn.Stat.GeneratorFees,
 		Active:            mn.Status == node.NodeStatusActive,
-		Longitude:         0,
-		Latitude:          0,
+		Longitude:         mn.Geolocation.Longitude,
+		Latitude:          mn.Geolocation.Latitude,
 	}
 }
 

@@ -93,20 +93,20 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	if offsetString != "" {
 		offset, err = strconv.Atoi(offsetString)
 		if err != nil {
-			return nil, err
+			return nil, common.NewErrBadRequest("offset parameter is not valid")
 		}
 	}
 	if limitString != "" {
 		limit, err = strconv.Atoi(limitString)
 		if err != nil {
-			return nil, err
+			return nil, common.NewErrBadRequest("limit parameter is not valid")
 		}
 	}
 	filter := event.MinerQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return nil, err
+			return nil, common.NewErrBadRequest("active paramter is not valid")
 		}
 		filter.Active = null.BoolFrom(active)
 	}
@@ -182,20 +182,20 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 	if offsetString != "" {
 		offset, err = strconv.Atoi(offsetString)
 		if err != nil {
-			return nil, err
+			return nil, common.NewErrBadRequest("offset parameter is not valid")
 		}
 	}
 	if limitString != "" {
 		limit, err = strconv.Atoi(limitString)
 		if err != nil {
-			return nil, err
+			return nil, common.NewErrBadRequest("limit parameter is not valid")
 		}
 	}
 	filter := event.SharderQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return nil, err
+			return nil, common.NewErrBadRequest("active string is not valid")
 		}
 		filter.Active = null.BoolFrom(active)
 	}
@@ -386,14 +386,20 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 
 	var (
 		id = params.Get("id")
-		sn *MinerNode
 	)
-
-	if sn, err = getMinerNode(id, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
+	if id == "" {
+		return nil, common.NewErrBadRequest("id parameter is compulsary")
 	}
-
-	return sn, nil
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("cannot connect to eventdb database")
+	}
+	if miner, err := balances.GetEventDB().GetMiner(id); err == nil {
+		return minerTableToMinerNode(miner), nil
+	}
+	if sharder, err := balances.GetEventDB().GetSharder(id); err == nil {
+		return sharderTableToSharderNode(sharder), nil
+	}
+	return nil, common.NewErrBadRequest("id was not found")
 }
 
 func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,

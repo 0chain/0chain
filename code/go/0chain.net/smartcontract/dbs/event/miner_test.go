@@ -104,11 +104,11 @@ func TestMiners(t *testing.T) {
 
 	access := dbs.DbAccess{
 		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
-		Port:            "5432",
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
@@ -164,7 +164,7 @@ func TestMiners(t *testing.T) {
 	}
 	events := []Event{eventAddMn}
 	eventDb.AddEvents(context.TODO(), events)
-
+	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, miner.Path, mn.Path)
@@ -225,7 +225,7 @@ func TestMiners(t *testing.T) {
 	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
 
 	miner, err = eventDb.GetMiner(mn.ID)
-	require.Error(t, err)
+	assert.Error(t, err)
 
 }
 
