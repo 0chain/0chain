@@ -46,14 +46,14 @@ func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.HashIDField
-	datastore.CollectionMemberField `json:"-" msgpack:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-" msg:"-"`
 	datastore.VersionField
 
-	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
-	PublicKey string        `json:"public_key,omitempty" msgpack:"puk,omitempty"`
+	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
+	PublicKey string `json:"public_key,omitempty" msgpack:"puk,omitempty"`
 
-	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
-	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
+	ToClientID      string           `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
+	ChainID         string           `json:"chain_id,omitempty" msgpack:"chid"`
 	TransactionData string           `json:"transaction_data" msgpack:"d"`
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
@@ -82,7 +82,7 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 /*ComputeProperties - Entity implementation */
 func (t *Transaction) ComputeProperties() {
 	t.EntityCollection = txnEntityCollection
-	if datastore.IsEmpty(t.ChainID) {
+	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	t.ComputeClientID()
@@ -155,7 +155,7 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if config.DevConfiguration.IsFeeEnabled && t.Fee < 0 {
 		return common.InvalidRequest("fee must be greater than or equal to zero")
 	}
-	err := config.ValidChain(datastore.ToString(t.ChainID))
+	err := config.ValidChain(t.ChainID)
 	if err != nil {
 		return err
 	}
@@ -243,8 +243,20 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 
 /*HashData - data used to hash the transaction */
 func (t *Transaction) HashData() string {
-	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
-	return hashdata
+	s := strings.Builder{}
+	s.WriteString(common.TimeToString(t.CreationDate))
+	s.WriteString(":")
+	s.WriteString(string(t.ClientID))
+	s.WriteString(":")
+	s.WriteString(string(t.ToClientID))
+	s.WriteString(":")
+	s.WriteString(strconv.FormatInt(t.Value, 10))
+	s.WriteString(":")
+	s.WriteString(encryption.Hash(t.TransactionData))
+	return s.String()
+	//hashdata := common.TimeToString(t.CreationDate) + ":" + string(t.ClientID) + ":" + string(t.ToClientID) + ":" +
+	//	strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
+	//return hashdata
 }
 
 /*ComputeHash - compute the hash from the various components of the transaction */
@@ -255,8 +267,14 @@ func (t *Transaction) ComputeHash() string {
 /*VerifyHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	if t.Hash != t.ComputeHash() {
-		logging.Logger.Debug("verify hash (hash mismatch)", zap.String("hash", t.Hash), zap.String("computed_hash", t.ComputeHash()), zap.String("hash_data", t.HashData()), zap.String("txn", datastore.ToJSON(t).String()))
-		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeHash(), t.HashData()))
+		logging.Logger.Debug("verify hash (hash mismatch)",
+			zap.String("hash", t.Hash),
+			zap.String("computed_hash", t.ComputeHash()),
+			zap.String("hash_data", t.HashData()),
+			zap.String("txn", datastore.ToJSON(t).String()))
+		return common.NewError("hash_mismatch",
+			fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v",
+				t.Hash, t.ComputeHash(), t.HashData()))
 	}
 	return nil
 }

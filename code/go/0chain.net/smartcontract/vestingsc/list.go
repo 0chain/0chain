@@ -1,18 +1,19 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"sort"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //
 // index of vesting pools of a client
@@ -23,7 +24,7 @@ func clientPoolsKey(vscKey, clientID datastore.Key) datastore.Key {
 }
 
 type clientPools struct {
-	Pools []datastore.Key `json:"pools"`
+	Pools []string `json:"pools"`
 }
 
 func (cp *clientPools) Encode() (b []byte) {
@@ -98,32 +99,16 @@ func (cp *clientPools) save(vscKey, clientID datastore.Key,
 // SC helpers
 //
 
-func (vsc *VestingSmartContract) getClientPoolsBytes(clientID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID))
-	if err != nil {
-		return
-	}
-
-	return val.Encode(), nil
-}
-
 func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 	balances chainstate.StateContextI) (cp *clientPools, err error) {
 
-	var listb []byte
-	if listb, err = vsc.getClientPoolsBytes(clientID, balances); err != nil {
-		return
-	}
-
 	cp = new(clientPools)
-	if err = cp.Decode(listb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID), cp)
+	if err != nil {
+		return nil, err
 	}
 
-	return
+	return cp, nil
 }
 
 func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,

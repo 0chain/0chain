@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore info destInfo addRequest
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 // internal errors
 
 var errZeroVesting = errors.New("zero vesting for this destination and period")
@@ -54,7 +57,7 @@ func (sr *stopRequest) decode(b []byte) error {
 //
 
 type destination struct {
-	ID     datastore.Key `json:"id"`     // destination ID
+	ID     string        `json:"id"`     // destination ID
 	Amount state.Balance `json:"amount"` // amount to vest for the destination (initial)
 	Vested state.Balance `json:"vested"` // tokens already vested
 	// Last tokens transfer time. The Last is for statistic and represent
@@ -168,9 +171,9 @@ func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
 		return errors.New("entry description is too long")
 	case ar.StartTime < now:
 		return errors.New("vesting starts before now")
-	case ar.Duration < conf.MinDuration:
+	case ar.Duration < time.Duration(conf.MinDuration):
 		return errors.New("vesting duration is too short")
-	case ar.Duration > conf.MaxDuration:
+	case ar.Duration > time.Duration(conf.MaxDuration):
 		return errors.New("vesting duration is too long")
 	case len(ar.Destinations) == 0:
 		return errors.New("no destinations")
@@ -201,7 +204,7 @@ type vestingPool struct {
 	StartTime    common.Timestamp `json:"start_time"`   //
 	ExpireAt     common.Timestamp `json:"expire_at"`    //
 	Destinations destinations     `json:"destinations"` //
-	ClientID     datastore.Key    `json:"client_id"`    // the pool owner
+	ClientID     string           `json:"client_id"`    // the pool owner
 }
 
 // newVestingPool returns new empty uninitialized vesting pool.
@@ -517,28 +520,13 @@ type info struct {
 // helpers
 //
 
-func (vsc *VestingSmartContract) getPoolBytes(poolID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
-
-	var val util.Serializable
-	if val, err = balances.GetTrieNode(poolID); err != nil {
-		return
-	}
-
-	return val.Encode(), nil
-}
-
 func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
 	balances chainstate.StateContextI) (vp *vestingPool, err error) {
 
-	var poolb []byte
-	if poolb, err = vsc.getPoolBytes(poolID, balances); err != nil {
-		return
-	}
-
 	vp = newVestingPool()
-	if err = vp.Decode(poolb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	err = balances.GetTrieNode(poolID, vp)
+	if err != nil {
+		return nil, err
 	}
 
 	return

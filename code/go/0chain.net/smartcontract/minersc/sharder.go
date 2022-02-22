@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"errors"
-	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -266,13 +265,9 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 
 	sn := NewMinerNode()
 	sn.ID = sid
-	ss, err := balances.GetTrieNode(sn.GetKey())
+	err := balances.GetTrieNode(sn.GetKey(), sn)
 	if err != nil {
 		return nil, err
-	}
-
-	if err = sn.Decode(ss.Encode()); err != nil {
-		return nil, fmt.Errorf("invalid state: decoding sharder: %v", err)
 	}
 
 	return sn, nil

@@ -74,17 +74,15 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		wp *writePool
-
-		b, err = ssc.getWritePoolBytes(clientID, balances)
+		wp, err = ssc.getWritePool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	wp = new(writePool)
 	require.NoError(t, wp.save(ssc.ID, clientID, balances))
-	b, err = ssc.getWritePoolBytes(clientID, balances)
+	wwp, err := ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, wp.Encode(), b)
+	assert.EqualValues(t, wp, wwp)
 }
 
 func TestStorageSmartContract_getWritePool(t *testing.T) {
@@ -111,7 +109,7 @@ func testSetWritePoolConfig(t *testing.T, wpc *writePoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
-		conf scConfig
+		conf Config
 		err  error
 	)
 	conf.WritePool = wpc
@@ -159,8 +157,8 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	testSetWritePoolConfig(t, &writePoolConfig{
 		MinLock:       10,
-		MinLockPeriod: 20 * time.Second,
-		MaxLockPeriod: 2 * time.Hour,
+		MinLockPeriod: int64(20 * time.Second),
+		MaxLockPeriod: int64(2 * time.Hour),
 	}, balances, ssc.ID)
 
 	var fp fundedPools = []string{client.id}
@@ -175,7 +173,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
 		},
 		Expiration:              10,
-		ChallengeCompletionTime: 200 * time.Second,
+		ChallengeCompletionTime: int64(200 * time.Second),
 		Owner:                   client.id,
 	}
 
@@ -195,7 +193,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	requireErrMsg(t, err, errMsg2)
 	// 3. min lock
 	tx.Value = 5
-	lr.Duration = 5 * time.Second
+	lr.Duration = int64(5 * time.Second)
 	lr.AllocationID = allocID
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg4)
@@ -205,11 +203,11 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg5)
 	// 6. max lock period
-	lr.Duration = 3 * time.Hour
+	lr.Duration = int64(3 * time.Hour)
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg6)
 	// 7. no such allocation
-	lr.Duration = 15 * time.Second
+	lr.Duration = int64(15 * time.Second)
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	require.Error(t, err)
 

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -150,7 +151,7 @@ func BenchmarkTests(
 					PreferredBlobbers:          []string{},
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+					MaxChallengeCompletionTime: int64(viper.GetDuration(bk.StorageMaxChallengeCompletionTime)),
 					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
@@ -182,7 +183,7 @@ func BenchmarkTests(
 					PreferredBlobbers:          blobberUrls[:8],
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+					MaxChallengeCompletionTime: int64(viper.GetDuration(bk.StorageMaxChallengeCompletionTime)),
 					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
@@ -526,10 +527,12 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&lockRequest{
-					Duration:     viper.GetDuration(bk.StorageReadPoolMinLockPeriod),
+				lr := &lockRequest{
+					Duration:     int64(viper.GetDuration(bk.StorageReadPoolMinLockPeriod)),
 					AllocationID: getMockAllocationId(0),
-				})
+				}
+				bytes, _ := json.Marshal(lr)
+				log.Println("lock_pool_duration:", lr.Duration)
 				return bytes
 			}(),
 		},
@@ -566,7 +569,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
-					Duration:     viper.GetDuration(bk.StorageWritePoolMinLockPeriod),
+					Duration:     int64(viper.GetDuration(bk.StorageWritePoolMinLockPeriod)),
 					AllocationID: getMockAllocationId(0),
 				})
 				return bytes

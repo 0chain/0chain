@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -21,12 +22,15 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore readPoolRedeem
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 //
 // client read pool (consist of allocation pools)
 //
 
 func readPoolKey(scKey, clientID string) datastore.Key {
-	return datastore.Key(scKey + ":readpool:" + clientID)
+	return scKey + ":readpool:" + clientID
 }
 
 // readPool represents client's read pool consist of allocation read pools
@@ -178,40 +182,24 @@ func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
 // smart contract methods
 //
 
-// getReadPoolBytes of a client
-func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
-	balances cstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	balances cstate.StateContextI) (rp *readPool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
-		return
-	}
 	rp = new(readPool)
-	err = rp.Decode(poolb)
+	err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID), rp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+	return rp, nil
 }
 
 // newReadPool SC function creates new read pool for a client.
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 
-	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
-
+	rp := new(readPool)
+	err = balances.GetTrieNode(readPoolKey(ssc.ID, t.ClientID), rp)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
@@ -220,7 +208,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 		return "", common.NewError("new_read_pool_failed", "already exist")
 	}
 
-	var rp = new(readPool)
+	rp = new(readPool)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
@@ -270,13 +258,13 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	if lr.Duration < conf.MinLockPeriod {
 		return "", common.NewError("read_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
-				lr.Duration.String(), conf.MinLockPeriod.String()))
+				time.Duration(lr.Duration).String(), time.Duration(conf.MinLockPeriod).String()))
 	}
 
 	if lr.Duration > conf.MaxLockPeriod {
 		return "", common.NewError("read_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
-				lr.Duration.String(), conf.MaxLockPeriod.String()))
+				time.Duration(lr.Duration).String(), time.Duration(conf.MaxLockPeriod).String()))
 	}
 
 	// check client balance
@@ -328,7 +316,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var ap allocationPool
 	ap.AllocationID = lr.AllocationID
-	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
+	ap.ExpireAt = t.CreationDate + toSeconds(time.Duration(lr.Duration))
 	ap.Blobbers = bps
 
 	if !lr.MintTokens {

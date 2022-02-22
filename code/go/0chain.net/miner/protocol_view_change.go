@@ -266,21 +266,13 @@ func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.
 
 	if active {
 
-		var n util.Serializable
-		n, err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey)
+		mpks = block.NewMpks()
+		err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
 		if err != nil {
 			return
 		}
-		if n == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
 
-		mpks = block.NewMpks()
-		if err = mpks.Decode(n.Encode()); err != nil {
-			return nil, err
-		}
-
-		return
+		return mpks, nil
 	}
 
 	var (
@@ -309,22 +301,12 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 
 	if active {
 
-		var n util.Serializable
-		n, err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey)
+		dmn = minersc.NewDKGMinerNodes()
+		err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
 		if err != nil {
 			return
 		}
-		if n == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
-
-		dmn = minersc.NewDKGMinerNodes()
-		err = dmn.Decode(n.Encode())
-		if err != nil {
-			return nil, err
-		}
-
-		return
+		return dmn, nil
 	}
 
 	var (
@@ -539,21 +521,13 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 	active bool) (magicBlock *block.MagicBlock, err error) {
 
 	if active {
-		var n util.Serializable
-		n, err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey)
-		if err != nil {
-			return // error
-		}
-		if n == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
-
 		magicBlock = block.NewMagicBlock()
-		if err = magicBlock.Decode(n.Encode()); err != nil {
+		err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey, magicBlock)
+		if err != nil {
 			return nil, err
 		}
 
-		return // ok
+		return
 	}
 
 	var (
@@ -614,8 +588,8 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 		return 0, nil
 	}
 
-	var seri util.Serializable
-	seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
+	var gn minersc.GlobalNode
+	err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
 	if err != nil {
 		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),
@@ -624,17 +598,6 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 			zap.Any("state", lfb.ClientStateHash))
 		return 0, common.NewErrorf("block_next_vc",
 			"can't get miner SC global node, lfb: %d, error: %v (%s)",
-			lfb.Round, err, lfb.Hash)
-	}
-	var gn minersc.GlobalNode
-	if err = gn.Decode(seri.Encode()); err != nil {
-		logging.Logger.Error("block_next_vc -- can't decode miner SC global node",
-			zap.Error(err), zap.Int64("lfb", lfb.Round),
-			zap.Bool("is_state", lfb.IsStateComputed()),
-			zap.Bool("is_init", lfb.ClientState != nil),
-			zap.Any("state", lfb.ClientStateHash))
-		return 0, common.NewErrorf("block_next_vc",
-			"can't decode miner SC global node, lfb: %d, error: %v (%s)",
 			lfb.Round, err, lfb.Hash)
 	}
 

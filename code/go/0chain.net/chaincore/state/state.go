@@ -10,6 +10,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore State
+
+//go:generate msgp -io=false -tests=false -v
 //Balance - any quantity that is represented as an integer in the lowest denomination
 type Balance int64
 
@@ -65,6 +68,15 @@ func (s *State) Decode(data []byte) error {
 	return nil
 }
 
+func (s *State) MarshalMsg([]byte) ([]byte, error) {
+	return s.Encode(), nil
+}
+
+func (s *State) UnmarshalMsg(data []byte) ([]byte, error) {
+	err := s.Decode(data)
+	return nil, err
+}
+
 //ComputeProperties - logic to compute derived properties
 func (s *State) ComputeProperties() {
 	s.TxnHash = hex.EncodeToString(s.TxnHashBytes)
@@ -84,15 +96,4 @@ func (s *State) SetTxnHash(txnHash string) error {
 	s.TxnHash = txnHash
 	s.TxnHashBytes = hashBytes
 	return nil
-}
-
-//Deserializer - a deserializer to convert raw serialized data to a state object
-type Deserializer struct {
-}
-
-//Deserialize - implement interface
-func (bd *Deserializer) Deserialize(sv util.Serializable) util.Serializable {
-	s := &State{}
-	s.Decode(sv.Encode())
-	return s
 }

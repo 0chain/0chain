@@ -178,8 +178,7 @@ func (c *Chain) NewStateContext(
 	txn *transaction.Transaction,
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
-		txn,
+	return bcstate.NewStateContext(b, s, txn,
 		c.GetBlockSharders,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
@@ -539,14 +538,13 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
-	ss, err := clientState.GetNodeValue(util.Path(clientID))
+	err := clientState.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return s, err
 	}
-	s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	return s, nil
 }
 
@@ -556,7 +554,8 @@ the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
+	st := &state.State{}
+	err := b.ClientState.GetNodeValue(util.Path(clientID), st)
 	if err != nil {
 		if !b.IsStateComputed() {
 			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
@@ -567,7 +566,6 @@ func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) 
 		}
 		return nil, err
 	}
-	st := c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	return st, nil
 }
 

@@ -7,6 +7,9 @@ import (
 	"0chain.net/chaincore/tokenpool"
 )
 
+//msgp:ignore interestPool
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 type interestPool struct {
 	*tokenpool.ZcnLockingPool `json:"pool"`
 	APR                       float64       `json:"apr"`
@@ -14,7 +17,7 @@ type interestPool struct {
 }
 
 func newInterestPool() *interestPool {
-	return &interestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{}}
+	return &interestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
 }
 
 func (ip *interestPool) encode() []byte {
@@ -48,10 +51,34 @@ func (ip *interestPool) decode(input []byte) error {
 	}
 	p, ok := objMap["pool"]
 	if ok {
-		err = ip.ZcnLockingPool.Decode(*p, &tokenLock{})
+		err = ip.ZcnLockingPool.Decode(*p, &TokenLock{})
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+type interestPoolDecode interestPool
+
+func (ip *interestPool) MarshalMsg(o []byte) ([]byte, error) {
+	ipd := interestPoolDecode(*ip)
+	return ipd.MarshalMsg(o)
+}
+
+func (ip *interestPool) UnmarshalMsg(data []byte) ([]byte, error) {
+	nip := newInterestPool()
+	nipd := interestPoolDecode(*nip)
+	d, err := nipd.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*ip = interestPool(nipd)
+	return d, nil
+}
+
+func (ip *interestPool) Msgsize() int {
+	ipd := interestPoolDecode(*ip)
+	return ipd.Msgsize()
 }

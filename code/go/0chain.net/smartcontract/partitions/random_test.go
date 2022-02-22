@@ -92,7 +92,7 @@ func TestFuzzyRandom(t *testing.T) {
 	}
 
 	balances := &mocks.StateContextI{}
-	rs := randomSelector{
+	rs := RandomSelector{
 		Name:          mockName,
 		PartitionSize: mockDivisionSize,
 		Callback:      mockCallBack,

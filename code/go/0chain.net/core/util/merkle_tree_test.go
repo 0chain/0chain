@@ -21,13 +21,13 @@ func (t *Txn) GetHashBytes() []byte {
 	return encryption.RawHash(t.Data)
 }
 
-func (t *Txn) Encode() []byte {
-	return []byte(t.Data)
+func (t *Txn) MarshalMsg([]byte) ([]byte, error) {
+	return []byte(t.Data), nil
 }
 
-func (t *Txn) Decode(data []byte) error {
+func (t *Txn) UnmarshalMsg(data []byte) ([]byte, error) {
 	t.Data = string(data)
-	return nil
+	return nil, nil
 }
 
 func TestMerkleTreeComputeTree(t *testing.T) {
@@ -120,7 +120,7 @@ func BenchmarkMerkleTreeVerifyPath(b *testing.B) {
 }
 
 func TestMerkleTree_computeSize(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	type fields struct {
 		tree        []string
@@ -147,7 +147,7 @@ func TestMerkleTree_computeSize(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			mt := &MerkleTree{
 				tree:        tt.fields.tree,
@@ -166,7 +166,7 @@ func TestMerkleTree_computeSize(t *testing.T) {
 }
 
 func TestMerkleTree_ComputeTree(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	txn := &Txn{encryption.Hash("data")}
 
@@ -200,7 +200,7 @@ func TestMerkleTree_ComputeTree(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			mt := &MerkleTree{
 				tree:        tt.fields.tree,
@@ -217,7 +217,7 @@ func TestMerkleTree_ComputeTree(t *testing.T) {
 }
 
 func TestMerkleTree_SetTree(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	type fields struct {
 		tree        []string
@@ -243,7 +243,7 @@ func TestMerkleTree_SetTree(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			mt := &MerkleTree{
 				tree:        tt.fields.tree,
@@ -258,7 +258,7 @@ func TestMerkleTree_SetTree(t *testing.T) {
 }
 
 func TestMerkleTree_GetLeafIndex(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	type fields struct {
 		tree        []string
@@ -283,7 +283,7 @@ func TestMerkleTree_GetLeafIndex(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			mt := &MerkleTree{
 				tree:        tt.fields.tree,
@@ -298,7 +298,7 @@ func TestMerkleTree_GetLeafIndex(t *testing.T) {
 }
 
 func TestMerkleTree_GetPath(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	type fields struct {
 		tree        []string
@@ -323,7 +323,7 @@ func TestMerkleTree_GetPath(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			mt := &MerkleTree{
 				tree:        tt.fields.tree,

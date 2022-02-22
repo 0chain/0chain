@@ -5,24 +5,25 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -v
 
 func NewPopulatedValidatorSelector(
 	name string,
 	size int,
 	data []ValidationNode,
 ) RandPartition {
-	rs := &randomSelector{
+	rs := &RandomSelector{
 		Name:          name,
 		PartitionSize: size,
 		ItemType:      ItemValidator,
 	}
 
 	for i := 0; i < len(data)/size; i++ {
-		partition := validatorItemList{
+		partition := ValidatorItemList{
 			Key:     rs.partitionKey(i),
 			Items:   data[size*i : size*(i+1)],
 			Changed: true,
@@ -31,7 +32,7 @@ func NewPopulatedValidatorSelector(
 		rs.NumPartitions++
 	}
 	if len(data)%size > 0 {
-		partition := validatorItemList{
+		partition := ValidatorItemList{
 			Key:     rs.partitionKey(rs.NumPartitions),
 			Items:   data[rs.NumPartitions*size:],
 			Changed: true,
@@ -72,13 +73,13 @@ func (vn *ValidationNode) Name() string {
 
 //------------------------------------------------------------------------------
 
-type validatorItemList struct {
-	Key     datastore.Key    `json:"-"`
+type ValidatorItemList struct {
+	Key     string           `json:"-" msg:"-"`
 	Items   []ValidationNode `json:"items"`
-	Changed bool             `json:"-"`
+	Changed bool             `json:"-" msg:"-"`
 }
 
-func (il *validatorItemList) Encode() []byte {
+func (il *ValidatorItemList) Encode() []byte {
 	var b, err = json.Marshal(il)
 	if err != nil {
 		panic(err)
@@ -86,33 +87,28 @@ func (il *validatorItemList) Encode() []byte {
 	return b
 }
 
-func (il *validatorItemList) Decode(b []byte) error {
+func (il *ValidatorItemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *validatorItemList) save(balances state.StateContextI) error {
+func (il *ValidatorItemList) save(balances state.StateContextI) error {
 	_, err := balances.InsertTrieNode(il.Key, il)
 	return err
 }
 
-func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI) error {
-	val, err := balances.GetTrieNode(key)
+func (il *ValidatorItemList) get(key datastore.Key, balances state.StateContextI) error {
+	err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		il = &validatorItemList{
-			Key: key,
-		}
+		il.Key = key
+		return nil
 	}
-	if err := il.Decode(val.Encode()); err != nil {
-		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	il.Key = key
 	return nil
 }
 
-func (il *validatorItemList) add(it PartitionItem) {
+func (il *ValidatorItemList) add(it PartitionItem) {
 	il.Items = append(il.Items, ValidationNode{
 		Id:  it.Name(),
 		Url: string(it.Data()),
@@ -120,7 +116,7 @@ func (il *validatorItemList) add(it PartitionItem) {
 	il.Changed = true
 }
 
-func (il *validatorItemList) remove(item PartitionItem) error {
+func (il *ValidatorItemList) remove(item PartitionItem) error {
 	if len(il.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
@@ -134,7 +130,7 @@ func (il *validatorItemList) remove(item PartitionItem) error {
 	return nil
 }
 
-func (il *validatorItemList) cutTail() PartitionItem {
+func (il *ValidatorItemList) cutTail() PartitionItem {
 	if len(il.Items) == 0 {
 		return nil
 	}
@@ -145,15 +141,15 @@ func (il *validatorItemList) cutTail() PartitionItem {
 	return &tail
 }
 
-func (il *validatorItemList) length() int {
+func (il *ValidatorItemList) length() int {
 	return len(il.Items)
 }
 
-func (il *validatorItemList) changed() bool {
+func (il *ValidatorItemList) changed() bool {
 	return il.Changed
 }
 
-func (il *validatorItemList) itemRange(start, end int) []PartitionItem {
+func (il *ValidatorItemList) itemRange(start, end int) []PartitionItem {
 	if start > end || end > len(il.Items) {
 		return nil
 	}
@@ -165,7 +161,7 @@ func (il *validatorItemList) itemRange(start, end int) []PartitionItem {
 	return rtv
 }
 
-func (il *validatorItemList) find(searchItem PartitionItem) int {
+func (il *ValidatorItemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
 		if item.Name() == searchItem.Name() {
 			return i

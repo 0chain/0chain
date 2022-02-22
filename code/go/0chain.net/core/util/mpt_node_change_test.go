@@ -11,7 +11,7 @@ import (
 )
 
 func TestChangeCollector_AddChange(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	var (
 		newNode = NewValueNode()
@@ -122,7 +122,7 @@ func TestChangeCollector_UpdateChanges(t *testing.T) {
 }
 
 func TestChangeCollector_PrintChanges(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	n := NewValueNode()
 
@@ -186,7 +186,7 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 }
 
 func TestChangeCollector_Validate(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	n := NewValueNode()
 
@@ -237,7 +237,7 @@ func TestChangeCollector_Validate(t *testing.T) {
 }
 
 func TestChangeCollector_Clone(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	n := NewValueNode()
 

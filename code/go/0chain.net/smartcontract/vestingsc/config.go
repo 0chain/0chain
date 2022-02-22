@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +9,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -21,6 +22,8 @@ import (
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 type Setting int
 
@@ -53,11 +56,11 @@ func scConfigKey(scKey string) datastore.Key {
 // config represents SC configurations ('vestingsc:' from sc.yaml)
 type config struct {
 	MinLock              state.Balance  `json:"min_lock"`
-	MinDuration          time.Duration  `json:"min_duration"`
-	MaxDuration          time.Duration  `json:"max_duration"`
+	MinDuration          int64          `json:"min_duration"`
+	MaxDuration          int64          `json:"max_duration"`
 	MaxDestinations      int            `json:"max_destinations"`
 	MaxDescriptionLength int            `json:"max_description_length"`
-	OwnerId              datastore.Key  `json:"owner_id"`
+	OwnerId              string         `json:"owner_id"`
 	Cost                 map[string]int `json:"cost"`
 }
 
@@ -65,9 +68,9 @@ func (c *config) validate() (err error) {
 	switch {
 	case c.MinLock <= 0:
 		return errors.New("invalid min_lock (<= 0)")
-	case toSeconds(c.MinDuration) < 1:
+	case toSeconds(time.Duration(c.MinDuration)) < 1:
 		return errors.New("invalid min_duration (< 1s)")
-	case toSeconds(c.MaxDuration) <= toSeconds(c.MinDuration):
+	case toSeconds(time.Duration(c.MaxDuration)) <= toSeconds(time.Duration(c.MinDuration)):
 		return errors.New("invalid max_duration: less or equal to min_duration")
 	case c.MaxDestinations < 1:
 		return errors.New("invalid max_destinations (< 1)")
@@ -106,14 +109,14 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MinDuration = dValue
+				c.MinDuration = int64(dValue)
 			}
 		case Settings[MaxDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MaxDuration = dValue
+				c.MaxDuration = int64(dValue)
 			}
 		case Settings[MaxDestinations]:
 			if iValue, err := strconv.Atoi(value); err != nil {
@@ -149,14 +152,14 @@ func (c *config) getConfigMap() smartcontract.StringMap {
 	sMap := smartcontract.StringMap{
 		Fields: make(map[string]string),
 	}
-  
+
 	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(c.MinLock)/1e10)
 	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", c.MinDuration)
 	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", c.MaxDuration)
 	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", c.MaxDestinations)
 	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", c.MaxDescriptionLength)
 	sMap.Fields[Settings[OwnerId]] = fmt.Sprintf("%v", c.OwnerId)
-  sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", c.Cost)
+	sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", c.Cost)
 	return sMap
 }
 
@@ -198,17 +201,6 @@ func (vsc *VestingSmartContract) updateConfig(
 // helpers
 //
 
-func (vsc *VestingSmartContract) getConfigBytes(
-	balances chainstate.StateContextI,
-) (b []byte, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configurations from sc.yaml
 func getConfiguredConfig() (conf *config, err error) {
 	const prefix = "smart_contracts.vestingsc."
@@ -218,8 +210,8 @@ func getConfiguredConfig() (conf *config, err error) {
 	// short hand
 	var scconf = configpkg.SmartContractConfig
 	conf.MinLock = state.Balance(scconf.GetFloat64(prefix+"min_lock") * 1e10)
-	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
-	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
+	conf.MinDuration = int64(scconf.GetDuration(prefix + "min_duration"))
+	conf.MaxDuration = int64(scconf.GetDuration(prefix + "max_duration"))
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
 	conf.OwnerId = scconf.GetString(prefix + "owner_id")
@@ -233,25 +225,18 @@ func getConfiguredConfig() (conf *config, err error) {
 }
 
 func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI) (conf *config, err error) {
-
-	var confb []byte
-	confb, err = vsc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
+	balances chainstate.StateContextI,
+) (conf *config, err error) {
 	conf = new(config)
-
-	if err == util.ErrValueNotPresent {
+	err = balances.GetTrieNode(scConfigKey(vsc.ID), conf)
+	switch err {
+	case nil:
+		return conf, nil
+	case util.ErrValueNotPresent:
 		return vsc.setupConfig(balances)
+	default:
+		return nil, err
 	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-
-	return
 }
 
 func (vsc *VestingSmartContract) setupConfig(

@@ -63,9 +63,9 @@ func Test_tokenLock_IsLocked(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tl := tokenLock{
+			tl := TokenLock{
 				StartTime: tt.fields.StartTime,
-				Duration:  tt.fields.Duration,
+				Duration:  int64(tt.fields.Duration),
 				Owner:     tt.fields.Owner,
 			}
 			if got := tl.IsLocked(tt.args.entity); got != tt.want {
@@ -111,7 +111,7 @@ func Test_tokenLock_LockStats(t *testing.T) {
 			want: (&poolStat{
 				StartTime: commonNow,
 				Duartion:  5 * time.Second,
-				TimeLeft:  (5*time.Second - timeNow.Sub(common.ToTime(commonNow))),
+				TimeLeft:  5*time.Second - timeNow.Sub(common.ToTime(commonNow)),
 				Locked:    true,
 			}).encode(),
 		},
@@ -126,16 +126,16 @@ func Test_tokenLock_LockStats(t *testing.T) {
 			want: (&poolStat{
 				StartTime: commonNow,
 				Duartion:  5 * time.Second,
-				TimeLeft:  (5*time.Second - timeNow.Add(50*time.Second).Sub(common.ToTime(commonNow))),
+				TimeLeft:  5*time.Second - timeNow.Add(50*time.Second).Sub(common.ToTime(commonNow)),
 				Locked:    false,
 			}).encode(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tl := tokenLock{
+			tl := TokenLock{
 				StartTime: tt.fields.StartTime,
-				Duration:  tt.fields.Duration,
+				Duration:  int64(tt.fields.Duration),
 				Owner:     tt.fields.Owner,
 			}
 			if got := tl.LockStats(tt.args.entity); !reflect.DeepEqual(got, tt.want) {

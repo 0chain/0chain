@@ -54,7 +54,7 @@ func requireErrMsg(t *testing.T, err error, msg string) {
 
 func Test_lockRequest_decode(t *testing.T) {
 	var lre, lrd lockRequest
-	lre.Duration = time.Second * 60
+	lre.Duration = int64(time.Second * 60)
 	lre.AllocationID = "alloc_hex"
 	lre.BlobberID = "blobber_hex"
 	require.NoError(t, lrd.decode(mustEncode(t, &lre)))
@@ -105,15 +105,15 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 
 		rp *readPool
 
-		_, err = ssc.getReadPoolBytes(clientID, balances)
+		_, err = ssc.getReadPool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	rp = new(readPool)
 	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-	b, err := ssc.getReadPoolBytes(clientID, balances)
+	b, err := ssc.getReadPool(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, rp.Encode(), b)
+	assert.EqualValues(t, rp, b)
 }
 
 func TestStorageSmartContract_getReadPool(t *testing.T) {
@@ -170,7 +170,7 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
-		conf scConfig
+		conf Config
 		err  error
 	)
 	conf.ReadPool = rpc
@@ -217,8 +217,8 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	testSetReadPoolConfig(t, &readPoolConfig{
 		MinLock:       10,
-		MinLockPeriod: 10 * time.Second,
-		MaxLockPeriod: 100 * time.Second,
+		MinLockPeriod: int64(10 * time.Second),
+		MaxLockPeriod: int64(100 * time.Second),
 	}, balances, ssc.ID)
 
 	var fp fundedPools = []string{client.id}
@@ -237,7 +237,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	requireErrMsg(t, err, errMsg2)
 	// 3. min lock
 	tx.Value = 5
-	lr.Duration = 5 * time.Second
+	lr.Duration = int64(5 * time.Second)
 	lr.AllocationID = allocID
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg4)
@@ -247,11 +247,11 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg5)
 	// 6. max lock period
-	lr.Duration = 150 * time.Second
+	lr.Duration = int64(150 * time.Second)
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg6)
 	// 7. no such allocation
-	lr.Duration = 15 * time.Second
+	lr.Duration = int64(15 * time.Second)
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	require.Error(t, err)
 

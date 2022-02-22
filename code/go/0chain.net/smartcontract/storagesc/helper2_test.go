@@ -1,8 +1,6 @@
 package storagesc
 
 import (
-	"time"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/block"
@@ -18,20 +16,20 @@ import (
 type mockStateContext struct {
 	ctx           cstate.StateContext
 	clientBalance state.Balance
-	store         map[datastore.Key]util.Serializable
+	store         map[datastore.Key]util.MPTSerializable
 }
 
 type mockBlobberYaml struct {
 	serviceCharge           float64
 	readPrice               float64
 	writePrice              float64
-	challengeCompletionTime time.Duration
-	MaxOfferDuration        time.Duration
+	challengeCompletionTime int64
+	MaxOfferDuration        int64
 	minLockDemand           float64
 }
 
 var (
-	scYaml          = &scConfig{}
+	scYaml          = &Config{}
 	creationDate    = common.Timestamp(100)
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
@@ -82,15 +80,21 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	var val, ok = sc.store[key]
 	if !ok {
-		return nil, util.ErrValueNotPresent
+		return util.ErrValueNotPresent
 	}
-	return val, nil
+	d, err := val.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
 }

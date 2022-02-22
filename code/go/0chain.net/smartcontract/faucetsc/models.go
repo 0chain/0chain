@@ -15,6 +15,8 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
 	Start   time.Time     `json:"start_time"`
@@ -62,7 +64,6 @@ func (gn *GlobalNode) Decode(input []byte) error {
 }
 
 func (gn *GlobalNode) updateConfig(fields map[string]string) error {
-	var err error
 	for key, value := range fields {
 		switch key {
 		case Settings[PourAmount]:
@@ -90,15 +91,20 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			}
 			gn.GlobalLimit = state.Balance(fAmount * 1e10)
 		case Settings[IndividualReset]:
-			gn.IndividualReset, err = time.ParseDuration(value)
+			ir, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+
+			gn.IndividualReset = int64(ir)
 		case Settings[GlobalReset]:
-			gn.GlobalReset, err = time.ParseDuration(value)
+			gr, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+
+			gn.GlobalReset = int64(gr)
+
 		case Settings[OwnerId]:
 			_, err := hex.DecodeString(value)
 			if err != nil {
@@ -123,7 +129,7 @@ func (gn *GlobalNode) validate() error {
 		return common.NewError("failed to validate global node", fmt.Sprintf("periodic limit(%v) is less than max pour amount(%v)", gn.PeriodicLimit, gn.MaxPourAmount))
 	case gn.PeriodicLimit > gn.GlobalLimit:
 		return common.NewError("failed to validate global node", fmt.Sprintf("global periodic limit(%v) is less than periodic limit(%v)", gn.GlobalLimit, gn.PeriodicLimit))
-	case toSeconds(gn.IndividualReset) < 1:
+	case toSeconds(time.Duration(gn.IndividualReset)) < 1:
 		return common.NewError("failed to validate global node", fmt.Sprintf("individual reset(%v) is too short", gn.IndividualReset))
 	case gn.GlobalReset < gn.IndividualReset:
 		return common.NewError("failed to validate global node", fmt.Sprintf("global reset(%v) is less than individual reset(%v)", gn.GlobalReset, gn.IndividualReset))

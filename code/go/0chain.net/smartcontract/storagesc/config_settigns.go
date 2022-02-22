@@ -198,7 +198,7 @@ var (
 	}
 )
 
-func (conf *scConfig) getConfigMap() (smartcontract.StringMap, error) {
+func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 	var im smartcontract.StringMap
 	im.Fields = make(map[string]string)
 	for key, info := range Settings {
@@ -215,7 +215,7 @@ func (conf *scConfig) getConfigMap() (smartcontract.StringMap, error) {
 	return im, nil
 }
 
-func (conf *scConfig) setInt(key string, change int) error {
+func (conf *Config) setInt(key string, change int) error {
 	switch Settings[key].setting {
 	case FreeAllocationDataShards:
 		conf.FreeAllocationSettings.DataShards = change
@@ -236,7 +236,7 @@ func (conf *scConfig) setInt(key string, change int) error {
 	return nil
 }
 
-func (conf *scConfig) setBalance(key string, change state.Balance) error {
+func (conf *Config) setBalance(key string, change state.Balance) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
@@ -275,7 +275,7 @@ func (conf *scConfig) setBalance(key string, change state.Balance) error {
 	return nil
 }
 
-func (conf *scConfig) setInt64(key string, change int64) error {
+func (conf *Config) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
 	case MinAllocSize:
 		conf.MinAllocSize = change
@@ -305,7 +305,7 @@ func (conf *scConfig) setInt64(key string, change int64) error {
 	return nil
 }
 
-func (conf *scConfig) setFloat64(key string, change float64) error {
+func (conf *Config) setFloat64(key string, change float64) error {
 	switch Settings[key].setting {
 	case FreeAllocationReadPoolFraction:
 		conf.FreeAllocationSettings.ReadPoolFraction = change
@@ -341,47 +341,47 @@ func (conf *scConfig) setFloat64(key string, change float64) error {
 	return nil
 }
 
-func (conf *scConfig) setDuration(key string, change time.Duration) error {
+func (conf *Config) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
-		conf.TimeUnit = change
+		conf.TimeUnit = int64(change)
 	case MinAllocDuration:
-		conf.MinAllocDuration = change
+		conf.MinAllocDuration = int64(change)
 	case MaxChallengeCompletionTime:
-		conf.MaxChallengeCompletionTime = change
+		conf.MaxChallengeCompletionTime = int64(change)
 	case MinOfferDuration:
-		conf.MinOfferDuration = change
+		conf.MinOfferDuration = int64(change)
 	case ReadPoolMinLockPeriod:
 		if conf.ReadPool == nil {
 			conf.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MinLockPeriod = change
+		conf.ReadPool.MinLockPeriod = int64(change)
 	case ReadPoolMaxLockPeriod:
 		if conf.ReadPool == nil {
 			conf.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MaxLockPeriod = change
+		conf.ReadPool.MaxLockPeriod = int64(change)
 	case WritePoolMinLockPeriod:
 		if conf.WritePool == nil {
 			conf.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MinLockPeriod = change
+		conf.WritePool.MinLockPeriod = int64(change)
 	case WritePoolMaxLockPeriod:
 		if conf.WritePool == nil {
 			conf.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MaxLockPeriod = change
+		conf.WritePool.MaxLockPeriod = int64(change)
 	case FreeAllocationDuration:
-		conf.FreeAllocationSettings.Duration = change
+		conf.FreeAllocationSettings.Duration = int64(change)
 	case FreeAllocationMaxChallengeCompletionTime:
-		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
+		conf.FreeAllocationSettings.MaxChallengeCompletionTime = int64(change)
 	default:
 		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
 	return nil
 }
 
-func (conf *scConfig) setBoolean(key string, change bool) error {
+func (conf *Config) setBoolean(key string, change bool) error {
 	switch Settings[key].setting {
 	case ChallengeEnabled:
 		conf.ChallengeEnabled = change
@@ -393,7 +393,7 @@ func (conf *scConfig) setBoolean(key string, change bool) error {
 	return nil
 }
 
-func (conf *scConfig) set(key string, change string) error {
+func (conf *Config) set(key string, change string) error {
 	s, ok := Settings[key]
 	if !ok {
 		return fmt.Errorf("unknown key %s, can't set value %v", key, change)
@@ -454,7 +454,7 @@ func (conf *scConfig) set(key string, change string) error {
 	return nil
 }
 
-func (conf *scConfig) get(key Setting) interface{} {
+func (conf *Config) get(key Setting) interface{} {
 	switch key {
 	case MaxMint:
 		return conf.MaxMint
@@ -549,7 +549,7 @@ func (conf *scConfig) get(key Setting) interface{} {
 	}
 }
 
-func (conf *scConfig) update(changes smartcontract.StringMap) error {
+func (conf *Config) update(changes smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
 		if err := conf.set(key, value); err != nil {
 			return err
@@ -565,7 +565,7 @@ func (ssc *StorageSmartContract) updateSettings(
 	input []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
 			"can't get config: "+err.Error())
@@ -608,7 +608,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
 			"can't get config: "+err.Error())
@@ -640,21 +640,17 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 }
 
 func getSettingChanges(balances cstate.StateContextI) (*smartcontract.StringMap, error) {
-	val, err := balances.GetTrieNode(settingChangesKey)
-	if err != nil || val == nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		return smartcontract.NewStringMap(), nil
-	}
-
 	var changes = new(smartcontract.StringMap)
-	err = changes.Decode(val.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	if changes.Fields == nil {
+	err := balances.GetTrieNode(settingChangesKey, changes)
+	switch err {
+	case nil:
+		if len(changes.Fields) == 0 {
+			return smartcontract.NewStringMap(), nil
+		}
+		return changes, nil
+	case util.ErrValueNotPresent:
 		return smartcontract.NewStringMap(), nil
+	default:
+		return nil, err
 	}
-	return changes, nil
 }

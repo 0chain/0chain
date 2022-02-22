@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"0chain.net/core/encryption"
+	"github.com/tinylib/msgp/msgp"
 )
 
 /*Hashable - anything that can provide it's hash */
@@ -19,6 +20,19 @@ type Serializable interface {
 	Decode([]byte) error
 }
 
+// MPTSerializable represents the interface for encoding/decoding
+// data that stores in MPT
+type MPTSerializable interface {
+	msgp.Marshaler
+	msgp.Unmarshaler
+}
+
+// MPTSerializableSize wraps the MPTSerializable and msgp.Sizer interfaces
+type MPTSerializableSize interface {
+	MPTSerializable
+	msgp.Sizer
+}
+
 /*HashStringToBytes - convert a hex hash string to bytes */
 func HashStringToBytes(hash string) []byte {
 	hashBytes, err := hex.DecodeString(hash)
@@ -30,7 +44,7 @@ func HashStringToBytes(hash string) []byte {
 
 /*SecureSerializableValueI an interface that makes a serializable value secure with hashing */
 type SecureSerializableValueI interface {
-	Serializable
+	MPTSerializable
 	Hashable
 }
 
@@ -59,13 +73,13 @@ func (spv *SecureSerializableValue) GetHashBytes() []byte {
 	return encryption.RawHash(spv.Buffer)
 }
 
-/*Encode - implement interface */
-func (spv *SecureSerializableValue) Encode() []byte {
-	return spv.Buffer
+// MarshalMsg encodes node and implement mspg.Marshaler interface
+func (spv *SecureSerializableValue) MarshalMsg([]byte) ([]byte, error) {
+	return spv.Buffer, nil
 }
 
-/*Decode - implement interface */
-func (spv *SecureSerializableValue) Decode(buf []byte) error {
+// UnmarshalMsg decodes node and implement msgp.Unmarshaler interface
+func (spv *SecureSerializableValue) UnmarshalMsg(buf []byte) ([]byte, error) {
 	spv.Buffer = buf
-	return nil
+	return nil, nil
 }

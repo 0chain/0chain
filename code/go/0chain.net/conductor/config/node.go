@@ -24,7 +24,7 @@ type Node struct {
 	StopCommand string `json:"stop_command" yaml:"stop_command" mapstructure:"stop_command"`
 
 	// internals
-	Command *exec.Cmd `json:"-" yaml:"-" mapstructure:"-"`
+	Command *exec.Cmd `json:"-" msg:"-" yaml:"-" mapstructure:"-"`
 }
 
 // Start the Node.

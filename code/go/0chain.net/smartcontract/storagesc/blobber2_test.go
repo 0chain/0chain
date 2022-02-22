@@ -11,7 +11,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -65,7 +64,7 @@ var (
 	blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.3,
 		readPrice:               0.01,
-		challengeCompletionTime: 2 * time.Minute,
+		challengeCompletionTime: int64(2 * time.Minute),
 	}
 )
 
@@ -179,7 +178,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	t.Run(errExpiredAllocation, func(t *testing.T) {
 		var faultyRead = read
 		faultyRead.timestamp = allocation.expiration +
-			toSeconds(blobberYaml.challengeCompletionTime) + 1
+			toSeconds(time.Duration(blobberYaml.challengeCompletionTime)) + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPools,
 		)
@@ -249,7 +248,6 @@ func testCommitBlobberRead(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -257,7 +255,7 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 		),
-		store: make(map[datastore.Key]util.Serializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 	}
 
 	var client = &Client{
@@ -305,7 +303,7 @@ func testCommitBlobberRead(
 	var storageAllocation = &StorageAllocation{
 		ID:                      allocationId,
 		StartTime:               allocation.startTime,
-		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+		ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
 		Expiration:              allocation.expiration,
 		BlobberDetails: []*BlobberAllocation{
 			{
@@ -385,10 +383,12 @@ func testCommitBlobberRead(
 
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := ctx.GetTrieNode(stats.GetKey(ssc.ID))
+	err = ctx.GetTrieNode(stats.GetKey(ssc.ID), stats)
 	require.NoError(t, err)
-	require.NotNil(t, statsBytes)
-	require.NoError(t, stats.Decode(statsBytes.Encode()))
+	sv, err := stats.MarshalMsg(nil)
+	require.NoError(t, err)
+	_, err = stats.UnmarshalMsg(sv)
+	require.NoError(t, err)
 
 	confirmCommitBlobberRead(t, f, resp, stats, newRp, newSp, ctx)
 	return nil

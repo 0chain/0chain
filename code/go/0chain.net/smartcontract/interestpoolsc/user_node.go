@@ -9,15 +9,17 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 type UserNode struct {
-	ClientID datastore.Key                   `json:"client_id"`
-	Pools    map[datastore.Key]*interestPool `json:"pools"`
+	ClientID string                   `json:"client_id"`
+	Pools    map[string]*interestPool `json:"pools"`
 }
 
 func newUserNode(clientID datastore.Key) *UserNode {
 	return &UserNode{
 		ClientID: clientID,
-		Pools:    make(map[datastore.Key]*interestPool),
+		Pools:    make(map[string]*interestPool),
 	}
 }
 

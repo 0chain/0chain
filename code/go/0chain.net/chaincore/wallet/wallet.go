@@ -9,10 +9,10 @@ import (
 /*Wallet - a struct representing the client's wallet */
 type Wallet struct {
 	SignatureScheme encryption.SignatureScheme
-	PublicKeyBytes  []byte `json:"-"`
+	PublicKeyBytes  []byte `json:"-" msg:"-"`
 	PublicKey       string `json:"public_key"`
 	ClientID        string `json:"id"`
-	Balance         int64  `json:"-"`
+	Balance         int64  `json:"-" msg:"-"`
 }
 
 /*Initialize - initialize a wallet with public/private keys */

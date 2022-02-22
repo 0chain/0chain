@@ -183,10 +183,10 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	networkTimes := make(map[string]time.Duration)
 	mb := c.GetCurrentMagicBlock()
 	for k, v := range mb.Miners.CopyNodesMap() {
-		networkTimes[k] = v.Info.MinersMedianNetworkTime
+		networkTimes[k] = time.Duration(v.Info.MinersMedianNetworkTime)
 	}
 	for k, v := range mb.Sharders.CopyNodesMap() {
-		networkTimes[k] = v.Info.MinersMedianNetworkTime
+		networkTimes[k] = time.Duration(v.Info.MinersMedianNetworkTime)
 	}
 
 	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,

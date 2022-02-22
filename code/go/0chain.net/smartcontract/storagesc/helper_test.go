@@ -280,8 +280,8 @@ var avgTerms = Terms{
 	ReadPrice:               1 * x10,
 	WritePrice:              5 * x10,
 	MinLockDemand:           0.1,
-	MaxOfferDuration:        1 * time.Hour,
-	ChallengeCompletionTime: 200 * time.Second,
+	MaxOfferDuration:        int64(1 * time.Hour),
+	ChallengeCompletionTime: int64(200 * time.Second),
 }
 
 // add allocation and 20 blobbers
@@ -304,7 +304,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 	nar.Size = 2 * GB // 2 GB
-	nar.MaxChallengeCompletionTime = 200 * time.Hour
+	nar.MaxChallengeCompletionTime = int64(200 * time.Hour)
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
@@ -321,7 +321,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	return deco.ID, blobs
 }
 
-func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
+func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
 	balances chainState.StateContextI) {
 
 	var _, err = balances.InsertTrieNode(key, val)
@@ -329,20 +329,20 @@ func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
 }
 
 func setConfig(t testing.TB, balances chainState.StateContextI) (
-	conf *scConfig) {
+	conf *Config) {
 
-	conf = new(scConfig)
+	conf = new(Config)
 
-	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = int64(48 * time.Hour) // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
-	conf.MinAllocDuration = 1 * time.Minute
+	conf.MinAllocDuration = int64(1 * time.Minute)
 	// conf.MaxChallengeCompletionTime = 15 * time.Second
-	conf.MinOfferDuration = 1 * time.Minute
+	conf.MinOfferDuration = int64(1 * time.Minute)
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
@@ -350,7 +350,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
-	conf.MaxChallengeCompletionTime = 5 * time.Minute
+	conf.MaxChallengeCompletionTime = int64(5 * time.Minute)
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
@@ -358,13 +358,13 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
-		MaxLockPeriod: 20 * time.Minute,
+		MinLockPeriod: int64(5 * time.Second),
+		MaxLockPeriod: int64(20 * time.Minute),
 	}
 	conf.WritePool = &writePoolConfig{
 		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
-		MaxLockPeriod: 20 * time.Minute,
+		MinLockPeriod: int64(5 * time.Second),
+		MaxLockPeriod: int64(20 * time.Minute),
 	}
 
 	conf.StakePool = &stakePoolConfig{

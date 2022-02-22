@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -18,6 +19,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //
 // client write pool (consist of allocation pools)
@@ -142,32 +145,16 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 // smart contract methods
 //
 
-// getWritePoolBytes of a client
-func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	balances chainState.StateContextI) (wp *writePool, err error) {
-
-	var poolb []byte
-	if poolb, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
-		return
-	}
 	wp = new(writePool)
-	err = wp.Decode(poolb)
+	err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+
+	return wp, nil
 }
 
 func (ssc *StorageSmartContract) createEmptyWritePool(
@@ -281,13 +268,13 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	if lr.Duration < conf.MinLockPeriod {
 		return "", common.NewError("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
-				lr.Duration.String(), conf.MinLockPeriod.String()))
+				time.Duration(lr.Duration).String(), time.Duration(conf.MinLockPeriod).String()))
 	}
 
 	if lr.Duration > conf.MaxLockPeriod {
 		return "", common.NewError("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
-				lr.Duration.String(), conf.MaxLockPeriod.String()))
+				time.Duration(lr.Duration).String(), time.Duration(conf.MaxLockPeriod).String()))
 	}
 
 	// check client balance
@@ -349,7 +336,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	// set fields
 	ap.AllocationID = lr.AllocationID
-	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
+	ap.ExpireAt = t.CreationDate + toSeconds(time.Duration(lr.Duration))
 	ap.Blobbers = bps
 
 	// add and save

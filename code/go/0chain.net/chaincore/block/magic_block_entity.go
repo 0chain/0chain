@@ -13,10 +13,12 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type MagicBlock struct {
 	datastore.HashIDField
-	mutex                  sync.RWMutex        `json:"-" msgpack:"-"`
-	PreviousMagicBlockHash datastore.Key       `json:"previous_hash"`
+	mutex                  sync.RWMutex        `json:"-" msgpack:"-" msg:"-"`
+	PreviousMagicBlockHash string              `json:"previous_hash"`
 	MagicBlockNumber       int64               `json:"magic_block_number"`
 	StartingRound          int64               `json:"starting_round"`
 	Miners                 *node.Pool          `json:"miners"`   //this is the pool of miners participating in the blockchain

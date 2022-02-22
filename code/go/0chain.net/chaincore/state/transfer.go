@@ -7,13 +7,15 @@ import (
 	"0chain.net/core/datastore"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 var ErrInvalidTransfer = common.NewError("invalid_transfer", "invalid transfer of state")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {
-	ClientID   datastore.Key `json:"from"`
-	ToClientID datastore.Key `json:"to"`
-	Amount     Balance       `json:"amount"`
+	ClientID   string  `json:"from"`
+	ToClientID string  `json:"to"`
+	Amount     Balance `json:"amount"`
 }
 
 //NewTransfer - create a new transfer

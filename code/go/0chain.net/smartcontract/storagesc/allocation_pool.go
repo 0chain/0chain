@@ -5,16 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 )
+
+//msgp:ignore lockRequest unlockRequest
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //
 // SC / API requests
@@ -28,11 +29,11 @@ import (
 // all tokens divided for all blobbers of the allocation
 // automatically
 type lockRequest struct {
-	Duration     time.Duration `json:"duration"`
-	AllocationID datastore.Key `json:"allocation_id"`
-	BlobberID    datastore.Key `json:"blobber_id,omitempty"`
-	TargetId     datastore.Key `json:"target_id,omitempty"`
-	MintTokens   bool          `json:"mint_tokens,omitempty"`
+	Duration     int64  `json:"duration"`
+	AllocationID string `json:"allocation_id"`
+	BlobberID    string `json:"blobber_id,omitempty"`
+	TargetId     string `json:"target_id,omitempty"`
+	MintTokens   bool   `json:"mint_tokens,omitempty"`
 }
 
 func (lr *lockRequest) decode(input []byte) (err error) {
@@ -47,8 +48,8 @@ func (lr *lockRequest) decode(input []byte) (err error) {
 
 // unlock request used to unlock all tokens of a read pool
 type unlockRequest struct {
-	PoolOwner datastore.Key `json:"pool_owner,omitempty"`
-	PoolID    datastore.Key `json:"pool_id"`
+	PoolOwner string `json:"pool_owner,omitempty"`
+	PoolID    string `json:"pool_id"`
 }
 
 func (ur *unlockRequest) decode(input []byte) error {
@@ -61,7 +62,7 @@ func (ur *unlockRequest) decode(input []byte) error {
 
 // blobber pool represents tokens locked for a blobber
 type blobberPool struct {
-	BlobberID datastore.Key `json:"blobber_id"`
+	BlobberID string        `json:"blobber_id"`
 	Balance   state.Balance `json:"balance"`
 }
 
@@ -145,7 +146,7 @@ func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 type allocationPool struct {
 	tokenpool.ZcnPool `json:"pool"`
 	ExpireAt          common.Timestamp `json:"expire_at"`     // inclusive
-	AllocationID      datastore.Key    `json:"allocation_id"` //
+	AllocationID      string           `json:"allocation_id"` //
 	Blobbers          blobberPools     `json:"blobbers"`      //
 }
 
@@ -429,7 +430,7 @@ func sortExpireAt(cut []*allocationPool) {
 
 // blobber pool represents tokens locked for a blobber
 type blobberPoolStat struct {
-	BlobberID datastore.Key `json:"blobber_id"`
+	BlobberID string        `json:"blobber_id"`
 	Balance   state.Balance `json:"balance"`
 }
 
@@ -444,7 +445,7 @@ type allocationPoolStat struct {
 	ID           string            `json:"id"`
 	Balance      state.Balance     `json:"balance"`
 	ExpireAt     common.Timestamp  `json:"expire_at"`
-	AllocationID datastore.Key     `json:"allocation_id"`
+	AllocationID string            `json:"allocation_id"`
 	Blobbers     []blobberPoolStat `json:"blobbers"`
 	Locked       bool              `json:"locked"`
 }
@@ -463,11 +464,6 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 	}
 
 	return
-}
-
-type backPool struct {
-	ID      string        `json:"id"`
-	Balance state.Balance `json:"balance"`
 }
 
 type allocationPoolsStat struct {
@@ -489,7 +485,7 @@ func (aps allocationPools) stat(now common.Timestamp) (
 //
 
 type untilStat struct {
-	PoolID   datastore.Key    `json:"pool_id"`
+	PoolID   string           `json:"pool_id"`
 	Balance  state.Balance    `json:"balance"`
 	ExpireAt common.Timestamp `json:"expire_at"`
 }
