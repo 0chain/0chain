@@ -3,7 +3,6 @@ package smartcontract
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -90,8 +89,8 @@ func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContrac
 	contractObj := getSmartContract(t.ToClientID)
 	cost := contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
 	//hack for tests
-	if cost == math.MaxInt32 {
-		return 0
-	}
+	//if cost == math.MaxInt32 {
+	//	return 0
+	//}
 	return cost
 }
