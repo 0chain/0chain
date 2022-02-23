@@ -3,9 +3,6 @@ package stakepool
 import (
 	"encoding/json"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/dbs"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -26,8 +23,6 @@ func (spu StakePoolReward) Emit(
 	tag event.EventTag,
 	balances cstate.StateContextI,
 ) error {
-	logging.Logger.Info("piers emit stake pool reward",
-		zap.Any("StakePoolReward", spu))
 	data, err := json.Marshal(&spu)
 	if err != nil {
 		return err
