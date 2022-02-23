@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -92,23 +92,15 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 	require.True(t, len(cNodes) <= len(delegates))
 	var count = 0
 	for i, node := range cNodes {
-		node.Active = make(map[string]*sci.DelegatePool)
+		node.Pools = make(map[string]*stakepool.DelegatePool)
 		var staked int64 = 0
 		for j, delegate := range delegates[i] {
 			count++
-			node.Active[strconv.Itoa(j)] = &sci.DelegatePool{
-				PoolStats: &sci.PoolStats{
-					DelegateID: datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j)),
-				},
-				ZcnLockingPool: &tokenpool.ZcnLockingPool{
-					ZcnPool: tokenpool.ZcnPool{
-						TokenPool: tokenpool.TokenPool{
-							ID:      strconv.Itoa(i*maxDelegates + j),
-							Balance: zcnToBalance(delegate),
-						},
-					},
-				},
-			}
+			var dp stakepool.DelegatePool
+			dp.Balance = zcnToBalance(delegate)
+			dp.DelegateID = datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j))
+			dp.Status = stakepool.Active
+			node.Pools[strconv.Itoa(j)] = &dp
 			staked += int64(zcnToBalance(delegate))
 		}
 		node.TotalStaked = staked
