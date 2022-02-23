@@ -7,15 +7,14 @@ import (
 
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/core/common"
-	"0chain.net/core/util"
-
 	"0chain.net/core/datastore"
 
 	cstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/chaincore/state"
 )
+
+//go:generate msgp -io=false -tests=false -v
 
 type Provider int
 
@@ -107,19 +106,12 @@ func (sp *StakePool) OrderedPoolIds() []string {
 func GetStakePool(
 	p Provider, id string, balances cstate.StateContextI,
 ) (*StakePool, error) {
-	var poolBytes []byte
-
-	var val util.Serializable
-	val, err := balances.GetTrieNode(stakePoolKey(p, id))
+	var sp = NewStakePool()
+	err := balances.GetTrieNode(stakePoolKey(p, id), sp)
 	if err != nil {
 		return nil, err
 	}
-	poolBytes = val.Encode()
-	var sp = NewStakePool()
-	err = sp.Decode(poolBytes)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+
 	return sp, nil
 }
 
