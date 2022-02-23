@@ -45,7 +45,7 @@ type TokenPool struct {
 	Balance state.Balance `json:"balance"`
 }
 
-//go:generate mockery --case underscore -name TokenLockInterface -inpkg -testonly
+//go:generate mockery --case underscore --name TokenLockInterface --inpackage --testonly
 type TokenLockInterface interface {
 	util.MPTSerializableSize
 	IsLocked(entity interface{}) bool
