@@ -16,6 +16,10 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
+const (
+	GB = 1024 * 1024 * 1024
+)
+
 func init() {
 	logging.Logger = zap.NewNop()
 }
@@ -30,11 +34,11 @@ func TestReadMarkers(t *testing.T) {
 		AllocationID    string           `json:"allocation_id"`
 		OwnerID         string           `json:"owner_id"`
 		Timestamp       common.Timestamp `json:"timestamp"`
-		ReadCounter     int64            `json:"counter"`
+		ReadSize        int64            `json:"read_size"`
 		Signature       string           `json:"signature"`
 		PayerID         string           `json:"payer_id"`
 		AuthTicket      string           `json:"auth_ticket"`
-		ReadSize        float64          `json:"read_size"`
+		ReadSizeInGB    float64          `json:"read_size_in_gb"`
 	}
 
 	convertMrm := func(mrm *ModelReadMarker, txnHash string, blockNumber int64) ReadMarker {
@@ -46,7 +50,6 @@ func TestReadMarkers(t *testing.T) {
 			TransactionID: txnHash,
 			OwnerID:       mrm.OwnerID,
 			Timestamp:     int64(mrm.Timestamp),
-			ReadCounter:   mrm.ReadCounter,
 			ReadSize:      mrm.ReadSize,
 			Signature:     mrm.Signature,
 			PayerID:       mrm.PayerID,
@@ -81,11 +84,10 @@ func TestReadMarkers(t *testing.T) {
 		AllocationID:    "allocation_id",
 		OwnerID:         "owner_id",
 		Timestamp:       111121,
-		ReadCounter:     11,
+		ReadSize:        100 * GB,
 		Signature:       "signature",
 		PayerID:         "payer_id",
 		AuthTicket:      "auth_ticket",
-		ReadSize:        100,
 	}
 
 	eReadMarker := convertMrm(&mrm, "t_hash", 1)

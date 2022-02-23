@@ -20,7 +20,8 @@ func readMarkerToReadMarkerTable(rm *ReadMarker) *event.ReadMarker {
 		AllocationID: rm.AllocationID,
 		OwnerID:      rm.OwnerID,
 		Timestamp:    int64(rm.Timestamp),
-		ReadSize:     rm.ReadSizeInGB,
+		ReadSize:     rm.ReadSize,
+		ReadSizeInGB: rm.ReadSizeInGB,
 		Signature:    rm.Signature,
 		PayerID:      rm.PayerID,
 	}

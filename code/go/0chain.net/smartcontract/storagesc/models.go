@@ -384,7 +384,7 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 type StorageAllocationStats struct {
 	UsedSize                  int64  `json:"used_size"`
 	NumWrites                 int64  `json:"num_of_writes"`
-	ReadsSize                 int64  `json:"reads_size`
+	ReadsSize                 int64  `json:"reads_size"`
 	TotalChallenges           int64  `json:"total_challenges"`
 	OpenChallenges            int64  `json:"num_open_challenges"`
 	SuccessChallenges         int64  `json:"num_success_challenges"`
