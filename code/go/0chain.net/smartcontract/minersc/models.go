@@ -629,11 +629,11 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 
 type Stat struct {
 	// for miner (totals)
-	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
-	GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
+	GeneratorRewards state.Balance `json:"generator_rewards,omitempty" msg:"gr,omitempty"`
+	GeneratorFees    state.Balance `json:"generator_fees,omitempty" msg:"gf,omitempty"`
 	// for sharder (totals)
-	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
-	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
+	SharderRewards state.Balance `json:"sharder_rewards,omitempty" msg:"sr,omitempty"`
+	SharderFees    state.Balance `json:"sharder_fees,omitempty" msg:"sf,omitempty"`
 }
 
 type SimpleNodeGeolocation struct {
@@ -673,7 +673,7 @@ type SimpleNode struct {
 	Stat Stat `json:"stat"`
 
 	// NodeType used for delegate pools statistic.
-	NodeType NodeType `json:"node_type,omitempty"`
+	NodeType NodeType `json:"node_type,omitempty" msg:"nt,omitempty"`
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
