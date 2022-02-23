@@ -355,28 +355,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"malformed request: missing read_marker")
 	}
 
-	var (
-		lastBlobberClientReadBytes util.Serializable
-		lastCommittedRM            = &ReadConnection{}
-		lastKnownCtr               int64
-	)
-
-	lastBlobberClientReadBytes, err = balances.GetTrieNode(
-		commitRead.GetKey(sc.ID))
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't get latest blobber client read: %v", err)
-	}
-
-	err = nil // reset possible ErrValueNotPresent
-
-	if lastBlobberClientReadBytes != nil {
-		lastCommittedRM.Decode(lastBlobberClientReadBytes.Encode())
-		lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
-	}
-
-	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
+	err = commitRead.ReadMarker.Verify(balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't verify read marker: %v", err)
@@ -411,17 +390,13 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"blobber doesn't belong to allocation")
 	}
 
-	const CHUNK_SIZE = 64 * KB
-
-	// one read is one 64 KB block
 	var (
-		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
-		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
+		sizeRead = sizeInGB(commitRead.ReadMarker.ReadSize)
 		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
-	commitRead.ReadMarker.ReadSize = sizeRead
+	commitRead.ReadMarker.ReadSizeInGB = sizeRead
 
 	// if 3rd party pays
 	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
@@ -482,9 +457,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker in db:", err.Error())
 	}
 
-	sc.newRead(balances, numReads)
+	// update stats
+	sc.newRead(balances, commitRead.ReadMarker.ReadSize)
 
-	return // ok, the response and nil
+	return
 }
 
 func sizePrice(size int64, price state.Balance) float64 {
