@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -28,62 +30,58 @@ const (
 )
 
 type userPools struct {
-	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
+	Pools map[string][]*delegatePoolStat `json:"pools"`
 }
 
 func newUserPools() (ups *userPools) {
 	ups = new(userPools)
-	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
+	ups.Pools = make(map[string][]*delegatePoolStat)
 	return
 }
 
 // user oriented pools requests handler
-func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
+func (msc *MinerSmartContract) GetUserPoolsHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
 	clientID := params.Get("client_id")
 
-	minerPools, err := stakepool.GetUserStakePool(stakepool.Miner, clientID, balances)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get user miner stake pools", err.Error())
-	}
-	sharderPools, err := stakepool.GetUserStakePool(stakepool.Sharder, clientID, balances)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get user miner stake pools", err.Error())
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
 	}
 
-	var ups = newUserPools()
-	for nodeID, poolIDs := range minerPools.Pools {
-		var mn *MinerNode
-		if mn, err = getMinerNode(nodeID, balances); err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
-		}
-		if ups.Pools[mn.NodeType.String()] == nil {
-			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
-		}
-		for _, id := range poolIDs {
-			var dp, ok = mn.Pools[id]
-			if ok {
-				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
-			}
-		}
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Miner))
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
 	}
 
-	for nodeID, poolIDs := range sharderPools.Pools {
-		var mn *MinerNode
-		if mn, err = getMinerNode(nodeID, balances); err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Sharder))
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	var ups = newUserPools() //	Pools map[string][]*delegatePoolStat `json:"pools"`
+	for _, pool := range minerPools {
+		dp := delegatePoolStat{
+			ID:         pool.PoolID,
+			Balance:    state.Balance(pool.Balance),
+			Reward:     state.Balance(pool.Reward),
+			RewardPaid: state.Balance(pool.TotalReward),
+			Status:     stakepool.PoolStatus(pool.Status).String(),
 		}
-		if ups.Pools[mn.NodeType.String()] == nil {
-			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+	}
+
+	for _, pool := range sharderPools {
+		dp := delegatePoolStat{
+			ID:         pool.PoolID,
+			Balance:    state.Balance(pool.Balance),
+			Reward:     state.Balance(pool.Reward),
+			RewardPaid: state.Balance(pool.TotalReward),
+			Status:     stakepool.PoolStatus(pool.Status).String(),
 		}
-		for _, id := range poolIDs {
-			var dp, ok = mn.Pools[id]
-			if ok {
-				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
-			}
-		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
 
 	return ups, nil
