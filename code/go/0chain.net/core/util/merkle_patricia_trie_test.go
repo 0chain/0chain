@@ -60,7 +60,7 @@ type pathNodesSponge struct {
 func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 	t.Helper()
 
-	var dirname, err = ioutil.TempDir("test", "mpt-pndb")
+	var dirname, err = ioutil.TempDir("", "mpt-pndb")
 	require.NoError(t, err)
 
 	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"),
