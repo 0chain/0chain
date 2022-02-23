@@ -5,9 +5,11 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
+	"go.uber.org/zap"
 	"math"
 	"math/rand"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 func (ssc *StorageSmartContract) blobberBlockRewards(
 	balances cstate.StateContextI,
 ) (err error) {
+	logging.Logger.Info("blobberBlockRewards started", zap.Int64("round", balances.GetBlock().Round))
 	var (
 		qualifyingBlobberIds []string
 		stakePools           []*stakePool
@@ -104,6 +107,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	for i, qsp := range stakePools {
 		reward := bbr * (weight[i] / totalWeight)
+		logging.Logger.Info("blobber_block_rewards_pass",
+			zap.Float64("reward", reward),
+			zap.String("blobber id", qualifyingBlobberIds[i]))
 
 		if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], stakepool.Blobber, balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
