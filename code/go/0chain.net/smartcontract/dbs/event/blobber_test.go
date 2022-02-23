@@ -9,14 +9,16 @@ import (
 
 	"golang.org/x/net/context"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 
-	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
+
+	"0chain.net/smartcontract/dbs"
 )
 
 func init() {
@@ -53,6 +55,7 @@ func TestBlobbers(t *testing.T) {
 		Used            int64                  `json:"used"`     // allocated capacity
 		LastHealthCheck common.Timestamp       `json:"last_health_check"`
 		PublicKey       string                 `json:"-"`
+		SavedData       int64                  `json:"saved_data"`
 		// StakePoolSettings used initially to create and setup stake pool.
 		StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
 	}
@@ -75,6 +78,7 @@ func TestBlobbers(t *testing.T) {
 			MaxStake:                int64(sn.StakePoolSettings.MaxStake),
 			NumDelegates:            sn.StakePoolSettings.NumDelegates,
 			ServiceCharge:           sn.StakePoolSettings.ServiceCharge,
+			SavedData:               sn.SavedData,
 		}
 
 	}
@@ -123,6 +127,7 @@ func TestBlobbers(t *testing.T) {
 			NumDelegates:   59,
 			ServiceCharge:  61.0,
 		},
+		SavedData: 10,
 	}
 	SnBlobber := convertSn(sn)
 	data, err := json.Marshal(&SnBlobber)
@@ -193,6 +198,7 @@ func TestBlobbers(t *testing.T) {
 			NumDelegates:   143,
 			ServiceCharge:  149.0,
 		},
+		SavedData: 10,
 	}
 	SnBlobber2 := convertSn(sn2)
 	data, err = json.Marshal(&SnBlobber2)

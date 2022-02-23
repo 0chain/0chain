@@ -79,6 +79,15 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 30 # seconds
     min_fee: 0
+    exempt:
+      - add_miner
+      - miner_health_check
+      - add_sharder
+      - sharder_health_check
+      - contributeMpk
+      - sharder_keep
+      - shareSignsOrShares
+      - wait
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true
@@ -158,6 +167,10 @@ min_stake: 0.0 # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake
 max_stake: 100.0 # tokens
+# latitude is miner/sharder latitude geolocation
+latitude: 28.644800
+# longitude is miner/sharder longitude geolocation
+longitude: 77.216721
 
 minio:
   enabled: false # Enable or disable minio backup, Do not enable with deep scan ON

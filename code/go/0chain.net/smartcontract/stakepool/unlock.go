@@ -6,43 +6,35 @@ import (
 	"0chain.net/chaincore/state"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 )
 
 func (sp *StakePool) UnlockPool(
-	clientId string,
+	txn *transaction.Transaction,
 	providerType Provider,
 	providerId datastore.Key,
 	poolId datastore.Key,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
 	var usp *UserStakePools
-	usp, err := getOrCreateUserStakePool(providerType, clientId, balances)
+	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}
 	foundProvider := usp.Find(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
-		return 0, fmt.Errorf("user %v does not own stake pool %v", clientId, poolId)
+		return 0, fmt.Errorf("user %v does not own stake pool %v", txn.ClientID, poolId)
 	}
 
 	dp, ok := sp.Pools[poolId]
 	if !ok {
 		return 0, fmt.Errorf("can't find pool: %v", poolId)
 	}
-	minter, err := cstate.GetMinter(sp.Minter)
-	if err != nil {
-		return 0, fmt.Errorf("can't find minter: %v", err)
-	}
-	transfer := state.NewTransfer(minter, clientId, dp.Balance)
-	if err := balances.AddTransfer(transfer); err != nil {
-		return 0, err
-	}
 
-	dp.Balance = 0
-	dp.Status = Deleted
+	dp.Status = Deleting
 	amount, err := sp.MintRewards(
-		clientId, poolId, providerId, providerType, usp, balances,
+		txn.ClientID, poolId, providerId, providerType, usp, balances,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)
