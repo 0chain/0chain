@@ -271,41 +271,8 @@ func AddMockBlobbers(
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
-	activePart, err := getActivePassedBlobbersList(balances, 1)
-	if err != nil {
-		panic(err)
-	}
-	ongPart, err := getOngoingPassedBlobbersList(balances, 1)
-	if err != nil {
-		panic(err)
-	}
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
-
-		partIndex, err := activePart.Add(&partitions.BlobberRewardNode{
-			ID:                id,
-			SuccessChallenges: 2,
-			WritePrice:        getMockBlobberWritePrice(),
-			ReadPrice:         getMockBlobberReadPrice(),
-			TotalData:         0,
-			DataRead:          0,
-		}, balances)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = ongPart.Add(&partitions.BlobberRewardNode{
-			ID:                id,
-			SuccessChallenges: 2,
-			WritePrice:        getMockBlobberWritePrice(),
-			ReadPrice:         getMockBlobberReadPrice(),
-			TotalData:         0,
-			DataRead:          0,
-		}, balances)
-		if err != nil {
-			panic(err)
-		}
-
 		blobber := &StorageNode{
 			ID:      id,
 			BaseURL: id + ".com",
@@ -319,14 +286,10 @@ func AddMockBlobbers(
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			RewardPartition: rewardPartitionLocation{
-				Index:      partIndex,
-				StartRound: 0,
-			},
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err = balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
+		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
 		if err != nil {
 			panic(err)
 		}
@@ -356,17 +319,7 @@ func AddMockBlobbers(
 			}
 		}
 	}
-
-	err = activePart.Save(balances)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ongPart.Save(balances)
-	if err != nil {
-		panic(err)
-	}
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
 	if err != nil {
 		panic(err)
 	}
@@ -574,8 +527,8 @@ func AddMockWriteRedeems(
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:               getMockBlobberReadPrice(),
-		WritePrice:              getMockBlobberWritePrice(),
+		ReadPrice:               state.Balance(0.1 * 1e10),
+		WritePrice:              state.Balance(0.1 * 1e10),
 		MinLockDemand:           0.0007,
 		MaxOfferDuration:        10000 * viper.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
@@ -691,13 +644,7 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
-	conf.BlockReward = &blockReward{
-		BlockReward:             state.Balance(viper.GetInt(sc.StorageBlockReward)),
-		TriggerPeriod:           viper.GetInt64(sc.StorageBlockRewardTriggerPeriod),
-		BlockRewardChangePeriod: viper.GetInt64(sc.StorageBlockRewardChangePeriod),
-		BlockRewardChangeRatio:  viper.GetFloat64(sc.StorageBlockRewardChangeRatio),
-		BlobberWeight:           viper.GetFloat64(sc.StorageBlockRewardBlobberWeight),
-	}
+	conf.BlockReward = &blockReward{}
 	conf.ExposeMpt = true
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
