@@ -57,13 +57,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
-	var randomSeed uint64
-	randomSeed, err = strconv.ParseUint(hashString[0:16], 16, 64)
+	var randomSeed int64
+	randomSeed, err = strconv.ParseInt(hashString[0:16], 16, 64)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"error in creating seed"+err.Error())
 	}
-	r := rand.New(rand.NewSource(int64(randomSeed)))
+	r := rand.New(rand.NewSource(randomSeed))
 
 	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
 	if err != nil {
