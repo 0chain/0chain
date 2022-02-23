@@ -7,6 +7,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool"
 	"math"
 	"math/rand"
 	"strconv"
@@ -104,11 +105,11 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, qsp := range stakePools {
 		reward := bbr * (weight[i] / totalWeight)
 
-		if err := mintReward(qsp, reward, balances); err != nil {
+		if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], stakepool.Blobber, balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 		}
 
-		qsp.Rewards.Blobber += state.Balance(reward)
+		qsp.Reward += state.Balance(reward) // do we need to do this?
 	}
 
 	for i, qsp := range stakePools {
