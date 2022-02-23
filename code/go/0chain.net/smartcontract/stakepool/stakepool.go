@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"sort"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -213,11 +210,6 @@ func (sp *StakePool) DistributeRewards(
 	providerType Provider,
 	balances cstate.StateContextI,
 ) error {
-	logging.Logger.Info("piers DistributeRewards",
-		zap.Float64("value", value),
-		zap.String("providerId", providerId),
-		zap.Any("providerType", providerType),
-	)
 	if value == 0 {
 		return nil // nothing to move
 	}

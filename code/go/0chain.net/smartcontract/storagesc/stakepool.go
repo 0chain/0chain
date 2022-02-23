@@ -1,11 +1,9 @@
 package storagesc
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -18,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract"
 )
 
 type stakePoolSettings struct {
@@ -543,84 +540,4 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	}
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
-}
-
-//
-// stat
-//
-
-const cantGetStakePoolMsg = "can't get related stake pool"
-
-// statistic for all locked tokens of a stake pool
-func (ssc *StorageSmartContract) getStakePoolStatHandlerDepreciated(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		blobberID = datastore.Key(params.Get("blobber_id"))
-		conf      *scConfig
-		blobber   *StorageNode
-		sp        *stakePool
-	)
-
-	if conf, err = ssc.getConfig(balances, false); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-	}
-
-	if blobber, err = ssc.getBlobber(blobberID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobberMsg)
-	}
-
-	if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
-	}
-
-	return sp.stat(conf, ssc.ID, common.Now(), blobber), nil
-}
-
-type userPoolStat struct {
-	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
-}
-
-// user oriented statistic
-// todo get from event database
-func (ssc *StorageSmartContract) getUserStakePoolStatHandlerDeprecitated(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = datastore.Key(params.Get("client_id"))
-	)
-
-	usp, err := stakepool.GetUserStakePool(stakepool.Blobber, clientID, balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get user stake pool")
-	}
-
-	var ups = new(userPoolStat)
-	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
-
-	for blobberID, poolIDs := range usp.Pools {
-		var sp *stakePool
-		if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
-		}
-
-		for _, id := range poolIDs {
-			var dp, ok = sp.Pools[id]
-			if !ok {
-				return nil, common.NewErrNoResource("missing delegate pool")
-			}
-			var dps = delegatePoolStat{
-				ID:         id,
-				Balance:    dp.Balance,
-				DelegateID: dp.DelegateID,
-				Rewards:    dp.Reward,
-				//Penalty:    dp.Penalty,
-			}
-			ups.Pools[blobberID] = append(ups.Pools[blobberID], &dps)
-		}
-	}
-
-	return ups, nil
 }
