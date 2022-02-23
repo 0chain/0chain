@@ -27,7 +27,7 @@ func atomicStoreFloat64(addr *uint64, val float64) {
 
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
-	Type int8 `json:"type"`
+	Type NodeType `json:"type"`
 
 	// ---------------------------------------------
 	mmx      sync.RWMutex     `json:"-" msgpack:"-"`
@@ -39,7 +39,7 @@ type Pool struct {
 }
 
 /*NewPool - create a new node pool of given type */
-func NewPool(Type int8) *Pool {
+func NewPool(Type NodeType) *Pool {
 	p := &Pool{
 		Type:     Type,
 		NodesMap: make(map[string]*Node),
