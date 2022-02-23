@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,7 +42,7 @@ func BlobberRewardKey(round int64) datastore.Key {
 
 // getActivePassedBlobbersList gets blobbers passed challenge from last challenge period
 func getActivePassedBlobbersList(balances c_state.StateContextI, period int64) (partitions.RandPartition, error) {
-	key := BlobberRewardKey(utils.GetPreviousRewardRound(balances.GetBlock().Round, period))
+	key := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
 	all, err := partitions.GetRandomSelector(key, balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -62,7 +61,7 @@ func getActivePassedBlobbersList(balances c_state.StateContextI, period int64) (
 
 // getOngoingPassedBlobbersList gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobbersList(balances c_state.StateContextI, period int64) (partitions.RandPartition, error) {
-	key := BlobberRewardKey(utils.GetCurrentRewardRound(balances.GetBlock().Round, period))
+	key := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
 	all, err := partitions.GetRandomSelector(key, balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -363,7 +362,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	rewardRound := utils.GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
+	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
 	ongoingList, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {

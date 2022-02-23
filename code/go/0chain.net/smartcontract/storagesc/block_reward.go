@@ -127,3 +127,24 @@ func getBlockReward(br state.Balance, currentRound, brChangePeriod int64, brChan
 	changePeriods := currentRound % brChangePeriod
 	return float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
 }
+
+func GetCurrentRewardRound(currentRound, period int64) int64 {
+	if period > 0 {
+		extra := currentRound % period
+		if currentRound >= extra {
+			return currentRound - extra
+		} else {
+			return 0
+		}
+	}
+	return 0
+}
+
+func GetPreviousRewardRound(currentRound, period int64) int64 {
+	crr := GetCurrentRewardRound(currentRound, period)
+	if crr >= period {
+		return crr - period
+	} else {
+		return 0
+	}
+}

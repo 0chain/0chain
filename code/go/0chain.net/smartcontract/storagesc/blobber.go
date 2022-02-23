@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"0chain.net/smartcontract/partitions"
-	"0chain.net/smartcontract/utils"
-
 	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -443,7 +441,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	details.ReadReward += value // stat
 	details.Spent += value      // reduce min lock demand left
 
-	rewardRound := utils.GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
+	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
 	if blobber.LastRoundDataReadUpdated >= rewardRound {
 		blobber.DataReadLastRound += sizeRead
@@ -734,7 +732,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	startRound := utils.GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
+	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
 	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
 		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)

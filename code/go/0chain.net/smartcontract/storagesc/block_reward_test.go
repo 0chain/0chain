@@ -4,7 +4,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/utils"
 	"github.com/stretchr/testify/require"
 	"strconv"
 	"testing"
@@ -74,7 +73,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		}
 		_, err = balances.DeleteTrieNode(
 			BlobberRewardKey(
-				utils.GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
+				GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
 		)
 		require.NoError(t, err)
 	}
