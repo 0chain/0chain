@@ -676,6 +676,10 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 ) (resp interface{}, err error) {
 	clientID := datastore.Key(params.Get("client_id"))
 
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
 	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Blobber))
 	if err != nil {
 		return nil, errors.New("blobber not found in event database")
