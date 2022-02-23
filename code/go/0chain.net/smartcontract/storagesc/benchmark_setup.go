@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -306,7 +308,7 @@ func AddMockBlobbers(
 				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
 				MinStake:                int64(blobber.StakePoolSettings.MaxStake),
 				MaxStake:                int64(blobber.StakePoolSettings.MaxStake),
-				NumDelegates:            blobber.StakePoolSettings.NumDelegates,
+				NumDelegates:            blobber.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
 			}
 			result := eventDb.Store.Get().Create(&blobberDb)
@@ -365,28 +367,23 @@ func GetMockStakePools(
 	balances cstate.StateContextI,
 ) []*stakePool {
 	sps := make([]*stakePool, 0, viper.GetInt(sc.NumBlobbers))
-	usps := make([]*userStakePools, len(clients), len(clients))
+	usps := make([]*stakepool.UserStakePools, len(clients), len(clients))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
-			Pools: make(map[string]*delegatePool),
-			Rewards: stakePoolRewards{
-				Charge:    0,
-				Blobber:   0,
-				Validator: 0,
+			StakePool: stakepool.StakePool{
+				Pools:    make(map[string]*stakepool.DelegatePool),
+				Reward:   0,
+				Settings: getMockStakePoolSettings(bId),
 			},
-			Settings: getMockStakePoolSettings(bId),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockBlobberStakePoolId(i, j)
 			clientIndex := (i&len(clients) + j) % len(clients)
-			sp.Pools[id] = &delegatePool{}
-			sp.Pools[id].ID = id
+			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-
-			sp.Pools[id].DelegateID = clients[clientIndex]
 			if usps[clientIndex] == nil {
-				usps[clientIndex] = newUserStakePools()
+				usps[clientIndex] = stakepool.NewUserStakePools()
 			}
 			usps[clientIndex].Pools[bId] = append(
 				usps[clientIndex].Pools[bId],
@@ -396,12 +393,11 @@ func GetMockStakePools(
 		sps = append(sps, sp)
 	}
 
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	for cId, usp := range usps {
 		if usp != nil {
-			_, err := balances.InsertTrieNode(userStakePoolsKey(sscId, clients[cId]), usp)
+			_, err := balances.InsertTrieNode(
+				stakepool.UserStakePoolsKey(stakepool.Blobber, clients[cId]), usp,
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -421,22 +417,16 @@ func GetMockValidatorStakePools(
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
-			Pools: make(map[string]*delegatePool),
-			Rewards: stakePoolRewards{
-				Charge:    0,
-				Blobber:   0,
-				Validator: 0,
+			StakePool: stakepool.StakePool{
+				Pools:    make(map[string]*stakepool.DelegatePool),
+				Reward:   0,
+				Settings: getMockStakePoolSettings(bId),
 			},
-			Settings: getMockStakePoolSettings(bId),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockValidatorStakePoolId(i, j)
-			clientIndex := (i&len(clients) + j) % len(clients)
-			sp.Pools[id] = &delegatePool{}
-			sp.Pools[id].ID = id
+			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-
-			sp.Pools[id].DelegateID = clients[clientIndex]
 			err := sp.save(sscId, getMockValidatorId(i), balances)
 			if err != nil {
 				panic(err)
@@ -543,13 +533,13 @@ func getMockBlobberTerms() Terms {
 	}
 }
 
-func getMockStakePoolSettings(blobber string) stakePoolSettings {
-	return stakePoolSettings{
-		DelegateWallet: blobber,
-		MinStake:       state.Balance(viper.GetInt64(sc.StorageMinStake) * 1e10),
-		MaxStake:       state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10),
-		NumDelegates:   viper.GetInt(sc.NumBlobberDelegates),
-		ServiceCharge:  viper.GetFloat64(sc.StorageMaxCharge),
+func getMockStakePoolSettings(blobber string) stakepool.StakePoolSettings {
+	return stakepool.StakePoolSettings{
+		DelegateWallet:  blobber,
+		MinStake:        state.Balance(viper.GetInt64(sc.StorageMinStake) * 1e10),
+		MaxStake:        state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10),
+		MaxNumDelegates: viper.GetInt(sc.NumBlobberDelegates),
+		ServiceCharge:   viper.GetFloat64(sc.StorageMaxCharge),
 	}
 }
 

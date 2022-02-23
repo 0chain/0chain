@@ -50,7 +50,6 @@ func copyBlock(b *Block) *Block {
 		HashIDField:        b.HashIDField,
 		Signature:          b.Signature,
 		ChainID:            b.ChainID,
-		ChainWeight:        b.ChainWeight,
 		RoundRank:          b.RoundRank,
 		PrevBlock:          copyBlock(b.PrevBlock),
 		ClientState:        nil,
@@ -189,7 +188,6 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -231,7 +229,6 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -268,7 +265,6 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -302,7 +298,6 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -329,7 +324,6 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -360,7 +354,6 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -438,7 +431,6 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -474,7 +466,6 @@ func TestBlock_Decode(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -522,7 +513,6 @@ func TestBlock_Decode(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -565,7 +555,6 @@ func TestBlock_Validate(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -599,7 +588,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -627,7 +615,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -656,7 +643,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -686,7 +672,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -709,7 +694,6 @@ func TestBlock_Validate(t *testing.T) {
 				b.ChainID = config.ServerChainID
 				b.Hash = b.ComputeHash()
 				b.MinerID = n.ID
-				b.ChainWeight = 2
 
 				return fields{
 					UnverifiedBlockBody:   b.UnverifiedBlockBody,
@@ -717,7 +701,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -750,7 +733,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -780,7 +762,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -810,7 +791,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -841,7 +821,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -876,7 +855,6 @@ func TestBlock_Validate(t *testing.T) {
 					HashIDField:           b.HashIDField,
 					Signature:             b.Signature,
 					ChainID:               b.ChainID,
-					ChainWeight:           b.ChainWeight,
 					RoundRank:             b.RoundRank,
 					PrevBlock:             b.PrevBlock,
 					TxnsMap:               b.TxnsMap,
@@ -901,7 +879,6 @@ func TestBlock_Validate(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -939,7 +916,6 @@ func TestBlock_Read(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -975,7 +951,6 @@ func TestBlock_Read(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1002,7 +977,6 @@ func TestBlock_GetScore(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1034,7 +1008,6 @@ func TestBlock_GetScore(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1072,7 +1045,6 @@ func TestBlock_Write(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1107,7 +1079,6 @@ func TestBlock_Write(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1145,7 +1116,6 @@ func TestBlock_Delete(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1180,7 +1150,6 @@ func TestBlock_Delete(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1210,7 +1179,6 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1240,7 +1208,6 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -1274,7 +1241,6 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1306,7 +1272,6 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1357,7 +1322,6 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1395,7 +1359,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1428,7 +1391,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -1459,7 +1421,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -1498,7 +1459,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -1529,7 +1489,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -1578,7 +1537,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1614,7 +1572,6 @@ func TestBlock_InitStateDB(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1667,7 +1624,6 @@ func TestBlock_InitStateDB(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1705,7 +1661,6 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1752,7 +1707,6 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1789,7 +1743,6 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1872,7 +1825,6 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1912,7 +1864,6 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -1946,7 +1897,6 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -1990,7 +1940,6 @@ func TestBlock_ComputeHash(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2016,7 +1965,6 @@ func TestBlock_ComputeHash(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -2040,7 +1988,6 @@ func TestBlock_ComputeHash(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2084,7 +2031,6 @@ func TestBlock_HashBlock(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2110,7 +2056,6 @@ func TestBlock_HashBlock(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -2134,7 +2079,6 @@ func TestBlock_HashBlock(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2169,7 +2113,6 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2195,7 +2138,6 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -2226,7 +2168,6 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2262,7 +2203,6 @@ func TestBlock_HasTransaction(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2292,7 +2232,6 @@ func TestBlock_HasTransaction(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -2316,7 +2255,6 @@ func TestBlock_HasTransaction(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -2341,7 +2279,6 @@ func TestBlock_HasTransaction(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2393,7 +2330,6 @@ func TestBlock_GetSummary(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2419,7 +2355,6 @@ func TestBlock_GetSummary(t *testing.T) {
 				HashIDField:           b.HashIDField,
 				Signature:             b.Signature,
 				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
 				RoundRank:             b.RoundRank,
 				PrevBlock:             b.PrevBlock,
 				TxnsMap:               b.TxnsMap,
@@ -2443,7 +2378,6 @@ func TestBlock_GetSummary(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2470,7 +2404,6 @@ func TestBlock_Weight(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2502,7 +2435,6 @@ func TestBlock_Weight(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2522,111 +2454,6 @@ func TestBlock_Weight(t *testing.T) {
 	}
 }
 
-func TestBlock_ComputeChainWeight(t *testing.T) {
-	b := NewBlock("", 1)
-	b.RoundRank = 1
-
-	type fields struct {
-		UnverifiedBlockBody   UnverifiedBlockBody
-		VerificationTickets   []*VerificationTicket
-		HashIDField           datastore.HashIDField
-		Signature             string
-		ChainID               datastore.Key
-		ChainWeight           float64
-		RoundRank             int
-		PrevBlock             *Block
-		TxnsMap               map[string]bool
-		ClientState           util.MerklePatriciaTrieI
-		stateStatus           int8
-		blockState            int8
-		isNotarized           bool
-		verificationStatus    int
-		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
-		MagicBlock            *MagicBlock
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   float64
-	}{
-		{
-			name: "Nil_Previous_Block_OK",
-			fields: fields{
-				UnverifiedBlockBody:   b.UnverifiedBlockBody,
-				VerificationTickets:   b.VerificationTickets,
-				HashIDField:           b.HashIDField,
-				Signature:             b.Signature,
-				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
-				RoundRank:             b.RoundRank,
-				PrevBlock:             nil,
-				TxnsMap:               b.TxnsMap,
-				ClientState:           b.ClientState,
-				stateStatus:           b.stateStatus,
-				blockState:            b.blockState,
-				isNotarized:           b.isNotarized,
-				verificationStatus:    b.verificationStatus,
-				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
-				MagicBlock:            b.MagicBlock,
-			},
-			want: 0.5,
-		},
-		{
-			name: "Not_Nil_Previous_Block_OK",
-			fields: fields{
-				UnverifiedBlockBody:   b.UnverifiedBlockBody,
-				VerificationTickets:   b.VerificationTickets,
-				HashIDField:           b.HashIDField,
-				Signature:             b.Signature,
-				ChainID:               b.ChainID,
-				ChainWeight:           b.ChainWeight,
-				RoundRank:             b.RoundRank,
-				PrevBlock:             NewBlock("", 3),
-				TxnsMap:               b.TxnsMap,
-				ClientState:           b.ClientState,
-				stateStatus:           b.stateStatus,
-				blockState:            b.blockState,
-				isNotarized:           b.isNotarized,
-				verificationStatus:    b.verificationStatus,
-				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
-				MagicBlock:            b.MagicBlock,
-			},
-			want: 0.5,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &Block{
-				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
-				VerificationTickets:   tt.fields.VerificationTickets,
-				HashIDField:           tt.fields.HashIDField,
-				Signature:             tt.fields.Signature,
-				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
-				RoundRank:             tt.fields.RoundRank,
-				PrevBlock:             tt.fields.PrevBlock,
-				TxnsMap:               tt.fields.TxnsMap,
-				ClientState:           tt.fields.ClientState,
-				stateStatus:           tt.fields.stateStatus,
-				blockState:            tt.fields.blockState,
-				isNotarized:           tt.fields.isNotarized,
-				verificationStatus:    tt.fields.verificationStatus,
-				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
-				MagicBlock:            tt.fields.MagicBlock,
-			}
-
-			b.ComputeChainWeight()
-			if b.ChainWeight != tt.want {
-				t.Errorf("ComuteChainWeight() got = %v, want = %v", b.ChainWeight, tt.want)
-			}
-		})
-	}
-}
-
 func TestBlock_GetBlockState(t *testing.T) {
 	type fields struct {
 		UnverifiedBlockBody   UnverifiedBlockBody
@@ -2634,7 +2461,6 @@ func TestBlock_GetBlockState(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2665,7 +2491,6 @@ func TestBlock_GetBlockState(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2707,7 +2532,6 @@ func TestBlock_GetClients(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2746,7 +2570,6 @@ func TestBlock_GetClients(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2773,7 +2596,6 @@ func TestBlock_GetStateStatus(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2805,7 +2627,6 @@ func TestBlock_GetStateStatus(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2832,7 +2653,6 @@ func TestBlock_IsStateComputed(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2869,7 +2689,6 @@ func TestBlock_IsStateComputed(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2903,7 +2722,6 @@ func TestBlock_GetTransaction(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -2946,7 +2764,6 @@ func TestBlock_GetTransaction(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -2973,7 +2790,6 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3005,7 +2821,6 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -3034,7 +2849,6 @@ func TestBlock_GetVerificationStatus(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3065,7 +2879,6 @@ func TestBlock_GetVerificationStatus(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -3111,7 +2924,6 @@ func TestBlock_UnknownTickets(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3158,7 +2970,6 @@ func TestBlock_UnknownTickets(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -3187,7 +2998,6 @@ func TestBlock_AddUniqueBlockExtension(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3225,7 +3035,6 @@ func TestBlock_AddUniqueBlockExtension(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -3263,7 +3072,6 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3302,7 +3110,6 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -3340,7 +3147,6 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3374,7 +3180,6 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,
@@ -3451,7 +3256,6 @@ func TestBlock_DoReadLock(t *testing.T) {
 		HashIDField           datastore.HashIDField
 		Signature             string
 		ChainID               datastore.Key
-		ChainWeight           float64
 		RoundRank             int
 		PrevBlock             *Block
 		TxnsMap               map[string]bool
@@ -3481,7 +3285,6 @@ func TestBlock_DoReadLock(t *testing.T) {
 				HashIDField:           tt.fields.HashIDField,
 				Signature:             tt.fields.Signature,
 				ChainID:               tt.fields.ChainID,
-				ChainWeight:           tt.fields.ChainWeight,
 				RoundRank:             tt.fields.RoundRank,
 				PrevBlock:             tt.fields.PrevBlock,
 				TxnsMap:               tt.fields.TxnsMap,

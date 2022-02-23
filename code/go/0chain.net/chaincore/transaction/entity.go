@@ -94,19 +94,8 @@ type smartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
-var exemptedSCFunctions = map[string]bool{
-	"add_miner":            true,
-	"miner_health_check":   true,
-	"add_sharder":          true,
-	"sharder_health_check": true,
-	"contributeMpk":        true,
-	"sharder_keep":         true,
-	"shareSignsOrShares":   true,
-	"wait":                 true,
-}
-
 // ValidateFee - Validate fee
-func (t *Transaction) ValidateFee() error {
+func (t *Transaction) ValidateFee(txnExempted map[string]bool) error {
 	if t.TransactionData != "" {
 		var smartContractData smartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
@@ -116,7 +105,7 @@ func (t *Transaction) ValidateFee() error {
 			return errors.New("invalid transaction data")
 		}
 
-		if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
+		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
 			return nil
 		}
 	}
