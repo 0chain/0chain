@@ -27,13 +27,22 @@ const (
 	activeNodes         = 1
 )
 
+type userPools struct {
+	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
+}
+
+func newUserPools() (ups *userPools) {
+	ups = new(userPools)
+	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
+	return
+}
+
 // user oriented pools requests handler
 func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
 
 	clientID := params.Get("client_id")
-	//un       *UserNode
 
 	minerPools, err := stakepool.GetUserStakePool(stakepool.Miner, clientID, balances)
 	if err != nil {

@@ -942,6 +942,7 @@ func newDelegatePoolStat(dp *stakepool.DelegatePool) (dps *delegatePoolStat) {
 	return
 }
 
+/*
 // A userPools represents response for user pools requests.
 type userPools struct {
 	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
@@ -953,7 +954,7 @@ func newUserPools() (ups *userPools) {
 	return
 }
 
-/*
+
 // UserNode keeps references to all user's pools.
 type UserNode struct {
 	ID    string                            `json:"id"`       // client ID
