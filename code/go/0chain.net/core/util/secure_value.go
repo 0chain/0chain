@@ -20,6 +20,7 @@ type Serializable interface {
 	Decode([]byte) error
 }
 
+//go:generate mockery -inpkg -case underscore -name MPTSerializable -testonly
 // MPTSerializable represents the interface for encoding/decoding
 // data that stores in MPT
 type MPTSerializable interface {

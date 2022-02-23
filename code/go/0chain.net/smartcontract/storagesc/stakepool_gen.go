@@ -418,21 +418,13 @@ func (z *rewardsStat) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *stakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 5
-	// string "Pools"
-	o = append(o, 0x85, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
-	o = msgp.AppendMapHeader(o, uint32(len(z.Pools)))
-	for za0001, za0002 := range z.Pools {
-		o = msgp.AppendString(o, za0001)
-		if za0002 == nil {
-			o = msgp.AppendNil(o)
-		} else {
-			o, err = za0002.MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, "Pools", za0001)
-				return
-			}
-		}
+	// map header, size 3
+	// string "StakePool"
+	o = append(o, 0x83, 0xa9, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
+	o, err = z.StakePool.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "StakePool")
+		return
 	}
 	// string "TotalOffers"
 	o = append(o, 0xab, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x73)
@@ -446,37 +438,6 @@ func (z *stakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.TotalUnStake.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "TotalUnStake")
-		return
-	}
-	// string "Rewards"
-	o = append(o, 0xa7, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73)
-	// map header, size 3
-	// string "Charge"
-	o = append(o, 0x83, 0xa6, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
-	o, err = z.Rewards.Charge.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Rewards", "Charge")
-		return
-	}
-	// string "Blobber"
-	o = append(o, 0xa7, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72)
-	o, err = z.Rewards.Blobber.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Rewards", "Blobber")
-		return
-	}
-	// string "Validator"
-	o = append(o, 0xa9, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72)
-	o, err = z.Rewards.Validator.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Rewards", "Validator")
-		return
-	}
-	// string "Settings"
-	o = append(o, 0xa8, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
-	o, err = z.Settings.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Settings")
 		return
 	}
 	return
@@ -500,46 +461,11 @@ func (z *stakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "Pools":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
+		case "StakePool":
+			bts, err = z.StakePool.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Pools")
+				err = msgp.WrapError(err, "StakePool")
 				return
-			}
-			if z.Pools == nil {
-				z.Pools = make(map[string]*delegatePool, zb0002)
-			} else if len(z.Pools) > 0 {
-				for key := range z.Pools {
-					delete(z.Pools, key)
-				}
-			}
-			for zb0002 > 0 {
-				var za0001 string
-				var za0002 *delegatePool
-				zb0002--
-				za0001, bts, err = msgp.ReadStringBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "Pools")
-					return
-				}
-				if msgp.IsNil(bts) {
-					bts, err = msgp.ReadNilBytes(bts)
-					if err != nil {
-						return
-					}
-					za0002 = nil
-				} else {
-					if za0002 == nil {
-						za0002 = new(delegatePool)
-					}
-					bts, err = za0002.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Pools", za0001)
-						return
-					}
-				}
-				z.Pools[za0001] = za0002
 			}
 		case "TotalOffers":
 			bts, err = z.TotalOffers.UnmarshalMsg(bts)
@@ -551,53 +477,6 @@ func (z *stakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			bts, err = z.TotalUnStake.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalUnStake")
-				return
-			}
-		case "Rewards":
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Rewards")
-				return
-			}
-			for zb0003 > 0 {
-				zb0003--
-				field, bts, err = msgp.ReadMapKeyZC(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "Rewards")
-					return
-				}
-				switch msgp.UnsafeString(field) {
-				case "Charge":
-					bts, err = z.Rewards.Charge.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Rewards", "Charge")
-						return
-					}
-				case "Blobber":
-					bts, err = z.Rewards.Blobber.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Rewards", "Blobber")
-						return
-					}
-				case "Validator":
-					bts, err = z.Rewards.Validator.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Rewards", "Validator")
-						return
-					}
-				default:
-					bts, err = msgp.Skip(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Rewards")
-						return
-					}
-				}
-			}
-		case "Settings":
-			bts, err = z.Settings.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Settings")
 				return
 			}
 		default:
@@ -614,19 +493,7 @@ func (z *stakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *stakePool) Msgsize() (s int) {
-	s = 1 + 6 + msgp.MapHeaderSize
-	if z.Pools != nil {
-		for za0001, za0002 := range z.Pools {
-			_ = za0002
-			s += msgp.StringPrefixSize + len(za0001)
-			if za0002 == nil {
-				s += msgp.NilSize
-			} else {
-				s += za0002.Msgsize()
-			}
-		}
-	}
-	s += 12 + z.TotalOffers.Msgsize() + 13 + z.TotalUnStake.Msgsize() + 8 + 1 + 7 + z.Rewards.Charge.Msgsize() + 8 + z.Rewards.Blobber.Msgsize() + 10 + z.Rewards.Validator.Msgsize() + 9 + z.Settings.Msgsize()
+	s = 1 + 10 + z.StakePool.Msgsize() + 12 + z.TotalOffers.Msgsize() + 13 + z.TotalUnStake.Msgsize()
 	return
 }
 
@@ -733,9 +600,9 @@ func (z *stakePoolSettings) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "MaxStake")
 		return
 	}
-	// string "NumDelegates"
-	o = append(o, 0xac, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
-	o = msgp.AppendInt(o, z.NumDelegates)
+	// string "MaxNumDelegates"
+	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
+	o = msgp.AppendInt(o, z.MaxNumDelegates)
 	// string "ServiceCharge"
 	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
 	o = msgp.AppendFloat64(o, z.ServiceCharge)
@@ -778,10 +645,10 @@ func (z *stakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxStake")
 				return
 			}
-		case "NumDelegates":
-			z.NumDelegates, bts, err = msgp.ReadIntBytes(bts)
+		case "MaxNumDelegates":
+			z.MaxNumDelegates, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "NumDelegates")
+				err = msgp.WrapError(err, "MaxNumDelegates")
 				return
 			}
 		case "ServiceCharge":
@@ -804,6 +671,6 @@ func (z *stakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *stakePoolSettings) Msgsize() (s int) {
-	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 13 + msgp.IntSize + 14 + msgp.Float64Size
+	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 16 + msgp.IntSize + 14 + msgp.Float64Size
 	return
 }
