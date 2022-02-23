@@ -8,6 +8,12 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
+	"0chain.net/core/datastore"
+
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -20,6 +26,42 @@ import (
 )
 
 const cantGetBlobberMsg = "can't get blobber"
+
+func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
+	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
+	if err != nil {
+		return StorageNode{}, err
+	}
+	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
+	if err != nil {
+		return StorageNode{}, err
+	}
+	return StorageNode{
+		ID:      blobber.BlobberID,
+		BaseURL: blobber.BaseURL,
+		Geolocation: StorageNodeGeolocation{
+			Latitude:  blobber.Latitude,
+			Longitude: blobber.Longitude,
+		},
+		Terms: Terms{
+			ReadPrice:               state.Balance(blobber.ReadPrice),
+			WritePrice:              state.Balance(blobber.WritePrice),
+			MinLockDemand:           blobber.MinLockDemand,
+			MaxOfferDuration:        maxOfferDuration,
+			ChallengeCompletionTime: challengeCompletionTime,
+		},
+		Capacity:        blobber.Capacity,
+		Used:            blobber.Used,
+		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  blobber.DelegateWallet,
+			MinStake:        state.Balance(blobber.MinStake),
+			MaxStake:        state.Balance(blobber.MaxStake),
+			MaxNumDelegates: blobber.NumDelegates,
+			ServiceCharge:   blobber.ServiceCharge,
+		},
+	}, nil
+}
 
 // Deprecated
 
@@ -563,6 +605,108 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	}
 
 	return blobberChallengeObj.ChallengeMap[challengeID], nil
+}
+
+// statistic for all locked tokens of a stake pool
+func (ssc *StorageSmartContract) getStakePoolStatHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	blobberID := datastore.Key(params.Get("blobber_id"))
+	logging.Logger.Info("piers getStakePoolStatHandler",
+		zap.String("blobber_id", blobberID))
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		logging.Logger.Info("piers getStakePoolStatHandler GetBlobber",
+			zap.Error(err))
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, int(stakepool.Blobber))
+	if err != nil {
+		logging.Logger.Info("piers getStakePoolStatHandler GetDelegatePools",
+			zap.Error(err))
+		return "", common.NewErrInternal("can't find user stake pool", err.Error())
+	}
+
+	stats := spStats(*blobber, delegatePools)
+	logging.Logger.Info("piers getUserStakePoolStatHandler",
+		zap.Any("spStats", stats))
+	return stats, nil
+	//return spStats(*blobber, delegatePools), nil
+}
+
+func spStats(
+	blobber event.Blobber,
+	delegatePools []event.DelegatePool,
+) *stakePoolStat {
+	stat := new(stakePoolStat)
+	stat.ID = blobber.BlobberID
+	stat.UnstakeTotal = state.Balance(blobber.UnstakeTotal)
+	stat.Capacity = blobber.Capacity
+	stat.WritePrice = state.Balance(blobber.WritePrice)
+	stat.OffersTotal = state.Balance(blobber.OffersTotal)
+	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
+	stat.Settings = stakepool.StakePoolSettings{
+		DelegateWallet:  blobber.DelegateWallet,
+		MinStake:        state.Balance(blobber.MinStake),
+		MaxStake:        state.Balance(blobber.MaxStake),
+		MaxNumDelegates: blobber.NumDelegates,
+		ServiceCharge:   blobber.ServiceCharge,
+	}
+	stat.Rewards = state.Balance(blobber.Reward)
+	for _, dp := range delegatePools {
+		dpStats := delegatePoolStat{
+			ID:           dp.PoolID,
+			Balance:      state.Balance(dp.Balance),
+			DelegateID:   dp.DelegateID,
+			Rewards:      state.Balance(dp.Reward),
+			Status:       stakepool.PoolStatus(dp.Status).String(),
+			TotalReward:  state.Balance(dp.TotalReward),
+			TotalPenalty: state.Balance(dp.TotalPenalty),
+			RoundCreated: dp.RoundCreated,
+		}
+		stat.Balance += dpStats.Balance
+		stat.Delegate = append(stat.Delegate, dpStats)
+	}
+	return stat
+}
+
+func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	clientID := datastore.Key(params.Get("client_id"))
+	logging.Logger.Info("piers getUserStakePoolStatHandler",
+		zap.String("client_id", clientID))
+	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Blobber))
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	var ups = new(userPoolStat)
+	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
+	for _, pool := range pools {
+		var dps = delegatePoolStat{
+			ID:           pool.PoolID,
+			Balance:      state.Balance(pool.Balance),
+			DelegateID:   pool.DelegateID,
+			Rewards:      state.Balance(pool.Reward),
+			TotalPenalty: state.Balance(pool.TotalPenalty),
+			TotalReward:  state.Balance(pool.TotalReward),
+			Status:       stakepool.PoolStatus(pool.Status).String(),
+			RoundCreated: pool.RoundCreated,
+		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dps)
+	}
+
+	return ups, nil
 }
 
 func (ssc *StorageSmartContract) GetBlockByHashHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {

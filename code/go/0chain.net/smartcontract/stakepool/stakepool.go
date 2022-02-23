@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"sort"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -52,6 +55,7 @@ func stakePoolKey(p Provider, id string) datastore.Key {
 	return datastore.Key(p.String() + ":stakepool:" + id)
 }
 
+// StakePool holds delegate information for an 0chain providers
 type StakePool struct {
 	Pools    map[string]*DelegatePool `json:"pools"`
 	Reward   state.Balance            `json:"rewards"`
@@ -132,6 +136,22 @@ func (sp *StakePool) Save(
 	return err
 }
 
+func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) error {
+	minter, err := cstate.GetMinter(sp.Minter)
+	if err != nil {
+		return err
+	}
+	if err := balances.AddMint(&state.Mint{
+		Minter:     minter,
+		ToClientID: sp.Settings.DelegateWallet,
+		Amount:     sp.Reward,
+	}); err != nil {
+		return fmt.Errorf("minting rewards: %v", err)
+	}
+	sp.Reward = 0
+	return nil
+}
+
 func (sp *StakePool) MintRewards(
 	clientId,
 	poolId, providerId string,
@@ -139,6 +159,11 @@ func (sp *StakePool) MintRewards(
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
+	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
+		if err := sp.MintServiceCharge(balances); err != nil {
+			return 0, err
+		}
+	}
 
 	dPool, ok := sp.Pools[poolId]
 	if !ok {
@@ -161,23 +186,20 @@ func (sp *StakePool) MintRewards(
 		dPool.Reward = 0
 	}
 
-	dpId := DelegatePoolId{
-		StakePoolId: StakePoolId{
-			ProviderId:   providerId,
-			ProviderType: providerType,
-		},
-		PoolId: poolId,
-	}
+	var dpUpdate = newDelegatePoolUpdate(providerId, providerType)
+	dpUpdate.Updates["reward"] = 0
+
 	if dPool.Status == Deleting {
 		delete(sp.Pools, poolId)
-		err := dpId.emit(event.TagRemoveDelegatePool, balances)
+		dpUpdate.Updates["status"] = Deleted
+		err := dpUpdate.emit(balances)
 		if err != nil {
 			return 0, err
 		}
 		usp.Del(providerId, poolId)
 		return reward, nil
 	} else {
-		err := dpId.emit(event.TagEmptyDelegatePool, balances)
+		err := dpUpdate.emit(balances)
 		if err != nil {
 			return 0, err
 		}
@@ -191,26 +213,26 @@ func (sp *StakePool) DistributeRewards(
 	providerType Provider,
 	balances cstate.StateContextI,
 ) error {
+	logging.Logger.Info("piers DistributeRewards",
+		zap.Float64("value", value),
+		zap.String("providerId", providerId),
+		zap.Any("providerType", providerType),
+	)
 	if value == 0 {
 		return nil // nothing to move
 	}
+	var spUpdate = NewStakePoolReward(providerId, providerType)
 
 	var serviceCharge float64
 	serviceCharge = sp.Settings.ServiceCharge * value
 	if state.Balance(serviceCharge) > 0 {
-		sp.Reward += state.Balance(serviceCharge)
+		reward := state.Balance(serviceCharge)
+		sp.Reward += reward
+		spUpdate.Reward = int64(reward)
 	}
 
 	if state.Balance(value-serviceCharge) == 0 {
-		return nil // nothing to move
-	}
-	reward := SpReward{
-		StakePoolId: StakePoolId{
-			ProviderId:   providerId,
-			ProviderType: providerType,
-		},
-		SpReward:       int64(serviceCharge),
-		DelegateReward: make(map[string]int64),
+		return nil
 	}
 
 	if len(sp.Pools) == 0 {
@@ -225,10 +247,11 @@ func (sp *StakePool) DistributeRewards(
 
 	for id, pool := range sp.Pools {
 		ratio := float64(pool.Balance) / stake
-		pool.Reward += state.Balance(valueLeft * ratio)
-		reward.DelegateReward[id] = int64(pool.Reward)
+		reward := state.Balance(valueLeft * ratio)
+		pool.Reward += reward
+		spUpdate.DelegateRewards[id] = int64(reward)
 	}
-	if err := reward.emit(balances); err != nil {
+	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 		return err
 	}
 	return nil

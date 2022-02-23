@@ -25,8 +25,9 @@ type Blobber struct {
 	MaxOfferDuration        string  `json:"max_offer_duration"`
 	ChallengeCompletionTime string  `json:"challenge_completion_time"`
 
-	Capacity        int64 `json:"capacity"` // total blobber capacity
-	Used            int64 `json:"used"`     // allocated capacity
+	Capacity        int64 `json:"capacity"`          // total blobber capacity
+	Used            int64 `json:"used"`              // allocated capacity
+	TotalDataStored int64 `json:"total_data_stored"` // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"`
 
@@ -35,7 +36,12 @@ type Blobber struct {
 	MinStake       int64   `json:"min_stake"`
 	MaxStake       int64   `json:"max_stake"`
 	NumDelegates   int     `json:"num_delegates"`
-	ServiceCharge  float64 `json:"service_charge"`
+	ServiceCharge  float64 `json:"service_chaoffers_totalrge"`
+
+	OffersTotal        int64 `json:"offers_total"`
+	UnstakeTotal       int64 `json:"unstake_total"`
+	Reward             int64 `json:"reward"`
+	TotalServiceCharge int64 `json:"total_service_charge"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
@@ -47,8 +53,27 @@ type BlobberLatLong struct {
 	Longitude float64 `json:"longitude"`
 }
 
+type blobberAggregateStats struct {
+	Reward             int64 `json:"reward"`
+	TotalServiceCharge int64 `json:"total_service_charge"`
+}
+
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where(&Blobber{BlobberID: id}).
+		First(&blobber)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving blobber %v, error %v",
+			id, result.Error)
+	}
+
+	return &blobber, nil
+}
+
+func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
+	var blobber blobberAggregateStats
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Where(&Blobber{BlobberID: id}).
@@ -134,6 +159,10 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"max_stake":                 blobber.MaxStake,
 			"num_delegates":             blobber.NumDelegates,
 			"service_charge":            blobber.ServiceCharge,
+			"offers_total":              blobber.OffersTotal,
+			"unstake_total":             blobber.UnstakeTotal,
+			"reward":                    blobber.Reward,
+			"total_service_charge":      blobber.TotalServiceCharge,
 			"saved_data":                blobber.SavedData,
 		})
 	return result.Error

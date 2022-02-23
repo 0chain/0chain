@@ -25,8 +25,3 @@ type Store interface {
 	AutoMigrate() error
 	Close()
 }
-
-type DbUpdates struct {
-	Id      string                 `json:"id"`
-	Updates map[string]interface{} `json:"updates"`
-}

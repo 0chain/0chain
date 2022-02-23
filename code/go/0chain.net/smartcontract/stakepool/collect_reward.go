@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// CollectRewardRequest uniquely defines a stake pool.
 type CollectRewardRequest struct {
 	ProviderType Provider `json:"provider_type"`
 	PoolId       string   `json:"pool_id"`

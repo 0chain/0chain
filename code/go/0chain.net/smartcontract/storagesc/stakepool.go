@@ -196,7 +196,6 @@ func (sp *stakePool) slash(
 	// the move is total movements, but it should be divided by all
 	// related stake holders, that can loose some tokens due to
 	// division error;
-
 	var ap = wp.allocPool(alloc.ID, until)
 	if ap == nil {
 		ap = new(allocationPool)
@@ -210,7 +209,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = (float64(slash) / float64(sp.stake()))
-
+	edbSlash := stakepool.NewStakePoolReward(blobID, stakepool.Blobber)
 	for id, dp := range sp.Pools {
 		var dpSlash = state.Balance(float64(dp.Balance) * ratio)
 		if dpSlash == 0 {
@@ -219,9 +218,11 @@ func (sp *stakePool) slash(
 		dp.Balance -= dpSlash
 		ap.Balance += dpSlash
 
-		// todo clean up event when stakePool table added
-		balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteStakePool, id, "one")
 		move += dpSlash
+		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
+	}
+	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
+		return 0, err
 	}
 
 	// move
@@ -267,7 +268,7 @@ func (sp *stakePool) capacity(now common.Timestamp,
 }
 
 // update the pool to get the stat
-func (sp *stakePool) stat(conf *scConfig, sscKey string,
+func (sp *stakePool) stat(_ *scConfig, _ string,
 	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
@@ -301,7 +302,7 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	}
 
 	// rewards
-	stat.Rewards.Charge = sp.Reward // total for all time
+	//	stat.Rewards.Charge = sp.Reward // total for all time
 	//stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
 	//stat.Rewards.Validator = sp.Rewards.Validator // total for all time
 
@@ -320,10 +321,13 @@ type delegatePoolStat struct {
 	ID         datastore.Key `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance
 	DelegateID datastore.Key `json:"delegate_id"` // wallet
-	Rewards    state.Balance `json:"rewards"`     // total for all time
-	Penalty    state.Balance `json:"penalty"`     // total for all time
+	Rewards    state.Balance `json:"rewards"`     // current
 	UnStake    bool          `json:"unstake"`     // want to unstake
 
+	TotalReward  state.Balance `json:"total_reward"`
+	TotalPenalty state.Balance `json:"total_penalty"`
+	Status       string        `json:"status"`
+	RoundCreated int64         `json:"round_created"`
 }
 
 type stakePoolStat struct {
@@ -341,7 +345,7 @@ type stakePoolStat struct {
 	Delegate []delegatePoolStat `json:"delegate"`
 	Penalty  state.Balance      `json:"penalty"` // total for all
 	// rewards
-	Rewards rewardsStat `json:"rewards"`
+	Rewards state.Balance `json:"rewards"`
 
 	// Settings of the stake pool
 	Settings stakepool.StakePoolSettings `json:"settings"`
@@ -408,31 +412,19 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 
 	// the stake pool can be created by related validator
 	sp, err := ssc.getStakePool(providerId, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, fmt.Errorf("unexpected error: %v", err)
-	}
-
-	if err == util.ErrValueNotPresent {
-		sp, err = newStakePool(), nil
-		sp.Settings.DelegateWallet = settings.DelegateWallet
-		sp.Settings.MinStake = settings.MinStake
-		sp.Settings.MaxStake = settings.MaxStake
-		sp.Settings.ServiceCharge = settings.ServiceCharge
-		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
-		sp.Minter = chainstate.MinterStorage
-		if err := sp.EmitNew(providerId, providerType, balances); err != nil {
-			return nil, err
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
-		return sp, err
+		sp = newStakePool()
+		sp.Settings.DelegateWallet = settings.DelegateWallet
+		sp.Minter = chainstate.MinterStorage
 	}
 
 	sp.Settings.MinStake = settings.MinStake
 	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceCharge = settings.ServiceCharge
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
-	if err := sp.EmitUpdate(providerId, providerType, balances); err != nil {
-		return nil, err
-	}
 	return sp, nil
 }
 
@@ -560,7 +552,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 const cantGetStakePoolMsg = "can't get related stake pool"
 
 // statistic for all locked tokens of a stake pool
-func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getStakePoolStatHandlerDepreciated(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 
@@ -592,7 +584,7 @@ type userPoolStat struct {
 
 // user oriented statistic
 // todo get from event database
-func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getUserStakePoolStatHandlerDeprecitated(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 

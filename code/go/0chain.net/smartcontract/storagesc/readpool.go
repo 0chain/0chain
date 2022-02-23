@@ -64,46 +64,6 @@ func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI)
 	return
 }
 
-func (rp *readPool) movePartToBlobber(
-	sscKey string,
-	ap *allocationPool,
-	sp *stakePool,
-	value float64,
-	balances cstate.StateContextI,
-) error {
-	blobberCharge := sp.Settings.ServiceCharge * float64(value)
-	if blobberCharge > float64(ap.Balance) {
-		return fmt.Errorf("allocation pool balance %v not enough to cover reward %v",
-			ap.Balance, blobberCharge)
-	}
-	ap.Balance -= state.Balance(blobberCharge)
-	sp.Reward += state.Balance(blobberCharge)
-
-	valueLeft := value - blobberCharge
-
-	if valueLeft == 0 {
-		return nil
-	}
-
-	var stake = float64(sp.stake())
-	if stake == 0 {
-		return errors.New("no stake pools found")
-	}
-
-	for _, pool := range sp.Pools {
-		ratio := float64(pool.Balance) / stake
-		move := float64(valueLeft) * ratio
-		if state.Balance(move) > ap.Balance {
-			return fmt.Errorf("allocation pool balance %v not enough to cover stake pool reward %v",
-				ap.Balance, blobberCharge)
-		}
-		pool.Reward += state.Balance(move)
-		ap.Balance -= state.Balance(move)
-	}
-
-	return nil
-}
-
 // The readPoolRedeem represents part of response of read markers redeeming.
 // A Blobber uses this response for internal read pools cache.
 type readPoolRedeem struct {
@@ -152,10 +112,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			move, bp.Balance = value, bp.Balance-value
 		}
 
-		err = rp.movePartToBlobber(sscKey, ap, sp, float64(move), balances)
-		if err != nil {
-			return // fatal, can't move, can't continue, rollback all
-		}
+		ap.Balance -= state.Balance(value)
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
@@ -174,6 +131,11 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	if moved < value {
 		return "", fmt.Errorf("not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
+	}
+
+	err = sp.DistributeRewards(float64(value), blobID, stakepool.Blobber, balances)
+	if err != nil {
+		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
 	// remove empty allocation pools
