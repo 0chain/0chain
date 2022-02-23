@@ -10,7 +10,7 @@ import (
 )
 
 func TestDelegatePoolsEvent(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -40,16 +40,16 @@ func TestDelegatePoolsEvent(t *testing.T) {
 	err = eventDb.addOrOverwriteDelegatePool(dp)
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	var count int64
-	eventDb.Get().Table("delegate_pools").Count(&count)
-	require.Equal(t, int64(1), count, "Delegate pool not getting inserted")
+	dps, err := eventDb.GetDelegatePools("provider_id", int(dbs.Blobber))
+	require.NoError(t, err)
+	require.Len(t, dps, 1)
 
 	err = eventDb.drop()
 	require.NoError(t, err)
 }
 
 func TestTagStakePoolReward(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
