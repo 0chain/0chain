@@ -11,7 +11,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"github.com/guregu/null"
 
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -518,14 +517,44 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	resp interface{}, err error) {
 
 	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		rp        *readPool
+		clientID     = params.Get("client_id")
+		allocID      = params.Get("allocation_id")
+		blobberID    = params.Get("blobber_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		offset       = 0
+		limit        = 0
 	)
 
-	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get retrieving read pool")
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("can not connect to eventdb")
+	}
+
+	if offsetString != "" {
+		offset, err := strconv.Atoi(offsetString)
+		if err != nil || offset <= 0 {
+			return nil, common.NewErrBadRequest("offset value is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err := strconv.Atoi(limitString)
+		if err != nil || limit <= 0 {
+			return nil, common.NewErrBadRequest("limit value is not valid")
+		}
+	}
+	allocations, err := balances.GetEventDB().GetAllocationPoolWithFilterAndPagination(event.AllocationPoolFilter{
+		UserID:      null.StringFrom(clientID),
+		IsWritePool: null.BoolFrom(false),
+	}, offset, limit)
+	if err != nil {
+		return nil, common.NewErrInternal(fmt.Sprintf("can't get read pool %v", err))
+	}
+
+	rp := readPool{}
+	rp.Pools = make(allocationPools, len(allocations))
+	for index, allocation := range allocations {
+		ap := allocationPoolTableToAllocationPool(allocation)
+		rp.Pools[index] = &ap
 	}
 
 	var (
@@ -564,7 +593,7 @@ func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	)
 
 	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can not connect to eventdb")
+		return nil, common.NewErrNoResource("can not connect to eventdb")
 	}
 
 	if offsetString != "" {
