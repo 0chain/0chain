@@ -283,12 +283,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		// check out balances
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 1e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
-
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
 		require.EqualValues(t, readPoolFund-1e10, rp.allocTotal(allocID, tp))
@@ -364,10 +359,8 @@ func Test_flow_reward(t *testing.T) {
 		var sp *stakePool
 		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
 
-		assert.EqualValues(t, 6e9, sp.Rewards.Charge)
+		assert.EqualValues(t, 6e9, sp.Reward)
 
 		var rp *readPool
 		rp, err = ssc.getReadPool(reader.id, balances)
@@ -440,12 +433,6 @@ func Test_flow_reward(t *testing.T) {
 		require.NotZero(t, resp)
 
 		// check out
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, state.Balance(2e10),
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
-
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
@@ -510,12 +497,6 @@ func Test_flow_reward(t *testing.T) {
 		require.NotZero(t, resp)
 
 		// check out
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 2e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
-
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
@@ -621,18 +602,10 @@ func Test_flow_reward(t *testing.T) {
 		var blobber *StorageNode
 		blobber, err = ssc.getBlobber(b3.id, balances)
 		require.NoError(t, err)
-
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b3.id, balances)
-		require.NoError(t, err)
-
 		//
 		var (
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
-			// last loop balances (previous balance)
-			cpl = cpb2
-			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
 		)
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
@@ -663,36 +636,6 @@ func Test_flow_reward(t *testing.T) {
 			require.Error(t, err)
 			require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
 			require.Zero(t, resp)
-			continue
-
-			// check out pools, blobbers, validators balances
-			wp, err = ssc.getWritePool(client.id, balances)
-			require.NoError(t, err)
-
-			// write pool balance should be the same
-			require.EqualValues(t, wpb2, wp.allocTotal(allocID, 0))
-
-			cp, err = ssc.getChallengePool(allocID, balances)
-			require.NoError(t, err)
-
-			// challenge pool tokens should be moved to blobber and validators
-			assert.True(t, cp.Balance < cpl)
-			cpl = cp.Balance
-
-			// blobber reward
-			sp, err = ssc.getStakePool(b3.id, balances)
-			require.NoError(t, err)
-			assert.True(t, b3l < sp.Rewards.Blobber+sp.Rewards.Validator)
-			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
-
-			// validators reward
-			for _, val := range valids {
-				_, err = ssc.getStakePool(val.id, balances)
-				require.NoError(t, err)
-			}
-
-			// next stage
-			prevID = challID
 		}
 
 	})
@@ -807,9 +750,6 @@ func Test_flow_penalty(t *testing.T) {
 		sp, err = ssc.getStakePool(b4.id, balances)
 		require.NoError(t, err)
 
-		var offer = sp.findOffer(allocID)
-		require.NotNil(t, offer)
-
 		// until the end
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -832,7 +772,6 @@ func Test_flow_penalty(t *testing.T) {
 			// last loop balances (previous balance)
 			spl = sp.stake()
 			wpl = wp.allocUntil(allocID, until)
-			opl = offer.Lock
 			cpl = cp.Balance
 			b4l = balances.balances[b4.id]
 		)
@@ -891,11 +830,6 @@ func Test_flow_penalty(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, sp.stake() < spl)
 			spl = sp.stake()
-
-			offer = sp.findOffer(allocID)
-			require.NotNil(t, offer)
-			assert.True(t, opl > offer.Lock)
-			opl = offer.Lock
 
 			// no rewards for the blobber
 			assert.True(t, b4l == balances.balances[b4.id])
@@ -1021,14 +955,6 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			if !isAllocBlobber(b.id, alloc) {
 				continue
 			}
-			var sp *stakePool
-			sp, err = ssc.getStakePool(b.id, balances)
-			require.NoError(t, err)
-
-			var offer = sp.findOffer(allocID)
-			require.NotNil(t, offer)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
-			require.EqualValues(t, 5000000027, offer.Lock)
 		}
 
 		// values before
@@ -1119,7 +1045,6 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.Nil(t, sp.findOffer(allocID)) // no offers expected
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 
@@ -1148,7 +1073,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			var vsp *stakePool
 			vsp, err = ssc.getStakePool(val.id, balances)
 			require.NoError(t, err)
-			assert.Zero(t, vsp.Rewards.Validator)
+			assert.Zero(t, vsp.Reward)
 			assert.Zero(t, balances.balances[val.id])
 		}
 
@@ -1256,11 +1181,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-
-			var offer = sp.findOffer(allocID)
-			require.NotNil(t, offer)
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
-			require.EqualValues(t, 5000000027, offer.Lock)
 		}
 
 		// values before
@@ -1350,7 +1271,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.Nil(t, sp.findOffer(allocID)) // no offers expected
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 
@@ -1379,7 +1299,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var vsp *stakePool
 			vsp, err = ssc.getStakePool(val.id, balances)
 			require.NoError(t, err)
-			assert.Zero(t, vsp.Rewards.Validator)
+			assert.Zero(t, vsp.Reward)
 			assert.Zero(t, balances.balances[val.id])
 		}
 

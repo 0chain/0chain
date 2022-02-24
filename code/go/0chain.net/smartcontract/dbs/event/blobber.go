@@ -30,6 +30,7 @@ type Blobber struct {
 	Capacity        int64 `json:"capacity"` // total blobber capacity
 	Used            int64 `json:"used"`     // allocated capacity
 	LastHealthCheck int64 `json:"last_health_check"`
+	SavedData       int64 `json:"saved_data"`
 
 	// stake_pool_settings
 	DelegateWallet string  `json:"delegate_wallet"`
@@ -173,6 +174,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"max_stake":                 blobber.MaxStake,
 			"num_delegates":             blobber.NumDelegates,
 			"service_charge":            blobber.ServiceCharge,
+			"saved_data":                blobber.SavedData,
 		})
 	return result.Error
 }

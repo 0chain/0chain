@@ -53,7 +53,7 @@ func SetupX2MRequestors() {
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized_block/get", options, blockEntityMetadata)
 
-	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_JSON, Compress: true}
+	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
 	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
 	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
