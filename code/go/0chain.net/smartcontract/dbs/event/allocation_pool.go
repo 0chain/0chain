@@ -13,6 +13,9 @@ type AllocationPool struct {
 	Balance       int64
 	Blobbers      []BlobberPool `gorm:"foreignKey:AllocationPoolID;references:AllocationID"`
 	IsWritePool   bool
+	ZcnBalance    int64
+	ZcnID         string
+	ExpireAt      int64
 }
 
 func (edb *EventDb) addAllocationPool(allocationPool AllocationPool) error {
@@ -25,6 +28,7 @@ type AllocationPoolFilter struct {
 	TransactionId null.String
 	UserID        null.String
 	Balance       null.Int
+	ExpireAt      null.Int
 	IsWritePool   null.Bool
 }
 

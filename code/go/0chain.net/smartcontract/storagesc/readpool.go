@@ -6,14 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"0chain.net/smartcontract/stakepool"
+	"github.com/guregu/null"
 
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -419,6 +422,10 @@ func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction
 		TransactionId: t.Hash,
 		UserID:        t.ToClientID,
 		Balance:       int64(readPool.Balance),
+		IsWritePool:   false,
+		ExpireAt:      int64(readPool.ExpireAt),
+		ZcnBalance:    int64(readPool.ZcnPool.Balance),
+		ZcnID:         readPool.ZcnPool.ID,
 	}
 	readAllocation.Blobbers = make([]event.BlobberPool, len(readPool.Blobbers))
 	for i, blobber := range readPool.Blobbers {
@@ -549,13 +556,61 @@ func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		clientID = datastore.Key(params.Get("client_id"))
-		rp       *readPool
+		clientID     = datastore.Key(params.Get("client_id"))
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		offset       = 0
+		limit        = 0
 	)
 
-	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool")
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can not connect to eventdb")
+	}
+
+	if offsetString != "" {
+		offset, err := strconv.Atoi(offsetString)
+		if err != nil || offset <= 0 {
+			return nil, common.NewErrBadRequest("offset value is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err := strconv.Atoi(limitString)
+		if err != nil || limit <= 0 {
+			return nil, common.NewErrBadRequest("limit value is not valid")
+		}
+	}
+	allocations, err := balances.GetEventDB().GetAllocationPoolWithFilterAndPagination(event.AllocationPoolFilter{
+		UserID:      null.StringFrom(clientID),
+		IsWritePool: null.BoolFrom(false),
+	}, offset, limit)
+	if err != nil {
+		return nil, common.NewErrInternal(fmt.Sprintf("can't get read pool %v", err))
+	}
+
+	rp := readPool{}
+	rp.Pools = make(allocationPools, len(allocations))
+	for index, allocation := range allocations {
+		ap := allocationPoolTableToAllocationPool(allocation)
+		rp.Pools[index] = &ap
 	}
 
 	return rp.stat(common.Now()), nil
+}
+
+func allocationPoolTableToAllocationPool(allocation event.AllocationPool) allocationPool {
+	ap := allocationPool{
+		AllocationID: allocation.AllocationID,
+		ZcnPool: tokenpool.ZcnPool{
+			TokenPool: tokenpool.TokenPool{Balance: state.Balance(allocation.ZcnBalance), ID: allocation.ZcnID},
+		},
+		ExpireAt: common.Timestamp(allocation.ExpireAt),
+	}
+	ap.Blobbers = make([]*blobberPool, len(allocation.Blobbers))
+	for index, blobber := range allocation.Blobbers {
+		ap.Blobbers[index] = &blobberPool{
+			BlobberID: blobber.BlobberID,
+			Balance:   state.Balance(blobber.Balance),
+		}
+	}
+	return ap
 }

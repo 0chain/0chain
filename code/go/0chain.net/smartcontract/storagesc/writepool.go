@@ -394,6 +394,9 @@ func writePoolToEventReadPool(writePool allocationPool, t *transaction.Transacti
 		UserID:        t.ToClientID,
 		Balance:       int64(writePool.Balance),
 		IsWritePool:   true,
+		ExpireAt:      int64(writePool.ExpireAt),
+		ZcnBalance:    int64(writePool.ZcnPool.Balance),
+		ZcnID:         writePool.ZcnPool.ID,
 	}
 	writeAllocation.Blobbers = make([]event.BlobberPool, len(writePool.Blobbers))
 	for i, blobber := range writePool.Blobbers {
