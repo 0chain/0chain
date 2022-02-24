@@ -30,10 +30,10 @@ func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, offset, l
 	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
 		Where(query)
-	if offset != -1 {
+	if offset > 0 {
 		queryBuilder = queryBuilder.Offset(offset)
 	}
-	if limit != -1 {
+	if limit > 0 {
 		queryBuilder = queryBuilder.Limit(limit)
 	}
 	queryBuilder.Order(clause.OrderByColumn{

@@ -399,8 +399,8 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 		offsetString = params.Get("offset")
 		limitString  = params.Get("limit")
 		sortString   = params.Get("sort")
-		limit        = -1
-		offset       = -1
+		limit        = 0
+		offset       = 0
 		isDescending = false
 	)
 
