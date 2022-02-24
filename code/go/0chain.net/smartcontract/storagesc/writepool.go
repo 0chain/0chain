@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"0chain.net/smartcontract/stakepool"
+	"github.com/guregu/null"
 
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -516,14 +517,42 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	resp interface{}, err error) {
 
 	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		wp        *writePool
+		clientID     = params.Get("client_id")
+		allocID      = params.Get("allocation_id")
+		blobberID    = params.Get("blobber_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		offset       = 0
+		limit        = 0
+		wp           writePool
 	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal()
+	}
+	if offsetString != "" {
+		offset, err := strconv.Atoi(offsetString)
+		if err != nil || offset <= 0 {
+			return nil, common.NewErrBadRequest("offset value is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err := strconv.Atoi(limitString)
+		if err != nil || limit <= 0 {
+			return nil, common.NewErrBadRequest("limit value is not valid")
+		}
+	}
+	allocations, err := balances.GetEventDB().GetAllocationPoolWithFilterAndPagination(
+		event.AllocationPoolFilter{
+			IsWritePool: null.BoolFrom(true),
+			UserID:      null.StringFrom(clientID),
+		},
+		offset,
+		limit,
+	)
+	wp.Pools = make(allocationPools, len(allocations))
+	for index, allocation := range allocations {
+		ap := allocationPoolTableToAllocationPool(allocation)
+		wp.Pools[index] = &ap
 	}
 
 	var (
@@ -554,12 +583,40 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		clientID = params.Get("client_id")
-		wp       *writePool
+		clientID     = params.Get("client_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		offset       = 0
+		limit        = 0
+		wp           writePool
 	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal()
+	}
+	if offsetString != "" {
+		offset, err := strconv.Atoi(offsetString)
+		if err != nil || offset <= 0 {
+			return nil, common.NewErrBadRequest("offset value is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err := strconv.Atoi(limitString)
+		if err != nil || limit <= 0 {
+			return nil, common.NewErrBadRequest("limit value is not valid")
+		}
+	}
+	allocations, err := balances.GetEventDB().GetAllocationPoolWithFilterAndPagination(
+		event.AllocationPoolFilter{
+			IsWritePool: null.BoolFrom(true),
+			UserID:      null.StringFrom(clientID),
+		},
+		offset,
+		limit,
+	)
+	wp.Pools = make(allocationPools, len(allocations))
+	for index, allocation := range allocations {
+		ap := allocationPoolTableToAllocationPool(allocation)
+		wp.Pools[index] = &ap
 	}
 
 	return wp.stat(common.Now()), nil
