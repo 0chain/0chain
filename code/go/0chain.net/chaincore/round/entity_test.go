@@ -78,7 +78,7 @@ func setupRoundDBMocks() {
 
 func makeTestNode(pbK string) (*node.Node, error) {
 	nc := map[interface{}]interface{}{
-		"type":       int8(1),
+		"type":       node.NodeTypeSharder,
 		"public_ip":  "public ip",
 		"n2n_ip":     "n2n_ip",
 		"port":       8080,
