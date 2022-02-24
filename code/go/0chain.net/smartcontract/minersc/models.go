@@ -20,9 +20,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -649,6 +647,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	return nil
 }
 
+/*
 // nodeWithVCPoolLock represents a MinerNode that use ViewChangeLock as tokenLockInterface
 // it is for decoding MinerNode bytes
 type nodeWithVCPoolLock struct {
@@ -677,11 +676,11 @@ type ZcnTokenPoolWithVCPoolLock struct {
 	tokenpool.ZcnPool `json:"pool"`
 	*ViewChangeLock   `json:"lock"`
 }
-
+*/
 // Decode decodes the miner node from bytes
 func (mn *MinerNode) Decode(input []byte) error {
-	n := newNodeWithVCPoolLock()
-	if err := json.Unmarshal(input, n); err != nil {
+	//n := newNodeWithVCPoolLock()
+	if err := json.Unmarshal(input, mn); err != nil {
 		return err
 	}
 	/*

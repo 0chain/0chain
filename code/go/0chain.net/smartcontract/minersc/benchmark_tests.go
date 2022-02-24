@@ -101,6 +101,7 @@ func BenchmarkTests(
 					Host:              "new host",
 					Port:              1234,
 				},
+				StakePool: stakepool.NewStakePool(),
 			}).Encode(),
 		},
 		{

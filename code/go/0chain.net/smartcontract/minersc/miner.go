@@ -41,6 +41,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	if err = newMiner.Validate(); err != nil {
+		logging.Logger.Info(
+			"piers AddMiner Validate", zap.Error(err))
 		return "", common.NewErrorf("add_miner", "invalid input: %v", err)
 	}
 
