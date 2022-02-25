@@ -60,12 +60,12 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 	if data != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			json.NewEncoder(w).Encode(data)
+			json.NewEncoder(w).Encode(data) //nolint: errcheck
 		} else {
 			w.Header().Set("Content-Encoding", "gzip")
 			gzw := gzip.NewWriter(w)
 			defer gzw.Close()
-			json.NewEncoder(gzw).Encode(data)
+			json.NewEncoder(gzw).Encode(data) //nolint: errcheck
 		}
 		return
 	}

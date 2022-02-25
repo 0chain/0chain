@@ -942,9 +942,11 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !config.DevConfiguration.ViewChange {
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-		w.Write([]byte(`<doctype html><html><head>
+		ss := []byte(`<doctype html><html><head>
 <title>DKG process informations</title></head><body>
-<h1>DKG process disabled</h1></body></html>`))
+<h1>DKG process disabled</h1></body></html>`)
+
+		w.Write(ss) //nolint: errcheck
 		return
 	}
 
@@ -1714,7 +1716,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 	if contract == "" {
 		contract = "global"
-	} else {
+	} else { //nolint: staticcheck
 		//TODO: get the smart contract as an optional parameter and pick the right state hash
 	}
 	mptRootHash := util.ToHex(mpt.GetRoot())

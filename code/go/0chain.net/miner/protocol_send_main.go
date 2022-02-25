@@ -29,7 +29,7 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	if mc.VerificationTicketsTo() == chain.Generator &&
 		b.MinerID != node.Self.Underlying().GetKey() {
 
-		m2m.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID)
+		m2m.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID) //nolint: errcheck
 		return
 	}
 

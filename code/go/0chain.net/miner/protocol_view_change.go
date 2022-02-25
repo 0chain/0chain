@@ -39,7 +39,7 @@ const (
 	scRestAPIGetDKGMiners  = "/getDkgList"
 	scRestAPIGetMinersMPKS = "/getMpksList"
 	scRestAPIGetMagicBlock = "/getMagicBlock"
-	scRestAPIGetMinerList  = "/getMinerList"
+	scRestAPIGetMinerList  = "/getMinerList" //nolint: deadcode, varcheck
 )
 
 // PhaseFunc represents local VC function returns optional
@@ -392,7 +392,9 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 			return err
 		}
 		if k == node.Self.Underlying().GetKey() {
-			mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false)
+			if err := mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false); err != nil {
+				return err
+			}
 			foundSelf = true
 		}
 	}
@@ -667,7 +669,9 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		var myShare, ok = share.ShareOrSigns[selfNodeKey]
 		if ok && myShare.Share != "" {
 			var share bls.Key
-			share.SetHexString(myShare.Share)
+			if err := share.SetHexString(myShare.Share); err != nil {
+				return nil, err
+			}
 			var validShare = vcdkg.ValidateShare(
 				bls.ConvertStringToMpk(mpks[key].Mpk), share)
 			if !validShare {
@@ -885,7 +889,7 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return
 	}
 
-	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock) //nolint: errcheck
 
 	if lfmb.MagicBlockNumber <= 1 {
 		mc.updateMagicBlocks(lfmb)
@@ -899,7 +903,7 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock) //nolint: errcheck
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
@@ -908,7 +912,7 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	pfmb, err = mc.GetBlock(ctx, lfmb.LatestFinalizedMagicBlockHash)
 	if err == nil && pfmb.MagicBlock != nil &&
 		pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+		mc.SetDKGSFromStore(ctx, pfmb.MagicBlock) //nolint: errcheck
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
@@ -937,6 +941,6 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return // error
 	}
 
-	mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
-	mc.updateMagicBlocks(pfmb, lfmb) // ok
+	mc.SetDKGSFromStore(ctx, pfmb.MagicBlock) //nolint: errcheck
+	mc.updateMagicBlocks(pfmb, lfmb)          // ok
 }

@@ -452,7 +452,7 @@ func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
 }
 
 // of DKG miners sorted list
-func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
+func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode, //nolint: unused
 	balances cstate.StateContextI) (has bool) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -468,7 +468,7 @@ func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
 
 // Receive list of ranked miners and extract miners of previous MB preserving
 // order. The given list not modified.
-func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
+func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode, //nolint: unused
 	balances cstate.StateContextI) (prev []*SimpleNode) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -743,7 +743,7 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
-func (ps *poolStat) decode(input []byte) error {
+func (ps *poolStat) decode(input []byte) error { //nolint: unused
 	return json.Unmarshal(input, ps)
 }
 
@@ -952,7 +952,7 @@ func min(a, b int) int {
 	return a
 }
 
-func max(a, b int) int {
+func max(a, b int) int { //nolint: unused, deadcode
 	if a > b {
 		return a
 	}

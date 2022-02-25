@@ -103,8 +103,8 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
-		require.EqualValues(t, want.error, err != nil)
 		if want.error {
+			require.Error(t, err)
 			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
@@ -605,7 +605,7 @@ func (f formulaeBlobberReward) validatorsReward() int64 {
 	return int64(totalReward * validatorCut)
 }
 
-func (f formulaeBlobberReward) validatorReward() int64 {
+func (f formulaeBlobberReward) validatorReward() int64 { //nolint: unused
 	var total = float64(f.validatorsReward())
 	var numberValidators = float64(len(f.validators))
 
@@ -640,7 +640,7 @@ func (f formulaeBlobberReward) validatorServiceCharge(validator string) int64 {
 	return int64(rewardPerValidator * serviceCharge)
 }
 
-func (f formulaeBlobberReward) blobberDelegateReward(index int) int64 {
+func (f formulaeBlobberReward) blobberDelegateReward(index int) int64 { //nolint unused
 	require.True(f.t, index < len(f.stakes))
 	var totalStake = 0.0
 	for _, stake := range f.stakes {
@@ -674,7 +674,7 @@ func (f formulaeBlobberReward) validatorDelegateReward(validator string, delegat
 	return int64(deleatesReward * delegateStake / totalStake)
 }
 
-func (f formulaeBlobberReward) totalMoved() int64 {
+func (f formulaeBlobberReward) totalMoved() int64 { //nolint: unused
 	var reward = float64(f.reward())
 	var validators = float64((f.validatorsReward()))
 	var partial = f.partial
@@ -683,7 +683,7 @@ func (f formulaeBlobberReward) totalMoved() int64 {
 	return int64(reward - movedBack)
 }
 
-func (f formulaeBlobberReward) blobberPenalty() int64 {
+func (f formulaeBlobberReward) blobberPenalty() int64 { //nolint unused
 	var totalAction = float64(f.reward())
 	var validatorReward = float64(f.validatorsReward())
 	var blobberRisk = totalAction - validatorReward

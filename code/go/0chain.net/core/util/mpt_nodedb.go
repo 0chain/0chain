@@ -256,7 +256,7 @@ func (mndb *MemoryNodeDB) Reachable(from, to Node) (ok bool) {
 func (mndb *MemoryNodeDB) ComputeRoot() (root Node) {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
-	mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) error {
+	mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) error { //nolint: errcheck
 		if root == nil {
 			root = node
 			return nil

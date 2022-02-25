@@ -12,7 +12,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
+func minerTableToMinerNode(edbMiner event.Miner) MinerNode { //nolint unused
 
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {

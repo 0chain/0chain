@@ -94,5 +94,5 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 	//TODO: make CORS more restrictive
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bNodes)
+	json.NewEncoder(w).Encode(bNodes) //nolint: errcheck
 }

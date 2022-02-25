@@ -44,7 +44,7 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
-func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
+func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) { //nolint unused
 	for i, b := range list {
 		if b.ID == update.ID {
 			list[i], ok = update, true
@@ -446,12 +446,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	return
 }
 
-func sizePrice(size int64, price state.Balance) float64 {
+func sizePrice(size int64, price state.Balance) float64 { //nolint unused
 	return sizeInGB(size) * float64(price)
 }
 
 // (expire - last_challenge_time) /  (allocation duration)
-func allocLeftRatio(start, expire, last common.Timestamp) float64 {
+func allocLeftRatio(start, expire, last common.Timestamp) float64 { //nolint unused
 	return float64(expire-last) / float64(expire-start)
 }
 
@@ -559,6 +559,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err := json.Marshal(details)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "encode error: %v", err)
+	}
 
 	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
 		return "", common.NewError("commit_connection_failed",
@@ -648,8 +651,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
-	if err := sc.newWrite(balances, commitConnection.WriteMarker.Size); err != nil {
-		return "", common.NewErrorf("commit_connection_failed", "new write err: %v", err)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "encode last write marker failed: %v", err)
 	}
-	return string(detailsBytes), err
+
+	if err := sc.newWrite(balances, commitConnection.WriteMarker.Size); err != nil {
+		return "", err
+	}
+	return string(detailsBytes), nil
 }

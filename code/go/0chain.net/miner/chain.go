@@ -141,7 +141,7 @@ type Chain struct {
 	viewChangeProcess
 
 	// not. blocks pulling joining at VC
-	pullingPin int64
+	pullingPin int64 //nolint: unused
 
 	// restart round event (rre)
 	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
@@ -186,11 +186,11 @@ func (mc *Chain) unsubRestartRoundEvent(subq chan struct{}) {
 	}
 }
 
-func (mc *Chain) startPulling() (ok bool) {
+func (mc *Chain) startPulling() (ok bool) { //nolint
 	return atomic.CompareAndSwapInt64(&mc.pullingPin, 0, 1)
 }
 
-func (mc *Chain) stopPulling() (ok bool) {
+func (mc *Chain) stopPulling() (ok bool) { //nolint
 	return atomic.CompareAndSwapInt64(&mc.pullingPin, 1, 0)
 }
 
@@ -244,7 +244,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
-	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.AddNotarizedBlock(mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
 	if b.IsStateComputed() {
 		if err := mc.SaveChanges(ctx, b); err != nil {

@@ -231,7 +231,7 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 
 			mb := mc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls) //nolint: errcheck
 		}
 		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
 	}

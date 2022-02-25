@@ -16,7 +16,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -65,10 +64,6 @@ func newStakePool() *stakePool {
 // stake pool key for the storage SC and  blobber
 func stakePoolKey(scKey, blobberID string) datastore.Key {
 	return datastore.Key(scKey + ":stakepool:" + blobberID)
-}
-
-func stakePoolID(scKey, blobberID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, blobberID))
 }
 
 // Encode to []byte
@@ -230,7 +225,6 @@ func (sp *stakePool) slash(
 func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	writePrice state.Balance) (free int64) {
 
-	const dryRun = true // don't update the stake pool state, just calculate
 	var total, offers = sp.cleanStake(), sp.TotalOffers
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater
@@ -242,10 +236,8 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 }
 
 // free staked capacity of related blobber
-func (sp *stakePool) capacity(now common.Timestamp,
-	writePrice state.Balance) (free int64) {
+func (sp *stakePool) capacity(now common.Timestamp, writePrice state.Balance) (free int64) { //nolint: unused
 
-	const dryRun = true // don't update the stake pool state, just calculate
 	var total, offers = sp.stake(), sp.TotalOffers
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
 	return
@@ -335,7 +327,7 @@ type stakePoolStat struct {
 	Settings stakepool.StakePoolSettings `json:"settings"`
 }
 
-func (stat *stakePoolStat) encode() (b []byte) {
+func (stat *stakePoolStat) encode() (b []byte) { //nolint: unused
 	var err error
 	if b, err = json.Marshal(stat); err != nil {
 		panic(err) // must never happen
@@ -343,7 +335,7 @@ func (stat *stakePoolStat) encode() (b []byte) {
 	return
 }
 
-func (stat *stakePoolStat) decode(input []byte) error {
+func (stat *stakePoolStat) decode(input []byte) error { //nolint: unused
 	return json.Unmarshal(input, stat)
 }
 

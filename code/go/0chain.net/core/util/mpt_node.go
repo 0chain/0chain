@@ -170,7 +170,7 @@ func (vn *ValueNode) SetValue(value MPTSerializable) {
 /*Encode - overwrite interface method */
 func (vn *ValueNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, vn)
+	writeNodePrefix(buf, vn) //nolint: errcheck
 	v := vn.GetValueBytes()
 	if len(v) > 0 {
 		buf.Write(v)
@@ -216,7 +216,7 @@ func (ln *LeafNode) GetHash() string {
 /*GetHashBytes - implement interface */
 func (ln *LeafNode) GetHashBytes() []byte {
 	buf := bytes.NewBuffer(nil)
-	binary.Write(buf, binary.LittleEndian, ln.GetOrigin())
+	binary.Write(buf, binary.LittleEndian, ln.GetOrigin()) //nolint: errcheck
 	ln.encode(buf)
 	return encryption.RawHash(buf.Bytes())
 }
@@ -224,7 +224,7 @@ func (ln *LeafNode) GetHashBytes() []byte {
 /*Encode - implement interface */
 func (ln *LeafNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, ln)
+	writeNodePrefix(buf, ln) //nolint: errcheck
 	ln.encode(buf)
 	return buf.Bytes()
 }
@@ -263,7 +263,9 @@ func (ln *LeafNode) Decode(buf []byte) error {
 		ln.SetValue(nil)
 	} else {
 		vn := NewValueNode()
-		vn.Decode(buf)
+		if err := vn.Decode(buf); err != nil {
+			return err
+		}
 		ln.Value = vn
 	}
 	return nil
@@ -344,7 +346,7 @@ func (fn *FullNode) GetHashBytes() []byte {
 /*Encode - implement interface */
 func (fn *FullNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, fn)
+	writeNodePrefix(buf, fn) //nolint: errcheck
 	fn.encode(buf)
 	return buf.Bytes()
 }
@@ -387,7 +389,9 @@ func (fn *FullNode) Decode(buf []byte) error {
 		fn.SetValue(nil)
 	} else {
 		vn := NewValueNode()
-		vn.Decode(buf)
+		if err := vn.Decode(buf); err != nil {
+			return err
+		}
 		fn.Value = vn
 	}
 	return nil
@@ -512,7 +516,7 @@ func (en *ExtensionNode) GetHashBytes() []byte {
 /*Encode - implement interface */
 func (en *ExtensionNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, en)
+	writeNodePrefix(buf, en) //nolint: errcheck
 	en.encode(buf)
 	return buf.Bytes()
 }
@@ -612,9 +616,12 @@ func CreateNode(r io.Reader) (Node, error) {
 		panic(fmt.Sprintf("unkown node type: %v", code))
 	}
 	var ot OriginTracker
-	ot.Read(r)
+	ot.Read(r) //nolint: errcheck
 	node.SetOriginTracker(&ot)
 	buf, err = ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
 	err = node.Decode(buf)
 	return node, err
 }
@@ -624,6 +631,5 @@ func writeNodePrefix(w io.Writer, node Node) error {
 	if err != nil {
 		return err
 	}
-	node.GetOriginTracker().Write(w)
-	return nil
+	return node.GetOriginTracker().Write(w)
 }

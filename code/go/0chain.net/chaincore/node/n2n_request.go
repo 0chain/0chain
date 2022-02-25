@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -54,7 +53,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	if total < minNum {
 		reqNum = total
 	} else {
-		reqNum = (1 / 10) * total
+		reqNum = total / 10
 		if reqNum < minNum {
 			reqNum = minNum
 		}
@@ -309,7 +308,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			provider.SetErrorCount(provider.GetSendErrors())
 
 			if resp.StatusCode != http.StatusOK {
-				data := string(buf.Bytes())
+				data := buf.String()
 				logging.N2n.Error("requesting",
 					zap.Int("from", selfNode.SetIndex),
 					zap.Int("to", provider.SetIndex),
@@ -335,7 +334,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					zap.String("entity", eName))
 				entityMeta = datastore.GetEntityMetadata(eName)
 				if entityMeta == nil {
-					data := string(buf.Bytes())
+					data := buf.String()
 					logging.N2n.Error("requesting - unknown entity",
 						zap.Int("from", selfNode.SetIndex),
 						zap.Int("to", provider.SetIndex),
@@ -440,7 +439,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		}
 		w.Header().Set("Content-Type", "application/json")
 		sdata := buffer.Bytes()
-		w.Write(sdata)
+		w.Write(sdata) //nolint: errcheck
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
@@ -496,7 +495,7 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		}
 		w.Header().Set("Content-Type", "application/json")
 		sdata := buffer.Bytes()
-		w.Write(sdata)
+		w.Write(sdata) //nolint: errcheck
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
@@ -509,5 +508,3 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			zap.Int("codec", options.CODEC))
 	}
 }
-
-var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))

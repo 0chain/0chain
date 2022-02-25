@@ -147,7 +147,7 @@ func (sc *Chain) cacheProcessingBlock(hash string) bool {
 			return false
 		}
 
-		sc.processingBlocks.Add(hash, struct{}{})
+		sc.processingBlocks.Add(hash, struct{}{}) //nolint: errcheck
 		sc.pbMutex.Unlock()
 		return true
 	default:

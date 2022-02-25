@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package miner
@@ -66,7 +67,9 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		}
 
 		var signatureScheme = chain.GetServerChain().GetSignatureScheme()
-		signatureScheme.SetPublicKey(n.PublicKey)
+		if err := signatureScheme.SetPublicKey(n.PublicKey); err != nil {
+			return nil, err
+		}
 
 		var err error
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)

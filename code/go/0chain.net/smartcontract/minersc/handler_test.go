@@ -18,7 +18,7 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
-	. "0chain.net/smartcontract/minersc"
+	. "0chain.net/smartcontract/minersc" //nolint: typecheck
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

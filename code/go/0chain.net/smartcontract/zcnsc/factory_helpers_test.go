@@ -44,7 +44,7 @@ func (n *Authorizer) Verify(sig, hash string) (bool, error) {
 }
 
 func CreateDefaultTransactionToZcnsc() *transaction.Transaction {
-	return CreateAddAuthorizerTransaction(defaultClient, MakeMockStateContext(), tokens)
+	return CreateAddAuthorizerTransaction(defaultClient, MakeMockStateContext(), tokens) //nolint: typecheck
 }
 
 func addTransactionData(tr *transaction.Transaction, methodName string, input []byte) {

@@ -124,8 +124,8 @@ func NewZLibCompDe() *ZLibCompDe {
 func (zlibcd *ZLibCompDe) Compress(data []byte) []byte {
 	bf := bytes.NewBuffer(nil)
 	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
-	w.Write(data)
-	w.Close()
+	w.Write(data) //nolint: errcheck
+	w.Close()     //nolint: errcheck
 	return bf.Bytes()
 }
 

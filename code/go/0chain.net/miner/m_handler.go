@@ -223,7 +223,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		}
 
 		// send notarized block
-		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID)
+		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID) //nolint: errcheck
 
 		logging.Logger.Info("Reject VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
@@ -278,7 +278,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
-	var lfb = mc.GetLatestFinalizedBlock()
+	var lfb = mc.GetLatestFinalizedBlock() //nolint:typecheck
 	if b.Round < lfb.Round {
 		logging.Logger.Debug("handle verify block", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil

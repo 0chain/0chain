@@ -31,11 +31,11 @@ func newTestBalances() *testBalances {
 	}
 }
 
-func (tb *testBalances) zeroize() {
+func (tb *testBalances) zeroize() { //nolint
 	tb.balances = make(map[string]state.Balance)
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
+func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) { //nolint
 	tb.balances[key] = b
 }
 
@@ -43,7 +43,7 @@ func (tb *testBalances) setLFMB(lfmb *block.Block) {
 	tb.lfmb = lfmb
 }
 
-func (tb *testBalances) requireAllBeZeros(t *testing.T) {
+func (tb *testBalances) requireAllBeZeros(t *testing.T) { //nolint
 	for id, value := range tb.balances {
 		if id == ADDRESS {
 			continue
@@ -52,7 +52,7 @@ func (tb *testBalances) requireAllBeZeros(t *testing.T) {
 	}
 }
 
-func (tb *testBalances) requireSpecifiedBeEqual(t *testing.T,
+func (tb *testBalances) requireSpecifiedBeEqual(t *testing.T, //nolint: unused
 	clients []*Client, value state.Balance, message string) {
 
 	for _, client := range clients {
@@ -60,7 +60,7 @@ func (tb *testBalances) requireSpecifiedBeEqual(t *testing.T,
 	}
 }
 
-func (tb *testBalances) requireTotalAmountBeEqual(t *testing.T,
+func (tb *testBalances) requireTotalAmountBeEqual(t *testing.T, //nolint: unused
 	expected state.Balance) {
 
 	var total state.Balance
@@ -74,7 +74,7 @@ func (tb *testBalances) requireTotalAmountBeEqual(t *testing.T,
 	require.EqualValues(t, expected, total, "total amount of tokens is wrong")
 }
 
-func (tb *testBalances) requireNodeAndStakersSumUpTo(t *testing.T,
+func (tb *testBalances) requireNodeAndStakersSumUpTo(t *testing.T, //nolint: unused
 	node *Client, stakers []*Client, expected state.Balance) {
 
 	var total state.Balance

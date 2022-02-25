@@ -24,12 +24,12 @@ type periodicResponse struct {
 	Allowed state.Balance `json:"tokens_allowed"`
 }
 
-func (pr *periodicResponse) encode() []byte {
+func (pr *periodicResponse) encode() []byte { //nolint: unused
 	buff, _ := json.Marshal(pr)
 	return buff
 }
 
-func (pr *periodicResponse) decode(input []byte) error {
+func (pr *periodicResponse) decode(input []byte) error { //nolint
 	err := json.Unmarshal(input, pr)
 	return err
 }

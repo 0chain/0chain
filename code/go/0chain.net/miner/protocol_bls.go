@@ -25,9 +25,8 @@ import (
 // ////////////  BLS-DKG Related stuff  /////////////////////
 
 var (
-	roundMap = make(map[int64]map[int]string)
+	roundMap = make(map[int64]map[int]string) //nolint
 
-	selfInd  int
 	vrfTimer metrics.Timer // VRF gen-to-sync timer
 )
 
@@ -37,11 +36,7 @@ func init() {
 
 // SetDKG - starts the DKG process
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
-	var (
-		mc   = GetMinerChain()
-		self = node.Self.Underlying()
-	)
-	selfInd = self.SetIndex
+	mc := GetMinerChain()
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
@@ -101,10 +96,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
-			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false)
+			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false) //nolint: errcheck
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false)
+				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false) //nolint: errcheck
 			}
 		}
 	}
@@ -432,7 +427,11 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		zap.Any("group_signature", groupSignature.GetHexString()),
 		zap.String("rboOutput", rbOutput))
 
-	mc.computeRBO(ctx, mr, rbOutput)
+	//mc.computeRBO(ctx, mr, rbOutput)
+	if err := mc.computeRBO(ctx, mr, rbOutput); err != nil {
+		Logger.Error("compute RBO failed", zap.Error(err))
+		return false
+	}
 
 	return true
 }

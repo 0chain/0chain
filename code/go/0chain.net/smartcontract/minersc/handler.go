@@ -22,8 +22,8 @@ import (
 
 const (
 	cantGetMinerNodeMsg = "can't get miner node"
-	inactiveNodes       = -1
-	activeNodes         = 1
+	inactiveNodes       = -1 //nolint unused
+	activeNodes         = 1  //nolint unused
 )
 
 // user oriented pools requests handler

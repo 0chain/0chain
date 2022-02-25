@@ -98,7 +98,7 @@ func (ml *MemLogger) writeEntry(w io.Writer, encoder zapcore.Encoder, entry *obs
 	if err != nil {
 		return
 	}
-	w.Write(buf.Bytes())
+	w.Write(buf.Bytes()) //nolint: errcheck
 }
 
 /*With - implement interface */

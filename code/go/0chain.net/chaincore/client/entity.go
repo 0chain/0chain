@@ -61,23 +61,25 @@ func (c *Client) Clone() *Client {
 		return nil
 	}
 
-	clone := Client{
-		IDField:           c.IDField,
-		VersionField:      c.VersionField,
-		CreationDateField: c.CreationDateField,
-		sigSchemeType:     c.sigSchemeType,
-		CollectionMemberField: datastore.CollectionMemberField{
-			CollectionScore: c.CollectionMemberField.CollectionScore,
-		},
+	clone := &Client{}
+	clone.Copy(c)
+	return clone
+}
+
+func (c *Client) Copy(src *Client) {
+	c.IDField = src.IDField
+	c.VersionField = src.VersionField
+	c.CreationDateField = src.CreationDateField
+	c.sigSchemeType = src.sigSchemeType
+	c.CollectionMemberField = datastore.CollectionMemberField{
+		CollectionScore: src.CollectionMemberField.CollectionScore,
 	}
 
-	clone.SetPublicKey(c.PublicKey)
+	c.SetPublicKey(src.PublicKey)
 
-	if c.EntityCollection != nil {
-		clone.EntityCollection = c.EntityCollection.Clone()
+	if src.EntityCollection != nil {
+		c.EntityCollection = src.EntityCollection.Clone()
 	}
-
-	return &clone
 }
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
@@ -299,7 +301,7 @@ func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	cacher.Add(co.GetKey(), co)
+	cacher.Add(co.GetKey(), co) //nolint: errcheck
 	return response, nil
 }
 

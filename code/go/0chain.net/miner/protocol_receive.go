@@ -51,7 +51,7 @@ func (mc *Chain) handleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	}
 }
 
-func (mc *Chain) isVRFComplete(ctx context.Context, r int64, rrs int64) error {
+func (mc *Chain) isVRFComplete(ctx context.Context, r int64, rrs int64) error { //nolint
 	var (
 		mb           = mc.GetMagicBlock(r)
 		blsThreshold = mb.T
@@ -277,39 +277,10 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (mc *Chain) verifyTicketsWithRetry(ctx context.Context,
-	r int64, block string, bvts []*block.VerificationTicket, retryN int) error {
-	for i := 0; i < retryN; i++ {
-		err := func() error {
-			logging.Logger.Debug("verification ticket",
-				zap.Int64("round", r),
-				zap.String("block", block),
-				zap.Int("retry", i))
-			cctx, cancel := context.WithTimeout(ctx, time.Second)
-			defer cancel()
-			return mc.VerifyTickets(cctx, block, bvts, r)
-		}()
-
-		switch err {
-		case nil:
-			return nil
-		case context.DeadlineExceeded:
-			if mc.GetCurrentRound() > r {
-				return common.NewErrorf("verify_tickets_timeout", "chain moved on, round: %d", r)
-			}
-		default:
-			logging.Logger.Error("verification ticket failed",
-				zap.Int64("round", r),
-				zap.Error(err))
-			return err
-		}
-	}
-
-	return common.NewErrorf("verify_tickets_timeout", "ticket timeout with retry, round: %d", r)
-}
-
 // handleVerificationTicketMessage - handles the verification ticket message.
-func (mc *Chain) handleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
+func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
+	msg *BlockMessage) {
+
 	var (
 		bvt = msg.BlockVerificationTicket
 		rn  = bvt.Round
@@ -576,7 +547,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 
 	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
-	if !mc.AddNotarizedBlock(ctx, mr, b) {
+	if !mc.AddNotarizedBlock(mr, b) {
 		finish(false)
 		return
 	}

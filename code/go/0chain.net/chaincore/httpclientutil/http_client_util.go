@@ -32,7 +32,7 @@ import (
   ToDo: This is adapted from blobber code. Need to find a way to reuse this
 */
 
-const maxRetries = 5
+const maxRetries = 5 //nolint unused
 
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
@@ -54,8 +54,7 @@ const RegisterClient = "/v1/client/put"
 var httpClient *http.Client
 
 func init() {
-	var transport *http.Transport
-	transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout:   1 * time.Second,
@@ -110,7 +109,7 @@ func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg.Add(len(urls))
 
 	for _, u := range urls {
-		go SendPostRequest(u, data, ID, pkey, &wg)
+		go SendPostRequest(u, data, ID, pkey, &wg) //nolint: errcheck
 	}
 	wg.Wait()
 }
@@ -142,7 +141,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
-		go sendTransactionToURL(txnURL, txn, ID, pkey, nil)
+		go sendTransactionToURL(txnURL, txn, ID, pkey, nil) //nolint: errcheck
 	}
 }
 
@@ -494,15 +493,14 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 			if err != nil {
 				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
 			}
-			summary.Decode(bodyBytes)
-			logging.Logger.Info("get magic block -- entity", zap.Any("summary", summary))
-			// logging.Logger.Info("get magic block -- entity", zap.Any("magic_block", entity), zap.Any("string of magic block", string(bodyBytes)))
+			err = summary.Decode(bodyBytes)
 			if err != nil {
 				logging.Logger.Error("Error unmarshalling response", zap.Any("error", err))
 				numErrs++
 				errString = errString + sharder + ":" + err.Error()
 				continue
 			}
+			logging.Logger.Info("get magic block -- entity", zap.Any("summary", summary))
 			retObj = summary
 			numSuccess++
 		}
