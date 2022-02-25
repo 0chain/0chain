@@ -18,8 +18,8 @@ type BenchTest struct {
 	endpoint func(
 		cstate.StateContextI,
 	) error
-	txn   *transaction.Transaction
-	input []byte
+	txn   *transaction.Transaction //nolint: structcheck,unused
+	input []byte                   //nolint: structcheck,unused
 }
 
 func (bt BenchTest) Name() string {
@@ -84,7 +84,7 @@ func controlIndividual(balances cstate.StateContextI) error {
 		if err != nil {
 			return err
 		}
-		itArray = append(itArray, it)
+		itArray = append(itArray, it) //nolint
 	}
 	return nil
 }

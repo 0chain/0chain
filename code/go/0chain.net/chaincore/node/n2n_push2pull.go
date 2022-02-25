@@ -102,8 +102,6 @@ func updatePullStats(sender *Node, uri string, length int, ts time.Time) {
 	sizer.Update(int64(length))
 }
 
-const pullEntityBufferSize = 10
-
 // pullingCache represents the cache for pulling request.
 // the key is the 'entityName:id', and value is a buffered channel
 type pullingCache struct {
@@ -131,7 +129,7 @@ func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullH
 	case cache.ErrKeyNotFound:
 		ch := make(chan pullHandlerFunc, c.chanSize)
 		ch <- pullHandler
-		c.cache.Add(key, ch)
+		c.cache.Add(key, ch) //nolint: errcheck
 		c.mutex.Unlock()
 
 		go c.runHandler(ctx, key, ch)

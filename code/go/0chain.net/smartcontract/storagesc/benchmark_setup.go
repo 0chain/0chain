@@ -33,12 +33,12 @@ func AddMockAllocations(
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
 		allocations Allocations
-		wps         = make([]*writePool, len(clients), len(clients))
-		rps         = make([]*readPool, len(clients), len(clients))
-		cas         = make([]*ClientAllocation, len(clients), len(clients))
-		fps         = make([]fundedPools, len(clients), len(clients))
+		wps         = make([]*writePool, len(clients))
+		rps         = make([]*readPool, len(clients))
+		cas         = make([]*ClientAllocation, len(clients))
+		fps         = make([]fundedPools, len(clients))
 
-		challanges = make([]BlobberChallenge, len(blobbers), len(blobbers))
+		challanges = make([]BlobberChallenge, len(blobbers))
 	)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
@@ -55,6 +55,9 @@ func AddMockAllocations(
 		cp.TokenPool.ID = challengePoolKey(sscId, sa.ID)
 		cp.Balance = mockMinLockDemand * 100
 		_, err = balances.InsertTrieNode(challengePoolKey(sscId, sa.ID), cp)
+		if err != nil {
+			panic(err)
+		}
 
 		startClients := i % len(clients)
 		amountPerBlobber := state.Balance(100 * 1e10)
@@ -367,7 +370,7 @@ func GetMockStakePools(
 	balances cstate.StateContextI,
 ) []*stakePool {
 	sps := make([]*stakePool, 0, viper.GetInt(sc.NumBlobbers))
-	usps := make([]*stakepool.UserStakePools, len(clients), len(clients))
+	usps := make([]*stakepool.UserStakePools, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{

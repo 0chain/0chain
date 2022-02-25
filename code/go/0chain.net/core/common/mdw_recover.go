@@ -1,12 +1,13 @@
 package common
 
 import (
-	"0chain.net/core/logging"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var (
@@ -34,9 +35,9 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 					data["code"] = are.Code
 				}
 				buf := bytes.NewBuffer(nil)
-				json.NewEncoder(buf).Encode(data)
+				json.NewEncoder(buf).Encode(data) //nolint: errcheck
 				w.WriteHeader(http.StatusInternalServerError)
-				buf.WriteTo(w)
+				buf.WriteTo(w) //nolint: errcheck
 			}
 		}()
 		handler(w, r)

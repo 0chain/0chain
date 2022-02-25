@@ -45,7 +45,7 @@ func AddVestingPools(
 			panic(err)
 		}
 
-		vestingPools = append(vestingPools, vestingPool.ID)
+		vestingPools = append(vestingPools, vestingPool.ID) //nolint: staticcheck
 	}
 }
 

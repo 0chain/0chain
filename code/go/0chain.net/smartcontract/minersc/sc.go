@@ -155,7 +155,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	return scFunc(t, input, gn, balances)
 }
 
-func getHostnameAndPort(burl string) (string, int, error) {
+func getHostnameAndPort(burl string) (string, int, error) { //nolint unused
 	hostName := ""
 	port := 0
 

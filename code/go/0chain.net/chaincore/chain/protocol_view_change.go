@@ -139,7 +139,7 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 		selfNodeKey  = selfNode.GetKey()
 	)
 
-	if mc.IsActiveInChain() && remote == false {
+	if mc.IsActiveInChain() && !remote {
 
 		var (
 			sp  = getStatePath(selfNode)
@@ -374,7 +374,6 @@ func isValueZero(v reflect.Value) bool {
 	default:
 		panic("reflect.Value.IsZero")
 	}
-	return false
 }
 
 // The isZero returns true if given value is zero. It can be replaced with

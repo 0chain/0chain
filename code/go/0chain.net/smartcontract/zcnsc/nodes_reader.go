@@ -1,23 +1,12 @@
 package zcnsc
 
 import (
-	"reflect"
-
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/util"
 
 	cstate "0chain.net/chaincore/chain/state"
 )
-
-type persistentNode interface {
-	util.Serializable
-	GetKey() string
-}
-
-func isNil(i interface{}) bool {
-	return i == nil || reflect.ValueOf(i).IsNil()
-}
 
 // GetAuthorizerNode returns error if node not found
 func GetAuthorizerNode(id string, ctx cstate.StateContextI) (*AuthorizerNode, error) {

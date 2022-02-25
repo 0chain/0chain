@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/zcnsc"
 
 	"github.com/stretchr/testify/require"
@@ -58,7 +59,7 @@ func init() {
 }
 
 type (
-	stakePoolConfig struct {
+	stakePoolConfig struct { //nolint unused
 		MinLock          int64         `json:"min_lock"`
 		InterestRate     float64       `json:"interest_rate"`
 		InterestInterval time.Duration `json:"interest_interval"`
@@ -89,9 +90,9 @@ type (
 	//	StakePool                       *stakePoolConfig `json:"stakepool"`
 	//}
 
-	//userStakePools struct {
-	//	Pools map[datastore.Key][]datastore.Key `json:"pools"`
-	//}
+	userStakePools struct {
+		Pools map[datastore.Key][]datastore.Key `json:"pools"`
+	}
 )
 
 //func (c *scConfig) MarshalMsg([]byte) ([]byte, error) {
@@ -1547,7 +1548,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				sp := &storagesc.UserStakePools{
+				sp := &stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						"key": {"key"},
 					},
@@ -1557,7 +1558,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					t.Fatal(err)
 				}
 				v2 := util.SecureSerializableValue{Buffer: blob}
-				k2 := encryption.Hash(storagesc.ADDRESS + ":stakepool:userpools:")
+				k2 := stakepool.UserStakePoolsKey(stakepool.Blobber, storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k2), &v2); err != nil {
 					t.Fatal(err)
 				}

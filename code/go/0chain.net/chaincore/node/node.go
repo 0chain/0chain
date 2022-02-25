@@ -41,7 +41,7 @@ func DeregisterNode(nodeID string) {
 
 	return // TODO (sfxdx): temporary disable nodes deregistering
 
-	nodesMutex.Lock()
+	nodesMutex.Lock() //nolint: govet
 	defer nodesMutex.Unlock()
 	delete(nodes, nodeID)
 }
@@ -50,7 +50,7 @@ func DeregisterNode(nodeID string) {
 func DeregisterNodes(keep map[string]struct{}) {
 	return // never deregister nodes for now
 
-	nodesMutex.Lock()
+	nodesMutex.Lock() //nolint: govet
 	defer nodesMutex.Unlock()
 
 	var newNodes = make(map[string]*Node)
@@ -323,7 +323,7 @@ func Read(line string) (*Node, error) {
 		return nil, err
 	}
 	node.Port = int(port)
-	node.SetID(fields[3])
+	node.SetID(fields[3]) //nolint: errcheck
 	node.Client.SetPublicKey(fields[4])
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
@@ -341,7 +341,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
-	node.SetID(nc["id"].(string))
+	node.SetID(nc["id"].(string)) //nolint: errcheck
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
 	} else {
@@ -463,7 +463,7 @@ func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
 		metric = metrics.NewHistogram(metrics.NewUniformSample(256))
 		n.SizeByURI[uri] = metric
-		metrics.Register(metricID, metric)
+		metrics.Register(metricID, metric) //nolint: errcheck
 	}
 	return metric
 }
@@ -616,7 +616,7 @@ func serveMetricKey(uri string) string {
 	return "p?" + uri
 }
 
-func isPullRequestURI(uri string) bool {
+func isPullRequestURI(uri string) bool { //nolint
 	return strings.HasPrefix(uri, "p?")
 }
 
@@ -649,7 +649,7 @@ func (n *Node) getOptimalLargeMessageSendTime() float64 {
 	return sendTime
 }
 
-func (n *Node) getTime(uri string) float64 {
+func (n *Node) getTime(uri string) float64 { //nolint: unused
 	pullTimer := n.GetTimer(uri)
 	return pullTimer.Mean()
 }
@@ -732,10 +732,7 @@ func (n *Node) Clone() *Node {
 		CommChannel:               make(chan struct{}, 15),
 	}
 
-	cc := n.Client.Clone()
-	if cc != nil {
-		clone.Client = *cc
-	}
+	clone.Client.Copy(&n.Client)
 
 	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))
 	for k, v := range n.TimersByURI {

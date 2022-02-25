@@ -187,8 +187,7 @@ func (sp *StakePool) DistributeRewards(
 		return nil // nothing to move
 	}
 
-	var serviceCharge float64
-	serviceCharge = sp.Settings.ServiceCharge * value
+	serviceCharge := sp.Settings.ServiceCharge * value
 	if state.Balance(serviceCharge) > 0 {
 		sp.Reward += state.Balance(serviceCharge)
 	}

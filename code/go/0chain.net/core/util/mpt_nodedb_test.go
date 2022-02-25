@@ -690,13 +690,6 @@ func TestMergeState(t *testing.T) {
 	})
 }
 
-func noNodeNotFound(err error) error {
-	if err == ErrNodeNotFound {
-		return nil
-	}
-	return err
-}
-
 // launch test with -race or make the case sense
 //func TestNodeDB_parallel(t *testing.T) {
 //

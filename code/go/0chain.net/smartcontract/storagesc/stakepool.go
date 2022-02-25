@@ -13,131 +13,15 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 )
 
-//msgp:ignore offerPool unlockResponse stakePoolStat stakePoolRequest userPoolStat
+//msgp:ignore unlockResponse stakePoolStat stakePoolRequest userPoolStat rewardsStat delegatePoolStat
 //go:generate msgp -io=false -tests=false -unexported=true -v
-
-// A UserStakePools collects stake pools references for a user.
-type UserStakePools struct {
-	// Pools is map blobber_id -> []pool_id.
-	Pools map[string][]string `json:"pools"`
-}
-
-func newUserStakePools() (usp *UserStakePools) {
-	usp = new(UserStakePools)
-	usp.Pools = make(map[datastore.Key][]datastore.Key)
-	return
-}
-
-// add or overwrite
-func (usp *UserStakePools) add(blobberID, poolID datastore.Key) {
-	usp.Pools[blobberID] = append(usp.Pools[blobberID], poolID)
-}
-
-// delete by id
-func (usp *UserStakePools) del(blobberID, poolID datastore.Key) (empty bool) {
-	var (
-		list = usp.Pools[blobberID]
-		i    int
-	)
-	for _, id := range list {
-		if id == poolID {
-			continue
-		}
-		list[i], i = id, i+1
-	}
-	list = list[:i]
-	if len(list) == 0 {
-		delete(usp.Pools, blobberID) // delete empty
-	} else {
-		usp.Pools[blobberID] = list // update
-	}
-	return len(usp.Pools) == 0
-}
-
-func (usp *UserStakePools) Encode() []byte {
-	var p, err = json.Marshal(usp)
-	if err != nil {
-		panic(err) // must never happen
-	}
-	return p
-}
-
-func (usp *UserStakePools) Decode(p []byte) error {
-	return json.Unmarshal(p, usp)
-}
-
-// save the user stake pools
-func (usp *UserStakePools) save(scKey, clientID datastore.Key,
-	balances chainstate.StateContextI) (err error) {
-
-	_, err = balances.InsertTrieNode(userStakePoolsKey(scKey, clientID), usp)
-	return
-}
-
-// remove the entire user stake pools node
-func (usp *UserStakePools) remove(scKey, clientID datastore.Key,
-	balances chainstate.StateContextI) (err error) {
-
-	_, err = balances.DeleteTrieNode(userStakePoolsKey(scKey, clientID))
-	return
-}
-
-func userStakePoolsKey(scKey, clientID datastore.Key) datastore.Key {
-	return datastore.Key(scKey + ":stakepool:userpools:" + clientID)
-}
-
-// offerPool represents stake tokens of a blobber locked
-// for an allocation, it required for cases where blobber
-// changes terms or changes its capacity including reducing
-// the capacity to zero; it implemented not as a token
-// pool, but as set or values
-type offerPool struct {
-	Lock   state.Balance    `json:"lock"`   // offer stake
-	Expire common.Timestamp `json:"expire"` // offer expiration
-}
-
-// stake pool internal rewards information
-type stakePoolRewards struct {
-	Charge    state.Balance `json:"charge"`    // blobber charge
-	Blobber   state.Balance `json:"blobber"`   // blobber stake holders reward
-	Validator state.Balance `json:"validator"` // validator stake holders reward
-}
-
-// delegatePool
-type delegatePool struct {
-	tokenpool.ZcnPool `json:"pool"`    // the pool
-	MintAt            common.Timestamp `json:"mint_at"`     // last mint time
-	DelegateID        string           `json:"delegate_id"` // user
-	Rewards           state.Balance    `json:"rewards"`     // total
-	Penalty           state.Balance    `json:"penalty"`     // total
-	UnStake           bool             `json:"unstake"`     // want to unstake
-}
-
-// stake pool settings
-
-type stakePoolSettings struct {
-	// DelegateWallet for pool owner.
-	DelegateWallet string `json:"delegate_wallet"`
-	// MinStake allowed.
-	MinStake state.Balance `json:"min_stake"`
-	// MaxStake allowed.
-	MaxStake state.Balance `json:"max_stake"`
-	// NumDelegates maximum allowed.
-	MaxNumDelegates int `json:"num_delegates"`
-	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
-	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
-	// then the blobber can't be registered / updated.
-	ServiceCharge float64 `json:"service_charge"`
-}
 
 func validateStakePoolSettings(
 	sps stakepool.StakePoolSettings,
@@ -181,10 +65,6 @@ func newStakePool() *stakePool {
 // stake pool key for the storage SC and  blobber
 func stakePoolKey(scKey, blobberID string) datastore.Key {
 	return datastore.Key(scKey + ":stakepool:" + blobberID)
-}
-
-func stakePoolID(scKey, blobberID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, blobberID))
 }
 
 // Encode to []byte
@@ -348,7 +228,6 @@ func (sp *stakePool) slash(
 func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	writePrice state.Balance) (free int64) {
 
-	const dryRun = true // don't update the stake pool state, just calculate
 	var total, offers = sp.cleanStake(), sp.TotalOffers
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater
@@ -360,10 +239,8 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 }
 
 // free staked capacity of related blobber
-func (sp *stakePool) capacity(now common.Timestamp,
-	writePrice state.Balance) (free int64) {
+func (sp *stakePool) capacity(now common.Timestamp, writePrice state.Balance) (free int64) { //nolint: unused
 
-	const dryRun = true // don't update the stake pool state, just calculate
 	var total, offers = sp.stake(), sp.TotalOffers
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
 	return
@@ -450,7 +327,7 @@ type stakePoolStat struct {
 	Settings stakepool.StakePoolSettings `json:"settings"`
 }
 
-func (stat *stakePoolStat) encode() (b []byte) {
+func (stat *stakePoolStat) encode() (b []byte) { //nolint: unused
 	var err error
 	if b, err = json.Marshal(stat); err != nil {
 		panic(err) // must never happen
@@ -458,7 +335,7 @@ func (stat *stakePoolStat) encode() (b []byte) {
 	return
 }
 
-func (stat *stakePoolStat) decode(input []byte) error {
+func (stat *stakePoolStat) decode(input []byte) error { //nolint: unused
 	return json.Unmarshal(input, stat)
 }
 

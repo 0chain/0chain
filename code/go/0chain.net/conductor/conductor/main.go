@@ -35,10 +35,10 @@ func init() {
 
 // type aliases
 type (
-	NodeID           = config.NodeID
+	NodeID           = config.NodeID //nolint unused
 	NodeName         = config.NodeName
 	Round            = config.Round
-	RoundName        = config.RoundName
+	RoundName        = config.RoundName //nolint unused
 	Number           = config.Number
 	ExpectMagicBlock = config.ExpectMagicBlock
 )
@@ -598,9 +598,6 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if !ok {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
-	if r.verbose {
-		// log.Print(" [INF] round ", re.Round)
-	}
 
 	// set last round
 	r.lastAcceptedRound = struct {
@@ -757,7 +754,7 @@ func (r *Runner) proceedWaiting() (err error) {
 	return
 }
 
-func isOk(cs []reportFlowDirective) (ok bool) {
+func isOk(cs []reportFlowDirective) (ok bool) { //nolint
 	for _, c := range cs {
 		if !c.success {
 			return false

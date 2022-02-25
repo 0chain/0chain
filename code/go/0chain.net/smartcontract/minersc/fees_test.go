@@ -78,7 +78,7 @@ func extractBlockSharders(sharders []*sharder, n int) (bs []string) {
 	return
 }
 
-func getBlockSharders(sharders []*sharder, bs []string) (got []*sharder) {
+func getBlockSharders(sharders []*sharder, bs []string) (got []*sharder) { //nolint unused
 	got = make([]*sharder, 0, len(bs))
 	for _, sh := range sharders {
 		for _, id := range bs {

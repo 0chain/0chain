@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 )
 
 const (
@@ -201,7 +202,7 @@ func hasField(r *http.Request, field string) (ok bool) {
 
 func skipFormField(skip string, r *http.Request) (q *http.Request, err error) {
 
-	r.ParseMultipartForm(0)
+	r.ParseMultipartForm(0) //nolint: errcheck
 	if r.MultipartForm == nil {
 		return r, nil
 	}
@@ -289,7 +290,7 @@ func simpleRoundTrip(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	copyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	io.Copy(w, resp.Body) //nolint: errcheck
 }
 
 func handle(w http.ResponseWriter, r *http.Request, markers, filter string) {
@@ -384,7 +385,7 @@ func (r *Run) Set(val string) (err error) {
 
 func waitSigInt() {
 	var c = make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, os.Kill)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	log.Printf("got signal %s, exiting...", <-c)
 }
 
@@ -463,7 +464,7 @@ func main() {
 
 	// start the proxy
 	go func() { log.Fatal(s.ListenAndServe()) }()
-	defer s.Shutdown(back)
+	defer s.Shutdown(back) //nolint: errcheck
 
 	if len(run) == 0 {
 		waitSigInt()

@@ -395,7 +395,7 @@ func (t *Transaction) DebugTxn() bool {
 	if !config.Development() {
 		return false
 	}
-	return strings.Index(t.TransactionData, "debug") >= 0
+	return strings.Contains(t.TransactionData, "debug")
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */

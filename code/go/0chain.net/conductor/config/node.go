@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // A Node used in tests.
@@ -101,16 +100,6 @@ func (n *Node) IsStarted() bool {
 	return n.Command != nil
 }
 
-func killAfterTimeout(cmd *exec.Cmd, tm time.Duration, done chan struct{}) {
-	select {
-	case <-done:
-	case <-time.After(tm):
-		if cmd != nil && cmd.Process != nil {
-			cmd.Process.Kill()
-		}
-	}
-}
-
 // Stop interrupts command and waits it. Then it closes STDIN and STDOUT
 // files (logs).
 func (n *Node) Stop() (err error) {
@@ -122,10 +111,10 @@ func (n *Node) Stop() (err error) {
 		return fmt.Errorf("command %v: kill: %v", n.Name, err)
 	}
 	if stdin, ok := startCmd.Stdin.(*os.File); ok {
-		stdin.Close() // ignore error
+		stdin.Close() //nolint // ignore error
 	}
 	if stderr, ok := startCmd.Stderr.(*os.File); ok {
-		stderr.Close() // ignore error
+		stderr.Close() //nolint // ignore error
 	}
 
 	if n.WorkDir == "" {

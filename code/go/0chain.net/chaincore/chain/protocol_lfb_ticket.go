@@ -81,7 +81,7 @@ type LFBTicket struct {
 	IsOwn     bool     `json:"-" msg:"-"`  // is own
 }
 
-func (lfbt *LFBTicket) addSender(sharder string) {
+func (lfbt *LFBTicket) addSender(sharder string) { //nolint
 	for _, sh := range lfbt.Senders {
 		if sharder == sh {
 			return // already hae
@@ -190,7 +190,6 @@ func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 	case c.unsubLFBTicket <- sub:
 	case <-c.lfbTickerWorkerIsDone:
 	}
-	return
 }
 
 // GetLatestLFBTicket

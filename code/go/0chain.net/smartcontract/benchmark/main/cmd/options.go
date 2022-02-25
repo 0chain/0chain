@@ -13,7 +13,7 @@ import (
 
 func setupOptions(flags *pflag.FlagSet) ([]string, []string) {
 	var err error
-	verbose := true
+	var verbose bool
 	if flags.Changed("verbose") {
 		verbose, err = flags.GetBool("verbose")
 		if err != nil {
@@ -59,8 +59,7 @@ func getTestSuites(
 	var suites []bk.TestSuite
 	if len(bkNames) == 0 {
 		for _, bks := range benchmarkSources {
-			var suite bk.TestSuite
-			suite = bks(data, &BLS0ChainScheme{})
+			suite := bks(data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)
 		}
@@ -68,8 +67,7 @@ func getTestSuites(
 	}
 	for _, name := range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
-			var suite bk.TestSuite
-			suite = benchmarkSources[code](data, &BLS0ChainScheme{})
+			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)
 			//suites = append(suites, benchmarkSources[code](data, &BLS0ChainScheme{}))

@@ -41,7 +41,7 @@ func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
 	return wp.Pools.blobberCut(allocID, blobberID, now)
 }
 
-func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) {
+func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) { //nolint unused
 	wp.Pools.removeEmpty(allocID, ap)
 }
 

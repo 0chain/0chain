@@ -100,7 +100,7 @@ func SetupPartialState(store datastore.Store) {
 func (ps *PartialState) newNodeDB() *util.MemoryNodeDB {
 	mndb := util.NewMemoryNodeDB()
 	for _, n := range ps.Nodes {
-		mndb.PutNode(n.GetHashBytes(), n)
+		mndb.PutNode(n.GetHashBytes(), n) //nolint: errcheck
 	}
 	return mndb
 }

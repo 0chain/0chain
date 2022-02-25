@@ -143,7 +143,7 @@ type Chain struct {
 	viewChangeProcess
 
 	// not. blocks pulling joining at VC
-	pullingPin int64
+	pullingPin int64 //nolint: unused
 
 	// restart round event (rre)
 	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
@@ -188,11 +188,11 @@ func (mc *Chain) unsubRestartRoundEvent(subq chan struct{}) {
 	}
 }
 
-func (mc *Chain) startPulling() (ok bool) {
+func (mc *Chain) startPulling() (ok bool) { //nolint
 	return atomic.CompareAndSwapInt64(&mc.pullingPin, 0, 1)
 }
 
-func (mc *Chain) stopPulling() (ok bool) {
+func (mc *Chain) stopPulling() (ok bool) { //nolint
 	return atomic.CompareAndSwapInt64(&mc.pullingPin, 1, 0)
 }
 
@@ -246,7 +246,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
-	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.AddNotarizedBlock(mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
 	if b.IsStateComputed() {
 		if err := mc.SaveChanges(ctx, b); err != nil {
@@ -398,7 +398,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 func (mc *Chain) ChainStarted(ctx context.Context) bool {
 	timer := time.NewTimer(time.Second)
 	timeoutCount := 0
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return false
@@ -407,7 +407,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 			var started int
 			mb := mc.GetCurrentMagicBlock()
 			for _, n := range mb.Miners.CopyNodesMap() {
-				mc.RequestStartChain(n, &start, &started)
+				mc.RequestStartChain(n, &start, &started) //nolint: errcheck
 			}
 			if start >= mb.T {
 				return false
@@ -422,7 +422,6 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin()))
 		}
 	}
-	return false
 }
 
 func StartChainRequestHandler(ctx context.Context, req *http.Request) (interface{}, error) {

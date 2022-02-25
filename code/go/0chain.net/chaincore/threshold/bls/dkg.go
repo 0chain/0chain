@@ -313,7 +313,7 @@ func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) {
 		var pk PublicKey
 		for _, mpk := range mpks {
 			var pkj PublicKey
-			pkj.Set(mpk, &k)
+			pkj.Set(mpk, &k) //nolint: errcheck
 			pk.Add(&pkj)
 		}
 		dkg.gmpk[k] = pk
@@ -355,7 +355,7 @@ func ConvertStringToMpk(strMpk []string) []PublicKey {
 	var mpk []PublicKey
 	for _, str := range strMpk {
 		var publickKey PublicKey
-		publickKey.SetHexString(str)
+		publickKey.SetHexString(str) //nolint: errcheck
 		mpk = append(mpk, publickKey)
 	}
 	return mpk
@@ -415,7 +415,9 @@ func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) e
 		if share == "" {
 			return common.NewError("failed to verify dkg summary", "share is nil")
 		}
-		sij.SetHexString(share)
+		if err := sij.SetHexString(share); err != nil {
+			return err
+		}
 		if !ValidateShare(v, sij, id) {
 			return common.NewError("failed to verify dkg summary", fmt.Sprintf("share unable to verify: %v", share))
 		}

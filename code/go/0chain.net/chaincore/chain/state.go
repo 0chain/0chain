@@ -413,7 +413,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	sctx.SetStateContext(fs)
+	sctx.SetStateContext(fs) //nolint: errcheck
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
@@ -432,7 +432,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	sctx.SetStateContext(ts)
+	sctx.SetStateContext(ts) //nolint: errcheck
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -464,9 +464,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn) //nolint: errcheck
 			}
-			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err) //nolint: errcheck
 			block.PrintStates(clientState, b.ClientState)
 			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
@@ -475,7 +475,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return common.NewError("mint_amount - get state", err.Error())
 	}
-	sctx.SetStateContext(ts)
+	sctx.SetStateContext(ts) //nolint: errcheck
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {

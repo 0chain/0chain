@@ -4,7 +4,6 @@ package zcnsc_test
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -29,30 +28,6 @@ const x10 = 10 * 1000 * 1000 * 1000
 
 func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
-}
-
-func mockSetValue(v interface{}) interface{} {
-	return mock.MatchedBy(func(c interface{}) bool {
-		cv := reflect.ValueOf(c)
-		if cv.Kind() != reflect.Ptr {
-			panic(fmt.Sprintf("%t must be a pointer, %v", v, cv.Kind()))
-		}
-
-		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.Ptr {
-			if vv.Type() != cv.Type() {
-				return false
-			}
-			cv.Elem().Set(vv.Elem())
-		} else {
-			if vv.Type() != cv.Elem().Type() {
-				return false
-			}
-
-			cv.Elem().Set(vv)
-		}
-		return true
-	})
 }
 
 type mockStateContext struct {
@@ -130,14 +105,14 @@ func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable
 	return util.ErrValueNotPresent
 }
 
-func MakeMockStateContext() *mockStateContext {
+func MakeMockStateContext() *mockStateContext { //nolint
 	ctx := &mockStateContext{
 		StateContextI: &mocks.StateContextI{},
 	}
 
 	// GetSignatureScheme
 
-	ctx.On("GetSignatureScheme").Return(
+	ctx.On("GetSignatureScheme").Return( //nolint: typecheck
 		func() encryption.SignatureScheme {
 			return encryption.NewBLS0ChainScheme()
 		},
@@ -172,13 +147,13 @@ func MakeMockStateContext() *mockStateContext {
 	/// GetClientBalance
 
 	ctx.
-		On("GetClientBalance", mock.AnythingOfType("string")).
+		On("GetClientBalance", mock.AnythingOfType("string")). //nolint: typecheck
 		Return(5, nil)
 
 	/// AddTransfer
 
 	ctx.
-		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).
+		On("AddTransfer", mock.AnythingOfType("*state.Transfer")). //nolint: typecheck
 		Return(
 			func(transfer *state.Transfer) error {
 				transfers = append(transfers, transfer)
@@ -188,7 +163,7 @@ func MakeMockStateContext() *mockStateContext {
 	/// GetTransfers
 
 	ctx.
-		On("GetTransfers").
+		On("GetTransfers"). //nolint: typecheck
 		Return(func() []*state.Transfer {
 			return transfers
 		})
@@ -234,7 +209,7 @@ func MakeMockStateContext() *mockStateContext {
 	/// DeleteTrieNode
 
 	ctx.
-		On("DeleteTrieNode", mock.AnythingOfType("string")).
+		On("DeleteTrieNode", mock.AnythingOfType("string")). //nolint: typecheck
 		Return(
 			func(key datastore.Key) datastore.Key {
 				if strings.Contains(key, AuthorizerNodeType) {
@@ -250,7 +225,7 @@ func MakeMockStateContext() *mockStateContext {
 	/// InsertTrieNode
 
 	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")).
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")). //nolint: typecheck
 		Return(
 			func(key datastore.Key, node util.MPTSerializable) util.MPTSerializable {
 				if strings.Contains(key, UserNodeType) {
@@ -273,7 +248,7 @@ func MakeMockStateContext() *mockStateContext {
 			})
 
 	ctx.
-		On("InsertTrieNode", ctx.globalNode.GetKey(), mock.AnythingOfType("*zcnsc.GlobalNode")).
+		On("InsertTrieNode", ctx.globalNode.GetKey(), mock.AnythingOfType("*zcnsc.GlobalNode")). //nolint: typecheck
 		Return(
 			func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
 				ctx.globalNode = node.(*GlobalNode)
@@ -284,7 +259,7 @@ func MakeMockStateContext() *mockStateContext {
 			})
 
 	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")).
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")). //nolint: typecheck
 		Return(
 			func(key datastore.Key, node util.MPTSerializable) datastore.Key {
 				n := node.(*UserNode)
@@ -295,9 +270,8 @@ func MakeMockStateContext() *mockStateContext {
 				return nil
 			})
 
-	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNode")).
-		Return(
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNode")). //nolint: typecheck
+														Return(
 			func(key datastore.Key, node util.MPTSerializable) datastore.Key {
 				if strings.Contains(key, UserNodeType) {
 					ctx.userNodes[key] = node.(*UserNode)
@@ -317,13 +291,11 @@ func MakeMockStateContext() *mockStateContext {
 				return nil
 			})
 
-	ctx.
-		On("AddMint", mock.AnythingOfType("*state.Mint")).
-		Return(nil)
+	ctx.On("AddMint", mock.AnythingOfType("*state.Mint")).Return(nil) //nolint: typecheck
 
 	// EventsDB
 
-	ctx.On(
+	ctx.On( //nolint: typecheck
 		"EmitEvent",
 		mock.AnythingOfType("event.EventType"),
 		mock.AnythingOfType("event.EventTag"),
@@ -334,7 +306,7 @@ func MakeMockStateContext() *mockStateContext {
 			fmt.Println(".")
 		})
 
-	ctx.On(
+	ctx.On( //nolint: typecheck
 		"EmitEvent",
 		event.TypeStats,
 		event.TagAddAuthorizer,
@@ -356,11 +328,11 @@ func MakeMockStateContext() *mockStateContext {
 }
 
 func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
-	scheme := ctx.GetSignatureScheme()
+	scheme := ctx.GetSignatureScheme() //nolint: typecheck
 	_ = scheme.GenerateKeys()
 
 	node := CreateAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
-	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
+	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100) //nolint: typecheck
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 
 	ctx.authorizers[node.GetKey()] = &Authorizer{

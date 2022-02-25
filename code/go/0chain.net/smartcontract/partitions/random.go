@@ -17,7 +17,8 @@ import (
 
 const notFound = -1
 
-//go:generate msgp -io=false -tests=false -v
+//msgp:ignore RandomSelector
+//go:generate msgp -io=false -tests=false -unexported=true -v
 type ItemType int
 
 const (
@@ -112,7 +113,7 @@ func (rs *RandomSelector) Remove(
 
 	replacment := lastPart.cutTail()
 	if replacment == nil {
-		fmt.Errorf("empty last partitions, currpt data")
+		return fmt.Errorf("empty last partitions, currpt data")
 	}
 	part.add(replacment)
 	if rs.Callback != nil {
@@ -150,7 +151,7 @@ func (rs *RandomSelector) AddRand(
 	}
 	moving := partition.cutTail()
 	if moving == nil {
-		fmt.Errorf("empty partitions, currpt data")
+		return -1, fmt.Errorf("empty partitions, corrupt data")
 	}
 	partition.add(item)
 
@@ -314,6 +315,26 @@ func (rs *RandomSelector) Encode() []byte {
 
 func (rs *RandomSelector) Decode(b []byte) error {
 	err := json.Unmarshal(b, rs)
-	rs.Partitions = make([]PartitionItemList, rs.NumPartitions, rs.NumPartitions)
+	rs.Partitions = make([]PartitionItemList, rs.NumPartitions)
 	return err
 }
+
+func (rs *RandomSelector) MarshalMsg(o []byte) ([]byte, error) {
+	d := randomSelectorDecode(*rs)
+	return d.MarshalMsg(o)
+}
+
+func (rs *RandomSelector) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &randomSelectorDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*rs = RandomSelector(*d)
+	rs.Partitions = make([]PartitionItemList, rs.NumPartitions)
+
+	return o, nil
+}
+
+type randomSelectorDecode RandomSelector

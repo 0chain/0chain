@@ -9,7 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/stakepool"
+	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -714,6 +716,9 @@ func (sc *StorageSmartContract) adjustChallengePool(
 					return fmt.Errorf("adjust_challenge_pool: %v", err)
 				}
 				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
+				if err != nil {
+					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
+				}
 				changed = true
 			}
 		default:

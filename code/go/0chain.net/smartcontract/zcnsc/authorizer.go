@@ -25,7 +25,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	)
 
 	var (
-		publicKey    = tran.PublicKey  // authorizer public key
 		authorizerID = tran.ClientID   // sender address
 		recipientID  = tran.ToClientID // smart contract address
 		authorizer   *AuthorizerNode
@@ -55,11 +54,11 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	publicKey = params.PublicKey
+	publicKey := params.PublicKey
 
 	// Check existing Authorizer
 
-	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
+	_, err = GetAuthorizerNode(authorizerID, ctx)
 	if err == nil {
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(code, msg)

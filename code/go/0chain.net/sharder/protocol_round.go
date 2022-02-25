@@ -45,7 +45,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		defer close(doneC)
 		if b.ClientState != nil {
 			// check if the block's client state is correct
-			if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+			if !bytes.Equal(b.ClientStateHash, b.ClientState.GetRoot()) {
 				select {
 				case errC <- errors.New("AddNotarizedBlock block client state does not match"):
 				default:

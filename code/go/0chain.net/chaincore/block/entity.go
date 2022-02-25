@@ -162,7 +162,7 @@ type Block struct {
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-" msg:"-"`
-	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty" msg:"mb,omitempty"`
+	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 }
 
 // NewBlock - create a new empty block
@@ -925,7 +925,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
 			zap.String("minerID", b.MinerID),
@@ -1047,7 +1047,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
 			zap.Int64("round", b.Round),
@@ -1120,7 +1120,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	if b.Hash != bsc.Block {
 		return ErrBlockHashMismatch
 	}
-	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bsc.Hash) {
 		return ErrBlockStateHashMismatch
 	}
 	root := bsc.GetRoot()
@@ -1146,7 +1146,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return err
 	}
 
-	if bytes.Compare(b.ClientStateHash, clientState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, clientState.GetRoot()) {
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
 

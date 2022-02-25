@@ -2,6 +2,12 @@ package miner
 
 /*This file contains the Miner To Miner send/receive messages */
 import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strconv"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -9,12 +15,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"context"
-	"encoding/hex"
-	"fmt"
 	"go.uber.org/zap"
-	"net/http"
-	"strconv"
 )
 
 var (
@@ -193,7 +194,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		}
 
 		// send notarized block
-		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID)
+		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID) //nolint: errcheck
 
 		logging.Logger.Info("Reject VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),

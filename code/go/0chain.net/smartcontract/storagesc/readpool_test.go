@@ -19,9 +19,6 @@ import (
 //
 // test extension
 //
-func (rp *readPool) total(now int64) state.Balance {
-	return rp.Pools.total(now)
-}
 
 func (rp *readPool) allocTotal(allocID string,
 	now int64) state.Balance {
@@ -223,6 +220,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	var fp fundedPools = []string{client.id}
 	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
+	require.NoError(t, err)
 
 	// 1. no pool
 	_, err = ssc.readPoolLock(&tx, nil, balances)

@@ -93,7 +93,7 @@ func (mcp *MemoryDBChunkProcessor) Process(ctx context.Context, chunk datastore.
 
 /*Run - interface implementation */
 func (mcp *MemoryDBChunkProcessor) Run(ctx context.Context) {
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return

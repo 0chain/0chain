@@ -113,7 +113,6 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
 	}
-	return
 }
 
 // UpdateStateFromNetwork get a bunch of state nodes from the network
@@ -156,7 +155,6 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
 	}
-	return
 }
 
 //GetStateFrom - get the state from a given node
@@ -203,8 +201,7 @@ func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) er
 	if ps.GetRoot() == nil {
 		return ErrNodeNull
 	}
-	c.SavePartialState(ctx, ps)
-	return nil
+	return c.SavePartialState(ctx, ps)
 }
 
 //SavePartialState - save the partial state
@@ -234,7 +231,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		if bytes.Compare(key, rps.Hash) != 0 {
+		if !bytes.Equal(key, rps.Hash) {
 			logging.Logger.Error("get partial state - state hash mismatch error",
 				zap.String("key", util.ToHex(key)),
 				zap.Any("hash", util.ToHex(rps.Hash)))
@@ -386,7 +383,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 			return nil, block.ErrBlockHashMismatch
 		}
 
-		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
+		if !bytes.Equal(b.ClientStateHash, rsc.Hash) {
 			logging.Logger.Error("get_block_state_change",
 				zap.Error(errors.New("state hash mismatch")),
 				zap.Int64("round", b.Round),

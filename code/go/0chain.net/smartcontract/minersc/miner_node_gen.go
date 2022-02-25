@@ -268,28 +268,9 @@ func (z *delegatePool) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *minerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// omitempty: check for empty values
-	zb0001Len := uint32(4)
-	var zb0001Mask uint8 /* 4 bits */
-	if z.Pending == nil {
-		zb0001Len--
-		zb0001Mask |= 0x2
-	}
-	if z.Active == nil {
-		zb0001Len--
-		zb0001Mask |= 0x4
-	}
-	if z.Deleting == nil {
-		zb0001Len--
-		zb0001Mask |= 0x8
-	}
-	// variable map header, size zb0001Len
-	o = append(o, 0x80|uint8(zb0001Len))
-	if zb0001Len == 0 {
-		return
-	}
+	// map header, size 4
 	// string "SimpleNode"
-	o = append(o, 0xaa, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x4e, 0x6f, 0x64, 0x65)
+	o = append(o, 0x84, 0xaa, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x4e, 0x6f, 0x64, 0x65)
 	if z.SimpleNode == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -299,54 +280,48 @@ func (z *minerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	if (zb0001Mask & 0x2) == 0 { // if not empty
-		// string "pending"
-		o = append(o, 0xa7, 0x70, 0x65, 0x6e, 0x64, 0x69, 0x6e, 0x67)
-		o = msgp.AppendMapHeader(o, uint32(len(z.Pending)))
-		for za0001, za0002 := range z.Pending {
-			o = msgp.AppendString(o, za0001)
-			if za0002 == nil {
-				o = msgp.AppendNil(o)
-			} else {
-				o, err = za0002.MarshalMsg(o)
-				if err != nil {
-					err = msgp.WrapError(err, "Pending", za0001)
-					return
-				}
+	// string "Pending"
+	o = append(o, 0xa7, 0x50, 0x65, 0x6e, 0x64, 0x69, 0x6e, 0x67)
+	o = msgp.AppendMapHeader(o, uint32(len(z.Pending)))
+	for za0001, za0002 := range z.Pending {
+		o = msgp.AppendString(o, za0001)
+		if za0002 == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = za0002.MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Pending", za0001)
+				return
 			}
 		}
 	}
-	if (zb0001Mask & 0x4) == 0 { // if not empty
-		// string "active"
-		o = append(o, 0xa6, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65)
-		o = msgp.AppendMapHeader(o, uint32(len(z.Active)))
-		for za0003, za0004 := range z.Active {
-			o = msgp.AppendString(o, za0003)
-			if za0004 == nil {
-				o = msgp.AppendNil(o)
-			} else {
-				o, err = za0004.MarshalMsg(o)
-				if err != nil {
-					err = msgp.WrapError(err, "Active", za0003)
-					return
-				}
+	// string "Active"
+	o = append(o, 0xa6, 0x41, 0x63, 0x74, 0x69, 0x76, 0x65)
+	o = msgp.AppendMapHeader(o, uint32(len(z.Active)))
+	for za0003, za0004 := range z.Active {
+		o = msgp.AppendString(o, za0003)
+		if za0004 == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = za0004.MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Active", za0003)
+				return
 			}
 		}
 	}
-	if (zb0001Mask & 0x8) == 0 { // if not empty
-		// string "deleting"
-		o = append(o, 0xa8, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x69, 0x6e, 0x67)
-		o = msgp.AppendMapHeader(o, uint32(len(z.Deleting)))
-		for za0005, za0006 := range z.Deleting {
-			o = msgp.AppendString(o, za0005)
-			if za0006 == nil {
-				o = msgp.AppendNil(o)
-			} else {
-				o, err = za0006.MarshalMsg(o)
-				if err != nil {
-					err = msgp.WrapError(err, "Deleting", za0005)
-					return
-				}
+	// string "Deleting"
+	o = append(o, 0xa8, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x69, 0x6e, 0x67)
+	o = msgp.AppendMapHeader(o, uint32(len(z.Deleting)))
+	for za0005, za0006 := range z.Deleting {
+		o = msgp.AppendString(o, za0005)
+		if za0006 == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = za0006.MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Deleting", za0005)
+				return
 			}
 		}
 	}
@@ -388,7 +363,7 @@ func (z *minerNodeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "pending":
+		case "Pending":
 			var zb0002 uint32
 			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
@@ -429,7 +404,7 @@ func (z *minerNodeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 				z.Pending[za0001] = za0002
 			}
-		case "active":
+		case "Active":
 			var zb0003 uint32
 			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
@@ -470,7 +445,7 @@ func (z *minerNodeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 				z.Active[za0003] = za0004
 			}
-		case "deleting":
+		case "Deleting":
 			var zb0004 uint32
 			zb0004, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {

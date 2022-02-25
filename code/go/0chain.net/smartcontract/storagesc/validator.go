@@ -68,7 +68,10 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", err
 		}
 
-		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+		_, err = balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+		if err != nil {
+			return "", err
+		}
 
 		sc.statIncr(statAddValidator)
 		sc.statIncr(statNumberOfValidators)

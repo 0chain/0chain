@@ -184,10 +184,7 @@ func shouldPush(options *SendOptions, receiver *Node, uri string, entity datasto
 	}
 	pushTime := timer.Mean()
 	push2pullTime := getPushToPullTime(receiver)
-	if pushTime > push2pullTime {
-		return false
-	}
-	return true
+	return pushTime <= push2pullTime
 }
 
 type senderSignInfo struct {
@@ -234,7 +231,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			toPull = true
 			key := p2pKey(uri, entity.GetKey())
 			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
-			pushDataCache.Add(key, pdce)
+			pushDataCache.Add(key, pdce) //nolint: errcheck
 		}
 
 		preparedSignatures, err := prepareSenderSign(entity, 5)
@@ -503,7 +500,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 
 		buf := bytes.Buffer{}
-		buf.ReadFrom(r.Body)
+		buf.ReadFrom(r.Body) //nolint: errcheck
 
 		go func() {
 			senderValidateFunc := func() error {
@@ -518,7 +515,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				})
 			}
 			// TODO:
-			root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second)
+			root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second) //nolint:govet
 			ctx := WithSenderValidateFunc(root, senderValidateFunc)
 			initialNodeID := r.Header.Get(HeaderInitialNodeID)
 			if initialNodeID != "" {

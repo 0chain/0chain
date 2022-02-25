@@ -53,7 +53,7 @@ type SpBalance struct {
 	DelegateBalance map[string]int64 `json:"delegate_reward"`
 }
 
-func (spr *SpBalance) emit(balances cstate.StateContextI) error {
+func (spr *SpBalance) emit(balances cstate.StateContextI) error { //nolint
 	data, err := json.Marshal(spr)
 	if err != nil {
 		return err
@@ -177,6 +177,6 @@ func (sp StakePool) updates(id string, providerType Provider) *DbUpdates {
 	return &spUpdates
 }
 
-func (sp StakePool) emit(id string, providerType int, balances cstate.StateContextI) {
+func (sp StakePool) emit(id string, providerType int, balances cstate.StateContextI) { //nolint: unused
 
 }

@@ -459,7 +459,7 @@ func TestPartialState_UnmarshalPartialState(t *testing.T) {
 			name: "OK",
 			args: args{
 				obj: map[string]interface{}{
-					"root":    ps.Hash,
+					"root":    []byte(ps.Hash),
 					"version": ps.Version,
 					"nodes": []interface{}{
 						base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(util.NodeTypeValueNode) + "node")),
@@ -620,13 +620,6 @@ func (v *valueNode) Encode() []byte {
 
 func (v *valueNode) Decode(b []byte) error {
 	return json.Unmarshal(b, v)
-}
-
-func newValueNode(version string, v int64) *valueNode {
-	return &valueNode{
-		Version: version,
-		Value:   v,
-	}
 }
 
 //func TestPartialUnmarshalMsgpack(t *testing.T) {

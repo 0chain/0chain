@@ -57,7 +57,7 @@ func discoverPoolMembers(discoveryFile string) {
 	for _, ip := range discoveryIps {
 		pm = poolMembers{}
 
-		httpclientutil.MakeGetRequest(ip+discoverIPPath, &pm)
+		httpclientutil.MakeGetRequest(ip+discoverIPPath, &pm) //nolint: errcheck
 
 		if pm.Miners == nil {
 			Logger.Info("Miners are nil")

@@ -38,7 +38,7 @@ type cmdMagicBlock struct {
 	dkgs map[string]*bls.DKG
 	// summaries collection
 	summaries       map[int]*bls.DKGSummary
-	states          *state.InitStates
+	states          *state.InitStates //nolint: structcheck,unused
 	originalIndices map[string]int
 }
 
@@ -125,7 +125,9 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 			cmd.summaries[node.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
 			if mid != id {
 				var privateKey bls.Key
-				privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey)
+				if err := privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey); err != nil {
+					panic(err)
+				}
 				message := encryption.Hash(share.GetHexString())
 				sos.ShareOrSigns[id] = &bls.DKGKeyShare{
 					Message: message,
@@ -161,7 +163,7 @@ func verifyKeys(hexSecKey, hexPubKey, hexId string) error {
 	return nil
 }
 
-func verifySummaries(cmd *cmdMagicBlock, key datastore.Key, index int) error {
+func verifySummaries(cmd *cmdMagicBlock, key datastore.Key, index int) error { //nolint unused
 
 	dkgs := cmd.summaries[index]
 	dkgs.ID = strconv.FormatInt(cmd.block.MagicBlockNumber, 10)
@@ -197,7 +199,7 @@ func (cmd *cmdMagicBlock) setupBlockHash() {
 }
 
 // jsonMB method return indented json of block
-func (cmd *cmdMagicBlock) jsonMB() ([]byte, error) {
+func (cmd *cmdMagicBlock) jsonMB() ([]byte, error) { //nolint
 	return json.MarshalIndent(cmd.block, "", " ")
 }
 
@@ -411,7 +413,7 @@ func writeNames(names map[string]string) string {
 }
 
 func getNamesFileName() string {
-	return fmt.Sprintf("names.yaml")
+	return "names.yaml"
 }
 
 func getNamesEmailFileName(email string) string {

@@ -8,6 +8,8 @@ import (
 	"sync"
 
 	"0chain.net/conductor/config"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var ErrShutdown = errors.New("server shutdown")
@@ -192,7 +194,6 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 
 	ns.state.send(ns.poll) // initial state sending
 	s.nodes[name] = ns
-	return
 }
 
 // not for updating
@@ -230,7 +231,9 @@ func (s *Server) UpdateStates(names []NodeName, update UpdateStateFunc) (
 	err error) {
 
 	for _, name := range names {
-		s.UpdateState(name, update)
+		if err := s.UpdateState(name, update); err != nil {
+			logging.Logger.Warn("update state failed", zap.Error(err))
+		}
 	}
 	return
 }
@@ -239,7 +242,9 @@ func (s *Server) UpdateAllStates(update UpdateStateFunc) (
 	err error) {
 
 	for name := range s.nodes {
-		s.UpdateState(name, update)
+		if err := s.UpdateState(name, update); err != nil {
+			logging.Logger.Warn("update state failed", zap.Error(err))
+		}
 	}
 	return
 }

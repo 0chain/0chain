@@ -82,7 +82,7 @@ func (usp *UserStakePools) Save(
 }
 
 // remove the entire user stake pools node
-func (usp *UserStakePools) remove(
+func (usp *UserStakePools) remove( //nolint: unused
 	p Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
@@ -91,7 +91,7 @@ func (usp *UserStakePools) remove(
 	return
 }
 
-// getUserStakePool of given client
+// GetUserStakePool of given client
 func GetUserStakePool(
 	p Provider,
 	clientID datastore.Key,

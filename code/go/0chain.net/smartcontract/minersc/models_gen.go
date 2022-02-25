@@ -724,9 +724,20 @@ func (z *PhaseNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 19
+	// omitempty: check for empty values
+	zb0001Len := uint32(19)
+	var zb0001Mask uint32 /* 19 bits */
+	if z.NodeType == 0 {
+		zb0001Len--
+		zb0001Mask |= 0x20000
+	}
+	// variable map header, size zb0001Len
+	o = msgp.AppendMapHeader(o, zb0001Len)
+	if zb0001Len == 0 {
+		return
+	}
 	// string "ID"
-	o = append(o, 0xde, 0x0, 0x13, 0xa2, 0x49, 0x44)
+	o = append(o, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "N2NHost"
 	o = append(o, 0xa7, 0x4e, 0x32, 0x4e, 0x48, 0x6f, 0x73, 0x74)
@@ -794,9 +805,11 @@ func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Stat")
 		return
 	}
-	// string "NodeType"
-	o = append(o, 0xa8, 0x4e, 0x6f, 0x64, 0x65, 0x54, 0x79, 0x70, 0x65)
-	o = msgp.AppendInt(o, int(z.NodeType))
+	if (zb0001Mask & 0x20000) == 0 { // if not empty
+		// string "nt"
+		o = append(o, 0xa2, 0x6e, 0x74)
+		o = msgp.AppendInt(o, int(z.NodeType))
+	}
 	// string "LastHealthCheck"
 	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
 	o, err = z.LastHealthCheck.MarshalMsg(o)
@@ -956,7 +969,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Stat")
 				return
 			}
-		case "NodeType":
+		case "nt":
 			{
 				var zb0003 int
 				zb0003, bts, err = msgp.ReadIntBytes(bts)
@@ -986,7 +999,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + msgp.Int64Size + 7 + msgp.BoolSize + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 14 + msgp.Float64Size + 18 + msgp.IntSize + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 5 + z.Stat.Msgsize() + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize()
+	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + msgp.Int64Size + 7 + msgp.BoolSize + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 14 + msgp.Float64Size + 18 + msgp.IntSize + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 5 + z.Stat.Msgsize() + 3 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize()
 	return
 }
 

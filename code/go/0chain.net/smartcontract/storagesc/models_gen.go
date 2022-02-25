@@ -1249,24 +1249,9 @@ func (z *ReadMarker) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// omitempty: check for empty values
-	zb0001Len := uint32(27)
-	var zb0001Mask uint32 /* 27 bits */
-	if z.Finalized == false {
-		zb0001Len--
-		zb0001Mask |= 0x100000
-	}
-	if z.Canceled == false {
-		zb0001Len--
-		zb0001Mask |= 0x200000
-	}
-	// variable map header, size zb0001Len
-	o = msgp.AppendMapHeader(o, zb0001Len)
-	if zb0001Len == 0 {
-		return
-	}
+	// map header, size 27
 	// string "ID"
-	o = append(o, 0xa2, 0x49, 0x44)
+	o = append(o, 0xde, 0x0, 0x1b, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Tx"
 	o = append(o, 0xa2, 0x54, 0x78)
@@ -1397,32 +1382,28 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "StartTime")
 		return
 	}
-	if (zb0001Mask & 0x100000) == 0 { // if not empty
-		// string "finalized"
-		o = append(o, 0xa9, 0x66, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64)
-		o = msgp.AppendBool(o, z.Finalized)
-	}
-	if (zb0001Mask & 0x200000) == 0 { // if not empty
-		// string "canceled"
-		o = append(o, 0xa8, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x65, 0x64)
-		o = msgp.AppendBool(o, z.Canceled)
-	}
-	// string "moved_to_challenge"
-	o = append(o, 0xb2, 0x6d, 0x6f, 0x76, 0x65, 0x64, 0x5f, 0x74, 0x6f, 0x5f, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
+	// string "Finalized"
+	o = append(o, 0xa9, 0x46, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.Finalized)
+	// string "Canceled"
+	o = append(o, 0xa8, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.Canceled)
+	// string "MovedToChallenge"
+	o = append(o, 0xb0, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x54, 0x6f, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
 	o, err = z.MovedToChallenge.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MovedToChallenge")
 		return
 	}
-	// string "moved_back"
-	o = append(o, 0xaa, 0x6d, 0x6f, 0x76, 0x65, 0x64, 0x5f, 0x62, 0x61, 0x63, 0x6b)
+	// string "MovedBack"
+	o = append(o, 0xa9, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x42, 0x61, 0x63, 0x6b)
 	o, err = z.MovedBack.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MovedBack")
 		return
 	}
-	// string "moved_to_validators"
-	o = append(o, 0xb3, 0x6d, 0x6f, 0x76, 0x65, 0x64, 0x5f, 0x74, 0x6f, 0x5f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73)
+	// string "MovedToValidators"
+	o = append(o, 0xb1, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x54, 0x6f, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73)
 	o, err = z.MovedToValidators.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MovedToValidators")
@@ -1721,31 +1702,31 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				err = msgp.WrapError(err, "StartTime")
 				return
 			}
-		case "finalized":
+		case "Finalized":
 			z.Finalized, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Finalized")
 				return
 			}
-		case "canceled":
+		case "Canceled":
 			z.Canceled, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Canceled")
 				return
 			}
-		case "moved_to_challenge":
+		case "MovedToChallenge":
 			bts, err = z.MovedToChallenge.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MovedToChallenge")
 				return
 			}
-		case "moved_back":
+		case "MovedBack":
 			bts, err = z.MovedBack.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MovedBack")
 				return
 			}
-		case "moved_to_validators":
+		case "MovedToValidators":
 			bts, err = z.MovedToValidators.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MovedToValidators")
@@ -1820,7 +1801,7 @@ func (z *StorageAllocationDecode) Msgsize() (s int) {
 	for za0004 := range z.WritePoolOwners {
 		s += msgp.StringPrefixSize + len(z.WritePoolOwners[za0004])
 	}
-	s += 24 + msgp.Int64Size + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 19 + z.MovedToChallenge.Msgsize() + 11 + z.MovedBack.Msgsize() + 20 + z.MovedToValidators.Msgsize() + 9 + msgp.Int64Size + 9 + msgp.ArrayHeaderSize
+	s += 24 + msgp.Int64Size + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.Int64Size + 9 + msgp.ArrayHeaderSize
 	for za0005 := range z.Curators {
 		s += msgp.StringPrefixSize + len(z.Curators[za0005])
 	}

@@ -17,7 +17,7 @@ var (
 	controlMKey = datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + encryption.Hash("control_all"))
 )
 
-func getControlMKey(index int) datastore.Key {
+func getControlMKey(index int) datastore.Key { //nolint unused
 	return datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" +
 		encryption.Hash("control_m"+strconv.Itoa(index)))
 }
@@ -67,7 +67,7 @@ func AddControlObjects(
 	if m == 0 || n > m {
 		return
 	}
-	fields := make([]int64, m, m)
+	fields := make([]int64, m)
 	for i := 0; i < m; i++ {
 		fields[i] = int64(i)
 	}

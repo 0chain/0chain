@@ -49,13 +49,11 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		}
 		roundEntity := sc.GetSharderRound(roundNumber)
 		if roundEntity == nil {
-			roundEntity, err = sc.GetRoundFromStore(ctx, roundNumber)
+			_, err = sc.GetRoundFromStore(ctx, roundNumber)
 			if err != nil {
 				return nil, err
 			}
 		}
-		// TODO: hash is overwritten by block hash getting by round number
-		hash = roundEntity.BlockHash
 
 		hash, err = sc.GetBlockHash(ctx, roundNumber)
 		if err != nil {

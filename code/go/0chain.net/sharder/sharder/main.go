@@ -48,30 +48,30 @@ func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error)
 		more    = scanner.Scan()
 	)
 
-	if more == false {
+	if !more {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 	mConf.StorageServiceURL = scanner.Text()
 	more = scanner.Scan()
-	if more == false {
+	if !more {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.AccessKeyID = scanner.Text()
 	more = scanner.Scan()
-	if more == false {
+	if !more {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.SecretAccessKey = scanner.Text()
 	more = scanner.Scan()
-	if more == false {
+	if !more {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.BucketName = scanner.Text()
 	more = scanner.Scan()
-	if more == false {
+	if !more {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
@@ -353,7 +353,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	scanner.Scan() //throw away the publickey
 	scanner.Scan() //throw away the secretkey
 	result := scanner.Scan()
-	if result == false {
+	if !result {
 		return "", "", 0, "", "", errors.New("error reading Host")
 	}
 
@@ -361,7 +361,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	Logger.Info("Host inside", zap.String("host", h))
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return "", "", 0, "", "", errors.New("error reading n2n host")
 	}
 
@@ -376,7 +376,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return h, n2nh, p, "", "", nil
 	}
 
@@ -384,7 +384,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	Logger.Info("Path inside", zap.String("path", path))
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return h, n2nh, p, path, "", nil
 	}
 

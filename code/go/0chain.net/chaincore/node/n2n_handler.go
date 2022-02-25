@@ -113,8 +113,7 @@ var httpClient *http.Client
 var n2nTrace = &httptrace.ClientTrace{}
 
 func init() {
-	var transport *http.Transport
-	transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -181,22 +180,15 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 var NoDataErr = common.NewError("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
-	io.Copy(ioutil.Discard, reader)
-	reader.Close()
-}
-
-func getDataAndClose(reader io.ReadCloser) []byte {
-	buf := &bytes.Buffer{}
-	io.Copy(buf, reader)
-	reader.Close()
-	return buf.Bytes()
+	io.Copy(ioutil.Discard, reader) //nolint: errcheck
+	reader.Close()                  //nolint: errcheck
 }
 
 func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(buffer)
+		cbuffer.ReadFrom(buffer) //nolint: errcheck
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr
@@ -216,7 +208,7 @@ func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata dat
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(reader)
+		cbuffer.ReadFrom(reader) //nolint: errcheck
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
@@ -233,26 +225,24 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	entity := entityMetadata.Instance()
 	switch codec {
 	case CodecMsgpack:
-		if err := datastore.FromMsgpack(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromMsgpack(reader, entity); err != nil {
 			logging.N2n.Error("msgpack decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	case CodecJSON:
-		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromJSON(reader, entity); err != nil {
 			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	default:
-		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromJSON(reader, entity); err != nil {
 			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	}
-	logging.N2n.Error("unknown_encoding", zap.String("encoding", codec))
-	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
 func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {

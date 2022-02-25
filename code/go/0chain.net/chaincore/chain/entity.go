@@ -91,7 +91,7 @@ type Chain struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	mutexViewChangeMB sync.RWMutex
+	mutexViewChangeMB sync.RWMutex //nolint: structcheck, unused
 
 	//Chain config goes into this object
 	Config
@@ -543,7 +543,7 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 
 func (c *Chain) getInitialState(tokens state.Balance) util.MPTSerializable {
 	balance := &state.State{}
-	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000") //nolint: errcheck
 	balance.Balance = state.Balance(tokens)
 	return balance
 }
@@ -552,7 +552,9 @@ func (c *Chain) getInitialState(tokens state.Balance) util.MPTSerializable {
 func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
-		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
+		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
+			logging.Logger.Error("chain.stateDB insert failed", zap.Error(err))
+		}
 	}
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
@@ -571,7 +573,9 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gb.MagicBlock = genesisMagicBlock
-	c.UpdateMagicBlock(gb.MagicBlock)
+	if err := c.UpdateMagicBlock(gb.MagicBlock); err != nil {
+		panic(err)
+	}
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, genesisRandomSeed)
 	gb.SetRoundRandomSeed(genesisRandomSeed)
@@ -585,22 +589,22 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	if b.Round != 0 {
 		return
 	}
-	c.UpdateMagicBlock(b.MagicBlock)
+	if err := c.UpdateMagicBlock(b.MagicBlock); err != nil {
+		panic(err)
+	}
 	c.SetLatestFinalizedMagicBlock(b)
 	c.SetLatestFinalizedBlock(b)
 	c.SetLatestDeterministicBlock(b)
 	c.blocks[b.Hash] = b
-	return
 }
 
 // AddLoadedFinalizedBlock - adds the genesis block to the chain.
 func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
-	c.UpdateMagicBlock(lfmb.MagicBlock)
+	c.UpdateMagicBlock(lfmb.MagicBlock) //nolint: errcheck
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
 	// c.LatestDeterministicBlock left as genesis
 	c.blocks[lfb.Hash] = lfb
-	return
 }
 
 /*AddBlock - adds a block to the cache */
@@ -780,8 +784,7 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 
 // GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	var miners []*node.Node
-	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
+	miners := r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
@@ -923,7 +926,7 @@ func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	return false, ErrInsufficientChain
 }
 
-func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
+func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) { //nolint: unused
 	c.stakeMutex.Lock()
 	defer c.stakeMutex.Unlock()
 	c.minersStake[minerID] = stake
@@ -1614,7 +1617,7 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	}
 }
 
-func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
+func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) ( //nolint: unused
 	err error) {
 
 	if c.viewChanger == nil {

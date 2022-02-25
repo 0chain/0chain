@@ -1,16 +1,17 @@
 package minersc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"encoding/json"
-	"fmt"
 )
 
-func sharderTableToSharderNode(edbSharder *event.Sharder) *MinerNode {
+func sharderTableToSharderNode(edbSharder *event.Sharder) *MinerNode { //nolint unused
 
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {

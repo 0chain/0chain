@@ -316,7 +316,7 @@ func (sc *Config) validate() (err error) {
 	return
 }
 
-func (conf *Config) canMint() bool {
+func (conf *Config) canMint() bool { //nolint: unused
 	return conf.Minted < conf.MaxMint
 }
 

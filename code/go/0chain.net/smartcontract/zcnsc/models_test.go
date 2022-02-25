@@ -190,6 +190,6 @@ func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, e
 	node := CreateSmartContractGlobalNode()
 	node.MinBurnAmount = 111
 	balances := MakeMockStateContext()
-	err := node.Save(balances)
-	return balances, node, err
+	err := node.Save(balances) // nolint: typecheck
+	return balances, node, err //nolint: typecheck
 }

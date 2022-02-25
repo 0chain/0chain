@@ -448,7 +448,7 @@ func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
 }
 
 // of DKG miners sorted list
-func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
+func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode, //nolint: unused
 	balances cstate.StateContextI) (has bool) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -464,7 +464,7 @@ func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
 
 // Receive list of ranked miners and extract miners of previous MB preserving
 // order. The given list not modified.
-func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
+func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode, //nolint: unused
 	balances cstate.StateContextI) (prev []*SimpleNode) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -629,11 +629,11 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 
 type Stat struct {
 	// for miner (totals)
-	GeneratorRewards state.Balance `json:"generator_rewards,omitempty" msg:"gr,omitempty"`
-	GeneratorFees    state.Balance `json:"generator_fees,omitempty" msg:"gf,omitempty"`
+	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
+	GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
 	// for sharder (totals)
-	SharderRewards state.Balance `json:"sharder_rewards,omitempty" msg:"sr,omitempty"`
-	SharderFees    state.Balance `json:"sharder_fees,omitempty" msg:"sf,omitempty"`
+	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
+	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
 }
 
 type SimpleNodeGeolocation struct {
@@ -673,7 +673,7 @@ type SimpleNode struct {
 	Stat Stat `json:"stat"`
 
 	// NodeType used for delegate pools statistic.
-	NodeType NodeType `json:"node_type,omitempty" msg:"nt,omitempty"`
+	NodeType NodeType `json:"node_type,omitempty"`
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
@@ -739,7 +739,7 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
-func (ps *poolStat) decode(input []byte) error {
+func (ps *poolStat) decode(input []byte) error { //nolint: unused
 	return json.Unmarshal(input, ps)
 }
 
@@ -948,7 +948,7 @@ func min(a, b int) int {
 	return a
 }
 
-func max(a, b int) int {
+func max(a, b int) int { //nolint: unused, deadcode
 	if a > b {
 		return a
 	}

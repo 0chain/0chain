@@ -120,7 +120,7 @@ func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, er
 	defer iterator.Close()
 	iterator.SeekToLast()
 	if iterator.Valid() {
-		datastore.FromJSON(iterator.Value().Data(), r)
+		datastore.FromJSON(iterator.Value().Data(), r) //nolint: errcheck
 	}
 	return r, iterator.Err()
 }
