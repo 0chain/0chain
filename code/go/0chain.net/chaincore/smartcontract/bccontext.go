@@ -50,7 +50,7 @@ func (bc *BCContext) GetNodepoolInfo() interface{} {
 		case node.NodeTypeSharder:
 			pm.Type = Sharder
 		default:
-			logging.Logger.Info("unknown_node_type", zap.Int8("Type", n.Type))
+			logging.Logger.Info("unknown_node_type", zap.Int8("Type", int8(n.Type)))
 		}
 		pm.PublicKey = n.PublicKey
 		//Logger.Info("Adding poolmember ", zap.String("Type", pm.Type), zap.String("N2nHost", pm.N2NHost))
