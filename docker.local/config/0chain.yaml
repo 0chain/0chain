@@ -9,7 +9,7 @@ logging:
 development:
   state: true
   dkg: true
-  view_change: false
+  view_change: true
   block_rewards: false
   smart_contract:
     storage: true
@@ -156,7 +156,7 @@ network:
 
 # delegate wallet is wallet that used to configure node in Miner SC; if its
 # empty, then node ID used
-delegate_wallet: ""
+delegate_wallet: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 # % of fees and rewards for generator
 service_charge: 0.10 # [0; 1) of all fees
 # max number of delegate pools allowed by a node in miner SC

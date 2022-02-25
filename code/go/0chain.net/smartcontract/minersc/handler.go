@@ -61,7 +61,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 		return nil, errors.New("blobber not found in event database")
 	}
 
-	var ups = newUserPools() //	Pools map[string][]*delegatePoolStat `json:"pools"`
+	var ups = newUserPools()
 	for _, pool := range minerPools {
 		dp := delegatePoolStat{
 			ID:         pool.PoolID,

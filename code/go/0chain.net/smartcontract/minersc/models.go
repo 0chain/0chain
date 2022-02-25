@@ -925,11 +925,11 @@ func (ps *poolStat) decode(input []byte) error {
 }
 
 type delegatePoolStat struct {
-	ID         datastore.Key `json:"id"`      // pool ID
-	Balance    state.Balance `json:"balance"` //
-	Reward     state.Balance `json:"reward"`
-	RewardPaid state.Balance `json:"reward_paid"` //
-	Status     string        `json:"status"`      //
+	ID         datastore.Key `json:"id"`
+	Balance    state.Balance `json:"balance"`
+	Reward     state.Balance `json:"reward"`      // uncollected reread
+	RewardPaid state.Balance `json:"reward_paid"` // total reward all time
+	Status     string        `json:"status"`
 }
 
 func newDelegatePoolStat(dp *stakepool.DelegatePool) (dps *delegatePoolStat) {
