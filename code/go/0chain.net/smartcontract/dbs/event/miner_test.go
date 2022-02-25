@@ -286,3 +286,69 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 		assert.Equal(t, want, miners[i], "Miners did not match")
 	}
 }
+
+func BenchmarkReturnValueMiner(t *testing.B) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer eventDb.drop()
+	assert.NoError(t, err, "error while migrating database")
+	eventDb.addMiner(Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true})
+	t.ResetTimer()
+	for i := 0; i < t.N; i++ {
+		mi, err := eventDb.GetMiner("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d")
+		assert.NoError(t, err)
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID, "minerid is not correct")
+	}
+}
+
+func BenchmarkReturnPointerValueMiner(t *testing.B) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer eventDb.drop()
+	assert.NoError(t, err, "error while migrating database")
+	eventDb.addMiner(Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e54pt", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true})
+	t.ResetTimer()
+	for i := 0; i < t.N; i++ {
+		mi, err := eventDb.GetMinerPointer("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e54pt")
+		assert.NoError(t, err)
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e54pt", mi.MinerID, "minerid is not correct")
+	}
+}
+
+func (edb *EventDb) GetMinerPointer(id string) (*Miner, error) {
+	miner := &Miner{}
+	return miner, edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{MinerID: id}).
+		First(miner).Error
+}
