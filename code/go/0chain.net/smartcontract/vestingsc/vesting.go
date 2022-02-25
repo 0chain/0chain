@@ -558,7 +558,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	}
 
 	var conf *config
-	if conf, err = vsc.getConfig(balances); err != nil {
+	if conf, err = vsc.getConfig(balances, true); err != nil {
 		return "", common.NewError("create_vesting_pool_failed",
 			"can't get SC configurations: "+err.Error())
 	}
