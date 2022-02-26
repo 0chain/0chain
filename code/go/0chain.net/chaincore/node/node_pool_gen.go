@@ -12,7 +12,11 @@ func (z *Pool) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 2
 	// string "Type"
 	o = append(o, 0x82, 0xa4, 0x54, 0x79, 0x70, 0x65)
-	o = msgp.AppendInt8(o, z.Type)
+	o, err = z.Type.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Type")
+		return
+	}
 	// string "NodesMap"
 	o = append(o, 0xa8, 0x4e, 0x6f, 0x64, 0x65, 0x73, 0x4d, 0x61, 0x70)
 	o = msgp.AppendMapHeader(o, uint32(len(z.NodesMap)))
@@ -50,7 +54,7 @@ func (z *Pool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "Type":
-			z.Type, bts, err = msgp.ReadInt8Bytes(bts)
+			bts, err = z.Type.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Type")
 				return
@@ -110,7 +114,7 @@ func (z *Pool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Pool) Msgsize() (s int) {
-	s = 1 + 5 + msgp.Int8Size + 9 + msgp.MapHeaderSize
+	s = 1 + 5 + z.Type.Msgsize() + 9 + msgp.MapHeaderSize
 	if z.NodesMap != nil {
 		for za0001, za0002 := range z.NodesMap {
 			_ = za0002

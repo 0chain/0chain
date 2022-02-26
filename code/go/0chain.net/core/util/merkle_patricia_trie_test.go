@@ -543,38 +543,39 @@ func TestMPT_MultipleConcurrentInserts(t *testing.T) {
 }
 
 func TestMPT_ConcurrentMerges(t *testing.T) {
-	//t.Parallel()
-	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
-	mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
-	ldb := NewLevelNodeDB(NewMemoryNodeDB(), db, false)
-	numGoRoutines := 10
-	numTxns := 10
-	txns := make([]*Txn, numGoRoutines*numTxns)
-	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
-	}
-	// insert some of the nodes to the original mpt
-	for i := 0; i < numGoRoutines; i++ {
-		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
-		require.NoError(t, err)
-	}
-	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0), mpt.GetRoot())
-	wg := &sync.WaitGroup{}
-	for i := 0; i < numGoRoutines; i++ {
-		wg.Add(1)
-		go func(mpt2 MerklePatriciaTrieI, i int) {
-			defer wg.Done()
-			for j := 1; j < numTxns; j++ {
-				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
-				require.NoError(t, err)
-				mpt.MergeMPTChanges(mpt2) // may produce error because of optimistic lock failure
-				// the transient mpt state contains no missing nodes
-				require.NoError(t, mpt.Iterate(context.TODO(), iterNopHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode))
-			}
-		}(mpt2, i)
-	}
-	wg.Wait()
-	checkIterationHash(t, mpt2, "e746a622dca7212732dd74521edf4f336b5134321513343819efb74f981f1925")
+	t.Skip() // we should never merge changes concurrently, it's not safe to do so.
+	////t.Parallel()
+	//db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
+	//mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
+	//ldb := NewLevelNodeDB(NewMemoryNodeDB(), db, false)
+	//numGoRoutines := 10
+	//numTxns := 10
+	//txns := make([]*Txn, numGoRoutines*numTxns)
+	//for i := 0; i < len(txns); i++ {
+	//	txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
+	//}
+	//// insert some of the nodes to the original mpt
+	//for i := 0; i < numGoRoutines; i++ {
+	//	_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+	//	require.NoError(t, err)
+	//}
+	//mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0), mpt.GetRoot())
+	//wg := &sync.WaitGroup{}
+	//for i := 0; i < numGoRoutines; i++ {
+	//	wg.Add(1)
+	//	go func(mpt2 MerklePatriciaTrieI, i int) {
+	//		defer wg.Done()
+	//		for j := 1; j < numTxns; j++ {
+	//			_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+	//			require.NoError(t, err)
+	//			mpt.MergeMPTChanges(mpt2) // may produce error because of optimistic lock failure
+	//			// the transient mpt state contains no missing nodes
+	//			require.NoError(t, mpt.Iterate(context.TODO(), iterNopHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode))
+	//		}
+	//	}(mpt2, i)
+	//}
+	//wg.Wait()
+	//checkIterationHash(t, mpt2, "e746a622dca7212732dd74521edf4f336b5134321513343819efb74f981f1925")
 }
 
 func TestMPTDelete(t *testing.T) {
