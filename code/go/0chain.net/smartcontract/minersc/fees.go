@@ -365,17 +365,17 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		iresp string
 	)
 
-	if mn.numActiveDelegates() == 0 {
-		return "", common.NewErrorf("pay_fees",
-			"miner %v has no delegates", mn.ID)
-	} else {
-		mn.Stat.GeneratorRewards += minerr + minerf
-		if err := mn.StakePool.DistributeRewards(
-			float64(minerr+minerf), mn.ID, stakepool.Miner, balances,
-		); err != nil {
-			return "", err
-		}
+	//if mn.numActiveDelegates() == 0 {
+	//	return "", common.NewErrorf("pay_fees",
+	//		"miner %v has no delegates", mn.ID)
+	//	} else {
+	mn.Stat.GeneratorRewards += minerr + minerf
+	if err := mn.StakePool.DistributeRewards(
+		float64(minerr+minerf), mn.ID, stakepool.Miner, balances,
+	); err != nil {
+		return "", err
 	}
+	//}
 	// pay and mint rest for mb sharders
 	iresp, err = msc.payShardersAndDelegates(sharderf, sharderr, mb, gn, balances)
 	if err != nil {
@@ -504,15 +504,15 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 
 	// part for every sharder
 	for _, sh := range sharders {
-		if sh.numActiveDelegates() == 0 {
-			return "", common.NewErrorf("pay_fees",
-				"sharder %v has no delegates", sh.ID)
-		} else {
-			sh.Stat.SharderRewards += partf + partm
-			err = sh.StakePool.DistributeRewards(
-				float64(partf+partm), sh.ID, stakepool.Sharder, balances,
-			)
-		}
+		//if sh.numActiveDelegates() == 0 {
+		//	return "", common.NewErrorf("pay_fees",
+		//		"sharder %v has no delegates", sh.ID)
+		//} else {
+		sh.Stat.SharderRewards += partf + partm
+		err = sh.StakePool.DistributeRewards(
+			float64(partf+partm), sh.ID, stakepool.Sharder, balances,
+		)
+		//}
 
 		if err = sh.save(balances); err != nil {
 			return "", common.NewErrorf("pay_fees/pay_sharders",

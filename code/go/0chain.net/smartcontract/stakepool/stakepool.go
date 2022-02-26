@@ -214,6 +214,17 @@ func (sp *StakePool) DistributeRewards(
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var stake = float64(sp.stake())
+
+	// give everything to the delegate wallet if there is no stake.
+	if len(sp.Pools) == 0 || stake == 0 {
+		sp.Reward = state.Balance(value)
+		spUpdate.Reward = int64(value)
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
+		return nil
+	}
 
 	var serviceCharge float64
 	serviceCharge = sp.Settings.ServiceCharge * value
@@ -227,16 +238,7 @@ func (sp *StakePool) DistributeRewards(
 		return nil
 	}
 
-	if len(sp.Pools) == 0 {
-		return fmt.Errorf("no stake pools to move tokens to")
-	}
-
 	valueLeft := value - serviceCharge
-	var stake = float64(sp.stake())
-	if stake == 0 {
-		return fmt.Errorf("no stake")
-	}
-
 	for id, pool := range sp.Pools {
 		ratio := float64(pool.Balance) / stake
 		reward := state.Balance(valueLeft * ratio)
