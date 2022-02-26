@@ -147,6 +147,7 @@ func TestNotarizedBlockHandler(t *testing.T) {
 		b   = block.NewBlock("", 1)
 	)
 
+	makeTestChain(t)
 	type args struct {
 		ctx    context.Context
 		entity datastore.Entity
@@ -192,6 +193,7 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 		b   = block.NewBlock("", 1)
 	)
 
+	makeTestChain(t)
 	type args struct {
 		ctx    context.Context
 		entity datastore.Entity
