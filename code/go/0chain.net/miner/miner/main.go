@@ -443,6 +443,8 @@ func initN2NHandlers(c *miner.Chain) {
 	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
+
+	chain.SetupLFBTicketSender()
 }
 
 func initWorkers(ctx context.Context) {

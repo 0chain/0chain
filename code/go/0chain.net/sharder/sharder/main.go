@@ -448,6 +448,8 @@ func initN2NHandlers(c *chain.Chain) {
 	sharder.SetupS2SRequestors()
 	sharder.SetupS2SResponders()
 	sharder.SetupX2SResponders()
+
+	chain.SetupLFBTicketSender()
 }
 
 func initWorkers(ctx context.Context) {
