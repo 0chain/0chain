@@ -486,7 +486,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			balances.GetBlock().Round == 0 {
 
 			var dataRead float64 = 0
-			if blobber.LastRewardRoundOfDataRead >= rewardRound {
+			if blobber.LastRewardDataReadRound >= rewardRound {
 				dataRead = blobber.DataReadLastRewardRound
 			}
 

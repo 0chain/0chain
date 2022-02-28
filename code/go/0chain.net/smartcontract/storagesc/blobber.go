@@ -496,12 +496,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
-	if blobber.LastRewardRoundOfDataRead >= rewardRound {
+	if blobber.LastRewardDataReadRound >= rewardRound {
 		blobber.DataReadLastRewardRound += sizeRead
 	} else {
 		blobber.DataReadLastRewardRound = sizeRead
 	}
-	blobber.LastRewardRoundOfDataRead = balances.GetBlock().Round
+	blobber.LastRewardDataReadRound = balances.GetBlock().Round
 
 	if blobber.RewardPartition.StartRound >= rewardRound && blobber.RewardPartition.Timestamp > 0 {
 		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
