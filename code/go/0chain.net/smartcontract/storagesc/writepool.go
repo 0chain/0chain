@@ -367,7 +367,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	if balances.GetEventDB() != nil {
-		data, err := writePoolToEventReadPool(ap, t)
+		data, err := writePoolToEventWritePool(ap, t)
 		if err != nil {
 			return "", err
 		}
@@ -388,7 +388,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	return
 }
 
-func writePoolToEventReadPool(writePool allocationPool, t *transaction.Transaction) (string, error) {
+func writePoolToEventWritePool(writePool allocationPool, t *transaction.Transaction) (string, error) {
 	writeAllocation := event.WriteAllocationPool{
 		AllocationID:  writePool.AllocationID,
 		TransactionId: t.Hash,
@@ -485,7 +485,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	}
 
 	if balances.GetEventDB() != nil {
-		data, err := writePoolToEventReadPool(*ap, t)
+		data, err := writePoolToEventWritePool(*ap, t)
 		if err != nil {
 			return "", err
 		}
