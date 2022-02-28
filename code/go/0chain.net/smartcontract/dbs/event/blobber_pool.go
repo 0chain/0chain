@@ -1,10 +1,14 @@
 package event
 
-import "gorm.io/gorm"
+import (
+	"github.com/guregu/null"
+	"gorm.io/gorm"
+)
 
 type BlobberPool struct {
 	gorm.Model
-	AllocationPoolID string
-	BlobberID        string
-	Balance          int64
+	ReadAllocationPoolID  null.String
+	WriteAllocationPoolID null.String
+	BlobberID             string
+	Balance               int64
 }

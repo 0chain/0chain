@@ -1,0 +1,43 @@
+package event
+
+import (
+	"github.com/guregu/null"
+	"gorm.io/gorm"
+)
+
+type WriteAllocationPool struct {
+	gorm.Model
+	AllocationID  string `gorm:"uniqueIndex"`
+	TransactionId string
+	UserID        string
+	Balance       int64
+	Blobbers      []BlobberPool `gorm:"foreignKey:WriteAllocationPoolID;references:AllocationID"`
+	ZcnBalance    int64
+	ZcnID         string
+	ExpireAt      int64
+}
+
+type WriteAllocationPoolFilter struct {
+	gorm.Model
+	AllocationID  null.String
+	TransactionId null.String
+	UserID        null.String
+	Balance       null.Int
+	ExpireAt      null.Int
+}
+
+func (edb *EventDb) addWriteAllocationPool(writeAllocationPool WriteAllocationPool) error {
+	return edb.Get().Model(&WriteAllocationPool{}).Create(&writeAllocationPool).Error
+}
+
+func (edb *EventDb) GetWriteAllocationPoolWithFilterAndPagination(filter WriteAllocationPoolFilter, offset, limit int) ([]WriteAllocationPool, error) {
+	query := edb.Get().Model(&WriteAllocationPool{}).Where(&filter)
+	if offset != -1 {
+		query = query.Offset(offset)
+	}
+	if limit != -1 {
+		query = query.Limit(limit)
+	}
+	var allocationPools []WriteAllocationPool
+	return allocationPools, query.Scan(&allocationPools).Error
+}

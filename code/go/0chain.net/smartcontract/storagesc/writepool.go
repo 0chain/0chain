@@ -374,7 +374,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
 			{
 				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddAllocationPool),
+				Tag:  int(event.TagAddWriteAllocationPool),
 				Data: data,
 			},
 		})
@@ -389,12 +389,11 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 }
 
 func writePoolToEventReadPool(writePool allocationPool, t *transaction.Transaction) (string, error) {
-	writeAllocation := event.AllocationPool{
+	writeAllocation := event.WriteAllocationPool{
 		AllocationID:  writePool.AllocationID,
 		TransactionId: t.Hash,
 		UserID:        t.ToClientID,
 		Balance:       int64(writePool.Balance),
-		IsWritePool:   true,
 		ExpireAt:      int64(writePool.ExpireAt),
 		ZcnBalance:    int64(writePool.ZcnPool.Balance),
 		ZcnID:         writePool.ZcnPool.ID,
@@ -402,9 +401,9 @@ func writePoolToEventReadPool(writePool allocationPool, t *transaction.Transacti
 	writeAllocation.Blobbers = make([]event.BlobberPool, len(writePool.Blobbers))
 	for i, blobber := range writePool.Blobbers {
 		writeAllocation.Blobbers[i] = event.BlobberPool{
-			AllocationPoolID: writePool.AllocationID,
-			Balance:          int64(blobber.Balance),
-			BlobberID:        blobber.BlobberID,
+			WriteAllocationPoolID: null.StringFrom(writePool.AllocationID),
+			Balance:               int64(blobber.Balance),
+			BlobberID:             blobber.BlobberID,
 		}
 	}
 	data, err := json.Marshal(writeAllocation)
@@ -493,7 +492,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
 			{
 				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddAllocationPool),
+				Tag:  int(event.TagAddWriteAllocationPool),
 				Data: data,
 			},
 		})
@@ -541,17 +540,16 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 			return nil, common.NewErrBadRequest("limit value is not valid")
 		}
 	}
-	allocations, err := balances.GetEventDB().GetAllocationPoolWithFilterAndPagination(
-		event.AllocationPoolFilter{
-			IsWritePool: null.BoolFrom(true),
-			UserID:      null.StringFrom(clientID),
+	allocations, err := balances.GetEventDB().GetWriteAllocationPoolWithFilterAndPagination(
+		event.WriteAllocationPoolFilter{
+			UserID: null.StringFrom(clientID),
 		},
 		offset,
 		limit,
 	)
 	wp.Pools = make(allocationPools, len(allocations))
 	for index, allocation := range allocations {
-		ap := allocationPoolTableToAllocationPool(allocation)
+		ap := allocationPoolTableToWriteAllocationPool(allocation)
 		wp.Pools[index] = &ap
 	}
 
@@ -605,17 +603,16 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 			return nil, common.NewErrBadRequest("limit value is not valid")
 		}
 	}
-	allocations, err := balances.GetEventDB().GetAllocationPoolWithFilterAndPagination(
-		event.AllocationPoolFilter{
-			IsWritePool: null.BoolFrom(true),
-			UserID:      null.StringFrom(clientID),
+	allocations, err := balances.GetEventDB().GetWriteAllocationPoolWithFilterAndPagination(
+		event.WriteAllocationPoolFilter{
+			UserID: null.StringFrom(clientID),
 		},
 		offset,
 		limit,
 	)
 	wp.Pools = make(allocationPools, len(allocations))
 	for index, allocation := range allocations {
-		ap := allocationPoolTableToAllocationPool(allocation)
+		ap := allocationPoolTableToWriteAllocationPool(allocation)
 		wp.Pools[index] = &ap
 	}
 

@@ -31,40 +31,40 @@ func TestWriteAllocationPool(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	defer eventDb.drop()
 	assert.NoError(t, err, "error while migrating")
-	err = eventDb.addAllocationPool(AllocationPool{
+	err = eventDb.addWriteAllocationPool(WriteAllocationPool{
 		AllocationID:  "allocationID",
 		TransactionId: "transaction id",
 		UserID:        "some user id",
 		Balance:       23,
 		Blobbers: []BlobberPool{
 			{
-				AllocationPoolID: "allocationID",
-				Balance:          2,
-				BlobberID:        "blobberID",
+				WriteAllocationPoolID: null.StringFrom("allocationID"),
+				Balance:               2,
+				BlobberID:             "blobberID",
 			},
 			{
-				AllocationPoolID: "allocationID",
-				Balance:          2,
-				BlobberID:        "blobberID1",
+				WriteAllocationPoolID: null.StringFrom("allocationID"),
+				Balance:               2,
+				BlobberID:             "blobberID1",
 			},
 		},
 	})
 	assert.NoError(t, err, "There should be on error")
-	err = eventDb.addAllocationPool(AllocationPool{
+	err = eventDb.addWriteAllocationPool(WriteAllocationPool{
 		AllocationID:  "allocation",
 		TransactionId: "transaction id",
 		UserID:        "some user id",
 		Balance:       23,
 		Blobbers: []BlobberPool{
 			{
-				AllocationPoolID: "allocation1",
-				Balance:          2,
-				BlobberID:        "blobberID",
+				WriteAllocationPoolID: null.StringFrom("allocation1"),
+				Balance:               2,
+				BlobberID:             "blobberID",
 			},
 			{
-				AllocationPoolID: "allocation2",
-				Balance:          2,
-				BlobberID:        "blobberID1",
+				WriteAllocationPoolID: null.StringFrom("allocation2"),
+				Balance:               2,
+				BlobberID:             "blobberID1",
 			},
 		},
 	})
@@ -91,49 +91,38 @@ func TestWriteAllocationPoolFilter(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	defer eventDb.drop()
 	assert.NoError(t, err, "error while migrating")
-	createAllocationPool(t, eventDb, 20)
-	t.Run("return only read allocation", func(t *testing.T) {
-		allocations, err := eventDb.GetAllocationPoolWithFilterAndPagination(AllocationPoolFilter{
-			IsWritePool: null.BoolFrom(false),
+	createWriteAllocationPool(t, eventDb, 20)
+	t.Run("return only write allocation with userid", func(t *testing.T) {
+		allocations, err := eventDb.GetWriteAllocationPoolWithFilterAndPagination(WriteAllocationPoolFilter{
+			UserID: null.StringFrom("userid"),
 		}, 0, 10)
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 10, len(allocations), "not all read allocations were returned")
 		for _, allocation := range allocations {
-			assert.Equal(t, false, allocation.IsWritePool, "write pool should not be returned")
-		}
-	})
-	t.Run("return only write allocation", func(t *testing.T) {
-		allocations, err := eventDb.GetAllocationPoolWithFilterAndPagination(AllocationPoolFilter{
-			IsWritePool: null.BoolFrom(true),
-		}, 0, 10)
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 10, len(allocations), "not all write allocations were returned")
-		for _, allocation := range allocations {
-			assert.Equal(t, true, allocation.IsWritePool, "read pool should not be returned")
+			assert.Equal(t, "userid", allocation.UserID, "write pool should not be returned")
 		}
 	})
 }
 
-func createAllocationPool(t *testing.T, eventDb *EventDb, count int) {
+func createWriteAllocationPool(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		indexString := strconv.Itoa(i)
-		err := eventDb.addAllocationPool(
-			AllocationPool{
+		err := eventDb.addWriteAllocationPool(
+			WriteAllocationPool{
 				AllocationID:  "allocation" + indexString,
 				TransactionId: "transaction" + indexString,
-				UserID:        "userid" + indexString,
+				UserID:        "userid",
 				Balance:       int64(i),
-				IsWritePool:   i%2 == 0,
 				Blobbers: []BlobberPool{
 					{
-						AllocationPoolID: "allocation" + indexString,
-						BlobberID:        "blobber1",
-						Balance:          2,
+						WriteAllocationPoolID: null.StringFrom("allocation" + indexString),
+						BlobberID:             "blobber1",
+						Balance:               2,
 					},
 					{
-						AllocationPoolID: "allocation" + indexString,
-						BlobberID:        "blobber2",
-						Balance:          2,
+						WriteAllocationPoolID: null.StringFrom("allocation" + indexString),
+						BlobberID:             "blobber2",
+						Balance:               2,
 					},
 				},
 			},
