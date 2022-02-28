@@ -36,6 +36,7 @@ func TestAddEvents(t *testing.T) {
 	})
 	time.Sleep(100 * time.Millisecond)
 	errObj := Error{}
+	time.Sleep(100 * time.Millisecond)
 	result := eventDb.Store.Get().Model(&Error{}).Where(&Error{TransactionID: "somehash", Error: "someData"}).Take(&errObj)
 	if result.Error != nil {
 		t.Errorf("error while trying to find errorObject %v got error %v", errObj, result.Error)
