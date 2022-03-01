@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-func makeTestNode(typ int8, pk string) (*node.Node, error) {
+func makeTestNode(typ node.NodeType, pk string) (*node.Node, error) {
 	nc := map[interface{}]interface{}{
 		"type":        typ,
 		"public_ip":   "public ip",
