@@ -1,11 +1,13 @@
 package event
 
 import (
+	"errors"
+	"fmt"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
-	"errors"
-	"fmt"
+	"github.com/guregu/null"
 	"gorm.io/gorm"
 )
 
@@ -30,26 +32,54 @@ type Miner struct {
 	Rewards           state.Balance
 	Fees              state.Balance
 	Active            bool
-	Longitude         int64
-	Latitude          int64
+	Longitude         float64
+	Latitude          float64
 }
 
-func (edb *EventDb) GetMiner(id string) (*Miner, error) {
+func (edb *EventDb) GetMiner(id string) (Miner, error) {
 
 	var miner Miner
-
-	result := edb.Store.Get().
+	return miner, edb.Store.Get().
 		Model(&Miner{}).
 		Where(&Miner{MinerID: id}).
-		First(&miner)
+		First(&miner).Error
+}
 
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving miner %v, error %v",
-			id, result.Error)
+type MinerQuery struct {
+	gorm.Model
+	MinerID           null.String
+	N2NHost           null.String
+	Host              null.String
+	Port              null.Int
+	Path              null.String
+	PublicKey         null.String
+	ShortName         null.String
+	BuildTag          null.String
+	TotalStaked       state.Balance
+	Delete            null.Bool
+	DelegateWallet    null.String
+	ServiceCharge     null.Float
+	NumberOfDelegates null.Int
+	MinStake          null.Int
+	MaxStake          null.Int
+	LastHealthCheck   null.Int
+	Rewards           null.Int
+	Fees              null.Int
+	Active            null.Bool
+	Longitude         null.Float
+	Latitude          null.Float
+}
+
+func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, offset, limit int) ([]Miner, error) {
+	var miners []Miner
+	query := edb.Get().Model(&Miner{}).Where(&filter)
+	if offset > 0 {
+		query = query.Offset(offset)
 	}
-
-	return &miner, nil
-
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	return miners, query.Scan(&miners).Error
 }
 
 func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
