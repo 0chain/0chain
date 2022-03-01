@@ -84,9 +84,9 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 // it is for decoding MinerNode bytes
 type minerNodeDecode struct {
 	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*delegatePool `json:"pending,omitempty" msg:"pending,omitempty"`
-	Active      map[string]*delegatePool `json:"active,omitempty" msg:"active,omitempty"`
-	Deleting    map[string]*delegatePool `json:"deleting,omitempty" msg:"deleting,omitempty"`
+	Pending     map[string]*delegatePool `json:"pending,omitempty"`
+	Active      map[string]*delegatePool `json:"active,omitempty"`
+	Deleting    map[string]*delegatePool `json:"deleting,omitempty"`
 }
 
 func newMinerNodeDecode() *minerNodeDecode {

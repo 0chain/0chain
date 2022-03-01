@@ -611,21 +611,21 @@ type StorageAllocation struct {
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
 	// Finalized is true where allocation has been finalized.
-	Finalized bool `json:"finalized,omitempty" msg:"finalized,omitempty"`
+	Finalized bool `json:"finalized,omitempty"`
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
-	Canceled bool `json:"canceled,omitempty" msg:"canceled,omitempty"`
+	Canceled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
 	UsedSize int64 `json:"-" msg:"-"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty" msg:"moved_to_challenge,omitempty"`
+	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack state.Balance `json:"moved_back,omitempty" msg:"moved_back,omitempty"`
+	MovedBack state.Balance `json:"moved_back,omitempty"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
-	MovedToValidators state.Balance `json:"moved_to_validators,omitempty" msg:"moved_to_validators,omitempty"`
+	MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
 
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.

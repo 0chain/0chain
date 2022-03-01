@@ -163,7 +163,7 @@ type Block struct {
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-" msg:"-"`
-	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty" msg:"mb,omitempty"`
+	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 }
 
 // NewBlock - create a new empty block
