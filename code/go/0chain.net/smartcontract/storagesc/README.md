@@ -564,12 +564,17 @@ free to use these zbox command.
     ```
     ./zwallet getbalance
     ```
-34. Since, your wallet was configured and delegate_wallet for the blobbers,
-    then it should have rewards, and interests
+34. Now transfer the rewards from your stakepool to your wallet.
     ```
-    ./zbox sp-take-rewards --blobber_id $BLOBBER1
-    ./zbox sp-take-rewards --blobber_id $BLOBBER2
+    ./zbox collect-rewards --poolod $POOL_ID --provider_type blobber
     ```
+35. You can now check your balance with    
+     ```
+    ./zwallet getbalance
+    ```
+    unfortunately this might not show your rewards, as `getbalance` ony gives 
+your balance to three decimal places. 
+
 
 # Client specific API
 
