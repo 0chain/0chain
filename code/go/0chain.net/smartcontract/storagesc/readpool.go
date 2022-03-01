@@ -485,19 +485,6 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
-	if balances.GetEventDB() != nil {
-		data, err := readPoolToEventReadPool(*ap, t)
-		if err != nil {
-			return "", err
-		}
-		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
-			{
-				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddReadAllocationPool),
-				Data: string(data),
-			},
-		})
-	}
 	// save read pools
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())

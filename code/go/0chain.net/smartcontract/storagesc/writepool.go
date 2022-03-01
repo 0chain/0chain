@@ -484,20 +484,6 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 
-	if balances.GetEventDB() != nil {
-		data, err := writePoolToEventWritePool(*ap, t)
-		if err != nil {
-			return "", err
-		}
-		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
-			{
-				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddWriteAllocationPool),
-				Data: data,
-			},
-		})
-	}
-
 	// save write pools
 	if err = wp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
