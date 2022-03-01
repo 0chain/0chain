@@ -10,7 +10,7 @@ import (
 )
 
 // collectReward mints tokens for miner or sharder delegate rewards.
-// The minted tokens are transferred the user's wallet.
+// The minted tokens are transferred to the user's wallet.
 func (ssc *MinerSmartContract) collectReward(
 	txn *transaction.Transaction,
 	input []byte,
@@ -24,14 +24,19 @@ func (ssc *MinerSmartContract) collectReward(
 			"can't decode request: %v", err)
 	}
 
+	if prr.ProviderType != stakepool.Miner && prr.ProviderType != stakepool.Sharder {
+		return "", common.NewErrorf("collect_reward_failed",
+			"invalid provider type: %s", prr.ProviderType.String())
+	}
+
 	usp, err := stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.Find(prr.PoolId)
-	if len(providerId) == 0 {
+	providerID := usp.Find(prr.PoolId)
+	if len(providerID) == 0 {
 		return "", common.NewErrorf("collect_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
 	}
@@ -39,9 +44,9 @@ func (ssc *MinerSmartContract) collectReward(
 	var provider *MinerNode
 	switch prr.ProviderType {
 	case stakepool.Miner:
-		provider, err = getMinerNode(providerId, balances)
+		provider, err = getMinerNode(providerID, balances)
 	case stakepool.Sharder:
-		provider, err = ssc.getSharderNode(providerId, balances)
+		provider, err = ssc.getSharderNode(providerID, balances)
 	default:
 		err = fmt.Errorf("unsupported provider type", prr.ProviderType.String())
 	}
@@ -50,7 +55,7 @@ func (ssc *MinerSmartContract) collectReward(
 	}
 
 	_, err = provider.StakePool.MintRewards(
-		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
+		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"error emptying account, %v", err)

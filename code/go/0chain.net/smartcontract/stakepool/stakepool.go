@@ -218,7 +218,7 @@ func (sp *StakePool) DistributeRewards(
 
 	// give everything to the delegate wallet if there is no stake.
 	if len(sp.Pools) == 0 || stake == 0 {
-		sp.Reward = state.Balance(value)
+		sp.Reward += state.Balance(value)
 		spUpdate.Reward = int64(value)
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err

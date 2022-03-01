@@ -41,8 +41,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	if err = newMiner.Validate(); err != nil {
-		logging.Logger.Info(
-			"piers AddMiner Validate", zap.Error(err))
 		return "", common.NewErrorf("add_miner", "invalid input: %v", err)
 	}
 
@@ -199,11 +197,6 @@ func (msc *MinerSmartContract) deleteNode(
 			}
 		case stakepool.Active:
 			pool.Status = stakepool.Deleting
-			//pool.TokenLockInterface = &ViewChangeLock{
-			//	Owner:               pool.DelegateID,
-			//	DeleteViewChangeSet: true,
-			//	DeleteVC:            gn.ViewChange,
-			//}
 		case stakepool.Deleting:
 		case stakepool.Deleted:
 		default:

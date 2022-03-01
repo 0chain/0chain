@@ -95,10 +95,13 @@ func (msc *MinerSmartContract) unlockOffline(
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
 		}
 		var err error
-		if mn.NodeType == NodeTypeMiner {
+		switch mn.NodeType {
+		case NodeTypeMiner:
 			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, stakepool.Miner, balances)
-		} else {
+		case NodeTypeSharder:
 			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, stakepool.Sharder, balances)
+		default:
+			err = fmt.Errorf("unrecognised node type: %s", mn.NodeType.String())
 		}
 		if err != nil {
 			return common.NewError("pay_fees/unlock_offline", err.Error())
@@ -437,11 +440,11 @@ func (msc *MinerSmartContract) payStakeHolders(
 	node *MinerNode,
 	isSharder bool,
 	balances cstate.StateContextI,
-) (resp string, err error) {
+) (string, error) {
 	if value == 0 {
-		return
+		return "", nil
 	}
-
+	var err error
 	if isSharder {
 		node.Stat.SharderRewards += value
 		err = node.StakePool.DistributeRewards(
@@ -453,7 +456,7 @@ func (msc *MinerSmartContract) payStakeHolders(
 			float64(value), node.ID, stakepool.Miner, balances,
 		)
 	}
-	return "", nil
+	return "", err
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
@@ -487,13 +490,13 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 }
 
 // pay fees and mint sharders
-func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
-	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
+func (msc *MinerSmartContract) payShardersAndDelegates(
+	fee, mint state.Balance, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
+) (string, error) {
+	var err error
 	var sharders []*MinerNode
 	if sharders, err = msc.getBlockSharders(block, balances); err != nil {
-		return // unexpected error
+		return "", err
 	}
 
 	// fess and mint
@@ -504,15 +507,13 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 
 	// part for every sharder
 	for _, sh := range sharders {
-		//if sh.numActiveDelegates() == 0 {
-		//	return "", common.NewErrorf("pay_fees",
-		//		"sharder %v has no delegates", sh.ID)
-		//} else {
 		sh.Stat.SharderRewards += partf + partm
-		err = sh.StakePool.DistributeRewards(
+		if err = sh.StakePool.DistributeRewards(
 			float64(partf+partm), sh.ID, stakepool.Sharder, balances,
-		)
-		//}
+		); err != nil {
+			return "", common.NewErrorf("pay_fees/pay_sharders",
+				"distributing rewards: %v", err)
+		}
 
 		if err = sh.save(balances); err != nil {
 			return "", common.NewErrorf("pay_fees/pay_sharders",
@@ -520,7 +521,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 		}
 	}
 
-	return
+	return "", nil
 }
 
 func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
