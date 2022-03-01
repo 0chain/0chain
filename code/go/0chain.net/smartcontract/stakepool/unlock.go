@@ -21,6 +21,24 @@ func (sp *StakePool) UnlockPool(
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}
+	return sp.UnlockPoolI(
+		clientID,
+		providerType,
+		providerId,
+		poolId,
+		usp,
+		balances,
+	)
+}
+
+func (sp *StakePool) UnlockPoolI(
+	clientID string,
+	providerType Provider,
+	providerId datastore.Key,
+	poolId datastore.Key,
+	usp *UserStakePools,
+	balances cstate.StateContextI,
+) (state.Balance, error) {
 	foundProvider := usp.Find(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
 		return 0, fmt.Errorf("user %v does not own stake pool %v", clientID, poolId)

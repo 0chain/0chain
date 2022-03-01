@@ -187,11 +187,16 @@ func (msc *MinerSmartContract) deleteNode(
 		nodeType = stakepool.Sharder
 	}
 
+	usp, err := stakepool.GetUserStakePool(nodeType, deleteNode.DelegateWallet, balances)
+	if err != nil {
+		return nil, fmt.Errorf("can't get user pools list: %v", err)
+	}
+
 	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
 		case stakepool.Pending:
-			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, deleteNode.ID, key, balances)
+			_, err := deleteNode.UnlockPoolI(
+				pool.DelegateID, nodeType, deleteNode.ID, key, usp, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}
