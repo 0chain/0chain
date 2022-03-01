@@ -17,8 +17,6 @@ import (
 )
 
 var (
-	// LatestRoundRequestor -
-	LatestRoundRequestor node.EntityRequestor
 	// RoundRequestor -
 	RoundRequestor node.EntityRequestor
 	// RoundSummariesRequestor -
@@ -35,7 +33,6 @@ var (
 func SetupS2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundEntityMetadata := datastore.GetEntityMetadata("round")
-	LatestRoundRequestor = node.RequestEntityHandler("/v1/_s2s/latest_round/get", options, roundEntityMetadata)
 
 	RoundRequestor = node.RequestEntityHandler("/v1/_s2s/round/get", options, roundEntityMetadata)
 
@@ -63,7 +60,7 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
-// SetupX2SRespondes setups sharders responders for miner and sharders.
+// SetupX2SResponders setups sharders responders for miner and sharders.
 func SetupX2SResponders() {
 	// BlockRequestHandler - used by nodes to get missing FB by received LFB
 	// ticket from sharder sent the ticket.
@@ -154,7 +151,7 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 }
 
 // LatestRoundRequestHandler - returns latest finalized round info.
-func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (
+func LatestRoundRequestHandler(_ context.Context, _ *http.Request) (
 	resp interface{}, err error) {
 	var (
 		sc = GetSharderChain()
