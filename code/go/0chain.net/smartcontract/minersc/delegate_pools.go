@@ -35,14 +35,15 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"can't add delegate pool for miner being deleted")
 	}
 
-	if fnd, lnd := mn.numDelegates(), mn.NumberOfDelegates; fnd >= lnd {
+	numDelegates := mn.numDelegates()
+	if numDelegates >= mn.NumberOfDelegates {
 		return "", common.NewErrorf("delegate_pool_add",
-			"max delegates already reached: %d (%d)", fnd, lnd)
+			"max delegates already reached: %d (%d)", numDelegates, mn.NumberOfDelegates)
 	}
 
-	if fnd, scn := mn.numDelegates(), gn.MaxDelegates; fnd >= scn {
+	if numDelegates >= gn.MaxDelegates {
 		return "", common.NewErrorf("delegate_pool_add",
-			"SC max delegates already reached: %d (%d)", fnd, scn)
+			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
 	}
 
 	if t.Value < int64(mn.MinStake) {
