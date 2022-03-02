@@ -58,7 +58,6 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		return "", common.NewErrorf("delegate_pool_add",
 			"digging delegate pool: %v", err)
 	}
-	mn.NumPending++
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
@@ -105,7 +104,6 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 				return "", common.NewErrorf("delegate_pool_del",
 					"stake_pool_unlock_failed: %v", err)
 			}
-			mn.NumPending--
 			if err = mn.save(balances); err != nil {
 				return "", common.NewError("delegate_pool_del", err.Error())
 			}
@@ -114,7 +112,6 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	case stakepool.Active:
 		{
 			pool.Status = stakepool.Deleting
-			mn.NumActive--
 			if err = mn.save(balances); err != nil {
 				return "", common.NewErrorf("delegate_pool_del",
 					"saving miner node: %v", err)

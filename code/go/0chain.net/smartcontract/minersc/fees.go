@@ -23,8 +23,6 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for _, pool := range mn.Pools {
 		if pool.Status == stakepool.Pending {
 			pool.Status = stakepool.Active
-			mn.NumPending--
-			mn.NumActive++
 			mn.TotalStaked += int64(pool.Balance)
 		}
 	}
@@ -77,7 +75,6 @@ func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	for _, pool := range mn.Pools {
 		if pool.Status == stakepool.Deleting {
 			pool.Status = stakepool.Deleted
-			mn.NumActive--
 		}
 	}
 
@@ -109,8 +106,6 @@ func (msc *MinerSmartContract) unlockOffline(
 
 		pool.Status = stakepool.Deleted
 	}
-	mn.NumPending = 0
-	mn.NumActive = 0
 
 	if err := mn.save(balances); err != nil {
 		return err

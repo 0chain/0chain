@@ -100,7 +100,6 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 			dp.Balance = zcnToBalance(delegate)
 			dp.DelegateID = datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j))
 			dp.Status = stakepool.Active
-			node.NumActive++
 			node.Pools[strconv.Itoa(j)] = &dp
 			staked += int64(zcnToBalance(delegate))
 		}

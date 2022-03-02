@@ -586,8 +586,6 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 type MinerNode struct {
 	*SimpleNode          `json:"simple_miner"`
 	*stakepool.StakePool `json:"stake_pool"`
-	NumPending           int `json:"pending"`
-	NumActive            int `json:"active"`
 }
 
 func NewMinerNode() *MinerNode {
@@ -611,24 +609,19 @@ func (mn *MinerNode) GetKey() datastore.Key {
 }
 
 func (mn *MinerNode) numDelegates() int {
-	return mn.NumPending + mn.NumActive
-}
-
-func (mn *MinerNode) numActiveDelegates() int {
-	return mn.NumActive
+	var count int
+	for _, pool := range mn.Pools {
+		if pool.Status == stakepool.Pending || pool.Status == stakepool.Active {
+			count++
+		}
+	}
+	return count
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
-	//var key datastore.Key
-	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
 	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
-	//Logger.Debug("saving miner node", zap.String("id", mn.ID),
-	//	zap.Int("pending", len(mn.Pending)), zap.Int("active", len(mn.Active)), zap.Int("size", len(mn.Encode())))
-	//Logger.Debug("MinerNode save successfully",
-	//	zap.String("path", encryption.Hash(mn.GetKey())),
-	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
 	return nil
 }
 
@@ -647,36 +640,6 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	return nil
 }
 
-/*
-// nodeWithVCPoolLock represents a MinerNode that use ViewChangeLock as tokenLockInterface
-// it is for decoding MinerNode bytes
-type nodeWithVCPoolLock struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*DelegatePoolWithVCPoolLock `json:"pending,omitempty"`
-	Active      map[string]*DelegatePoolWithVCPoolLock `json:"active,omitempty"`
-	Deleting    map[string]*DelegatePoolWithVCPoolLock `json:"deleting,omitempty"`
-}
-
-func newNodeWithVCPoolLock() *nodeWithVCPoolLock {
-	mn := &nodeWithVCPoolLock{SimpleNode: &SimpleNode{}}
-	mn.Pending = make(map[string]*DelegatePoolWithVCPoolLock)
-	mn.Active = make(map[string]*DelegatePoolWithVCPoolLock)
-	mn.Deleting = make(map[string]*DelegatePoolWithVCPoolLock)
-	return mn
-}
-
-// DelegatePoolWithVCPoolLock is for decoding delegate pool with ViewChangeLock as the TokenLockInterface
-type DelegatePoolWithVCPoolLock struct {
-	*sci.PoolStats              `json:"stats"`
-	*ZcnTokenPoolWithVCPoolLock `json:"pool"`
-}
-
-// ZcnTokenPoolWithVCPoolLock represents the struct for decoding pool in DelegatePool
-type ZcnTokenPoolWithVCPoolLock struct {
-	tokenpool.ZcnPool `json:"pool"`
-	*ViewChangeLock   `json:"lock"`
-}
-*/
 // Decode decodes the miner node from bytes
 func (mn *MinerNode) Decode(input []byte) error {
 	//n := newNodeWithVCPoolLock()
@@ -711,20 +674,6 @@ func (mn *MinerNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
-/*
-func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
-	var keys []string
-	for k := range mn.Active {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	ops = make([]*sci.DelegatePool, 0, len(keys))
-	for _, key := range keys {
-		ops = append(ops, mn.Active[key])
-	}
-	return
-}
-*/
 // NodeType used in pools statistic.
 type NodeType int
 
@@ -941,81 +890,6 @@ func newDelegatePoolStat(dp *stakepool.DelegatePool) (dps *delegatePoolStat) {
 	return
 }
 
-/*
-// A userPools represents response for user pools requests.
-type userPools struct {
-	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
-}
-
-func newUserPools() (ups *userPools) {
-	ups = new(userPools)
-	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
-	return
-}
-
-
-// UserNode keeps references to all user's pools.
-type UserNode struct {
-	ID    string                            `json:"id"`       // client ID
-	Pools map[datastore.Key][]datastore.Key `json:"pool_map"` // node_id -> [pool_id]
-}
-
-func NewUserNode() *UserNode {
-	return &UserNode{Pools: make(map[datastore.Key][]datastore.Key)}
-}
-
-func (un *UserNode) save(balances cstate.StateContextI) (err error) {
-
-	if len(un.Pools) > 0 {
-		if _, err = balances.InsertTrieNode(un.GetKey(), un); err != nil {
-			return fmt.Errorf("saving user node: %v", err)
-		}
-	} else {
-		if _, err = balances.DeleteTrieNode(un.GetKey()); err != nil {
-			return fmt.Errorf("deleting user node: %v", err)
-		}
-	}
-
-	return
-}
-
-func (un *UserNode) deletePool(nodeId, id datastore.Key) error {
-	for i, pool := range un.Pools[nodeId] {
-		if id == pool {
-			un.Pools[nodeId][i] = un.Pools[nodeId][len(un.Pools[nodeId])-1]
-			un.Pools[nodeId][len(un.Pools[nodeId])-1] = ""
-			un.Pools[nodeId] = un.Pools[nodeId][:len(un.Pools[nodeId])-1]
-			if len(un.Pools[nodeId]) == 0 {
-				delete(un.Pools, nodeId)
-			}
-
-			return nil
-		}
-	}
-	return fmt.Errorf("remove pool failed, cannot find pool %s in user's node %s", id, nodeId)
-}
-
-func (un *UserNode) Encode() []byte {
-	buff, _ := json.Marshal(un)
-	return buff
-}
-
-func (un *UserNode) Decode(input []byte) error {
-	return json.Unmarshal(input, un)
-}
-
-func (un *UserNode) GetKey() datastore.Key {
-	return datastore.Key(ADDRESS + un.ID)
-}
-
-func (un *UserNode) GetHash() string {
-	return util.ToHex(un.GetHashBytes())
-}
-
-func (un *UserNode) GetHashBytes() []byte {
-	return encryption.RawHash(un.Encode())
-}
-*/
 type deletePool struct {
 	MinerID string `json:"id"`
 	PoolID  string `json:"pool_id"`
@@ -1050,50 +924,6 @@ func (pn *PhaseNode) Decode(input []byte) error {
 	return json.Unmarshal(input, pn)
 }
 
-/*
-func HasPool(pools map[string]*sci.DelegatePool, poolID datastore.Key) bool {
-	pool := pools[poolID]
-	return pool != nil
-}
-
-func AddPool(pools map[string]*sci.DelegatePool, pool *sci.DelegatePool) error {
-	if HasPool(pools, pool.ID) {
-		return common.NewError("can't add pool", "miner node already has pool")
-	}
-	pools[pool.ID] = pool
-	return nil
-}
-
-func DeletePool(pools map[string]*sci.DelegatePool, poolID datastore.Key) error {
-	if HasPool(pools, poolID) {
-		return common.NewError("can't delete pool", "pool doesn't exist")
-	}
-	delete(pools, poolID)
-	return nil
-}
-
-func DecodeDelegatePools(pools map[string]*sci.DelegatePool,
-	poolsBytes json.RawMessage, tokenlock tokenpool.TokenLockInterface) error {
-
-	var rawMessagesPools map[string]json.RawMessage
-	err := json.Unmarshal(poolsBytes, &rawMessagesPools)
-	if err != nil {
-		return err
-	}
-	for _, raw := range rawMessagesPools {
-		tempPool := sci.NewDelegatePool()
-		err = tempPool.Decode(raw, tokenlock)
-		if err != nil {
-			return err
-		}
-		err = AddPool(pools, tempPool)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-*/
 type DKGMinerNodes struct {
 	MinN     int     `json:"min_n"`
 	MaxN     int     `json:"max_n"`
