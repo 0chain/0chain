@@ -359,8 +359,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		// fees         -- total fees for the mb
 		fees             = msc.sumFee(mb, true)
 		minerf, sharderf = gn.splitByShareRatio(fees)
-		// intermediate response
-		iresp string
 	)
 
 	mn.Stat.GeneratorRewards += minerr + minerf
@@ -369,13 +367,11 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	); err != nil {
 		return "", err
 	}
-	//}
+
 	// pay and mint rest for mb sharders
-	iresp, err = msc.payShardersAndDelegates(sharderf, sharderr, mb, gn, balances)
-	if err != nil {
+	if err := msc.payShardersAndDelegates(sharderf, sharderr, mb, gn, balances); err != nil {
 		return "", err
 	}
-	resp += iresp
 
 	// save node first, for the VC pools work
 	if err = mn.save(balances); err != nil {
@@ -483,11 +479,11 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
 	fee, mint state.Balance, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
-) (string, error) {
+) error {
 	var err error
 	var sharders []*MinerNode
 	if sharders, err = msc.getBlockSharders(block, balances); err != nil {
-		return "", err
+		return err
 	}
 
 	// fess and mint
@@ -502,17 +498,17 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		if err = sh.StakePool.DistributeRewards(
 			float64(partf+partm), sh.ID, stakepool.Sharder, balances,
 		); err != nil {
-			return "", common.NewErrorf("pay_fees/pay_sharders",
+			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
 		}
 
 		if err = sh.save(balances); err != nil {
-			return "", common.NewErrorf("pay_fees/pay_sharders",
+			return common.NewErrorf("pay_fees/pay_sharders",
 				"saving sharder node: %v", err)
 		}
 	}
 
-	return "", nil
+	return nil
 }
 
 func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
