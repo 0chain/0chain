@@ -96,14 +96,14 @@ type Chain struct {
 	Config
 	BlocksToSharder int
 
-	MagicBlockStorage round.RoundStorage `json:"-" msg:"-"`
+	MagicBlockStorage round.RoundStorage `json:"-"`
 
-	PreviousMagicBlock *block.MagicBlock `json:"-" msg:"-"`
+	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	getLFMB                      chan *block.Block `json:"-" msg:"-"`
+	getLFMB                      chan *block.Block `json:"-"`
 	getLFMBClone                 chan *block.Block
-	updateLFMB                   chan *updateLFMBWithReply `json:"-" msg:"-"`
+	updateLFMB                   chan *updateLFMBWithReply `json:"-"`
 	lfmbMutex                    sync.RWMutex
 	latestOwnFinalizedBlockRound int64 // finalized by this node
 
@@ -114,7 +114,7 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	currentRound int64 `json:"-" msg:"-"`
+	currentRound int64 `json:"-"`
 
 	FeeStats transaction.TransactionFeeStats `json:"fee_stats"`
 
@@ -130,16 +130,16 @@ type Chain struct {
 	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *finalizeBlockWithReply
 
-	*Stats `json:"-" msg:"-"`
+	*Stats `json:"-"`
 
-	BlockChain *ring.Ring `json:"-" msg:"-"`
+	BlockChain *ring.Ring `json:"-"`
 
 	minersStake map[datastore.Key]int
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
 
-	GenerateTimeout int `json:"-" msg:"-"`
+	GenerateTimeout int `json:"-"`
 	genTimeoutMutex *sync.Mutex
 
 	// syncStateTimeout is the timeout for syncing a MPT state from network
