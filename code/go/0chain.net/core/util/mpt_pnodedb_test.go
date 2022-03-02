@@ -11,54 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//const dataDir = "tmp"
-
-//func cleanUp() error {
-//	if err := os.RemoveAll(dataDir); err != nil {
-//		return err
-//	}
-//
-//	return nil
-//}
-
-func TestNewPNodeDB(t *testing.T) {
-	//sstType = SSTTypePlainTable
-
-	//type args struct {
-	//	dataDir string
-	//	logDir  string
-	//}
-	//tests := []struct {
-	//	name    string
-	//	args    args
-	//	wantErr bool
-	//}{
-	//	{
-	//		name:    "Test_NewPNodeDB_OK",
-	//		args:    args{dataDir: dataDir},
-	//		wantErr: false,
-	//	},
-	//}
-	//for _, tt := range tests {
-	//	t.Run(tt.name, func(t *testing.T) {
-	//		dirname, err := ioutil.TempDir("test", "pndb")
-	//		require.NoError(t, err)
-	//
-	//		_, err := NewPNodeDB(filepath.Join(dirname, "mpt"), filepath.Join(dirname, "log"))
-	//		if (err != nil) != tt.wantErr {
-	//			t.Errorf("NewPNodeDB() error = %v, wantErr %v", err, tt.wantErr)
-	//			return
-	//		}
-	//
-	//		if err := os.RemoveAll("tmp"); err != nil {
-	//			t.Error(err)
-	//		}
-	//	})
-	//}
-	_, clean := newPNodeDB(t)
-	defer clean()
-}
-
 func TestPNodeDB_Iterate(t *testing.T) {
 	t.Parallel()
 
@@ -285,9 +237,6 @@ func TestPNodeDB_GetDBVersions(t *testing.T) {
 		})
 	}
 
-	//if err := cleanUp(); err != nil {
-	//	t.Error(err)
-	//}
 }
 
 func TestPNodeDB_TrackDBVersion(t *testing.T) {

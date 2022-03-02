@@ -265,7 +265,6 @@ func (sc *StateContext) Validate() error {
 
 func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s := &state.State{}
-	//s.Balance = state.Balance(0)
 	err := sc.state.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

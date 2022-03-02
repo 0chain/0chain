@@ -287,9 +287,6 @@ func (ln *LeafNode) GetNodeType() byte {
 
 /*HasValue - implement interface */
 func (ln *LeafNode) HasValue() bool {
-	// TODO: remove the GetValueBytes check, as it would try to marshal the value to see if it is empty, which is
-	// a waste of time
-	//return ln.Value != nil && len(ln.Value.GetValueBytes()) > 0
 	return ln.Value != nil && ln.Value.Value != nil
 }
 

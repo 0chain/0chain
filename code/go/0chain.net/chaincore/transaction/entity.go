@@ -46,7 +46,7 @@ func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.HashIDField
-	datastore.CollectionMemberField `json:"-" msgpack:"-" msg:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
 
 	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`

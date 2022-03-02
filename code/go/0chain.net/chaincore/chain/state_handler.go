@@ -1,7 +1,9 @@
 package chain
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -11,8 +13,10 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
-
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
+	"github.com/tinylib/msgp/msgp"
 )
 
 /*SetupStateHandlers - setup handlers to manage state */
@@ -71,32 +75,37 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
-	// TODO: check the keys
-	//scAddress := r.FormValue("sc_address")
-	//key := r.FormValue("key")
-	//lfb := c.GetLatestFinalizedBlock()
-	//if lfb == nil {
-	//	return nil, common.NewError("failed to get sc state", "finalized block doesn't exist")
-	//}
-	//if lfb.ClientState == nil {
-	//	return nil, common.NewError("failed to get sc state", "finalized block's state doesn't exist")
-	//}
-	//c.stateMutex.RLock()
-	//defer c.stateMutex.RUnlock()
-	//node, err := lfb.ClientState.GetNodeValue(util.Path(encryption.Hash(scAddress + key)))
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if node == nil {
-	//	return nil, common.NewError("key_not_found", "key was not found")
-	//}
-	//var retObj interface{}
-	//err = json.Unmarshal(node.Encode(), &retObj)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return retObj, nil
-	return nil, nil
+	scAddress := r.FormValue("sc_address")
+	key := r.FormValue("key")
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, common.NewError("failed to get sc state", "finalized block doesn't exist")
+	}
+	if lfb.ClientState == nil {
+		return nil, common.NewError("failed to get sc state", "finalized block's state doesn't exist")
+	}
+	c.stateMutex.RLock()
+	defer c.stateMutex.RUnlock()
+	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
+	if err != nil {
+		return nil, err
+	}
+	if len(d) == 0 {
+		return nil, common.NewError("key_not_found", "key was not found")
+	}
+
+	buf := &bytes.Buffer{}
+	_, err = msgp.UnmarshalAsJSON(buf, d)
+	if err != nil {
+		return nil, common.NewErrorf("decode error", "unmarshal as json failed: %v", err)
+	}
+
+	var retObj interface{}
+	err = json.NewDecoder(buf).Decode(&retObj)
+	if err != nil {
+		return nil, err
+	}
+	return retObj, nil
 }
 
 /*GetBalanceHandler - get the balance of a client */

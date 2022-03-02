@@ -89,8 +89,19 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path, v MPTSerializable) error {
+	d, err := mpt.GetNodeValueRaw(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
+}
+
+// GetNodeValueRaw gets the raw data slice for a given path without decodding
+func (mpt *MerklePatriciaTrie) GetNodeValueRaw(path Path) ([]byte, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return fmt.Errorf("invalid hex path: path=%q, err=%v", string(path), err)
+		return nil, fmt.Errorf("invalid hex path: path=%q, err=%v", string(path), err)
 	}
 
 	mpt.mutex.RLock()
@@ -98,26 +109,18 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path, v MPTSerializable) error 
 
 	rootKey := []byte(mpt.root)
 	if len(rootKey) == 0 {
-		return ErrValueNotPresent
+		return nil, ErrValueNotPresent
 	}
 
 	rootNode, err := mpt.db.GetNode(rootKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if rootNode == nil {
-		return ErrNodeNotFound
+		return nil, ErrNodeNotFound
 	}
 
-	return mpt.getNodeValue(path, rootNode, v)
-
-	//if err != nil {
-	//	return err
-	//}
-	//if v == nil { // This can happen if path given is partial that aligns with a full node that has no value
-	//	return ErrValueNotPresent
-	//}
-	//return v, err
+	return mpt.getNodeValueRaw(path, rootNode)
 }
 
 /*Insert - inserts (updates) a value into this trie and updates the trie all the way up and produces a new root */
@@ -303,32 +306,39 @@ func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 }
 
 func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node, v MPTSerializable) error {
+	d, err := mpt.getNodeValueRaw(path, node)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
+}
+
+func (mpt *MerklePatriciaTrie) getNodeValueRaw(path Path, node Node) ([]byte, error) {
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
 			d := nodeImpl.GetValueBytes()
 			if len(d) == 0 {
-				return ErrValueNotPresent
+				return nil, ErrValueNotPresent
 			}
 
-			_, err := v.UnmarshalMsg(d)
-			return err
+			return d, nil
 		}
-		return ErrValueNotPresent
+		return nil, ErrValueNotPresent
 	case *FullNode:
 		if len(path) == 0 {
 			d := nodeImpl.GetValueBytes()
 			if len(d) == 0 {
-				return ErrValueNotPresent
+				return nil, ErrValueNotPresent
 			}
 
-			_, err := v.UnmarshalMsg(d)
-			return err
-			//return nodeImpl.GetValue(), nil
+			return d, nil
 		}
 		ckey := nodeImpl.GetChild(path[0])
 		if ckey == nil {
-			return ErrValueNotPresent
+			return nil, ErrValueNotPresent
 		}
 
 		nnode, err := mpt.db.GetNode(ckey)
@@ -340,13 +350,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node, v MPTSerializa
 					zap.String("key", ToHex(ckey)),
 					zap.Error(err))
 			}
-			return ErrNodeNotFound
+			return nil, ErrNodeNotFound
 		}
-		return mpt.getNodeValue(path[1:], nnode, v)
+		return mpt.getNodeValueRaw(path[1:], nnode)
 	case *ExtensionNode:
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if len(prefix) == 0 {
-			return ErrValueNotPresent
+			return nil, ErrValueNotPresent
 		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.db.GetNode(nodeImpl.NodeKey)
@@ -354,11 +364,11 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node, v MPTSerializa
 				if err != nil {
 					Logger.Error("extension node get node failed", zap.Error(err))
 				}
-				return ErrNodeNotFound
+				return nil, ErrNodeNotFound
 			}
-			return mpt.getNodeValue(path[len(prefix):], nnode, v)
+			return mpt.getNodeValueRaw(path[len(prefix):], nnode)
 		}
-		return ErrValueNotPresent
+		return nil, ErrValueNotPresent
 	default:
 		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
