@@ -363,10 +363,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		iresp string
 	)
 
-	//if mn.numActiveDelegates() == 0 {
-	//	return "", common.NewErrorf("pay_fees",
-	//		"miner %v has no delegates", mn.ID)
-	//	} else {
 	mn.Stat.GeneratorRewards += minerr + minerf
 	if err := mn.StakePool.DistributeRewards(
 		float64(minerr+minerf), mn.ID, stakepool.Miner, balances,

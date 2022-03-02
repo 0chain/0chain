@@ -26,9 +26,9 @@ func AddMockNodes(
 		err          error
 		nodes        []string
 		allNodes     MinerNodes
-		numActive    int
 		nodeMap      = make(map[string]*SimpleNode)
 		numNodes     int
+		numActive    int
 		numDelegates int
 		key          string
 	)
