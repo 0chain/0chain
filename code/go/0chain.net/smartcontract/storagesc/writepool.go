@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -289,7 +291,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	// check client balance
-	if err = checkFill(t, balances); err != nil {
+	if err = stakepool.CheckClientBalance(t, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 

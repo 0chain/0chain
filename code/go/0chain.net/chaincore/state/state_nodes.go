@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +18,7 @@ import (
 type Nodes struct {
 	datastore.IDField
 	Version string      `json:"version"`
-	Nodes   []util.Node `json:"-"`
+	Nodes   []util.Node `json:"-" msgpack:"-"`
 }
 
 //NewStateNodes - create a new partial state object with initialization
@@ -78,18 +79,7 @@ func (ns *Nodes) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 
 //MarshalJSON - implement Marshaler interface
 func (ns *Nodes) MarshalJSON() ([]byte, error) {
-	var data = make(map[string]interface{})
-	return ns.MartialStateNodes(data)
-}
-
-//MartialStateNodes - martal the state nodes
-func (ns *Nodes) MartialStateNodes(data map[string]interface{}) ([]byte, error) {
-	data["version"] = ns.Version
-	nodes := make([][]byte, len(ns.Nodes))
-	for idx, nd := range ns.Nodes {
-		nodes[idx] = nd.Encode()
-	}
-	data["nodes"] = nodes
+	data := ns.getMarshalFields()
 	b, err := json.Marshal(data)
 	if err != nil {
 		logging.Logger.Error("marshal JSON - state nodes", zap.Error(err))
@@ -107,11 +97,11 @@ func (ns *Nodes) UnmarshalJSON(data []byte) error {
 		logging.Logger.Error("unmarshal json - state nodes", zap.Error(err))
 		return err
 	}
-	return ns.UnmarshalStateNodes(obj)
+	return ns.unmarshalStateNodesJSON(obj)
 }
 
-//UnmarshalStateNodes - unmarshal the partial state
-func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
+//unmarshalStateNodesJSON - unmarshal the partial state
+func (ns *Nodes) unmarshalStateNodesJSON(obj map[string]interface{}) error {
 	if str, ok := obj["version"].(string); ok {
 		ns.Version = str
 	} else {
@@ -139,6 +129,70 @@ func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
 		}
 	} else {
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	return nil
+}
+
+func (ns *Nodes) MarshalMsgpack() ([]byte, error) {
+	data := ns.getMarshalFields()
+	b, err := msgpack.Marshal(data)
+	if err != nil {
+		logging.Logger.Error("marshal msgpack - state nodes", zap.Error(err))
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (ns *Nodes) getMarshalFields() map[string]interface{} {
+	data := make(map[string]interface{})
+	data["version"] = ns.Version
+	nodes := make([][]byte, len(ns.Nodes))
+	for idx, nd := range ns.Nodes {
+		nodes[idx] = nd.Encode()
+	}
+	data["nodes"] = nodes
+	return data
+}
+
+//UnmarshalMsgpack - implement Unmarshaler interface
+func (ns *Nodes) UnmarshalMsgpack(data []byte) error {
+	var obj map[string]interface{}
+	err := msgpack.Unmarshal(data, &obj)
+	if err != nil {
+		logging.Logger.Error("unmarshal msgpack - state nodes", zap.Error(err))
+		return err
+	}
+	return ns.unmarshalStateNodesMsgpack(obj)
+}
+
+//unmarshalStateNodesMsgpack - unmarshal the partial state
+func (ns *Nodes) unmarshalStateNodesMsgpack(obj map[string]interface{}) error {
+	if str, ok := obj["version"].(string); ok {
+		ns.Version = str
+	} else {
+		logging.Logger.Error("unmarshal msgpack - no version", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	if nodes, ok := obj["nodes"].([]interface{}); ok {
+		ns.Nodes = make([]util.Node, len(nodes))
+		for idx, nd := range nodes {
+			if buf, ok := nd.([]byte); ok {
+				var err error
+				ns.Nodes[idx], err = util.CreateNode(bytes.NewBuffer(buf))
+				if err != nil {
+					logging.Logger.Error("unmarshal msgpack - state change", zap.Error(err))
+					return err
+				}
+			} else {
+				logging.Logger.Error("unmarshal msgpack - invalid node", zap.Int("idx", idx),
+					zap.Any("node", nd), zap.Any("obj", obj))
+				return common.ErrInvalidData
+			}
+		}
+	} else {
+		logging.Logger.Error("unmarshal msgpack - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	return nil

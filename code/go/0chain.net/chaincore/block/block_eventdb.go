@@ -23,7 +23,6 @@ func blockToBlockEvent(block *Block) *event.Block {
 		PrevHash:              block.PrevHash,
 		Signature:             block.Signature,
 		ChainId:               block.ChainID,
-		ChainWeight:           fmt.Sprintf("%f", block.ChainWeight),
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
 		CreatedAt:             block.CreationDateField.ToTime(),

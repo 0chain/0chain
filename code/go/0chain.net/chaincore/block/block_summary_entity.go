@@ -26,7 +26,7 @@ type BlockSummary struct {
 	ClientStateHash       util.Key      `json:"state_hash"`
 	ReceiptMerkleTreeRoot string        `json:"receipt_merkle_tree_root"`
 	NumTxns               int           `json:"num_txns"`
-	*MagicBlock           `json:"maigc_block,omitempty"`
+	*MagicBlock           `json:"maigc_block,omitempty" msgpack:"mb,omitempty"`
 }
 
 var blockSummaryEntityMetadata *datastore.EntityMetadataImpl

@@ -144,11 +144,10 @@ type Block struct {
 	datastore.HashIDField
 	Signature string `json:"signature"`
 
-	ChainID     datastore.Key `json:"chain_id"`
-	ChainWeight float64       `json:"chain_weight"`
-	RoundRank   int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
-	PrevBlock   *Block        `json:"-" msgpack:"-"`
-	Events      []event.Event
+	ChainID   datastore.Key `json:"chain_id"`
+	RoundRank int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
+	PrevBlock *Block        `json:"-" msgpack:"-"`
+	Events    []event.Event
 
 	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
@@ -243,9 +242,6 @@ func (b *Block) Validate(_ context.Context) error {
 	miner := node.GetNode(b.MinerID)
 	if miner == nil {
 		return common.NewError("unknown_miner", "Do not know this miner")
-	}
-	if b.ChainWeight > float64(b.Round) {
-		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
 
 	b.mutexTxns.RLock()
@@ -522,15 +518,6 @@ func (b *Block) Weight() float64 {
 	return w
 }
 
-/*ComputeChainWeight - compute the weight of the chain up to this block */
-func (b *Block) ComputeChainWeight() {
-	if b.PrevBlock == nil {
-		b.ChainWeight = b.Weight()
-	} else {
-		b.ChainWeight = b.PrevBlock.ChainWeight + b.Weight()
-	}
-}
-
 /*Clear - clear the block */
 func (b *Block) Clear() {
 	b.PrevBlock = nil
@@ -723,7 +710,6 @@ func (b *Block) Clone() *Block {
 		HashIDField:         b.HashIDField,
 		Signature:           b.Signature,
 		ChainID:             b.ChainID,
-		ChainWeight:         b.ChainWeight,
 		RoundRank:           b.RoundRank,
 		PrevBlock:           b.PrevBlock,
 		RunningTxnCount:     b.RunningTxnCount,

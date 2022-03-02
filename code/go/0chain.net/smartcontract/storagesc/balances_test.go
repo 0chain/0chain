@@ -56,7 +56,7 @@ func (tb *testBalances) setTransaction(t testing.TB,
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                                    { return nil }
+func (tb *testBalances) GetBlock() *block.Block                                    { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
 func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
 func (tb *testBalances) GetBlockSharders(b *block.Block) []string                  { return nil }

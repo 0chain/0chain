@@ -614,6 +614,11 @@ func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
 func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
+	isJSON := r.Header.Get("Accept") == "application/json"
+	if isJSON {
+		JSONHandler(w, r)
+		return
+	}
 	HomePageHandler(w, r)
 	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime.Format(common.DateTimeFormat), time.Since(StartTime))
 	sc.healthSummary(w, r)
@@ -623,19 +628,19 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
 	selfNodeType := node.Self.Underlying().Type
-	if selfNodeType == node.NodeTypeMiner && config.Development() {
+	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
 		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
-	if selfNodeType == node.NodeTypeSharder {
+	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
 		fmt.Fprintf(w, "<li><a href='_health_check'>/_health_check</a></li>")
 	}
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
-	if selfNodeType == node.NodeTypeMiner && config.Development() {
+	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
 	}
 	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
@@ -644,7 +649,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
-	if selfNodeType == node.NodeTypeMiner {
+	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
 		//ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
@@ -1123,7 +1128,6 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", metric.FormattedTime(cf))
 		}
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.GetKey())
-		fmt.Fprintf(w, "<td class='number'>%.8f</td>", cf.ChainWeight)
 		fmt.Fprintf(w, "<td>%s</td>", cf.BlockHash)
 		fmt.Fprintf(w, "<td>%v</td>", util.ToHex(cf.ClientStateHash))
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedCount)
@@ -1231,7 +1235,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	// Calculate and update fee
-	if err := txn.ValidateFee(); err != nil {
+	if err := txn.ValidateFee(sc.Config.TxnExempt(), sc.Config.MinTxnFee()); err != nil {
 		return nil, err
 	}
 
