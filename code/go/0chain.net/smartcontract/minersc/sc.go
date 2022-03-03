@@ -209,7 +209,6 @@ func getGlobalNode(
 	balances cstate.StateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
-	//var p util.Serializable
 	err = balances.GetTrieNode(GlobalNodeKey, gn)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

@@ -254,9 +254,6 @@ func (t *Transaction) HashData() string {
 	s.WriteString(":")
 	s.WriteString(encryption.Hash(t.TransactionData))
 	return s.String()
-	//hashdata := common.TimeToString(t.CreationDate) + ":" + string(t.ClientID) + ":" + string(t.ToClientID) + ":" +
-	//	strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
-	//return hashdata
 }
 
 /*ComputeHash - compute the hash from the various components of the transaction */

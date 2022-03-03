@@ -85,10 +85,10 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
 
 	closeAndClear = func() {
-		//rDB.Close()
-		//bDB.Close()
-		//rsDB.Close()
-		//bsDB.Close()
+		rDB.Close()
+		bDB.Close()
+		rsDB.Close()
+		bsDB.Close()
 
 		err = os.RemoveAll(dbDir)
 		require.NoError(t, err)

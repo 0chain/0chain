@@ -67,16 +67,9 @@ func (mn *MinerNode) numActiveDelegates() int {
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
-	//var key datastore.Key
-	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
 	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
-	//Logger.Debug("saving miner node", zap.String("id", mn.ID),
-	//	zap.Int("pending", len(mn.Pending)), zap.Int("active", len(mn.Active)), zap.Int("size", len(mn.Encode())))
-	//Logger.Debug("MinerNode save successfully",
-	//	zap.String("path", encryption.Hash(mn.GetKey())),
-	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
 	return nil
 }
 

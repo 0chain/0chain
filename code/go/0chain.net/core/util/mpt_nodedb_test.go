@@ -461,7 +461,7 @@ func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 
 	for i := 0; i < parallel; i++ {
 		t.Run("parallel access", func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			lndb.RebaseCurrentDB(fcurr)
 
@@ -946,7 +946,7 @@ func TestRaceLevelNodeDB_Full(t *testing.T) {
 }
 
 func TestMemoryNodeDB_reachable(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
 
@@ -990,7 +990,7 @@ func TestMemoryNodeDB_reachable(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			mndb := &MemoryNodeDB{
 				Nodes: tt.fields.Nodes,
@@ -1004,7 +1004,7 @@ func TestMemoryNodeDB_reachable(t *testing.T) {
 }
 
 func TestLevelNodeDB_GetDBVersion(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	type fields struct {
 		mu               *sync.RWMutex
@@ -1029,7 +1029,7 @@ func TestLevelNodeDB_GetDBVersion(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			lndb := &LevelNodeDB{
 				mutex:            &sync.RWMutex{},
@@ -1047,7 +1047,7 @@ func TestLevelNodeDB_GetDBVersion(t *testing.T) {
 }
 
 func TestLevelNodeDB_GetNode(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	ndb := NewMemoryNodeDB()
 
@@ -1083,7 +1083,7 @@ func TestLevelNodeDB_GetNode(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			lndb := &LevelNodeDB{
 				mutex:            &sync.RWMutex{},
@@ -1160,7 +1160,7 @@ func TestLevelNodeDB_MultiPutNode(t *testing.T) {
 }
 
 func TestLevelNodeDB_Iterate(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	ndm := NewMemoryNodeDB()
 
@@ -1192,7 +1192,7 @@ func TestLevelNodeDB_Iterate(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			lndb := &LevelNodeDB{
 				mutex:            &sync.RWMutex{},
@@ -1211,7 +1211,7 @@ func TestLevelNodeDB_Iterate(t *testing.T) {
 
 func TestMemoryNodeDB_Validate(t *testing.T) {
 	t.Skip("need protect DebugMPTNode against concurrent access")
-	//t.Parallel()
+	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
 
@@ -1261,7 +1261,7 @@ func TestMemoryNodeDB_Validate(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			mndb := &MemoryNodeDB{
 				Nodes: tt.fields.Nodes,
