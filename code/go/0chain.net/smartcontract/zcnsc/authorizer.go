@@ -3,6 +3,8 @@ package zcnsc
 import (
 	"fmt"
 
+	"0chain.net/core/util"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -74,6 +76,11 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(code, msg)
 		Logger.Warn("get authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	if err != nil && err == util.ErrNodeNotFound {
+		Logger.Error("get authorizer node", zap.Error(err))
 		return "", err
 	}
 
