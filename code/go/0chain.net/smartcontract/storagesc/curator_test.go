@@ -79,6 +79,11 @@ func TestAddCurator(t *testing.T) {
 			event.TypeStats, event.TagAddOrOverwriteCurator, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
 		return args{ssc, txn, input, balances}
 	}
 
