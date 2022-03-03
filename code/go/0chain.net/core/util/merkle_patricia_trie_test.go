@@ -1042,7 +1042,7 @@ func TestCloneMPT(t *testing.T) {
 type User struct {
 	Name        string `json:"full_name"`
 	Age         int    `json:"age,omitempty"`
-	Active      bool   `json:"-" msg:"-"`
+	Active      bool   `json:"-"`
 	lastLoginAt string
 }
 

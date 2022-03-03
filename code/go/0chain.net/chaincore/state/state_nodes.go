@@ -18,7 +18,7 @@ import (
 type Nodes struct {
 	datastore.IDField
 	Version string      `json:"version"`
-	Nodes   []util.Node `json:"-" msgpack:"-" msg:"-"`
+	Nodes   []util.Node `json:"-" msgpack:"-"`
 }
 
 //NewStateNodes - create a new partial state object with initialization

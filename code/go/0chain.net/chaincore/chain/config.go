@@ -338,7 +338,7 @@ type HealthCheckCycleScan struct {
 
 //ConfigData - chain Configuration
 type ConfigData struct {
-	version              int64         `json:"-" msg:"-"`               //version of config to track updates
+	version              int64         `json:"-"`                       //version of config to track updates
 	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
 	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
 	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have

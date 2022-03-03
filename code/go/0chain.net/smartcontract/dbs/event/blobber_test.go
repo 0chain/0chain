@@ -54,7 +54,7 @@ func TestBlobbers(t *testing.T) {
 		Capacity        int64                  `json:"capacity"` // total blobber capacity
 		Used            int64                  `json:"used"`     // allocated capacity
 		LastHealthCheck common.Timestamp       `json:"last_health_check"`
-		PublicKey       string                 `json:"-" msg:"-"`
+		PublicKey       string                 `json:"-"`
 		SavedData       int64                  `json:"saved_data"`
 		// StakePoolSettings used initially to create and setup stake pool.
 		StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`

@@ -146,23 +146,23 @@ type Block struct {
 	Signature string `json:"signature"`
 
 	ChainID   datastore.Key `json:"chain_id"`
-	RoundRank int           `json:"-" msgpack:"-" msg:"-"` // rank of the block in the round it belongs to
-	PrevBlock *Block        `json:"-" msgpack:"-" msg:"-"`
+	RoundRank int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
+	PrevBlock *Block        `json:"-" msgpack:"-"`
 	Events    []event.Event
 
-	TxnsMap   map[string]bool `json:"-" msgpack:"-" msg:"-"`
-	mutexTxns sync.RWMutex    `json:"-" msgpack:"-" msg:"-"`
+	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
+	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
 
-	ClientState           util.MerklePatriciaTrieI `json:"-" msgpack:"-" msg:"-"`
+	ClientState           util.MerklePatriciaTrieI `json:"-" msgpack:"-"`
 	stateStatus           int8
-	stateStatusMutex      sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
-	stateMutex            sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
+	stateStatusMutex      sync.RWMutex `json:"-" msgpack:"-"`
+	stateMutex            sync.RWMutex `json:"-" msgpack:"-"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
+	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-"`
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
-	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-" msg:"-"`
+	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
 	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 }
 

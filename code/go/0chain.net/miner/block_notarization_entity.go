@@ -12,7 +12,7 @@ type Notarization struct {
 	VerificationTickets []*block.VerificationTicket
 	BlockID             datastore.Key `json:"block_id"`
 	Round               int64
-	Block               *block.Block `json:"-" msg:"-"`
+	Block               *block.Block `json:"-"`
 }
 
 var notarizationEntityMetadata *datastore.EntityMetadataImpl
