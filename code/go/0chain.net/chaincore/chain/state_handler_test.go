@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/zcnsc"
 
 	"github.com/stretchr/testify/require"
@@ -63,54 +64,7 @@ type (
 		InterestRate     float64       `json:"interest_rate"`
 		InterestInterval time.Duration `json:"interest_interval"`
 	}
-
-	//scConfig struct {
-	//	TimeUnit                        time.Duration    `json:"time_unit"`
-	//	MaxMint                         state.Balance    `json:"max_mint"`
-	//	Minted                          state.Balance    `json:"minted"`
-	//	MinAllocSize                    int64            `json:"min_alloc_size"`
-	//	MinAllocDuration                time.Duration    `json:"min_alloc_duration"`
-	//	MaxChallengeCompletionTime      time.Duration    `json:"max_challenge_completion_time"`
-	//	MinOfferDuration                time.Duration    `json:"min_offer_duration"`
-	//	MinBlobberCapacity              int64            `json:"min_blobber_capacity"`
-	//	ValidatorReward                 float64          `json:"validator_reward"`
-	//	BlobberSlash                    float64          `json:"blobber_slash"`
-	//	MaxReadPrice                    state.Balance    `json:"max_read_price"`
-	//	MaxWritePrice                   state.Balance    `json:"max_write_price"`
-	//	FailedChallengesToCancel        int              `json:"failed_challenges_to_cancel"`
-	//	FailedChallengesToRevokeMinLock int              `json:"failed_challenges_to_revoke_min_lock"`
-	//	ChallengeEnabled                bool             `json:"challenge_enabled"`
-	//	MaxChallengesPerGeneration      int              `json:"max_challenges_per_generation"`
-	//	ChallengeGenerationRate         float64          `json:"challenge_rate_per_mb_min"`
-	//	MinStake                        state.Balance    `json:"min_stake"`
-	//	MaxStake                        state.Balance    `json:"max_stake"`
-	//	MaxDelegates                    int              `json:"max_delegates"`
-	//	MaxCharge                       float64          `json:"max_charge"`
-	//	StakePool                       *stakePoolConfig `json:"stakepool"`
-	//}
-
-	//userStakePools struct {
-	//	Pools map[datastore.Key][]datastore.Key `json:"pools"`
-	//}
 )
-
-//func (c *scConfig) MarshalMsg([]byte) ([]byte, error) {
-//	return json.Marshal(c)
-//}
-//
-//func (c *scConfig) UnmarshalMsg(data []byte) ([]byte, error) {
-//	err := json.Unmarshal(data, c)
-//	return nil, err
-//}
-//
-//func (u *userStakePools) MarshalMsg([]byte) ([]byte, error) {
-//	return json.Marshal(u)
-//}
-//
-//func (u *userStakePools) UnmarshalMsg(data []byte) ([]byte, error) {
-//	err := json.Unmarshal(data, u)
-//	return nil, err
-//}
 
 func TestChain_HandleSCRest_Status(t *testing.T) {
 	const (
@@ -1547,7 +1501,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				sp := &storagesc.UserStakePools{
+				sp := &stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						"key": {"key"},
 					},

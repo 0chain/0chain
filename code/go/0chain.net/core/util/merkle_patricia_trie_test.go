@@ -206,7 +206,6 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	astate := &AState{}
 	err := mpt.GetNodeValue([]byte(key), astate)
 	assert.NoError(t, err)
-	//assert.NoError(t, astate.Decode(val.Encode()))
 	if astate.balance != value {
 		t.Fatalf("%s: wrong state value: %d, expected: %d", key, astate.balance,
 			value)

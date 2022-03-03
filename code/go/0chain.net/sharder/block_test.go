@@ -44,14 +44,6 @@ const (
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
-	//cd, err := os.Getwd()
-	//require.NoError(t, err)
-	//
-	//tmpDir := filepath.Join(cd, "tmp")
-	//err = os.RemoveAll(tmpDir)
-	//err = os.MkdirAll(tmpDir, 0700)
-	//require.NoError(t, err)
-	//
 	dbDir, err := ioutil.TempDir("", "dbs")
 	require.NoError(t, err)
 

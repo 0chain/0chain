@@ -272,7 +272,6 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 		}
 		return s, err
 	}
-	//s = sc.clientStateDeserializer.Deserialize(ss).(*state.State)
 	//TODO: should we apply the pending transfers?
 	return s, nil
 }
