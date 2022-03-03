@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore unlockResponse stakePoolStat stakePoolRequest userPoolStat delegatePoolStat rewardsStat
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 type stakePoolSettings struct {
 	// DelegateWallet for pool owner.
 	DelegateWallet string `json:"delegate_wallet"`
