@@ -165,3 +165,16 @@ func TestNodeTypeNames(t *testing.T) {
 	require.Equal(t, "Sharder", NodeTypeNames[NodeTypeSharder].Value)
 	require.Equal(t, "Blobber", NodeTypeNames[NodeTypeBlobber].Value)
 }
+
+func TestGetNodeTypeNames(t *testing.T) {
+	n := Provider()
+	n.Type = NodeTypeMiner
+	n.SetIndex = 2
+	require.Equal(t, "Miner002", n.GetPseudoName())
+	n.Type = NodeTypeSharder
+	require.Equal(t, "Sharder002", n.GetPseudoName())
+	n.Type = NodeTypeBlobber
+	require.Equal(t, "Blobber002", n.GetPseudoName())
+	n.Type = 100
+	require.Equal(t, "Unknown002", n.GetPseudoName())
+}

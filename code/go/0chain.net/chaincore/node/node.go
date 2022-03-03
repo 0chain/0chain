@@ -401,7 +401,12 @@ func (n *Node) GetNodeType() string {
 
 /*GetNodeTypeName - get the name of this node type */
 func (n *Node) GetNodeTypeName() string {
-	return NodeTypeNames[n.Type].Value
+	name, err := GetNodeTypeName(n)
+	if err == nil {
+		return name
+	} else {
+		return "Unknown"
+	}
 }
 
 //Grab - grab a slot to send message
