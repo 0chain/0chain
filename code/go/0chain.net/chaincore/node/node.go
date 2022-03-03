@@ -99,11 +99,25 @@ var (
 	NodeStatusInactive = 1
 )
 
-var (
-	NodeTypeMiner   int8 = 0
-	NodeTypeSharder int8 = 1
-	NodeTypeBlobber int8 = 2
+type NodeType int8
+
+const (
+	NodeTypeMiner NodeType = iota
+	NodeTypeSharder
+	NodeTypeBlobber
 )
+
+func (n NodeType) String() string {
+	switch n {
+	case NodeTypeMiner:
+		return "Miner"
+	case NodeTypeSharder:
+		return "Sharder"
+	case NodeTypeBlobber:
+		return "Blobber"
+	}
+	return ""
+}
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
@@ -123,7 +137,7 @@ type Node struct {
 	Host           string        `json:"host" yaml:"public_ip"`
 	Port           int           `json:"port" yaml:"port"`
 	Path           string        `json:"path" yaml:"path"`
-	Type           int8          `json:"type" yaml:"-"`
+	Type           NodeType      `json:"type" yaml:"-"`
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
@@ -331,7 +345,7 @@ func Read(line string) (*Node, error) {
 /*NewNode - read a node config line and create the node */
 func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node := Provider()
-	node.Type = nc["type"].(int8)
+	node.Type = nc["type"].(NodeType)
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
