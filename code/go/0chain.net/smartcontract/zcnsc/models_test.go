@@ -270,7 +270,7 @@ func Test_AuthorizerNodeSerialization(t *testing.T) {
 
 func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	type AuthorizerConfigSource struct {
-		Fee string `json:"fee"`
+		Fee state.Balance `json:"fee"`
 	}
 
 	type AuthorizerNodeSource struct {
@@ -281,7 +281,7 @@ func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	source := &AuthorizerNodeSource{
 		ID: "12345678",
 		Config: &AuthorizerConfigSource{
-			Fee: "999",
+			Fee: state.Balance(999),
 		},
 	}
 	target := &AuthorizerNode{}

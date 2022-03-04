@@ -398,8 +398,9 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 		Fee: state.Balance(111),
 	}
 
-	node.UpdateConfig(cfg)
-	err := node.Save(ctx)
+	err := node.UpdateConfig(cfg)
+	require.NoError(t, err)
+	err = node.Save(ctx)
 	require.NoError(t, err)
 
 	// Get node and check its setting

@@ -162,19 +162,16 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 	fee, ok := objMap[Fee]
 	if ok {
 		var (
-			unmarshalError error
-			feeInt         *int64
+			err    error
+			feeInt *int64
 		)
 
-		var unmarshallTypeError *json.UnmarshalTypeError
-		if errors.As(unmarshalError, &unmarshallTypeError) {
-			unmarshalError = json.Unmarshal(*fee, &feeInt)
-			if unmarshalError != nil {
-				return unmarshalError
-			}
-			c.Fee = state.Balance(*feeInt)
-			return
+		err = json.Unmarshal(*fee, &feeInt)
+		if err != nil {
+			return err
 		}
+
+		c.Fee = state.Balance(*feeInt)
 	}
 
 	return nil
