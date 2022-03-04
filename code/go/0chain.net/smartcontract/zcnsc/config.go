@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 	"0chain.net/smartcontract"
 	"github.com/pkg/errors"
 )
@@ -32,16 +31,16 @@ const (
 )
 
 // ZCNSConfig config both for GlobalNode and AuthorizerNode
-type ZCNSConfig struct {
-	MinMintAmount      state.Balance `json:"min_mint_amount"`
-	MinBurnAmount      state.Balance `json:"min_burn_amount"`
-	MinStakeAmount     state.Balance `json:"min_stake_amount"`
-	MaxFee             state.Balance `json:"max_fee"`
-	PercentAuthorizers float64       `json:"percent_authorizers"`
-	MinAuthorizers     int64         `json:"min_authorizers"`
-	BurnAddress        string        `json:"burn_address"`
-	OwnerId            datastore.Key `json:"owner_id"`
-}
+//type ZCNSConfig struct {
+//	MinMintAmount      state.Balance `json:"min_mint_amount"`
+//	MinBurnAmount      state.Balance `json:"min_burn_amount"`
+//	MinStakeAmount     state.Balance `json:"min_stake_amount"`
+//	MaxFee             state.Balance `json:"max_fee"`
+//	PercentAuthorizers float64       `json:"percent_authorizers"`
+//	MinAuthorizers     int64         `json:"min_authorizers"`
+//	BurnAddress        string        `json:"burn_address"`
+//	OwnerId            datastore.Key `json:"owner_id"`
+//}
 
 func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
 	const (
@@ -55,7 +54,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	}
 
 	if err := smartcontractinterface.AuthorizeWithOwner(FuncName, func() bool {
-		return gn.Config.OwnerId == t.ClientID
+		return gn.OwnerId == t.ClientID
 	}); err != nil {
 		return "", errors.Wrap(err, Code)
 	}
@@ -82,8 +81,8 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	return string(gn.Encode()), nil
 }
 
-func (cfg *ZCNSConfig) ToStringMap() (res *smartcontract.StringMap, err error) {
-	bytes, err := json.Marshal(cfg)
+func (gn *GlobalNode) ToStringMap() (res *smartcontract.StringMap, err error) {
+	bytes, err := json.Marshal(gn)
 	if err != nil {
 		return res, errors.Wrap(err, "failed to convert config to StringMap")
 	}
@@ -105,20 +104,20 @@ func (cfg *ZCNSConfig) ToStringMap() (res *smartcontract.StringMap, err error) {
 	return
 }
 
-func Section(section string) string {
+func section(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func loadSettings() (conf *ZCNSConfig) {
-	conf = new(ZCNSConfig)
-	conf.MinMintAmount = state.Balance(cfg.GetInt(Section(MinMintAmount)))
-	conf.PercentAuthorizers = cfg.GetFloat64(Section(PercentAuthorizers))
-	conf.MinAuthorizers = cfg.GetInt64(Section(MinAuthorizers))
-	conf.MinBurnAmount = state.Balance(cfg.GetInt64(Section(MinBurnAmount)))
-	conf.MinStakeAmount = state.Balance(cfg.GetInt64(Section(MinStakeAmount)))
-	conf.BurnAddress = cfg.GetString(Section(BurnAddress))
-	conf.MaxFee = state.Balance(cfg.GetInt64(Section(MaxFee)))
-	conf.OwnerId = cfg.GetString(Section(OwnerID))
+func loadSettings() (conf *GlobalNode) {
+	conf = new(GlobalNode)
+	conf.MinMintAmount = state.Balance(cfg.GetInt(section(MinMintAmount)))
+	conf.PercentAuthorizers = cfg.GetFloat64(section(PercentAuthorizers))
+	conf.MinAuthorizers = cfg.GetInt64(section(MinAuthorizers))
+	conf.MinBurnAmount = state.Balance(cfg.GetInt64(section(MinBurnAmount)))
+	conf.MinStakeAmount = state.Balance(cfg.GetInt64(section(MinStakeAmount)))
+	conf.BurnAddress = cfg.GetString(section(BurnAddress))
+	conf.MaxFee = state.Balance(cfg.GetInt64(section(MaxFee)))
+	conf.OwnerId = cfg.GetString(section(OwnerID))
 
 	return conf
 }

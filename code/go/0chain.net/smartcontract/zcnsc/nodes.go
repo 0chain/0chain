@@ -22,21 +22,21 @@ import (
 // ------------- GlobalNode ------------------------
 
 type GlobalNode struct {
-	ID     string      `json:"id"`
-	Config *ZCNSConfig `json:"config"`
+	ID                 string        `json:"id"`
+	MinMintAmount      state.Balance `json:"min_mint_amount"`
+	MinBurnAmount      state.Balance `json:"min_burn_amount"`
+	MinStakeAmount     state.Balance `json:"min_stake_amount"`
+	MaxFee             state.Balance `json:"max_fee"`
+	PercentAuthorizers float64       `json:"percent_authorizers"`
+	MinAuthorizers     int64         `json:"min_authorizers"`
+	BurnAddress        string        `json:"burn_address"`
+	OwnerId            datastore.Key `json:"owner_id"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
 	var (
 		err error
-		c   *ZCNSConfig
 	)
-
-	if gn.Config == nil {
-		gn.Config = new(ZCNSConfig)
-	}
-
-	c = gn.Config
 
 	for key, value := range cfg.Fields {
 		switch key {
@@ -45,25 +45,25 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
 			}
-			c.MinMintAmount = state.Balance(amount * 1e10)
+			gn.MinMintAmount = state.Balance(amount * 1e10)
 		case MinBurnAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
 			}
-			c.MinBurnAmount = state.Balance(amount * 1e10)
+			gn.MinBurnAmount = state.Balance(amount * 1e10)
 		case BurnAddress:
 			if value == "" {
 				return fmt.Errorf("key %s is empty", key)
 			}
-			c.BurnAddress = value
+			gn.BurnAddress = value
 		case PercentAuthorizers:
-			c.PercentAuthorizers, err = strconv.ParseFloat(value, 64)
+			gn.PercentAuthorizers, err = strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to float64", key, value)
 			}
 		case MinAuthorizers:
-			c.MinAuthorizers, err = strconv.ParseInt(value, 10, 64)
+			gn.MinAuthorizers, err = strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
 			}
@@ -72,15 +72,15 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
 			}
-			c.MinStakeAmount = state.Balance(amount * 1e10)
+			gn.MinStakeAmount = state.Balance(amount * 1e10)
 		case MaxFee:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
 			}
-			c.MaxFee = state.Balance(amount * 1e10)
+			gn.MaxFee = state.Balance(amount * 1e10)
 		case OwnerID:
-			c.OwnerId = value
+			gn.OwnerId = value
 		default:
 			return fmt.Errorf("key %s not recognised as setting", key)
 		}
@@ -95,22 +95,22 @@ func (gn *GlobalNode) Validate() error {
 	)
 
 	switch {
-	case gn.Config.MinStakeAmount < 1:
-		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.Config.MinStakeAmount))
-	case gn.Config.MinMintAmount < 1:
-		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.Config.MinMintAmount))
-	case gn.Config.MaxFee < 1:
-		return common.NewError(Code, fmt.Sprintf("max fee (%v) is less than 1", gn.Config.MaxFee))
-	case gn.Config.MinAuthorizers < 20:
-		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 20", gn.Config.MinAuthorizers))
-	case gn.Config.MinBurnAmount < 1:
-		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.Config.MinBurnAmount))
-	case gn.Config.PercentAuthorizers < 70:
-		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 70", gn.Config.PercentAuthorizers))
-	case gn.Config.BurnAddress == "":
-		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.Config.BurnAddress))
-	case gn.Config.OwnerId == "":
-		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.Config.OwnerId))
+	case gn.MinStakeAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.MinStakeAmount))
+	case gn.MinMintAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.MinMintAmount))
+	case gn.MaxFee < 1:
+		return common.NewError(Code, fmt.Sprintf("max fee (%v) is less than 1", gn.MaxFee))
+	case gn.MinAuthorizers < 20:
+		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 20", gn.MinAuthorizers))
+	case gn.MinBurnAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.MinBurnAmount))
+	case gn.PercentAuthorizers < 70:
+		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 70", gn.PercentAuthorizers))
+	case gn.BurnAddress == "":
+		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
+	case gn.OwnerId == "":
+		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
 	}
 	return nil
 }

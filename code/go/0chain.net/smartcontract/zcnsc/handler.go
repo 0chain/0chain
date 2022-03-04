@@ -66,11 +66,11 @@ func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ct
 		return nil, common.NewError("get config handler", err.Error())
 	}
 
-	var zcnConfig *ZCNSConfig
-	if gn == nil || gn.Config == nil {
+	var zcnConfig *GlobalNode
+	if gn == nil {
 		zcnConfig = loadSettings()
 	} else {
-		zcnConfig = gn.Config
+		zcnConfig = gn
 	}
 
 	return zcnConfig.ToStringMap()
