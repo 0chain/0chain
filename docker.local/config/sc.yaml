@@ -230,7 +230,7 @@ smart_contracts:
     max_duration: "2h"
     max_destinations: 3
     max_description_length: 20
-    сost:
+    cost:
       trigger: 100
       unlock: 100
       add: 100
