@@ -26,7 +26,6 @@ import (
 /*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
 
 var TXN_TIME_TOLERANCE int64
-var TXN_MIN_FEE int64
 
 var transactionCount uint64 = 0
 var redis_txns string
@@ -94,19 +93,8 @@ type smartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
-var exemptedSCFunctions = map[string]bool{
-	"add_miner":            true,
-	"miner_health_check":   true,
-	"add_sharder":          true,
-	"sharder_health_check": true,
-	"contributeMpk":        true,
-	"sharder_keep":         true,
-	"shareSignsOrShares":   true,
-	"wait":                 true,
-}
-
 // ValidateFee - Validate fee
-func (t *Transaction) ValidateFee() error {
+func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) error {
 	if t.TransactionData != "" {
 		var smartContractData smartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
@@ -116,11 +104,11 @@ func (t *Transaction) ValidateFee() error {
 			return errors.New("invalid transaction data")
 		}
 
-		if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
+		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
 			return nil
 		}
 	}
-	if t.Fee < TXN_MIN_FEE {
+	if t.Fee < minTxnFee {
 		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
 	}
 	return nil
@@ -441,10 +429,6 @@ func (t *Transaction) Clone() *Transaction {
 
 func SetTxnTimeout(timeout int64) {
 	TXN_TIME_TOLERANCE = timeout
-}
-
-func SetTxnFee(min int64) {
-	TXN_MIN_FEE = min
 }
 
 func GetTransactionCount() uint64 {
