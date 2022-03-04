@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -66,12 +67,12 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 			Capacity:        b.Capacity,
 			Used:            b.Used,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
-			StakePoolSettings: stakePoolSettings{
-				DelegateWallet: b.DelegateWallet,
-				MinStake:       state.Balance(b.MinStake),
-				MaxStake:       state.Balance(b.MaxStake),
-				NumDelegates:   b.NumDelegates,
-				ServiceCharge:  b.ServiceCharge,
+			StakePoolSettings: stakepool.StakePoolSettings{
+				DelegateWallet:  b.DelegateWallet,
+				MinStake:        state.Balance(b.MinStake),
+				MaxStake:        state.Balance(b.MaxStake),
+				MaxNumDelegates: b.NumDelegates,
+				ServiceCharge:   b.ServiceCharge,
 			},
 		})
 
