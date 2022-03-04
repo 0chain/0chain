@@ -159,7 +159,7 @@ func (vsc *VestingSmartContract) updateConfig(
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
 	var conf *config
-	if conf, err = vsc.getConfig(balances, true); err != nil {
+	if conf, err = vsc.getConfig(balances); err != nil {
 		return "", common.NewError("update_config",
 			"can't get config: "+err.Error())
 	}
@@ -225,8 +225,7 @@ func getConfiguredConfig() (conf *config, err error) {
 }
 
 func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI, setup bool,
-) (conf *config, err error) {
+	balances chainstate.StateContextI) (conf *config, err error) {
 
 	var confb []byte
 	confb, err = vsc.getConfigBytes(balances)
@@ -237,9 +236,6 @@ func (vsc *VestingSmartContract) getConfig(
 	conf = new(config)
 
 	if err == util.ErrValueNotPresent {
-		if !setup {
-			return // value not present
-		}
 		return vsc.setupConfig(balances)
 	}
 
@@ -273,7 +269,7 @@ func (vsc *VestingSmartContract) getConfigHandler(
 	params url.Values,
 	balances chainstate.StateContextI,
 ) (interface{}, error) {
-	conf, err := vsc.getConfig(balances, true)
+	conf, err := vsc.getConfig(balances)
 	if err != nil {
 		return nil, common.NewErrInternal("can't get config", err.Error())
 	}
