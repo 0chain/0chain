@@ -139,28 +139,33 @@ func TestGetWriteMarkers(t *testing.T) {
 
 	addWriterMarkers(t, eventDb, "someHash")
 
-	t.Run("GetWriteMarkers", func(t *testing.T) {
+	t.Run("GetWriteMarkers ascending", func(t *testing.T) {
 		gotWM, err := eventDb.GetWriteMarkers(0, 10, false)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 10, false)
-
-		gotWM, err = eventDb.GetWriteMarkers(0, 10, true)
+	})
+	t.Run("GetWriteMarkers descending", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkers(0, 10, true)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 10, true)
-
-		gotWM, err = eventDb.GetWriteMarkers(0, 5, false)
+	})
+	t.Run("GetWriteMarkers 5 limit asecending", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkers(0, 5, false)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 5, false)
-
-		gotWM, err = eventDb.GetWriteMarkers(0, 5, true)
+	})
+	t.Run("GetWriteMarkers 5 limit descending", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkers(0, 5, true)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 5, true)
-
-		gotWM, err = eventDb.GetWriteMarkers(5, 5, false)
+	})
+	t.Run("GetWriteMarkers 5 offset 5 limit asecending", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkers(5, 5, false)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, false)
-
-		gotWM, err = eventDb.GetWriteMarkers(5, 5, true)
+	})
+	t.Run("GetWriteMarkers 5 offset 5 limit descending", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkers(5, 5, true)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
@@ -182,7 +187,8 @@ func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
 
 func compareWriteMarker(t *testing.T, gotWM []WriteMarker, blobberID string, offset, limit int, isDescending bool) {
 	if isDescending {
-		for j, i := 0, offset+limit-1; i >= offset; i, j = i-1, j-1 {
+		t.Log(offset, limit, offset+limit-1)
+		for j, i := 0, 9-offset; j < limit; i, j = i-1, j+1 {
 			transactionID := fmt.Sprintf("transactionHash_%d", i)
 			want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)}
 			want.ID = gotWM[j].ID
@@ -192,12 +198,12 @@ func compareWriteMarker(t *testing.T, gotWM []WriteMarker, blobberID string, off
 		}
 		return
 	}
-	for i := offset; i < offset+limit; i++ {
+	for i, j := offset, 0; i < offset+limit; i, j = i+1, j+1 {
 		transactionID := fmt.Sprintf("transactionHash_%d", i)
 		want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)}
-		want.ID = gotWM[i].ID
-		want.CreatedAt = gotWM[i].CreatedAt
-		want.UpdatedAt = gotWM[i].UpdatedAt
-		assert.Equal(t, want, gotWM[i], "Got invalid WM")
+		want.ID = gotWM[j].ID
+		want.CreatedAt = gotWM[j].CreatedAt
+		want.UpdatedAt = gotWM[j].UpdatedAt
+		assert.Equal(t, want, gotWM[j], "Got invalid WM")
 	}
 }
