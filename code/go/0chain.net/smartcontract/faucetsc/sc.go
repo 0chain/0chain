@@ -58,22 +58,19 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 	return fc.SmartContract.RestHandlers
 }
 
-func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) int {
+func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
 	node, err := fc.getGlobalVariables(t, balances)
 	if err != nil {
-		logging.Logger.Error("can't get global node", zap.Error(err))
-		return math.MaxInt32
+		return math.MaxInt32, err
 	}
 	if node.Cost == nil {
-		logging.Logger.Error("can't get cost")
-		return math.MaxInt32
+		return math.MaxInt32, err
 	}
 	cost, ok := node.Cost[funcName]
 	if !ok {
-		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
-		return math.MaxInt32
+		return math.MaxInt32, err
 	}
-	return cost
+	return cost, nil
 }
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {

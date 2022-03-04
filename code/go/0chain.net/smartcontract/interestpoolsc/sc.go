@@ -1,10 +1,9 @@
 package interestpoolsc
 
 import (
-	"0chain.net/core/logging"
 	"context"
+	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"math"
 	"net/url"
 	"time"
@@ -62,22 +61,19 @@ func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontracti
 	return ipsc.RestHandlers
 }
 
-func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) int {
-	node := ipsc.getGlobalNode(balances, funcName)
-	if node == nil {
-		logging.Logger.Error("can't get global node")
-		return math.MaxInt32
+func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
+	n := ipsc.getGlobalNode(balances, funcName)
+	if n == nil {
+		return math.MaxInt32, errors.New("can't get global node")
 	}
-	if node.Cost == nil {
-		logging.Logger.Error("can't get cost")
-		return math.MaxInt32
+	if n.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
 	}
-	cost, ok := node.Cost[funcName]
+	cost, ok := n.Cost[funcName]
 	if !ok {
-		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
-		return math.MaxInt32
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
 	}
-	return cost
+	return cost, nil
 }
 
 func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {

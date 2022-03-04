@@ -85,12 +85,7 @@ func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractT
 	return "", common.NewError("invalid_smart_contract_address", "Invalid Smart Contract address")
 }
 
-func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) int {
+func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) (int, error) {
 	contractObj := getSmartContract(t.ToClientID)
-	cost := contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
-	//hack for tests
-	//if cost == math.MaxInt32 {
-	//	return 0
-	//}
-	return cost
+	return contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
 }

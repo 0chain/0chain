@@ -287,7 +287,11 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	logging.Logger.Debug("ValidateBlockCost", zap.String("block", b.Hash))
 	cost := 0
 	for _, txn := range b.Txns {
-		cost += mc.EstimateTransactionCost(ctx, b, mc.GetLatestFinalizedBlock().ClientState, txn)
+		c, err := mc.EstimateTransactionCost(ctx, b, mc.GetLatestFinalizedBlock().ClientState, txn)
+		if err != nil {
+			return nil, err
+		}
+		cost += c
 		if cost > mc.Config.MaxBlockCost() {
 			return nil, block.ErrCostTooBig
 		}
@@ -652,7 +656,11 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
-		cost := mc.EstimateTransactionCost(ctx, mc.GetLatestFinalizedBlock(), mc.GetLatestFinalizedBlock().ClientState, txn)
+		cost, err := mc.EstimateTransactionCost(ctx, mc.GetLatestFinalizedBlock(), mc.GetLatestFinalizedBlock().ClientState, txn)
+		if err != nil {
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			return true
+		}
 		if tii.cost+cost >= mc.Config.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true
