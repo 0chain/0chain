@@ -9,15 +9,15 @@ import (
 	"0chain.net/core/util"
 )
 
-//go:generate msgp -io=false -tests=false -v
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
-type ItemList struct {
+type itemList struct {
 	Key     string       `json:"-" msg:"-"`
 	Items   []StringItem `json:"items"`
 	Changed bool         `json:"-" msg:"-"`
 }
 
-func (il *ItemList) Encode() []byte {
+func (il *itemList) Encode() []byte {
 	var b, err = json.Marshal(il)
 	if err != nil {
 		panic(err)
@@ -25,16 +25,16 @@ func (il *ItemList) Encode() []byte {
 	return b
 }
 
-func (il *ItemList) Decode(b []byte) error {
+func (il *itemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *ItemList) save(balances state.StateContextI) error {
+func (il *itemList) save(balances state.StateContextI) error {
 	_, err := balances.InsertTrieNode(il.Key, il)
 	return err
 }
 
-func (il *ItemList) get(key datastore.Key, balances state.StateContextI) error {
+func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 	err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -46,12 +46,12 @@ func (il *ItemList) get(key datastore.Key, balances state.StateContextI) error {
 	return nil
 }
 
-func (il *ItemList) add(it PartitionItem) {
+func (il *itemList) add(it PartitionItem) {
 	il.Items = append(il.Items, StringItem{it.Name()})
 	il.Changed = true
 }
 
-func (il *ItemList) remove(item PartitionItem) error {
+func (il *itemList) remove(item PartitionItem) error {
 	if len(il.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
@@ -65,7 +65,7 @@ func (il *ItemList) remove(item PartitionItem) error {
 	return nil
 }
 
-func (il *ItemList) cutTail() PartitionItem {
+func (il *itemList) cutTail() PartitionItem {
 	if len(il.Items) == 0 {
 		return nil
 	}
@@ -76,15 +76,15 @@ func (il *ItemList) cutTail() PartitionItem {
 	return &tail
 }
 
-func (il *ItemList) length() int {
+func (il *itemList) length() int {
 	return len(il.Items)
 }
 
-func (il *ItemList) changed() bool {
+func (il *itemList) changed() bool {
 	return il.Changed
 }
 
-func (il *ItemList) itemRange(start, end int) []PartitionItem {
+func (il *itemList) itemRange(start, end int) []PartitionItem {
 	if start > end || end > len(il.Items) {
 		return nil
 	}
@@ -96,7 +96,7 @@ func (il *ItemList) itemRange(start, end int) []PartitionItem {
 	return rtv
 }
 
-func (il *ItemList) find(searchItem PartitionItem) int {
+func (il *itemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
 		if item.Name() == searchItem.Name() {
 			return i

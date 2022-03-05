@@ -9,21 +9,21 @@ import (
 	"0chain.net/core/util"
 )
 
-//go:generate msgp -io=false -tests=false -v
+//go:generate msgp -v -io=false -tests=false -unexported=true
 
 func NewPopulatedValidatorSelector(
 	name string,
 	size int,
 	data []ValidationNode,
 ) RandPartition {
-	rs := &RandomSelector{
+	rs := &randomSelector{
 		Name:          name,
 		PartitionSize: size,
 		ItemType:      ItemValidator,
 	}
 
 	for i := 0; i < len(data)/size; i++ {
-		partition := ValidatorItemList{
+		partition := validatorItemList{
 			Key:     rs.partitionKey(i),
 			Items:   data[size*i : size*(i+1)],
 			Changed: true,
@@ -32,7 +32,7 @@ func NewPopulatedValidatorSelector(
 		rs.NumPartitions++
 	}
 	if len(data)%size > 0 {
-		partition := ValidatorItemList{
+		partition := validatorItemList{
 			Key:     rs.partitionKey(rs.NumPartitions),
 			Items:   data[rs.NumPartitions*size:],
 			Changed: true,
@@ -73,13 +73,13 @@ func (vn *ValidationNode) Name() string {
 
 //------------------------------------------------------------------------------
 
-type ValidatorItemList struct {
+type validatorItemList struct {
 	Key     string           `json:"-" msg:"-"`
 	Items   []ValidationNode `json:"items"`
 	Changed bool             `json:"-" msg:"-"`
 }
 
-func (il *ValidatorItemList) Encode() []byte {
+func (il *validatorItemList) Encode() []byte {
 	var b, err = json.Marshal(il)
 	if err != nil {
 		panic(err)
@@ -87,16 +87,16 @@ func (il *ValidatorItemList) Encode() []byte {
 	return b
 }
 
-func (il *ValidatorItemList) Decode(b []byte) error {
+func (il *validatorItemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *ValidatorItemList) save(balances state.StateContextI) error {
+func (il *validatorItemList) save(balances state.StateContextI) error {
 	_, err := balances.InsertTrieNode(il.Key, il)
 	return err
 }
 
-func (il *ValidatorItemList) get(key datastore.Key, balances state.StateContextI) error {
+func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI) error {
 	err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -108,7 +108,7 @@ func (il *ValidatorItemList) get(key datastore.Key, balances state.StateContextI
 	return nil
 }
 
-func (il *ValidatorItemList) add(it PartitionItem) {
+func (il *validatorItemList) add(it PartitionItem) {
 	il.Items = append(il.Items, ValidationNode{
 		Id:  it.Name(),
 		Url: string(it.Data()),
@@ -116,7 +116,7 @@ func (il *ValidatorItemList) add(it PartitionItem) {
 	il.Changed = true
 }
 
-func (il *ValidatorItemList) remove(item PartitionItem) error {
+func (il *validatorItemList) remove(item PartitionItem) error {
 	if len(il.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
@@ -130,7 +130,7 @@ func (il *ValidatorItemList) remove(item PartitionItem) error {
 	return nil
 }
 
-func (il *ValidatorItemList) cutTail() PartitionItem {
+func (il *validatorItemList) cutTail() PartitionItem {
 	if len(il.Items) == 0 {
 		return nil
 	}
@@ -141,15 +141,15 @@ func (il *ValidatorItemList) cutTail() PartitionItem {
 	return &tail
 }
 
-func (il *ValidatorItemList) length() int {
+func (il *validatorItemList) length() int {
 	return len(il.Items)
 }
 
-func (il *ValidatorItemList) changed() bool {
+func (il *validatorItemList) changed() bool {
 	return il.Changed
 }
 
-func (il *ValidatorItemList) itemRange(start, end int) []PartitionItem {
+func (il *validatorItemList) itemRange(start, end int) []PartitionItem {
 	if start > end || end > len(il.Items) {
 		return nil
 	}
@@ -161,7 +161,7 @@ func (il *ValidatorItemList) itemRange(start, end int) []PartitionItem {
 	return rtv
 }
 
-func (il *ValidatorItemList) find(searchItem PartitionItem) int {
+func (il *validatorItemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
 		if item.Name() == searchItem.Name() {
 			return i

@@ -68,7 +68,7 @@ func (z ValidationNode) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *ValidatorItemList) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *validatorItemList) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "Items"
@@ -87,7 +87,7 @@ func (z *ValidatorItemList) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *ValidatorItemList) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *validatorItemList) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -165,7 +165,7 @@ func (z *ValidatorItemList) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *ValidatorItemList) Msgsize() (s int) {
+func (z *validatorItemList) Msgsize() (s int) {
 	s = 1 + 6 + msgp.ArrayHeaderSize
 	for za0001 := range z.Items {
 		s += 1 + 3 + msgp.StringPrefixSize + len(z.Items[za0001].Id) + 4 + msgp.StringPrefixSize + len(z.Items[za0001].Url)

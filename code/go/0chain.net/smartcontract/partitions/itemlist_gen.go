@@ -7,7 +7,59 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *ItemList) MarshalMsg(b []byte) (o []byte, err error) {
+func (z StringItem) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "Item"
+	o = append(o, 0x81, 0xa4, 0x49, 0x74, 0x65, 0x6d)
+	o = msgp.AppendString(o, z.Item)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *StringItem) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "Item":
+			z.Item, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Item")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z StringItem) Msgsize() (s int) {
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Item)
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z *itemList) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "Items"
@@ -23,7 +75,7 @@ func (z *ItemList) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *ItemList) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *itemList) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -95,62 +147,10 @@ func (z *ItemList) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *ItemList) Msgsize() (s int) {
+func (z *itemList) Msgsize() (s int) {
 	s = 1 + 6 + msgp.ArrayHeaderSize
 	for za0001 := range z.Items {
 		s += 1 + 5 + msgp.StringPrefixSize + len(z.Items[za0001].Item)
 	}
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z StringItem) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
-	// string "Item"
-	o = append(o, 0x81, 0xa4, 0x49, 0x74, 0x65, 0x6d)
-	o = msgp.AppendString(o, z.Item)
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *StringItem) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "Item":
-			z.Item, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Item")
-				return
-			}
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z StringItem) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Item)
 	return
 }
