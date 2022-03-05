@@ -149,32 +149,8 @@ type AuthorizerConfig struct {
 }
 
 func (c *AuthorizerConfig) Decode(input []byte) (err error) {
-	const (
-		Fee = "fee"
-	)
-
-	var objMap map[string]*json.RawMessage
-	err = json.Unmarshal(input, &objMap)
-	if err != nil {
-		return err
-	}
-
-	fee, ok := objMap[Fee]
-	if ok {
-		var (
-			err    error
-			feeInt *int64
-		)
-
-		err = json.Unmarshal(*fee, &feeInt)
-		if err != nil {
-			return err
-		}
-
-		c.Fee = state.Balance(*feeInt)
-	}
-
-	return nil
+	err = json.Unmarshal(input, c)
+	return
 }
 
 // ----- AuthorizerNode --------------------
@@ -326,18 +302,10 @@ func (an *AuthorizerNode) ToEvent() ([]byte, error) {
 		an.Config = new(AuthorizerConfig)
 	}
 	data, err := json.Marshal(&event.Authorizer{
-		Model:           gorm.Model{},
-		Fee:             an.Config.Fee,
-		AuthorizerID:    an.ID,
-		URL:             an.URL,
-		Latitude:        0,
-		Longitude:       0,
-		LastHealthCheck: 0,
-		DelegateWallet:  "",
-		MinStake:        0,
-		MaxStake:        0,
-		NumDelegates:    0,
-		ServiceCharge:   0,
+		Model:        gorm.Model{},
+		Fee:          an.Config.Fee,
+		AuthorizerID: an.ID,
+		URL:          an.URL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshalling authorizer event: %v", err)
