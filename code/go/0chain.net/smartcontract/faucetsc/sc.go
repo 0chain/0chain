@@ -196,11 +196,7 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
 	un := &UserNode{ID: id}
 	err := balances.GetTrieNode(un.GetKey(globalKey), un)
-	if err != nil {
-		return nil, err
-	}
-
-	return un, nil
+	return un, err
 }
 
 func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode, balances c_state.StateContextI) *UserNode {
