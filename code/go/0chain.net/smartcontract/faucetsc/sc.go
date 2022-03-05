@@ -229,7 +229,7 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
 	}
 

@@ -246,9 +246,9 @@ func (t *Transaction) HashData() string {
 	s := strings.Builder{}
 	s.WriteString(common.TimeToString(t.CreationDate))
 	s.WriteString(":")
-	s.WriteString(string(t.ClientID))
+	s.WriteString(t.ClientID)
 	s.WriteString(":")
-	s.WriteString(string(t.ToClientID))
+	s.WriteString(t.ToClientID)
 	s.WriteString(":")
 	s.WriteString(strconv.FormatInt(t.Value, 10))
 	s.WriteString(":")

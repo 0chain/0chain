@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 
 	// "encoding/json"
@@ -72,7 +73,7 @@ func (fc *FaucetSmartContract) getConfigHandler(
 	balances c_state.StateContextI,
 ) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return nil, common.NewError("get config handler", err.Error())
 	}
 
