@@ -194,20 +194,7 @@ func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 	if cfg == nil {
 		return errors.New("config not initialized")
 	}
-
-	updatedCfg := &AuthorizerConfig{}
-
-	bytes, err := json.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(bytes, &updatedCfg)
-	if err != nil {
-		return err
-	}
-
-	an.Config = updatedCfg
+	an.Config = cfg
 
 	return nil
 }
