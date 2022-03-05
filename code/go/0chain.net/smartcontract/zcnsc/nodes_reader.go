@@ -83,7 +83,7 @@ func GetGlobalNode(ctx cstate.StateContextI) (*GlobalNode, error) {
 		return nil, err
 	}
 
-	gn.Config = loadSettings()
+	gn = loadSettings()
 
 	return gn, nil
 }

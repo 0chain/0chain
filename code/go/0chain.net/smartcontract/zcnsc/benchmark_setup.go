@@ -36,17 +36,13 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 
-	cfg := new(ZCNSConfig)
-
-	cfg.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
-	cfg.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
-	cfg.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)
-	cfg.MinBurnAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount))
-	cfg.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount))
-	cfg.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
-	cfg.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MaxFee))
-
-	gn.Config = cfg
+	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
+	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
+	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)
+	gn.MinBurnAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount))
+	gn.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount))
+	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
+	gn.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MaxFee))
 
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }

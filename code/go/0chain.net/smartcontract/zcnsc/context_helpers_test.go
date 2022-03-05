@@ -44,10 +44,8 @@ func MakeMockStateContext() *mocks.StateContextI {
 	// Global Node
 
 	globalNode := &GlobalNode{
-		ID: ADDRESS,
-		Config: &ZCNSConfig{
-			MinStakeAmount: 11,
-		},
+		ID:             ADDRESS,
+		MinStakeAmount: 11,
 	}
 
 	// User Node

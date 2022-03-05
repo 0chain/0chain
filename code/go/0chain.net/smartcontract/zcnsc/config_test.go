@@ -10,7 +10,7 @@ import (
 )
 
 func TestConfigMap_Get(t *testing.T) {
-	cfg := &zcnsc.ZCNSConfig{
+	cfg := &zcnsc.GlobalNode{
 		BurnAddress:        "0xBEEF",
 		MinMintAmount:      100,
 		PercentAuthorizers: 101,

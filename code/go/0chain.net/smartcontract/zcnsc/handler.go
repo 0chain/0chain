@@ -2,7 +2,6 @@ package zcnsc
 
 import (
 	"context"
-	"encoding/json"
 	"net/url"
 
 	cState "0chain.net/chaincore/chain/state"
@@ -57,7 +56,7 @@ func (zcn *ZCNSmartContract) GetAuthorizer(_ context.Context, params url.Values,
 		return nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id)
 	}
 
-	return ToAuthorizerResponse(ev)
+	return toAuthorizerResponse(ev)
 }
 
 func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
@@ -97,27 +96,30 @@ func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list")
 	}
 
-	return ToNodeResponse(events), nil
+	return toNodeResponse(events), nil
 }
 
 // Helpers
 
-func ToAuthorizerResponse(authorizer *event.Authorizer) (*authorizerResponse, error) {
-	bytes, err := json.Marshal(authorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &authorizerResponse{}
-	err = json.Unmarshal(bytes, resp)
-	if err != nil {
-		return nil, err
+func toAuthorizerResponse(auth *event.Authorizer) (*authorizerResponse, error) {
+	resp := &authorizerResponse{
+		AuthorizerID:    auth.AuthorizerID,
+		URL:             auth.URL,
+		Fee:             auth.Fee,
+		Latitude:        auth.Latitude,
+		Longitude:       auth.Longitude,
+		LastHealthCheck: auth.LastHealthCheck,
+		DelegateWallet:  auth.DelegateWallet,
+		MinStake:        auth.MinStake,
+		MaxStake:        auth.MaxStake,
+		NumDelegates:    auth.NumDelegates,
+		ServiceCharge:   auth.ServiceCharge,
 	}
 
 	return resp, nil
 }
 
-func ToNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
+func toNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
 	var (
 		resp       = &authorizerNodesResponse{}
 		authorizer event.Authorizer
