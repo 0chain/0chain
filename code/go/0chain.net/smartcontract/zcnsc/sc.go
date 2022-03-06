@@ -19,8 +19,8 @@ const (
 	NAME                       = "zcnsc"
 	AddAuthorizerFunc          = "AddAuthorizer"
 	DeleteAuthorizerFunc       = "DeleteAuthorizer"
-	UpdateGlobalConfigFunc     = "UpdateGlobalConfig"
-	UpdateAuthorizerConfigFunc = "UpdateAuthorizerConfig"
+	UpdateGlobalConfigFunc     = "update-global-config"
+	UpdateAuthorizerConfigFunc = "update-authorizer-config"
 	MintFunc                   = "mint"
 	BurnFunc                   = "burn"
 )
