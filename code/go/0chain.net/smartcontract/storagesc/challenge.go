@@ -741,6 +741,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
-	sc.newChallenge(balances, storageChallenge.Created)
+	if err := sc.newChallenge(balances, storageChallenge.Created); err != nil {
+		return "", err
+	}
 	return string(challengeBytes), err
 }

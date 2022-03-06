@@ -458,7 +458,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker in db:", err.Error())
 	}
 
-	sc.newRead(balances, numReads)
+	if err := sc.newRead(balances, numReads); err != nil {
+		return "", common.NewError("new read err: ", err.Error())
+	}
 
 	return // ok, the response and nil
 }
@@ -665,6 +667,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
-	sc.newWrite(balances, commitConnection.WriteMarker.Size)
+	if err := sc.newWrite(balances, commitConnection.WriteMarker.Size); err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "new write err: %v", err)
+	}
 	return string(detailsBytes), err
 }

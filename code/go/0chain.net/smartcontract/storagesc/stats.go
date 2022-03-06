@@ -6,7 +6,7 @@ import (
 	"0chain.net/core/util"
 )
 
-func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) {
+func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
@@ -14,38 +14,40 @@ func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSi
 	case nil, util.ErrValueNotPresent:
 		stats.Stats.NumWrites++
 		stats.Stats.UsedSize += writeSize
-		statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+		_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+		return err
 	default:
-		return
+		return err
 	}
-
 }
 
-func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) {
+func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
-	if err != nil {
-		return
+	if err != nil && err != util.ErrValueNotPresent {
+		return err
 	}
 
 	stats.Stats.NumReads += numReads
-	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	return err
 }
 
-func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) {
+func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
-	if err != nil {
-		return
+	if err != nil && err != util.ErrValueNotPresent {
+		return err
 	}
 
 	stats.Stats.OpenChallenges++
 	stats.Stats.TotalChallenges++
 	stats.LastChallengedSize = stats.Stats.UsedSize
 	stats.LastChallengedTime = challengeTimestamp
-	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	return err
 }
 
 func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI, challengedPassed bool) {
