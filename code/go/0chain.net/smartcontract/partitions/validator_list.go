@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
@@ -126,10 +127,10 @@ func (il *validatorItemList) update(it PartitionItem) error {
 			}
 			il.Items[i] = newItem
 			il.Changed = true
-			break
+			return nil
 		}
 	}
-	return nil
+	return errors.New("item not found")
 }
 
 func (il *validatorItemList) remove(item PartitionItem) error {
