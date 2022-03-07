@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/partitions"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,10 +25,11 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 var (
-	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
+	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
+	ALL_ALLOCATIONS_KEY        = ADDRESS + encryption.Hash("all_allocations")
+	STORAGE_STATS_KEY          = ADDRESS + encryption.Hash("all_storage")
+	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
 )
 
 type ClientAllocation struct {
@@ -342,6 +344,8 @@ type StorageNode struct {
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
+	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
 }
 
 // validate the blobber configurations
@@ -419,8 +423,9 @@ type StorageAllocationStats struct {
 }
 
 type BlobberAllocation struct {
-	BlobberID       string                  `json:"blobber_id"`
-	AllocationID    string                  `json:"allocation_id"`
+	BlobberID    string `json:"blobber_id"`
+	AllocationID string `json:"allocation_id"`
+	// Size is blobber allocation maximum size
 	Size            int64                   `json:"size"`
 	AllocationRoot  string                  `json:"allocation_root"`
 	LastWriteMarker *WriteMarker            `json:"write_marker"`

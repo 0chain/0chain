@@ -28,6 +28,25 @@ import (
 	"go.uber.org/zap"
 )
 
+const allBlobbersChallengePartitionSize = 50
+
+func getBlobbersChallengeList(balances c_state.StateContextI) (partitions.RandPartition, error) {
+	all, err := partitions.GetRandomSelector(ALL_BLOBBERS_CHALLENGE_KEY, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		all = partitions.NewRandomSelector(
+			ALL_BLOBBERS_CHALLENGE_KEY,
+			allBlobbersChallengePartitionSize,
+			nil,
+			partitions.ItemBlobberChallenge,
+		)
+	}
+	all.SetCallback(nil)
+	return all, nil
+}
+
 func (sc *StorageSmartContract) completeChallengeForBlobber(
 	blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge,
 	challengeResponse *ChallengeResponse) bool {

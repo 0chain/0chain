@@ -1,19 +1,20 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/partitions"
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"go.uber.org/zap"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/dbs/event"
 )
 
 const blobberHealthTime = 60 * 60 // 1 Hour
@@ -531,6 +532,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"malformed input: "+err.Error())
 	}
 
+	bcPartition, err := getBlobbersChallengeList(balances)
+	if err != nil {
+		return "", common.NewError("commit_connection_failed",
+			"error fetching blobber challenge partition")
+	}
+
 	if !commitConnection.Verify() {
 		return "", common.NewError("commit_connection_failed", "Invalid input")
 	}
@@ -603,7 +610,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	storageNode.SavedData += alloc.Stats.UsedSize
-	// emit blobber update event
 
 	var sp *stakePool
 	if sp, err = sc.getStakePool(storageNode.ID, balances); err != nil {
@@ -634,11 +640,31 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
+	if storageNode.ChallengePartitionLoc == nil {
+		loc, err := bcPartition.Add(&partitions.BlobberChallengeNode{
+			Id:  storageNode.ID,
+			Url: storageNode.BaseURL,
+		}, balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error adding to blobber challenge partition")
+		}
+
+		storageNode.ChallengePartitionLoc = partitions.NewPartitionLocation(loc, t.CreationDate)
+	} else {
+
+	}
+
 	// save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)
+	}
+
+	// emit blobber update event
+	if err = emitAddOrOverwriteBlobber(storageNode, balances); err != nil {
+		logging.Logger.Error("error emitting blobber", zap.Any("blobber", storageNode.ID), zap.Error(err))
 	}
 
 	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)

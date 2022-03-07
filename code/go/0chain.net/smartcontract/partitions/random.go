@@ -24,6 +24,7 @@ type ItemType int
 const (
 	ItemString ItemType = iota
 	ItemValidator
+	ItemBlobberChallenge
 )
 
 //------------------------------------------------------------------------------
@@ -340,6 +341,44 @@ func (rs *randomSelector) UnmarshalMsg(b []byte) ([]byte, error) {
 func (rs *randomSelector) Msgsize() int {
 	d := randomSelectorDecode(*rs)
 	return d.Msgsize()
+}
+
+func (rs *randomSelector) UpdateItem(
+	partIndex int,
+	it PartitionItem,
+	balances state.StateContextI,
+) error {
+
+	partition, err := rs.getPartition(partIndex, balances)
+	if err != nil {
+		return err
+	}
+
+	err = partition.update(it)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rs *randomSelector) GetItem(
+	partIndex int,
+	itemName string,
+	balances state.StateContextI,
+) (PartitionItem, error) {
+
+	partition, err := rs.getPartition(partIndex, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range partition.itemRange(0, partition.length()) {
+		if item.Name() == itemName {
+			return item, nil
+		}
+	}
+
+	return nil, errors.New("item not present")
 }
 
 type randomSelectorDecode randomSelector
