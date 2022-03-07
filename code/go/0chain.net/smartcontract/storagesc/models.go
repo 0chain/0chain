@@ -608,6 +608,101 @@ type StorageAllocation struct {
 	Curators []string `json:"curators"`
 }
 
+func (sa *StorageAllocation) bSize() int64 {
+	var size = sa.DataShards + sa.ParityShards
+	return (sa.Size + int64(size-1)) / int64(size)
+}
+
+func (sa *StorageAllocation) removeBlobber(
+	blobbers []*StorageNode,
+	removeId string,
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI,
+) error {
+	remove, found := sa.BlobberMap[removeId]
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+	}
+	delete(sa.BlobberMap, removeId)
+
+	found = false
+	for i, d := range sa.Blobbers {
+		if d.ID == removeId {
+			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
+			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+	}
+
+	found = false
+	for i, d := range blobbers {
+		if d.ID == removeId {
+			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
+			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+	}
+
+	blobber, err := ssc.getBlobber(removeId, balances)
+	if err != nil {
+		return err
+	}
+	blobber.Used -= sa.bSize()
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sa *StorageAllocation) changeBlobbers(
+	blobbers []*StorageNode,
+	addId, removeId string,
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI,
+) error {
+	beforeSize := sa.bSize()
+	if len(removeId) > 0 {
+		if err := sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+			return err
+		}
+	}
+
+	_, found := sa.BlobberMap[addId]
+	if found {
+		return fmt.Errorf("allocatino already has blobber %s", addId)
+	}
+
+	addedBlobber, err := ssc.getBlobber(addId, balances)
+	if err != nil {
+		return err
+	}
+	sa.Blobbers = append(sa.Blobbers, addedBlobber)
+	blobbers = append(blobbers, addedBlobber)
+	sa.BlobberMap[addId] = &BlobberAllocation{}
+	afterSize := sa.bSize()
+	if afterSize != beforeSize {
+		delta := afterSize - beforeSize
+		for _, b := range sa.Blobbers {
+			b.Used += delta
+		}
+		for _, b := range blobbers {
+			b.Used += delta
+		}
+	}
+
+	return nil
+}
+
 // The restMinLockDemand returns number of tokens required as min_lock_demand;
 // if a blobber receive write marker, then some token moves to related
 // challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'

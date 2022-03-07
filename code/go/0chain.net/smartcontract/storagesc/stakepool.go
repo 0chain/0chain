@@ -164,10 +164,9 @@ func (sp *stakePool) addOffer(amount state.Balance) {
 	sp.TotalOffers += amount
 }
 
-// extendOffer changes offer lock and expiration on update allocations
-func (sp *stakePool) extendOffer(delta state.Balance) (err error) {
-	sp.TotalOffers += delta
-	return
+// remove offer of an allocation related to blobber owns this stake pool
+func (sp *stakePool) removeOffer(amount state.Balance) {
+	sp.TotalOffers -= amount
 }
 
 type stakePoolUpdateInfo struct {
