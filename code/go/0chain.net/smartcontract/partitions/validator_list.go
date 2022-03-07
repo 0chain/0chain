@@ -2,7 +2,6 @@ package partitions
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
@@ -122,20 +121,18 @@ func (il *validatorItemList) add(it PartitionItem) {
 }
 
 func (il *validatorItemList) update(it PartitionItem) error {
-	var found bool
 	for i := range il.itemRange(0, il.length()) {
 		if il.Items[i].Name() == it.Name() {
-			found = true
-			il.Items[i] = ValidationNode{
-				Id:  it.Name(),
-				Url: it.Data(),
+			var newItem ValidationNode
+			err := newItem.Decode(it.Encode())
+			if err != nil {
+				return fmt.Errorf("decoding error: %v", err)
 			}
+			il.Items[i] = newItem
+			il.Changed = true
+			break
 		}
 	}
-	if !found {
-		return errors.New("item not found in list")
-	}
-	il.Changed = true
 	return nil
 }
 
