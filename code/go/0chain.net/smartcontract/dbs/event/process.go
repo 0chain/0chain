@@ -62,7 +62,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
 		newEvents := edb.removeDuplicate(ctx, events)
-
 		edb.addEvents(ctx, newEvents)
 		for _, event := range newEvents {
 			var err error = nil
