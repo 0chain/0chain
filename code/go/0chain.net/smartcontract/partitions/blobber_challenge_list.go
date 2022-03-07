@@ -6,6 +6,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -138,6 +139,22 @@ func (il *blobberChallengeItemList) find(searchItem PartitionItem) int {
 		}
 	}
 	return notFound
+}
+
+func (il *blobberChallengeItemList) update(it PartitionItem) error {
+	for i := 0; i < il.length(); i++ {
+		if il.Items[i].Name() == it.Name() {
+			var newItem BlobberChallengeNode
+			err := newItem.Decode(it.Encode())
+			if err != nil {
+				return fmt.Errorf("decoding error: %v", err)
+			}
+			il.Items[i] = newItem
+			il.Changed = true
+			return nil
+		}
+	}
+	return errors.New("item not found")
 }
 
 //------------------------------------------------------------------------------

@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
@@ -103,6 +104,17 @@ func (il *itemList) find(searchItem PartitionItem) int {
 		}
 	}
 	return notFound
+}
+
+func (il *itemList) update(it PartitionItem) error {
+	for i := 0; i < il.length(); i++ {
+		if il.Items[i].Name() == it.Name() {
+			il.Items[i] = StringItem{it.Name()}
+			il.Changed = true
+			return nil
+		}
+	}
+	return errors.New("item not found")
 }
 
 type StringItem struct {

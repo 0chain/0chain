@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
@@ -168,6 +169,22 @@ func (il *validatorItemList) find(searchItem PartitionItem) int {
 		}
 	}
 	return notFound
+}
+
+func (il *validatorItemList) update(it PartitionItem) error {
+	for i := 0; i < il.length(); i++ {
+		if il.Items[i].Name() == it.Name() {
+			var newItem ValidationNode
+			err := newItem.Decode(it.Encode())
+			if err != nil {
+				return fmt.Errorf("decoding error: %v", err)
+			}
+			il.Items[i] = newItem
+			il.Changed = true
+			return nil
+		}
+	}
+	return errors.New("item not found")
 }
 
 //------------------------------------------------------------------------------
