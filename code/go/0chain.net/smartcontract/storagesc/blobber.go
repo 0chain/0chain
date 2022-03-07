@@ -640,6 +640,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
+	//todo: handle allocations are all deleted
 	if storageNode.ChallengePartitionLoc == nil {
 		loc, err := bcPartition.Add(&partitions.BlobberChallengeNode{
 			Id:  storageNode.ID,
@@ -651,8 +652,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 
 		storageNode.ChallengePartitionLoc = partitions.NewPartitionLocation(loc, t.CreationDate)
-	} else {
-
+		err = bcPartition.Save(balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error saving blobber challenge partition")
+		}
 	}
 
 	// save allocation object
