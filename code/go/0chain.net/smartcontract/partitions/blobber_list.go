@@ -6,6 +6,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -96,10 +97,10 @@ func (il *blobberItemList) update(it PartitionItem) error {
 			}
 			il.Items[i] = newItem
 			il.Changed = true
-			break
+			return nil
 		}
 	}
-	return nil
+	return errors.New("item not found")
 }
 
 func (il *blobberItemList) remove(item PartitionItem) error {
