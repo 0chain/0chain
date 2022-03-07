@@ -56,7 +56,7 @@ func (il *itemList) add(it PartitionItem) {
 }
 
 func (il *itemList) update(it PartitionItem) error {
-	for i := range il.itemRange(0, il.length()) {
+	for i := 0; i < il.length(); i++ {
 		if il.Items[i].Name() == it.Name() {
 			il.Items[i] = StringItem{it.Name()}
 			il.Changed = true
