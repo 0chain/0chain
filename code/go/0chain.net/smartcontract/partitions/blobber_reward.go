@@ -7,7 +7,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -99,23 +98,19 @@ func (il *blobberRewardItemList) add(it PartitionItem) {
 }
 
 func (il *blobberRewardItemList) update(it PartitionItem) error {
-	var found bool
 	for i := range il.itemRange(0, il.length()) {
 		if il.Items[i].Name() == it.Name() {
-			found = true
 			var newItem BlobberRewardNode
 			err := newItem.Decode(it.Encode())
 			if err != nil {
 				return fmt.Errorf("decoding error: %v", err)
 			}
 			il.Items[i] = newItem
+			il.Changed = true
+			break
 		}
 	}
 
-	if !found {
-		return errors.New("item not found in list")
-	}
-	il.Changed = true
 	return nil
 }
 

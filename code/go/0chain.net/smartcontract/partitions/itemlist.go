@@ -2,7 +2,6 @@ package partitions
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
@@ -53,17 +52,13 @@ func (il *itemList) add(it PartitionItem) {
 }
 
 func (il *itemList) update(it PartitionItem) error {
-	var found bool
 	for i := range il.itemRange(0, il.length()) {
 		if il.Items[i].Name() == it.Name() {
-			found = true
 			il.Items[i] = StringItem{it.Name()}
+			il.Changed = true
+			break
 		}
 	}
-	if !found {
-		return errors.New("item not found in list")
-	}
-	il.Changed = true
 	return nil
 }
 
