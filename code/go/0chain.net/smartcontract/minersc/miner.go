@@ -77,6 +77,11 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.Int64("max_stake", int64(newMiner.MaxStake)),
 	)
 	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
+	err = emitAddMiner(newMiner, balances)
+	if err != nil {
+		return "", common.NewErrorf("add_miner",
+			"insert new miner: %v", err)
+	}
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
@@ -107,12 +112,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		if err = updateMinersList(balances, allMiners); err != nil {
 			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
-		}
-
-		err = emitAddMiner(newMiner, balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"insert new miner: %v", err)
 		}
 
 		update = true
