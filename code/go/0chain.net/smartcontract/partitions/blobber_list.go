@@ -87,7 +87,7 @@ func (il *blobberItemList) add(it PartitionItem) {
 }
 
 func (il *blobberItemList) update(it PartitionItem) error {
-	for i := range il.itemRange(0, il.length()) {
+	for i := 0; i < il.length(); i++ {
 		if il.Items[i].Name() == it.Name() {
 			var newItem BlobberNode
 			err := newItem.Decode(it.Encode())

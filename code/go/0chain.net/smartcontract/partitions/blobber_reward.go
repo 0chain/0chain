@@ -98,7 +98,7 @@ func (il *blobberRewardItemList) add(it PartitionItem) {
 }
 
 func (il *blobberRewardItemList) update(it PartitionItem) error {
-	for i := range il.itemRange(0, il.length()) {
+	for i := 0; i < il.length(); i++ {
 		if il.Items[i].Name() == it.Name() {
 			var newItem BlobberRewardNode
 			err := newItem.Decode(it.Encode())
