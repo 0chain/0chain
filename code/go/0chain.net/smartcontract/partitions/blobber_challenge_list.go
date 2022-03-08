@@ -81,10 +81,11 @@ func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateC
 }
 
 func (il *blobberChallengeItemList) add(it PartitionItem) error {
-	bcn, ok := it.(*BlobberChallengeNode)
+	val, ok := it.(*BlobberChallengeNode)
 	if !ok {
 		return errors.New("invalid item")
 	}
+	bcn := *val
 	il.Items = append(il.Items, BlobberChallengeNode{
 		ID:           it.Name(),
 		AllocationID: bcn.AllocationID,
@@ -149,9 +150,15 @@ func (il *blobberChallengeItemList) find(searchItem PartitionItem) int {
 }
 
 func (il *blobberChallengeItemList) update(it PartitionItem) error {
+
+	val, ok := it.(*BlobberChallengeNode)
+	if !ok {
+		return errors.New("invalid item")
+	}
+
 	for i := 0; i < il.length(); i++ {
 		if il.Items[i].Name() == it.Name() {
-			var newItem BlobberChallengeNode
+			newItem := *val
 			err := newItem.Decode(it.Encode())
 			if err != nil {
 				return fmt.Errorf("decoding error: %v", err)

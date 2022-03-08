@@ -173,9 +173,15 @@ func (il *validatorItemList) find(searchItem PartitionItem) int {
 }
 
 func (il *validatorItemList) update(it PartitionItem) error {
+
+	val, ok := it.(*ValidationNode)
+	if !ok {
+		return errors.New("invalid item")
+	}
+
 	for i := 0; i < il.length(); i++ {
 		if il.Items[i].Name() == it.Name() {
-			var newItem ValidationNode
+			newItem := *val
 			err := newItem.Decode(it.Encode())
 			if err != nil {
 				return fmt.Errorf("decoding error: %v", err)
