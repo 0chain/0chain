@@ -33,12 +33,12 @@ func NewVestingSmartContract() smartcontractinterface.SmartContractInterface {
 	return vscCopy
 }
 
-func (ipsc *VestingSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
+func (vsc *VestingSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return vsc.SmartContract.HandlerStats(ctx, params)
 }
 
-func (ipsc *VestingSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
+func (vsc *VestingSmartContract) GetExecutionStats() map[string]interface{} {
+	return vsc.SmartContractExecutionStats
 }
 
 func (vsc *VestingSmartContract) GetName() string {
