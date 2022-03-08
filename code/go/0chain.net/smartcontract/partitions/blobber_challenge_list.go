@@ -13,8 +13,9 @@ import (
 //------------------------------------------------------------------------------
 
 type BlobberChallengeNode struct {
-	Id  string `json:"id"`
-	Url string `json:"url"`
+	ID           string `json:"id"`
+	AllocationID string `json:"allocation_id"`
+	UsedSize     int64  `json:"used_size"`
 }
 
 func (bcn *BlobberChallengeNode) Encode() []byte {
@@ -30,11 +31,11 @@ func (bcn *BlobberChallengeNode) Decode(b []byte) error {
 }
 
 func (bcn *BlobberChallengeNode) Data() string {
-	return bcn.Url
+	return string(bcn.Encode())
 }
 
 func (bcn *BlobberChallengeNode) Name() string {
-	return bcn.Id
+	return bcn.ID
 }
 
 //------------------------------------------------------------------------------
@@ -79,12 +80,18 @@ func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateC
 	return nil
 }
 
-func (il *blobberChallengeItemList) add(it PartitionItem) {
+func (il *blobberChallengeItemList) add(it PartitionItem) error {
+	bcn, ok := it.(*BlobberChallengeNode)
+	if !ok {
+		return errors.New("invalid item")
+	}
 	il.Items = append(il.Items, BlobberChallengeNode{
-		Id:  it.Name(),
-		Url: it.Data(),
+		ID:           it.Name(),
+		AllocationID: bcn.AllocationID,
+		UsedSize:     bcn.UsedSize,
 	})
 	il.Changed = true
+	return nil
 }
 
 func (il *blobberChallengeItemList) remove(item PartitionItem) error {

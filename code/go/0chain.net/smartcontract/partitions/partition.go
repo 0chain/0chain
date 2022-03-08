@@ -19,7 +19,7 @@ type PartitionItem interface {
 
 type PartitionItemList interface {
 	util.Serializable
-	add(it PartitionItem)
+	add(it PartitionItem) error
 	remove(item PartitionItem) error
 	cutTail() PartitionItem
 	changed() bool

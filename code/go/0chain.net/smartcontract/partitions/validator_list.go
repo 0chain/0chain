@@ -109,12 +109,13 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 	return nil
 }
 
-func (il *validatorItemList) add(it PartitionItem) {
+func (il *validatorItemList) add(it PartitionItem) error {
 	il.Items = append(il.Items, ValidationNode{
 		Id:  it.Name(),
 		Url: string(it.Data()),
 	})
 	il.Changed = true
+	return nil
 }
 
 func (il *validatorItemList) remove(item PartitionItem) error {

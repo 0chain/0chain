@@ -47,9 +47,10 @@ func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 	return nil
 }
 
-func (il *itemList) add(it PartitionItem) {
+func (il *itemList) add(it PartitionItem) error {
 	il.Items = append(il.Items, StringItem{it.Name()})
 	il.Changed = true
+	return nil
 }
 
 func (il *itemList) remove(item PartitionItem) error {

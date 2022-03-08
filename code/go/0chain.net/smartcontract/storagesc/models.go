@@ -344,8 +344,6 @@ type StorageNode struct {
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
-	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
 }
 
 // validate the blobber configurations
@@ -525,6 +523,8 @@ type BlobberAllocation struct {
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
+	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
+	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
