@@ -500,16 +500,14 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 func (uar *updateAllocationRequest) validate(
 	conf *scConfig,
 	alloc *StorageAllocation,
-) (err error) {
+) error {
 	if uar.SetImmutable && alloc.IsImmutable {
 		return errors.New("allocation is already immutable")
 	}
-
-	if uar.Size == 0 && uar.Expiration == 0 {
+	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddedBlobberId) == 0 {
 		if !uar.SetImmutable {
 			return errors.New("update allocation changes nothing")
 		}
-
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
 			return fmt.Errorf("new allocation size is too small: %d < %d",
@@ -537,7 +535,7 @@ func (uar *updateAllocationRequest) validate(
 		}
 	}
 
-	return
+	return nil
 }
 
 // calculate size difference for every blobber of the allocations

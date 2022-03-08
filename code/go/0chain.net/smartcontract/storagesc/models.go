@@ -675,6 +675,9 @@ func (sa *StorageAllocation) changeBlobbers(
 		if err := sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
 			return err
 		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
 	}
 
 	_, found := sa.BlobberMap[addId]
