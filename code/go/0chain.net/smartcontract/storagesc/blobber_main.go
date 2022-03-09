@@ -6,7 +6,7 @@ package storagesc
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -33,7 +33,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, stakepool.Blobber,
+	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, spenum.Blobber,
 		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
