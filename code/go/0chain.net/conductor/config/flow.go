@@ -88,3 +88,13 @@ func execute(name string, ex Executor, val interface{}, tm time.Duration) (
 
 	return fn(name, ex, val, tm)
 }
+
+// IsSavingLogs checks if in the current Flow exist saving logs directive.
+func (f Flow) IsSavingLogs() bool {
+	for _, d := range f {
+		if name, _, _ := d.unwrap(); name == saveLogsDirectiveName {
+			return true
+		}
+	}
+	return false
+}

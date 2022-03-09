@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package miner
@@ -13,9 +14,7 @@ import (
 
 /*SendVRFShare - send the round vrf share */
 func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-	mb := mc.GetMagicBlock(vrfs.Round)
-	m2m := mb.Miners
-	m2m.SendAll(ctx, RoundVRFSender(vrfs))
+	mc.sendVRFShare(ctx, vrfs)
 }
 
 /*SendVerificationTicket - send the block verification ticket */
@@ -35,4 +34,9 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	}
 
 	m2m.SendAll(ctx, VerificationTicketSender(bvt))
+}
+
+// SendBlock - send the block proposal to the network.
+func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+	mc.sendBlock(ctx, b)
 }
