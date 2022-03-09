@@ -1,9 +1,12 @@
+//go:build integration_tests
 // +build integration_tests
 
 package chain
 
 import (
 	"context"
+
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -12,7 +15,6 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 var myFailingRound int64 // once set, we ignore all restarts for that round
@@ -52,6 +54,10 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
 	return false // is not
 }
+
+func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {} // disable deleting rounds
+
+func (c *Chain) DeleteRoundsBelow(roundNumber int64) {} // disable deleting rounds
 
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	state := crpc.Client().State()
