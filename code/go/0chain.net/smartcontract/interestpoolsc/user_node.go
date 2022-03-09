@@ -60,13 +60,14 @@ func (un *UserNode) Decode(input []byte) error {
 		if err != nil {
 			return err
 		}
+		un.Pools = make(map[string]*interestPool, len(rawMessagesPools))
 		for _, raw := range rawMessagesPools {
 			tempPool := newInterestPool()
 			err = tempPool.decode(*raw)
 			if err != nil {
 				return err
 			}
-			un.addPool(tempPool)
+			un.Pools[tempPool.ID] = tempPool
 		}
 	}
 	return nil
