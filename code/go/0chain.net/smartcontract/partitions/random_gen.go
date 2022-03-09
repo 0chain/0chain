@@ -35,7 +35,7 @@ func (z ItemType) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *randomSelector) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *randomSelectorDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 4
 	// string "Name"
@@ -54,7 +54,7 @@ func (z *randomSelector) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *randomSelector) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *randomSelectorDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -112,7 +112,7 @@ func (z *randomSelector) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *randomSelector) Msgsize() (s int) {
+func (z *randomSelectorDecode) Msgsize() (s int) {
 	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 14 + msgp.IntSize + 14 + msgp.IntSize + 9 + msgp.IntSize
 	return
 }

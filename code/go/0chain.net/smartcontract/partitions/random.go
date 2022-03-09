@@ -17,6 +17,7 @@ import (
 
 const notFound = -1
 
+//msgp:ignore randomSelector
 //go:generate msgp -io=false -tests=false -unexported=true -v
 type ItemType int
 
@@ -314,6 +315,31 @@ func (rs *randomSelector) Encode() []byte {
 
 func (rs *randomSelector) Decode(b []byte) error {
 	err := json.Unmarshal(b, rs)
-	rs.Partitions = make([]PartitionItemList, rs.NumPartitions, rs.NumPartitions)
+	rs.Partitions = make([]PartitionItemList, rs.NumPartitions)
 	return err
 }
+
+func (rs *randomSelector) MarshalMsg(o []byte) ([]byte, error) {
+	d := randomSelectorDecode(*rs)
+	return d.MarshalMsg(o)
+}
+
+func (rs *randomSelector) UnmarshalMsg(b []byte) ([]byte, error) {
+	d := &randomSelectorDecode{}
+	o, err := d.UnmarshalMsg(b)
+	if err != nil {
+		return nil, err
+	}
+
+	*rs = randomSelector(*d)
+
+	rs.Partitions = make([]PartitionItemList, d.NumPartitions)
+	return o, nil
+}
+
+func (rs *randomSelector) Msgsize() int {
+	d := randomSelectorDecode(*rs)
+	return d.Msgsize()
+}
+
+type randomSelectorDecode randomSelector
