@@ -70,6 +70,7 @@ type Config interface {
 	FromViper()
 	Update(configMap *minersc.GlobalSettings) error
 	TxnExempt() map[string]bool
+	MinTxnFee() int64
 }
 
 type ConfigImpl struct {
@@ -303,6 +304,13 @@ func (c *ConfigImpl) TxnExempt() map[string]bool {
 	return c.conf.TxnExempt
 }
 
+func (c *ConfigImpl) MinTxnFee() int64 {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.MinTxnFee
+}
+
 // HealthCheckCycleScan -
 type HealthCheckCycleScan struct {
 	Settle time.Duration `json:"settle"`
@@ -334,6 +342,7 @@ type ConfigData struct {
 	ThresholdByStake     int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
 	ValidationBatchSize  int           `json:"validation_size"`         // Batch size of txns for crypto verification
 	TxnMaxPayload        int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
+	MinTxnFee            int64         `json:"min_txn_fee"`             // Minimum txn fee allowed
 	PruneStateBelowCount int           `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange           int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 	// todo move BlocksToSharder out of ConfigData
@@ -382,6 +391,7 @@ func (c *ConfigImpl) FromViper() {
 	conf.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
+	conf.MinTxnFee = viper.GetInt64("server_chain.transaction.min_fee")
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
@@ -546,6 +556,10 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 		return err
 	}
 	conf.TxnMaxPayload, err = cf.GetInt(minersc.TransactionPayloadMaxSize)
+	if err != nil {
+		return err
+	}
+	conf.MinTxnFee, err = cf.GetInt64(minersc.TransactionMinFee)
 	if err != nil {
 		return err
 	}
