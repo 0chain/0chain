@@ -157,8 +157,9 @@ type scConfig struct {
 	BlockReward *blockReward `json:"block_reward"`
 
 	// Allow direct access to MPT
-	ExposeMpt bool          `json:"expose_mpt"`
-	OwnerId   datastore.Key `json:"owner_id"`
+	ExposeMpt bool           `json:"expose_mpt"`
+	OwnerId   datastore.Key  `json:"owner_id"`
+	Cost      map[string]int `json:"cost"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -450,7 +451,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	)
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
-
+	conf.Cost = scc.GetStringMapInt(pfx + "cost")
 	err = conf.validate()
 	return
 }
