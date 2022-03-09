@@ -28,4 +28,5 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 }
 
 func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
+
 }

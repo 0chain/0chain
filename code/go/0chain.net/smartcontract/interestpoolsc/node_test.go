@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	globalNodeJson0       = "{\"min_lock_period\":\"0s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\"}}"
-	globalNodeJson10      = "{\"min_lock_period\":\"10s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\"}}"
-	wrongGlobalNodeJson10 = "{\"min_lock_period\":\"10\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\"}}"
+	globalNodeJson0       = "{\"min_lock_period\":\"0s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\",\"cost\":null}}"
+	globalNodeJson10      = "{\"min_lock_period\":\"10s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\",\"cost\":null}}"
+	wrongGlobalNodeJson10 = "{\"min_lock_period\":\"10\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\",\"cost\":null}}"
 )
 
 var (

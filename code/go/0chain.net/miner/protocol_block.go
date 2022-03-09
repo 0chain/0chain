@@ -284,6 +284,20 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 	logging.Logger.Debug("ValidateTransactions finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
+	logging.Logger.Debug("ValidateBlockCost", zap.String("block", b.Hash))
+	cost := 0
+	for _, txn := range b.Txns {
+		c, err := mc.EstimateTransactionCost(ctx, b, mc.GetLatestFinalizedBlock().ClientState, txn)
+		if err != nil {
+			return nil, err
+		}
+		cost += c
+		if cost > mc.Config.MaxBlockCost() {
+			return nil, block.ErrCostTooBig
+		}
+	}
+	logging.Logger.Debug("ValidateBlockCost", zap.Int("calculated cost", cost))
+
 	logging.Logger.Debug("ComputeState", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.ComputeState(ctx, b); err != nil {
@@ -610,6 +624,8 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
+	//accumulated transaction cost
+	cost int
 }
 
 func newTxnIterInfo(blockSize int32) *TxnIterInfo {
@@ -640,6 +656,16 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
+		cost, err := mc.EstimateTransactionCost(ctx, mc.GetLatestFinalizedBlock(), mc.GetLatestFinalizedBlock().ClientState, txn)
+		if err != nil {
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			return true
+		}
+		if tii.cost+cost >= mc.Config.MaxBlockCost() {
+			logging.Logger.Debug("generate block (too big cost, skipping)")
+			return true
+		}
+
 		if txnProcessor(ctx, bState, txn, tii) {
 			if tii.idx >= mc.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
@@ -658,7 +684,7 @@ func txnIterHandlerFunc(mc *Chain,
 	}
 }
 
-/*generateBlock - This works on generating a block
+/*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
@@ -690,7 +716,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
-	beforeBlockGeneration(b, cctx, txnIterHandler)
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
 		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
@@ -723,7 +748,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	blockSize := iterInfo.idx
 	var reusedTxns int32
-	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() && err != context.DeadlineExceeded {
+	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() &&
+		err != context.DeadlineExceeded && iterInfo.cost < mc.Config.MaxBlockCost() {
 		blocks := mc.GetUnrelatedBlocks(10, b)
 		rcount := 0
 		for _, ub := range blocks {

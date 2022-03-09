@@ -29,14 +29,15 @@ const (
 // ------------- GlobalNode ------------------------
 
 type GlobalNode struct {
-	ID                 string        `json:"id"`
-	MinMintAmount      state.Balance `json:"min_mint_amount"`
-	PercentAuthorizers float64       `json:"percent_authorizers"`
-	MinBurnAmount      int64         `json:"min_burn_amount"`
-	MinStakeAmount     int64         `json:"min_stake_amount"`
-	BurnAddress        string        `json:"burn_address"`
-	MinAuthorizers     int64         `json:"min_authorizers"`
-	MaxFee             int64         `json:"max_fee"`
+	ID                 string         `json:"id"`
+	MinMintAmount      state.Balance  `json:"min_mint_amount"`
+	PercentAuthorizers float64        `json:"percent_authorizers"`
+	MinBurnAmount      int64          `json:"min_burn_amount"`
+	MinStakeAmount     int64          `json:"min_stake_amount"`
+	BurnAddress        string         `json:"burn_address"`
+	MinAuthorizers     int64          `json:"min_authorizers"`
+	MaxFee             int64          `json:"max_fee"`
+	Cost               map[string]int `json:"cost"`
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {

@@ -42,21 +42,21 @@ func Test_config_validate(t *testing.T) {
 		err    string
 	}{
 		// min lock
-		{config{-1, 0, 0, 0, 0, ""}, "invalid min_lock (<= 0)"},
-		{config{0, 0, 0, 0, 0, ""}, "invalid min_lock (<= 0)"},
+		{config{-1, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
+		{config{0, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
 		// min duration
-		{config{1, s(-1), 0, 0, 0, ""}, "invalid min_duration (< 1s)"},
-		{config{1, s(0), 0, 0, 0, ""}, "invalid min_duration (< 1s)"},
+		{config{1, s(-1), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
+		{config{1, s(0), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
 		// max duration
-		{config{1, s(1), s(0), 0, 0, ""},
+		{config{1, s(1), s(0), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
 			"invalid max_duration: less or equal to min_duration"},
-		{config{1, s(1), s(1), 0, 0, ""},
+		{config{1, s(1), s(1), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
 			"invalid max_duration: less or equal to min_duration"},
 		// max_destinations
-		{config{1, s(1), s(2), 0, 0, ""}, "invalid max_destinations (< 1)"},
+		{config{1, s(1), s(2), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_destinations (< 1)"},
 		// max_description_length
-		{config{1, s(1), s(2), 1, 0, ""}, "invalid max_description_length (< 1)"},
-		{config{1, s(1), s(2), 1, 1, ""}, "owner_id is not set or empty"},
+		{config{1, s(1), s(2), 1, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_description_length (< 1)"},
+		{config{1, s(1), s(2), 1, 1, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "owner_id is not set or empty"},
 	} {
 		requireErrMsg(t, tt.config.validate(), tt.err)
 	}
@@ -71,11 +71,13 @@ func configureConfig() (configured *config) {
 	configpkg.SmartContractConfig.Set(pfx+"max_destinations", 2)
 	configpkg.SmartContractConfig.Set(pfx+"max_description_length", 20)
 	configpkg.SmartContractConfig.Set(pfx+"owner_id", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	configpkg.SmartContractConfig.Set(pfx+"cost", "{\"1\":1, \"2\":2, \"3\":3}")
 
 	return &config{
 		100e10,
 		1 * time.Second, 10 * time.Hour,
 		2, 20, "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+		map[string]int{"1": 1, "2": 2, "3": 3},
 	}
 }
 
@@ -154,7 +156,7 @@ func TestUpdateConfig(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			scConfigKey(vsc.ID),
-			&conf,
+			mock.Anything,
 		).Return("", nil).Once()
 
 		return args{
@@ -181,6 +183,7 @@ func TestUpdateConfig(t *testing.T) {
 					Settings[MaxDestinations]:      "0",
 					Settings[MaxDescriptionLength]: "17",
 					Settings[OwnerId]:              "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+					Settings[Cost]:                 "{\"1\":1, \"2\":2, \"3\":3}",
 				},
 			},
 		},
