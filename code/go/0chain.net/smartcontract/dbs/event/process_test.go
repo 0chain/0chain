@@ -26,6 +26,8 @@ func TestAddEvents(t *testing.T) {
 		t.Skip("only for local debugging, requires local postgresql")
 		return
 	}
+	eventDb.AutoMigrate()
+	defer eventDb.drop()
 
 	eventDb.AddEvents(context.Background(), []Event{
 		{

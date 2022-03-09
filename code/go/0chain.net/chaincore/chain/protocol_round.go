@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -16,8 +19,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
-	metrics "github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 var DELTA = 200 * time.Millisecond
@@ -124,7 +125,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
 that extend from a single block in that round. */
-func (c *Chain) FinalizeRound(r round.RoundI) {
+func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
 	}

@@ -92,6 +92,6 @@ func GetGlobalNode(ctx cstate.StateContextI) (*GlobalNode, error) {
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
 	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
 	gn.MaxFee = config.SmartContractConfig.GetInt64("smart_contracts.zcn.max_fee")
-
+	gn.Cost = config.SmartContractConfig.GetStringMapInt("smart_contracts.zcn.cost")
 	return gn, nil
 }
