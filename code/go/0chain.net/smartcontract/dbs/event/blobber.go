@@ -36,7 +36,7 @@ type Blobber struct {
 	MinStake       int64   `json:"min_stake"`
 	MaxStake       int64   `json:"max_stake"`
 	NumDelegates   int     `json:"num_delegates"`
-	ServiceCharge  float64 `json:"service_chaoffers_totalrge"`
+	ServiceCharge  float64 `json:"service_charge"`
 
 	OffersTotal        int64 `json:"offers_total"`
 	UnstakeTotal       int64 `json:"unstake_total"`

@@ -3,6 +3,8 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/dbs"
 )
 
@@ -40,8 +42,8 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
 	var err error
 	update := dbs.NewDbUpdates(spu.ProviderId)
 
-	switch dbs.Provider(spu.ProviderType) {
-	case dbs.Blobber:
+	switch spenum.Provider(spu.ProviderType) {
+	case spenum.Blobber:
 		{
 			blobber, err := edb.blobberAggregateStats(spu.ProviderId)
 			if err != nil {
@@ -51,7 +53,7 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
 			update.Updates["total_service_charge"] = blobber.TotalServiceCharge + spu.Reward
 			err = edb.updateBlobber(*update)
 		}
-	case dbs.Validator:
+	case spenum.Validator:
 		{
 			validator, err := edb.validatorAggregateStats(spu.ProviderId)
 			if err != nil {

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 )
@@ -17,8 +19,8 @@ type DelegatePool struct {
 	DelegateID   string `json:"delegate_id"`
 
 	Balance      int64 `json:"balance"`
-	Reward       int64 `json:"reward"`
-	TotalReward  int64 `json:"total_reward"`
+	Reward       int64 `json:"reward"`       // unclaimed reward
+	TotalReward  int64 `json:"total_reward"` // total reward paid to pool
 	TotalPenalty int64 `json:"total_penalty"`
 	Status       int   `json:"status"`
 	RoundCreated int64 `json:"round_created"`
@@ -64,7 +66,7 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 func (edb *EventDb) updateReward(reward int64, dp DelegatePool) error {
 	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
 
-	if dp.ProviderType == int(dbs.Blobber) && reward < 0 {
+	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {
 		dpu.Updates["total_penalty"] = dp.TotalPenalty - reward
 	} else {
 		dpu.Updates["reward"] = dp.Reward + reward
@@ -84,7 +86,7 @@ func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, erro
 			ProviderType: pType,
 			ProviderID:   id,
 		}).
-		Not(&DelegatePool{Status: int(dbs.Deleted)}).
+		Not(&DelegatePool{Status: int(spenum.Deleted)}).
 		Find(&dps)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting delegate pools, %v", result.Error)
@@ -100,7 +102,7 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePo
 			ProviderType: pType,
 			DelegateID:   userId,
 		}).
-		Not(&DelegatePool{Status: int(dbs.Deleted)}).
+		Not(&DelegatePool{Status: int(spenum.Deleted)}).
 		Find(&dps)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting delegate pools, %v", result.Error)

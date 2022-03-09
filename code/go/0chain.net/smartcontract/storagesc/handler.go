@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/core/datastore"
 
 	"0chain.net/smartcontract/stakepool"
@@ -621,7 +623,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(
 		return nil, errors.New("blobber not found in event database")
 	}
 
-	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, int(stakepool.Blobber))
+	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, int(spenum.Blobber))
 	if err != nil {
 		return "", common.NewErrInternal("can't find user stake pool", err.Error())
 	}
@@ -654,7 +656,7 @@ func spStats(
 			Balance:      state.Balance(dp.Balance),
 			DelegateID:   dp.DelegateID,
 			Rewards:      state.Balance(dp.Reward),
-			Status:       stakepool.PoolStatus(dp.Status).String(),
+			Status:       spenum.PoolStatus(dp.Status).String(),
 			TotalReward:  state.Balance(dp.TotalReward),
 			TotalPenalty: state.Balance(dp.TotalPenalty),
 			RoundCreated: dp.RoundCreated,
@@ -680,7 +682,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 		return nil, errors.New("no event database found")
 	}
 
-	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Blobber))
+	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Blobber))
 	if err != nil {
 		return nil, errors.New("blobber not found in event database")
 	}
@@ -695,7 +697,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 			Rewards:      state.Balance(pool.Reward),
 			TotalPenalty: state.Balance(pool.TotalPenalty),
 			TotalReward:  state.Balance(pool.TotalReward),
-			Status:       stakepool.PoolStatus(pool.Status).String(),
+			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dps)

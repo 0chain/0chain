@@ -3,6 +3,8 @@ package stakepool
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/state"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -11,7 +13,7 @@ import (
 
 func (sp *StakePool) UnlockPool(
 	clientID string,
-	providerType Provider,
+	providerType spenum.Provider,
 	providerId datastore.Key,
 	poolId datastore.Key,
 	balances cstate.StateContextI,
@@ -31,7 +33,7 @@ func (sp *StakePool) UnlockPool(
 		return 0, fmt.Errorf("can't find pool: %v", poolId)
 	}
 
-	dp.Status = Deleting
+	dp.Status = spenum.Deleting
 	amount, err := sp.MintRewards(
 		clientID, poolId, providerId, providerType, usp, balances,
 	)

@@ -3,6 +3,8 @@ package stakepool
 import (
 	"encoding/json"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -10,7 +12,7 @@ import (
 
 type DelegatePoolUpdate dbs.DelegatePoolUpdate
 
-func newDelegatePoolUpdate(pId string, pType Provider) *DelegatePoolUpdate {
+func newDelegatePoolUpdate(pId string, pType spenum.Provider) *DelegatePoolUpdate {
 	var spu DelegatePoolUpdate
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
@@ -20,7 +22,7 @@ func newDelegatePoolUpdate(pId string, pType Provider) *DelegatePoolUpdate {
 
 func (dp DelegatePool) emitNew(
 	poolId, providerId string,
-	providerType Provider,
+	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
 	data, err := json.Marshal(&event.DelegatePool{
@@ -45,7 +47,7 @@ func (dp DelegatePool) emitNew(
 	return nil
 }
 
-func (dpu DelegatePoolUpdate) emit(
+func (dpu DelegatePoolUpdate) emitUpdate(
 	balances cstate.StateContextI,
 ) error {
 	data, err := json.Marshal(&dpu)

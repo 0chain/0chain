@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +42,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 	err = eventDb.addOrOverwriteDelegatePool(dp)
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(dbs.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
 	require.NoError(t, err)
 	require.Len(t, dps, 1)
 
@@ -108,7 +110,7 @@ func TestTagStakePoolReward(t *testing.T) {
 
 	var spr dbs.StakePoolReward
 	spr.ProviderId = "provider_id"
-	spr.ProviderType = int(dbs.Blobber)
+	spr.ProviderType = int(spenum.Blobber)
 	spr.Reward = 17
 	spr.DelegateRewards = map[string]int64{
 		"pool_id_1": 15,
@@ -125,7 +127,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	var after int64
 	eventDb.Get().Table("delegate_pools").Count(&after)
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(dbs.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
 	require.NoError(t, err)
 	require.Len(t, dps, 2)
 }
