@@ -28,6 +28,7 @@ const (
 	BurnAddress        = "burn_address"
 	MaxFee             = "max_fee"
 	OwnerID            = "owner_id"
+	Cost               = "cost"
 )
 
 // ZCNSConfig config both for GlobalNode and AuthorizerNode
@@ -118,6 +119,7 @@ func loadSettings() (conf *GlobalNode) {
 	conf.BurnAddress = cfg.GetString(section(BurnAddress))
 	conf.MaxFee = state.Balance(cfg.GetInt64(section(MaxFee)))
 	conf.OwnerId = cfg.GetString(section(OwnerID))
+	conf.Cost = cfg.GetStringMapInt(Cost)
 
 	return conf
 }

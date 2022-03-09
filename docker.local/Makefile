@@ -35,3 +35,9 @@ miner: ## Run miner num (=miner number)
 
 sharder: ## Run sharder num (=miner number)
 	@cd sharder$(num) && ../bin/start.b0sharder.sh
+
+build_miner_it: ## 4.Build miners (integration tests)
+	@cd .. && ./docker.local/bin/build.miners-integration-tests.sh
+
+build_sharder_it: ## 5.Build sharders (integration tests)
+	@cd .. && ./docker.local/bin/build.sharders-integration-tests.sh

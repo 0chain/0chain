@@ -22,15 +22,16 @@ import (
 // ------------- GlobalNode ------------------------
 
 type GlobalNode struct {
-	ID                 string        `json:"id"`
-	MinMintAmount      state.Balance `json:"min_mint_amount"`
-	MinBurnAmount      state.Balance `json:"min_burn_amount"`
-	MinStakeAmount     state.Balance `json:"min_stake_amount"`
-	MaxFee             state.Balance `json:"max_fee"`
-	PercentAuthorizers float64       `json:"percent_authorizers"`
-	MinAuthorizers     int64         `json:"min_authorizers"`
-	BurnAddress        string        `json:"burn_address"`
-	OwnerId            datastore.Key `json:"owner_id"`
+	ID                 string         `json:"id"`
+	MinMintAmount      state.Balance  `json:"min_mint_amount"`
+	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
+	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
+	MaxFee             state.Balance  `json:"max_fee"`
+	PercentAuthorizers float64        `json:"percent_authorizers"`
+	MinAuthorizers     int64          `json:"min_authorizers"`
+	BurnAddress        string         `json:"burn_address"`
+	OwnerId            datastore.Key  `json:"owner_id"`
+	Cost               map[string]int `json:"cost"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {

@@ -3,7 +3,9 @@ package vestingsc
 import (
 	"0chain.net/chaincore/smartcontract"
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -49,6 +51,21 @@ func (vsc *VestingSmartContract) GetAddress() string {
 
 func (vsc *VestingSmartContract) GetRestPoints() RestPoints {
 	return vsc.RestHandlers
+}
+
+func (vsc *VestingSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) (int, error) {
+	node, err := vsc.getConfig(balances)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if node.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
 }
 
 func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,
