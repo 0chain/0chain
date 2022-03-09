@@ -359,9 +359,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return
 		}
 	}
-
+	total := int64(0)
 	for _, mint := range sctx.GetMints() {
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
+		total += int64(mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash),
@@ -369,6 +370,15 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return
 		}
 	}
+	data, err := json.Marshal(event.Mint{
+		BlockHash: b.Hash,
+		Amount:    total,
+	})
+	if err != nil {
+		logging.Logger.Error("Failed to marshal mint")
+		return
+	}
+	sctx.EmitEvent(event.TypeStats, event.TagAddMint, b.Hash, string(data))
 
 	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
 		logging.Logger.Error("update nonce error", zap.Any("error", err),

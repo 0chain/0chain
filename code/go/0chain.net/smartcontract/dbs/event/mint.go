@@ -6,5 +6,5 @@ type Mint struct {
 }
 
 func (edb *EventDb) addMint(mint Mint) error {
-	return edb.Store.Get().Exec("UPDATE blocks SET mint_total_amount = mint_total_amount + ? WHERE hash = ?;", mint.Amount, mint.BlockHash).Error
+	return edb.Store.Get().Model(&Block{}).Where(&Block{Hash: mint.BlockHash}).Update("mint_total_amount", mint.Amount).Error
 }
