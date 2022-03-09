@@ -24,7 +24,7 @@ func TestConfigMap_Get(t *testing.T) {
 	stringMap, err := cfg.ToStringMap()
 	require.NoError(t, err)
 
-	require.Equal(t, 9, len(stringMap.Fields))
+	require.Equal(t, 10, len(stringMap.Fields))
 	require.Contains(t, stringMap.Fields, zcnsc.BurnAddress)
 	require.Contains(t, stringMap.Fields, zcnsc.MinBurnAmount)
 	require.Contains(t, stringMap.Fields, zcnsc.MinMintAmount)
