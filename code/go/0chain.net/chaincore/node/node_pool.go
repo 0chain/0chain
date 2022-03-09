@@ -14,7 +14,8 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-//go:generate msgp -io=false -tests=false -v
+//msgp:ignore Pool
+//go:generate msgp -v -io=false -tests=false -unexported
 
 //ErrNodeNotFound - to indicate that a node is not present in the pool
 var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not found")
@@ -37,7 +38,7 @@ type Pool struct {
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
-	medianNetworkTime uint64 // float64
+	medianNetworkTime uint64 `msg:"-"` // float64
 }
 
 /*NewPool - create a new node pool of given type */
@@ -327,3 +328,35 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 	np.computeNodePositions()
 	return nil
 }
+
+func (np *Pool) MarshalMsg(o []byte) ([]byte, error) {
+	d := poolDecode(*np)
+	return d.MarshalMsg(o)
+}
+
+func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
+	d := &poolDecode{}
+	o, err := d.UnmarshalMsg(b)
+	if err != nil {
+		return nil, err
+	}
+
+	np.Nodes = make([]*Node, 0, len(d.NodesMap))
+	for k := range d.NodesMap {
+		n := d.NodesMap[k]
+		if n.SigScheme == nil {
+			n.SetPublicKey(n.PublicKey)
+		}
+		np.Nodes = append(np.Nodes, n)
+	}
+
+	np.computeNodePositions()
+	return o, nil
+}
+
+func (np *Pool) Msgsize() int {
+	d := poolDecode(*np)
+	return d.Msgsize()
+}
+
+type poolDecode Pool
