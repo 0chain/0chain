@@ -26,7 +26,7 @@ const (
 	Strings
 )
 
-//go:generate msgp -io=false -tests=false -unexported=true -v
+//go:generate msgp -io=false -tests=false -v
 
 var ConfigTypeName = []string{
 	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance","Cost", "datastore.Key", "[]string",

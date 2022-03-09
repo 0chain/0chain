@@ -7,7 +7,6 @@ import (
 	"0chain.net/chaincore/tokenpool"
 )
 
-//msgp:ignore interestPool
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type interestPool struct {
@@ -57,28 +56,4 @@ func (ip *interestPool) decode(input []byte) error {
 		}
 	}
 	return nil
-}
-
-type interestPoolDecode interestPool
-
-func (ip *interestPool) MarshalMsg(o []byte) ([]byte, error) {
-	ipd := interestPoolDecode(*ip)
-	return ipd.MarshalMsg(o)
-}
-
-func (ip *interestPool) UnmarshalMsg(data []byte) ([]byte, error) {
-	nip := newInterestPool()
-	nipd := interestPoolDecode(*nip)
-	d, err := nipd.UnmarshalMsg(data)
-	if err != nil {
-		return nil, err
-	}
-
-	*ip = interestPool(nipd)
-	return d, nil
-}
-
-func (ip *interestPool) Msgsize() int {
-	ipd := interestPoolDecode(*ip)
-	return ipd.Msgsize()
 }

@@ -13,7 +13,7 @@ import (
 	"0chain.net/core/util"
 )
 
-//go:generate msgp -io=false -tests=false -unexported=true -v
+//go:generate msgp -io=false -tests=false -v
 
 type GlobalNode struct {
 	*SimpleGlobalNode `json:"simple_global_node"`

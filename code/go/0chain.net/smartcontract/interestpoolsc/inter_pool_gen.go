@@ -8,7 +8,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *interestPoolDecode) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *interestPool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
 	// string "ZcnLockingPool"
@@ -36,7 +36,7 @@ func (z *interestPoolDecode) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *interestPoolDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *interestPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -95,7 +95,7 @@ func (z *interestPoolDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *interestPoolDecode) Msgsize() (s int) {
+func (z *interestPool) Msgsize() (s int) {
 	s = 1 + 15
 	if z.ZcnLockingPool == nil {
 		s += msgp.NilSize

@@ -318,9 +318,12 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to transfer amount",
+				zap.Any("txn type", txn.TransactionType),
+				zap.String("txn data", txn.TransactionData),
 				zap.Any("transfer_ClientID", transfer.ClientID),
 				zap.Any("to_ClientID", transfer.ToClientID),
-				zap.Any("amount", transfer.Amount))
+				zap.Any("amount", transfer.Amount),
+				zap.Error(err))
 			return
 		}
 	}
@@ -420,6 +423,9 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	if fs.Balance < amount {
+		logging.Logger.Error("transfer amount - insufficient balance",
+			zap.Any("balance", fs.Balance),
+			zap.Any("transfer", amount))
 		return transaction.ErrInsufficientBalance
 	}
 	ts, err := c.getState(clientState, toClient)

@@ -90,7 +90,7 @@ func newMinerNodeDecode() *minerNodeDecode {
 	return mn
 }
 
-func newMinerNodeFromDecode(mn *MinerNode) *minerNodeDecode {
+func newDecodeFromMinerNode(mn *MinerNode) *minerNodeDecode {
 	n := newMinerNodeDecode()
 	n.SimpleNode = mn.SimpleNode
 	for k, pl := range mn.Pending {
@@ -182,29 +182,26 @@ func (mn *MinerNode) Decode(input []byte) error {
 }
 
 func (mn *MinerNode) MarshalMsg(o []byte) ([]byte, error) {
-	n := newMinerNodeFromDecode(mn)
-	return n.MarshalMsg(o)
+	d := newDecodeFromMinerNode(mn)
+	return d.MarshalMsg(o)
 }
 
 func (mn *MinerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	n := newMinerNodeDecode()
-	o, err := n.UnmarshalMsg(data)
+	d := newMinerNodeDecode()
+	o, err := d.UnmarshalMsg(data)
 	if err != nil {
 		return nil, err
 	}
 
-	nmn := n.toMinerNode()
-	*mn = *nmn
+	dmn := d.toMinerNode()
+	*mn = *dmn
 	return o, nil
 }
 
-//func (mn *MinerNode) GetHash() string {
-//	return util.ToHex(mn.GetHashBytes())
-//}
-
-//func (mn *MinerNode) GetHashBytes() []byte {
-//	return encryption.RawHash(mn.Encode())
-//}
+func (mn *MinerNode) Msgsize() int {
+	d := newDecodeFromMinerNode(mn)
+	return d.Msgsize()
+}
 
 func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	mn.N2NHost = params.Get("n2n_host")

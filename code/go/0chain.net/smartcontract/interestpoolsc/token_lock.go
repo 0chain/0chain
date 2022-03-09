@@ -6,7 +6,7 @@ import (
 	"0chain.net/core/common"
 )
 
-//go:generate msgp -io=false -tests=false -unexported=true -v
+//go:generate msgp -io=false -tests=false -v
 
 type TokenLock struct {
 	StartTime common.Timestamp `json:"start_time"`

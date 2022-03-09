@@ -24,7 +24,7 @@ func (mn *MinerNodes) MarshalMsg(o []byte) ([]byte, error) {
 	}
 
 	for i, n := range mn.Nodes {
-		nn.Nodes[i] = newMinerNodeFromDecode(n)
+		nn.Nodes[i] = newDecodeFromMinerNode(n)
 	}
 
 	return nn.MarshalMsg(o)
