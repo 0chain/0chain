@@ -334,17 +334,15 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
 	ap.Blobbers = bps
 	if balances.GetEventDB() != nil {
-		data, err := readPoolToEventReadPool(ap, t)
-		if err != nil {
-			return "", err
+		if data, err := readPoolToEventReadPool(ap, t); err == nil {
+			balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+				{
+					Type: int(event.TypeStats),
+					Tag:  int(event.TagAddReadAllocationPool),
+					Data: string(data),
+				},
+			})
 		}
-		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
-			{
-				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddReadAllocationPool),
-				Data: string(data),
-			},
-		})
 	}
 	if !lr.MintTokens {
 		var transfer *state.Transfer

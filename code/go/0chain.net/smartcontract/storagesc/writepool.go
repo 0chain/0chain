@@ -367,17 +367,15 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	if balances.GetEventDB() != nil {
-		data, err := writePoolToEventWritePool(ap, t)
-		if err != nil {
-			return "", err
+		if data, err := writePoolToEventWritePool(ap, t); err == nil {
+			balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+				{
+					Type: int(event.TypeStats),
+					Tag:  int(event.TagAddWriteAllocationPool),
+					Data: data,
+				},
+			})
 		}
-		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
-			{
-				Type: int(event.TypeStats),
-				Tag:  int(event.TagAddWriteAllocationPool),
-				Data: data,
-			},
-		})
 	}
 	// save new linked allocation pool
 	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)

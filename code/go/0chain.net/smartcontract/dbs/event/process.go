@@ -48,7 +48,6 @@ const (
 	TagRemoveCurator
 	TagAddReadAllocationPool
 	TagAddWriteAllocationPool
-	TagStakePoolReward
 	TagStakePoolBalance
 	TagAddOrOverwriteStakePool
 	TagAddOrOverwriteDelegatePool
