@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool"
@@ -137,11 +139,11 @@ func (sp *stakePool) empty(
 	// Instead we mark as unstake to prevent being used for further allocations.
 	if sp.stake()-sp.TotalOffers-dp.Balance < 0 {
 		sp.TotalUnStake += dp.Balance
-		dp.Status = stakepool.Unstaking
+		dp.Status = spenum.Unstaking
 		return true, nil
 	}
 
-	if dp.Status == stakepool.Unstaking {
+	if dp.Status == spenum.Unstaking {
 		sp.TotalUnStake -= dp.Balance
 	}
 
@@ -151,7 +153,7 @@ func (sp *stakePool) empty(
 	}
 
 	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = stakepool.Deleting
+	sp.Pools[poolID].Status = spenum.Deleting
 
 	return true, nil
 }
@@ -206,7 +208,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = (float64(slash) / float64(sp.stake()))
-	edbSlash := stakepool.NewStakePoolReward(blobID, stakepool.Blobber)
+	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {
 		var dpSlash = state.Balance(float64(dp.Balance) * ratio)
 		if dpSlash == 0 {
@@ -292,7 +294,7 @@ func (sp *stakePool) stat(_ *scConfig, _ string,
 			DelegateID: dp.DelegateID,
 			Rewards:    dp.Reward,
 			//Penalty:    dp.Penalty,
-			UnStake: dp.Status == stakepool.Unstaking,
+			UnStake: dp.Status == spenum.Unstaking,
 		}
 		//stat.Penalty += dp.Penalty
 		stat.Delegate = append(stat.Delegate, dps)
@@ -399,7 +401,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 func (ssc *StorageSmartContract) getOrUpdateStakePool(
 	conf *scConfig,
 	providerId datastore.Key,
-	providerType stakepool.Provider,
+	providerType spenum.Provider,
 	settings stakepool.StakePoolSettings,
 	balances chainstate.StateContextI,
 ) (*stakePool, error) {
@@ -478,7 +480,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			conf.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, stakepool.Blobber, spr.BlobberID, stakepool.Active, balances)
+	err = sp.LockPool(t, spenum.Blobber, spr.BlobberID, spenum.Active, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool digging error: %v", err)
@@ -528,7 +530,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, stakepool.Blobber, spr.BlobberID, spr.PoolID, balances)
+	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.BlobberID, spr.PoolID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/core/util"
 
 	"0chain.net/chaincore/state"
@@ -41,9 +43,9 @@ func CheckClientBalance(
 
 func (sp *StakePool) LockPool(
 	txn *transaction.Transaction,
-	providerType Provider,
+	providerType spenum.Provider,
 	providerId datastore.Key,
-	status PoolStatus,
+	status spenum.PoolStatus,
 	balances cstate.StateContextI,
 ) error {
 	if err := CheckClientBalance(txn, balances); err != nil {

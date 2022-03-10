@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -17,38 +19,7 @@ import (
 	"0chain.net/chaincore/state"
 )
 
-type Provider int
-
-const (
-	Miner Provider = iota
-	Sharder
-	Blobber
-	Validator
-	Authorizer
-)
-
-func (p Provider) String() string {
-	return [...]string{"miner", "sharder", "blobber", "validator", "authorizer"}[p]
-}
-
-type PoolStatus int
-
-const (
-	Active PoolStatus = iota
-	Pending
-	Inactive
-	Unstaking
-	Deleting
-	Deleted
-)
-
-var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting"}
-
-func (p PoolStatus) String() string {
-	return poolString[p]
-}
-
-func stakePoolKey(p Provider, id string) datastore.Key {
+func stakePoolKey(p spenum.Provider, id string) datastore.Key {
 	return datastore.Key(p.String() + ":stakepool:" + id)
 }
 
@@ -69,11 +40,11 @@ type StakePoolSettings struct {
 }
 
 type DelegatePool struct {
-	Balance      state.Balance `json:"balance"`
-	Reward       state.Balance `json:"reward"`
-	Status       PoolStatus    `json:"status"`
-	RoundCreated int64         `json:"round_created"` // used for cool down
-	DelegateID   string        `json:"delegate_id"`
+	Balance      state.Balance     `json:"balance"`
+	Reward       state.Balance     `json:"reward"`
+	Status       spenum.PoolStatus `json:"status"`
+	RoundCreated int64             `json:"round_created"` // used for cool down
+	DelegateID   string            `json:"delegate_id"`
 }
 
 func NewStakePool() *StakePool {
@@ -106,7 +77,7 @@ func (sp *StakePool) OrderedPoolIds() []string {
 }
 
 func GetStakePool(
-	p Provider, id string, balances cstate.StateContextI,
+	p spenum.Provider, id string, balances cstate.StateContextI,
 ) (*StakePool, error) {
 	var poolBytes []byte
 
@@ -125,7 +96,7 @@ func GetStakePool(
 }
 
 func (sp *StakePool) Save(
-	p Provider,
+	p spenum.Provider,
 	id string,
 	balances cstate.StateContextI,
 ) error {
@@ -152,7 +123,7 @@ func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) error {
 func (sp *StakePool) MintRewards(
 	clientId,
 	poolId, providerId string,
-	providerType Provider,
+	providerType spenum.Provider,
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
@@ -186,17 +157,17 @@ func (sp *StakePool) MintRewards(
 	var dpUpdate = newDelegatePoolUpdate(providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
 
-	if dPool.Status == Deleting {
+	if dPool.Status == spenum.Deleting {
 		delete(sp.Pools, poolId)
-		dpUpdate.Updates["status"] = Deleted
-		err := dpUpdate.emit(balances)
+		dpUpdate.Updates["status"] = spenum.Deleted
+		err := dpUpdate.emitUpdate(balances)
 		if err != nil {
 			return 0, err
 		}
 		usp.Del(providerId, poolId)
 		return reward, nil
 	} else {
-		err := dpUpdate.emit(balances)
+		err := dpUpdate.emitUpdate(balances)
 		if err != nil {
 			return 0, err
 		}
@@ -207,24 +178,13 @@ func (sp *StakePool) MintRewards(
 func (sp *StakePool) DistributeRewards(
 	value float64,
 	providerId string,
-	providerType Provider,
+	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
 	if value == 0 {
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
-	var stake = float64(sp.stake())
-
-	// give everything to the delegate wallet if there is no stake.
-	if len(sp.Pools) == 0 || stake == 0 {
-		sp.Reward += state.Balance(value)
-		spUpdate.Reward = int64(value)
-		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
-			return err
-		}
-		return nil
-	}
 
 	var serviceCharge float64
 	serviceCharge = sp.Settings.ServiceCharge * value
@@ -238,7 +198,16 @@ func (sp *StakePool) DistributeRewards(
 		return nil
 	}
 
+	if len(sp.Pools) == 0 {
+		return fmt.Errorf("no stake pools to move tokens to")
+	}
+
 	valueLeft := value - serviceCharge
+	var stake = float64(sp.stake())
+	if stake == 0 {
+		return fmt.Errorf("no stake")
+	}
+
 	for id, pool := range sp.Pools {
 		ratio := float64(pool.Balance) / stake
 		reward := state.Balance(valueLeft * ratio)

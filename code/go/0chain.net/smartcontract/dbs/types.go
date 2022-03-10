@@ -1,26 +1,5 @@
 package dbs
 
-type Provider int
-
-const (
-	Miner Provider = iota
-	Sharder
-	Blobber
-	Validator
-	Authorizer
-)
-
-type PoolStatus int
-
-const (
-	Active PoolStatus = iota
-	Pending
-	Inactive
-	Unstaking
-	Deleting
-	Deleted
-)
-
 type DbUpdates struct {
 	Id      string                 `json:"id"`
 	Updates map[string]interface{} `json:"updates"`

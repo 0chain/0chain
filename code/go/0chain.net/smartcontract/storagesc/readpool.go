@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/smartcontract"
@@ -133,7 +135,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			"allocation: %s, blobber: %s", allocID, blobID)
 	}
 
-	err = sp.DistributeRewards(float64(value), blobID, stakepool.Blobber, balances)
+	err = sp.DistributeRewards(float64(value), blobID, spenum.Blobber, balances)
 	if err != nil {
 		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}

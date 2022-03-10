@@ -2,6 +2,8 @@ package conductrpc
 
 import (
 	"net/rpc"
+
+	"0chain.net/conductor/conductrpc/stats"
 )
 
 // client of the conductor RPC server.
@@ -152,6 +154,72 @@ func (c *client) state(me NodeID) (state *State, err error) {
 	err = c.client.Call("Server.State", me, &state)
 	for err == rpc.ErrShutdown {
 		err = c.client.Call("Server.State", me, &state)
+	}
+	return
+}
+
+func (c *client) configureTestCase(blob []byte) (err error) {
+	err = c.client.Call("Server.ConfigureTestCase", blob, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.ConfigureTestCase", blob, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addTestCaseResult(blob []byte) (err error) {
+	err = c.client.Call("Server.AddTestCaseResult", blob, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddTestCaseResult", blob, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addBlockServerStats(ss *stats.BlockRequest) (err error) {
+	err = c.client.Call("Server.AddBlockServerStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddBlockServerStats", ss, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addVRFSServerStats(ss *stats.VRFSRequest) (err error) {
+	err = c.client.Call("Server.AddVRFSServerStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddVRFSServerStats", ss, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addBlockStateChangeRequestorStats(ss *stats.BlockStateChangeRequest) (err error) {
+	err = c.client.Call("Server.AddBlockStateChangeRequestorStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddBlockStateChangeRequestorStats", ss, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addMinerNotarisedBlockRequestorStats(ss *stats.MinerNotarisedBlockRequest) (err error) {
+	err = c.client.Call("Server.AddMinerNotarisedBlockRequestorStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddMinerNotarisedBlockRequestorStats", ss, &struct{}{})
 	}
 	return
 }

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -158,7 +160,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		}
 	}
 	var usp = stakepool.NewUserStakePools()
-	require.NoError(t, usp.Save(stakepool.Blobber, txn.ClientID, ctx))
+	require.NoError(t, usp.Save(spenum.Blobber, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
@@ -169,7 +171,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	newStakePool, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
 	var newUsp *stakepool.UserStakePools
-	newUsp, err = stakepool.GetUserStakePool(stakepool.Blobber, txn.ClientID, ctx)
+	newUsp, err = stakepool.GetUserStakePool(spenum.Blobber, txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)
