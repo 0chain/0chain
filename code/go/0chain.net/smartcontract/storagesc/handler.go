@@ -332,7 +332,7 @@ func (msc *StorageSmartContract) GetErrors(
 	return &transaction, err
 }
 
-func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
+func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	logging.Logger.Info("GetAllocationsHandler",
@@ -366,6 +366,61 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		}
 	}
 	return result, nil
+}
+
+func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	clientID := params.Get("client")
+	if balances.GetEventDB() == nil {
+		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
+	}
+
+	allocations, err := getClientAllocationsFromDb(clientID, balances.GetEventDB())
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations")
+	}
+
+	return allocations, nil
+}
+
+func (ssc *StorageSmartContract) GetActiveAllocationsCountHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db is not initialized")
+	}
+	count, err := balances.GetEventDB().GetActiveAllocationsCount()
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true,
+			"can't get active allocations count")
+	}
+
+	response := struct {
+		ActiveAllocationsCount int64 `json:"active_allocations_count"`
+	}{count}
+
+	return response, nil
+}
+
+func (ssc *StorageSmartContract) GetActiveAllocsBlobberCountHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db is not initialized")
+	}
+
+	count, err := balances.GetEventDB().GetActiveAllocsBlobberCount()
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true,
+			"can't get blobber allocations count")
+	}
+
+	response := struct {
+		BlobberAllocationsCount int64 `json:"blobber_allocations_count"`
+	}{count}
+
+	return response, nil
 }
 
 func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context,
@@ -417,7 +472,7 @@ const (
 	cantGetBlobber    = "can't get blobber"
 )
 
-func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	logging.Logger.Info("AllocationStatsHandler",
 		zap.Bool("is event db present", balances.GetEventDB() != nil))
 	allocationID := params.Get("allocation")
@@ -437,6 +492,21 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	}
 
 	return allocationObj, nil
+}
+
+func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	allocationID := params.Get("allocation")
+
+	if balances.GetEventDB() == nil {
+		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
+	}
+
+	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+	}
+
+	return allocation, nil
 }
 
 func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,

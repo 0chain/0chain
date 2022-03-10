@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"fmt"
-
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -50,6 +49,7 @@ const (
 	TagAddOrOverwriteDelegatePool
 	TagStakePoolReward
 	TagUpdateDelegatePool
+	TagAddOrOverwriteAllocation
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -234,6 +234,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.rewardUpdate(spu)
+	case TagAddOrOverwriteAllocation:
+		var alloc Allocation
+		err := json.Unmarshal([]byte(event.Data), &alloc)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteAllocation(&alloc)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

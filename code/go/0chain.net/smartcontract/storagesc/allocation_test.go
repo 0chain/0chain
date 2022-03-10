@@ -696,6 +696,11 @@ func TestTransferAllocation(t *testing.T) {
 					len(ca.Allocations.List) == 1 && ok
 			})).Return("", nil).Once()
 
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
 		return args{ssc, txn, input, balances}
 	}
 
