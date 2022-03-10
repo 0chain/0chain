@@ -50,6 +50,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&ReadAllocationPool{},
 		&WriteAllocationPool{},
 		&BlobberPool{},
+		&DelegatePool{},
 	); err != nil {
 		return err
 	}
