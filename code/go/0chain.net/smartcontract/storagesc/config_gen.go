@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 31
+	// map header, size 32
 	// string "TimeUnit"
-	o = append(o, 0xde, 0x0, 0x1f, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = append(o, 0xde, 0x0, 0x20, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
 	o = msgp.AppendInt64(o, z.TimeUnit)
 	// string "MaxMint"
 	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
@@ -184,6 +184,19 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "OwnerId"
 	o = append(o, 0xa7, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x49, 0x64)
 	o = msgp.AppendString(o, z.OwnerId)
+	// string "Cost"
+	o = append(o, 0xa4, 0x43, 0x6f, 0x73, 0x74)
+	o = msgp.AppendMapHeader(o, uint32(len(z.Cost)))
+	keys_za0001 := make([]string, 0, len(z.Cost))
+	for k := range z.Cost {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.Cost[k]
+		o = msgp.AppendString(o, k)
+		o = msgp.AppendInt(o, za0002)
+	}
 	return
 }
 
@@ -528,6 +541,36 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "OwnerId")
 				return
 			}
+		case "Cost":
+			var zb0005 uint32
+			zb0005, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Cost")
+				return
+			}
+			if z.Cost == nil {
+				z.Cost = make(map[string]int, zb0005)
+			} else if len(z.Cost) > 0 {
+				for key := range z.Cost {
+					delete(z.Cost, key)
+				}
+			}
+			for zb0005 > 0 {
+				var za0001 string
+				var za0002 int
+				zb0005--
+				za0001, bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Cost")
+					return
+				}
+				za0002, bts, err = msgp.ReadIntBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Cost", za0001)
+					return
+				}
+				z.Cost[za0001] = za0002
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -566,7 +609,13 @@ func (z *Config) Msgsize() (s int) {
 	} else {
 		s += z.BlockReward.Msgsize()
 	}
-	s += 10 + msgp.BoolSize + 8 + msgp.StringPrefixSize + len(z.OwnerId)
+	s += 10 + msgp.BoolSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	if z.Cost != nil {
+		for za0001, za0002 := range z.Cost {
+			_ = za0002
+			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
+		}
+	}
 	return
 }
 

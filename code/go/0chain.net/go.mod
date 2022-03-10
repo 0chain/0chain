@@ -51,4 +51,5 @@ require (
 )
 
 replace github.com/tinylib/msgp => github.com/peterlimg/msgp v1.1.61
+
 //replace github.com/tinylib/msgp => ../../../../../peterlimg/msgp
