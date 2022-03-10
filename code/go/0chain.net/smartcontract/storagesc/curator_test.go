@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 func TestAddCurator(t *testing.T) {

@@ -100,19 +100,19 @@ func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 }
 
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
-	var blobberIDs []string
+	blobberIDs := make([]string,0)
 	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
 	return blobberIDs, result.Error
 }
 
 func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
-	var blobbers []BlobberLatLong
+	blobbers := make([]BlobberLatLong,0)
 	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
 	return blobbers, result.Error
 }
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
-	var blobbers []Blobber
+	blobbers := make([]Blobber,0)
 	result := edb.Store.Get().
 		Raw("SELECT * FROM blobbers WHERE blobber_id IN ?", ids).Scan(&blobbers)
 	return blobbers, result.Error

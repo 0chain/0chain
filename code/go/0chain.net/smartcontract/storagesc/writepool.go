@@ -352,7 +352,6 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("write_pool_lock_failed",
 			"saving allocation: %v", err)
 	}
-
 	return
 }
 
