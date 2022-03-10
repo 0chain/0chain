@@ -19,36 +19,36 @@ import (
 func (c *Chain) FinalizeRound(r round.RoundI) {
 	c.FinalizeRoundImpl(r)
 
-	if isTestingOnUpdateFinalizedBlock(r) {
-		finalisedBlockHash := ""
-		if r.IsFinalized() {
-			roundImpl, ok := r.(*round.Round)
-			if !ok {
-				panic("unexpected type")
-			}
-			finalisedBlockHash = roundImpl.BlockHash
-		}
-
-		if err := AddRoundInfoResult(r, finalisedBlockHash); err != nil {
-			log.Panicf("Conductor: error while sending round info result: %v", err)
-		}
-	}
+	addResultOnFinalizeRoundIfNeeded(r)
 }
 
-func isTestingOnUpdateFinalizedBlock(r round.RoundI) bool {
-	s := crpc.Client().State()
-	var isTestingFunc func(round int64, generator bool, typeRank int) bool
-	switch {
-	case s.BlockStateChangeRequestor != nil && s.BlockStateChangeRequestor.GetType() == cases.BSCRChangeNode:
-		isTestingFunc = s.BlockStateChangeRequestor.IsTesting
+func addResultOnFinalizeRoundIfNeeded(r round.RoundI) {
+	cfg := crpc.Client().State().BlockStateChangeRequestor
 
-	default:
-		return false
-	}
+	cfg.Lock()
+	defer cfg.Unlock()
 
 	nodeType, typeRank := GetNodeTypeAndTypeRank(r.GetRoundNumber())
-	testing := isTestingFunc(r.GetRoundNumber(), nodeType == generator, typeRank)
-	return testing
+	testing := cfg != nil && cfg.GetType() == cases.BSCRChangeNode && !cfg.Resulted &&
+		cfg.IsTesting(r.GetRoundNumber(), nodeType == generator, typeRank)
+	if !testing {
+		return
+	}
+
+	finalisedBlockHash := ""
+	if r.IsFinalized() {
+		roundImpl, ok := r.(*round.Round)
+		if !ok {
+			panic("unexpected type")
+		}
+		finalisedBlockHash = roundImpl.BlockHash
+	}
+
+	if err := AddRoundInfoResult(r, finalisedBlockHash); err != nil {
+		log.Panicf("Conductor: error while sending round info result: %v", err)
+	}
+
+	cfg.Resulted = true
 }
 
 const (
@@ -88,6 +88,7 @@ func AddRoundInfoResult(r round.RoundI, finalisedBlockHash string) error {
 	res := roundInfo(r.GetRoundNumber(), finalisedBlockHash)
 	blob, err := res.Encode()
 	if err != nil {
+		log.Printf("1!")
 		return err
 	}
 	return crpc.Client().AddTestCaseResult(blob)
