@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"sync"
@@ -85,6 +86,21 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return msc.RestHandlers
+}
+
+func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
+	n, err := getGlobalNode(balances)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if n.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := n.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
 }
 
 //setSC setting up smartcontract. implementing the interface

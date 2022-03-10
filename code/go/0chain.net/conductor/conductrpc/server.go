@@ -464,6 +464,11 @@ func (s *Server) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeReq
 	return nil
 }
 
+func (s *Server) AddMinerNotarisedBlockRequestorStats(rs *stats.MinerNotarisedBlockRequest, _ *struct{}) error {
+	s.NodesClientStatsCollector.AddMinerNotarisedBlockStats(rs)
+	return nil
+}
+
 //
 // flow
 //

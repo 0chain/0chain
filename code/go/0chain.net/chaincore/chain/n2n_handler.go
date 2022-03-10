@@ -117,7 +117,7 @@ func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error
 
 // blockStateChangeHandler - provide the state changes associated with a block.
 func (c *Chain) blockStateChangeHandler(ctx context.Context, r *http.Request) (*block.StateChange, error) {
-	var b, err = c.getNotarizedBlock(ctx, r)
+	var b, err = c.getNotarizedBlock(ctx, r.FormValue("round"), r.FormValue("block"))
 	if err != nil {
 		return nil, err
 	}
@@ -147,21 +147,17 @@ func (c *Chain) blockStateChangeHandler(ctx context.Context, r *http.Request) (*
 	return bsc, nil
 }
 
-func (c *Chain) getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
-
+func (c *Chain) getNotarizedBlock(ctx context.Context, roundStr, blockHash string) (*block.Block, error) {
 	var (
-		r    = req.FormValue("round")
-		hash = req.FormValue("block")
-
 		cr = c.GetCurrentRound()
 	)
 
 	errBlockNotAvailable := common.NewError("block_not_available",
 		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
-			cr, r, hash))
+			cr, roundStr, blockHash))
 
-	if hash != "" {
-		b, err := c.GetBlock(ctx, hash)
+	if blockHash != "" {
+		b, err := c.GetBlock(ctx, blockHash)
 		if err != nil {
 			return nil, err
 		}
@@ -173,12 +169,12 @@ func (c *Chain) getNotarizedBlock(ctx context.Context, req *http.Request) (*bloc
 		return nil, errBlockNotAvailable
 	}
 
-	if r == "" {
+	if roundStr == "" {
 		return nil, common.NewError("none_round_or_hash_provided",
 			"no block hash or round number is provided")
 	}
 
-	roundN, err := strconv.ParseInt(r, 10, 64)
+	roundN, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
 		return nil, err
 	}

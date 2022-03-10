@@ -61,6 +61,7 @@ type State struct {
 	BadTimeoutVRFS                        *cases.BadTimeoutVRFS
 	HalfNodesDown                         *cases.HalfNodesDown
 	BlockStateChangeRequestor             *cases.BlockStateChangeRequestor
+	MinerNotarisedBlockRequestor          *cases.MinerNotarisedBlockRequestor
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses
@@ -78,7 +79,7 @@ func (s *State) Name(id NodeID) NodeName {
 
 func (s *State) copy() (cp *State) {
 	cp = new(State)
-	(*cp) = (*s)
+	*cp = *s
 	return
 
 }

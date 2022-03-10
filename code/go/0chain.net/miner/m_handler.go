@@ -2,6 +2,12 @@ package miner
 
 /*This file contains the Miner To Miner send/receive messages */
 import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strconv"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -9,12 +15,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"context"
-	"encoding/hex"
-	"fmt"
 	"go.uber.org/zap"
-	"net/http"
-	"strconv"
 )
 
 var (
@@ -521,8 +522,8 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	return nil, nil
 }
 
-// NotarizedBlockSendHandler - handles a request for a notarized block.
-func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// notarizedBlockSendHandler - handles a request for a notarized block.
+func notarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return getNotarizedBlock(ctx, r)
 }
 

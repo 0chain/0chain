@@ -212,3 +212,14 @@ func (c *client) addBlockStateChangeRequestorStats(ss *stats.BlockStateChangeReq
 	}
 	return
 }
+
+func (c *client) addMinerNotarisedBlockRequestorStats(ss *stats.MinerNotarisedBlockRequest) (err error) {
+	err = c.client.Call("Server.AddMinerNotarisedBlockRequestorStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddMinerNotarisedBlockRequestorStats", ss, &struct{}{})
+	}
+	return
+}

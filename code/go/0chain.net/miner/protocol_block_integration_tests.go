@@ -14,7 +14,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
@@ -84,7 +83,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.updateFinalizedBlock(ctx, b)
 
 	if isTestingOnUpdateFinalizedBlock(b.Round) {
-		if err := addRoundInfoResult(b.Hash, mc.GetRound(b.Round)); err != nil {
+		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
@@ -115,79 +114,18 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	case s.BadTimeoutVRFS != nil:
 		isTestingFunc = s.BadTimeoutVRFS.IsTesting
 
-	case s.BlockStateChangeRequestor != nil:
+	case s.BlockStateChangeRequestor != nil && s.BlockStateChangeRequestor.GetType() != cases.BSCRChangeNode:
 		isTestingFunc = s.BlockStateChangeRequestor.IsTesting
+
+	case s.MinerNotarisedBlockRequestor != nil:
+		isTestingFunc = s.MinerNotarisedBlockRequestor.IsTesting
 
 	default:
 		return false
 	}
 
-	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
 	return isTestingFunc(round, nodeType == generator, typeRank)
-}
-
-func addRoundInfoResult(finalisedBlockHash string, r round.RoundI) error {
-	res := roundInfo(r.GetRoundNumber(), finalisedBlockHash)
-	blob, err := res.Encode()
-	if err != nil {
-		return err
-	}
-	return crpc.Client().AddTestCaseResult(blob)
-}
-
-func roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
-	mc := GetMinerChain()
-
-	miners := mc.GetMiners(round).CopyNodes()
-	rankedMiners := make([]string, len(miners))
-	roundI := mc.GetRound(round)
-	for _, miner := range miners {
-		rankedMiners[roundI.GetMinerRank(miner)] = miner.ID
-	}
-
-	propBlocks := roundI.GetProposedBlocks()
-	propBlocksInfo := make([]*cases.BlockInfo, 0, len(propBlocks))
-	for _, b := range propBlocks {
-		propBlocksInfo = append(propBlocksInfo, getBlockInfo(b))
-	}
-	notBlocks := roundI.GetNotarizedBlocks()
-	notBlocksInfo := make([]*cases.BlockInfo, 0, len(notBlocks))
-	for _, b := range notBlocks {
-		notBlocksInfo = append(notBlocksInfo, getBlockInfo(b))
-	}
-
-	return &cases.RoundInfo{
-		Num:                round,
-		GeneratorsNum:      mc.GetGeneratorsNum(),
-		RankedMiners:       rankedMiners,
-		FinalisedBlockHash: finalisedBlockHash,
-		ProposedBlocks:     propBlocksInfo,
-		NotarisedBlocks:    notBlocksInfo,
-		TimeoutCount:       roundI.GetTimeoutCount(),
-		RoundRandomSeed:    roundI.GetRandomSeed(),
-		IsFinalised:        roundI.IsFinalized(),
-	}
-}
-
-func getBlockInfo(b *block.Block) *cases.BlockInfo {
-	return &cases.BlockInfo{
-		Hash:                b.Hash,
-		PrevHash:            b.PrevHash,
-		Notarised:           b.IsBlockNotarized(),
-		VerificationStatus:  b.GetVerificationStatus(),
-		Rank:                b.RoundRank,
-		VerificationTickets: getVerificationTicketsInfo(b.VerificationTickets),
-	}
-}
-
-func getVerificationTicketsInfo(tickets []*block.VerificationTicket) []*cases.VerificationTicketInfo {
-	tickInfo := make([]*cases.VerificationTicketInfo, 0, len(tickets))
-	for _, ticket := range tickets {
-		tickInfo = append(tickInfo, &cases.VerificationTicketInfo{
-			VerifierID: ticket.VerifierID,
-		})
-	}
-	return tickInfo
 }
 
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
@@ -202,7 +140,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.Bloc
 
 func isIgnoringGenerateBlock(rNum int64) bool {
 	cfg := crpc.Client().State().NotarisingNonExistentBlock
-	nodeType, typeRank := getNodeTypeAndTypeRank(rNum)
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(rNum)
 	// we need to ignore generating block phase on configured round and on the Generator1 node
 	return cfg != nil && cfg.OnRound == rNum && nodeType == generator && typeRank == 1
 }
