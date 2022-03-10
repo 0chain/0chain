@@ -149,6 +149,8 @@ type Runner struct {
 	conf    *config.Config
 	verbose bool
 
+	currTestCaseName string
+
 	// state
 
 	lastVC            *VCInfo // last view change
@@ -888,6 +890,12 @@ func (r *Runner) Run() (err error, success bool) {
 					log.Printf("[ERR] at the end of %d test case: %v", i, err)
 					if mustFail {
 						log.Printf("[The error is expected result of the test case]")
+					}
+
+					if testCase.Flow.IsSavingLogs() {
+						if err := r.SaveLogs(); err != nil {
+							log.Printf("Warning: error while saving logs: %v", err)
+						}
 					}
 
 					continue cases

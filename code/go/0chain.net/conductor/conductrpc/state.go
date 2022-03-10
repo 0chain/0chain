@@ -2,6 +2,7 @@ package conductrpc
 
 import (
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/config/cases"
 )
 
 //
@@ -48,10 +49,27 @@ type State struct {
 	Signatures *config.Bad
 	Publish    *config.Bad
 
+	ExtendNotNotarisedBlock               *cases.NotNotarisedBlockExtension
+	SendDifferentBlocksFromFirstGenerator *cases.SendDifferentBlocksFromFirstGenerator
+	SendDifferentBlocksFromAllGenerators  *cases.SendDifferentBlocksFromAllGenerators
+	BreakingSingleBlock                   *cases.BreakingSingleBlock
+	SendInsufficientProposals             *cases.SendInsufficientProposals
+	VerifyingNonExistentBlock             *cases.VerifyingNonExistentBlock
+	NotarisingNonExistentBlock            *cases.NotarisingNonExistentBlock
+	ResendProposedBlock                   *cases.ResendProposedBlock
+	ResendNotarisation                    *cases.ResendNotarisation
+	BadTimeoutVRFS                        *cases.BadTimeoutVRFS
+	HalfNodesDown                         *cases.HalfNodesDown
+	BlockStateChangeRequestor             *cases.BlockStateChangeRequestor
+	MinerNotarisedBlockRequestor          *cases.MinerNotarisedBlockRequestor
+
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses
 	ValidatorProof *config.Bad // blobber sends invalid proof to validators
 	Challenges     *config.Bad // blobber ignores challenges
+
+	ServerStatsCollectorEnabled bool
+	ClientStatsCollectorEnabled bool
 }
 
 // Name returns NodeName by given NodeID.
@@ -61,15 +79,13 @@ func (s *State) Name(id NodeID) NodeName {
 
 func (s *State) copy() (cp *State) {
 	cp = new(State)
-	(*cp) = (*s)
+	*cp = *s
 	return
 
 }
 
 func (s *State) send(poll chan *State) {
-	go func(state *State) {
-		poll <- state
-	}(s.copy())
+	poll <- s.copy()
 }
 
 type IsGoodOrBad interface {
