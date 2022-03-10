@@ -401,7 +401,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	}
 	storChall.RandomNumber = seed
 	storChall.AllocationID = allocID
-	storChall.Blobber = blobber
+	//storChall.Blobber = blobber
 	storChall.AllocationRoot = allocRoot
 
 	require.True(t, blobberChall.addChallenge(storChall))

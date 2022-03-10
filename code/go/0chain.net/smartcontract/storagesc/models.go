@@ -98,10 +98,10 @@ type ChallengeResponse struct {
 }
 
 type BlobberChallenge struct {
-	BlobberID                string                       `json:"blobber_id"`
-	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+	BlobberID                string            `json:"blobber_id"`
+	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"`
+	ChallengeIDs             []string          `json:"challenge_ids"`
+	ChallengeIDMap           map[string]bool   `json:"challenge_id_map"`
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
@@ -157,32 +157,85 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 }
 
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
-	if sn.Challenges == nil {
-		sn.Challenges = make([]*StorageChallenge, 0)
-		sn.ChallengeMap = make(map[string]*StorageChallenge)
+	//if sn.Challenges == nil {
+	//	sn.Challenges = make([]*StorageChallenge, 0)
+	//	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	//}
+	//if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
+	//	if len(sn.Challenges) > 0 {
+	//		lastChallenge := sn.Challenges[len(sn.Challenges)-1]
+	//		challenge.PrevID = lastChallenge.ID
+	//	} else if sn.LatestCompletedChallenge != nil {
+	//		challenge.PrevID = sn.LatestCompletedChallenge.ID
+	//	}
+	//	sn.Challenges = append(sn.Challenges, challenge)
+	//	sn.ChallengeMap[challenge.ID] = challenge
+	//	return true
+	//}
+
+	if sn.ChallengeIDs == nil {
+		sn.ChallengeIDMap = make(map[string]bool)
 	}
-	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
-		if len(sn.Challenges) > 0 {
-			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
-			challenge.PrevID = lastChallenge.ID
-		} else if sn.LatestCompletedChallenge != nil {
-			challenge.PrevID = sn.LatestCompletedChallenge.ID
+	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
+		if len(sn.ChallengeIDs) > 0 {
+			lastChallengeID := sn.ChallengeIDs[len(sn.ChallengeIDs)-1]
+			challenge.PrevID = lastChallengeID
+		} else if sn.LatestCompletedChallengeID != "" {
+			challenge.PrevID = sn.LatestCompletedChallengeID
 		}
-		sn.Challenges = append(sn.Challenges, challenge)
-		sn.ChallengeMap[challenge.ID] = challenge
+		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
+		sn.ChallengeIDMap[challenge.ID] = true
 		return true
 	}
 	return false
 }
 
+type AllocationChallenge struct {
+	AllocationID               string                       `json:"allocation_id"`
+	Challenges                 []*StorageChallenge          `json:"challenges"`
+	ChallengeMap               map[string]*StorageChallenge `json:"-"`
+	LatestCompletedChallenge   *StorageChallenge            `json:"lastest_completed_challenge"`
+	ChallengeIDs               []string                     `json:"challenge_ids"`
+	LatestCompletedChallengeID string                       `json:"latest_completed_challenge_id"`
+}
+
+func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + ":allocationchallenge:" + sn.AllocationID)
+}
+
+func (sn *AllocationChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *AllocationChallenge) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *AllocationChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
+}
+
+func (sn *AllocationChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeMap[challenge.ID] = challenge
+	}
+	return nil
+}
+
 type StorageChallenge struct {
-	Created        common.Timestamp   `json:"created"`
-	ID             string             `json:"id"`
-	PrevID         string             `json:"prev_id"`
-	Validators     []*ValidationNode  `json:"validators"`
-	RandomNumber   int64              `json:"seed"`
-	AllocationID   string             `json:"allocation_id"`
-	Blobber        *StorageNode       `json:"blobber"`
+	Created      common.Timestamp  `json:"created"`
+	ID           string            `json:"id"`
+	PrevID       string            `json:"prev_id"`
+	Validators   []*ValidationNode `json:"validators"`
+	RandomNumber int64             `json:"seed"`
+	AllocationID string            `json:"allocation_id"`
+	//Blobber        *StorageNode       `json:"blobber"`
 	AllocationRoot string             `json:"allocation_root"`
 	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
 }

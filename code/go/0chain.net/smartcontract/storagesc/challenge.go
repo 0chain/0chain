@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 
@@ -59,7 +58,7 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 		}
 	}
 	idx := 0
-	if found && idx >= 0 && idx < len(blobberChallengeObj.Challenges) {
+	if found && idx < len(blobberChallengeObj.Challenges) {
 		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:idx], blobberChallengeObj.Challenges[idx+1:]...)
 		challengeCompleted.Response = challengeResponse
 		blobberChallengeObj.LatestCompletedChallenge = challengeCompleted
@@ -78,6 +77,34 @@ func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 	}
 
 	return bc, nil
+}
+
+func (sc *StorageSmartContract) getAllocationChallengeBytes(allocID string,
+	balances c_state.StateContextI) (b []byte, err error) {
+
+	var (
+		ac   AllocationChallenge
+		seri util.Serializable
+	)
+	ac.AllocationID = allocID
+	if seri, err = balances.GetTrieNode(ac.GetKey(sc.ID)); err != nil {
+		return
+	}
+	return seri.Encode(), nil
+}
+
+func (sc *StorageSmartContract) getAllocationChallenge(allocID string,
+	balances c_state.StateContextI) (ac *AllocationChallenge, err error) {
+
+	var b []byte
+	if b, err = sc.getAllocationChallengeBytes(allocID, balances); err != nil {
+		return
+	}
+	ac = new(AllocationChallenge)
+	if err = ac.Decode(b); err != nil {
+		return nil, fmt.Errorf("decoding allocation_challenge: %v", err)
+	}
+	return
 }
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
@@ -354,7 +381,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"Cannot find the challenge with ID %s", challResp.ID)
 	}
 
-	if challReq.Blobber.ID != t.ClientID {
+	if blobberChall.BlobberID != t.ClientID {
 		return "", common.NewError("verify_challenge",
 			"Challenge response should be submitted by the same blobber"+
 				" as the challenge request")
@@ -685,10 +712,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
 	balances c_state.StateContextI) (resp string, err error) {
 
-	sort.SliceStable(alloc.Blobbers, func(i, j int) bool {
-		return alloc.Blobbers[i].ID < alloc.Blobbers[j].ID
-	})
-
 	blobber := &StorageNode{}
 
 	for _, b := range alloc.Blobbers {
@@ -731,26 +754,28 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 	var storageChallenge StorageChallenge
 	storageChallenge.ID = challengeID
 	storageChallenge.Validators = selectedValidators
-	storageChallenge.Blobber = blobber
+	//storageChallenge.Blobber = blobber
 	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
-
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
-
-	err = balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-	default:
-		return "", err
-	}
-
 	storageChallenge.Created = creationDate
-	addedChallege := blobberChallengeObj.addChallenge(&storageChallenge)
-	if !addedChallege {
-		challengeBytes, err := json.Marshal(storageChallenge)
-		return string(challengeBytes), err
+
+	blobberChallengeObj, err := sc.getBlobberChallenge(blobberID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			blobberChallengeObj = &BlobberChallenge{}
+			blobberChallengeObj.BlobberID = blobberID
+
+			addedChallenge := blobberChallengeObj.addChallenge(&storageChallenge)
+			if !addedChallenge {
+				challengeBytes, err := json.Marshal(storageChallenge)
+				return string(challengeBytes), err
+			}
+
+		} else {
+			return "", common.NewError("add_challenge",
+				"error fetching blobber challenge: "+err.Error())
+		}
 	}
 
 	balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
