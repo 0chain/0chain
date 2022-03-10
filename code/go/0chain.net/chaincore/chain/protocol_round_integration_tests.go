@@ -88,7 +88,6 @@ func AddRoundInfoResult(r round.RoundI, finalisedBlockHash string) error {
 	res := roundInfo(r.GetRoundNumber(), finalisedBlockHash)
 	blob, err := res.Encode()
 	if err != nil {
-		log.Printf("1!")
 		return err
 	}
 	return crpc.Client().AddTestCaseResult(blob)
