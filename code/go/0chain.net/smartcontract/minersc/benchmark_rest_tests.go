@@ -5,13 +5,12 @@ import (
 	"net/url"
 	"testing"
 
-	"0chain.net/smartcontract/stakepool"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 type RestBenchTest struct {
@@ -50,7 +49,7 @@ func BenchmarkRestTests(
 			endpoint: msc.GetNodepoolHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, stakepool.Miner))
+				values.Set("id", GetMockNodeId(0, spenum.Miner))
 				values.Set("n2n_host", "n2n_host")
 				return values
 			}(),
@@ -105,7 +104,7 @@ func BenchmarkRestTests(
 			endpoint: msc.nodeStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, stakepool.Miner))
+				values.Set("id", GetMockNodeId(0, spenum.Miner))
 				return values
 			}(),
 		},
@@ -114,8 +113,8 @@ func BenchmarkRestTests(
 			endpoint: msc.nodePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, stakepool.Miner))
-				values.Set("pool_id", getMinerDelegatePoolId(0, 0, stakepool.Miner))
+				values.Set("id", GetMockNodeId(0, spenum.Miner))
+				values.Set("pool_id", getMinerDelegatePoolId(0, 0, spenum.Miner))
 				return values
 			}(),
 		},

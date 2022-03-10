@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/chaincore/state"
 
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -52,12 +52,12 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 		return nil, errors.New("no event database found")
 	}
 
-	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Miner))
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
 	if err != nil {
 		return nil, errors.New("blobber not found in event database")
 	}
 
-	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(stakepool.Sharder))
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
 	if err != nil {
 		return nil, errors.New("blobber not found in event database")
 	}
@@ -69,7 +69,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 			Balance:    state.Balance(pool.Balance),
 			Reward:     state.Balance(pool.Reward),
 			RewardPaid: state.Balance(pool.TotalReward),
-			Status:     stakepool.PoolStatus(pool.Status).String(),
+			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
@@ -80,7 +80,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 			Balance:    state.Balance(pool.Balance),
 			Reward:     state.Balance(pool.Reward),
 			RewardPaid: state.Balance(pool.TotalReward),
-			Status:     stakepool.PoolStatus(pool.Status).String(),
+			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}

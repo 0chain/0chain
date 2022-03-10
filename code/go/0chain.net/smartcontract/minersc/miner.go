@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -180,11 +181,11 @@ func (msc *MinerSmartContract) deleteNode(
 ) (*MinerNode, error) {
 	var err error
 	deleteNode.Delete = true
-	var nodeType stakepool.Provider
+	var nodeType spenum.Provider
 	if deleteNode.NodeType == NodeTypeMiner {
-		nodeType = stakepool.Miner
+		nodeType = spenum.Miner
 	} else {
-		nodeType = stakepool.Sharder
+		nodeType = spenum.Sharder
 	}
 
 	usp, err := stakepool.GetUserStakePool(nodeType, deleteNode.DelegateWallet, balances)
@@ -194,16 +195,16 @@ func (msc *MinerSmartContract) deleteNode(
 
 	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
-		case stakepool.Pending:
+		case spenum.Pending:
 			_, err := deleteNode.UnlockPoolI(
 				pool.DelegateID, nodeType, deleteNode.ID, key, usp, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}
-		case stakepool.Active:
-			pool.Status = stakepool.Deleting
-		case stakepool.Deleting:
-		case stakepool.Deleted:
+		case spenum.Active:
+			pool.Status = spenum.Deleting
+		case spenum.Deleting:
+		case spenum.Deleted:
 		default:
 			return nil, fmt.Errorf(
 				"unrecognised stakepool status: %v", pool.Status.String())

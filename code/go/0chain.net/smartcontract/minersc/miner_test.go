@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -47,14 +48,14 @@ func TestDeleteMiner(t *testing.T) {
 		for i := 0; i < p.activePools; i++ {
 			id := "active pool " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
-			dp.Status = stakepool.Active
+			dp.Status = spenum.Active
 			mn.Pools[id] = &dp
 		}
 		for i, amount := range p.pendingPools {
 			id := "pending pool " + strconv.Itoa(i)
 			delegateId := "delegate " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
-			dp.Status = stakepool.Pending
+			dp.Status = spenum.Pending
 			dp.Balance = state.Balance(amount) * x10
 			dp.DelegateID = delegateId
 			balances.On("AddTransfer", &state.Transfer{
@@ -67,11 +68,11 @@ func TestDeleteMiner(t *testing.T) {
 			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
 			balances.On(
 				"GetTrieNode",
-				stakepool.UserStakePoolsKey(stakepool.Miner, delegateId),
+				stakepool.UserStakePoolsKey(spenum.Miner, delegateId),
 			).Return(un, nil).Once()
 			balances.On(
 				"DeleteTrieNode",
-				stakepool.UserStakePoolsKey(stakepool.Miner, delegateId),
+				stakepool.UserStakePoolsKey(spenum.Miner, delegateId),
 			).Return("", nil).Once()
 		}
 

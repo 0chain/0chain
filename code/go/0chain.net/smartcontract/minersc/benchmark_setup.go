@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -19,7 +20,7 @@ import (
 
 func AddMockNodes(
 	clients []string,
-	nodeType stakepool.Provider,
+	nodeType spenum.Provider,
 	balances cstate.StateContextI,
 ) []string {
 	var (
@@ -33,7 +34,7 @@ func AddMockNodes(
 		key          string
 	)
 
-	if nodeType == stakepool.Miner {
+	if nodeType == spenum.Miner {
 		numActive = viper.GetInt(benchmark.NumActiveMiners)
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
@@ -65,10 +66,10 @@ func AddMockNodes(
 				DelegateID: clients[dId],
 			}
 			if i < numActive {
-				pool.Status = stakepool.Active
+				pool.Status = spenum.Active
 				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			} else {
-				pool.Status = stakepool.Pending
+				pool.Status = spenum.Pending
 				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			}
 		}
@@ -80,7 +81,7 @@ func AddMockNodes(
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
 	}
-	if nodeType == stakepool.Miner {
+	if nodeType == spenum.Miner {
 		dkgMiners := NewDKGMinerNodes()
 		dkgMiners.SimpleNodes = nodeMap
 		dkgMiners.T = viper.GetInt(benchmark.InternalT)
@@ -112,16 +113,16 @@ func AddNodeDelegates(
 	balances cstate.StateContextI,
 ) {
 	for i := range miners {
-		AddUserNodesForNode(i, stakepool.Miner, miners, clients, balances)
+		AddUserNodesForNode(i, spenum.Miner, miners, clients, balances)
 	}
 	for i := range sharders {
-		AddUserNodesForNode(i, stakepool.Sharder, sharders, clients, balances)
+		AddUserNodesForNode(i, spenum.Sharder, sharders, clients, balances)
 	}
 }
 
 func AddUserNodesForNode(
 	nodeIndex int,
-	nodeType stakepool.Provider,
+	nodeType spenum.Provider,
 	nodes []string,
 	clients []string,
 	balances cstate.StateContextI,
@@ -202,11 +203,11 @@ func AddPhaseNode(balances cstate.StateContextI) {
 	}
 }
 
-func getMinerDelegatePoolId(miner, delegate int, nodeType stakepool.Provider) string {
+func getMinerDelegatePoolId(miner, delegate int, nodeType spenum.Provider) string {
 	return encryption.Hash("delegate pool" +
 		strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType)))
 }
 
-func GetMockNodeId(index int, nodeType stakepool.Provider) string {
+func GetMockNodeId(index int, nodeType spenum.Provider) string {
 	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
 }

@@ -5,7 +5,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
@@ -55,7 +55,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"stake is greater than max allowed: %d > %d", t.Value, mn.MaxStake)
 	}
 
-	if err := mn.LockPool(t, stakepool.Miner, mn.ID, stakepool.Pending, balances); err != nil {
+	if err := mn.LockPool(t, spenum.Miner, mn.ID, spenum.Pending, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"digging delegate pool: %v", err)
 	}
@@ -98,9 +98,9 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	}
 
 	switch pool.Status {
-	case stakepool.Pending:
+	case spenum.Pending:
 		{
-			_, err := mn.UnlockPool(t.ClientID, stakepool.Blobber, dp.MinerID, dp.PoolID, balances)
+			_, err := mn.UnlockPool(t.ClientID, spenum.Blobber, dp.MinerID, dp.PoolID, balances)
 			if err != nil {
 				return "", common.NewErrorf("delegate_pool_del",
 					"stake_pool_unlock_failed: %v", err)
@@ -110,19 +110,19 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			}
 			return resp, nil
 		}
-	case stakepool.Active:
+	case spenum.Active:
 		{
-			pool.Status = stakepool.Deleting
+			pool.Status = spenum.Deleting
 			if err = mn.save(balances); err != nil {
 				return "", common.NewErrorf("delegate_pool_del",
 					"saving miner node: %v", err)
 			}
 			return `{"action": "pool will be released next VC"}`, nil
 		}
-	case stakepool.Deleting:
+	case spenum.Deleting:
 		return "", common.NewError("delegate_pool_del",
 			"pool already deleted")
-	case stakepool.Deleted:
+	case spenum.Deleted:
 		return "", common.NewError("delegate_pool_del",
 			"pool already deleted")
 	default:

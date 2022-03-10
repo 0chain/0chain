@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/block"
@@ -99,7 +101,7 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 			var dp stakepool.DelegatePool
 			dp.Balance = zcnToBalance(delegate)
 			dp.DelegateID = datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j))
-			dp.Status = stakepool.Active
+			dp.Status = spenum.Active
 			node.Pools[strconv.Itoa(j)] = &dp
 			staked += int64(zcnToBalance(delegate))
 		}

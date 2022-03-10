@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/smartcontract"
@@ -615,7 +617,7 @@ func (mn *MinerNode) GetKey() datastore.Key {
 func (mn *MinerNode) numDelegates() int {
 	var count int
 	for _, pool := range mn.Pools {
-		if pool.Status == stakepool.Pending || pool.Status == stakepool.Active {
+		if pool.Status == spenum.Pending || pool.Status == spenum.Active {
 			count++
 		}
 	}

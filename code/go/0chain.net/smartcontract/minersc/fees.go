@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -21,8 +22,8 @@ import (
 
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for _, pool := range mn.Pools {
-		if pool.Status == stakepool.Pending {
-			pool.Status = stakepool.Active
+		if pool.Status == spenum.Pending {
+			pool.Status = spenum.Active
 			mn.TotalStaked += int64(pool.Balance)
 		}
 	}
@@ -32,7 +33,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 func (msc *MinerSmartContract) deletePoolFromUserNode(
 	delegateID, nodeID,
 	poolID string,
-	providerType stakepool.Provider,
+	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
 
@@ -41,7 +42,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(
 		return fmt.Errorf("getting user node: %v", err)
 	}
 	usp.Del(nodeID, poolID)
-	if err := usp.Save(stakepool.Blobber, delegateID, balances); err != nil {
+	if err := usp.Save(spenum.Blobber, delegateID, balances); err != nil {
 		return fmt.Errorf("saving user node: %v", err)
 	}
 
@@ -73,8 +74,8 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {
 	for _, pool := range mn.Pools {
-		if pool.Status == stakepool.Deleting {
-			pool.Status = stakepool.Deleted
+		if pool.Status == spenum.Deleting {
+			pool.Status = spenum.Deleted
 		}
 	}
 
@@ -94,9 +95,9 @@ func (msc *MinerSmartContract) unlockOffline(
 		var err error
 		switch mn.NodeType {
 		case NodeTypeMiner:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, stakepool.Miner, balances)
+			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, spenum.Miner, balances)
 		case NodeTypeSharder:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, stakepool.Sharder, balances)
+			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, spenum.Sharder, balances)
 		default:
 			err = fmt.Errorf("unrecognised node type: %s", mn.NodeType.String())
 		}
@@ -104,7 +105,7 @@ func (msc *MinerSmartContract) unlockOffline(
 			return common.NewError("pay_fees/unlock_offline", err.Error())
 		}
 
-		pool.Status = stakepool.Deleted
+		pool.Status = spenum.Deleted
 	}
 
 	if err := mn.save(balances); err != nil {
@@ -363,7 +364,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	mn.Stat.GeneratorRewards += minerr + minerf
 	if err := mn.StakePool.DistributeRewards(
-		float64(minerr+minerf), mn.ID, stakepool.Miner, balances,
+		float64(minerr+minerf), mn.ID, spenum.Miner, balances,
 	); err != nil {
 		return "", err
 	}
@@ -435,12 +436,12 @@ func (msc *MinerSmartContract) payStakeHolders(
 	if isSharder {
 		node.Stat.SharderRewards += value
 		err = node.StakePool.DistributeRewards(
-			float64(value), node.ID, stakepool.Sharder, balances,
+			float64(value), node.ID, spenum.Sharder, balances,
 		)
 	} else {
 		node.Stat.GeneratorRewards += value
 		err = node.StakePool.DistributeRewards(
-			float64(value), node.ID, stakepool.Miner, balances,
+			float64(value), node.ID, spenum.Miner, balances,
 		)
 	}
 	return "", err
@@ -496,7 +497,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	for _, sh := range sharders {
 		sh.Stat.SharderRewards += partf + partm
 		if err = sh.StakePool.DistributeRewards(
-			float64(partf+partm), sh.ID, stakepool.Sharder, balances,
+			float64(partf+partm), sh.ID, spenum.Sharder, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)

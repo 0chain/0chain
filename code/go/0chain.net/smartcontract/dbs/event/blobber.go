@@ -43,11 +43,6 @@ type Blobber struct {
 	Reward             int64 `json:"reward"`
 	TotalServiceCharge int64 `json:"total_service_charge"`
 
-	OffersTotal        int64 `json:"offers_total"`
-	UnstakeTotal       int64 `json:"unstake_total"`
-	Reward             int64 `json:"reward"`
-	TotalServiceCharge int64 `json:"total_service_charge"`
-
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }

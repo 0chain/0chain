@@ -3,6 +3,8 @@ package minersc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -24,7 +26,7 @@ func (ssc *MinerSmartContract) collectReward(
 			"can't decode request: %v", err)
 	}
 
-	if prr.ProviderType != stakepool.Miner && prr.ProviderType != stakepool.Sharder {
+	if prr.ProviderType != spenum.Miner && prr.ProviderType != spenum.Sharder {
 		return "", common.NewErrorf("collect_reward_failed",
 			"invalid provider type: %s", prr.ProviderType.String())
 	}
@@ -43,9 +45,9 @@ func (ssc *MinerSmartContract) collectReward(
 
 	var provider *MinerNode
 	switch prr.ProviderType {
-	case stakepool.Miner:
+	case spenum.Miner:
 		provider, err = getMinerNode(providerID, balances)
-	case stakepool.Sharder:
+	case spenum.Sharder:
 		provider, err = ssc.getSharderNode(providerID, balances)
 	default:
 		err = fmt.Errorf("unsupported provider type", prr.ProviderType.String())
