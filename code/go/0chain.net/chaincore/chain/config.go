@@ -41,6 +41,7 @@ type Config interface {
 	OwnerID() datastore.Key
 	BlockSize() int32
 	MinBlockSize() int32
+	MaxBlockCost() int
 	MaxByteSize() int64
 	MinGenerators() int
 	GeneratorsPercent() float64
@@ -70,6 +71,7 @@ type Config interface {
 	FromViper()
 	Update(configMap *minersc.GlobalSettings) error
 	TxnExempt() map[string]bool
+	MinTxnFee() int64
 }
 
 type ConfigImpl struct {
@@ -296,11 +298,25 @@ func (c *ConfigImpl) DbsEvents() dbs.DbAccess {
 	return c.conf.DbsEvents
 }
 
+func (c *ConfigImpl) MaxBlockCost() int {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.MaxBlockCost
+}
+
 func (c *ConfigImpl) TxnExempt() map[string]bool {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
 
 	return c.conf.TxnExempt
+}
+
+func (c *ConfigImpl) MinTxnFee() int64 {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.MinTxnFee
 }
 
 // HealthCheckCycleScan -
@@ -326,6 +342,7 @@ type ConfigData struct {
 	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
 	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
 	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have
+	MaxBlockCost         int           `json:"max_block_cost"`          // multiplier of soft timeouts to restart a round
 	MaxByteSize          int64         `json:"max_byte_size"`           // Max number of bytes a block can have
 	MinGenerators        int           `json:"min_generators"`          // Min number of block generators.
 	GeneratorsPercent    float64       `json:"generators_percent"`      // Percentage of all miners
@@ -334,6 +351,7 @@ type ConfigData struct {
 	ThresholdByStake     int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
 	ValidationBatchSize  int           `json:"validation_size"`         // Batch size of txns for crypto verification
 	TxnMaxPayload        int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
+	MinTxnFee            int64         `json:"min_txn_fee"`             // Minimum txn fee allowed
 	PruneStateBelowCount int           `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange           int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 	// todo move BlocksToSharder out of ConfigData
@@ -372,6 +390,7 @@ func (c *ConfigImpl) FromViper() {
 	conf := c.conf
 	conf.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	conf.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
+	conf.MaxBlockCost = viper.GetInt("server_chain.block.max_block_cost")
 	conf.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
 	conf.MinGenerators = viper.GetInt("server_chain.block.min_generators")
 	conf.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
@@ -382,6 +401,7 @@ func (c *ConfigImpl) FromViper() {
 	conf.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
+	conf.MinTxnFee = viper.GetInt64("server_chain.transaction.min_fee")
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
@@ -476,6 +496,10 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 	if err != nil {
 		return err
 	}
+	conf.MaxBlockCost, err = cf.GetInt(minersc.BlockMaxCost)
+	if err != nil {
+		return err
+	}
 	conf.MaxByteSize, err = cf.GetInt64(minersc.BlockMaxByteSize)
 	if err != nil {
 		return err
@@ -546,6 +570,10 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 		return err
 	}
 	conf.TxnMaxPayload, err = cf.GetInt(minersc.TransactionPayloadMaxSize)
+	if err != nil {
+		return err
+	}
+	conf.MinTxnFee, err = cf.GetInt64(minersc.TransactionMinFee)
 	if err != nil {
 		return err
 	}

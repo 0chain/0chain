@@ -50,6 +50,7 @@ var (
 
 	ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
 	ErrPreviousStateNotComputed = common.NewError("prev_state_not_computed", "Previous state not computed")
+	ErrCostTooBig               = common.NewError("cost_too_big", "Block cost is too big")
 
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
 	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
