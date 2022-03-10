@@ -49,3 +49,6 @@ require (
 	gorm.io/driver/postgres v1.2.1
 	gorm.io/gorm v1.22.2
 )
+
+replace github.com/tinylib/msgp => github.com/peterlimg/msgp v1.1.61
+//replace github.com/tinylib/msgp => ../../../../../peterlimg/msgp

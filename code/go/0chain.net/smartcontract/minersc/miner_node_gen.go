@@ -283,14 +283,20 @@ func (z *minerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Pending"
 	o = append(o, 0xa7, 0x50, 0x65, 0x6e, 0x64, 0x69, 0x6e, 0x67)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Pending)))
-	for za0001, za0002 := range z.Pending {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.Pending))
+	for k := range z.Pending {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.Pending[k]
+		o = msgp.AppendString(o, k)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0002.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Pending", za0001)
+				err = msgp.WrapError(err, "Pending", k)
 				return
 			}
 		}
@@ -298,14 +304,20 @@ func (z *minerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Active"
 	o = append(o, 0xa6, 0x41, 0x63, 0x74, 0x69, 0x76, 0x65)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Active)))
-	for za0003, za0004 := range z.Active {
-		o = msgp.AppendString(o, za0003)
+	keys_za0003 := make([]string, 0, len(z.Active))
+	for k := range z.Active {
+		keys_za0003 = append(keys_za0003, k)
+	}
+	msgp.Sort(keys_za0003)
+	for _, k := range keys_za0003 {
+		za0004 := z.Active[k]
+		o = msgp.AppendString(o, k)
 		if za0004 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0004.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Active", za0003)
+				err = msgp.WrapError(err, "Active", k)
 				return
 			}
 		}
@@ -313,14 +325,20 @@ func (z *minerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Deleting"
 	o = append(o, 0xa8, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x69, 0x6e, 0x67)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Deleting)))
-	for za0005, za0006 := range z.Deleting {
-		o = msgp.AppendString(o, za0005)
+	keys_za0005 := make([]string, 0, len(z.Deleting))
+	for k := range z.Deleting {
+		keys_za0005 = append(keys_za0005, k)
+	}
+	msgp.Sort(keys_za0005)
+	for _, k := range keys_za0005 {
+		za0006 := z.Deleting[k]
+		o = msgp.AppendString(o, k)
 		if za0006 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0006.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Deleting", za0005)
+				err = msgp.WrapError(err, "Deleting", k)
 				return
 			}
 		}
