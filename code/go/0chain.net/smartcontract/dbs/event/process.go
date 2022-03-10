@@ -47,12 +47,9 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
-	TagStakePoolReward
-	TagStakePoolBalance
-	TagAddOrOverwriteStakePool
 	TagAddOrOverwriteDelegatePool
-	TagRemoveDelegatePool
-	TagEmptyDelegatePool
+	TagStakePoolReward
+	TagUpdateDelegatePool
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -215,14 +212,29 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.removeCurator(c)
-	case TagAddOrOverwriteStakePool:
-		return nil // todo
+
+	//stake pool
 	case TagAddOrOverwriteDelegatePool:
-		return nil // todo
-	case TagRemoveDelegatePool:
-		return nil // todo
-	case TagEmptyDelegatePool:
-		return nil // todo
+		var sp DelegatePool
+		err := json.Unmarshal([]byte(event.Data), &sp)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteDelegatePool(sp)
+	case TagUpdateDelegatePool:
+		var spUpdate dbs.DelegatePoolUpdate
+		err := json.Unmarshal([]byte(event.Data), &spUpdate)
+		if err != nil {
+			return err
+		}
+		return edb.updateDelegatePool(spUpdate)
+	case TagStakePoolReward:
+		var spu dbs.StakePoolReward
+		err := json.Unmarshal([]byte(event.Data), &spu)
+		if err != nil {
+			return err
+		}
+		return edb.rewardUpdate(spu)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
