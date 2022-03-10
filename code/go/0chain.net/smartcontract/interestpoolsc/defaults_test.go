@@ -180,5 +180,6 @@ func testConfiguredGlobalNode() *GlobalNode {
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	gn.Cost = map[string]int{"1": 1, "2": 2, "3": 3}
 	return gn
 }

@@ -2,7 +2,9 @@ package interestpoolsc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"time"
 
@@ -57,6 +59,21 @@ func (ipsc *InterestPoolSmartContract) GetExecutionStats() map[string]interface{
 
 func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
 	return ipsc.RestHandlers
+}
+
+func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
+	n := ipsc.getGlobalNode(balances, funcName)
+	if n == nil {
+		return math.MaxInt32, errors.New("can't get global node")
+	}
+	if n.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := n.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
 }
 
 func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
@@ -174,6 +191,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
 	gn.OwnerId = conf.GetString(pfx + "owner_id")
+	gn.Cost = conf.GetStringMapInt(pfx + "cost")
 	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}

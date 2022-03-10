@@ -31,6 +31,7 @@ const (
 	MaxDestinations
 	MaxDescriptionLength
 	OwnerId
+	Cost
 )
 
 var (
@@ -41,6 +42,7 @@ var (
 		"max_destinations",
 		"max_description_length",
 		"owner_id",
+		"cost",
 	}
 )
 
@@ -50,12 +52,13 @@ func scConfigKey(scKey string) datastore.Key {
 
 // config represents SC configurations ('vestingsc:' from sc.yaml)
 type config struct {
-	MinLock              state.Balance `json:"min_lock"`
-	MinDuration          time.Duration `json:"min_duration"`
-	MaxDuration          time.Duration `json:"max_duration"`
-	MaxDestinations      int           `json:"max_destinations"`
-	MaxDescriptionLength int           `json:"max_description_length"`
-	OwnerId              datastore.Key `json:"owner_id"`
+	MinLock              state.Balance  `json:"min_lock"`
+	MinDuration          time.Duration  `json:"min_duration"`
+	MaxDuration          time.Duration  `json:"max_duration"`
+	MaxDestinations      int            `json:"max_destinations"`
+	MaxDescriptionLength int            `json:"max_description_length"`
+	OwnerId              datastore.Key  `json:"owner_id"`
+	Cost                 map[string]int `json:"cost"`
 }
 
 func (c *config) validate() (err error) {
@@ -133,6 +136,8 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 			} else {
 				c.OwnerId = value
 			}
+		case Settings[Cost]:
+
 		default:
 			return fmt.Errorf("config setting %s not found", key)
 		}
@@ -144,12 +149,14 @@ func (c *config) getConfigMap() smartcontract.StringMap {
 	sMap := smartcontract.StringMap{
 		Fields: make(map[string]string),
 	}
+  
 	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(c.MinLock)/1e10)
 	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", c.MinDuration)
 	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", c.MaxDuration)
 	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", c.MaxDestinations)
 	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", c.MaxDescriptionLength)
 	sMap.Fields[Settings[OwnerId]] = fmt.Sprintf("%v", c.OwnerId)
+  sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", c.Cost)
 	return sMap
 }
 
@@ -216,6 +223,7 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
 	conf.OwnerId = scconf.GetString(prefix + "owner_id")
+	conf.Cost = scconf.GetStringMapInt(prefix + "cost")
 
 	err = conf.validate()
 	if err != nil {

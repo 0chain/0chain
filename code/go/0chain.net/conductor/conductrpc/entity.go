@@ -3,9 +3,9 @@ package conductrpc
 import (
 	"log"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/core/viper"
 )
 
@@ -14,7 +14,8 @@ type Entity struct {
 	id     NodeID  // this
 	client *client // RPC client
 
-	state atomic.Value // the last state (can be nil first time)
+	stateMu sync.Mutex
+	state   *State // the last state (can be nil first time)
 
 	quitOnce sync.Once     //
 	quit     chan struct{} //
@@ -22,15 +23,18 @@ type Entity struct {
 
 // State returns current state.
 func (e *Entity) State() (state *State) {
-	if val := e.state.Load(); val != nil {
-		return val.(*State)
-	}
-	return // nil, not polled yet
+	e.stateMu.Lock()
+	defer e.stateMu.Unlock()
+
+	return e.state
 }
 
 // SetState sets current state.
 func (e *Entity) SetState(state *State) {
-	e.state.Store(state) // update
+	e.stateMu.Lock()
+	defer e.stateMu.Unlock()
+
+	e.state = state
 }
 
 // NewEntity creates RPC client for integration tests.
@@ -172,6 +176,34 @@ func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
 //
 // global
 //
+
+// checks
+
+func (e *Entity) ConfigureTestCase(blob []byte) error {
+	return e.client.configureTestCase(blob)
+}
+
+func (e *Entity) AddTestCaseResult(blob []byte) error {
+	return e.client.addTestCaseResult(blob)
+}
+
+// stats
+
+func (e *Entity) AddBlockServerStats(ss *stats.BlockRequest) error {
+	return e.client.addBlockServerStats(ss)
+}
+
+func (e *Entity) AddVRFSServerStats(ss *stats.VRFSRequest) error {
+	return e.client.addVRFSServerStats(ss)
+}
+
+func (e *Entity) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeRequest) error {
+	return e.client.addBlockStateChangeRequestorStats(rs)
+}
+
+func (e *Entity) AddMinerNotarisedBlockRequestorStats(rs *stats.MinerNotarisedBlockRequest) error {
+	return e.client.addMinerNotarisedBlockRequestorStats(rs)
+}
 
 var global *Entity
 
