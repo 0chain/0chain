@@ -51,17 +51,19 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 	challengeResponse *ChallengeResponse) bool {
 
 	found := false
-	if len(blobberChallengeObj.Challenges) > 0 {
-		latestOpenChallenge := blobberChallengeObj.Challenges[0]
-		if latestOpenChallenge.ID == challengeCompleted.ID {
+	if len(blobberChallengeObj.ChallengeIDs) > 0 {
+		latestOpenChallengeID := blobberChallengeObj.ChallengeIDs[0]
+		if latestOpenChallengeID == challengeCompleted.ID {
 			found = true
 		}
 	}
 	idx := 0
-	if found && idx < len(blobberChallengeObj.Challenges) {
-		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:idx], blobberChallengeObj.Challenges[idx+1:]...)
+	if found && idx < len(blobberChallengeObj.ChallengeIDs) {
+		blobberChallengeObj.ChallengeIDs = append(
+			blobberChallengeObj.ChallengeIDs[:idx], blobberChallengeObj.ChallengeIDs[idx+1:]...)
 		challengeCompleted.Response = challengeResponse
 		blobberChallengeObj.LatestCompletedChallenge = challengeCompleted
+		delete(blobberChallengeObj.ChallengeIDMap, challengeCompleted.ID)
 	}
 	return found
 }
@@ -767,26 +769,40 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 		if err == util.ErrValueNotPresent {
 			blobberChallengeObj = &BlobberChallenge{}
 			blobberChallengeObj.BlobberID = blobberID
-
-			addedChallenge := blobberChallengeObj.addChallenge(&storageChallenge)
-			if !addedChallenge {
-				challengeBytes, err := json.Marshal(storageChallenge)
-				return string(challengeBytes), err
-			}
-
 		} else {
 			return "", common.NewError("add_challenge",
 				"error fetching blobber challenge: "+err.Error())
 		}
 	}
 
-	balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	addedChallenge := blobberChallengeObj.addChallenge(&storageChallenge)
+	if !addedChallenge {
+		challengeBytes, err := json.Marshal(storageChallenge)
+		return string(challengeBytes), err
+	}
+
+	_, err = balances.InsertTrieNode(storageChallenge.GetKey(sc.ID), &storageChallenge)
+	if err != nil {
+		return "", common.NewError("add_challenge",
+			"error storing challenge: "+err.Error())
+	}
+
+	_, err = balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	if err != nil {
+		return "", common.NewError("add_challenge",
+			"error storing blobber challenge: "+err.Error())
+	}
 
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
-	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", common.NewError("add_challenge",
+			"error storing allocation: "+err.Error())
+	}
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	if err := sc.newChallenge(balances, storageChallenge.Created); err != nil {

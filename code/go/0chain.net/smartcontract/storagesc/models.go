@@ -126,9 +126,9 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
-	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	sn.ChallengeIDMap = make(map[string]bool)
 	for _, challenge := range sn.Challenges {
-		sn.ChallengeMap[challenge.ID] = challenge
+		sn.ChallengeIDMap[challenge.ID] = true
 	}
 	return nil
 }
@@ -244,6 +244,27 @@ type StorageChallenge struct {
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
 	return globalKey + "storagechallenge:" + sc.ID
+}
+
+func (sc *StorageChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sc *StorageChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sc)
+	return buff
+}
+
+func (sc *StorageChallenge) GetHash() string {
+	return util.ToHex(sc.GetHashBytes())
+}
+
+func (sc *StorageChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sc.Encode())
 }
 
 type ValidationNode struct {
