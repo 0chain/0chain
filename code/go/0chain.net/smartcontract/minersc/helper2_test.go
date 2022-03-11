@@ -118,9 +118,7 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 	}
 }
 
-func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, ctx cstate.StateContextI) {
-
-	//var viewChangeRound = runtime.blockRound%scYaml.rewardRoundPeriod == 0
+func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, miner MinerNode, ctx cstate.StateContextI) {
 	var epochChangeRound = runtime.blockRound%scYaml.epoch == 0
 
 	if epochChangeRound {
@@ -143,6 +141,8 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 			"pay miner delegates and delegates for each sharder, plus one miner update",
 		)
 	}
+
+	require.EqualValues(t, f.minerReward(EtBoth), int64(miner.Reward))
 }
 
 type EarningsType int

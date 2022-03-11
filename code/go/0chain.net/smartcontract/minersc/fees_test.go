@@ -157,6 +157,7 @@ func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.B
 }
 
 func Test_payFees(t *testing.T) {
+	t.Skip("Needs to be reworked. We now no longer pay fees with transfers and mints")
 	const stakeVal, stakeHolders = 10e10, 5
 
 	var (

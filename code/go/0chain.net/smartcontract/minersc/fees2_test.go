@@ -321,6 +321,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		},
 		StakePool: stakepool.NewStakePool(),
 	}
+	miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
 	}
@@ -330,7 +331,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var sharders []*MinerNode
 	for i := 0; i < numberOfSharders; i++ {
-		sharders = append(sharders, &MinerNode{
+		sharder := &MinerNode{
 			SimpleNode: &SimpleNode{
 				ID:             sharderIDs[i],
 				TotalStaked:    100,
@@ -338,7 +339,9 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 				DelegateWallet: sharderIDs[i],
 			},
 			StakePool: stakepool.NewStakePool(),
-		})
+		}
+		miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
+		sharders = append(sharders, sharder)
 	}
 
 	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
@@ -367,7 +370,10 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		return err
 	}
 
-	confirmResults(t, *globalNode, runtime, f, ctx)
+	minerAfter, err := getMinerNode(minerID, ctx)
+	require.NoError(t, err)
+
+	confirmResults(t, *globalNode, runtime, f, *minerAfter, ctx)
 
 	return err
 }

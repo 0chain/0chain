@@ -22,12 +22,14 @@ type testBalances struct {
 	block         *block.Block
 	blockSharders []string
 	lfmb          *block.Block
+	events        []event.Event
 }
 
 func newTestBalances() *testBalances {
 	return &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
 		tree:     make(map[datastore.Key]util.Serializable),
+		block:    &block.Block{},
 	}
 }
 
@@ -102,17 +104,26 @@ func (tb *testBalances) GetBlockSharders(*block.Block) []string {
 }
 
 // stubs
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
-func (tb *testBalances) Validate() error                                           { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                                   { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error                        { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer                           { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)                {}
-func (tb *testBalances) GetEventDB() *event.EventDb                                { return nil }
-func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
-func (tb *testBalances) EmitError(error)                                           {}
-func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI         { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction   { return nil }
+func (tb *testBalances) Validate() error                            { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                    { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error         { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer            { return nil }
+func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {}
+func (tb *testBalances) GetEventDB() *event.EventDb                 { return nil }
+func (sc *testBalances) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
+	sc.events = append(sc.events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        int(eventType),
+		Tag:         int(tag),
+		Index:       index,
+		Data:        data,
+	})
+}
+func (tb *testBalances) EmitError(error)          {}
+func (tb *testBalances) GetEvents() []event.Event { return tb.events }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
