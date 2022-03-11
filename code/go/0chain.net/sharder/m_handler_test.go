@@ -218,6 +218,8 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 			t.Parallel()
 
 			if tt.setLFB {
+				sc := sharder.GetSharderChain()
+				sc = sc
 				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 			}
 
