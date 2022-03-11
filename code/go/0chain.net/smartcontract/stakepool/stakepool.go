@@ -186,6 +186,16 @@ func (sp *StakePool) DistributeRewards(
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
 
+	// if no stake pools pay all rewards to the provider
+	if len(sp.Pools) == 0 {
+		sp.Reward += state.Balance(value)
+		spUpdate.Reward = int64(value)
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	var serviceCharge float64
 	serviceCharge = sp.Settings.ServiceCharge * value
 	if state.Balance(serviceCharge) > 0 {
@@ -196,10 +206,6 @@ func (sp *StakePool) DistributeRewards(
 
 	if state.Balance(value-serviceCharge) == 0 {
 		return nil
-	}
-
-	if len(sp.Pools) == 0 {
-		return fmt.Errorf("no stake pools to move tokens to")
 	}
 
 	valueLeft := value - serviceCharge
