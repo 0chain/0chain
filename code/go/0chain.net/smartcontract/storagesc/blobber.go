@@ -645,7 +645,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	pData := &partitions.BlobberChallengeNode{
 		ID:           details.BlobberID,
 		AllocationID: details.AllocationID,
-		UsedSize:     details.Stats.UsedSize,
 	}
 	if details.ChallengePartitionLoc == nil {
 		loc, err := bcPartition.Add(pData, balances)

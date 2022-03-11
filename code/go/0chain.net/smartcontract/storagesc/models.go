@@ -101,7 +101,7 @@ type BlobberChallenge struct {
 	BlobberID                string            `json:"blobber_id"`
 	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"`
 	ChallengeIDs             []string          `json:"challenge_ids"`
-	ChallengeIDMap           map[string]bool   `json:"challenge_id_map"`
+	ChallengeIDMap           map[string]bool   `json:"-"`
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
@@ -180,8 +180,8 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 		if len(sn.ChallengeIDs) > 0 {
 			lastChallengeID := sn.ChallengeIDs[len(sn.ChallengeIDs)-1]
 			challenge.PrevID = lastChallengeID
-		} else if sn.LatestCompletedChallengeID != "" {
-			challenge.PrevID = sn.LatestCompletedChallengeID
+		} else if sn.LatestCompletedChallenge != nil {
+			challenge.PrevID = sn.LatestCompletedChallenge.ID
 		}
 		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
 		sn.ChallengeIDMap[challenge.ID] = true
@@ -196,7 +196,7 @@ type AllocationChallenge struct {
 	ChallengeMap               map[string]*StorageChallenge `json:"-"`
 	LatestCompletedChallenge   *StorageChallenge            `json:"lastest_completed_challenge"`
 	ChallengeIDs               []string                     `json:"challenge_ids"`
-	LatestCompletedChallengeID string                       `json:"latest_completed_challenge_id"`
+	LatestCompletedChallengeID string                       `json:"-"`
 }
 
 func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
@@ -229,15 +229,16 @@ func (sn *AllocationChallenge) Decode(input []byte) error {
 }
 
 type StorageChallenge struct {
-	Created      common.Timestamp  `json:"created"`
-	ID           string            `json:"id"`
-	PrevID       string            `json:"prev_id"`
-	Validators   []*ValidationNode `json:"validators"`
-	RandomNumber int64             `json:"seed"`
-	AllocationID string            `json:"allocation_id"`
+	Created         common.Timestamp  `json:"created"`    // needed
+	ID              string            `json:"id"`         //needed
+	PrevID          string            `json:"prev_id"`    // needed
+	Validators      []*ValidationNode `json:"validators"` // to be removed
+	TotalValidators int               `json:"total_validators"`
+	RandomNumber    int64             `json:"seed"`
+	AllocationID    string            `json:"allocation_id"`
 	//Blobber        *StorageNode       `json:"blobber"`
 	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
+	Response       *ChallengeResponse `json:"challenge_response,omitempty"` //needed
 }
 
 type ValidationNode struct {

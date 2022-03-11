@@ -47,6 +47,7 @@ func TestAddChallenge(t *testing.T) {
 		creationDate  common.Timestamp
 		r             *rand.Rand
 		challengeSeed int64
+		blobberID     string
 		balances      cstate.StateContextI
 	}
 
@@ -57,7 +58,19 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	parametersToArgs := func(p parameters) args {
-		var blobbers = []*StorageNode{}
+
+		blobberChallenge := partitions.NewRandomSelector(
+			ALL_BLOBBERS_CHALLENGE_KEY,
+			allBlobbersChallengePartitionSize,
+			nil,
+			partitions.ItemBlobberChallenge,
+		)
+
+		balances := &mockStateContext{
+			store: make(map[datastore.Key]util.Serializable),
+		}
+
+		var blobbers []*StorageNode
 		var blobberMap = make(map[string]*BlobberAllocation)
 		for i := 0; i < p.numBlobbers; i++ {
 			var sn = StorageNode{
@@ -68,16 +81,22 @@ func TestAddChallenge(t *testing.T) {
 				AllocationRoot: "root " + sn.ID,
 				Stats:          &StorageAllocationStats{},
 			}
+
+			_, err := blobberChallenge.Add(
+				&partitions.BlobberChallengeNode{
+					ID:           sn.ID,
+					AllocationID: "allocation_id",
+				}, balances)
+			require.NoError(t, err)
 		}
+
 		validators := partitions.NewRandomSelector(
 			ALL_VALIDATORS_KEY,
 			allValidatorsPartitionSize,
 			nil,
 			partitions.ItemValidator,
 		)
-		balances := &mockStateContext{
-			store: make(map[datastore.Key]util.MPTSerializable),
-		}
+
 		for i := 0; i < p.numValidators; i++ {
 			_, err := validators.Add(
 				&partitions.ValidationNode{
@@ -87,6 +106,13 @@ func TestAddChallenge(t *testing.T) {
 			)
 			require.NoError(t, err)
 		}
+
+		r := rand.New(rand.NewSource(int64(p.randomSeed)))
+		bcList, err := blobberChallenge.GetRandomSlice(r, balances)
+		require.NoError(t, err)
+		i := rand.Intn(len(bcList))
+		bcItem := bcList[i]
+
 		return args{
 			alloc: &StorageAllocation{
 				Blobbers:   blobbers,
@@ -95,7 +121,8 @@ func TestAddChallenge(t *testing.T) {
 				Stats:      &StorageAllocationStats{},
 			},
 			validators: validators,
-			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
+			r:          r,
+			blobberID:  bcItem.Name(),
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.MPTSerializable),
 			},
@@ -111,11 +138,11 @@ func TestAddChallenge(t *testing.T) {
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
 		if p.numValidators > p.dataShards {
-			require.EqualValues(t, len(challenge.Validators), p.dataShards)
+			require.EqualValues(t, challenge.TotalValidators, p.dataShards)
 		} else {
-			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
+			require.EqualValues(t, challenge.TotalValidators, p.numValidators-1)
 		}
-		require.EqualValues(t, len(want.validators), len(challenge.Validators))
+		require.EqualValues(t, len(want.validators), challenge.TotalValidators)
 	}
 
 	tests := []struct {
@@ -170,7 +197,7 @@ func TestAddChallenge(t *testing.T) {
 				SmartContract: sci.NewSC(ADDRESS),
 			}
 
-			resp, err := ssc.addChallenge(args.alloc, args.validators, args.challengeID,
+			resp, err := ssc.addChallenge(args.alloc, args.blobberID, args.validators, args.challengeID,
 				args.creationDate, args.r, args.challengeSeed, args.balances)
 			validate(t, resp, err, tt.parameters, tt.want)
 		})

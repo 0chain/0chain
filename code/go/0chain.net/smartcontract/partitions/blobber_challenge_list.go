@@ -15,7 +15,6 @@ import (
 type BlobberChallengeNode struct {
 	ID           string `json:"id"`
 	AllocationID string `json:"allocation_id"`
-	UsedSize     int64  `json:"used_size"`
 }
 
 func (bcn *BlobberChallengeNode) Encode() []byte {
@@ -31,7 +30,7 @@ func (bcn *BlobberChallengeNode) Decode(b []byte) error {
 }
 
 func (bcn *BlobberChallengeNode) Data() string {
-	return string(bcn.Encode())
+	return bcn.AllocationID
 }
 
 func (bcn *BlobberChallengeNode) Name() string {
@@ -89,7 +88,6 @@ func (il *blobberChallengeItemList) add(it PartitionItem) error {
 	il.Items = append(il.Items, BlobberChallengeNode{
 		ID:           it.Name(),
 		AllocationID: bcn.AllocationID,
-		UsedSize:     bcn.UsedSize,
 	})
 	il.Changed = true
 	return nil

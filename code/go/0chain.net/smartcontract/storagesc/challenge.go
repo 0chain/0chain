@@ -428,7 +428,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	}
 
 	var (
-		threshold = len(challReq.Validators) / 2
+		threshold = challReq.TotalValidators / 2
 		pass      = success > threshold ||
 			(success > failure && success+failure < threshold)
 		cct   = toSeconds(details.Terms.ChallengeCompletionTime)
@@ -480,8 +480,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "challenge passed by blobber", nil
 	}
 
-	var enoughFails = failure > (len(challReq.Validators)/2) ||
-		(success+failure) == len(challReq.Validators)
+	var enoughFails = failure > (challReq.TotalValidators/2) ||
+		(success+failure) == challReq.TotalValidators
 
 	if enoughFails || (pass && !fresh) {
 
@@ -753,7 +753,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 
 	var storageChallenge StorageChallenge
 	storageChallenge.ID = challengeID
-	storageChallenge.Validators = selectedValidators
+	//storageChallenge.Validators = selectedValidators
+	storageChallenge.TotalValidators = len(selectedValidators)
 	//storageChallenge.Blobber = blobber
 	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = alloc.ID
