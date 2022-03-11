@@ -20,23 +20,8 @@ import (
 	"0chain.net/core/util"
 )
 
-//msgp:ignore unlockResponse stakePoolStat stakePoolRequest userPoolStat delegatePoolStat rewardsStat
+//msgp:ignore unlockResponse stakePoolStat stakePoolRequest delegatePoolStat rewardsStat
 //go:generate msgp -io=false -tests=false -unexported=true -v
-
-type stakePoolSettings struct {
-	// DelegateWallet for pool owner.
-	DelegateWallet string `json:"delegate_wallet"`
-	// MinStake allowed.
-	MinStake state.Balance `json:"min_stake"`
-	// MaxStake allowed.
-	MaxStake state.Balance `json:"max_stake"`
-	// NumDelegates maximum allowed.
-	MaxNumDelegates int `json:"num_delegates"`
-	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
-	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
-	// then the blobber can't be registered / updated.
-	ServiceCharge float64 `json:"service_charge"`
-}
 
 func validateStakePoolSettings(
 	sps stakepool.StakePoolSettings,

@@ -26,7 +26,11 @@ func (z *DelegatePool) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "Status"
 	o = append(o, 0xa6, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73)
-	o = msgp.AppendInt(o, int(z.Status))
+	o, err = z.Status.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Status")
+		return
+	}
 	// string "RoundCreated"
 	o = append(o, 0xac, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o = msgp.AppendInt64(o, z.RoundCreated)
@@ -67,14 +71,10 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Status":
-			{
-				var zb0002 int
-				zb0002, bts, err = msgp.ReadIntBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "Status")
-					return
-				}
-				z.Status = PoolStatus(zb0002)
+			bts, err = z.Status.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Status")
+				return
 			}
 		case "RoundCreated":
 			z.RoundCreated, bts, err = msgp.ReadInt64Bytes(bts)
@@ -102,63 +102,7 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DelegatePool) Msgsize() (s int) {
-	s = 1 + 8 + z.Balance.Msgsize() + 7 + z.Reward.Msgsize() + 7 + msgp.IntSize + 13 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.DelegateID)
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z PoolStatus) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendInt(o, int(z))
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *PoolStatus) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	{
-		var zb0001 int
-		zb0001, bts, err = msgp.ReadIntBytes(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		(*z) = PoolStatus(zb0001)
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z PoolStatus) Msgsize() (s int) {
-	s = msgp.IntSize
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z Provider) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendInt(o, int(z))
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	{
-		var zb0001 int
-		zb0001, bts, err = msgp.ReadIntBytes(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		(*z) = Provider(zb0001)
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z Provider) Msgsize() (s int) {
-	s = msgp.IntSize
+	s = 1 + 8 + z.Balance.Msgsize() + 7 + z.Reward.Msgsize() + 7 + z.Status.Msgsize() + 13 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.DelegateID)
 	return
 }
 

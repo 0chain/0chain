@@ -2,7 +2,7 @@
 set -e
 
 # Install msgp
-./install.msgp.sh
+./docker.local/bin/install.msgp.sh
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

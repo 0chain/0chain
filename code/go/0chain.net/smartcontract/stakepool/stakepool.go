@@ -16,8 +16,10 @@ import (
 	"0chain.net/chaincore/state"
 )
 
+//go:generate msgp -v -io=false -tests=false
+
 func stakePoolKey(p spenum.Provider, id string) datastore.Key {
-	return datastore.Key(p.String() + ":stakepool:" + id)
+	return p.String() + ":stakepool:" + id
 }
 
 // StakePool holds delegate information for an 0chain providers
