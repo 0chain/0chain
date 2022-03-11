@@ -147,7 +147,10 @@ func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.Mer
 	return c.updateState(ctx, b, bState, txn)
 }
 
-func (c *Chain) EstimateTransactionCost(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (int, error) {
+func (c *Chain) EstimateTransactionCost(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)

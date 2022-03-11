@@ -2,7 +2,7 @@
 set -e
 
 # Install msgp
-go install github.com/peterlimg/msgp@v1.1.61
+./install.msgp.sh
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

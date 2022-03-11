@@ -14,7 +14,7 @@ import (
 	"0chain.net/core/datastore"
 )
 
-//msgp:ignore MinerNode
+//msgp:ignore MinerNode dp
 //go:generate msgp -io=false -tests=false -unexported -v
 
 //
