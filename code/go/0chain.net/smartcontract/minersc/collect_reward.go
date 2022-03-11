@@ -50,7 +50,7 @@ func (ssc *MinerSmartContract) collectReward(
 	case spenum.Sharder:
 		provider, err = ssc.getSharderNode(providerID, balances)
 	default:
-		err = fmt.Errorf("unsupported provider type", prr.ProviderType.String())
+		err = fmt.Errorf("unsupported provider type %s", prr.ProviderType.String())
 	}
 	if err != nil {
 		return "", common.NewError("collect_reward_failed", err.Error())

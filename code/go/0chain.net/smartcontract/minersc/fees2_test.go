@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
@@ -317,6 +319,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			ServiceCharge:  zChainYaml.ServiceCharge,
 			DelegateWallet: minerID,
 		},
+		StakePool: stakepool.NewStakePool(),
 	}
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
@@ -334,6 +337,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 				ServiceCharge:  zChainYaml.ServiceCharge,
 				DelegateWallet: sharderIDs[i],
 			},
+			StakePool: stakepool.NewStakePool(),
 		})
 	}
 
