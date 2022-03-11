@@ -127,8 +127,8 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 		return err
 	}
 	sn.ChallengeIDMap = make(map[string]bool)
-	for _, challenge := range sn.Challenges {
-		sn.ChallengeIDMap[challenge.ID] = true
+	for _, challengeID := range sn.ChallengeIDs {
+		sn.ChallengeIDMap[challengeID] = true
 	}
 	return nil
 }
@@ -229,13 +229,13 @@ func (sn *AllocationChallenge) Decode(input []byte) error {
 }
 
 type StorageChallenge struct {
-	Created         common.Timestamp  `json:"created"`    // needed
-	ID              string            `json:"id"`         //needed
-	PrevID          string            `json:"prev_id"`    // needed
-	Validators      []*ValidationNode `json:"validators"` // to be removed
-	TotalValidators int               `json:"total_validators"`
-	RandomNumber    int64             `json:"seed"`
-	AllocationID    string            `json:"allocation_id"`
+	Created common.Timestamp `json:"created"` // needed
+	ID      string           `json:"id"`      //needed
+	PrevID  string           `json:"prev_id"` // needed
+	//Validators      []*ValidationNode `json:"validators"` // to be removed
+	TotalValidators int    `json:"total_validators"`
+	RandomNumber    int64  `json:"seed"`
+	AllocationID    string `json:"allocation_id"`
 	//Blobber        *StorageNode       `json:"blobber"`
 	BlobberID      string             `json:"blobber_id"`
 	AllocationRoot string             `json:"allocation_root"`

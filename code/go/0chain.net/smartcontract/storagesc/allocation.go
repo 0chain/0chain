@@ -1217,7 +1217,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			return nil, fmt.Errorf("getting blobber challenge: %v", err)
 		}
 		// no blobber challenges, no failures
-		if err == util.ErrValueNotPresent || len(bc.Challenges) == 0 {
+		if err == util.ErrValueNotPresent || len(bc.ChallengeIDs) == 0 {
 			passRates, err = append(passRates, 1.0), nil
 			continue // no challenges for the blobber
 		}

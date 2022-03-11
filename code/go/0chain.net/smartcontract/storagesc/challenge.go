@@ -81,6 +81,34 @@ func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 	return bc, nil
 }
 
+func (sc *StorageSmartContract) getStorageChallengeBytes(challengeID string,
+	balances c_state.StateContextI) (b []byte, err error) {
+
+	var (
+		chall *StorageChallenge
+		seri  util.Serializable
+	)
+	chall.ID = challengeID
+	if seri, err = balances.GetTrieNode(chall.GetKey(sc.ID)); err != nil {
+		return
+	}
+	return seri.Encode(), nil
+}
+
+func (sc *StorageSmartContract) getStorageChallenge(challengeID string,
+	balances c_state.StateContextI) (challenge *StorageChallenge, err error) {
+
+	var b []byte
+	if b, err = sc.getStorageChallengeBytes(challengeID, balances); err != nil {
+		return
+	}
+	challenge = new(StorageChallenge)
+	if err = challenge.Decode(b); err != nil {
+		return nil, fmt.Errorf("decoding storage_challenge: %v", err)
+	}
+	return
+}
+
 func (sc *StorageSmartContract) getAllocationChallengeBytes(allocID string,
 	balances c_state.StateContextI) (b []byte, err error) {
 
@@ -371,7 +399,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"can't get the blobber challenge %s: %v", t.ClientID, err)
 	}
 
-	var challReq, ok = blobberChall.ChallengeMap[challResp.ID]
+	var _, ok = blobberChall.ChallengeIDMap[challResp.ID]
 	if !ok {
 		if blobberChall.LatestCompletedChallenge != nil &&
 			challResp.ID == blobberChall.LatestCompletedChallenge.ID &&
@@ -387,6 +415,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewError("verify_challenge",
 			"Challenge response should be submitted by the same blobber"+
 				" as the challenge request")
+	}
+
+	challReq, err := sc.getStorageChallenge(challResp.ID, balances)
+	if err != nil {
+		return "", common.NewErrorf("verify_challenge",
+			"Cannot fetch the challenge with ID %s", challResp.ID)
 	}
 
 	var alloc *StorageAllocation
@@ -454,6 +488,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.LastestClosedChallengeTxn = challReq.ID
 		details.Stats.SuccessChallenges++
 		details.Stats.OpenChallenges--
+
+		balances.InsertTrieNode(challReq.GetKey(sc.ID), challReq)
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
 		sc.challengeResolved(balances, true)

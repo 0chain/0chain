@@ -582,13 +582,14 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 
 	// return "200" with empty list, if no challenges are found
 	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
-	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-		return blobberChallengeObj, nil
-	default:
-		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
+	blobberChallengeObj.ChallengeIDs = make([]string, 0)
+		err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+		switch err {
+		case nil, util.ErrValueNotPresent:
+			return blobberChallengeObj, nil
+		default:
+			return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
+		}
 	}
 
 	// for k, v := range blobberChallengeObj.ChallengeMap {
@@ -611,7 +612,7 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	blobberID := params.Get("blobber")
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = blobberID
-	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
+	blobberChallengeObj.ChallengeIDs = make([]string, 0)
 
 	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
 	if err != nil {
@@ -619,11 +620,16 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	}
 
 	challengeID := params.Get("challenge")
-	if _, ok := blobberChallengeObj.ChallengeMap[challengeID]; !ok {
+	if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 
-	return blobberChallengeObj.ChallengeMap[challengeID], nil
+	challenge, err := ssc.getStorageChallenge(challengeID, balances)
+	if err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge")
+	}
+
+	return challenge, nil
 }
 
 // statistic for all locked tokens of a stake pool

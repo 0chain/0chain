@@ -136,7 +136,7 @@ func AddMockAllocations(
 		}
 	}
 	for _, ch := range challanges {
-		if len(ch.Challenges) > 0 {
+		if len(ch.ChallengeIDs) > 0 {
 			ch.LatestCompletedChallenge = ch.Challenges[0]
 		}
 		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
