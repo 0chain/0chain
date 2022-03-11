@@ -616,10 +616,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewError("commit_connection_failed",
 			"can't get stake pool")
 	}
-	if err = emitAddOrOverwriteBlobber(storageNode, sp, balances); err != nil {
-		logging.Logger.Error("error emitting blobber",
-			zap.Any("blobber", storageNode.ID), zap.Error(err))
-	}
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
@@ -676,8 +672,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// emit blobber update event
-	if err = emitAddOrOverwriteBlobber(storageNode, balances); err != nil {
-		logging.Logger.Error("error emitting blobber", zap.Any("blobber", storageNode.ID), zap.Error(err))
+	if err = emitAddOrOverwriteBlobber(storageNode, sp, balances); err != nil {
+		logging.Logger.Error("error emitting blobber",
+			zap.Any("blobber", storageNode.ID), zap.Error(err))
 	}
 
 	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
