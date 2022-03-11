@@ -756,6 +756,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 	//storageChallenge.Validators = selectedValidators
 	storageChallenge.TotalValidators = len(selectedValidators)
 	//storageChallenge.Blobber = blobber
+	storageChallenge.BlobberID = blobberID
 	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot

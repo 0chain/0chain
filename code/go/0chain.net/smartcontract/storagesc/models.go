@@ -237,8 +237,13 @@ type StorageChallenge struct {
 	RandomNumber    int64             `json:"seed"`
 	AllocationID    string            `json:"allocation_id"`
 	//Blobber        *StorageNode       `json:"blobber"`
+	BlobberID      string             `json:"blobber_id"`
 	AllocationRoot string             `json:"allocation_root"`
 	Response       *ChallengeResponse `json:"challenge_response,omitempty"` //needed
+}
+
+func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
+	return globalKey + "storagechallenge:" + sc.ID
 }
 
 type ValidationNode struct {
