@@ -48,6 +48,7 @@ func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr fl
 		MinLock:     minLock,
 		APR:         apr,
 		OwnerId:     ownerId,
+		Cost:        map[string]int{},
 	}
 	if minLockP != 0 {
 		gn.MinLockPeriod = int64(minLockP)
