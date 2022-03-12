@@ -237,7 +237,7 @@ smart_contracts:
       stop: 100
       delete: 100
       vestingsc-update-settings: 100
-  zcn:
+  zcnsc:
     min_mint_amount: 1
     percent_authorizers: 0.7
     min_authorizers: 1
