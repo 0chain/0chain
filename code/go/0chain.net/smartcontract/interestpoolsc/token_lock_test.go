@@ -65,7 +65,7 @@ func Test_tokenLock_IsLocked(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tl := TokenLock{
 				StartTime: tt.fields.StartTime,
-				Duration:  int64(tt.fields.Duration),
+				Duration:  tt.fields.Duration,
 				Owner:     tt.fields.Owner,
 			}
 			if got := tl.IsLocked(tt.args.entity); got != tt.want {
@@ -135,7 +135,7 @@ func Test_tokenLock_LockStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tl := TokenLock{
 				StartTime: tt.fields.StartTime,
-				Duration:  int64(tt.fields.Duration),
+				Duration:  tt.fields.Duration,
 				Owner:     tt.fields.Owner,
 			}
 			if got := tl.LockStats(tt.args.entity); !reflect.DeepEqual(got, tt.want) {

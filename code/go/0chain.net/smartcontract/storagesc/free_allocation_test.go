@@ -207,8 +207,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockTransactionHash      = "12345678"
 		mockReadPoolFraction     = 0.2
 		mockMinLock              = 10
-		mockMinLockPeriod        = int64(2 * time.Minute)
-		mockMaxLockPeriod        = int64(8760 * time.Hour)
+		mockMinLockPeriod        = 2 * time.Minute
+		mockMaxLockPeriod        = 8760 * time.Hour
 		mockFreeTokens           = 5 * mockMinLock
 		mockIndividualTokenLimit = mockFreeTokens + 1
 		mockTotalTokenLimit      = mockIndividualTokenLimit * 300
@@ -222,15 +222,15 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Size:                       123456,
 			ReadPriceRange:             PriceRange{0, 5000},
 			WritePriceRange:            PriceRange{0, 5000},
-			MaxChallengeCompletionTime: int64(1 * time.Hour),
-			Duration:                   int64(24 * 365 * time.Hour),
+			MaxChallengeCompletionTime: 1 * time.Hour,
+			Duration:                   24 * 365 * time.Hour,
 			ReadPoolFraction:           mockReadPoolFraction,
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
 			MinAllocSize:               1027,
-			MinAllocDuration:           int64(5 * time.Minute),
-			MaxChallengeCompletionTime: int64(1 * time.Hour),
+			MinAllocDuration:           5 * time.Minute,
+			MaxChallengeCompletionTime: 1 * time.Hour,
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
 			ReadPool: &readPoolConfig{
@@ -410,7 +410,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					pool.AllocationID == mockTransactionHash &&
 					len(pool.Blobbers) == mockNumBlobbers &&
 					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
-						time.Duration(conf.FreeAllocationSettings.Duration)).Unix())+toSeconds(time.Duration(mockChallengeCompletionTime))
+						conf.FreeAllocationSettings.Duration).Unix())+toSeconds(mockChallengeCompletionTime)
 			})).Return("", nil).Once()
 
 		// readPoolLock blockchain access
@@ -460,7 +460,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				return pool.Balance == state.Balance(readPoolLocked) &&
 					pool.ID == mockTransactionHash &&
 					pool.AllocationID == mockTransactionHash &&
-					pool.ExpireAt == txn.CreationDate+toSeconds(time.Duration(conf.FreeAllocationSettings.Duration))
+					pool.ExpireAt == txn.CreationDate+toSeconds(conf.FreeAllocationSettings.Duration)
 			})).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}
@@ -602,7 +602,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
 	)
-	var mockTimeUnit = int64(1 * time.Hour)
+	var mockTimeUnit = 1 * time.Hour
 	var mockMaxAnnualFreeAllocation = zcnToBalance(100354)
 	var mockFreeAllocationSettings = freeAllocationSettings{
 		DataShards:                 5,
@@ -610,14 +610,14 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		Size:                       123456,
 		ReadPriceRange:             PriceRange{0, 5000},
 		WritePriceRange:            PriceRange{0, 5000},
-		MaxChallengeCompletionTime: int64(1 * time.Hour),
-		Duration:                   int64(24 * 365 * time.Hour),
+		MaxChallengeCompletionTime: 1 * time.Hour,
+		Duration:                   24 * 365 * time.Hour,
 	}
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
 		MinAllocSize:               1027,
-		MinAllocDuration:           int64(5 * time.Minute),
-		MaxChallengeCompletionTime: int64(1 * time.Hour),
+		MinAllocDuration:           5 * time.Minute,
+		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 	}

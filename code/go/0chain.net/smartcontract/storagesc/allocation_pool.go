@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -29,11 +30,11 @@ import (
 // all tokens divided for all blobbers of the allocation
 // automatically
 type lockRequest struct {
-	Duration     int64  `json:"duration"`
-	AllocationID string `json:"allocation_id"`
-	BlobberID    string `json:"blobber_id,omitempty"`
-	TargetId     string `json:"target_id,omitempty"`
-	MintTokens   bool   `json:"mint_tokens,omitempty"`
+	Duration     time.Duration `json:"duration"`
+	AllocationID string        `json:"allocation_id"`
+	BlobberID    string        `json:"blobber_id,omitempty"`
+	TargetId     string        `json:"target_id,omitempty"`
+	MintTokens   bool          `json:"mint_tokens,omitempty"`
 }
 
 func (lr *lockRequest) decode(input []byte) (err error) {

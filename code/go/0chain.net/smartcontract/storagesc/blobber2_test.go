@@ -64,7 +64,7 @@ var (
 	blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.3,
 		readPrice:               0.01,
-		challengeCompletionTime: int64(2 * time.Minute),
+		challengeCompletionTime: 2 * time.Minute,
 	}
 )
 
@@ -178,7 +178,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	t.Run(errExpiredAllocation, func(t *testing.T) {
 		var faultyRead = read
 		faultyRead.timestamp = allocation.expiration +
-			toSeconds(time.Duration(blobberYaml.challengeCompletionTime)) + 1
+			toSeconds(blobberYaml.challengeCompletionTime) + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPools,
 		)
@@ -303,7 +303,7 @@ func testCommitBlobberRead(
 	var storageAllocation = &StorageAllocation{
 		ID:                      allocationId,
 		StartTime:               allocation.startTime,
-		ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
+		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		Expiration:              allocation.expiration,
 		BlobberDetails: []*BlobberAllocation{
 			{

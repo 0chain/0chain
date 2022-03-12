@@ -103,7 +103,7 @@ func (c *Chain) getNodePool(np *node.Pool) []nodeInfo {
 			Description:                 nd.Description,
 			BuildTag:                    nd.Info.BuildTag,
 			StateMissingNodes:           nd.Info.StateMissingNodes,
-			MinersMedianNetworkTime:     time.Duration(nd.Info.MinersMedianNetworkTime),
+			MinersMedianNetworkTime:     nd.Info.MinersMedianNetworkTime,
 			AvgBlockTxns:                nd.Info.AvgBlockTxns,
 		}
 

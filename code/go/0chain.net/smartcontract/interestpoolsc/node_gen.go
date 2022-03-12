@@ -26,7 +26,7 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ID)
 	// string "MinLockPeriod"
 	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
-	o = msgp.AppendInt64(o, z.MinLockPeriod)
+	o = msgp.AppendDuration(o, z.MinLockPeriod)
 	return
 }
 
@@ -72,7 +72,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinLockPeriod":
-			z.MinLockPeriod, bts, err = msgp.ReadInt64Bytes(bts)
+			z.MinLockPeriod, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLockPeriod")
 				return
@@ -97,6 +97,6 @@ func (z *GlobalNode) Msgsize() (s int) {
 	} else {
 		s += z.SimpleGlobalNode.Msgsize()
 	}
-	s += 3 + msgp.StringPrefixSize + len(z.ID) + 14 + msgp.Int64Size
+	s += 3 + msgp.StringPrefixSize + len(z.ID) + 14 + msgp.DurationSize
 	return
 }

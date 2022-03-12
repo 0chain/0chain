@@ -195,8 +195,8 @@ func TestBlobberReward(t *testing.T) {
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: int64(30 * time.Minute),
-		TimeUnit:                   int64(720 * time.Hour),
+		MaxChallengeCompletionTime: 30 * time.Minute,
+		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.30,
@@ -214,7 +214,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(time.Duration(blobberYaml.challengeCompletionTime)) + 1
+		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -273,12 +273,12 @@ func TestBlobberPenalty(t *testing.T) {
 		MaxMint:                    zcnToBalance(4000000.0),
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: int64(30 * time.Minute),
-		TimeUnit:                   int64(720 * time.Hour),
+		MaxChallengeCompletionTime: 30 * time.Minute,
+		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.30,
-		challengeCompletionTime: int64(scYaml.MaxChallengeCompletionTime),
+		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
 		writePrice:              1,
 	}
 	var validatorYamls = []mockBlobberYaml{
@@ -301,7 +301,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(time.Duration(blobberYaml.challengeCompletionTime)) + 1
+		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
@@ -478,7 +478,7 @@ func setupChallengeMocks(
 		ChallengePoolIntegralValue: challengePoolIntegralValue,
 		Terms: Terms{
 			WritePrice:              zcnToBalance(blobberYaml.writePrice),
-			ChallengeCompletionTime: int64(blobberYaml.challengeCompletionTime),
+			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		},
 		Size: size,
 	}

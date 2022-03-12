@@ -108,14 +108,14 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	if npr.Duration > YEAR {
 		return "", common.NewError("failed locking tokens", fmt.Sprintf("duration (%v) is longer than max lock period (%v)", npr.Duration.String(), YEAR.String()))
 	}
-	if npr.Duration < time.Duration(gn.MinLockPeriod) {
-		return "", common.NewError("failed locking tokens", fmt.Sprintf("duration (%v) is shorter than min lock period (%v)", npr.Duration.String(), time.Duration(gn.MinLockPeriod).String()))
+	if npr.Duration < gn.MinLockPeriod {
+		return "", common.NewError("failed locking tokens", fmt.Sprintf("duration (%v) is shorter than min lock period (%v)", npr.Duration.String(), gn.MinLockPeriod.String()))
 	}
 	if !gn.canMint() {
 		return "", common.NewError("failed locking tokens", "can't mint anymore")
 	}
 	pool := newInterestPool()
-	pool.TokenLockInterface = &TokenLock{StartTime: t.CreationDate, Duration: int64(npr.Duration), Owner: un.ClientID}
+	pool.TokenLockInterface = &TokenLock{StartTime: t.CreationDate, Duration: npr.Duration, Owner: un.ClientID}
 	transfer, resp, err := pool.DigPool(t.Hash, t)
 	if err == nil {
 		balances.AddTransfer(transfer)
@@ -187,7 +187,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	case util.ErrValueNotPresent:
 		const pfx = "smart_contracts.interestpoolsc."
 		var conf = config.SmartContractConfig
-		gn.MinLockPeriod = int64(conf.GetDuration(pfx + "min_lock_period"))
+		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
 		gn.APR = conf.GetFloat64(pfx + "apr")
 		gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 		gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)

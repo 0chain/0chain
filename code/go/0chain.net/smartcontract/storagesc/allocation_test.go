@@ -34,10 +34,10 @@ func TestSelectBlobbers(t *testing.T) {
 		mockBlobberId        = "mock_blobber_id"
 		mockPoolId           = "mock pool id"
 		mockMinPrice         = 0
-		confTimeUnit         = int64(720 * time.Hour)
+		confTimeUnit         = 720 * time.Hour
 		confMinAllocSize     = 1024
-		confMinAllocDuration = int64(5 * time.Minute)
-		mockMaxOffDuration   = int64(744 * time.Hour)
+		confMinAllocDuration = 5 * time.Minute
+		mockMaxOffDuration   = 744 * time.Hour
 	)
 	var mockStatke = zcnToBalance(100)
 	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
@@ -143,7 +143,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 2,
 				dataShards:           5,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(time.Duration(confMinAllocDuration)).Unix()),
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
 			},
 			want: want{
 				blobberIds: []int{0, 1, 2, 3, 4},
@@ -157,7 +157,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 2,
 				dataShards:           5,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(time.Duration(confMinAllocDuration)).Unix()),
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
 			},
 			want: want{
 				blobberIds: []int{0, 1, 5, 3, 2},
@@ -171,7 +171,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 8,
 				dataShards:           5,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(time.Duration(confMinAllocDuration)).Unix()),
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
 			},
 			want: want{
 				err:    true,
@@ -186,7 +186,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 6,
 				dataShards:           4,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(time.Duration(confMinAllocDuration)).Unix()),
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
 			},
 			want: want{
 				blobberIds: []int{0, 1, 2, 3},
@@ -240,19 +240,19 @@ func TestExtendAllocation(t *testing.T) {
 		mockPoolId                  = "mock pool id"
 		mockAllocationId            = "mock allocation id"
 		mockMinPrice                = 0
-		confTimeUnit                = int64(720 * time.Hour)
+		confTimeUnit                = 720 * time.Hour
 		confMinAllocSize            = 1024
-		confMinAllocDuration        = int64(5 * time.Minute)
-		mockMaxOffDuration          = int64(744 * time.Hour)
+		confMinAllocDuration        = 5 * time.Minute
+		mockMaxOffDuration          = 744 * time.Hour
 		mocksSize                   = 10000000000
 		mockDataShards              = 2
 		mockParityShards            = 2
 		mockNumAllBlobbers          = 2 + mockDataShards + mockParityShards
 		mockExpiration              = common.Timestamp(17000)
 		mockStake                   = 3
-		mockChallengeCompletionTime = int64(1 * time.Hour)
+		mockChallengeCompletionTime = 1 * time.Hour
 		mockMinLockDemmand          = 0.1
-		mockTimeUnit                = int64(1 * time.Hour)
+		mockTimeUnit                = 1 * time.Hour
 		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
 	)
@@ -382,7 +382,7 @@ func TestExtendAllocation(t *testing.T) {
 		for i, funds := range args.poolFunds {
 			var wp writePool
 			for j := 0; j < args.poolCount[i]; j++ {
-				expiresAt := sa.Expiration + toSeconds(time.Duration(sa.ChallengeCompletionTime)) + args.request.Expiration + 1
+				expiresAt := sa.Expiration + toSeconds(sa.ChallengeCompletionTime) + args.request.Expiration + 1
 				ap := allocationPool{
 					AllocationID: sa.ID,
 					ExpireAt:     expiresAt,
@@ -895,8 +895,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				ReadPrice:               20,
 				WritePrice:              200,
 				MinLockDemand:           0.1,
-				MaxOfferDuration:        int64(200 * time.Second),
-				ChallengeCompletionTime: int64(15 * time.Second),
+				MaxOfferDuration:        200 * time.Second,
+				ChallengeCompletionTime: 15 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
 			Used:            5 * GB,  //  5 GB
@@ -909,8 +909,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				ReadPrice:               25,
 				WritePrice:              250,
 				MinLockDemand:           0.05,
-				MaxOfferDuration:        int64(250 * time.Second),
-				ChallengeCompletionTime: int64(10 * time.Second),
+				MaxOfferDuration:        250 * time.Second,
+				ChallengeCompletionTime: 10 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
 			Used:            10 * GB, // 10 GB
@@ -965,10 +965,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	balances.setTransaction(t, &tx)
 
 	conf = setConfig(t, balances)
-	conf.MaxChallengeCompletionTime = int64(20 * time.Second)
-	conf.MinAllocDuration = int64(20 * time.Second)
+	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
-	conf.TimeUnit = int64(2 * time.Minute)
+	conf.TimeUnit = 2 * time.Minute
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
@@ -1014,8 +1014,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = "" // not set
 	nar.OwnerPublicKey = pubKey
-	nar.PreferredBlobbers = nil                             // not set
-	nar.MaxChallengeCompletionTime = int64(200 * time.Hour) // max cct
+	nar.PreferredBlobbers = nil                      // not set
+	nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg5p9)
@@ -1125,7 +1125,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	assert.Nil(t, aresp.PreferredBlobbers)
 	assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
 	assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
-	assert.Equal(t, int64(15*time.Second), aresp.ChallengeCompletionTime) // max
+	assert.Equal(t, 15*time.Second, aresp.ChallengeCompletionTime) // max
 	assert.Equal(t, tx.CreationDate, aresp.StartTime)
 	assert.False(t, aresp.Finalized)
 
@@ -1253,8 +1253,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	balances.(*testBalances).setTransaction(t, &tx)
 
-	conf.MaxChallengeCompletionTime = int64(20 * time.Second)
-	conf.MinAllocDuration = int64(20 * time.Second)
+	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
@@ -1274,8 +1274,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
-	nar.PreferredBlobbers = nil                             // not set
-	nar.MaxChallengeCompletionTime = int64(200 * time.Hour) //
+	nar.PreferredBlobbers = nil                      // not set
+	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
@@ -1398,7 +1398,7 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
-		toSeconds(time.Duration(alloc.ChallengeCompletionTime)) + 20
+		toSeconds(alloc.ChallengeCompletionTime) + 20
 	resp, err = ssc.closeAllocation(&tx, alloc, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
@@ -1679,7 +1679,7 @@ func Test_finalize_allocation(t *testing.T) {
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
-	tp += int64(toSeconds(time.Duration(alloc.ChallengeCompletionTime)))
+	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
 	assert.Zero(t, cp.Balance, "should be drained")
 	assert.Zero(t, wp.allocUntil(allocID, common.Timestamp(tp)),
 		"should be drained")
@@ -1725,7 +1725,7 @@ func Test_preferred_blobbers(t *testing.T) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 2 * GB // 2 GB
-		nar.MaxChallengeCompletionTime = int64(200 * time.Hour)
+		nar.MaxChallengeCompletionTime = 200 * time.Hour
 		return
 	}
 

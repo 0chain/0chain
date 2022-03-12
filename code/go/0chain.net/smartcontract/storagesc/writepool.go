@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -268,13 +267,13 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	if lr.Duration < conf.MinLockPeriod {
 		return "", common.NewError("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
-				time.Duration(lr.Duration).String(), time.Duration(conf.MinLockPeriod).String()))
+				lr.Duration.String(), conf.MinLockPeriod.String()))
 	}
 
 	if lr.Duration > conf.MaxLockPeriod {
 		return "", common.NewError("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
-				time.Duration(lr.Duration).String(), time.Duration(conf.MaxLockPeriod).String()))
+				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
 
 	// check client balance
@@ -336,7 +335,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	// set fields
 	ap.AllocationID = lr.AllocationID
-	ap.ExpireAt = t.CreationDate + toSeconds(time.Duration(lr.Duration))
+	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
 	ap.Blobbers = bps
 
 	// add and save

@@ -282,7 +282,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			MinLock:     state.Balance(scYml.minLock),
 			APR:         scYml.apr,
 		},
-		MinLockPeriod: int64(scYml.minLockPeriod),
+		MinLockPeriod: scYml.minLockPeriod,
 	}
 
 	output, err := isc.lock(txn, userNode, globalNode, input, ctx)

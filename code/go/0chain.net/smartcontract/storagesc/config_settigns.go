@@ -344,37 +344,37 @@ func (conf *Config) setFloat64(key string, change float64) error {
 func (conf *Config) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
-		conf.TimeUnit = int64(change)
+		conf.TimeUnit = change
 	case MinAllocDuration:
-		conf.MinAllocDuration = int64(change)
+		conf.MinAllocDuration = change
 	case MaxChallengeCompletionTime:
-		conf.MaxChallengeCompletionTime = int64(change)
+		conf.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
-		conf.MinOfferDuration = int64(change)
+		conf.MinOfferDuration = change
 	case ReadPoolMinLockPeriod:
 		if conf.ReadPool == nil {
 			conf.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MinLockPeriod = int64(change)
+		conf.ReadPool.MinLockPeriod = change
 	case ReadPoolMaxLockPeriod:
 		if conf.ReadPool == nil {
 			conf.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MaxLockPeriod = int64(change)
+		conf.ReadPool.MaxLockPeriod = change
 	case WritePoolMinLockPeriod:
 		if conf.WritePool == nil {
 			conf.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MinLockPeriod = int64(change)
+		conf.WritePool.MinLockPeriod = change
 	case WritePoolMaxLockPeriod:
 		if conf.WritePool == nil {
 			conf.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MaxLockPeriod = int64(change)
+		conf.WritePool.MaxLockPeriod = change
 	case FreeAllocationDuration:
-		conf.FreeAllocationSettings.Duration = int64(change)
+		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
-		conf.FreeAllocationSettings.MaxChallengeCompletionTime = int64(change)
+		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
 	default:
 		return fmt.Errorf("key: %v not implemented as duration", key)
 	}

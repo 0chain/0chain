@@ -33,7 +33,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params u
 	var resp periodicResponse
 	resp.Start = un.StartTime
 	resp.Used = un.Used
-	resp.Restart = (time.Duration(gn.IndividualReset) - time.Since(un.StartTime)).String()
+	resp.Restart = (gn.IndividualReset - time.Since(un.StartTime)).String()
 	if gn.PeriodicLimit >= un.Used {
 		resp.Allowed = gn.PeriodicLimit - un.Used
 	} else {
@@ -50,7 +50,7 @@ func (fc *FaucetSmartContract) globalPeriodicLimit(_ context.Context, _ url.Valu
 	var resp periodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
-	resp.Restart = (time.Duration(gn.GlobalReset) - time.Since(gn.StartTime)).String()
+	resp.Restart = (gn.GlobalReset - time.Since(gn.StartTime)).String()
 	if gn.GlobalLimit > gn.Used {
 		resp.Allowed = gn.GlobalLimit - gn.Used
 	} else {

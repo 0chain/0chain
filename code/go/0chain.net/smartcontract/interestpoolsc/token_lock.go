@@ -10,14 +10,14 @@ import (
 
 type TokenLock struct {
 	StartTime common.Timestamp `json:"start_time"`
-	Duration  int64            `json:"duration"`
+	Duration  time.Duration    `json:"duration"`
 	Owner     string           `json:"owner"`
 }
 
 func (tl TokenLock) IsLocked(entity interface{}) bool {
 	tm, ok := entity.(time.Time)
 	if ok {
-		return tm.Sub(common.ToTime(tl.StartTime)) < time.Duration(tl.Duration)
+		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}
 	return true
 }
@@ -25,7 +25,7 @@ func (tl TokenLock) IsLocked(entity interface{}) bool {
 func (tl TokenLock) LockStats(entity interface{}) []byte {
 	tm, ok := entity.(time.Time)
 	if ok {
-		p := &poolStat{StartTime: tl.StartTime, Duartion: time.Duration(tl.Duration), TimeLeft: time.Duration(tl.Duration) - tm.Sub(common.ToTime(tl.StartTime)), Locked: tl.IsLocked(tm)}
+		p := &poolStat{StartTime: tl.StartTime, Duartion: tl.Duration, TimeLeft: tl.Duration - tm.Sub(common.ToTime(tl.StartTime)), Locked: tl.IsLocked(tm)}
 		return p.encode()
 	}
 	return nil

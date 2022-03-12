@@ -151,7 +151,7 @@ func BenchmarkTests(
 					PreferredBlobbers:          []string{},
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: int64(viper.GetDuration(bk.StorageMaxChallengeCompletionTime)),
+					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
@@ -183,7 +183,7 @@ func BenchmarkTests(
 					PreferredBlobbers:          blobberUrls[:8],
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: int64(viper.GetDuration(bk.StorageMaxChallengeCompletionTime)),
+					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
@@ -528,7 +528,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				lr := &lockRequest{
-					Duration:     int64(viper.GetDuration(bk.StorageReadPoolMinLockPeriod)),
+					Duration:     viper.GetDuration(bk.StorageReadPoolMinLockPeriod),
 					AllocationID: getMockAllocationId(0),
 				}
 				bytes, _ := json.Marshal(lr)
@@ -569,7 +569,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
-					Duration:     int64(viper.GetDuration(bk.StorageWritePoolMinLockPeriod)),
+					Duration:     viper.GetDuration(bk.StorageWritePoolMinLockPeriod),
 					AllocationID: getMockAllocationId(0),
 				})
 				return bytes

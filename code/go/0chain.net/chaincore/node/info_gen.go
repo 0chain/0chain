@@ -18,7 +18,7 @@ func (z *Info) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt64(o, z.StateMissingNodes)
 	// string "MinersMedianNetworkTime"
 	o = append(o, 0xb7, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x73, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x6e, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x54, 0x69, 0x6d, 0x65)
-	o = msgp.AppendInt64(o, z.MinersMedianNetworkTime)
+	o = msgp.AppendDuration(o, z.MinersMedianNetworkTime)
 	// string "AvgBlockTxns"
 	o = append(o, 0xac, 0x41, 0x76, 0x67, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x54, 0x78, 0x6e, 0x73)
 	o = msgp.AppendInt(o, z.AvgBlockTxns)
@@ -56,7 +56,7 @@ func (z *Info) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinersMedianNetworkTime":
-			z.MinersMedianNetworkTime, bts, err = msgp.ReadInt64Bytes(bts)
+			z.MinersMedianNetworkTime, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinersMedianNetworkTime")
 				return
@@ -81,6 +81,6 @@ func (z *Info) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Info) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 18 + msgp.Int64Size + 24 + msgp.Int64Size + 13 + msgp.IntSize
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 18 + msgp.Int64Size + 24 + msgp.DurationSize + 13 + msgp.IntSize
 	return
 }

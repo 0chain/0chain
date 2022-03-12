@@ -56,8 +56,8 @@ func scConfigKey(scKey string) datastore.Key {
 // config represents SC configurations ('vestingsc:' from sc.yaml)
 type config struct {
 	MinLock              state.Balance  `json:"min_lock"`
-	MinDuration          int64          `json:"min_duration"`
-	MaxDuration          int64          `json:"max_duration"`
+	MinDuration          time.Duration  `json:"min_duration"`
+	MaxDuration          time.Duration  `json:"max_duration"`
 	MaxDestinations      int            `json:"max_destinations"`
 	MaxDescriptionLength int            `json:"max_description_length"`
 	OwnerId              string         `json:"owner_id"`
@@ -68,9 +68,9 @@ func (c *config) validate() (err error) {
 	switch {
 	case c.MinLock <= 0:
 		return errors.New("invalid min_lock (<= 0)")
-	case toSeconds(time.Duration(c.MinDuration)) < 1:
+	case toSeconds(c.MinDuration) < 1:
 		return errors.New("invalid min_duration (< 1s)")
-	case toSeconds(time.Duration(c.MaxDuration)) <= toSeconds(time.Duration(c.MinDuration)):
+	case toSeconds(c.MaxDuration) <= toSeconds(c.MinDuration):
 		return errors.New("invalid max_duration: less or equal to min_duration")
 	case c.MaxDestinations < 1:
 		return errors.New("invalid max_destinations (< 1)")
@@ -109,14 +109,14 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MinDuration = int64(dValue)
+				c.MinDuration = dValue
 			}
 		case Settings[MaxDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MaxDuration = int64(dValue)
+				c.MaxDuration = dValue
 			}
 		case Settings[MaxDestinations]:
 			if iValue, err := strconv.Atoi(value); err != nil {
@@ -210,8 +210,8 @@ func getConfiguredConfig() (conf *config, err error) {
 	// short hand
 	var scconf = configpkg.SmartContractConfig
 	conf.MinLock = state.Balance(scconf.GetFloat64(prefix+"min_lock") * 1e10)
-	conf.MinDuration = int64(scconf.GetDuration(prefix + "min_duration"))
-	conf.MaxDuration = int64(scconf.GetDuration(prefix + "max_duration"))
+	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
+	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
 	conf.OwnerId = scconf.GetString(prefix + "owner_id")

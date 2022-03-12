@@ -255,9 +255,9 @@ type Terms struct {
 	// user never write something to the blobber.
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
-	MaxOfferDuration int64 `json:"max_offer_duration"`
+	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime int64 `json:"challenge_completion_time"`
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
@@ -597,16 +597,16 @@ type StorageAllocation struct {
 	IsImmutable       bool                          `json:"is_immutable"`
 
 	// Requested ranges.
-	ReadPriceRange             PriceRange `json:"read_price_range"`
-	WritePriceRange            PriceRange `json:"write_price_range"`
-	MaxChallengeCompletionTime int64      `json:"max_challenge_completion_time"`
+	ReadPriceRange             PriceRange    `json:"read_price_range"`
+	WritePriceRange            PriceRange    `json:"write_price_range"`
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
 
 	//AllocationPools allocationPools `json:"allocation_pools"`
 	WritePoolOwners []string `json:"write_pool_owners"`
 
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
-	ChallengeCompletionTime int64 `json:"challenge_completion_time"`
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
@@ -629,7 +629,7 @@ type StorageAllocation struct {
 
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
-	TimeUnit int64 `json:"time_unit"`
+	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
 }
@@ -715,7 +715,7 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 		return errors.New("insufficient allocation size")
 	}
 	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
-	if int64(dur) < conf.MinAllocDuration {
+	if dur < conf.MinAllocDuration {
 		return errors.New("insufficient allocation duration")
 	}
 
@@ -748,7 +748,7 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 List:
 	for _, b := range list {
 		// filter by max offer duration
-		if time.Duration(b.Terms.MaxOfferDuration) < dur {
+		if b.Terms.MaxOfferDuration < dur {
 			continue
 		}
 		// filter by read price
@@ -868,7 +868,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 
 // Until returns allocation expiration.
 func (sa *StorageAllocation) Until() common.Timestamp {
-	return sa.Expiration + toSeconds(time.Duration(sa.ChallengeCompletionTime))
+	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
 }
 
 // The durationInTimeUnits returns given duration (represented as

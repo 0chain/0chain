@@ -178,7 +178,7 @@ func addMockAllocation(
 		OwnerPublicKey:             publicKey,
 		ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
 		WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
-		MaxChallengeCompletionTime: int64(viper.GetDuration(sc.StorageMaxChallengeCompletionTime)),
+		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 		DiverseBlobbers:            viper.GetBool(sc.StorageDiverseBlobbers),
 		WritePoolOwners:            []string{clients[cIndex]},
 		Stats: &StorageAllocationStats{
@@ -191,7 +191,7 @@ func addMockAllocation(
 			FailedChallenges:          1,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
-		TimeUnit: int64(1 * time.Hour),
+		TimeUnit: 1 * time.Hour,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
 		sa.Curators = append(sa.Curators, clients[j])
@@ -302,8 +302,8 @@ func AddMockBlobbers(
 				ReadPrice:               int64(blobber.Terms.ReadPrice),
 				WritePrice:              int64(blobber.Terms.WritePrice),
 				MinLockDemand:           blobber.Terms.MinLockDemand,
-				MaxOfferDuration:        time.Duration(blobber.Terms.MaxOfferDuration).String(),
-				ChallengeCompletionTime: time.Duration(blobber.Terms.ChallengeCompletionTime).String(),
+				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
+				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),
@@ -530,8 +530,8 @@ func getMockBlobberTerms() Terms {
 		ReadPrice:               state.Balance(0.1 * 1e10),
 		WritePrice:              state.Balance(0.1 * 1e10),
 		MinLockDemand:           0.0007,
-		MaxOfferDuration:        int64(10000 * viper.GetDuration(sc.StorageMinOfferDuration)),
-		ChallengeCompletionTime: int64(viper.GetDuration(sc.StorageMaxChallengeCompletionTime)),
+		MaxOfferDuration:        10000 * viper.GetDuration(sc.StorageMinOfferDuration),
+		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 	}
 }
 
@@ -591,15 +591,15 @@ func SetMockConfig(
 ) (conf *Config) {
 	conf = new(Config)
 
-	conf.TimeUnit = int64(48 * time.Hour) // use one hour as the time unit in the tests
+	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = viper.GetInt(sc.StorageMaxChallengesPerGeneration)
 	conf.FailedChallengesToCancel = viper.GetInt(sc.StorageFailedChallengesToCancel)
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = viper.GetInt64(sc.StorageMinAllocSize)
-	conf.MinAllocDuration = int64(viper.GetDuration(sc.StorageMinAllocDuration))
-	conf.MinOfferDuration = int64(1 * time.Minute)
+	conf.MinAllocDuration = viper.GetDuration(sc.StorageMinAllocDuration)
+	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
@@ -607,7 +607,7 @@ func SetMockConfig(
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
-	conf.MaxChallengeCompletionTime = int64(viper.GetDuration(sc.StorageMaxChallengeCompletionTime))
+	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
 	conf.MinStake = state.Balance(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10)
@@ -616,13 +616,13 @@ func SetMockConfig(
 	conf.MaxIndividualFreeAllocation = state.Balance(viper.GetInt64(sc.StorageMaxIndividualFreeAllocation) * 1e10)
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
-		MinLockPeriod: int64(viper.GetDuration(sc.StorageReadPoolMinLockPeriod)),
-		MaxLockPeriod: int64(viper.GetDuration(sc.StorageReadPoolMaxLockPeriod)),
+		MinLockPeriod: viper.GetDuration(sc.StorageReadPoolMinLockPeriod),
+		MaxLockPeriod: viper.GetDuration(sc.StorageReadPoolMaxLockPeriod),
 	}
 	conf.WritePool = &writePoolConfig{
 		MinLock:       int64(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
-		MinLockPeriod: int64(viper.GetDuration(sc.StorageWritePoolMinLockPeriod)),
-		MaxLockPeriod: int64(viper.GetDuration(sc.StorageWritePoolMaxLockPeriod)),
+		MinLockPeriod: viper.GetDuration(sc.StorageWritePoolMinLockPeriod),
+		MaxLockPeriod: viper.GetDuration(sc.StorageWritePoolMaxLockPeriod),
 	}
 
 	conf.StakePool = &stakePoolConfig{
@@ -632,7 +632,7 @@ func SetMockConfig(
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),
 		ParityShards: viper.GetInt(sc.StorageFasParityShards),
 		Size:         viper.GetInt64(sc.StorageFasSize),
-		Duration:     int64(viper.GetDuration(sc.StorageFasDuration)),
+		Duration:     viper.GetDuration(sc.StorageFasDuration),
 		ReadPriceRange: PriceRange{
 			Min: state.Balance(viper.GetFloat64(sc.StorageFasReadPriceMin) * 1e10),
 			Max: state.Balance(viper.GetFloat64(sc.StorageFasReadPriceMax) * 1e10),
@@ -641,7 +641,7 @@ func SetMockConfig(
 			Min: state.Balance(viper.GetFloat64(sc.StorageFasWritePriceMin) * 1e10),
 			Max: state.Balance(viper.GetFloat64(sc.StorageFasWritePriceMax) * 1e10),
 		},
-		MaxChallengeCompletionTime: int64(viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime)),
+		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
 	conf.BlockReward = &blockReward{}

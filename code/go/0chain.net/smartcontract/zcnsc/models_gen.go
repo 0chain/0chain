@@ -248,7 +248,7 @@ func (z *TokenLock) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "Duration"
 	o = append(o, 0xa8, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	o = msgp.AppendInt64(o, z.Duration)
+	o = msgp.AppendDuration(o, z.Duration)
 	// string "Owner"
 	o = append(o, 0xa5, 0x4f, 0x77, 0x6e, 0x65, 0x72)
 	o = msgp.AppendString(o, z.Owner)
@@ -280,7 +280,7 @@ func (z *TokenLock) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Duration":
-			z.Duration, bts, err = msgp.ReadInt64Bytes(bts)
+			z.Duration, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Duration")
 				return
@@ -305,7 +305,7 @@ func (z *TokenLock) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *TokenLock) Msgsize() (s int) {
-	s = 1 + 10 + z.StartTime.Msgsize() + 9 + msgp.Int64Size + 6 + msgp.StringPrefixSize + len(z.Owner)
+	s = 1 + 10 + z.StartTime.Msgsize() + 9 + msgp.DurationSize + 6 + msgp.StringPrefixSize + len(z.Owner)
 	return
 }
 

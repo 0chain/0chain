@@ -103,14 +103,14 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	require.NoError(t, err)
 
 	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime +
-		int64(1*time.Second)
+		1*time.Second
 
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)
 
 	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime -
-		int64(1*time.Second)
-	terms.MaxOfferDuration = conf.MinOfferDuration - int64(1*time.Second)
+		1*time.Second
+	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)
 }
@@ -180,7 +180,7 @@ func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
 	balances.txn = &tx
 	var _, err = ssc.writePoolLock(&tx, mustEncode(t, &lockRequest{
 		AllocationID: allocID,
-		Duration:     int64(dur),
+		Duration:     dur,
 	}), balances)
 	require.NoError(t, err)
 
@@ -265,7 +265,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     int64(20 * time.Minute),
+			Duration:     20 * time.Minute,
 			AllocationID: allocID,
 		}), balances)
 		require.NoError(t, err)
@@ -343,7 +343,7 @@ func Test_flow_reward(t *testing.T) {
 			int64(len(alloc.BlobberDetails))*2*x10, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     int64(20 * time.Minute),
+			Duration:     20 * time.Minute,
 			AllocationID: allocID,
 		}), balances)
 		require.NoError(t, err)
@@ -1003,7 +1003,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(time.Duration(avgTerms.ChallengeCompletionTime)))
+		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1229,7 +1229,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(time.Duration(avgTerms.ChallengeCompletionTime)))
+		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1376,7 +1376,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 		nar.ReadPriceRange = PriceRange{0, 10 * x10}
 		nar.WritePriceRange = PriceRange{0, 20 * x10}
 		nar.Size = 100 * MB // 100 MB
-		nar.MaxChallengeCompletionTime = int64(200 * time.Hour)
+		nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 		var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
 			balances)

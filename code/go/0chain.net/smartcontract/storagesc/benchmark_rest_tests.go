@@ -124,7 +124,7 @@ func BenchmarkRestTests(
 					PreferredBlobbers:          []string{},
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: int64(viper.GetDuration(bk.StorageMaxChallengeCompletionTime)),
+					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()
 				values.Set("allocation_data", string(nar))

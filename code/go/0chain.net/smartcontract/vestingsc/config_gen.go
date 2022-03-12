@@ -47,10 +47,10 @@ func (z *config) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "MinDuration"
 	o = append(o, 0xab, 0x4d, 0x69, 0x6e, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	o = msgp.AppendInt64(o, z.MinDuration)
+	o = msgp.AppendDuration(o, z.MinDuration)
 	// string "MaxDuration"
 	o = append(o, 0xab, 0x4d, 0x61, 0x78, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	o = msgp.AppendInt64(o, z.MaxDuration)
+	o = msgp.AppendDuration(o, z.MaxDuration)
 	// string "MaxDestinations"
 	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x44, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73)
 	o = msgp.AppendInt(o, z.MaxDestinations)
@@ -101,13 +101,13 @@ func (z *config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinDuration":
-			z.MinDuration, bts, err = msgp.ReadInt64Bytes(bts)
+			z.MinDuration, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinDuration")
 				return
 			}
 		case "MaxDuration":
-			z.MaxDuration, bts, err = msgp.ReadInt64Bytes(bts)
+			z.MaxDuration, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxDuration")
 				return
@@ -174,7 +174,7 @@ func (z *config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *config) Msgsize() (s int) {
-	s = 1 + 8 + z.MinLock.Msgsize() + 12 + msgp.Int64Size + 12 + msgp.Int64Size + 16 + msgp.IntSize + 21 + msgp.IntSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 8 + z.MinLock.Msgsize() + 12 + msgp.DurationSize + 12 + msgp.DurationSize + 16 + msgp.IntSize + 21 + msgp.IntSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

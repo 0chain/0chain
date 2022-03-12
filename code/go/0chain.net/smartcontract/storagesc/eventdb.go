@@ -3,7 +3,6 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
@@ -22,8 +21,8 @@ func emitAddOrOverwriteBlobber(
 		ReadPrice:               int64(sn.Terms.ReadPrice),
 		WritePrice:              int64(sn.Terms.WritePrice),
 		MinLockDemand:           sn.Terms.MinLockDemand,
-		MaxOfferDuration:        time.Duration(sn.Terms.MaxOfferDuration).String(),
-		ChallengeCompletionTime: time.Duration(sn.Terms.ChallengeCompletionTime).String(),
+		MaxOfferDuration:        sn.Terms.MaxOfferDuration.String(),
+		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
 
 		Capacity:        sn.Capacity,
 		Used:            sn.Used,
@@ -56,8 +55,8 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"read_price":                int64(sn.Terms.ReadPrice),
 			"write_price":               int64(sn.Terms.WritePrice),
 			"min_lock_demand":           sn.Terms.MinLockDemand,
-			"max_offer_duration":        time.Duration(sn.Terms.MaxOfferDuration).String(),
-			"challenge_completion_time": time.Duration(sn.Terms.ChallengeCompletionTime).String(),
+			"max_offer_duration":        sn.Terms.MaxOfferDuration.String(),
+			"challenge_completion_time": sn.Terms.ChallengeCompletionTime.String(),
 			"capacity":                  sn.Capacity,
 			"used":                      sn.Used,
 			"last_health_check":         int64(sn.LastHealthCheck),

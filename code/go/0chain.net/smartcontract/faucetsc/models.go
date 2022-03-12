@@ -96,14 +96,14 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
 
-			gn.IndividualReset = int64(ir)
+			gn.IndividualReset = ir
 		case Settings[GlobalReset]:
 			gr, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
 
-			gn.GlobalReset = int64(gr)
+			gn.GlobalReset = gr
 
 		case Settings[OwnerId]:
 			_, err := hex.DecodeString(value)
@@ -129,7 +129,7 @@ func (gn *GlobalNode) validate() error {
 		return common.NewError("failed to validate global node", fmt.Sprintf("periodic limit(%v) is less than max pour amount(%v)", gn.PeriodicLimit, gn.MaxPourAmount))
 	case gn.PeriodicLimit > gn.GlobalLimit:
 		return common.NewError("failed to validate global node", fmt.Sprintf("global periodic limit(%v) is less than periodic limit(%v)", gn.GlobalLimit, gn.PeriodicLimit))
-	case toSeconds(time.Duration(gn.IndividualReset)) < 1:
+	case toSeconds(gn.IndividualReset) < 1:
 		return common.NewError("failed to validate global node", fmt.Sprintf("individual reset(%v) is too short", gn.IndividualReset))
 	case gn.GlobalReset < gn.IndividualReset:
 		return common.NewError("failed to validate global node", fmt.Sprintf("global reset(%v) is less than individual reset(%v)", gn.GlobalReset, gn.IndividualReset))

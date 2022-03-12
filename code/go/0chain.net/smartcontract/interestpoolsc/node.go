@@ -18,7 +18,7 @@ import (
 type GlobalNode struct {
 	*SimpleGlobalNode `json:"simple_global_node"`
 	ID                string
-	MinLockPeriod     int64 `json:"min_lock_period"`
+	MinLockPeriod     time.Duration `json:"min_lock_period"`
 }
 
 func newGlobalNode() *GlobalNode {
@@ -35,7 +35,7 @@ func (gn *GlobalNode) Encode() []byte {
 	simpleNodeEnc := json.RawMessage(gn.SimpleGlobalNode.Encode())
 	rawMessage["simple_global_node"] = &simpleNodeEnc
 	// encoding simple_global_node to json.RawMeesage
-	dur, _ := json.Marshal(time.Duration(gn.MinLockPeriod).String())
+	dur, _ := json.Marshal(gn.MinLockPeriod.String())
 	durEnc := json.RawMessage(dur)
 	rawMessage["min_lock_period"] = &durEnc
 	b, _ := json.Marshal(rawMessage)
@@ -66,7 +66,7 @@ func (gn *GlobalNode) Decode(input []byte) error {
 		if err != nil {
 			return err
 		}
-		gn.MinLockPeriod = int64(dur)
+		gn.MinLockPeriod = dur
 	}
 	return nil
 }
@@ -92,7 +92,7 @@ func (gn *GlobalNode) set(key string, value string) error {
 			return fmt.Errorf("cannot conver key %s, value %s into time.duration; %v", key, value, err)
 		}
 
-		gn.MinLockPeriod = int64(mlp)
+		gn.MinLockPeriod = mlp
 	case Settings[MaxMint]:
 		fValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {

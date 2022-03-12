@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"time"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/block"
@@ -23,7 +25,7 @@ type mockBlobberYaml struct {
 	serviceCharge           float64
 	readPrice               float64
 	writePrice              float64
-	challengeCompletionTime int64
+	challengeCompletionTime time.Duration
 	MaxOfferDuration        int64
 	minLockDemand           float64
 }

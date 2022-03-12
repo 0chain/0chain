@@ -51,7 +51,7 @@ func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr fl
 		Cost:        map[string]int{},
 	}
 	if minLockP != 0 {
-		gn.MinLockPeriod = int64(minLockP)
+		gn.MinLockPeriod = minLockP
 	}
 	return gn
 }
@@ -64,13 +64,14 @@ func testGlobalNodeStringTime(id string, maxMint, totalMint, minLock, apr float6
 		MinLock:     state.Balance(minLock * 1e10),
 		APR:         apr,
 		OwnerId:     ownerId,
+		Cost:        map[string]int{},
 	}
 	mlp, err := time.ParseDuration(minLockP)
 	if err != nil {
 		panic(err)
 	}
 
-	gn.MinLockPeriod = int64(mlp)
+	gn.MinLockPeriod = mlp
 	return gn
 }
 
@@ -138,7 +139,7 @@ func testInterestPool(sec time.Duration, balance int) *interestPool {
 		},
 		TokenLockInterface: &TokenLock{
 			StartTime: timeNow,
-			Duration:  int64(sec * time.Second),
+			Duration:  sec * time.Second,
 			Owner:     clientID1,
 		},
 	}}
@@ -178,7 +179,7 @@ func testConfiguredGlobalNode() *GlobalNode {
 	var gn = newGlobalNode()
 	const pfx = "smart_contracts.interestpoolsc."
 	var conf = config.SmartContractConfig
-	gn.MinLockPeriod = int64(conf.GetDuration(pfx + "min_lock_period"))
+	gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)

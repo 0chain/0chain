@@ -45,18 +45,18 @@ func Test_config_validate(t *testing.T) {
 		{config{-1, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
 		{config{0, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
 		// min duration
-		{config{1, int64(s(-1)), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
-		{config{1, int64(s(0)), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
-		// max duration
-		{config{1, int64(s(1)), int64(s(0)), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
-			"invalid max_duration: less or equal to min_duration"},
-		{config{1, int64(s(1)), int64(s(1)), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
+		{config{1, s(-1), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
+		{config{1, s(0), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
+		// max dura
+		{config{1, s(1), s(0), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
+			"invaliduraios orequal to min_duration"},
+		{config{1, s(1), s(1), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
 			"invalid max_duration: less or equal to min_duration"},
 		// max_destinations
-		{config{1, int64(s(1)), int64(s(2)), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_destinations (< 1)"},
-		// max_description_length
-		{config{1, int64(s(1)), int64(s(2)), 1, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_description_length (< 1)"},
-		{config{1, int64(s(1)), int64(s(2)), 1, 1, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "owner_id is not set or empty"},
+		{config{1, s(1), s(2), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_destinations (< 1)"},
+		// max_descn_legt
+		{config{1, s(1), s(2), 1, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_description_length (< 1)"},
+		{config{1, s(1), s(2), 1, 1, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "owner_id is not set or empty"},
 	} {
 		requireErrMsg(t, tt.config.validate(), tt.err)
 	}
@@ -75,7 +75,7 @@ func configureConfig() (configured *config) {
 
 	return &config{
 		100e10,
-		int64(1 * time.Second), int64(10 * time.Hour),
+		1 * time.Second, 10 * time.Hour,
 		2, 20, "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
 		map[string]int{"1": 1, "2": 2, "3": 3},
 	}
@@ -140,11 +140,11 @@ func TestUpdateConfig(t *testing.T) {
 		}
 		if value, ok := p.input[Settings[MinDuration]]; ok {
 			minDur, _ := time.ParseDuration(value)
-			conf.MinDuration = int64(minDur)
+			conf.MinDuration = minDur
 		}
 		if value, ok := p.input[Settings[MaxDuration]]; ok {
 			maxDur, _ := time.ParseDuration(value)
-			conf.MaxDuration = int64(maxDur)
+			conf.MaxDuration = maxDur
 		}
 		if value, ok := p.input[Settings[MaxDestinations]]; ok {
 			conf.MaxDestinations, err = strconv.Atoi(value)

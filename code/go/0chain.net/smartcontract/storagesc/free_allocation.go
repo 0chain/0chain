@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"0chain.net/chaincore/smartcontractinterface"
 
@@ -248,7 +247,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		DataShards:                 conf.FreeAllocationSettings.DataShards,
 		ParityShards:               conf.FreeAllocationSettings.ParityShards,
 		Size:                       conf.FreeAllocationSettings.Size,
-		Expiration:                 common.Timestamp(common.ToTime(txn.CreationDate).Add(time.Duration(conf.FreeAllocationSettings.Duration)).Unix()),
+		Expiration:                 common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.FreeAllocationSettings.Duration).Unix()),
 		Owner:                      marker.Recipient,
 		OwnerPublicKey:             inputObj.RecipientPublicKey,
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
@@ -340,7 +339,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		ID:         inputObj.AllocationId,
 		OwnerID:    marker.Recipient,
 		Size:       conf.FreeAllocationSettings.Size,
-		Expiration: common.Timestamp(time.Duration(conf.FreeAllocationSettings.Duration).Seconds()),
+		Expiration: common.Timestamp(conf.FreeAllocationSettings.Duration.Seconds()),
 	}
 	input, err = json.Marshal(request)
 	if err != nil {

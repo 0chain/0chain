@@ -9,9 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -177,7 +176,7 @@ type newAllocationRequest struct {
 	PreferredBlobbers          []string         `json:"preferred_blobbers"`
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
-	MaxChallengeCompletionTime int64            `json:"max_challenge_completion_time"`
+	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
 }
 
@@ -194,7 +193,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.PreferredBlobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
-	sa.MaxChallengeCompletionTime = int64(nar.MaxChallengeCompletionTime)
+	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
 	sa.DiverseBlobbers = nar.DiversifyBlobbers
 	return
 }
@@ -571,7 +570,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	resp string, err error) {
 
 	if alloc.Expiration-t.CreationDate <
-		toSeconds(time.Duration(alloc.ChallengeCompletionTime)) {
+		toSeconds(alloc.ChallengeCompletionTime) {
 		return "", common.NewError("allocation_closing_failed",
 			"doesn't need to close allocation is about to expire")
 	}
@@ -786,13 +785,13 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		details.Size = size // new size
 
-		if uar.Expiration > toSeconds(time.Duration(b.Terms.MaxOfferDuration)) {
+		if uar.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s doesn't allow so long offers", b.ID)
 		}
 
-		if b.Terms.ChallengeCompletionTime > int64(cct) {
-			cct = time.Duration(b.Terms.ChallengeCompletionTime) // seek max CCT
+		if b.Terms.ChallengeCompletionTime > cct {
+			cct = b.Terms.ChallengeCompletionTime // seek max CCT
 		}
 
 		// since, new terms is weighted average based on previous terms and
@@ -831,7 +830,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	}
 
 	// update max challenge_completion_time
-	alloc.ChallengeCompletionTime = int64(cct)
+	alloc.ChallengeCompletionTime = cct
 
 	var until = alloc.Until()
 	wps, err := alloc.getAllocationPools(sc, balances)
@@ -1077,7 +1076,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// an allocation can't be shorter than configured in SC
 	// (prevent allocation shortening for entire period)
 	if request.Expiration < 0 &&
-		newExpiration-t.CreationDate < toSeconds(time.Duration(conf.MinAllocDuration)) {
+		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
 
 		return "", common.NewError("allocation_updating_failed",
 			"allocation duration becomes too short")
@@ -1231,7 +1230,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			if c.Response != nil || c.AllocationID != alloc.ID {
 				continue // already accepted, already rewarded/penalized
 			}
-			var expire = c.Created + toSeconds(time.Duration(d.Terms.ChallengeCompletionTime))
+			var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
 			if expire < now {
 				d.Stats.FailedChallenges++
 			} else {

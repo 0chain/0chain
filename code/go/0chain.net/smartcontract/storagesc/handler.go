@@ -47,8 +47,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 			ReadPrice:               state.Balance(blobber.ReadPrice),
 			WritePrice:              state.Balance(blobber.WritePrice),
 			MinLockDemand:           blobber.MinLockDemand,
-			MaxOfferDuration:        int64(maxOfferDuration),
-			ChallengeCompletionTime: int64(challengeCompletionTime),
+			MaxOfferDuration:        maxOfferDuration,
+			ChallengeCompletionTime: challengeCompletionTime,
 		},
 		Capacity:        blobber.Capacity,
 		Used:            blobber.Used,
@@ -107,19 +107,27 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	if blobberID == "" {
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
-	if balances.GetEventDB() == nil {
-		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+
+	sn, err := ssc.getBlobber(blobberID, balances)
+	if err != nil {
+		return nil, err
 	}
 
-	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
-	if err != nil {
-		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	}
+	return sn, nil
 
-	sn, err := blobberTableToStorageNode(*blobber)
-	if err != nil {
-		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	}
+	//if balances.GetEventDB() == nil {
+	//	return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	//}
+	//
+	//blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	//if err != nil {
+	//	return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	//}
+	//
+	//sn, err := blobberTableToStorageNode(*blobber)
+	//if err != nil {
+	//	return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	//}
 	return sn, err
 }
 

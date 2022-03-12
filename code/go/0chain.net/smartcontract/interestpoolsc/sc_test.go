@@ -780,9 +780,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Execute() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

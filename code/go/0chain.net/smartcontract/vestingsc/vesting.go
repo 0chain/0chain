@@ -171,9 +171,9 @@ func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
 		return errors.New("entry description is too long")
 	case ar.StartTime < now:
 		return errors.New("vesting starts before now")
-	case ar.Duration < time.Duration(conf.MinDuration):
+	case ar.Duration < conf.MinDuration:
 		return errors.New("vesting duration is too short")
-	case ar.Duration > time.Duration(conf.MaxDuration):
+	case ar.Duration > conf.MaxDuration:
 		return errors.New("vesting duration is too long")
 	case len(ar.Destinations) == 0:
 		return errors.New("no destinations")

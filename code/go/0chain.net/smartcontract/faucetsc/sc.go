@@ -100,12 +100,12 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	if state.Balance(gn.PourAmount)+un.Used > gn.PeriodicLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
-				t.Value, un.Used, gn.PeriodicLimit, time.Duration(gn.IndividualReset).String()))
+				t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
 	}
 	if state.Balance(gn.PourAmount)+gn.Used > gn.GlobalLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
-				t.Value, gn.Used, gn.GlobalLimit, time.Duration(gn.GlobalReset).String()))
+				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
 	}
 	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
@@ -205,8 +205,8 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
-	if common.ToTime(t.CreationDate).Sub(un.StartTime) >= time.Duration(gn.IndividualReset) ||
-		common.ToTime(t.CreationDate).Sub(un.StartTime) >= time.Duration(gn.GlobalReset) {
+	if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.IndividualReset ||
+		common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.GlobalReset {
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
@@ -234,7 +234,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, ba
 	}
 
 	if err == nil {
-		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= time.Duration(gn.GlobalReset) {
+		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
 			gn.StartTime = common.ToTime(t.CreationDate)
 			gn.Used = 0
 		}
