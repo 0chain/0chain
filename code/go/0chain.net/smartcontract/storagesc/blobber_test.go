@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -632,10 +631,8 @@ func Test_flow_reward(t *testing.T) {
 			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			// todo fix validator delegates so that this does not error
-			require.Error(t, err)
-			require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
-			require.Zero(t, resp)
+			require.NoError(t, err)
+			require.EqualValues(t, "challenge passed by blobber", resp)
 		}
 
 	})
@@ -801,10 +798,8 @@ func Test_flow_penalty(t *testing.T) {
 			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			// todo fix validator delegates so that this does not error
-			require.Error(t, err)
-			require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
-			require.Zero(t, resp)
+			require.NoError(t, err)
+			require.EqualValues(t, "Challenge Failed by Blobber", resp)
 			continue
 
 			inspectCPIV(t, ssc, allocID, balances)
