@@ -21,7 +21,7 @@ import (
 )
 
 func TestDeleteMiner(t *testing.T) {
-	t.Skip("This delete_miner unused and to be reworked as kill_provider")
+	t.Skip("delete_miner unused and to be reworked as kill_provider")
 	const (
 		mockDeletedMinerId               = "mock deleted miner id"
 		mockRoundNumber                  = 5

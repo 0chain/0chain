@@ -21,6 +21,7 @@ import (
 )
 
 func TestDeleteSharder(t *testing.T) {
+	t.Skip("delete_sharder is unused and to be reworked as kill_provider")
 	const (
 		mockDeletedSharderId               = "mock deleted sharder id"
 		mockRoundNumber                    = 5
