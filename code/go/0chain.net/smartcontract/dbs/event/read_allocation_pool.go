@@ -14,7 +14,7 @@ type ReadAllocationPool struct {
 	UserID       string
 	StateBalance int64
 	Balance      int64
-	Blobbers     []BlobberPool `gorm:"foreignKey:ReadAllocationPoolID;references:AllocationID"`
+	Blobbers     []BlobberPool `gorm:"foreignKey:ReadAllocationPoolID;references:PoolID"`
 	ExpireAt     int64
 }
 

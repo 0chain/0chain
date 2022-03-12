@@ -13,7 +13,7 @@ type WriteAllocationPool struct {
 	AllocationID string
 	UserID       string
 	Balance      int64
-	Blobbers     []BlobberPool `gorm:"foreignKey:WriteAllocationPoolID;references:AllocationID"`
+	Blobbers     []BlobberPool `gorm:"foreignKey:WriteAllocationPoolID;references:PoolID"`
 	StateBalance int64
 	ExpireAt     int64
 }
