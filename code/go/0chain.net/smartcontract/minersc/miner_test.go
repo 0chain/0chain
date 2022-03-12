@@ -21,6 +21,7 @@ import (
 )
 
 func TestDeleteMiner(t *testing.T) {
+	t.Skip("This delete_miner unused and to be reworked as kill_provider")
 	const (
 		mockDeletedMinerId               = "mock deleted miner id"
 		mockRoundNumber                  = 5
@@ -45,6 +46,7 @@ func TestDeleteMiner(t *testing.T) {
 		}
 		mn := NewMinerNode()
 		mn.ID = mockDeletedMinerId
+		mn.DelegateWallet = mockDeletedMinerId
 		for i := 0; i < p.activePools; i++ {
 			id := "active pool " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
@@ -68,13 +70,14 @@ func TestDeleteMiner(t *testing.T) {
 			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
 			balances.On(
 				"GetTrieNode",
-				stakepool.UserStakePoolsKey(spenum.Miner, delegateId),
+				stakepool.UserStakePoolsKey(spenum.Miner, mn.DelegateWallet),
 			).Return(un, nil).Once()
-			balances.On(
-				"DeleteTrieNode",
-				stakepool.UserStakePoolsKey(spenum.Miner, delegateId),
-			).Return("", nil).Once()
 		}
+
+		balances.On(
+			"DeleteTrieNode",
+			stakepool.UserStakePoolsKey(spenum.Miner, mn.DelegateWallet),
+		).Return("", nil).Once()
 
 		balances.On("GetTrieNode", mn.GetKey()).Return(mn, nil).Once()
 		balances.On(
