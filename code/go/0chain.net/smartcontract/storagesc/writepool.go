@@ -6,13 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract"
+	"github.com/guregu/null"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -370,7 +372,66 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("write_pool_lock_failed",
 			"saving allocation: %v", err)
 	}
+
+	if balances.GetEventDB() == nil {
+		return
+	}
+
+	data, err := writePoolToEventWritePool(ap, t)
+	if err != nil {
+		return
+	}
+	go balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+		{
+			Type: int(event.TypeStats),
+			Tag:  int(event.TagAddOrOverwriteWriteAllocationPool),
+			Data: data,
+		},
+	})
 	return
+}
+
+func writePoolToEventWritePool(writePool allocationPool, t *transaction.Transaction) (string, error) {
+	writeAllocation := event.WriteAllocationPool{
+		AllocationID:  writePool.AllocationID,
+		TransactionId: t.Hash,
+		UserID:        t.ToClientID,
+		Balance:       int64(writePool.Balance),
+		ExpireAt:      int64(writePool.ExpireAt),
+		ZcnBalance:    int64(writePool.ZcnPool.Balance),
+		ZcnID:         writePool.ZcnPool.ID,
+	}
+	writeAllocation.Blobbers = make([]event.BlobberPool, len(writePool.Blobbers))
+	for i, blobber := range writePool.Blobbers {
+		writeAllocation.Blobbers[i] = event.BlobberPool{
+			WriteAllocationPoolID: null.StringFrom(writePool.AllocationID),
+			Balance:               int64(blobber.Balance),
+			BlobberID:             blobber.BlobberID,
+		}
+	}
+	data, err := json.Marshal(writeAllocation)
+	if err != nil {
+		return "", common.NewError("writePool marshal error ", err.Error())
+	}
+	return string(data), nil
+}
+
+func allocationPoolTableToWriteAllocationPool(allocation event.WriteAllocationPool) allocationPool {
+	ap := allocationPool{
+		AllocationID: allocation.AllocationID,
+		ZcnPool: tokenpool.ZcnPool{
+			TokenPool: tokenpool.TokenPool{Balance: state.Balance(allocation.ZcnBalance), ID: allocation.ZcnID},
+		},
+		ExpireAt: common.Timestamp(allocation.ExpireAt),
+	}
+	ap.Blobbers = make([]*blobberPool, len(allocation.Blobbers))
+	for index, blobber := range allocation.Blobbers {
+		ap.Blobbers[index] = &blobberPool{
+			BlobberID: blobber.BlobberID,
+			Balance:   state.Balance(blobber.Balance),
+		}
+	}
+	return ap
 }
 
 // unlock tokens if expired
@@ -462,14 +523,41 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	resp interface{}, err error) {
 
 	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		wp        *writePool
+		clientID     = params.Get("client_id")
+		allocID      = params.Get("allocation_id")
+		blobberID    = params.Get("blobber_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		offset       = 0
+		limit        = 0
+		wp           writePool
 	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal()
+	}
+	if offsetString != "" {
+		offset, err := strconv.Atoi(offsetString)
+		if err != nil || offset <= 0 {
+			return nil, common.NewErrBadRequest("offset value is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err := strconv.Atoi(limitString)
+		if err != nil || limit <= 0 {
+			return nil, common.NewErrBadRequest("limit value is not valid")
+		}
+	}
+	allocations, err := balances.GetEventDB().GetWriteAllocationPoolWithFilterAndPagination(
+		event.WriteAllocationPoolFilter{
+			UserID: null.StringFrom(clientID),
+		},
+		offset,
+		limit,
+	)
+	wp.Pools = make(allocationPools, len(allocations))
+	for index, allocation := range allocations {
+		ap := allocationPoolTableToWriteAllocationPool(allocation)
+		wp.Pools[index] = &ap
 	}
 
 	var (
@@ -500,12 +588,39 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		clientID = params.Get("client_id")
-		wp       *writePool
+		clientID     = params.Get("client_id")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		offset       = 0
+		limit        = 0
+		wp           writePool
 	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal()
+	}
+	if offsetString != "" {
+		offset, err := strconv.Atoi(offsetString)
+		if err != nil || offset <= 0 {
+			return nil, common.NewErrBadRequest("offset value is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err := strconv.Atoi(limitString)
+		if err != nil || limit <= 0 {
+			return nil, common.NewErrBadRequest("limit value is not valid")
+		}
+	}
+	allocations, err := balances.GetEventDB().GetWriteAllocationPoolWithFilterAndPagination(
+		event.WriteAllocationPoolFilter{
+			UserID: null.StringFrom(clientID),
+		},
+		offset,
+		limit,
+	)
+	wp.Pools = make(allocationPools, len(allocations))
+	for index, allocation := range allocations {
+		ap := allocationPoolTableToWriteAllocationPool(allocation)
+		wp.Pools[index] = &ap
 	}
 
 	return wp.stat(common.Now()), nil

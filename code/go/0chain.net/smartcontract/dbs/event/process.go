@@ -46,6 +46,8 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
+	TagAddOrOverwriteReadAllocationPool
+	TagAddOrOverwriteWriteAllocationPool
 	TagAddOrOverwriteDelegatePool
 	TagStakePoolReward
 	TagUpdateDelegatePool
@@ -211,7 +213,20 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.removeCurator(c)
-
+	case TagAddOrOverwriteReadAllocationPool:
+		var allocationPool ReadAllocationPool
+		err := json.Unmarshal([]byte(event.Data), &allocationPool)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteReadAllocationPool(allocationPool)
+	case TagAddOrOverwriteWriteAllocationPool:
+		var allocationPool WriteAllocationPool
+		err := json.Unmarshal([]byte(event.Data), &allocationPool)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteWriteAllocationPool(allocationPool)
 	//stake pool
 	case TagAddOrOverwriteDelegatePool:
 		var sp DelegatePool

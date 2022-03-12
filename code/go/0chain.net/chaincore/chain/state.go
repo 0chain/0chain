@@ -201,7 +201,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
-		sctx        = c.NewStateContext(b, clientState, txn, nil)
+		sctx        = c.NewStateContext(b, clientState, txn, c.GetEventDb())
 		startRoot   = sctx.GetState().GetRoot()
 	)
 	defer func() { events = sctx.GetEvents() }()
