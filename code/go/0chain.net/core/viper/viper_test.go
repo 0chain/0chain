@@ -61,6 +61,7 @@ func Test_Viper_IsThreadSafe(t *testing.T) {
 					test.viper.Set("test.Int", i)
 					test.viper.Set("test.String", iter)
 					test.viper.Set("test.Time", timestamp)
+					test.viper.Set("test.Cost", map[string]string{"1": "1", "2": "1", "3": "1", "4": "1"})
 
 					if err := test.viper.WriteConfigFile(filepath); err != nil {
 						t.Errorf("can't write file path: '%s'", filepath)

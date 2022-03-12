@@ -22,11 +22,12 @@ const (
 	String
 	StateBalance
 	Key
+	Cost
 	Strings
 )
 
 var ConfigTypeName = []string{
-	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance", "datastore.Key", "[]string",
+	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance","Cost", "datastore.Key", "[]string",
 }
 
 type StringMap struct {
