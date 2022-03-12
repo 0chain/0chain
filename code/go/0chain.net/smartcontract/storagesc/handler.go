@@ -183,6 +183,8 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	}
 	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 
+	//readPriceRange := request.ReadPriceRange
+	//writePriceRange := request.WritePriceRange
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(paramsToMap(params), dur)
 	if err != nil || len(blobberIDs) == 0 {
 		return nil, fmt.Errorf("no blobbers found %v", err)
