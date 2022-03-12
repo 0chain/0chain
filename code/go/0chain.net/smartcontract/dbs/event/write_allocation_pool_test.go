@@ -30,10 +30,9 @@ func TestWriteAllocationPool(t *testing.T) {
 	defer eventDb.drop()
 	assert.NoError(t, err, "error while migrating")
 	err = eventDb.addOrOverwriteWriteAllocationPool(WriteAllocationPool{
-		AllocationID:  "allocationID",
-		TransactionId: "transaction id",
-		UserID:        "some user id",
-		Balance:       23,
+		PoolID:  "allocationID",
+		UserID:  "some user id",
+		Balance: 23,
 		Blobbers: []BlobberPool{
 			{
 				Balance:   2,
@@ -47,10 +46,9 @@ func TestWriteAllocationPool(t *testing.T) {
 	})
 	assert.NoError(t, err, "There should be on error")
 	err = eventDb.addOrOverwriteWriteAllocationPool(WriteAllocationPool{
-		AllocationID:  "allocationID",
-		TransactionId: "transaction id",
-		UserID:        "some user id",
-		Balance:       40,
+		PoolID:  "allocationID",
+		UserID:  "some user id",
+		Balance: 40,
 		Blobbers: []BlobberPool{
 			{
 				Balance:   2,
@@ -68,10 +66,9 @@ func TestWriteAllocationPool(t *testing.T) {
 	assert.Equal(t, int64(40), write.Balance, "Update failed")
 
 	err = eventDb.addOrOverwriteWriteAllocationPool(WriteAllocationPool{
-		AllocationID:  "allocation",
-		TransactionId: "transaction id",
-		UserID:        "some user id",
-		Balance:       23,
+		PoolID:  "allocation",
+		UserID:  "some user id",
+		Balance: 23,
 		Blobbers: []BlobberPool{
 			{
 				Balance:   2,

@@ -384,13 +384,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction) (string, error) {
 	readAllocation := event.ReadAllocationPool{
-		AllocationID:  readPool.AllocationID,
-		TransactionId: t.Hash,
-		UserID:        t.ToClientID,
-		Balance:       int64(readPool.Balance),
-		ExpireAt:      int64(readPool.ExpireAt),
-		ZcnBalance:    int64(readPool.ZcnPool.Balance),
-		ZcnID:         readPool.ZcnPool.ID,
+		AllocationID: readPool.AllocationID,
+		PoolID:       readPool.ID,
+		UserID:       t.ToClientID,
+		Balance:      int64(readPool.Balance),
+		ExpireAt:     int64(readPool.ExpireAt),
 	}
 	readAllocation.Blobbers = make([]event.BlobberPool, len(readPool.Blobbers))
 	for i, blobber := range readPool.Blobbers {
@@ -411,7 +409,7 @@ func allocationPoolTableToReadAllocationPool(allocation event.ReadAllocationPool
 	ap := allocationPool{
 		AllocationID: allocation.AllocationID,
 		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{Balance: state.Balance(allocation.ZcnBalance), ID: allocation.ZcnID},
+			TokenPool: tokenpool.TokenPool{Balance: state.Balance(allocation.Balance), ID: allocation.PoolID},
 		},
 		ExpireAt: common.Timestamp(allocation.ExpireAt),
 	}

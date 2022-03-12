@@ -9,14 +9,13 @@ import (
 
 type WriteAllocationPool struct {
 	gorm.Model
-	AllocationID  string `gorm:"uniqueIndex"`
-	TransactionId string
-	UserID        string
-	Balance       int64
-	Blobbers      []BlobberPool `gorm:"foreignKey:WriteAllocationPoolID;references:AllocationID"`
-	ZcnBalance    int64
-	ZcnID         string
-	ExpireAt      int64
+	PoolID       string `gorm:"uniqueIndex"`
+	AllocationID string
+	UserID       string
+	Balance      int64
+	Blobbers     []BlobberPool `gorm:"foreignKey:WriteAllocationPoolID;references:AllocationID"`
+	StateBalance int64
+	ExpireAt     int64
 }
 
 type WriteAllocationPoolFilter struct {
@@ -29,14 +28,15 @@ type WriteAllocationPoolFilter struct {
 }
 
 func (edb *EventDb) addOrOverwriteWriteAllocationPool(writeAllocationPool WriteAllocationPool) error {
-	if !edb.isWritePoolExists(writeAllocationPool.AllocationID) {
+	if !edb.isWritePoolExists(writeAllocationPool.PoolID) {
+		writeAllocationPool.StateBalance = writeAllocationPool.Balance
 		return edb.Get().Model(&WriteAllocationPool{}).Create(&writeAllocationPool).Error
 	}
 	return edb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{AllocationID: writeAllocationPool.AllocationID}).Updates(&writeAllocationPool).Error
 }
 
-func (edb *EventDb) isWritePoolExists(allocationID string) bool {
-	err := edb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{AllocationID: allocationID}).Take(&WriteAllocationPool{}).Error
+func (edb *EventDb) isWritePoolExists(poolID string) bool {
+	err := edb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{PoolID: poolID}).Take(&WriteAllocationPool{}).Error
 	if errors.Is(gorm.ErrRecordNotFound, err) {
 		return false
 	}

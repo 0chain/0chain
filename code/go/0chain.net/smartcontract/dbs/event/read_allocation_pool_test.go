@@ -30,10 +30,9 @@ func TestReadAllocationPool(t *testing.T) {
 	defer eventDb.drop()
 	assert.NoError(t, err, "error while migrating")
 	err = eventDb.addOrOverwriteReadAllocationPool(ReadAllocationPool{
-		AllocationID:  "allocationID",
-		TransactionId: "transaction id",
-		UserID:        "some user id",
-		Balance:       23,
+		PoolID:  "allocationID",
+		UserID:  "some user id",
+		Balance: 23,
 		Blobbers: []BlobberPool{
 			{
 				Balance:   2,
@@ -47,10 +46,9 @@ func TestReadAllocationPool(t *testing.T) {
 	})
 	assert.NoError(t, err, "There should be on error")
 	err = eventDb.addOrOverwriteReadAllocationPool(ReadAllocationPool{
-		AllocationID:  "allocationID",
-		TransactionId: "transaction id",
-		UserID:        "some user id",
-		Balance:       40,
+		PoolID:  "allocationID",
+		UserID:  "some user id",
+		Balance: 40,
 		Blobbers: []BlobberPool{
 			{
 				Balance:   2,
@@ -64,14 +62,13 @@ func TestReadAllocationPool(t *testing.T) {
 	})
 	assert.NoError(t, err, "There should be on error")
 	read := ReadAllocationPool{}
-	eventDb.Get().Model(&ReadAllocationPool{}).Where(&ReadAllocationPool{AllocationID: "allocationID"}).Scan(&read)
+	eventDb.Get().Model(&ReadAllocationPool{}).Where(&ReadAllocationPool{PoolID: "allocationID"}).Scan(&read)
 	assert.Equal(t, int64(40), read.Balance, "Update failed")
 
 	err = eventDb.addOrOverwriteReadAllocationPool(ReadAllocationPool{
-		AllocationID:  "allocation",
-		TransactionId: "transaction id",
-		UserID:        "some user id",
-		Balance:       23,
+		AllocationID: "allocation",
+		UserID:       "some user id",
+		Balance:      23,
 		Blobbers: []BlobberPool{
 			{
 				Balance:   2,

@@ -392,14 +392,13 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 }
 
 func writePoolToEventWritePool(writePool allocationPool, t *transaction.Transaction) (string, error) {
+
 	writeAllocation := event.WriteAllocationPool{
-		AllocationID:  writePool.AllocationID,
-		TransactionId: t.Hash,
-		UserID:        t.ToClientID,
-		Balance:       int64(writePool.Balance),
-		ExpireAt:      int64(writePool.ExpireAt),
-		ZcnBalance:    int64(writePool.ZcnPool.Balance),
-		ZcnID:         writePool.ZcnPool.ID,
+		AllocationID: writePool.AllocationID,
+		PoolID:       writePool.ID,
+		UserID:       t.ToClientID,
+		Balance:      int64(writePool.Balance),
+		ExpireAt:     int64(writePool.ExpireAt),
 	}
 	writeAllocation.Blobbers = make([]event.BlobberPool, len(writePool.Blobbers))
 	for i, blobber := range writePool.Blobbers {
@@ -420,7 +419,7 @@ func allocationPoolTableToWriteAllocationPool(allocation event.WriteAllocationPo
 	ap := allocationPool{
 		AllocationID: allocation.AllocationID,
 		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{Balance: state.Balance(allocation.ZcnBalance), ID: allocation.ZcnID},
+			TokenPool: tokenpool.TokenPool{Balance: state.Balance(allocation.Balance), ID: allocation.PoolID},
 		},
 		ExpireAt: common.Timestamp(allocation.ExpireAt),
 	}
