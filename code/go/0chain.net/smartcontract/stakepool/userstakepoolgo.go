@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -14,7 +16,7 @@ type UserStakePools struct {
 	Pools map[datastore.Key][]datastore.Key `json:"pools"`
 }
 
-func UserStakePoolsKey(p Provider, clientID datastore.Key) datastore.Key {
+func UserStakePoolsKey(p spenum.Provider, clientID datastore.Key) datastore.Key {
 	return datastore.Key(p.String() + ":stakepool:user_pools:" + clientID)
 }
 
@@ -73,7 +75,7 @@ func (usp *UserStakePools) Decode(p []byte) error {
 
 // save the user stake pools
 func (usp *UserStakePools) Save(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (err error) {
@@ -83,7 +85,7 @@ func (usp *UserStakePools) Save(
 
 // remove the entire user stake pools node
 func (usp *UserStakePools) remove(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (err error) {
@@ -92,7 +94,7 @@ func (usp *UserStakePools) remove(
 }
 
 func getUserStakePoolBytes(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (b []byte, err error) {
@@ -106,7 +108,7 @@ func getUserStakePoolBytes(
 
 // getUserStakePool of given client
 func GetUserStakePool(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (usp *UserStakePools, err error) {
@@ -124,7 +126,7 @@ func GetUserStakePool(
 
 // getOrCreateUserStakePool of given client
 func getOrCreateUserStakePool(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (usp *UserStakePools, err error) {

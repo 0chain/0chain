@@ -591,6 +591,8 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 
 	config.SetupDefaultSmartContractConfig()
 
+	node := testConfiguredGlobalNode()
+	node.Cost = map[string]int{}
 	tests := []test{
 		{
 			name: "empty_globalNode",
@@ -598,7 +600,7 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 				balances: testBalance("", 0),
 				funcName: "funcName",
 			},
-			want: testConfiguredGlobalNode(),
+			want: node,
 		},
 		{
 			name: "existing_globalNode",

@@ -36,37 +36,100 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-/*SetupHandlers sets up the necessary API end points */
-func SetupHandlers(c Chainer) {
-	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
-	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
+const (
+	getBlockV1Pattern = "/v1/block/get"
+)
 
-	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(GetBlockHandler)))
-	}
-	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
-	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
-	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler(c))))
-	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
-	http.HandleFunc("/v1/block/get/fee_stats", common.UserRateLimit(common.ToJSONResponse(LatestBlockFeeStatsHandler)))
-
-	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
-	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
-	http.HandleFunc("/_diagnostics/current_mb_nodes", common.UserRateLimit(DiagnosticsNodesHandler))
-	http.HandleFunc("/_diagnostics/dkg_process", common.UserRateLimit(DiagnosticsDKGHandler))
-	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
-
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(
-		datastore.ToJSONEntityReqResponse(
-			datastore.DoAsyncEntityJSONHandler(
-				memorystore.WithConnectionEntityJSONHandler(
-					PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
+	m := map[string]func(http.ResponseWriter, *http.Request){
+		"/v1/chain/get": common.Recover(
+			common.ToJSONResponse(
+				memorystore.WithConnectionHandler(
+					GetChainHandler,
+				),
+			),
+		),
+		"/v1/chain/put": common.Recover(
+			datastore.ToJSONEntityReqResponse(
+				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
+				chainEntityMetadata,
+			),
+		),
+		"/v1/block/get/latest_finalized": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedBlockHandler,
+			),
+		),
+		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedMagicBlockSummaryHandler,
+			),
+		),
+		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedMagicBlockHandler(c),
+			),
+		),
+		"/v1/block/get/recent_finalized": common.UserRateLimit(
+			common.ToJSONResponse(
+				RecentFinalizedBlockHandler,
+			),
+		),
+		"/v1/block/get/fee_stats": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestBlockFeeStatsHandler,
+			),
+		),
+		"/": common.UserRateLimit(
+			HomePageHandler,
+		),
+		"/_diagnostics": common.UserRateLimit(
+			DiagnosticsHomepageHandler,
+		),
+		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+			DiagnosticsNodesHandler,
+		),
+		"/_diagnostics/dkg_process": common.UserRateLimit(
+			DiagnosticsDKGHandler,
+		),
+		"/_diagnostics/round_info": common.UserRateLimit(
+			RoundInfoHandler,
+		),
+		"/v1/transaction/put": common.UserRateLimit(
+			datastore.ToJSONEntityReqResponse(
+				datastore.DoAsyncEntityJSONHandler(
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+					transaction.TransactionEntityChannel,
+				),
+				transactionEntityMetadata,
+			),
+		),
+		"/_diagnostics/state_dump": common.UserRateLimit(
+			StateDumpHandler,
+		),
+		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+			common.ToJSONResponse(
+				LFBTicketHandler,
+			),
+		),
+	}
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		m[getBlockV1Pattern] = common.UserRateLimit(
+			common.ToJSONResponse(
+				GetBlockHandler,
+			),
+		)
+	}
 
-	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
+	return m
+}
 
-	http.HandleFunc("/v1/block/get/latest_finalized_ticket", common.N2NRateLimit(common.ToJSONResponse(LFBTicketHandler)))
+/*setupHandlers sets up the necessary API end points */
+func setupHandlers(handlersMap map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlersMap {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {

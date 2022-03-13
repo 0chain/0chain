@@ -16,6 +16,7 @@ const (
 	MinLockPeriod
 	MaxMint
 	OwnerId
+	Cost
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 		"min_lock_period",
 		"max_mint",
 		"owner_id",
+		"cost",
 	}
 )
 

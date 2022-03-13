@@ -10,10 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/memorystore"
-
-	"0chain.net/core/logging"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -24,9 +22,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-
-	"go.uber.org/zap"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -177,7 +175,7 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 
 //Creates the next round, if next round exists and has RRS returns existent.
 //If RRS is not present, starts VRF phase for this round
-func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
+func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	var (
 		rn = r.GetRoundNumber()
@@ -261,7 +259,7 @@ func (mc *Chain) getClientState(
 	roundNumber int64,
 ) (*util.MerklePatriciaTrie, error) {
 	pround := mc.GetRound(roundNumber - 1)
-	pb := mc.GetBlockToExtend(ctx, pround)
+	pb := mc.getBlockToExtend(ctx, pround)
 	if pb == nil || pb.ClientState == nil {
 		return nil, fmt.Errorf("cannot get MPT from latest block %v", pb)
 	}
@@ -327,7 +325,7 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 }
 
 // GetBlockToExtend - Get the block to extend from the given round.
-func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
+func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 	bnb *block.Block) {
 
 	if bnb = r.GetHeaviestNotarizedBlock(); bnb == nil {
@@ -841,6 +839,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
+			b.SetVerificationStatus(block.VerificationFailed)
 			logging.Logger.Debug("verifyAndSend - got error on verify round block",
 				zap.String("phase", round.GetPhaseName(r.GetPhase())), zap.Error(err))
 			switch err {
@@ -1033,6 +1032,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 
 	if !mc.getBlockNotarizationResultSync(ctx, b.PrevHash) {
+		b.SetVerificationStatus(block.VerificationFailed)
 		return nil, common.NewError("verify_round_block", "Verification tickets of previous block are not valid")
 	}
 
@@ -1109,7 +1109,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	return true
 }
 
-func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
+func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, beforeStartNextRound func()) {
 	r.SetPhase(round.Complete)
 	var rn = r.GetRoundNumber()
 	if !mc.waitNotAhead(ctx, rn) {
@@ -1117,6 +1117,9 @@ func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 			zap.Int64("round", rn))
 		return // terminated
 	}
+
+	beforeStartNextRound()
+
 	//TODO start if not started, atm we  resend vrf share here
 	nr := mc.StartNextRound(ctx, r)
 	mc.SetCurrentRound(nr.Number)
@@ -1357,8 +1360,8 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 	return tick
 }
 
-// HandleRoundTimeout handle timeouts appropriately.
-func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
+// handleRoundTimeout handle timeouts appropriately.
+func (mc *Chain) handleRoundTimeout(ctx context.Context, round int64) {
 	// 	mmb = mc.GetMagicBlock(rn + chain.ViewChangeOffset + 1)
 	// 	cmb = mc.GetMagicBlock(rn)
 
@@ -1416,7 +1419,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
 			logging.Logger.Info("Sent proposal in handle NoProgress")
-			go mc.SendBlock(context.Background(), b)
+			go mc.sendBlock(context.Background(), b)
 
 			if r.OwnVerificationTicket() != nil {
 				if mc.GetRoundTimeoutCount() <= 10 {

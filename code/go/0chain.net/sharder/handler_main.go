@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package sharder
@@ -6,11 +7,15 @@ import (
 	"context"
 	"net/http"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
-
-	"0chain.net/core/common"
 )
+
+// SetupHandlers sets up the necessary API end points.
+func SetupHandlers() {
+	setupHandlers(handlersMap())
+}
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
 func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (interface{}, error) {

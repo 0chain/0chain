@@ -60,12 +60,24 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
-// SetupX2SResponders setups sharders responders for miner and sharders.
-func SetupX2SResponders() {
-	// BlockRequestHandler - used by nodes to get missing FB by received LFB
-	// ticket from sharder sent the ticket.
-	http.HandleFunc("/v1/_x2s/block/get",
-		node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
+const (
+	getBlockX2SV1Pattern = "/v1/_x2s/block/get"
+)
+
+func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
+	return map[string]func(http.ResponseWriter, *http.Request){
+		getBlockX2SV1Pattern: node.ToN2NSendEntityHandler(
+			// BlockRequestHandler - used by nodes to get missing FB by received LFB
+			// ticket from sharder sent the ticket.
+			RoundBlockRequestHandler,
+		),
+	}
+}
+
+func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlers {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 // RoundSummariesHandler -

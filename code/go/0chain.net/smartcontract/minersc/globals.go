@@ -40,6 +40,7 @@ const (
 	Owner   // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
+	BlockMaxCost
 	BlockMaxByteSize
 	BlockReplicators
 	BlockGenerationTimout        // todo from miner.update
@@ -123,6 +124,7 @@ var GlobalSettingName = []string{
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
+	"server_chain.block.max_block_cost",
 	"server_chain.block.max_byte_size",
 	"server_chain.block.replicators",
 	"server_chain.block.generation.timeout",
@@ -220,6 +222,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
+	GlobalSettingName[BlockMaxCost]:                      {smartcontract.Int, true},
 	GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
 	GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
 	GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, false},

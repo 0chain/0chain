@@ -11,9 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/smartcontract/dbs/event"
 	"github.com/herumi/bls/ffi/go/bls"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -29,6 +27,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/minersc"
 )
 
@@ -973,14 +972,14 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 }
 
 /*DeleteRound - delete a round and associated block data */
-func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
+func (c *Chain) deleteRound(ctx context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())
 }
 
 /*DeleteRoundsBelow - delete rounds below */
-func (c *Chain) DeleteRoundsBelow(roundNumber int64) {
+func (c *Chain) deleteRoundsBelow(roundNumber int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
