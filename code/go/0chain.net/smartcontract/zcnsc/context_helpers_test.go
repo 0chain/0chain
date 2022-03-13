@@ -43,7 +43,10 @@ func MakeMockStateContext() *mocks.StateContextI {
 
 	// Global Node
 
-	globalNode := &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
+	globalNode := &GlobalNode{
+		ID:             ADDRESS,
+		MinStakeAmount: 11,
+	}
 
 	// User Node
 
@@ -254,6 +257,24 @@ func MakeMockStateContext() *mocks.StateContextI {
 			events[id] = authorizerNode
 		})
 
+	ctx.On(
+		"EmitEvent",
+		event.TypeStats,
+		event.TagUpdateAuthorizer,
+		mock.AnythingOfType("string"), // authorizerID
+		mock.AnythingOfType("string"), // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+			if err != nil {
+				panic(err)
+			}
+			if authorizerNode.ID != id {
+				panic("authorizerID must be equal to ID")
+			}
+			events[id] = authorizerNode
+		})
+
 	return ctx
 }
 
@@ -261,7 +282,7 @@ func createTestAuthorizer(ctx *mocks.StateContextI, id string) *Authorizer {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 
-	node := CreateAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
+	node := NewAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 
