@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -14,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"go.uber.org/zap"
 )
 
 /*SetupNodeHandlers - setup the handlers for the chain */
@@ -65,7 +66,7 @@ func setupX2MRequestors() {
 	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
 }
 
-func SetupX2SRequestors() {
+func setupX2SRequestors() {
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
