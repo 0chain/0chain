@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"reflect"
 
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
+	. "0chain.net/chaincore/config"
 	"0chain.net/core/util"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 )
 
-type persistentNode interface {
-	util.Serializable
-	GetKey() string
-}
+var (
+	cfg = SmartContractConfig
+)
 
 func isNil(i interface{}) bool {
 	return i == nil || reflect.ValueOf(i).IsNil()
@@ -42,7 +40,7 @@ func GetAuthorizerNode(id string, ctx cstate.StateContextI) (*AuthorizerNode, er
 
 // GetUserNode returns error if node not found
 func GetUserNode(id string, ctx cstate.StateContextI) (*UserNode, error) {
-	node := &UserNode{ID: id}
+	node := NewUserNode(id, 0)
 	blob, err := ctx.GetTrieNode(node.GetKey())
 	if err != nil {
 		return node, err
@@ -84,14 +82,6 @@ func GetGlobalNode(ctx cstate.StateContextI) (*GlobalNode, error) {
 	if gn == nil {
 		return nil, err
 	}
-
-	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcn.min_mint_amount"))
-	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64("smart_contracts.zcn.percent_authorizers")
-	gn.MinAuthorizers = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_authorizers")
-	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_burn_amount")
-	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
-	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
-	gn.MaxFee = config.SmartContractConfig.GetInt64("smart_contracts.zcn.max_fee")
 
 	return gn, nil
 }
