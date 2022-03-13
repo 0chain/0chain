@@ -197,12 +197,14 @@ func (e *Entity) AddVRFSServerStats(ss *stats.VRFSRequest) error {
 	return e.client.addVRFSServerStats(ss)
 }
 
-func (e *Entity) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeRequest) error {
-	return e.client.addBlockStateChangeRequestorStats(rs)
-}
+func (e *Entity) AddBlockClientStats(rs *stats.BlockRequest, reqType stats.BlockRequestor) error {
+	br := newBlockRequest(rs, reqType)
+	blob, err := br.Encode()
+	if err != nil {
+		return err
+	}
 
-func (e *Entity) AddMinerNotarisedBlockRequestorStats(rs *stats.MinerNotarisedBlockRequest) error {
-	return e.client.addMinerNotarisedBlockRequestorStats(rs)
+	return e.client.addBlockClientStats(blob)
 }
 
 var global *Entity
