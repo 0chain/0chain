@@ -7,6 +7,7 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 const allValidatorsPartitionSize = 50
@@ -42,6 +43,13 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", common.NewError("add_validator_failed",
 				"Failed to get validator."+err.Error())
 		}
+
+		_, err = sc.getBlobber(newValidator.ID, balances)
+		if err != nil {
+			return "", common.NewError("add_validator_failed",
+				"new validator id does not match a registered blobber: "+err.Error())
+		}
+
 		allValidatorsList, err := getValidatorsList(balances)
 		if err != nil {
 			return "", common.NewError("add_validator_failed",
@@ -77,7 +85,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrUpdateStakePool(conf, t.ClientID, stakepool.Validator,
+	sp, err = sc.getOrUpdateStakePool(conf, t.ClientID, spenum.Validator,
 		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",

@@ -235,9 +235,9 @@ func TestGetSmartContract(t *testing.T) {
 			restpoints: 3,
 		},
 		{
-			name:       "zcn",
+			name:       "zcnsc",
 			address:    zcnsc.ADDRESS,
-			restpoints: 1,
+			restpoints: 3,
 		},
 		{
 			name:    "Nil_OK",
@@ -458,7 +458,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    blob,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0}}",
 			wantErr: false,
 		},
 	}

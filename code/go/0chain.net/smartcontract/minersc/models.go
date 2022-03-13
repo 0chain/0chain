@@ -246,8 +246,9 @@ type GlobalNode struct {
 	Minted state.Balance `json:"minted"`
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
-	RewardRoundFrequency int64         `json:"reward_round_frequency"`
-	OwnerId              datastore.Key `json:"owner_id"`
+	RewardRoundFrequency int64          `json:"reward_round_frequency"`
+	OwnerId              datastore.Key  `json:"owner_id"`
+	Cost                 map[string]int `json:"cost"`
 }
 
 func (gn *GlobalNode) readConfig() {
@@ -271,6 +272,7 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
+	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
 }
 
 func (gn *GlobalNode) validate() error {
@@ -356,6 +358,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MaxMint, nil
 	case OwnerId:
 		return gn.OwnerId, nil
+	case Cost:
+		return gn.Cost, nil
 	default:
 		return nil, errors.New("Setting not implemented")
 	}
@@ -799,17 +803,23 @@ type Stat struct {
 	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
 }
 
+type SimpleNodeGeolocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type SimpleNode struct {
-	ID          string `json:"id" validate:"hexadecimal,len=64"`
-	N2NHost     string `json:"n2n_host"`
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	Path        string `json:"path"`
-	PublicKey   string `json:"public_key"`
-	ShortName   string `json:"short_name"`
-	BuildTag    string `json:"build_tag"`
-	TotalStaked int64  `json:"total_stake"`
-	Delete      bool   `json:"delete"`
+	ID          string                `json:"id" validate:"hexadecimal,len=64"`
+	N2NHost     string                `json:"n2n_host"`
+	Host        string                `json:"host"`
+	Port        int                   `json:"port"`
+	Geolocation SimpleNodeGeolocation `json:"geolocation"`
+	Path        string                `json:"path"`
+	PublicKey   string                `json:"public_key"`
+	ShortName   string                `json:"short_name"`
+	BuildTag    string                `json:"build_tag"`
+	TotalStaked int64                 `json:"total_stake"`
+	Delete      bool                  `json:"delete"`
 
 	// settings and statistic
 

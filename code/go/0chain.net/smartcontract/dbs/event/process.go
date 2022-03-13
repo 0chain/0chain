@@ -30,6 +30,7 @@ const (
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddAuthorizer
+	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
@@ -46,6 +47,9 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
+	TagAddOrOverwriteDelegatePool
+	TagStakePoolReward
+	TagUpdateDelegatePool
 	TagStakePoolReward
 	TagStakePoolBalance
 	TagAddOrOverwriteStakePool
@@ -62,7 +66,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
 		newEvents := edb.removeDuplicate(ctx, events)
-
 		edb.addEvents(ctx, newEvents)
 		for _, event := range newEvents {
 			var err error = nil
@@ -215,6 +218,29 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.removeCurator(c)
+
+	//stake pool
+	case TagAddOrOverwriteDelegatePool:
+		var sp DelegatePool
+		err := json.Unmarshal([]byte(event.Data), &sp)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteDelegatePool(sp)
+	case TagUpdateDelegatePool:
+		var spUpdate dbs.DelegatePoolUpdate
+		err := json.Unmarshal([]byte(event.Data), &spUpdate)
+		if err != nil {
+			return err
+		}
+		return edb.updateDelegatePool(spUpdate)
+	case TagStakePoolReward:
+		var spu dbs.StakePoolReward
+		err := json.Unmarshal([]byte(event.Data), &spu)
+		if err != nil {
+			return err
+		}
+		return edb.rewardUpdate(spu)
 	case TagAddOrOverwriteStakePool:
 		return nil // todo
 	case TagAddOrOverwriteDelegatePool:

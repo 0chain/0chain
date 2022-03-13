@@ -3,6 +3,7 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -39,6 +40,7 @@ const (
 	Owner   // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
+	BlockMaxCost
 	BlockMaxByteSize
 	BlockReplicators
 	BlockGenerationTimout        // todo from miner.update
@@ -63,6 +65,7 @@ const (
 	TransactionPayloadMaxSize
 	TransactionTimeout // todo from global
 	TransactionMinFee  // todo from global
+	TransactionExempt
 	ClientSignatureScheme
 	ClientDiscover // todo from chain
 	MessagesVerificationTicketsTo
@@ -121,6 +124,7 @@ var GlobalSettingName = []string{
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
+	"server_chain.block.max_block_cost",
 	"server_chain.block.max_byte_size",
 	"server_chain.block.replicators",
 	"server_chain.block.generation.timeout",
@@ -143,6 +147,7 @@ var GlobalSettingName = []string{
 	"server_chain.transaction.payload.max_size",
 	"server_chain.transaction.timeout",
 	"server_chain.transaction.min_fee",
+	"server_chain.transaction.exempt",
 	"server_chain.client.signature_scheme",
 	"server_chain.client.discover",
 	"server_chain.messages.verification_tickets_to",
@@ -217,6 +222,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
+	GlobalSettingName[BlockMaxCost]:                      {smartcontract.Int, true},
 	GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
 	GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
 	GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, false},
@@ -239,6 +245,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[TransactionPayloadMaxSize]:         {smartcontract.Int, true},
 	GlobalSettingName[TransactionTimeout]:                {smartcontract.Int, false},
 	GlobalSettingName[TransactionMinFee]:                 {smartcontract.Int64, false},
+	GlobalSettingName[TransactionExempt]:                 {smartcontract.Strings, true},
 	GlobalSettingName[ClientSignatureScheme]:             {smartcontract.String, true},
 	GlobalSettingName[ClientDiscover]:                    {smartcontract.Boolean, false},
 	GlobalSettingName[MessagesVerificationTicketsTo]:     {smartcontract.String, true},
@@ -486,13 +493,35 @@ func (gl *GlobalSettings) GetBool(field GlobalSetting) (bool, error) {
 	return value, nil
 }
 
+// GetStrings returns a global setting as a []string], a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetStrings(field GlobalSetting) ([]string, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return nil, err
+	}
+
+	iValue, err := smartcontract.StringToInterface(gl.Fields[key], smartcontract.Strings)
+	if err != nil {
+		return viper.GetStringSlice(key), nil
+	}
+	value, ok := iValue.([]string)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
+	}
+	return value, nil
+}
+
 func getStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
 	for key := range GlobalSettingInfo {
 		if _, ok := GlobalSettingsIgnored[key]; ok {
 			continue
 		}
-		globals[key] = viper.GetString(key)
+		if key == "server_chain.transaction.exempt" {
+			globals[key] = strings.Join(viper.GetStringSlice(key), ",")
+		} else {
+			globals[key] = viper.GetString(key)
+		}
 	}
 	return globals
 }
