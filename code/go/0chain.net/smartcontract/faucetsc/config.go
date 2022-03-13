@@ -18,6 +18,7 @@ const (
 	IndividualReset
 	GlobalReset
 	OwnerId
+	Cost
 )
 
 var (
@@ -29,17 +30,19 @@ var (
 		"individual_reset",
 		"global_rest",
 		"owner_id",
+		"cost",
 	}
 )
 
 type FaucetConfig struct {
-	PourAmount      state.Balance `json:"pour_amount"`
-	MaxPourAmount   state.Balance `json:"max_pour_amount"`
-	PeriodicLimit   state.Balance `json:"periodic_limit"`
-	GlobalLimit     state.Balance `json:"global_limit"`
-	IndividualReset time.Duration `json:"individual_reset"`
-	GlobalReset     time.Duration `json:"global_rest"`
-	OwnerId         datastore.Key `json:"owner_id"`
+	PourAmount      state.Balance  `json:"pour_amount"`
+	MaxPourAmount   state.Balance  `json:"max_pour_amount"`
+	PeriodicLimit   state.Balance  `json:"periodic_limit"`
+	GlobalLimit     state.Balance  `json:"global_limit"`
+	IndividualReset time.Duration  `json:"individual_reset"`
+	GlobalReset     time.Duration  `json:"global_rest"`
+	OwnerId         datastore.Key  `json:"owner_id"`
+	Cost            map[string]int `json:"cost"`
 }
 
 // configurations from sc.yaml
@@ -52,5 +55,6 @@ func getConfig() (conf *FaucetConfig) {
 	conf.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
 	conf.GlobalReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	conf.OwnerId = config.SmartContractConfig.GetString("smart_contracts.faucetsc.owner_id")
+	conf.Cost = config.SmartContractConfig.GetStringMapInt("smart_contracts.faucetsc.cost")
 	return
 }

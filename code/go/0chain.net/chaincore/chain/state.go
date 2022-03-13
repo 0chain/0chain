@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -144,6 +145,30 @@ func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.Mer
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return c.updateState(ctx, b, bState, txn)
+}
+
+func (c *Chain) EstimateTransactionCost(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (int, error) {
+	var (
+		clientState = CreateTxnMPT(bState) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, txn, nil)
+	)
+
+	if txn.TransactionType == transaction.TxnTypeSmartContract {
+		var scData sci.SmartContractTransactionData
+		dataBytes := []byte(txn.TransactionData)
+		err := json.Unmarshal(dataBytes, &scData)
+		if err != nil {
+			logging.Logger.Error("Error while decoding the JSON from transaction",
+				zap.Any("input", txn.TransactionData), zap.Any("error", err))
+			return math.MaxInt32, err
+		}
+		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
+		logging.Logger.Debug("transaction cost", zap.Int("cost", cost), zap.String("tx_hash", txn.Hash),
+			zap.String("func", scData.FunctionName))
+		return cost, err
+	}
+
+	return 0, nil
 }
 
 // NewStateContext creation helper.
