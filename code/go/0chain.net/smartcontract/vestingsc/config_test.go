@@ -47,14 +47,14 @@ func Test_config_validate(t *testing.T) {
 		// min duration
 		{config{1, s(-1), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
 		{config{1, s(0), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
-		// max dura
+		// max duration
 		{config{1, s(1), s(0), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
-			"invaliduraios orequal to min_duration"},
+			"invalid max_duration: less or equal to min_duration"},
 		{config{1, s(1), s(1), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}},
 			"invalid max_duration: less or equal to min_duration"},
 		// max_destinations
 		{config{1, s(1), s(2), 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_destinations (< 1)"},
-		// max_descn_legt
+		// max_description_length
 		{config{1, s(1), s(2), 1, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid max_description_length (< 1)"},
 		{config{1, s(1), s(2), 1, 1, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "owner_id is not set or empty"},
 	} {

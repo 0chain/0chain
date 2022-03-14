@@ -279,9 +279,9 @@ func TestCommitSettingChanges(t *testing.T) {
 						{
 							expected, err := time.ParseDuration(value)
 							require.NoError(t, err)
-							actual, ok := setting.(int64)
+							actual, ok := setting.(time.Duration)
 							require.True(t, ok)
-							if int64(expected) != actual {
+							if expected != actual {
 								return false
 							}
 						}

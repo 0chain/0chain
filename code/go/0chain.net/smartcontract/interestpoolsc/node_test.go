@@ -64,7 +64,7 @@ func TestGlobalNode_Encode(t *testing.T) {
 	type fields struct {
 		ID               datastore.Key
 		SimpleGlobalNode *SimpleGlobalNode
-		MinLockPeriod    int64
+		MinLockPeriod    time.Duration
 	}
 	tests := []struct {
 		name   string
@@ -108,7 +108,7 @@ func TestGlobalNode_Decode(t *testing.T) {
 	type fields struct {
 		ID               datastore.Key
 		SimpleGlobalNode *SimpleGlobalNode
-		MinLockPeriod    int64
+		MinLockPeriod    time.Duration
 	}
 	type args struct {
 		input []byte
@@ -178,7 +178,7 @@ func TestGlobalNode_getKey(t *testing.T) {
 	type fields struct {
 		ID               datastore.Key
 		SimpleGlobalNode *SimpleGlobalNode
-		MinLockPeriod    int64
+		MinLockPeriod    time.Duration
 	}
 	tests := []struct {
 		name   string
@@ -213,7 +213,7 @@ func TestGlobalNode_GetHashBytes(t *testing.T) {
 	type fields struct {
 		ID               datastore.Key
 		SimpleGlobalNode *SimpleGlobalNode
-		MinLockPeriod    int64
+		MinLockPeriod    time.Duration
 	}
 	tests := []struct {
 		name   string
@@ -225,7 +225,7 @@ func TestGlobalNode_GetHashBytes(t *testing.T) {
 			fields: fields{
 				ID:               ADDRESS,
 				SimpleGlobalNode: &SimpleGlobalNode{},
-				MinLockPeriod:    int64(10 * time.Second),
+				MinLockPeriod:    10 * time.Second,
 			},
 			want: gnHash10,
 		},
@@ -234,7 +234,7 @@ func TestGlobalNode_GetHashBytes(t *testing.T) {
 			fields: fields{
 				ID:               ADDRESS,
 				SimpleGlobalNode: &SimpleGlobalNode{},
-				MinLockPeriod:    int64(0 * time.Second),
+				MinLockPeriod:    0 * time.Second,
 			},
 			want: gnHash0,
 		},
@@ -257,7 +257,7 @@ func TestGlobalNode_GetHash(t *testing.T) {
 	type fields struct {
 		ID               datastore.Key
 		SimpleGlobalNode *SimpleGlobalNode
-		MinLockPeriod    int64
+		MinLockPeriod    time.Duration
 	}
 	tests := []struct {
 		name   string
@@ -292,7 +292,7 @@ func TestGlobalNode_canMint(t *testing.T) {
 	type fields struct {
 		ID               datastore.Key
 		SimpleGlobalNode *SimpleGlobalNode
-		MinLockPeriod    int64
+		MinLockPeriod    time.Duration
 	}
 	tests := []struct {
 		name   string
