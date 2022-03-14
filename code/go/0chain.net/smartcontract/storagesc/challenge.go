@@ -817,6 +817,29 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 		return string(challengeBytes), err
 	}
 
+	allocChallengeObj, err := sc.getAllocationChallenge(alloc.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			allocChallengeObj = &AllocationChallenge{}
+			allocChallengeObj.AllocationID = alloc.ID
+		} else {
+			return "", common.NewError("add_challenge",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
+
+	addedAllocChallenge := allocChallengeObj.addChallenge(&storageChallenge)
+	if !addedAllocChallenge {
+		challengeBytes, err := json.Marshal(storageChallenge)
+		return string(challengeBytes), err
+	}
+
+	_, err = balances.InsertTrieNode(allocChallengeObj.GetKey(sc.ID), allocChallengeObj)
+	if err != nil {
+		return "", common.NewError("add_challenge",
+			"error storing alloc challenge: "+err.Error())
+	}
+
 	_, err = balances.InsertTrieNode(storageChallenge.GetKey(sc.ID), &storageChallenge)
 	if err != nil {
 		return "", common.NewError("add_challenge",

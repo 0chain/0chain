@@ -1208,35 +1208,39 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberDetails))
 	var failed, succesful int64 = 0, 0
-	// range over all related blobbers
-	for _, d := range alloc.BlobberDetails {
-		// check out blobber challenges
-		var bc *BlobberChallenge
-		bc, err = sc.getBlobberChallenge(d.BlobberID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, fmt.Errorf("getting blobber challenge: %v", err)
+
+	allocChallenge, err := sc.getAllocationChallenge(alloc.ID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, fmt.Errorf("getting blobber challenge: %v", err)
+	}
+
+	var blobberFound = make(map[string]bool)
+	for _, c := range allocChallenge.Challenges {
+		blobberID := c.BlobberID
+		d, ok := alloc.BlobberMap[blobberID]
+		if !ok {
+			continue
 		}
-		// no blobber challenges, no failures
-		if err == util.ErrValueNotPresent || len(bc.ChallengeIDs) == 0 {
-			passRates, err = append(passRates, 1.0), nil
-			continue // no challenges for the blobber
-		}
+
 		if d.Stats == nil {
 			d.Stats = new(StorageAllocationStats) // make sure
 		}
-		// all expired open challenges are failed, all other
-		// challenges we are treating as successful
-		for _, c := range bc.Challenges {
-			if c.Response != nil || c.AllocationID != alloc.ID {
-				continue // already accepted, already rewarded/penalized
-			}
-			var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
-			if expire < now {
-				d.Stats.FailedChallenges++
-			} else {
-				d.Stats.SuccessChallenges++
-			}
+
+		if c.Response != nil || c.AllocationID != alloc.ID {
+			continue // already accepted, already rewarded/penalized
 		}
+		var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
+		if expire < now {
+			d.Stats.FailedChallenges++
+		} else {
+			d.Stats.SuccessChallenges++
+		}
+
+		blobberFound[blobberID] = true
+	}
+
+	for _, d := range alloc.BlobberDetails {
+
 		d.Stats.OpenChallenges = 0
 		d.Stats.TotalChallenges = d.Stats.SuccessChallenges + d.Stats.FailedChallenges
 		if d.Stats.TotalChallenges == 0 {
@@ -1249,6 +1253,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		succesful += d.Stats.SuccessChallenges
 		failed += d.Stats.FailedChallenges
 	}
+
 	alloc.Stats.SuccessChallenges = succesful
 	alloc.Stats.FailedChallenges = failed
 	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
