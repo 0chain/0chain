@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/smartcontract"
@@ -632,7 +634,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
 					PoolId:       getMockBlobberStakePoolId(0, 0),
-					ProviderType: stakepool.Blobber,
+					ProviderType: spenum.Blobber,
 				})
 				return bytes
 			}(),
