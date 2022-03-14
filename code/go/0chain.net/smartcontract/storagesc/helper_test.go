@@ -393,15 +393,11 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.ID = challID
 	storChall.PrevID = prevID
 	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
-	for _, val := range valSlice {
-		storChall.Validators = append(storChall.Validators, &ValidationNode{
-			ID:      val.Name(),
-			BaseURL: val.Data(),
-		})
-	}
+	storChall.TotalValidators = len(valSlice)
 	storChall.RandomNumber = seed
 	storChall.AllocationID = allocID
 	//storChall.Blobber = blobber
+	storChall.BlobberID = blobber.ID
 	storChall.AllocationRoot = allocRoot
 
 	require.True(t, blobberChall.addChallenge(storChall))

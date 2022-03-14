@@ -441,11 +441,14 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				alloc, err = ssc.getAllocation(allocID, balances)
 				require.NoError(b, err)
 
+				// 6.3 keep for the benchmark
+				blobberID = alloc.Blobbers[rand.Intn(len(alloc.Blobbers))].ID
+
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
 					challBytes string
 				)
-				challBytes, err = ssc.addChallenge(alloc, valids, challID,
+				challBytes, err = ssc.addChallenge(alloc, blobberID, valids, challID,
 					common.Timestamp(tp), r, tp, balances)
 				require.NoError(b, err)
 
@@ -458,8 +461,10 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				var challResp ChallengeResponse
 				challResp.ID = chall.ID
 
-				for _, v := range chall.Validators {
-					var vx = blobsMap[v.ID]
+				validators, err := valids.GetRandomSlice(r, balances)
+				require.NoError(b, err)
+				for _, v := range validators {
+					var vx = blobsMap[v.Name()]
 					challResp.ValidationTickets = append(
 						challResp.ValidationTickets,
 						vx.validTicket(b, chall.ID, chall.BlobberID, true, tp),
@@ -467,7 +472,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				}
 
 				// 6.3 keep for the benchmark
-				blobberID = chall.BlobberID
+				//blobberID = chall.BlobberID
 
 				// 6.4 prepare transaction
 				tp += 1
