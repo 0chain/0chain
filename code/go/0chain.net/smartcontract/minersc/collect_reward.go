@@ -3,7 +3,9 @@ package minersc
 import (
 	"fmt"
 
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -19,13 +21,14 @@ func (ssc *MinerSmartContract) collectReward(
 	_ *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-
 	var prr stakepool.CollectRewardRequest
 	if err := prr.Decode(input); err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't decode request: %v", err)
 	}
-
+	logging.Logger.Info("piers miner sc collectReward",
+		zap.Any("input", prr),
+	)
 	if prr.ProviderType != spenum.Miner && prr.ProviderType != spenum.Sharder {
 		return "", common.NewErrorf("collect_reward_failed",
 			"invalid provider type: %s", prr.ProviderType.String())
@@ -37,7 +40,10 @@ func (ssc *MinerSmartContract) collectReward(
 			"can't get related user stake pools: %v", err)
 	}
 
-	providerID := usp.Find(prr.PoolId)
+	var providerID = prr.ProviderId
+	if len(prr.ProviderId) == 0 {
+		providerID = usp.Find(prr.PoolId)
+	}
 	if len(providerID) == 0 {
 		return "", common.NewErrorf("collect_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
