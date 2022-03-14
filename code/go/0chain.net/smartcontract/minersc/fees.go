@@ -362,7 +362,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		minerf, sharderf = gn.splitByShareRatio(fees)
 	)
 
-	mn.Stat.GeneratorRewards += minerr + minerf
 	if err := mn.StakePool.DistributeRewards(
 		float64(minerr+minerf), mn.ID, spenum.Miner, balances,
 	); err != nil {
@@ -423,30 +422,6 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	return state.Balance(totalMaxFee)
 }
 
-func (msc *MinerSmartContract) payStakeHolders(
-	value state.Balance,
-	node *MinerNode,
-	isSharder bool,
-	balances cstate.StateContextI,
-) (string, error) {
-	if value == 0 {
-		return "", nil
-	}
-	var err error
-	if isSharder {
-		node.Stat.SharderRewards += value
-		err = node.StakePool.DistributeRewards(
-			float64(value), node.ID, spenum.Sharder, balances,
-		)
-	} else {
-		node.Stat.GeneratorRewards += value
-		err = node.StakePool.DistributeRewards(
-			float64(value), node.ID, spenum.Miner, balances,
-		)
-	}
-	return "", err
-}
-
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
 
@@ -495,7 +470,6 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 	// part for every sharder
 	for _, sh := range sharders {
-		sh.Stat.SharderRewards += partf + partm
 		if err = sh.StakePool.DistributeRewards(
 			float64(partf+partm), sh.ID, spenum.Sharder, balances,
 		); err != nil {
@@ -510,37 +484,4 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	}
 
 	return nil
-}
-
-func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
-	gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	if reward != 0 {
-		Logger.Info("pay "+mn.NodeType.String()+" service charge",
-			zap.Any("delegate_wallet", mn.DelegateWallet),
-			zap.Any("service_charge_reward", reward))
-
-		mn.Stat.GeneratorRewards += reward
-		var mint = state.NewMint(ADDRESS, mn.DelegateWallet, reward)
-		if err = balances.AddMint(mint); err != nil {
-			resp += fmt.Sprintf("pay_fee/minting - adding mint: %v", err)
-		}
-		msc.addMint(gn, mint.Amount)
-		resp += string(mint.Encode())
-	}
-	if fee != 0 {
-		Logger.Info("pay "+mn.NodeType.String()+" service charge",
-			zap.Any("delegate_wallet", mn.DelegateWallet),
-			zap.Any("service_charge_fee", fee))
-
-		mn.Stat.GeneratorFees += fee
-		var transfer = state.NewTransfer(ADDRESS, mn.DelegateWallet, fee)
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", fmt.Errorf("adding transfer: %v", err)
-		}
-		resp += string(transfer.Encode())
-	}
-
-	return resp, nil
 }

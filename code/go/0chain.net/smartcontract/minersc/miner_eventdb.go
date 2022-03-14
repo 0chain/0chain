@@ -34,10 +34,6 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		NumberOfDelegates: edbMiner.NumberOfDelegates,
 		MinStake:          edbMiner.MinStake,
 		MaxStake:          edbMiner.MaxStake,
-		Stat: Stat{
-			GeneratorRewards: edbMiner.Rewards,
-			GeneratorFees:    edbMiner.Fees,
-		},
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbMiner.Latitude,
 			Longitude: edbMiner.Longitude,
@@ -54,7 +50,6 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 }
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
-
 	return event.Miner{
 		MinerID:           mn.ID,
 		N2NHost:           mn.N2NHost,
@@ -72,8 +67,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		MinStake:          mn.MinStake,
 		MaxStake:          mn.MaxStake,
 		LastHealthCheck:   mn.LastHealthCheck,
-		Rewards:           mn.Stat.GeneratorRewards,
-		Fees:              mn.Stat.GeneratorFees,
+		Rewards:           mn.Reward,
 		Active:            mn.Status == node.NodeStatusActive,
 		Longitude:         mn.Geolocation.Longitude,
 		Latitude:          mn.Geolocation.Latitude,
@@ -130,8 +124,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"min_stake":           mn.MinStake,
 			"max_stake":           mn.MaxStake,
 			"last_health_check":   mn.LastHealthCheck,
-			"rewards":             mn.SimpleNode.Stat.GeneratorRewards,
-			"fees":                mn.SimpleNode.Stat.GeneratorFees,
+			"rewards":             mn.Reward,
 			"longitude":           0,
 			"latitude":            0,
 		},

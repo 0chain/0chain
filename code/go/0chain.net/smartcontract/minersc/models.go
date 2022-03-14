@@ -729,15 +729,6 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	return
 }
 
-type Stat struct {
-	// for miner (totals)
-	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
-	GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
-	// for sharder (totals)
-	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
-	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
-}
-
 type SimpleNodeGeolocation struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -770,9 +761,6 @@ type SimpleNode struct {
 	MinStake state.Balance `json:"min_stake"`
 	// MaxStake allowed by node.
 	MaxStake state.Balance `json:"max_stake"`
-
-	// Stat contains node statistic.
-	Stat Stat `json:"stat"`
 
 	// NodeType used for delegate pools statistic.
 	NodeType NodeType `json:"node_type,omitempty"`

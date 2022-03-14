@@ -123,7 +123,7 @@ func (msc *MinerSmartContract) AddSharder(
 			return string(newSharder.Encode()), nil
 		}
 		// otherwise the sharder has saved by block sharders reward
-		newSharder.Stat.SharderRewards = existing.Stat.SharderRewards
+		newSharder.Reward = existing.Reward
 	}
 
 	newSharder.NodeType = NodeTypeSharder // set node type
