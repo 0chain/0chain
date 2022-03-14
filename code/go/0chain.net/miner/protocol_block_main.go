@@ -5,6 +5,7 @@ package miner
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"context"
@@ -26,5 +27,17 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	return
 }
 
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	mc.updateFinalizedBlock(ctx, b)
+}
+
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+	return mc.generateBlockWorker.Run(ctx, func() error {
+		return mc.generateBlock(ctx, b, minerChain, waitOver)
+	})
+}
+
 func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
+
 }

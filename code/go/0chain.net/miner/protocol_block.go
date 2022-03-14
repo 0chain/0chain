@@ -9,7 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/smartcontract/storagesc"
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -17,18 +18,13 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
-
-	"0chain.net/smartcontract/minersc"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
-	metrics "github.com/rcrowley/go-metrics"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/storagesc"
 )
 
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
@@ -329,6 +325,20 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 	logging.Logger.Debug("ValidateTransactions finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
+	logging.Logger.Debug("ValidateBlockCost", zap.String("block", b.Hash))
+	cost := 0
+	for _, txn := range b.Txns {
+		c, err := mc.EstimateTransactionCost(ctx, b, mc.GetLatestFinalizedBlock().ClientState, txn)
+		if err != nil {
+			return nil, err
+		}
+		cost += c
+		if cost > mc.Config.MaxBlockCost() {
+			return nil, block.ErrCostTooBig
+		}
+	}
+	logging.Logger.Debug("ValidateBlockCost", zap.Int("calculated cost", cost))
+
 	logging.Logger.Debug("ComputeState", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.ComputeState(ctx, b); err != nil {
@@ -520,7 +530,7 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()))
 	if config.Development() {
 		for _, t := range b.Txns {
@@ -565,14 +575,6 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 //NotarizedBlockFetched - handler to process fetched notarized block
 func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// mc.SendNotarization(ctx, b)
-}
-
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
-	bsh chain.BlockStateHandler, waitOver bool) error {
-
-	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
-	})
 }
 
 type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *TxnIterInfo) bool
@@ -685,6 +687,8 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
+	//accumulated transaction cost
+	cost int
 }
 
 func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
@@ -749,6 +753,16 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
+		cost, err := mc.EstimateTransactionCost(ctx, mc.GetLatestFinalizedBlock(), mc.GetLatestFinalizedBlock().ClientState, txn)
+		if err != nil {
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			return true
+		}
+		if tii.cost+cost >= mc.Config.MaxBlockCost() {
+			logging.Logger.Debug("generate block (too big cost, skipping)")
+			return true
+		}
+
 		if txnProcessor(ctx, bState, txn, tii) {
 			if tii.idx >= mc.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
@@ -833,7 +847,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	var reusedTxns int32
 
 	rcount := 0
-	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && len(iterInfo.currentTxns) > 0 && err != context.DeadlineExceeded {
+	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && len(iterInfo.currentTxns) > 0 &&
+		err != context.DeadlineExceeded && iterInfo.cost < mc.Config.MaxBlockCost() {
 		for _, txn := range iterInfo.currentTxns {
 			if txnProcessor(ctx, blockState, txn, iterInfo) {
 				rcount++
