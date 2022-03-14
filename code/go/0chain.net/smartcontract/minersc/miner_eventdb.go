@@ -13,7 +13,6 @@ import (
 )
 
 func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
-
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
 		status = node.NodeStatusActive

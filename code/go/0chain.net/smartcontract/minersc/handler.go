@@ -420,10 +420,12 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 		return nil, common.NewErrInternal("cannot connect to eventdb database")
 	}
 	if miner, err := balances.GetEventDB().GetMiner(id); err == nil {
-		return minerTableToMinerNode(miner), nil
+		return miner, err
+		//return minerTableToMinerNode(miner), nil
 	}
 	if sharder, err := balances.GetEventDB().GetSharder(id); err == nil {
-		return sharderTableToSharderNode(sharder), nil
+		return sharder, err
+		//return sharderTableToSharderNode(sharder), nil
 	}
 	return nil, common.NewErrBadRequest("miner/sharder not found")
 }
