@@ -108,26 +108,19 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
 
-	sn, err := ssc.getBlobber(blobberID, balances)
-	if err != nil {
-		return nil, err
+	if balances.GetEventDB() == nil {
+		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
 	}
 
-	return sn, nil
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	}
 
-	//if balances.GetEventDB() == nil {
-	//	return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	//}
-	//
-	//blobber, err := balances.GetEventDB().GetBlobber(blobberID)
-	//if err != nil {
-	//	return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	//}
-	//
-	//sn, err := blobberTableToStorageNode(*blobber)
-	//if err != nil {
-	//	return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	//}
+	sn, err := blobberTableToStorageNode(*blobber)
+	if err != nil {
+		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	}
 	return sn, err
 }
 
