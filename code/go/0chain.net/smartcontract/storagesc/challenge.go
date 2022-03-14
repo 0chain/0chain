@@ -48,7 +48,7 @@ func getBlobbersChallengeList(balances c_state.StateContextI) (partitions.RandPa
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(
 	blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge,
-	challengeResponse *ChallengeResponse) bool {
+	challengeResponse *ChallengeResponse, balances c_state.StateContextI) bool {
 
 	found := false
 	if len(blobberChallengeObj.ChallengeIDs) > 0 {
@@ -61,10 +61,35 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 	if found && idx < len(blobberChallengeObj.ChallengeIDs) {
 		blobberChallengeObj.ChallengeIDs = append(
 			blobberChallengeObj.ChallengeIDs[:idx], blobberChallengeObj.ChallengeIDs[idx+1:]...)
+		allocChallenge, err := sc.getAllocationChallenge(challengeCompleted.AllocationID, balances)
+		if err != nil {
+			Logger.Error("error fetching allocation challenge (complete_challenge)",
+				zap.String("allocation id", challengeCompleted.AllocationID))
+			return false
+		}
+
+		if _, ok := allocChallenge.ChallengeMap[challengeCompleted.ID]; ok {
+			for i := range allocChallenge.Challenges {
+				if allocChallenge.Challenges[i].ID == challengeCompleted.ID {
+					allocChallenge.Challenges = append(
+						allocChallenge.Challenges[:i], allocChallenge.Challenges[i+1:]...)
+					break
+				}
+			}
+
+			_, err = balances.InsertTrieNode(allocChallenge.GetKey(sc.ID), allocChallenge)
+			if err != nil {
+				Logger.Error("error inserting allocation challenge (complete_challenge)",
+					zap.String("allocation id", challengeCompleted.AllocationID))
+				return false
+			}
+
+		}
+
 		challengeCompleted.Response = challengeResponse
 		blobberChallengeObj.LatestCompletedChallenge = challengeCompleted
-		delete(blobberChallengeObj.ChallengeIDMap, challengeCompleted.ID)
 	}
+
 	return found
 }
 
@@ -392,8 +417,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"Invalid parameters to challenge response")
 	}
 
-	var blobberChall *BlobberChallenge
-	blobberChall, err = sc.getBlobberChallenge(t.ClientID, balances)
+	blobberChall, err := sc.getBlobberChallenge(t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"can't get the blobber challenge %s: %v", t.ClientID, err)
@@ -475,7 +499,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if pass && fresh {
 
 		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
-			&challResp)
+			&challResp, balances)
 		if !completed {
 			return "", common.NewError("challenge_out_of_order",
 				"First challenge on the list is not same as the one"+
@@ -524,7 +548,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if enoughFails || (pass && !fresh) {
 
 		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
-			&challResp)
+			&challResp, balances)
 		if !completed {
 			return "", common.NewError("challenge_out_of_order",
 				"First challenge on the list is not same as the one"+
