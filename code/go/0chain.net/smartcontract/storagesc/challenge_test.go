@@ -107,11 +107,15 @@ func TestAddChallenge(t *testing.T) {
 			require.NoError(t, err)
 		}
 
+		var bID string
 		r := rand.New(rand.NewSource(int64(p.randomSeed)))
-		bcList, err := blobberChallenge.GetRandomSlice(r, balances)
-		require.NoError(t, err)
-		i := rand.Intn(len(bcList))
-		bcItem := bcList[i]
+		if p.numBlobbers > 0 {
+			bcList, err := blobberChallenge.GetRandomSlice(r, balances)
+			require.NoError(t, err)
+			i := rand.Intn(len(bcList))
+			bcItem := bcList[i]
+			bID = bcItem.Name()
+		}
 
 		return args{
 			alloc: &StorageAllocation{
@@ -122,7 +126,7 @@ func TestAddChallenge(t *testing.T) {
 			},
 			validators: validators,
 			r:          r,
-			blobberID:  bcItem.Name(),
+			blobberID:  bID,
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.MPTSerializable),
 			},
@@ -184,7 +188,7 @@ func TestAddChallenge(t *testing.T) {
 			},
 			want: want{
 				error:    true,
-				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+				errorMsg: "add_challenges: empty blobber id",
 			},
 		},
 	}

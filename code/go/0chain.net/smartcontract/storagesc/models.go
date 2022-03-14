@@ -157,21 +157,6 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 }
 
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
-	//if sn.Challenges == nil {
-	//	sn.Challenges = make([]*StorageChallenge, 0)
-	//	sn.ChallengeMap = make(map[string]*StorageChallenge)
-	//}
-	//if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
-	//	if len(sn.Challenges) > 0 {
-	//		lastChallenge := sn.Challenges[len(sn.Challenges)-1]
-	//		challenge.PrevID = lastChallenge.ID
-	//	} else if sn.LatestCompletedChallenge != nil {
-	//		challenge.PrevID = sn.LatestCompletedChallenge.ID
-	//	}
-	//	sn.Challenges = append(sn.Challenges, challenge)
-	//	sn.ChallengeMap[challenge.ID] = challenge
-	//	return true
-	//}
 
 	if sn.ChallengeIDs == nil {
 		sn.ChallengeIDMap = make(map[string]bool)

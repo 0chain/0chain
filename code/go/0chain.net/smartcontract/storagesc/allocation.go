@@ -1210,8 +1210,8 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	var failed, succesful int64 = 0, 0
 
 	allocChallenge, err := sc.getAllocationChallenge(alloc.ID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, fmt.Errorf("getting blobber challenge: %v", err)
+	if err != nil {
+		return nil, fmt.Errorf("getting allocation challenge: %v", err)
 	}
 
 	var blobberFound = make(map[string]bool)

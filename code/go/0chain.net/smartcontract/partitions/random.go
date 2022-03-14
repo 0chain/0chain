@@ -291,6 +291,8 @@ func (rs *randomSelector) getPartition(
 	var part PartitionItemList
 	if rs.ItemType == ItemString {
 		part = &itemList{}
+	} else if rs.ItemType == ItemBlobberChallenge {
+		part = &blobberChallengeItemList{}
 	} else {
 		part = &validatorItemList{}
 	}

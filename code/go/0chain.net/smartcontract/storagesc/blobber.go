@@ -654,7 +654,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		err = bcPartition.UpdateItem(details.ChallengePartitionLoc.Location, pData, balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
-				"error updating blobber challenge partition")
+				"error updating blobber challenge partition"+err.Error())
 		}
 	}
 

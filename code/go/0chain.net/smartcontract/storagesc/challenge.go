@@ -110,7 +110,7 @@ func (sc *StorageSmartContract) getStorageChallengeBytes(challengeID string,
 	balances c_state.StateContextI) (b []byte, err error) {
 
 	var (
-		chall *StorageChallenge
+		chall = new(StorageChallenge)
 		seri  util.Serializable
 	)
 	chall.ID = challengeID
@@ -774,6 +774,10 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
 	balances c_state.StateContextI) (resp string, err error) {
 
+	if blobberID == "" {
+		return "", common.NewError("add_challenges",
+			"empty blobber id")
+	}
 	blobber := &StorageNode{}
 
 	for _, b := range alloc.Blobbers {
