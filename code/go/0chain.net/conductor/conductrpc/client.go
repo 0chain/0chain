@@ -202,24 +202,13 @@ func (c *client) addVRFSServerStats(ss *stats.VRFSRequest) (err error) {
 	return
 }
 
-func (c *client) addBlockStateChangeRequestorStats(ss *stats.BlockStateChangeRequest) (err error) {
-	err = c.client.Call("Server.AddBlockStateChangeRequestorStats", ss, &struct{}{})
+func (c *client) addBlockClientStats(req []byte) (err error) {
+	err = c.client.Call("Server.AddBlockClientStats", req, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
 			return
 		}
-		err = c.client.Call("Server.AddBlockStateChangeRequestorStats", ss, &struct{}{})
-	}
-	return
-}
-
-func (c *client) addMinerNotarisedBlockRequestorStats(ss *stats.MinerNotarisedBlockRequest) (err error) {
-	err = c.client.Call("Server.AddMinerNotarisedBlockRequestorStats", ss, &struct{}{})
-	if err == rpc.ErrShutdown {
-		if err = c.dial(); err != nil {
-			return
-		}
-		err = c.client.Call("Server.AddMinerNotarisedBlockRequestorStats", ss, &struct{}{})
+		err = c.client.Call("Server.AddBlockClientStats", req, &struct{}{})
 	}
 	return
 }

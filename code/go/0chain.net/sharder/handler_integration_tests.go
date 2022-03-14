@@ -22,7 +22,6 @@ func SetupHandlers() {
 		handlers[getBlockV1Pattern],
 		chain.BlockStatsConfigurator{
 			HashKey: "block",
-			Handler: getBlockV1Pattern,
 		},
 	)
 
