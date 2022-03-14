@@ -15,7 +15,6 @@ func (ssc *StorageSmartContract) collectReward(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-
 	var prr stakepool.CollectRewardRequest
 	if err := prr.Decode(input); err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
@@ -28,7 +27,10 @@ func (ssc *StorageSmartContract) collectReward(
 			"can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.Find(prr.PoolId)
+	providerId := prr.ProviderId
+	if len(providerId) == 0 {
+		providerId = usp.Find(prr.PoolId)
+	}
 	if len(providerId) == 0 {
 		return "", common.NewErrorf("pay_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
