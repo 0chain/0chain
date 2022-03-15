@@ -155,6 +155,7 @@ func AddMockAllocations(
 				if err != nil {
 					panic(err)
 				}
+				break
 			}
 		}
 	}
