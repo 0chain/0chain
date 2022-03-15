@@ -115,7 +115,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, qsp := range stakePools {
 		weightRatio := weight[i] / totalWeight
 		if weightRatio > 0 && weightRatio <= 1 {
-			reward := bbr * (weight[i] / totalWeight)
+			reward := bbr * weightRatio
 			logging.Logger.Info("blobber_block_rewards_pass",
 				zap.Float64("reward", reward),
 				zap.String("blobber id", qualifyingBlobberIds[i]))
@@ -125,6 +125,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			}
 
 			qsp.Reward += state.Balance(reward) // do we need to do this?
+		} else {
+			logging.Logger.Error("blobber_bloc_rewards - error in weight ratio",
+				zap.Any("stake pool", qsp))
 		}
 	}
 
