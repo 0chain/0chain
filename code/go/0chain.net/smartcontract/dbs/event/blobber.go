@@ -169,7 +169,7 @@ func (edb *EventDb) GetBlobbersFromParams(params map[string]interface{}, dur tim
 	dbStore = dbStore.Where("max_offer_duration < ?", dur.String())
 
 	var blobberIDs []string
-	result := edb.Store.Get().Select("base_url").Find(&blobberIDs)
+	result := edb.Store.Get().Model(&Blobber{}).Select("base_url").Find(&blobberIDs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving blobbers, error %v", result.Error)
 	}
