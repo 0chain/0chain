@@ -297,7 +297,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.writePoolLock(t, input, balances)
 	case "write_pool_unlock":
 		resp, err = sc.writePoolUnlock(t, input, balances)
-
 		// stake pool
 
 	case "stake_pool_lock":

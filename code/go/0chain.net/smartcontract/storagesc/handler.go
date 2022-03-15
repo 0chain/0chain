@@ -359,7 +359,7 @@ func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	if blockHash != "" {
 		return balances.GetEventDB().GetTransactionByBlockHash(blockHash, offset, limit)
 	}
-	return nil, errors.New("No filter selected")
+	return nil, errors.New("no filter selected")
 }
 
 func (msc *StorageSmartContract) GetWriteMarkerHandler(
