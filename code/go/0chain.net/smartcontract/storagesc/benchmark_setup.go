@@ -30,6 +30,7 @@ func AddMockAllocations(
 	balances cstate.StateContextI,
 ) {
 	const mockMinLockDemand = 1
+	numAllocations := viper.GetInt(sc.NumAllocations)
 	var (
 		sscId = StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
@@ -40,12 +41,13 @@ func AddMockAllocations(
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
 		fps         = make([]fundedPools, len(clients), len(clients))
 
-		challanges = make([]BlobberChallenge, len(blobbers), len(blobbers))
+		challanges      = make([]BlobberChallenge, len(blobbers), len(blobbers))
+		allocChallenges = make([]AllocationChallenge, numAllocations, numAllocations)
 	)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		sa := addMockAllocation(
-			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators,
+			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators, allocChallenges,
 		)
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
@@ -142,6 +144,19 @@ func AddMockAllocations(
 		}
 	}
 
+	for _, ch := range allocChallenges {
+		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		if err != nil {
+			panic(err)
+		}
+		for _, chall := range ch.Challenges {
+			_, err := balances.InsertTrieNode(chall.GetKey(ADDRESS), chall)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
 	if err != nil {
 		panic(err)
@@ -157,6 +172,7 @@ func addMockAllocation(
 	blobbers []*StorageNode,
 	challanges []BlobberChallenge,
 	validators []*ValidationNode,
+	allocChallenges []AllocationChallenge,
 ) *StorageAllocation {
 	const mockMinLockDemand = 1
 	var (
@@ -230,7 +246,9 @@ func addMockAllocation(
 			blobbers[bIndex],
 			&challanges[bIndex],
 			validators,
+			&allocChallenges[i],
 		)
+
 	}
 	return sa
 }
@@ -241,6 +259,7 @@ func setupMockChallenges(
 	blobber *StorageNode,
 	bc *BlobberChallenge,
 	validators []*ValidationNode,
+	ac *AllocationChallenge,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
@@ -253,9 +272,11 @@ func setupMockChallenges(
 			TotalValidators: len(selValidators),
 			BlobberID:       blobber.ID,
 		}
+		ac.addChallenge(storageChall)
 		bc.addChallenge(storageChall)
 		if i == 0 {
 			bc.LatestCompletedChallenge = storageChall
+			ac.LatestCompletedChallenge = storageChall
 		}
 	}
 }
