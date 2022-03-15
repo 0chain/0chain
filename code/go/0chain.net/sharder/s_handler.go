@@ -216,8 +216,8 @@ func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface
 	return nil, common.InvalidRequest("block hash is required")
 }
 
-// RoundBlockRequestHandler -
-func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// roundBlockRequestHandler -
+func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	hash := r.FormValue("hash")
 	var b *block.Block

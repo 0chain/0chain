@@ -459,13 +459,13 @@ func (s *Server) AddVRFSServerStats(ss *stats.VRFSRequest, _ *struct{}) error {
 	return nil
 }
 
-func (s *Server) AddBlockStateChangeRequestorStats(rs *stats.BlockStateChangeRequest, _ *struct{}) error {
-	s.NodesClientStatsCollector.AddBlockStateChangeStats(rs)
-	return nil
-}
+func (s *Server) AddBlockClientStats(reqBlob []byte, _ *struct{}) error {
+	req := new(BlockRequest)
+	if err := req.Decode(reqBlob); err != nil {
+		return err
+	}
 
-func (s *Server) AddMinerNotarisedBlockRequestorStats(rs *stats.MinerNotarisedBlockRequest, _ *struct{}) error {
-	s.NodesClientStatsCollector.AddMinerNotarisedBlockStats(rs)
+	s.NodesClientStatsCollector.AddBlockStats(req.Req, req.ReqType)
 	return nil
 }
 

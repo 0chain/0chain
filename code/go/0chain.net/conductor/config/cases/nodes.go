@@ -64,7 +64,7 @@ func (n *Nodes) IsActingOnTestRequestor(informer *MinerInformer, requestorID str
 	}
 
 	if selfInfo.IsSharder {
-		selfName := "sharder-" + strconv.Itoa(selfInfo.SetIndex)
+		selfName := "sharder-" + strconv.Itoa(selfInfo.SetIndex+1)
 		return n.Sharders.Contains(selfName)
 	}
 
