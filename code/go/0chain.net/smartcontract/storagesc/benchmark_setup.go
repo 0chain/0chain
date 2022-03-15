@@ -256,6 +256,7 @@ func setupMockChallenges(
 	ac *AllocationChallenge,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
+	ac.AllocationID = allocationId
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
 		storageChall := &StorageChallenge{
