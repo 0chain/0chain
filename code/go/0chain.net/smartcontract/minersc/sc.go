@@ -169,12 +169,10 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	}
 	scFunc, found := msc.smartContractFunctions[funcName]
 	if !found {
+		Logger.Info("piers Execute", zap.String("cannot find", funcName))
 		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
 	}
-	resp, err := scFunc(t, input, gn, balances)
-	Logger.Info("piers called", zap.String("func", funcName), zap.Error(err))
-	return resp, err
-	//return scFunc(t, input, gn, balances)
+	return scFunc(t, input, gn, balances)
 }
 
 func getHostnameAndPort(burl string) (string, int, error) {

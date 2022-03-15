@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"sort"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -196,11 +193,11 @@ func (sp *StakePool) DistributeRewards(
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
 
-	logging.Logger.Info("piers DistributeRewards",
-		zap.Float64("value", value),
-		zap.String("provider id", providerId),
-		zap.String("type", providerType.String()),
-	)
+	//logging.Logger.Info("piers DistributeRewards",
+	//	zap.Float64("value", value),
+	//	zap.String("provider id", providerId),
+	//	zap.String("type", providerType.String()),
+	//)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
