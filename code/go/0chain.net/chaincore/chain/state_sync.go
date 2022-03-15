@@ -7,13 +7,14 @@ import (
 	"net/url"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"go.uber.org/zap"
 )
 
 var ErrNodeNull = common.NewError("node_null", "Node is not available")
@@ -68,21 +69,6 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 		zap.Int64("round", b.Round),
 		zap.Any("duration", time.Since(ts)))
 	return nil
-}
-
-//GetPartialState - get the partial state from the network
-func (c *Chain) GetPartialState(ctx context.Context, key util.Key) {
-	ps, err := c.getPartialState(ctx, key)
-	if err != nil {
-		logging.Logger.Error("get partial state - no ps", zap.String("key", util.ToHex(key)), zap.Error(err))
-		return
-	}
-	err = c.SavePartialState(ctx, ps)
-	if err != nil {
-		logging.Logger.Error("get partial state - error saving", zap.String("key", util.ToHex(key)), zap.Error(err))
-	} else {
-		logging.Logger.Info("get partial state - saving", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(ps.Nodes)))
-	}
 }
 
 //GetStateNodes - get a bunch of state nodes from the network
@@ -219,53 +205,6 @@ func (c *Chain) SaveStateNodes(ctx context.Context, ns *state.Nodes) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return ns.SaveState(ctx, c.stateDB)
-}
-
-func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.PartialState, error) {
-	psRequestor := PartialStateRequestor
-	params := &url.Values{}
-	params.Add("node", util.ToHex(key))
-	cctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	psC := make(chan *state.PartialState, 1)
-	handler := func(_ context.Context, entity datastore.Entity) (interface{}, error) {
-		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
-		rps, ok := entity.(*state.PartialState)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-		if bytes.Compare(key, rps.Hash) != 0 {
-			logging.Logger.Error("get partial state - state hash mismatch error",
-				zap.String("key", util.ToHex(key)),
-				zap.Any("hash", util.ToHex(rps.Hash)))
-			return nil, state.ErrHashMismatch
-		}
-		root := rps.GetRoot()
-		if root == nil {
-			logging.Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(rps.Nodes)))
-			return nil, common.NewError("state_root_error", "Partial state root calculcation error")
-		}
-		cancel()
-		select {
-		case psC <- rps:
-		default:
-		}
-		return rps, nil
-	}
-	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
-	var ps *state.PartialState
-	select {
-	case ps = <-psC:
-	default:
-	}
-	if ps == nil {
-		return nil, common.NewError("partial_state_change_error", "Error getting the partial state")
-	}
-
-	logging.Logger.Info("get partial state",
-		zap.String("key", util.ToHex(key)),
-		zap.Int("nodes", len(ps.Nodes)))
-	return ps, nil
 }
 
 func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Nodes, error) {

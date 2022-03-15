@@ -236,7 +236,7 @@ func TestSetupCORSResponse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			SetupCORSResponse(tt.args.w, tt.args.r)
+			SetupCORSResponse(tt.args.w)
 
 			if !reflect.DeepEqual(tt.args.w, tt.wantW) {
 				t.Errorf("Respond() got = %#v, want = %#v", tt.args.w, tt.wantW)
