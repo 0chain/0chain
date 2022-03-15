@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -169,7 +171,10 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	if !found {
 		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
 	}
-	return scFunc(t, input, gn, balances)
+	resp, err := scFunc(t, input, gn, balances)
+	Logger.Info("piers called", zap.String("func", funcName), zap.Error(err))
+	return resp, err
+	//return scFunc(t, input, gn, balances)
 }
 
 func getHostnameAndPort(burl string) (string, int, error) {
