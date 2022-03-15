@@ -39,6 +39,8 @@ cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/0chain/gorocksdb v0.0.0-20220125141924-9721107d4a29 h1:s+AuxxYRkArYAHlkGZDSbXCk9Ox+Uu08XqESgt/lLIQ=
 github.com/0chain/gorocksdb v0.0.0-20220125141924-9721107d4a29/go.mod h1:3i9d+2Osik7apjXERxpAlKxE7SilJKkHoW9Ihdjdfxs=
+github.com/0chain/msgp v1.1.62 h1:D/s/TYygUwQnMlvfHUjh56FEaI0wP2VfPVS0TTGGu9I=
+github.com/0chain/msgp v1.1.62/go.mod h1:g7jEyb18KPe65d9RRhGw+ThaJr5duyBH8eaFgBUor7Y=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
@@ -347,8 +349,6 @@ github.com/patrickmn/go-cache v2.1.0+incompatible h1:HRMgzkcYKYpi3C8ajMPV8OFXaaR
 github.com/patrickmn/go-cache v2.1.0+incompatible/go.mod h1:3Qf8kWWT7OJRJbdiICTKqZju1ZixQ/KpMGzzAfe6+WQ=
 github.com/pelletier/go-toml v1.9.3 h1:zeC5b1GviRUyKYd6OJPvBU/mcVDVoL1OhT17FCt5dSQ=
 github.com/pelletier/go-toml v1.9.3/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
-github.com/peterlimg/msgp v1.1.62 h1:4lozqnYfLcUzrfDCHA0tr6ogUnwfqOfD6NQv3tei7kY=
-github.com/peterlimg/msgp v1.1.62/go.mod h1:g7jEyb18KPe65d9RRhGw+ThaJr5duyBH8eaFgBUor7Y=
 github.com/philhofer/fwd v1.1.2-0.20210722190033-5c56ac6d0bb9 h1:6ob53CVz+ja2i7easAStApZJlh7sxyq3Cm7g1Di6iqA=
 github.com/philhofer/fwd v1.1.2-0.20210722190033-5c56ac6d0bb9/go.mod h1:gk3iGcWd9+svBvR0sR+KPcfE+RNWozjowpeBVG3ZVNU=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=

@@ -50,6 +50,4 @@ require (
 	gorm.io/gorm v1.22.2
 )
 
-replace github.com/tinylib/msgp => github.com/peterlimg/msgp v1.1.62
-
-//replace github.com/tinylib/msgp => ../../../../../peterlimg/msgp
+replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
