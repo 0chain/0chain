@@ -41,15 +41,13 @@ func AddMockAllocations(
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
 		fps         = make([]fundedPools, len(clients), len(clients))
 
-		challanges       = make([]BlobberChallenge, len(blobbers), len(blobbers))
-		allocChallenges  = make([]AllocationChallenge, numAllocations, numAllocations)
-		storageChallenge = make([]StorageChallenge, 1, 1)
+		challanges      = make([]BlobberChallenge, len(blobbers), len(blobbers))
+		allocChallenges = make([]AllocationChallenge, numAllocations, numAllocations)
 	)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		sa := addMockAllocation(
 			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators, allocChallenges,
-			storageChallenge,
 		)
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
@@ -151,12 +149,13 @@ func AddMockAllocations(
 		if err != nil {
 			panic(err)
 		}
-	}
-
-	for _, ch := range storageChallenge {
-		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
-		if err != nil {
-			panic(err)
+		for _, chall := range ch.Challenges {
+			if chall.ID == getMockChallengeId(0, 0) {
+				_, err := balances.InsertTrieNode(chall.GetKey(ADDRESS), chall)
+				if err != nil {
+					panic(err)
+				}
+			}
 		}
 	}
 
@@ -176,7 +175,6 @@ func addMockAllocation(
 	challanges []BlobberChallenge,
 	validators []*ValidationNode,
 	allocChallenges []AllocationChallenge,
-	storageChall []StorageChallenge,
 ) *StorageAllocation {
 	const mockMinLockDemand = 1
 	var (
@@ -251,7 +249,6 @@ func addMockAllocation(
 			&challanges[bIndex],
 			validators,
 			&allocChallenges[i],
-			&storageChall[0],
 		)
 
 	}
@@ -265,7 +262,6 @@ func setupMockChallenges(
 	bc *BlobberChallenge,
 	validators []*ValidationNode,
 	ac *AllocationChallenge,
-	storageChallenge *StorageChallenge,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
 	ac.AllocationID = allocationId
@@ -284,9 +280,6 @@ func setupMockChallenges(
 		if i == 0 {
 			bc.LatestCompletedChallenge = storageChall
 			ac.LatestCompletedChallenge = storageChall
-		}
-		if bIndex == 0 && i == 0 {
-			storageChallenge = storageChall
 		}
 	}
 }
