@@ -149,6 +149,14 @@ func AddMockAllocations(
 		if err != nil {
 			panic(err)
 		}
+		for _, chall := range ch.Challenges {
+			if chall.ID == getMockChallengeId(0, 0) {
+				_, err := balances.InsertTrieNode(chall.GetKey(ADDRESS), chall)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
 	}
 
 	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
