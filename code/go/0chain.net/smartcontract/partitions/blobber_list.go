@@ -80,6 +80,11 @@ func (il *blobberItemList) get(key datastore.Key, balances state.StateContextI) 
 }
 
 func (il *blobberItemList) add(it PartitionItem) {
+	for _, bi := range il.Items {
+		if bi.ID == it.Name() {
+			return
+		}
+	}
 	il.Items = append(il.Items, BlobberNode{
 		ID:  it.Name(),
 		Url: it.Data(),
