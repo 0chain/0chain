@@ -3,6 +3,9 @@ package stakepool
 import (
 	"encoding/json"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -29,6 +32,8 @@ func (spu StakePoolReward) Emit(
 	if err != nil {
 		return err
 	}
+	logging.Logger.Info("piers StakePoolReward Emit",
+		zap.Any("event", spu))
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,

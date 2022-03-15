@@ -306,7 +306,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-
+	Logger.Info("piers payFees start")
 	if config.DevConfiguration.ViewChange {
 		// TODO: cache the phase node so if when there's no view change happens, we
 		// can avoid unnecessary MPT access
@@ -361,7 +361,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		fees             = msc.sumFee(mb, true)
 		minerf, sharderf = gn.splitByShareRatio(fees)
 	)
-
+	Logger.Info("piers payFees before DistributeRewards",
+		zap.Float64("(minerr+minerf)", float64(minerr+minerf)))
 	if err := mn.StakePool.DistributeRewards(
 		float64(minerr+minerf), mn.ID, spenum.Miner, balances,
 	); err != nil {
