@@ -52,6 +52,12 @@ func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 }
 
 func (il *itemList) add(it PartitionItem) {
+	for _, bi := range il.Items {
+		if bi.Name() == it.Name() {
+			return
+		}
+	}
+
 	il.Items = append(il.Items, StringItem{it.Name()})
 	il.Changed = true
 }

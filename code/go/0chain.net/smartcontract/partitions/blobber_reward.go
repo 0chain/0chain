@@ -85,8 +85,15 @@ func (il *blobberRewardItemList) get(key datastore.Key, balances state.StateCont
 }
 
 func (il *blobberRewardItemList) add(it PartitionItem) {
-	var brn BlobberRewardNode
-	brn.Decode(it.Encode())
+	for _, bi := range il.Items {
+		if bi.ID == it.Name() {
+			return
+		}
+	}
+	brn, ok := it.(*BlobberRewardNode)
+	if !ok {
+		return
+	}
 	il.Items = append(il.Items, BlobberRewardNode{
 		ID:                it.Name(),
 		SuccessChallenges: brn.SuccessChallenges,

@@ -114,6 +114,12 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 }
 
 func (il *validatorItemList) add(it PartitionItem) {
+	for _, bi := range il.Items {
+		if bi.Name() == it.Name() {
+			return
+		}
+	}
+
 	il.Items = append(il.Items, ValidationNode{
 		Id:  it.Name(),
 		Url: string(it.Data()),
