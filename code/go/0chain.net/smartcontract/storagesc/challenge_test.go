@@ -84,8 +84,7 @@ func TestAddChallenge(t *testing.T) {
 
 			_, err := blobberChallenge.Add(
 				&partitions.BlobberChallengeNode{
-					ID:           sn.ID,
-					AllocationID: "allocation_id",
+					ID: sn.ID,
 				}, balances)
 			require.NoError(t, err)
 		}

@@ -12,12 +12,11 @@ import (
 
 //------------------------------------------------------------------------------
 
-type BlobberChallengeNode struct {
-	ID           string `json:"id"`
-	AllocationID string `json:"allocation_id"`
+type BlobberChallengeAllocationNode struct {
+	ID string `json:"id"`
 }
 
-func (bcn *BlobberChallengeNode) Encode() []byte {
+func (bcn *BlobberChallengeAllocationNode) Encode() []byte {
 	var b, err = json.Marshal(bcn)
 	if err != nil {
 		panic(err)
@@ -25,27 +24,27 @@ func (bcn *BlobberChallengeNode) Encode() []byte {
 	return b
 }
 
-func (bcn *BlobberChallengeNode) Decode(b []byte) error {
+func (bcn *BlobberChallengeAllocationNode) Decode(b []byte) error {
 	return json.Unmarshal(b, bcn)
 }
 
-func (bcn *BlobberChallengeNode) Data() string {
-	return bcn.AllocationID
+func (bcn *BlobberChallengeAllocationNode) Data() string {
+	return ""
 }
 
-func (bcn *BlobberChallengeNode) Name() string {
+func (bcn *BlobberChallengeAllocationNode) Name() string {
 	return bcn.ID
 }
 
 //------------------------------------------------------------------------------
 
-type blobberChallengeItemList struct {
-	Key     datastore.Key          `json:"-"`
-	Items   []BlobberChallengeNode `json:"items"`
-	Changed bool                   `json:"-"`
+type blobberChallengeAllocationItemList struct {
+	Key     datastore.Key                    `json:"-"`
+	Items   []BlobberChallengeAllocationNode `json:"items"`
+	Changed bool                             `json:"-"`
 }
 
-func (il *blobberChallengeItemList) Encode() []byte {
+func (il *blobberChallengeAllocationItemList) Encode() []byte {
 	var b, err = json.Marshal(il)
 	if err != nil {
 		panic(err)
@@ -53,22 +52,22 @@ func (il *blobberChallengeItemList) Encode() []byte {
 	return b
 }
 
-func (il *blobberChallengeItemList) Decode(b []byte) error {
+func (il *blobberChallengeAllocationItemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *blobberChallengeItemList) save(balances state.StateContextI) error {
+func (il *blobberChallengeAllocationItemList) save(balances state.StateContextI) error {
 	_, err := balances.InsertTrieNode(il.Key, il)
 	return err
 }
 
-func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateContextI) error {
+func (il *blobberChallengeAllocationItemList) get(key datastore.Key, balances state.StateContextI) error {
 	val, err := balances.GetTrieNode(key)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		il = &blobberChallengeItemList{
+		il = &blobberChallengeAllocationItemList{
 			Key: key,
 		}
 	}
@@ -79,21 +78,20 @@ func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateC
 	return nil
 }
 
-func (il *blobberChallengeItemList) add(it PartitionItem) error {
-	val, ok := it.(*BlobberChallengeNode)
-	if !ok {
-		return errors.New("invalid item")
+func (il *blobberChallengeAllocationItemList) add(it PartitionItem) error {
+	for _, bi := range il.Items {
+		if bi.ID == it.Name() {
+			return errors.New("blobber_challenge_allocation item already exists")
+		}
 	}
-	bcn := *val
-	il.Items = append(il.Items, BlobberChallengeNode{
-		ID:           it.Name(),
-		AllocationID: bcn.AllocationID,
+	il.Items = append(il.Items, BlobberChallengeAllocationNode{
+		ID: it.Name(),
 	})
 	il.Changed = true
 	return nil
 }
 
-func (il *blobberChallengeItemList) remove(item PartitionItem) error {
+func (il *blobberChallengeAllocationItemList) remove(item PartitionItem) error {
 	if len(il.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
@@ -107,7 +105,7 @@ func (il *blobberChallengeItemList) remove(item PartitionItem) error {
 	return nil
 }
 
-func (il *blobberChallengeItemList) cutTail() PartitionItem {
+func (il *blobberChallengeAllocationItemList) cutTail() PartitionItem {
 	if len(il.Items) == 0 {
 		return nil
 	}
@@ -118,15 +116,15 @@ func (il *blobberChallengeItemList) cutTail() PartitionItem {
 	return &tail
 }
 
-func (il *blobberChallengeItemList) length() int {
+func (il *blobberChallengeAllocationItemList) length() int {
 	return len(il.Items)
 }
 
-func (il *blobberChallengeItemList) changed() bool {
+func (il *blobberChallengeAllocationItemList) changed() bool {
 	return il.Changed
 }
 
-func (il *blobberChallengeItemList) itemRange(start, end int) []PartitionItem {
+func (il *blobberChallengeAllocationItemList) itemRange(start, end int) []PartitionItem {
 	if start > end || end > len(il.Items) {
 		return nil
 	}
@@ -138,7 +136,7 @@ func (il *blobberChallengeItemList) itemRange(start, end int) []PartitionItem {
 	return rtv
 }
 
-func (il *blobberChallengeItemList) find(searchItem PartitionItem) int {
+func (il *blobberChallengeAllocationItemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
 		if item.Name() == searchItem.Name() {
 			return i
@@ -147,9 +145,9 @@ func (il *blobberChallengeItemList) find(searchItem PartitionItem) int {
 	return notFound
 }
 
-func (il *blobberChallengeItemList) update(it PartitionItem) error {
+func (il *blobberChallengeAllocationItemList) update(it PartitionItem) error {
 
-	val, ok := it.(*BlobberChallengeNode)
+	val, ok := it.(*BlobberChallengeAllocationNode)
 	if !ok {
 		return errors.New("invalid item")
 	}

@@ -32,6 +32,10 @@ var (
 	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
 )
 
+func getBlobberChallengeAllocationKey(blobberID string) string {
+	return ADDRESS + encryption.Hash("blobber_challenge_allocation"+blobberID)
+}
+
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`
 	Allocations *Allocations `json:"allocations"`
@@ -608,7 +612,12 @@ type BlobberAllocation struct {
 	// balance.
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
 	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
-	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
+	ChallengePartitionLoc *BlobberChallengePartitionLocation `json:"challenge_partition_loc"`
+}
+
+type BlobberChallengePartitionLocation struct {
+	BlobberChallengeLocation    *partitions.PartitionLocation
+	AllocationChallengeLocation *partitions.PartitionLocation
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate

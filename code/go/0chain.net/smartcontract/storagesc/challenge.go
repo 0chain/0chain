@@ -28,6 +28,7 @@ import (
 )
 
 const allBlobbersChallengePartitionSize = 50
+const blobberChallengeAllocationPartitionSize = 100
 
 func getBlobbersChallengeList(balances c_state.StateContextI) (partitions.RandPartition, error) {
 	all, err := partitions.GetRandomSelector(ALL_BLOBBERS_CHALLENGE_KEY, balances)
@@ -40,6 +41,23 @@ func getBlobbersChallengeList(balances c_state.StateContextI) (partitions.RandPa
 			allBlobbersChallengePartitionSize,
 			nil,
 			partitions.ItemBlobberChallenge,
+		)
+	}
+	all.SetCallback(nil)
+	return all, nil
+}
+
+func getBlobbersChallengeAllocationList(blobberID string, balances c_state.StateContextI) (partitions.RandPartition, error) {
+	all, err := partitions.GetRandomSelector(getBlobberChallengeAllocationKey(blobberID), balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		all = partitions.NewRandomSelector(
+			getBlobberChallengeAllocationKey(blobberID),
+			blobberChallengeAllocationPartitionSize,
+			nil,
+			partitions.ItemBlobberChallengeAllocation,
 		)
 	}
 	all.SetCallback(nil)
@@ -733,13 +751,27 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 		randomIndex := rand.Intn(len(bcPartition))
 		bcItem := bcPartition[randomIndex]
-		val, ok := bcItem.(*partitions.BlobberChallengeNode)
-		if !ok {
+
+		blobberID := bcItem.Name()
+
+		bcAllocList, err := getBlobbersChallengeAllocationList(blobberID, balances)
+		if err != nil {
 			return common.NewError("generate_challenges",
-				"invalid item type")
+				"error getting blobber_challenge_allocation list: "+err.Error())
 		}
 
-		alloc, err = selectAlloc(val.AllocationID)
+		// maybe we should use another random seed
+		bcAllocPartition, err := bcAllocList.GetRandomSlice(cr, balances)
+		if err != nil {
+			return common.NewError("generate_challenges",
+				"error getting random slice from blobber challenge allocation partition")
+		}
+		randomIndex = rand.Intn(len(bcAllocPartition))
+		bcAllocItem := bcAllocPartition[randomIndex]
+
+		allocID := bcAllocItem.Name()
+
+		alloc, err = selectAlloc(allocID)
 		if err != nil {
 			return err
 		}
@@ -753,7 +785,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			tp              = time.Now()
 			challengeString string
 		)
-		challengeString, err = sc.addChallenge(alloc, bcItem.Name(), validators, challengeID,
+		challengeString, err = sc.addChallenge(alloc, blobberID, validators, challengeID,
 			t.CreationDate, r, int64(challengeSeed), balances)
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err),

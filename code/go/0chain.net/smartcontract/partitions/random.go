@@ -25,6 +25,7 @@ const (
 	ItemString ItemType = iota
 	ItemValidator
 	ItemBlobberChallenge
+	ItemBlobberChallengeAllocation
 )
 
 //------------------------------------------------------------------------------
@@ -216,6 +217,14 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 		newPartition = &itemList{
 			Key: rs.partitionKey(rs.NumPartitions),
 		}
+	} else if rs.ItemType == ItemBlobberChallenge {
+		newPartition = &blobberChallengeItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberChallengeAllocation {
+		newPartition = &blobberChallengeAllocationItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
 	} else {
 		newPartition = &validatorItemList{
 			Key: rs.partitionKey(rs.NumPartitions),
@@ -293,6 +302,8 @@ func (rs *randomSelector) getPartition(
 		part = &itemList{}
 	} else if rs.ItemType == ItemBlobberChallenge {
 		part = &blobberChallengeItemList{}
+	} else if rs.ItemType == ItemBlobberChallengeAllocation {
+		part = &blobberChallengeAllocationItemList{}
 	} else {
 		part = &validatorItemList{}
 	}
