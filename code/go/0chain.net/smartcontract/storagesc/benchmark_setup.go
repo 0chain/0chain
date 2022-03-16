@@ -64,6 +64,7 @@ func AddMockAllocations(
 			if err != nil {
 				panic(err)
 			}
+			totalBlobberItems++
 			if _, ok := blobAllocChallengePart[b.ID]; !ok {
 				bcaPart, err := getBlobbersChallengeAllocationList(b.ID, balances)
 				if err != nil {
@@ -79,7 +80,6 @@ func AddMockAllocations(
 				panic(err)
 			}
 		}
-		totalBlobberItems += len(sa.Blobbers)
 
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {

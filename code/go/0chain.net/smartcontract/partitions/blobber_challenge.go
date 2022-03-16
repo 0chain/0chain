@@ -80,12 +80,6 @@ func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateC
 
 func (il *blobberChallengeItemList) add(it PartitionItem) error {
 
-	for _, bi := range il.Items {
-		if bi.ID == it.Name() {
-			return errors.New("blobber_challenge item already exists")
-		}
-	}
-
 	il.Items = append(il.Items, BlobberChallengeNode{
 		ID: it.Name(),
 	})
