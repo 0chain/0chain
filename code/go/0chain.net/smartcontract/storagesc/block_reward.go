@@ -21,13 +21,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 ) (err error) {
 	logging.Logger.Info("blobberBlockRewards started", zap.Int64("round", balances.GetBlock().Round))
 	var (
-		qualifyingBlobberIds []string
-		stakePools           []*stakePool
-		stakeTotals          []float64
-		totalQStake          float64
-		weight               []float64
-		totalWeight          float64
-		conf                 *scConfig
+		stakePools  []*stakePool
+		stakeTotals []float64
+		totalQStake float64
+		weight      []float64
+		totalWeight float64
+		conf        *scConfig
 	)
 
 	// TODO: move all the maths constants with right name once finalized to the sc.yaml
@@ -80,8 +79,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		return common.NewError("blobber_block_rewards_failed",
 			"Error getting random partition: "+err.Error())
 	}
+	qualifyingBlobberIds := make([]string, len(blobberPartition), len(blobberPartition))
 
-	for _, b := range blobberPartition {
+	for i, b := range blobberPartition {
 		var sp *stakePool
 		var blobber partitions.BlobberRewardNode
 
@@ -99,7 +99,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		gamma := maths.GetGamma(A, B, alpha, blobber.TotalData, blobber.DataRead)
 		zeta := maths.GetZeta(I, K, mu, float64(blobber.WritePrice), float64(blobber.ReadPrice))
-		qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.ID)
+		qualifyingBlobberIds[i] = blobber.ID
 		stakePools = append(stakePools, sp)
 		stakeTotals = append(stakeTotals, stake)
 		totalQStake += stake
