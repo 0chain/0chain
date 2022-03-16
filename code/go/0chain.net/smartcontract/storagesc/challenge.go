@@ -848,8 +848,8 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		}
 	}()
 
+	var totalChallenges int64 = 0
 	for result := range output {
-
 		var (
 			tp              = time.Now()
 			challengeString string
@@ -863,12 +863,14 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 				zap.Any("challengeString", challengeString))
 			continue
 		}
+		totalChallenges++
 		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
 				timer.Update(time.Since(tp))
 			}
 		}
 	}
+	sc.newChallenge(balances, t.CreationDate, totalChallenges)
 	return nil
 }
 
@@ -993,10 +995,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation, blobberID
 		return "", common.NewError("add_challenge",
 			"error storing allocation: "+err.Error())
 	}
-	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
+
 	challengeBytes, err := json.Marshal(storageChallenge)
-	if err := sc.newChallenge(balances, storageChallenge.Created); err != nil {
-		return "", err
-	}
 	return string(challengeBytes), err
 }
