@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 
@@ -219,6 +220,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		}
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
+
+		log.Println("challenge:read_redeem 1", challengesEnabled)
 		if challengesEnabled {
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
@@ -234,6 +237,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
+		log.Println("challenge:commit_connection 1", challengesEnabled)
 		if challengesEnabled {
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
@@ -310,6 +314,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
+
+		log.Println("challenge:generate_challenges 1", challengesEnabled)
+
 		if challengesEnabled {
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {

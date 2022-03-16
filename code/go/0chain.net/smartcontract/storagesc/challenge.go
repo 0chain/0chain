@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"sort"
@@ -664,11 +665,13 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	var statsBytes util.Serializable
 	statsBytes, err = balances.GetTrieNode(stats.GetKey(sc.ID))
 	if err != nil && err != util.ErrValueNotPresent {
+		log.Println("challenge: 2 skip because of ErrValueNotPresent")
 		return // unexpected MPT error
 	}
 	if statsBytes != nil {
 		if err = stats.Decode(statsBytes.Encode()); err != nil {
 			Logger.Error("storage stats decode error")
+			log.Println("challenge: 3", err)
 			return
 		}
 	}
@@ -680,6 +683,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	sizeDiffMB := (stats.Stats.UsedSize - stats.LastChallengedSize) / (1024 * 1024)
 
 	if numMins == 0 && sizeDiffMB == 0 {
+		log.Println("challenge: 4 numMins == 0 && sizeDiffMB == 0")
 		return nil
 	}
 
@@ -693,6 +697,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	// SC configurations
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, false); err != nil {
+		log.Println("challenge: 5 ", err)
 		return common.NewErrorf("generate_challenges",
 			"can't get SC configurations: %v", err)
 	}
@@ -709,6 +714,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	if err != nil {
 		Logger.Error("Error in creating seed for creating challenges",
 			zap.Error(err))
+		log.Println("challenge: 6 ", err)
 		return err
 	}
 	r := rand.New(rand.NewSource(int64(randomSeed)))
@@ -717,17 +723,20 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	validators, err := getValidatorsList(balances)
 	if err != nil {
+		log.Println("challenge: 7 ", err)
 		return common.NewErrorf("adding_challenge_error",
 			"error getting the validators list: %v", err)
 	}
 
 	var all *Allocations
 	if all, err = sc.getAllAllocationsList(balances); err != nil {
+		log.Println("challenge: 8 ", err)
 		return common.NewErrorf("adding_challenge_error",
 			"error getting the allocation list: %v", err)
 	}
 
 	if len(all.List) == 0 {
+		log.Println("challenge: 9 no available allocation ")
 		return common.NewError("adding_challenge_error",
 			"no allocations at this time")
 	}
@@ -735,6 +744,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	var selectAlloc = func(i int) (alloc *StorageAllocation, err error) {
 		alloc, err = sc.getAllocation(all.List[i], balances)
 		if err != nil && err != util.ErrValueNotPresent {
+			log.Println("challenge: 10 skip ErrValueNotPresent ", err)
 			return nil, common.NewErrorf("adding_challenge_error",
 				"unexpected error getting allocation: %v", err)
 		}
@@ -742,13 +752,18 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			Logger.Error("client state has invalid allocations",
 				zap.Any("allocation_list", all.List),
 				zap.Any("selected_allocation", all.List[i]))
+
+			log.Println("challenge: 11 skip ErrValueNotPresent ", err)
+
 			return nil, common.NewErrorf("invalid_allocation",
 				"client state has invalid allocations")
 		}
 		if alloc.Expiration < t.CreationDate {
+			log.Println("challenge: 12 alloc.Expiration < t.CreationDate")
 			return nil, nil
 		}
 		if alloc.Stats == nil {
+			log.Println("challenge: 13 alloc.Expiration < t.CreationDate")
 			return nil, nil
 		}
 		if alloc.Stats.NumWrites > 0 {
@@ -769,10 +784,12 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 		alloc, err = selectAlloc(r.Intn(len(all.List)))
 		if err != nil {
+
 			return err
 		}
 
 		if alloc == nil {
+			log.Println("challenge: 14 continue next")
 			continue // try another one
 		}
 
@@ -784,6 +801,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		if err != nil {
 			Logger.Error("Error in creating challenge seed", zap.Error(err),
 				zap.Any("challengeID", challengeID))
+			log.Println("challenge: 15 challengeSeed", err)
 			continue
 		}
 		// statistics
@@ -796,6 +814,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err),
 				zap.Any("challengeString", challengeString))
+			log.Println("challenge: 16 addChallenge", err)
 			continue
 		}
 		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
