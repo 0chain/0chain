@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"log"
 	"strconv"
 	"time"
 
@@ -44,11 +45,28 @@ func AddMockAllocations(
 		challanges      = make([]BlobberChallenge, len(blobbers), len(blobbers))
 		allocChallenges = make([]AllocationChallenge, numAllocations, numAllocations)
 	)
+	part, err := getBlobbersChallengeList(balances)
+	if err != nil {
+		panic(err)
+	}
+	total_partition_size := 0
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		sa := addMockAllocation(
 			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators, allocChallenges,
 		)
+
+		for _, b := range sa.Blobbers {
+			_, err = part.Add(&partitions.BlobberChallengeNode{
+				ID:           b.ID,
+				AllocationID: sa.ID,
+			}, balances)
+			if err != nil {
+				panic(err)
+			}
+		}
+		total_partition_size += len(sa.Blobbers)
+
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
 			panic(err)
@@ -103,6 +121,11 @@ func AddMockAllocations(
 				rps[cIndex].Pools = append(rps[cIndex].Pools, &rap)
 			}
 		}
+	}
+	log.Println("total pair in partition: ", total_partition_size)
+	err = part.Save(balances)
+	if err != nil {
+		panic(err)
 	}
 	for i := 0; i < len(wps); i++ {
 		_, err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i])
@@ -160,7 +183,7 @@ func AddMockAllocations(
 		}
 	}
 
-	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
+	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
 	if err != nil {
 		panic(err)
 	}
@@ -276,11 +299,9 @@ func setupMockChallenges(
 			TotalValidators: len(selValidators),
 			BlobberID:       blobber.ID,
 		}
-		ac.addChallenge(storageChall)
-		bc.addChallenge(storageChall)
-		if i == 0 {
-			bc.LatestCompletedChallenge = storageChall
-			ac.LatestCompletedChallenge = storageChall
+		bcAdded := bc.addChallenge(storageChall)
+		if bcAdded {
+			ac.addChallenge(storageChall)
 		}
 	}
 }
