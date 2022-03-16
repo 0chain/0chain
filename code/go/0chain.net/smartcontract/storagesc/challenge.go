@@ -817,6 +817,9 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			log.Println("challenge: 16 addChallenge", err)
 			continue
 		}
+
+		log.Println("challenge: 17 done", challengeString)
+
 		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
 				timer.Update(time.Since(tp))
