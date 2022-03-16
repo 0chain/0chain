@@ -10,7 +10,7 @@ import (
 	"0chain.net/smartcontract/partitions"
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -62,7 +62,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, stakepool.Blobber,
+	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, spenum.Blobber,
 		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
@@ -74,7 +74,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// update the list
 	blobbers.Nodes.add(blobber)
-	if err := emitAddOrOverwriteBlobber(blobber, balances); err != nil {
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 

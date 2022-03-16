@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/smartcontract/storagesc"
+	"github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -16,18 +17,13 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
-
-	"0chain.net/smartcontract/minersc"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
-	metrics "github.com/rcrowley/go-metrics"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/storagesc"
 )
 
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
@@ -489,7 +485,7 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()))
 	if config.Development() {
 		for _, t := range b.Txns {
@@ -534,14 +530,6 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 //NotarizedBlockFetched - handler to process fetched notarized block
 func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// mc.SendNotarization(ctx, b)
-}
-
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
-	bsh chain.BlockStateHandler, waitOver bool) error {
-
-	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
-	})
 }
 
 type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *TxnIterInfo) bool

@@ -1384,7 +1384,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getStakePoolStat_No_Blobber_404",
@@ -1417,7 +1417,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getStakePoolStat_No_Stake_Pool_404",
@@ -1469,7 +1469,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name:  "Storagesc_/getUserStakePoolStat_No_Config_404",
@@ -1484,7 +1484,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getUserStakePoolStat_No_User_Stake_Pool_404",
@@ -1520,7 +1520,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getUserStakePoolStat_No_Stake_Pool_404",
@@ -1571,7 +1571,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name:  "Storagesc_/getChallengePoolStat_400",

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract"
 
@@ -130,7 +130,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward float64,
 			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
-		err := sp.DistributeRewards(oneReward, validatos[i], stakepool.Validator, balances)
+		err := sp.DistributeRewards(oneReward, validatos[i], spenum.Validator, balances)
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
 				validatos[i], err)
