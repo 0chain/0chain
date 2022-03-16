@@ -486,7 +486,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				}, balances)
 			if err != nil {
 				return "", common.NewError("verify_challenge",
-					"can't add to ongoing partition list"+err.Error())
+					"can't add to ongoing partition list "+err.Error())
 			}
 
 			blobber.RewardPartition = rewardPartitionLocation{
