@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -624,6 +625,104 @@ func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
 	}
 }
 
+func (sc *StorageSmartContract) selectAllocationForChallenge(
+	t *transaction.Transaction,
+	allocID string,
+	balances c_state.StateContextI) (alloc *StorageAllocation, err error) {
+	alloc, err = sc.getAllocation(allocID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, common.NewErrorf("adding_challenge_error",
+			"unexpected error getting allocation: %v", err)
+	}
+	if err == util.ErrValueNotPresent {
+		Logger.Error("client state has invalid allocations",
+			zap.Any("selected_allocation", allocID))
+		return nil, common.NewErrorf("invalid_allocation",
+			"client state has invalid allocations")
+	}
+	if alloc.Expiration < t.CreationDate {
+		return nil, nil
+	}
+	if alloc.Stats == nil {
+		return nil, nil
+	}
+	if alloc.Stats.NumWrites > 0 {
+		return alloc, nil // found
+	}
+	return nil, nil
+}
+
+type challengeInput struct {
+	cr            *rand.Rand
+	t             *transaction.Transaction
+	challengeSeed uint64
+	challengeID   string
+}
+
+type challengeOutput struct {
+	alloc         *StorageAllocation
+	blobberId     string
+	challengeSeed uint64
+	challengeID   string
+}
+
+func (sc *StorageSmartContract) asyncGenerateChallenges(
+	blobberChallengeList partitions.RandPartition,
+	data <-chan challengeInput,
+	errChan chan<- error,
+	result chan<- challengeOutput,
+	wg *sync.WaitGroup,
+	balances c_state.StateContextI) {
+
+	defer wg.Done()
+
+	for d := range data {
+		bcPartition, err := blobberChallengeList.GetRandomSlice(d.cr, balances)
+		if err != nil {
+			errChan <- common.NewError("generate_challenges",
+				"error getting random slice from blobber challenge partition")
+		}
+
+		randomIndex := rand.Intn(len(bcPartition))
+		bcItem := bcPartition[randomIndex]
+
+		blobberID := bcItem.Name()
+
+		bcAllocList, err := getBlobbersChallengeAllocationList(blobberID, balances)
+		if err != nil {
+			errChan <- common.NewError("generate_challenges",
+				"error getting blobber_challenge_allocation list: "+err.Error())
+		}
+
+		// maybe we should use another random seed
+		bcAllocPartition, err := bcAllocList.GetRandomSlice(d.cr, balances)
+		if err != nil {
+			errChan <- common.NewError("generate_challenges",
+				"error getting random slice from blobber challenge allocation partition")
+		}
+		randomIndex = rand.Intn(len(bcAllocPartition))
+		bcAllocItem := bcAllocPartition[randomIndex]
+
+		allocID := bcAllocItem.Name()
+
+		alloc, err := sc.selectAllocationForChallenge(d.t, allocID, balances)
+		if err != nil {
+			errChan <- err
+		}
+
+		if alloc == nil {
+			errChan <- errors.New("empty allocation")
+		}
+
+		result <- challengeOutput{
+			alloc:         alloc,
+			blobberId:     blobberID,
+			challengeSeed: d.challengeSeed,
+			challengeID:   d.challengeID,
+		}
+	}
+}
+
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
 
@@ -705,31 +804,17 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			"error getting the blobber challenge list: %v", err)
 	}
 
-	var selectAlloc = func(allocID string) (alloc *StorageAllocation, err error) {
-		alloc, err = sc.getAllocation(allocID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, common.NewErrorf("adding_challenge_error",
-				"unexpected error getting allocation: %v", err)
-		}
-		if err == util.ErrValueNotPresent {
-			Logger.Error("client state has invalid allocations",
-				zap.Any("selected_allocation", allocID))
-			return nil, common.NewErrorf("invalid_allocation",
-				"client state has invalid allocations")
-		}
-		if alloc.Expiration < t.CreationDate {
-			return nil, nil
-		}
-		if alloc.Stats == nil {
-			return nil, nil
-		}
-		if alloc.Stats.NumWrites > 0 {
-			return alloc, nil // found
-		}
-		return nil, nil
-	}
+	var (
+		data    = make(chan challengeInput, numChallenges)
+		output  = make(chan challengeOutput, numChallenges)
+		errChan = make(chan error, numChallenges)
+		wg      sync.WaitGroup
+	)
 
-	var alloc *StorageAllocation
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go sc.asyncGenerateChallenges(blobberChallengeList, data, errChan, output, &wg, balances)
+	}
 
 	for i := int64(0); i < numChallenges; i++ {
 
@@ -742,51 +827,37 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			continue
 		}
 		cr := rand.New(rand.NewSource(int64(challengeSeed)))
-
-		bcPartition, err := blobberChallengeList.GetRandomSlice(cr, balances)
-		if err != nil {
-			return common.NewError("generate_challenges",
-				"error getting random slice from blobber challenge partition")
+		data <- challengeInput{
+			cr:            cr,
+			t:             t,
+			challengeID:   challengeID,
+			challengeSeed: challengeSeed,
 		}
+	}
+	close(data)
 
-		randomIndex := rand.Intn(len(bcPartition))
-		bcItem := bcPartition[randomIndex]
+	go func() {
+		wg.Wait()
+		close(output)
+		close(errChan)
+	}()
 
-		blobberID := bcItem.Name()
-
-		bcAllocList, err := getBlobbersChallengeAllocationList(blobberID, balances)
-		if err != nil {
-			return common.NewError("generate_challenges",
-				"error getting blobber_challenge_allocation list: "+err.Error())
+	go func() {
+		for err := range errChan {
+			Logger.Error(err.Error())
 		}
+	}()
 
-		// maybe we should use another random seed
-		bcAllocPartition, err := bcAllocList.GetRandomSlice(cr, balances)
-		if err != nil {
-			return common.NewError("generate_challenges",
-				"error getting random slice from blobber challenge allocation partition")
-		}
-		randomIndex = rand.Intn(len(bcAllocPartition))
-		bcAllocItem := bcAllocPartition[randomIndex]
+	for result := range output {
 
-		allocID := bcAllocItem.Name()
-
-		alloc, err = selectAlloc(allocID)
-		if err != nil {
-			return err
-		}
-
-		if alloc == nil {
-			continue // try another one
-		}
-
-		// statistics
 		var (
 			tp              = time.Now()
 			challengeString string
+			alloc           = result.alloc
+			blobberID       = result.blobberId
 		)
-		challengeString, err = sc.addChallenge(alloc, blobberID, validators, challengeID,
-			t.CreationDate, r, int64(challengeSeed), balances)
+		challengeString, err = sc.addChallenge(alloc, blobberID, validators, result.challengeID,
+			t.CreationDate, r, int64(result.challengeSeed), balances)
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err),
 				zap.Any("challengeString", challengeString))
