@@ -128,6 +128,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		} else {
 			logging.Logger.Error("blobber_bloc_rewards - error in weight ratio",
 				zap.Any("stake pool", qsp))
+			return common.NewError("blobber_block_rewards_failed", "weight ratio out of bound")
 		}
 	}
 
