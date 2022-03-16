@@ -157,11 +157,6 @@ func (sp *stakePool) extendOffer(delta state.Balance) (err error) {
 	return
 }
 
-//type stakePoolUpdateInfo struct {
-//	stake  state.Balance // stake of all delegate pools
-//	offers state.Balance // offers stake
-//}
-
 // slash represents blobber penalty; it returns number of tokens moved in
 // reality, with regards to division errors
 func (sp *stakePool) slash(

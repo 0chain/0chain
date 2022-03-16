@@ -146,8 +146,6 @@ func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
 		balances = newTestBalances()
 		err      error
 	)
-	//_, err = vsc.getPoolBytes(poolKey(vsc.ID, txHash), balances)
-	//require.Equal(t, util.ErrValueNotPresent, err)
 	_, err = vsc.getPool(poolKey(vsc.ID, txHash), balances)
 	require.Equal(t, util.ErrValueNotPresent, err)
 	var vp = newVestingPoolFromReqeust(clientID, &addRequest{

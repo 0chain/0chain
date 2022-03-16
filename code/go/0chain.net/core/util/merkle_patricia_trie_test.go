@@ -927,19 +927,11 @@ func TestAddTwiceDeleteOnce(t *testing.T) {
 
 	doStrValInsert(t, mpt2, "1234567812", "x")
 	doStrValInsert(t, mpt2, "1234567822", "y")
-	//doStrValInsert(t,"setup data", mpt2, "123556782", "z")
 
 	doStrValInsert(t, mpt2, "2234567812", "x")
 	doStrValInsert(t, mpt2, "2234567822", "y")
 
 	doStrValInsert(t, mpt2, "2234567822", "a")
-	//doStrValInsert(t,"setup data", mpt2, "223556782", "b")
-	//mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode /*|NodeTypeFullNode|NodeTypeExtensionNode */)
-
-	//doDelete("delete a leaf node", mpt2, "123456781", true)
-	//mpt2.PrettyPrint(os.Stdout)
-
-	//doDelete("delete a leaf node", mpt2, "223556782", true)
 }
 
 func TestWithPruneStats(t *testing.T) {
@@ -963,8 +955,6 @@ func TestWithPruneStats(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
-
 			if got := WithPruneStats(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("WithPruneStats() = %v, want %v", got, tt.want)
 			}
@@ -973,8 +963,6 @@ func TestWithPruneStats(t *testing.T) {
 }
 
 func TestGetPruneStats(t *testing.T) {
-	////t.Parallel()
-
 	ps := PruneStats{Stage: PruneStateStart}
 	ctx := context.WithValue(context.TODO(), PruneStatsKey, &ps)
 
@@ -1000,8 +988,6 @@ func TestGetPruneStats(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//////t.Parallel()
-
 			if got := GetPruneStats(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetPruneStats() = %v, want %v", got, tt.want)
 			}
@@ -1030,7 +1016,6 @@ func TestCloneMPT(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//////t.Parallel()
 
 			if got := CloneMPT(tt.args.mpt); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CloneMPT() = %v, want %v", got, tt.want)
@@ -1083,7 +1068,6 @@ func TestCloneMPT2(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//////t.Parallel()
 			got := CloneMPT(tt.args.mpt)
 			if _, err := mpt1.Insert([]byte("bbb"), &User{Age: 1}); err != nil {
 				t.Error(err)
@@ -1098,7 +1082,7 @@ func TestCloneMPT2(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
-	//////t.Parallel()
+	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
 	mndb1 := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
@@ -1134,8 +1118,6 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
-
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
 				root:            tt.fields.Root,
@@ -1154,7 +1136,7 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
@@ -1186,8 +1168,6 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
-
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
 				root:            tt.fields.Root,
@@ -1344,7 +1324,7 @@ func TestMerklePatriciaTrie_Insert(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_GetPathNodes(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -1373,7 +1353,7 @@ func TestMerklePatriciaTrie_GetPathNodes(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
@@ -1395,7 +1375,7 @@ func TestMerklePatriciaTrie_GetPathNodes(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_getPathNodes(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	fn := NewFullNode(&SecureSerializableValue{Buffer: []byte("fn data")})
 	keyFn := Key(fn.GetHash())
@@ -1476,7 +1456,7 @@ func TestMerklePatriciaTrie_getPathNodes(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
+			t.Parallel()
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
@@ -1498,7 +1478,7 @@ func TestMerklePatriciaTrie_getPathNodes(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_Iterate(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -1528,7 +1508,7 @@ func TestMerklePatriciaTrie_Iterate(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
+			t.Parallel()
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
@@ -1552,7 +1532,7 @@ func TestMerklePatriciaTrie_Iterate(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_getNodeValue(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	fn := NewFullNode(&SecureSerializableValue{Buffer: []byte("fn data")})
 	keyFn := Key(fn.GetHash())
@@ -1609,8 +1589,6 @@ func TestMerklePatriciaTrie_getNodeValue(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
-
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
 				root:            tt.fields.Root,
@@ -1631,7 +1609,7 @@ func TestMerklePatriciaTrie_getNodeValue(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_insert(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -1663,7 +1641,7 @@ func TestMerklePatriciaTrie_insert(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
+			t.Parallel()
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
@@ -1688,6 +1666,7 @@ func TestMerklePatriciaTrie_insert(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
+	t.Parallel()
 	db, cleanup := newPNodeDB(t)
 	defer cleanup()
 	db.wo = gorocksdb.NewDefaultWriteOptions()
@@ -1835,7 +1814,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_MergeChanges(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	mpt := NewMerklePatriciaTrie(NewMemoryNodeDB(), 0, nil)
 
@@ -1876,8 +1855,6 @@ func TestMerklePatriciaTrie_MergeChanges(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
-
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
 				root:            tt.fields.Root,
@@ -1893,7 +1870,7 @@ func TestMerklePatriciaTrie_MergeChanges(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	DebugMPTNode = true
 
@@ -1977,8 +1954,6 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
-
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
 				root:            tt.fields.Root,
@@ -1994,7 +1969,7 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_IntegrityAfterValueUpdate(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
 	mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
 	txn := &Txn{"1"}
@@ -2012,7 +1987,7 @@ func TestMerklePatriciaTrie_IntegrityAfterValueUpdate(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_Validate(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
@@ -2100,8 +2075,6 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
-
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
 				root:            tt.fields.Root,
@@ -2117,7 +2090,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 }
 
 func TestIsMPTValid(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	type args struct {
 		mpt MerklePatriciaTrieI
@@ -2136,7 +2109,7 @@ func TestIsMPTValid(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
+			t.Parallel()
 
 			if err := IsMPTValid(tt.args.mpt); (err != nil) != tt.wantErr {
 				t.Errorf("IsMPTValid() error = %v, wantErr %v", err, tt.wantErr)
@@ -2146,7 +2119,7 @@ func TestIsMPTValid(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
-	////t.Parallel()
+	t.Parallel()
 
 	mpt := NewMerklePatriciaTrie(nil, 0, nil)
 	mnh := func(ctx context.Context, path Path, key Key) error {
@@ -2231,7 +2204,6 @@ func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			////t.Parallel()
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,

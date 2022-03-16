@@ -61,13 +61,13 @@ func (d *EntityCollection) Clone() *EntityCollection {
 
 // GetCollectionName returns the key for the collection
 // by given an partitioning key (such as parent key).
-func (d *EntityCollection) GetCollectionName(parent Key) string {
+func (d *EntityCollection) GetCollectionName(parent string) string {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
 	name := d.CollectionName
 	if !IsEmpty(parent) {
-		name += ":" + string(parent)
+		name += ":" + parent
 	}
 
 	return name
