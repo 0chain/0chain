@@ -20,6 +20,7 @@ type WriteAllocationPool struct {
 
 type WriteAllocationPoolFilter struct {
 	gorm.Model
+	PoolID        null.String
 	AllocationID  null.String
 	TransactionId null.String
 	UserID        null.String
@@ -32,7 +33,7 @@ func (edb *EventDb) addOrOverwriteWriteAllocationPool(writeAllocationPool WriteA
 		writeAllocationPool.StateBalance = writeAllocationPool.Balance
 		return edb.Get().Model(&WriteAllocationPool{}).Create(&writeAllocationPool).Error
 	}
-	return edb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{AllocationID: writeAllocationPool.AllocationID}).Updates(&writeAllocationPool).Error
+	return edb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{PoolID: writeAllocationPool.PoolID}).Updates(&writeAllocationPool).Error
 }
 
 func (edb *EventDb) isWritePoolExists(poolID string) bool {
@@ -44,7 +45,7 @@ func (edb *EventDb) isWritePoolExists(poolID string) bool {
 }
 
 func (edb *EventDb) GetWriteAllocationPoolWithFilterAndPagination(filter WriteAllocationPoolFilter, offset, limit int) ([]WriteAllocationPool, error) {
-	query := edb.Get().Model(&WriteAllocationPool{}).Where(&filter)
+	query := edb.Get().Debug().Model(&WriteAllocationPool{}).Where(&filter).Preload("Blobbers")
 	if offset != -1 {
 		query = query.Offset(offset)
 	}
@@ -52,5 +53,5 @@ func (edb *EventDb) GetWriteAllocationPoolWithFilterAndPagination(filter WriteAl
 		query = query.Limit(limit)
 	}
 	var allocationPools []WriteAllocationPool
-	return allocationPools, query.Scan(&allocationPools).Error
+	return allocationPools, query.Find(&allocationPools).Error
 }

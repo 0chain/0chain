@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs"
+	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,12 +61,11 @@ func TestWriteAllocationPool(t *testing.T) {
 			},
 		},
 	})
-	assert.NoError(t, err, "There should be on error")
+	assert.NoError(t, err, "There should be no error")
 	write := WriteAllocationPool{}
-	eventDb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{AllocationID: "allocationID"}).Scan(&write)
+	eventDb.Get().Model(&WriteAllocationPool{}).Where(&WriteAllocationPool{PoolID: "allocationID"}).Scan(&write)
 	assert.Equal(t, int64(40), write.Balance, "Update failed")
-
-	err = eventDb.addOrOverwriteWriteAllocationPool(WriteAllocationPool{
+	want := WriteAllocationPool{
 		PoolID:  "allocation",
 		UserID:  "some user id",
 		Balance: 23,
@@ -79,6 +79,11 @@ func TestWriteAllocationPool(t *testing.T) {
 				BlobberID: "blobberID1",
 			},
 		},
-	})
+	}
+	err = eventDb.addOrOverwriteWriteAllocationPool(want)
 	assert.NoError(t, err, "there should be an error")
+
+	w, err := eventDb.GetWriteAllocationPoolWithFilterAndPagination(WriteAllocationPoolFilter{PoolID: null.StringFrom("allocation")}, 0, 0)
+	assert.NoError(t, err, "should be no error")
+	assert.Equal(t, int64(2), w[0].Blobbers[0].Balance, "should be equal")
 }

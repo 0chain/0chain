@@ -386,7 +386,7 @@ func readPoolToEventReadPool(readPool allocationPool, t *transaction.Transaction
 	readAllocation := event.ReadAllocationPool{
 		AllocationID: readPool.AllocationID,
 		PoolID:       readPool.ID,
-		UserID:       t.ToClientID,
+		UserID:       t.ClientID,
 		Balance:      int64(readPool.Balance),
 		ExpireAt:     int64(readPool.ExpireAt),
 	}

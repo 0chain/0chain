@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/guregu/null"
+
+	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -238,6 +239,26 @@ func (ssc *StorageSmartContract) createWritePool(
 		return fmt.Errorf("saving write pool: %v", err)
 	}
 
+	fmt.Println("---came here---------------------")
+	if balances.GetEventDB() == nil {
+		fmt.Println("Database is not present here")
+		return
+	}
+	data := ""
+	for _, p := range wp.Pools {
+		data, err = writePoolToEventWritePool(*p, t)
+		if err != nil {
+			return
+		}
+		balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
+			{
+				Type: int(event.TypeStats),
+				Tag:  int(event.TagAddOrOverwriteWriteAllocationPool),
+				Data: data,
+			},
+		})
+	}
+
 	return
 }
 
@@ -372,13 +393,18 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("write_pool_lock_failed",
 			"saving allocation: %v", err)
 	}
-
+	fmt.Println("---------------------------------------------------------------------------")
+	fmt.Println("Came here")
 	if balances.GetEventDB() == nil {
+		fmt.Println("---------------------------------------------------------------------------")
+		fmt.Println("Came here db")
 		return
 	}
 
 	data, err := writePoolToEventWritePool(ap, t)
 	if err != nil {
+		fmt.Println("---------------------------------------------------------------------------")
+		fmt.Println("Came here processing")
 		return
 	}
 	go balances.GetEventDB().AddEvents(context.TODO(), []event.Event{
@@ -388,6 +414,8 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			Data: data,
 		},
 	})
+	fmt.Println("---------------------------------------------------------------------------")
+	fmt.Println("Done")
 	return
 }
 
@@ -396,7 +424,7 @@ func writePoolToEventWritePool(writePool allocationPool, t *transaction.Transact
 	writeAllocation := event.WriteAllocationPool{
 		AllocationID: writePool.AllocationID,
 		PoolID:       writePool.ID,
-		UserID:       t.ToClientID,
+		UserID:       t.ClientID,
 		Balance:      int64(writePool.Balance),
 		ExpireAt:     int64(writePool.ExpireAt),
 	}
@@ -522,49 +550,57 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	resp interface{}, err error) {
 
 	var (
-		clientID     = params.Get("client_id")
-		allocID      = params.Get("allocation_id")
-		blobberID    = params.Get("blobber_id")
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		offset       = 0
-		limit        = 0
-		wp           writePool
+		clientID  = params.Get("client_id")
+		allocID   = params.Get("allocation_id")
+		blobberID = params.Get("blobber_id")
+		wp        *writePool
 	)
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal()
+
+	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
 	}
-	if offsetString != "" {
-		offset, err := strconv.Atoi(offsetString)
-		if err != nil || offset <= 0 {
-			return nil, common.NewErrBadRequest("offset value is not valid")
-		}
-	}
-	if limitString != "" {
-		limit, err := strconv.Atoi(limitString)
-		if err != nil || limit <= 0 {
-			return nil, common.NewErrBadRequest("limit value is not valid")
-		}
-	}
+
+	fmt.Println("-----1--------------", *wp)
+	wpp := writePool{}
 	allocations, err := balances.GetEventDB().GetWriteAllocationPoolWithFilterAndPagination(
 		event.WriteAllocationPoolFilter{
 			UserID: null.StringFrom(clientID),
 		},
-		offset,
-		limit,
+		0,
+		0,
 	)
-	wp.Pools = make(allocationPools, len(allocations))
+	wpp.Pools = make(allocationPools, len(allocations))
 	for index, allocation := range allocations {
 		ap := allocationPoolTableToWriteAllocationPool(allocation)
-		wp.Pools[index] = &ap
+		wpp.Pools[index] = &ap
+	}
+	fmt.Println("-------------111111")
+	for _, a := range wp.Pools {
+		fmt.Println(a)
+		for _, b := range a.Blobbers {
+			fmt.Println(*b)
+		}
+	}
+	fmt.Println("-------------2222")
+	for _, a := range wpp.Pools {
+		fmt.Println(a)
+		for _, b := range a.Blobbers {
+			fmt.Println(*b)
+		}
 	}
 
 	var (
 		cut  = wp.blobberCut(allocID, blobberID, common.Now())
+		cut2 = wpp.blobberCut(allocID, blobberID, common.Now())
 		stat []untilStat
 	)
+	for _, c1 := range cut2 {
+		fmt.Println(*c1)
+	}
+	fmt.Println("--------------------------")
 
 	for _, ap := range cut {
+		fmt.Println(*ap)
 		var bp, ok = ap.Blobbers.get(blobberID)
 		if !ok {
 			continue
@@ -587,40 +623,15 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		clientID     = params.Get("client_id")
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		offset       = 0
-		limit        = 0
-		wp           writePool
+		clientID = params.Get("client_id")
+		wp       *writePool
 	)
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal()
-	}
-	if offsetString != "" {
-		offset, err := strconv.Atoi(offsetString)
-		if err != nil || offset <= 0 {
-			return nil, common.NewErrBadRequest("offset value is not valid")
-		}
-	}
-	if limitString != "" {
-		limit, err := strconv.Atoi(limitString)
-		if err != nil || limit <= 0 {
-			return nil, common.NewErrBadRequest("limit value is not valid")
-		}
-	}
-	allocations, err := balances.GetEventDB().GetWriteAllocationPoolWithFilterAndPagination(
-		event.WriteAllocationPoolFilter{
-			UserID: null.StringFrom(clientID),
-		},
-		offset,
-		limit,
-	)
-	wp.Pools = make(allocationPools, len(allocations))
-	for index, allocation := range allocations {
-		ap := allocationPoolTableToWriteAllocationPool(allocation)
-		wp.Pools[index] = &ap
-	}
 
-	return wp.stat(common.Now()), nil
+	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
+	}
+	fmt.Println("-------------------", wp)
+	t := wp.stat(common.Now())
+	fmt.Println(t, "came here t")
+	return t, nil
 }

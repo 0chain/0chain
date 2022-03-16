@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func GetPostgresSqlDb(config dbs.DbAccess) (dbs.Store, error) {
@@ -41,6 +42,7 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 		&gorm.Config{
 			//		SkipDefaultTransaction: true,
 			//		PrepareStmt:            true,
+			Logger: logger.Default.LogMode(logger.Silent),
 		})
 	if err != nil {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
