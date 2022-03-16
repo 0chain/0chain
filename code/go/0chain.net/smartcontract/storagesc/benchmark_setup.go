@@ -42,14 +42,15 @@ func AddMockAllocations(
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
 		fps         = make([]fundedPools, len(clients), len(clients))
 
-		challanges      = make([]BlobberChallenge, len(blobbers), len(blobbers))
-		allocChallenges = make([]AllocationChallenge, numAllocations, numAllocations)
+		challanges             = make([]BlobberChallenge, len(blobbers), len(blobbers))
+		allocChallenges        = make([]AllocationChallenge, numAllocations, numAllocations)
+		blobAllocChallengePart = make(map[string]partitions.RandPartition)
 	)
 	part, err := getBlobbersChallengeList(balances)
 	if err != nil {
 		panic(err)
 	}
-	total_partition_size := 0
+	totalBlobberItems := 0
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		sa := addMockAllocation(
@@ -63,8 +64,22 @@ func AddMockAllocations(
 			if err != nil {
 				panic(err)
 			}
+			if _, ok := blobAllocChallengePart[b.ID]; !ok {
+				bcaPart, err := getBlobbersChallengeAllocationList(b.ID, balances)
+				if err != nil {
+					panic(err)
+				}
+				blobAllocChallengePart[b.ID] = bcaPart
+			}
+			allocPart := blobAllocChallengePart[b.ID]
+			_, err = allocPart.Add(&partitions.BlobberChallengeAllocationNode{
+				ID: sa.ID,
+			}, balances)
+			if err != nil {
+				panic(err)
+			}
 		}
-		total_partition_size += len(sa.Blobbers)
+		totalBlobberItems += len(sa.Blobbers)
 
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
@@ -121,11 +136,20 @@ func AddMockAllocations(
 			}
 		}
 	}
-	log.Println("total pair in partition: ", total_partition_size)
+	log.Println("total blobber in partition: ", totalBlobberItems)
+
 	err = part.Save(balances)
 	if err != nil {
 		panic(err)
 	}
+
+	for _, allocPart := range blobAllocChallengePart {
+		err = allocPart.Save(balances)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	for i := 0; i < len(wps); i++ {
 		_, err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i])
 		if err != nil {
