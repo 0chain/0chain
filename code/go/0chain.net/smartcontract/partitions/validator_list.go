@@ -109,10 +109,10 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 	return nil
 }
 
-func (il *validatorItemList) add(it PartitionItem) {
+func (il *validatorItemList) add(it PartitionItem) error {
 	for _, bi := range il.Items {
 		if bi.Name() == it.Name() {
-			return
+			return errors.New("blobber item already exists")
 		}
 	}
 
@@ -121,6 +121,7 @@ func (il *validatorItemList) add(it PartitionItem) {
 		Url: string(it.Data()),
 	})
 	il.Changed = true
+	return nil
 }
 
 func (il *validatorItemList) update(it PartitionItem) error {

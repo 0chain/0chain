@@ -47,15 +47,17 @@ func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 	return nil
 }
 
-func (il *itemList) add(it PartitionItem) {
+func (il *itemList) add(it PartitionItem) error {
 	for _, bi := range il.Items {
 		if bi.Name() == it.Name() {
-			return
+			return errors.New("item already exists")
+
 		}
 	}
 
 	il.Items = append(il.Items, StringItem{it.Name()})
 	il.Changed = true
+	return nil
 }
 
 func (il *itemList) update(it PartitionItem) error {

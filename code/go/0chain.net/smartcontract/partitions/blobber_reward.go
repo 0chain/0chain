@@ -84,15 +84,15 @@ func (il *blobberRewardItemList) get(key datastore.Key, balances state.StateCont
 	return nil
 }
 
-func (il *blobberRewardItemList) add(it PartitionItem) {
+func (il *blobberRewardItemList) add(it PartitionItem) error {
 	for _, bi := range il.Items {
 		if bi.ID == it.Name() {
-			return
+			return errors.New("blobber reward item already exists")
 		}
 	}
 	brn, ok := it.(*BlobberRewardNode)
 	if !ok {
-		return
+		return errors.New("not a blobber reward item")
 	}
 	il.Items = append(il.Items, BlobberRewardNode{
 		ID:                it.Name(),
@@ -103,6 +103,7 @@ func (il *blobberRewardItemList) add(it PartitionItem) {
 		DataRead:          brn.DataRead,
 	})
 	il.Changed = true
+	return nil
 }
 
 func (il *blobberRewardItemList) update(it PartitionItem) error {

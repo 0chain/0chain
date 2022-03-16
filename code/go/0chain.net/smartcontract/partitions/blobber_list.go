@@ -79,10 +79,10 @@ func (il *blobberItemList) get(key datastore.Key, balances state.StateContextI) 
 	return nil
 }
 
-func (il *blobberItemList) add(it PartitionItem) {
+func (il *blobberItemList) add(it PartitionItem) error {
 	for _, bi := range il.Items {
 		if bi.ID == it.Name() {
-			return
+			return errors.New("blobber item already exists")
 		}
 	}
 	il.Items = append(il.Items, BlobberNode{
@@ -90,6 +90,7 @@ func (il *blobberItemList) add(it PartitionItem) {
 		Url: it.Data(),
 	})
 	il.Changed = true
+	return nil
 }
 
 func (il *blobberItemList) update(it PartitionItem) error {

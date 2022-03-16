@@ -80,7 +80,9 @@ func (rs *randomSelector) Add(
 	if len(rs.Partitions) == 0 || part.length() >= rs.PartitionSize {
 		part = rs.addPartition()
 	}
-	part.add(item)
+	if err := part.add(item); err != nil {
+		return 0, err
+	}
 	return len(rs.Partitions) - 1, nil
 }
 
@@ -117,7 +119,9 @@ func (rs *randomSelector) Remove(
 	if replacment == nil {
 		fmt.Errorf("empty last partitions, currpt data")
 	}
-	part.add(replacment)
+	if err := part.add(replacment); err != nil {
+		return err
+	}
 	if rs.Callback != nil {
 		err = rs.Callback(replacment, len(rs.Partitions)-1, index, balances)
 		if err != nil {
@@ -155,7 +159,9 @@ func (rs *randomSelector) AddRand(
 	if moving == nil {
 		fmt.Errorf("empty partitions, currpt data")
 	}
-	partition.add(item)
+	if err := partition.add(item); err != nil {
+		return 0, err
+	}
 
 	movedTo, err := rs.Add(moving, balances)
 	if err != nil {
