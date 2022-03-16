@@ -8,7 +8,7 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"go.uber.org/zap"
 	"math"
@@ -120,7 +120,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				zap.Float64("reward", reward),
 				zap.String("blobber id", qualifyingBlobberIds[i]))
 
-			if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], stakepool.Blobber, balances); err != nil {
+			if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
 				return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 			}
 
