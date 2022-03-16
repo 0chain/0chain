@@ -58,14 +58,15 @@ func AddMockAllocations(
 		)
 
 		for _, b := range sa.Blobbers {
-			_, err = part.Add(&partitions.BlobberChallengeNode{
-				ID: b.ID,
-			}, balances)
-			if err != nil {
-				panic(err)
-			}
-			totalBlobberItems++
 			if _, ok := blobAllocChallengePart[b.ID]; !ok {
+				_, err = part.Add(&partitions.BlobberChallengeNode{
+					ID: b.ID,
+				}, balances)
+				if err != nil {
+					panic(err)
+				}
+				totalBlobberItems++
+
 				bcaPart, err := getBlobbersChallengeAllocationList(b.ID, balances)
 				if err != nil {
 					panic(err)
