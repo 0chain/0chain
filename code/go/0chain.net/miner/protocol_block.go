@@ -589,7 +589,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		err := mc.validateTransaction(b, bState, txn)
 		switch err {
 		case PastTransaction:
-			tii.invalidTxns = append(tii.invalidTxns, txn)
+			tii.pastTxns = append(tii.pastTxns, txn)
 			if debugTxn {
 				logging.Logger.Info("generate block (debug transaction) error, transaction hash old nonce",
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
@@ -624,12 +624,13 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
-		if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
-			if err != nil {
-				tii.reInclusionErr = err
-			}
-			return false
-		}
+		//we can remove it, since it won't work, every accepted transaction will be included in chain and increment the nonce
+		//if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
+		//	if err != nil {
+		//		tii.reInclusionErr = err
+		//	}
+		//	return false
+		//}
 
 		events, err := mc.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
@@ -669,6 +670,7 @@ type TxnIterInfo struct {
 	clients     map[string]*client.Client
 	eTxns       []datastore.Entity
 	invalidTxns []datastore.Entity
+	pastTxns    []datastore.Entity
 	futureTxns  map[datastore.Key][]*transaction.Transaction
 	currentTxns []*transaction.Transaction
 
@@ -709,7 +711,7 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 		//we can have several transactions with the same nonce execute first and skip others
 		// included n=0 in the list 1, 1, 2. take first 1 and skip the second
 		if futures[i].Nonce-currentNonce < 1 {
-			tii.invalidTxns = append(tii.invalidTxns, futures[i])
+			tii.pastTxns = append(tii.pastTxns, futures[i])
 			continue
 		}
 
@@ -815,8 +817,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
-		logging.Logger.Info("generate block (found invalid transactions)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
+		var keys []string
+		for _, txn := range iterInfo.pastTxns {
+			keys = append(keys, txn.GetKey())
+		}
+		logging.Logger.Info("generate block (found invalid transactions)", zap.Any("round", b.Round), zap.Strings("txn_hashes", keys))
 		go mc.deleteTxns(iterInfo.invalidTxns) // OK to do in background
+	}
+	if len(iterInfo.pastTxns) > 0 {
+		var keys []string
+		for _, txn := range iterInfo.pastTxns {
+			keys = append(keys, txn.GetKey())
+		}
+		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Any("round", b.Round), zap.Strings("txn_hashes", keys))
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
