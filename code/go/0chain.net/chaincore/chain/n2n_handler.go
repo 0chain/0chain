@@ -35,8 +35,6 @@ var (
 	// ShardersBlockStateChangeRequestor is the same, but from sharders.
 	// ShardersBlockStateChangeRequestor node.EntityRequestor
 
-	// PartialStateRequestor - request partial state from a given root.
-	PartialStateRequestor node.EntityRequestor
 	// StateNodesRequestor - request a set of state nodes given their keys.
 	StateNodesRequestor node.EntityRequestor
 	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
@@ -58,9 +56,6 @@ func setupX2MRequestors() {
 	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
 	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
 	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
-
-	partialStateEntityMetadata := datastore.GetEntityMetadata("partial_state")
-	PartialStateRequestor = node.RequestEntityHandler("/v1/_x2m/state/get", options, partialStateEntityMetadata)
 
 	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
 	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
