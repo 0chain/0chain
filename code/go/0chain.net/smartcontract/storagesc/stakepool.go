@@ -243,56 +243,6 @@ func (sp *stakePool) capacity(now common.Timestamp, writePrice state.Balance) (f
 	return
 }
 
-// update the pool to get the stat
-func (sp *stakePool) stat(_ *Config, _ string,
-	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
-
-	stat = new(stakePoolStat)
-	stat.ID = blobber.ID
-	// Balance is full balance including all.
-	stat.Balance = sp.stake()
-	// Unstake is total balance of delegate pools want to unsake. But
-	// can't for now. Total stake for new offers (new allocations) can
-	// be calculated as (Balance - Unstake).
-	stat.UnstakeTotal = sp.TotalUnStake
-	// Free is free space, excluding delegate pools want to unstake.
-	stat.Free = sp.cleanCapacity(now, blobber.Terms.WritePrice)
-	stat.Capacity = blobber.Capacity
-	stat.WritePrice = blobber.Terms.WritePrice
-
-	stat.OffersTotal = sp.TotalOffers
-
-	// delegate pools
-	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
-	for poolId, dp := range sp.Pools {
-		var dps = delegatePoolStat{
-			ID:         poolId,
-			Balance:    dp.Balance,
-			DelegateID: dp.DelegateID,
-			Rewards:    dp.Reward,
-			//Penalty:    dp.Penalty,
-			UnStake: dp.Status == spenum.Unstaking,
-		}
-		//stat.Penalty += dp.Penalty
-		stat.Delegate = append(stat.Delegate, dps)
-	}
-
-	// rewards
-	//	stat.Rewards.Charge = sp.Reward // total for all time
-	//stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
-	//stat.Rewards.Validator = sp.Rewards.Validator // total for all time
-
-	stat.Settings = sp.Settings
-	return
-}
-
-// stat
-type rewardsStat struct {
-	Charge    state.Balance `json:"charge"`    // total for all time
-	Blobber   state.Balance `json:"blobber"`   // total for all time
-	Validator state.Balance `json:"validator"` // total for all time
-}
-
 type delegatePoolStat struct {
 	ID         string        `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance

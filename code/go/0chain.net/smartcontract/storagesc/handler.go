@@ -25,8 +25,6 @@ import (
 	"0chain.net/core/util"
 )
 
-const cantGetBlobberMsg = "can't get blobber"
-
 func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
