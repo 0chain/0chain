@@ -11,6 +11,10 @@ To run
 go build -tags bn256 && ./main benchmark | column -t -s,
 ```
 
+```bash
+go build -tags bn256 && ./main benchmark --load fred  | column -t -s,
+```
+
 To run only a subset of the test suits
 ```bash
 go build -tags bn256

@@ -18,24 +18,15 @@ simulation:
   num_vesting_destinations_client: 10
   num_write_redeem_allocation: 10
   num_challenges_blobber: 10
+  num_authorisers: 200
 
 options:
   verbose: true
   test_suites:
     - "storage"
     - "storage_rest"
-    - "miner"
-    - "miner_rest"
-    - "faucet"
-    - "faucet_rest"
-    - "interest_pool"
-    - "interest_pool_rest"
-    - "vesting"
-    - "vesting_rest"
-    - "multi_sig"
-    - "zcnscbridge"
-    - "zcnscbridge_rest"
   omitted_tests:
+  save_path: ./fred # do not add a load_path key, this is read from command line options
 
 dbs:
   events:

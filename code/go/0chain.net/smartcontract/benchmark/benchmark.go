@@ -1,6 +1,8 @@
 package benchmark
 
 import (
+	"encoding/json"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -90,6 +92,7 @@ const (
 	SimulationNumVestingDestinationsClient
 	SimulationNumWriteRedeemAllocation
 	SimulationNumChallengesBlobber
+	SimulationNumAuthorizers
 	NumberSimulationParameters
 )
 
@@ -120,10 +123,13 @@ const (
 	Colour                  = Internal + "colour"
 	ControlM                = Internal + "control_m"
 	ControlN                = Internal + "control_n"
+	MptRoot                 = Internal + "mpt_root"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"
 	OptionOmittedTests = Options + "omitted_tests"
+	OptionLoadPath     = Options + "load_path"
+	OptionSavePath     = Options + "save_path"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
@@ -225,6 +231,7 @@ func (w SimulatorParameter) String() string {
 		"num_vesting_destinations_client",
 		"num_write_redeem_allocation",
 		"num_challenges_blobber",
+		"num_authorizers",
 	}[w]
 }
 
@@ -248,6 +255,7 @@ var (
 	NumVestingDestinationsClient = Simulation + SimulationNumVestingDestinationsClient.String()
 	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
 	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
+	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
 )
 
 type BenchTestI interface {
@@ -295,9 +303,22 @@ func (ts *TestSuite) removeBenchmark(benchToRemove string) bool {
 }
 
 type BenchData struct {
-	Clients     []string
-	PublicKeys  []string
-	PrivateKeys []string
-	Sharders    []string
-	EventDb     *event.EventDb
+	Clients     []string       `json:"clients"`
+	PublicKeys  []string       `json:"publicKeys"`
+	PrivateKeys []string       `json:"privateKeys"`
+	Sharders    []string       `json:"sharders"`
+	EventDb     *event.EventDb `json:"-"`
+}
+
+func (bd *BenchData) Encode() (b []byte) {
+	var err error
+	if b, err = json.Marshal(bd); err != nil {
+		log.Fatal(err)
+	}
+	return
+}
+
+// Decode from []byte
+func (bd *BenchData) Decode(input []byte) error {
+	return json.Unmarshal(input, bd)
 }

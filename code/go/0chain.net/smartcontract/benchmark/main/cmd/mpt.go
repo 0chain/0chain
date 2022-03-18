@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"encoding/hex"
+	"os"
+	"path"
 	"sync"
 	"time"
 
@@ -33,6 +35,8 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"github.com/spf13/viper"
 )
+
+var BenchDataKey = encryption.Hash("benchData")
 
 func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatriciaTrie {
 	pNode := mpt.GetNodeDB()
@@ -74,16 +78,70 @@ func getBalances(
 	)
 }
 
+func getMpt(loadPath, configPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+	var mptDir string
+	savePath := viper.GetString(benchmark.OptionSavePath)
+
+	if len(savePath) > 0 {
+		if loadPath != savePath {
+			if err := os.MkdirAll(savePath, os.ModePerm); err != nil {
+				log.Fatal("making save directory", savePath)
+			}
+			if err := viper.WriteConfigAs(path.Join(savePath, "benchmark.yaml")); err != nil {
+				log.Fatal("cannot copy config file to", savePath)
+			}
+		}
+		mptDir = path.Join(savePath, "mpt_db")
+	} else {
+		mptDir = "./mpt_db"
+	}
+
+	if len(loadPath) == 0 {
+		return setUpMpt(mptDir)
+	}
+
+	return openMpt(mptDir)
+}
+
+func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+	pNode, err := util.NewPNodeDB(
+		loadPath,
+		loadPath+"log",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
+
+	root := viper.GetString(benchmark.MptRoot)
+	_, balances := getBalances(
+		&transaction.Transaction{},
+		extractMpt(pMpt, util.Key(root)),
+		benchmark.BenchData{},
+	)
+
+	var benchData benchmark.BenchData
+	val, err := balances.GetTrieNode(BenchDataKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = benchData.Decode(val.Encode())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return pMpt, util.Key(root), benchData
+}
+
 func setUpMpt(
 	dbPath string,
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
-
 	log.Println("starting building blockchain")
 	mptGenTime := time.Now()
 
 	pNode, err := util.NewPNodeDB(
-		dbPath+"name_dataDir",
-		dbPath+"name_logDir",
+		dbPath,
+		dbPath+"log",
 	)
 	if err != nil {
 		panic(err)
@@ -323,15 +381,34 @@ func setUpMpt(
 
 	wg.Wait()
 
-	log.Println("mpt generation took:", time.Since(mptGenTime), "\n")
-
-	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
+	benchData := benchmark.BenchData{
 		Clients:     clients,
 		PublicKeys:  publicKeys,
 		PrivateKeys: privateKeys,
 		Sharders:    sharders,
 		EventDb:     eventDb,
 	}
+
+	if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
+		log.Fatal(err)
+	}
+
+	var bd benchmark.BenchData
+	val, err := balances.GetTrieNode(BenchDataKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = bd.Decode(val.Encode())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	root := balances.GetState().GetRoot()
+	viper.Set(benchmark.MptRoot, string((root)))
+
+	log.Println("mpt generation took:", time.Since(mptGenTime), "\n")
+
+	return pMpt, balances.GetState().GetRoot(), benchData
 }
 
 func addMockClients(

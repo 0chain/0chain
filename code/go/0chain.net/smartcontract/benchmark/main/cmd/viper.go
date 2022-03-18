@@ -13,9 +13,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetViper(path string) {
+func GetViper(loadPath string) {
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("benchmark")
+	viper.AddConfigPath(loadPath)
 	viper.AddConfigPath("../config/")
 	viper.AddConfigPath("./testdata/")
 	viper.AddConfigPath("./config/")
@@ -42,6 +43,11 @@ func validateConfig() {
 	if viper.GetInt(bk.NumBlobbersPerAllocation) > viper.GetInt(bk.NumBlobbers) {
 		log.Fatal(fmt.Errorf("number of blobber per allocation %d grater than avalable blobbers %d",
 			viper.GetInt(bk.NumBlobbersPerAllocation), viper.GetInt(bk.NumBlobbers)))
+	}
+
+	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.NumAuthorizers) {
+		log.Fatal(fmt.Errorf("number of clients %d less than authorisers %d",
+			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumAuthorizers)))
 	}
 
 	if viper.GetInt(bk.NumClients) <= multisigsc.MaxSigners {
