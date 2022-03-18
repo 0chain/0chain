@@ -364,7 +364,7 @@ func AddMockValidators(
 	return validatornodes
 }
 
-func GetMockStakePools(
+func GetMockBlobberStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) []*stakePool {

@@ -2,21 +2,19 @@ package cmd
 
 import (
 	"encoding/hex"
+	"sync"
+	"time"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/control"
+	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/smartcontract/benchmark/main/cmd/control"
-
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
-
-	"0chain.net/smartcontract/multisigsc"
-
-	"0chain.net/smartcontract/vestingsc"
-
-	"0chain.net/smartcontract/interestpoolsc"
 
 	"0chain.net/smartcontract/faucetsc"
 
@@ -81,6 +79,7 @@ func setUpMpt(
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 
 	log.Println("starting building blockchain")
+	mptGenTime := time.Now()
 
 	pNode, err := util.NewPNodeDB(
 		dbPath+"name_dataDir",
@@ -91,12 +90,17 @@ func setUpMpt(
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 	log.Println("made empty blockchain")
-	clients, publicKeys, privateKeys := addMockClients(pMpt)
-	log.Println("added clients")
-	faucetsc.FundMockFaucetSmartContract(pMpt)
-	log.Println("funded faucet")
-	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
+	timer := time.Now()
+	clients, publicKeys, privateKeys := addMockClients(pMpt)
+	log.Println("added clients\t", time.Since(timer))
+
+	timer = time.Now()
+	faucetsc.FundMockFaucetSmartContract(pMpt)
+	log.Println("funded faucet\t", time.Since(timer))
+
+	timer = time.Now()
+	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 	bk := &block.Block{}
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
@@ -115,10 +119,11 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 		nil,
 	)
-	log.Println("created balances")
+	log.Println("created balances\t", time.Since(timer))
 
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
+		timer = time.Now()
 		eventDb, err := event.NewEventDb(dbs.DbAccess{
 			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
 			Name:            viper.GetString(benchmark.EventDbName),
@@ -136,58 +141,189 @@ func setUpMpt(
 		if err := eventDb.AutoMigrate(); err != nil {
 			panic(err)
 		}
+		log.Println("created event database\t", time.Since(timer))
 	}
-	log.Println("created event database")
 
-	_ = storagesc.SetMockConfig(balances)
-	log.Println("created storage config")
-	validators := storagesc.AddMockValidators(publicKeys, balances)
-	log.Println("added validators")
-	blobbers := storagesc.AddMockBlobbers(eventDb, balances)
-	log.Println("added blobbers")
-	stakePools := storagesc.GetMockStakePools(clients, balances)
-	log.Println("added stake pools")
-	storagesc.GetMockValidatorStakePools(clients, balances)
-	log.Println("added validator stake pools")
-	storagesc.AddMockAllocations(
-		clients, publicKeys, stakePools, blobbers, validators, balances,
-	)
-	log.Println("added allocations")
-	storagesc.SaveMockStakePools(stakePools, balances)
-	log.Println("added stake pools")
-	miners := minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
-	log.Println("added miners")
-	sharders := minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
-	log.Println("added sharders")
-	minersc.AddNodeDelegates(clients, miners, sharders, balances)
-	log.Println("adding miners and sharders delegates")
-	minersc.AddMagicBlock(miners, sharders, balances)
-	log.Println("add magic block")
-	minersc.SetUpNodes(miners, sharders)
-	log.Println("registering miners and sharders")
-	storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
-	log.Println("added free storage assigners")
-	storagesc.AddMockStats(balances)
-	log.Println("added storage stats")
-	storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
-	log.Println("added read redeems")
-	faucetsc.AddMockGlobalNode(balances)
-	log.Println("added faucet global node")
-	faucetsc.AddMockUserNodes(clients, balances)
-	log.Println("added faucet user nodes")
-	interestpoolsc.AddMockNodes(clients, balances)
-	log.Println("added user nodes")
-	multisigsc.AddMockWallets(clients, publicKeys, balances)
-	log.Println("added client wallets")
-	vestingsc.AddVestingPools(clients, balances)
-	log.Println("added vesting pools")
-	minersc.AddPhaseNode(balances)
-	log.Println("added miners phase node")
-	zcnsc.Setup(clients, publicKeys, balances)
-	log.Println("added zcnsc")
-	log.Println("added phase node")
-	control.AddControlObjects(balances)
-	log.Println("added control objects")
+	var wg sync.WaitGroup
+
+	var blobbers []*storagesc.StorageNode
+	var validators []*storagesc.ValidationNode
+	var miners, sharders []string
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		_ = storagesc.SetMockConfig(balances)
+		log.Println("created storage config\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		validators = storagesc.AddMockValidators(publicKeys, balances)
+		log.Println("added validators\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
+		log.Println("added blobbers\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
+		log.Println("added miners\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
+		log.Println("added sharders\t", time.Since(timer))
+	}()
+
+	timer = time.Now()
+	stakePools := storagesc.GetMockBlobberStakePools(clients, balances)
+	log.Println("created blobber stake pools\t", time.Since(timer))
+
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.GetMockValidatorStakePools(clients, balances)
+		log.Println("added validator stake pools\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockAllocations(
+			clients, publicKeys, stakePools, blobbers, validators, balances,
+		)
+		log.Println("added allocations\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.SaveMockStakePools(stakePools, balances)
+		log.Println("saved blobber stake pools\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		minersc.AddNodeDelegates(clients, miners, sharders, balances)
+		log.Println("adding miners and sharders delegates\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		minersc.AddMagicBlock(miners, sharders, balances)
+		log.Println("add magic block\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		minersc.SetUpNodes(miners, sharders)
+		log.Println("registering miners and sharders\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		minersc.AddPhaseNode(balances)
+		log.Println("added miners phase node\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
+		log.Println("added free storage assigners\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockStats(balances)
+		log.Println("added storage stats\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
+		log.Println("added read redeems\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		faucetsc.AddMockGlobalNode(balances)
+		log.Println("added faucet global node\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		faucetsc.AddMockUserNodes(clients, balances)
+		log.Println("added faucet user nodes\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		interestpoolsc.AddMockNodes(clients, balances)
+		log.Println("added user nodes\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		multisigsc.AddMockWallets(clients, publicKeys, balances)
+		log.Println("added client wallets\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		vestingsc.AddVestingPools(clients, balances)
+		log.Println("added vesting pools\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		zcnsc.Setup(clients, publicKeys, balances)
+		log.Println("added zcnsc\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		control.AddControlObjects(balances)
+		log.Println("added control objects\t", time.Since(timer))
+	}()
+
+	wg.Wait()
+
+	log.Println("mpt generation took:", time.Since(mptGenTime), "\n")
 
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients,
