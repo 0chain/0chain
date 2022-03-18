@@ -565,7 +565,7 @@ type StorageAllocation struct {
 	OwnerPublicKey    string                        `json:"owner_public_key"`
 	Stats             *StorageAllocationStats       `json:"stats"`
 	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
-	PreferredBlobbers []string                      `json:"preferred_blobbers"`
+	PreferredBlobbers []string                      `json:"blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
 	IsImmutable       bool                          `json:"is_immutable"`
