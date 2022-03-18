@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
@@ -128,14 +129,21 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 	mc.handleRoundTimeout(ctx, round)
 
 	minerRound := mc.GetMinerRound(round)
-	if isTestingHalfNodesDown(minerRound) || isTestingSendDifferentBlocks(minerRound) {
-		finalisedBlockHash := ""
-		if minerRound.IsFinalized() {
-			finalisedBlockHash = minerRound.BlockHash
-		}
-		if err := chain.AddRoundInfoResult(minerRound, finalisedBlockHash); err != nil {
-			log.Panicf("Conductor: error while adding test case result: %v", err)
-		}
+	addRoundInfoResultOnHandleRoundTimeoutIfNeeded(minerRound)
+}
+
+func addRoundInfoResultOnHandleRoundTimeoutIfNeeded(minerRound *Round) {
+	testing := isTestingHalfNodesDown(minerRound) || isTestingSendDifferentBlocks(minerRound) || isTestingMissingLFBTickets(minerRound)
+	if !testing {
+		return
+	}
+
+	finalisedBlockHash := ""
+	if minerRound.IsFinalized() {
+		finalisedBlockHash = minerRound.BlockHash
+	}
+	if err := chain.AddRoundInfoResult(minerRound, finalisedBlockHash); err != nil {
+		log.Panicf("Conductor: error while adding test case result: %v", err)
 	}
 }
 
@@ -158,6 +166,15 @@ func isTestingSendDifferentBlocks(minerRound *Round) bool {
 	return (shouldTestFromAllGen || shouldTestFromFirstGen) &&
 		minerRound.GetTimeoutCount() == 1 &&
 		minerRound.GetSoftTimeoutCount() == 0
+}
+
+func isTestingMissingLFBTickets(minerRound *Round) bool {
+	lfbTicketAhead := int64(config.GetLFBTicketAhead())
+	hndCfg := crpc.Client().State().MissingLFBTicket
+	return hndCfg != nil &&
+		hndCfg.OnRound+lfbTicketAhead-1 == minerRound.Number &&
+		minerRound.GetTimeoutCount() == 0 &&
+		minerRound.GetSoftTimeoutCount() == 9
 }
 
 func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
