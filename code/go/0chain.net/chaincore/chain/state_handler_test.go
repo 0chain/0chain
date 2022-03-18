@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/zcnsc"
 
 	"github.com/stretchr/testify/require"
@@ -1511,7 +1512,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					t.Fatal(err)
 				}
 				v2 := util.SecureSerializableValue{Buffer: blob}
-				k2 := stakepool.UserStakePoolsKey(stakepool.Blobber, storagesc.ADDRESS)
+				k2 := stakepool.UserStakePoolsKey(spenum.Blobber, storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k2), &v2); err != nil {
 					t.Fatal(err)
 				}
