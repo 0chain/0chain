@@ -16,7 +16,7 @@ simulation:
   num_curators: 3
   num_free_storage_assigners: 10
   num_vesting_destinations_client: 10
-  num_write_redeem_allocation: 10
+  num_write_redeem_allocation: 1
   num_challenges_blobber: 10
   num_authorisers: 200
 
@@ -24,7 +24,6 @@ options:
   verbose: true
   test_suites:
     - "storage"
-    - "storage_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
@@ -142,5 +141,5 @@ internal:
   satisfactory: 1ms
   time_unit: 1ms
   colour: true
-  control_m: 250000
-  control_n: 900
+  control_m: 25000
+  control_n: 90

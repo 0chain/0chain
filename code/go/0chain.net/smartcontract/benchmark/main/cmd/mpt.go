@@ -241,12 +241,12 @@ func setUpMpt(
 		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
+	wg.Wait()
 
 	timer = time.Now()
 	stakePools := storagesc.GetMockBlobberStakePools(clients, balances)
 	log.Println("created blobber stake pools\t", time.Since(timer))
 
-	wg.Wait()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -258,10 +258,62 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockAllocations(
-			clients, publicKeys, stakePools, blobbers, validators, balances,
-		)
+		storagesc.AddMockAllocations(clients, publicKeys, balances)
 		log.Println("added allocations\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockReadPools(clients, balances)
+		log.Println("added allocation read pools\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockWritePools(clients, balances)
+		log.Println("added allocation write pools\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockFundedPools(clients, balances)
+		log.Println("added allocation funded pools\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockChallengePools(balances)
+		log.Println("added challenge pools\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockChallenges(blobbers, validators, balances)
+		log.Println("added challenges\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockClientAllocation(clients, balances)
+		log.Println("added client allocations\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		storagesc.AddMockAllAllocations(balances)
+		log.Println("added all allocations list\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
@@ -354,10 +406,16 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		vestingsc.AddVestingPools(clients, balances)
+		vestingsc.AddMockClientPools(clients, balances)
+		log.Println("added vesting client pools\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		vestingsc.AddMockVestingPools(clients, balances)
 		log.Println("added vesting pools\t", time.Since(timer))
 	}()
-
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -373,9 +431,10 @@ func setUpMpt(
 		log.Println("added control objects\t", time.Since(timer))
 	}()
 
-	wg.Add(1)
 	var benchData benchmark.BenchData
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		timer = time.Now()
 		benchData.EventDb = eventDb
 		benchData.Clients = clients

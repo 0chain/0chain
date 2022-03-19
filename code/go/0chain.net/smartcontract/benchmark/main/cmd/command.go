@@ -65,6 +65,7 @@ var rootCmd = &cobra.Command{
 	Short: "Benchmark 0chain smart-contract",
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
+		totalTimer := time.Now()
 		// path to config file can only come from command line options
 		loadPath, configPath := loadPath(cmd.Flags())
 
@@ -83,10 +84,12 @@ var rootCmd = &cobra.Command{
 				log.Fatal("cannot copy config file to", savePath)
 			}
 		}
-
+		testsTimer := time.Now()
 		suites := getTestSuites(data, tests, omittedTests)
 		results := runSuites(suites, mpt, root, data)
-
+		log.Println()
+		log.Println("tests took", time.Since(testsTimer))
+		log.Println("benchmark took", time.Since(totalTimer), "\n")
 		printResults(results)
 	},
 }

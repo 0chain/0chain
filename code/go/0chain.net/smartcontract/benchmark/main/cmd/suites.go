@@ -3,6 +3,7 @@ package cmd
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
@@ -56,8 +57,10 @@ func runSuite(
 		wg.Add(1)
 		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 			defer wg.Done()
+			timer := time.Now()
 			log.Println("starting", bm.Name())
 			var err error
+
 			result := testing.Benchmark(func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()
@@ -75,12 +78,11 @@ func runSuite(
 				benchmarkResults{
 					test:   bm,
 					result: result,
-					error: err,
+					error:  err,
 				},
 			)
 
-			log.Println("test", bm.Name(), "done")
-
+			log.Println("test", bm.Name(), "done. took:", time.Since(timer))
 		}(bm, &wg)
 	}
 	wg.Wait()
