@@ -303,11 +303,8 @@ func (ts *TestSuite) removeBenchmark(benchToRemove string) bool {
 }
 
 type BenchData struct {
-	Clients     []string       `json:"clients"`
-	PublicKeys  []string       `json:"publicKeys"`
-	PrivateKeys []string       `json:"privateKeys"`
-	Sharders    []string       `json:"sharders"`
-	EventDb     *event.EventDb `json:"-"`
+	BenchDataMpt
+	EventDb *event.EventDb
 }
 
 func (bd *BenchData) Encode() (b []byte) {

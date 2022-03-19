@@ -120,11 +120,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	)
 
 	var benchData benchmark.BenchData
-	val, err := balances.GetTrieNode(BenchDataKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = benchData.Decode(val.Encode())
+	err = balances.GetTrieNode(BenchDataKey, &benchData)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -377,32 +373,24 @@ func setUpMpt(
 		log.Println("added control objects\t", time.Since(timer))
 	}()
 
+	wg.Add(1)
+	var benchData benchmark.BenchData
+	go func() {
+		timer = time.Now()
+		benchData.EventDb = eventDb
+		benchData.Clients = clients
+		benchData.PublicKeys = publicKeys
+		benchData.PrivateKeys = privateKeys
+		benchData.Sharders = sharders
+		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
+			log.Fatal(err)
+		}
+		root := balances.GetState().GetRoot()
+		viper.Set(benchmark.MptRoot, string((root)))
+		log.Println("saved simulation parameters\t", time.Since(timer))
+	}()
+
 	wg.Wait()
-
-	benchData := benchmark.BenchData{
-		Clients:     clients,
-		PublicKeys:  publicKeys,
-		PrivateKeys: privateKeys,
-		Sharders:    sharders,
-		EventDb:     eventDb,
-	}
-
-	if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
-		log.Fatal(err)
-	}
-
-	var bd benchmark.BenchData
-	val, err := balances.GetTrieNode(BenchDataKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = bd.Decode(val.Encode())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	root := balances.GetState().GetRoot()
-	viper.Set(benchmark.MptRoot, string((root)))
 
 	log.Println("mpt generation took:", time.Since(mptGenTime), "\n")
 

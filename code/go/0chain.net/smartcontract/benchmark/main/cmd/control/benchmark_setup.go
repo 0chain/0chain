@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate msgp -io=false -tests=false -unexported=true -v
+//go:generate msgp -io=false -tests=false -unexported=true
 
 var (
 	controlMKey = datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + encryption.Hash("control_all"))
