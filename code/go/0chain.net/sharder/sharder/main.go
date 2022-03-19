@@ -264,7 +264,7 @@ func main() {
 	sc.SetupHealthyRound()
 
 	common.ConfigRateLimits()
-	initN2NHandlers(sc.Chain)
+	initN2NHandlers(sc)
 	initWorkers(ctx)
 
 	// start sharding from the LFB stored
@@ -438,11 +438,11 @@ func initEntities(workdir string) {
 	setupsc.SetupSmartContracts()
 }
 
-func initN2NHandlers(c *chain.Chain) {
+func initN2NHandlers(c *sharder.Chain) {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
-	sharder.SetupM2SResponders()
-	chain.SetupX2XResponders(c)
+	sharder.SetupM2SResponders(c)
+	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
 	sharder.SetupS2SRequestors()

@@ -96,7 +96,7 @@ type SendOptions struct {
 	Pull               bool
 }
 
-/*MessageFilterI - tells wether the given message should be processed or not
+/*MessageFilterI - tells whether the given message should be processed or not
 * This will be useful since if for example a notarized block is received multiple times
 * the cost of decoding and decompressing can be avoided */
 type MessageFilterI interface {
