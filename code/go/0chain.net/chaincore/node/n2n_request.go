@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -53,7 +54,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	if total < minNum {
 		reqNum = total
 	} else {
-		reqNum = total / 10
+		reqNum = int(math.Ceil(float64(total) / 10.0))
 		if reqNum < minNum {
 			reqNum = minNum
 		}

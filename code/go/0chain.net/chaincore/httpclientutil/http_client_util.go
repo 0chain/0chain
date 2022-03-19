@@ -32,13 +32,8 @@ import (
   ToDo: This is adapted from blobber code. Need to find a way to reuse this
 */
 
-const maxRetries = 5 //nolint unused
-
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
-
-//TxnConfirmationTime time to wait before checking the status
-const TxnConfirmationTime = 15
 
 const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"

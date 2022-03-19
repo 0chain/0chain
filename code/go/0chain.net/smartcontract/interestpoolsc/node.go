@@ -99,8 +99,7 @@ func (gn *GlobalNode) set(key string, value string) error {
 		}
 		gn.MaxMint = state.Balance(fValue * 1e10)
 	default:
-		// report warning message instead of return error,
-		return nil
+		return fmt.Errorf("config setting %q not found", key)
 	}
 	return nil
 }

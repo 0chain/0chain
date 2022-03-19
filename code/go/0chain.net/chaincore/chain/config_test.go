@@ -141,7 +141,7 @@ server_chain:
     replicators: 0
     generation:
       timeout: 15
-      retryWaitTime: 5 #milliseconds
+      retry_wait_time: 5 #milliseconds
     proposal:
       max_wait_time: 180ms # milliseconds
       wait_mode: static # static or dynamic
