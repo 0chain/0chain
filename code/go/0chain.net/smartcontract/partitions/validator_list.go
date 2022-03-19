@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -v -io=false -tests=false -unexported=true
 
 func NewPopulatedValidatorSelector(
 	name string,
@@ -73,9 +74,9 @@ func (vn *ValidationNode) Name() string {
 //------------------------------------------------------------------------------
 
 type validatorItemList struct {
-	Key     datastore.Key    `json:"-"`
+	Key     string           `json:"-" msg:"-"`
 	Items   []ValidationNode `json:"items"`
-	Changed bool             `json:"-"`
+	Changed bool             `json:"-" msg:"-"`
 }
 
 func (il *validatorItemList) Encode() []byte {
@@ -96,19 +97,14 @@ func (il *validatorItemList) save(balances state.StateContextI) error {
 }
 
 func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI) error {
-	val, err := balances.GetTrieNode(key)
+	err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		il = &validatorItemList{
-			Key: key,
-		}
+		il.Key = key
+		return nil
 	}
-	if err := il.Decode(val.Encode()); err != nil {
-		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	il.Key = key
 	return nil
 }
 

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/chaincore/state"
-	"0chain.net/core/datastore"
 )
 
 func TestTokenPoolTransferResponse_Encode(t *testing.T) {
@@ -28,12 +27,12 @@ func TestTokenPoolTransferResponse_Encode(t *testing.T) {
 	}
 
 	type fields struct {
-		TxnHash    datastore.Key
-		FromPool   datastore.Key
-		ToPool     datastore.Key
+		TxnHash    string
+		FromPool   string
+		ToPool     string
 		Value      state.Balance
-		FromClient datastore.Key
-		ToClient   datastore.Key
+		FromClient string
+		ToClient   string
 	}
 	tests := []struct {
 		name   string
@@ -83,12 +82,12 @@ func TestTokenPoolTransferResponse_Decode(t *testing.T) {
 	}
 
 	type fields struct {
-		TxnHash    datastore.Key
-		FromPool   datastore.Key
-		ToPool     datastore.Key
+		TxnHash    string
+		FromPool   string
+		ToPool     string
 		Value      state.Balance
-		FromClient datastore.Key
-		ToClient   datastore.Key
+		FromClient string
+		ToClient   string
 	}
 	type args struct {
 		input []byte

@@ -17,8 +17,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/smartcontract/minersc"
+	"go.uber.org/zap"
 )
 
 type home struct {
@@ -324,18 +326,20 @@ func (c *Chain) getInfraHealth() InfraHealth {
 		isLFBStateInitialized = lfb.ClientState != nil
 	case node.NodeTypeSharder:
 		var (
-			lfb                     = c.GetLatestFinalizedBlock()
-			seri, err               = c.GetBlockStateNode(lfb, minersc.PhaseKey)
-			phase     minersc.Phase = minersc.Unknown
-			restarts  int64         = -1
-			pn        minersc.PhaseNode
+			lfb      = c.GetLatestFinalizedBlock()
+			pn       minersc.PhaseNode
+			phase    minersc.Phase = minersc.Unknown
+			restarts int64         = -1
 		)
-		if err == nil {
-			if err = pn.Decode(seri.Encode()); err == nil {
-				phase = pn.Phase
-				restarts = pn.Restarts
-			}
+		err := c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
+		switch err {
+		case nil:
+			phase = pn.Phase
+			restarts = pn.Restarts
+		default:
+			logging.Logger.Warn("get block state node failed", zap.Error(err))
 		}
+
 		if !config.DevConfiguration.ViewChange {
 			isDKGProcessDisabled = true
 		} else {

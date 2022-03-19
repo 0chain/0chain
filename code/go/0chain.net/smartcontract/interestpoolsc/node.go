@@ -13,9 +13,11 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type GlobalNode struct {
-	ID                datastore.Key
 	*SimpleGlobalNode `json:"simple_global_node"`
+	ID                string
 	MinLockPeriod     time.Duration `json:"min_lock_period"`
 }
 
@@ -85,10 +87,12 @@ func (gn *GlobalNode) set(key string, value string) error {
 			return fmt.Errorf("cannot conver key %s, value %s into float64e; %v", key, value, err)
 		}
 	case Settings[MinLockPeriod]:
-		gn.MinLockPeriod, err = time.ParseDuration(value)
+		mlp, err := time.ParseDuration(value)
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into time.duration; %v", key, value, err)
 		}
+
+		gn.MinLockPeriod = mlp
 	case Settings[MaxMint]:
 		fValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {
