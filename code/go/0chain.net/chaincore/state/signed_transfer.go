@@ -12,8 +12,8 @@ import (
 type SignedTransfer struct {
 	Transfer
 	SchemeName string
-	PublicKey string
-	Sig string
+	PublicKey  string
+	Sig        string
 }
 
 func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {

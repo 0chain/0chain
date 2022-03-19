@@ -15,6 +15,8 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
 	Start   time.Time     `json:"start_time"`
@@ -62,7 +64,6 @@ func (gn *GlobalNode) Decode(input []byte) error {
 }
 
 func (gn *GlobalNode) updateConfig(fields map[string]string) error {
-	var err error
 	for key, value := range fields {
 		switch key {
 		case Settings[PourAmount]:
@@ -90,15 +91,20 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			}
 			gn.GlobalLimit = state.Balance(fAmount * 1e10)
 		case Settings[IndividualReset]:
-			gn.IndividualReset, err = time.ParseDuration(value)
+			ir, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+
+			gn.IndividualReset = ir
 		case Settings[GlobalReset]:
-			gn.GlobalReset, err = time.ParseDuration(value)
+			gr, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+
+			gn.GlobalReset = gr
+
 		case Settings[OwnerId]:
 			_, err := hex.DecodeString(value)
 			if err != nil {

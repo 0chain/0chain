@@ -30,7 +30,7 @@ generate_mock "../smartcontract/mocks"
 cd $BASEDIR/code/go/0chain.net/chaincore/chain/state || exit
 mockery --case underscore --name=StateContextI --output=../../../mocks
 
-cd $BASEDIR/code/go/0chain.net/chaincore/chain || exit
-go generate
+cd $BASEDIR/code/go/0chain.net || exit
+go generate -run="mockery" ./...
 
 echo "Mocks files are generated."

@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +9,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -21,6 +22,8 @@ import (
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 type Setting int
 
@@ -57,7 +60,7 @@ type config struct {
 	MaxDuration          time.Duration  `json:"max_duration"`
 	MaxDestinations      int            `json:"max_destinations"`
 	MaxDescriptionLength int            `json:"max_description_length"`
-	OwnerId              datastore.Key  `json:"owner_id"`
+	OwnerId              string         `json:"owner_id"`
 	Cost                 map[string]int `json:"cost"`
 }
 
@@ -149,14 +152,14 @@ func (c *config) getConfigMap() smartcontract.StringMap {
 	sMap := smartcontract.StringMap{
 		Fields: make(map[string]string),
 	}
-  
+
 	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(c.MinLock)/1e10)
 	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", c.MinDuration)
 	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", c.MaxDuration)
 	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", c.MaxDestinations)
 	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", c.MaxDescriptionLength)
 	sMap.Fields[Settings[OwnerId]] = fmt.Sprintf("%v", c.OwnerId)
-  sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", c.Cost)
+	sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", c.Cost)
 	return sMap
 }
 
@@ -198,17 +201,6 @@ func (vsc *VestingSmartContract) updateConfig(
 // helpers
 //
 
-func (vsc *VestingSmartContract) getConfigBytes(
-	balances chainstate.StateContextI,
-) (b []byte, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configurations from sc.yaml
 func getConfiguredConfig() (conf *config, err error) {
 	const prefix = "smart_contracts.vestingsc."
@@ -233,25 +225,18 @@ func getConfiguredConfig() (conf *config, err error) {
 }
 
 func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI) (conf *config, err error) {
-
-	var confb []byte
-	confb, err = vsc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
+	balances chainstate.StateContextI,
+) (conf *config, err error) {
 	conf = new(config)
-
-	if err == util.ErrValueNotPresent {
+	err = balances.GetTrieNode(scConfigKey(vsc.ID), conf)
+	switch err {
+	case nil:
+		return conf, nil
+	case util.ErrValueNotPresent:
 		return vsc.setupConfig(balances)
+	default:
+		return nil, err
 	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-
-	return
 }
 
 func (vsc *VestingSmartContract) setupConfig(

@@ -68,7 +68,6 @@ func getBalances(
 	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
-		&state.Deserializer{},
 		txn,
 		func(*block.Block) []string { return data.Sharders },
 		func() *block.Block { return bk },
@@ -165,7 +164,6 @@ func setUpMpt(
 	balances := cstate.NewStateContext(
 		bk,
 		pMpt,
-		&state.Deserializer{},
 		&transaction.Transaction{
 			HashIDField: datastore.HashIDField{
 				Hash: encryption.Hash("mock transaction hash"),

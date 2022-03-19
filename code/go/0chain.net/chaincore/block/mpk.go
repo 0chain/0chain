@@ -8,6 +8,8 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type MPK struct {
 	ID  string
 	Mpk []string

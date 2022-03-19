@@ -80,6 +80,9 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 		}
 		roundNumber--
 		rd = c.GetRound(roundNumber)
+		if rd == nil {
+			break
+		}
 	}
 
 	if len(notarizedBlocks) == 0 {
