@@ -1,6 +1,7 @@
 package interestpoolsc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -98,6 +99,11 @@ func (gn *GlobalNode) set(key string, value string) error {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
 		gn.MaxMint = state.Balance(fValue * 1e10)
+	case Settings[OwnerId]:
+		if _, err := hex.DecodeString(value); err != nil {
+			return fmt.Errorf("%s must be a hes string: %v", key, err)
+		}
+		gn.OwnerId = value
 	default:
 		return fmt.Errorf("config setting %q not found", key)
 	}
