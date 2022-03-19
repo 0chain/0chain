@@ -24,6 +24,10 @@ const (
 	UserNodeType          = "usernode"
 )
 
+type (
+	smartContractFunction func(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (string, error)
+)
+
 // -----------  AuthorizerSignature -------------------
 
 type AuthorizerSignature struct {
