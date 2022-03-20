@@ -51,12 +51,12 @@ func init() {
 
 func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
-	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
-		if err != nil {
-			return err
-		}
-		return common.NewError("process fee transaction", "transaction already exists")
-	}
+	//if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
+	//	if err != nil {
+	//		return err
+	//	}
+	//	return common.NewError("process fee transaction", "transaction already exists")
+	//}
 	events, err := mc.UpdateState(ctx, b, bState, txn)
 	b.Events = append(b.Events, events...)
 	if err != nil {
@@ -441,14 +441,14 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 					return
 				}
-				ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
-				if ok || err != nil {
-					if err != nil {
-						logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
-					}
-					cancel = true
-					return
-				}
+				//ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
+				//if ok || err != nil {
+				//	if err != nil {
+				//		logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+				//	}
+				//	cancel = true
+				//	return
+				//}
 
 				validTxns = append(validTxns, txn)
 			}
@@ -624,7 +624,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
-		//we can remove it, since it won't work, every accepted transaction will be included in chain and increment the nonce
+		//we can remove it, since it won't work, every accepted transaction will be included in chain and will increment the nonce
 		//if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 		//	if err != nil {
 		//		tii.reInclusionErr = err
