@@ -17,6 +17,14 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
+// unlock response
+type unlockResponse struct {
+	// one of the fields is set in a response, the Unstake if can't unstake
+	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
+	Unstake bool          `json:"unstake"` // max time to wait to unstake
+	Balance state.Balance `json:"balance"`
+}
+
 type stakePoolRequest struct {
 	PoolID       string `json:"pool_id,omitempty"`
 	AuthorizerID string `json:"authorizer_id,omitempty"`
@@ -227,5 +235,50 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 }
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(t *transaction.Transaction, input []byte, ctx cstate.StateContextI) (resp string, err error) {
-	return "", nil
+	const code = "stake_pool_unlock_failed"
+	var spr stakePoolRequest
+
+	if err = spr.decode(input); err != nil {
+		return "", common.NewErrorf(code, "can't decode request: %v", err)
+	}
+	var sp *stakePool
+	if sp, err = zcn.getStakePool(spr.AuthorizerID, ctx); err != nil {
+		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
+	}
+
+	unstake, err := sp.empty(zcn.ID, spr.PoolID, t.ClientID, ctx)
+	if err != nil {
+		return "", common.NewErrorf(code,
+			"unlocking tokens: %v", err)
+	}
+
+	// the tokens can't be unlocked due to opened offers, but we mark it
+	// as 'unstake' and returns maximal time to wait to unlock the pool
+	if !unstake {
+		// save the pool and return special result
+		if err = sp.save(zcn.ID, spr.AuthorizerID, ctx); err != nil {
+			return "", common.NewErrorf(code, "saving stake pool: %v", err)
+		}
+		return toJson(&unlockResponse{Unstake: false}), nil
+	}
+
+	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, spr.PoolID, ctx)
+	if err != nil {
+		return "", common.NewErrorf(code, "%v", err)
+	}
+
+	// save the pool
+	if err = sp.save(zcn.ID, spr.AuthorizerID, ctx); err != nil {
+		return "", common.NewErrorf(code, "saving stake pool: %v", err)
+	}
+
+	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+}
+
+func toJson(val interface{}) string {
+	var b, err = json.Marshal(val)
+	if err != nil {
+		panic(err) // must not happen
+	}
+	return string(b)
 }
