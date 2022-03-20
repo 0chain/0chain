@@ -11,7 +11,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -239,7 +238,6 @@ func testCommitBlobberRead(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -247,7 +245,7 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 		),
-		store: make(map[datastore.Key]util.Serializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 	}
 
 	var client = &Client{
@@ -366,10 +364,12 @@ func testCommitBlobberRead(
 
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := ctx.GetTrieNode(stats.GetKey(ssc.ID))
+	err = ctx.GetTrieNode(stats.GetKey(ssc.ID), stats)
 	require.NoError(t, err)
-	require.NotNil(t, statsBytes)
-	require.NoError(t, stats.Decode(statsBytes.Encode()))
+	sv, err := stats.MarshalMsg(nil)
+	require.NoError(t, err)
+	_, err = stats.UnmarshalMsg(sv)
+	require.NoError(t, err)
 
 	confirmCommitBlobberRead(t, f, resp, stats, newRp, newSp, ctx)
 	return nil

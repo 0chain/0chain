@@ -63,6 +63,7 @@ type State struct {
 	BlockStateChangeRequestor             *cases.BlockStateChangeRequestor
 	MinerNotarisedBlockRequestor          *cases.MinerNotarisedBlockRequestor
 	FBRequestor                           *cases.FBRequestor
+	MissingLFBTicket                      *cases.MissingLFBTickets
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

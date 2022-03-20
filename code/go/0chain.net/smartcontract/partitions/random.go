@@ -13,11 +13,12 @@ import (
 	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 )
 
 const notFound = -1
 
+//msgp:ignore randomSelector
+//go:generate msgp -io=false -tests=false -unexported=true -v
 type ItemType int
 
 const (
@@ -28,11 +29,11 @@ const (
 //------------------------------------------------------------------------------
 
 type randomSelector struct {
-	Name          datastore.Key           `json:"name"`
+	Name          string                  `json:"name"`
 	PartitionSize int                     `json:"partition_size"`
 	NumPartitions int                     `json:"num_partitions"`
-	Partitions    []PartitionItemList     `json:"-"`
-	Callback      ChangePartitionCallback `json:"-"`
+	Partitions    []PartitionItemList     `json:"-" msg:"-"`
+	Callback      ChangePartitionCallback `json:"-" msg:"-"`
 	ItemType      ItemType                `json:"item_type"` // todo think of something better
 }
 
@@ -296,13 +297,10 @@ func GetRandomSelector(
 	balances state.StateContextI,
 ) (RandPartition, error) {
 	var rs randomSelector
-	val, err := balances.GetTrieNode(key)
+	err := balances.GetTrieNode(key, &rs)
 	if err != nil {
 		return nil, err
 
-	}
-	if err := rs.Decode(val.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return &rs, nil
 }
@@ -317,6 +315,31 @@ func (rs *randomSelector) Encode() []byte {
 
 func (rs *randomSelector) Decode(b []byte) error {
 	err := json.Unmarshal(b, rs)
-	rs.Partitions = make([]PartitionItemList, rs.NumPartitions, rs.NumPartitions)
+	rs.Partitions = make([]PartitionItemList, rs.NumPartitions)
 	return err
 }
+
+func (rs *randomSelector) MarshalMsg(o []byte) ([]byte, error) {
+	d := randomSelectorDecode(*rs)
+	return d.MarshalMsg(o)
+}
+
+func (rs *randomSelector) UnmarshalMsg(b []byte) ([]byte, error) {
+	d := &randomSelectorDecode{}
+	o, err := d.UnmarshalMsg(b)
+	if err != nil {
+		return nil, err
+	}
+
+	*rs = randomSelector(*d)
+
+	rs.Partitions = make([]PartitionItemList, d.NumPartitions)
+	return o, nil
+}
+
+func (rs *randomSelector) Msgsize() int {
+	d := randomSelectorDecode(*rs)
+	return d.Msgsize()
+}
+
+type randomSelectorDecode randomSelector

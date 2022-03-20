@@ -74,17 +74,15 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		wp *writePool
-
-		b, err = ssc.getWritePoolBytes(clientID, balances)
+		wp, err = ssc.getWritePool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	wp = new(writePool)
 	require.NoError(t, wp.save(ssc.ID, clientID, balances))
-	b, err = ssc.getWritePoolBytes(clientID, balances)
+	wwp, err := ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, wp.Encode(), b)
+	assert.EqualValues(t, wp, wwp)
 }
 
 func TestStorageSmartContract_getWritePool(t *testing.T) {
@@ -111,7 +109,7 @@ func testSetWritePoolConfig(t *testing.T, wpc *writePoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
-		conf scConfig
+		conf Config
 		err  error
 	)
 	conf.WritePool = wpc

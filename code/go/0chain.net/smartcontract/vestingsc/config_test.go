@@ -130,7 +130,8 @@ func TestUpdateConfig(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 		prevConf := configureConfig()
-		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(prevConf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(vsc.ID),
+			mockSetValue(prevConf)).Return(nil).Once()
 		var conf config
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
@@ -138,10 +139,12 @@ func TestUpdateConfig(t *testing.T) {
 			conf.MinLock = state.Balance(fValue * 1e10)
 		}
 		if value, ok := p.input[Settings[MinDuration]]; ok {
-			conf.MinDuration, err = time.ParseDuration(value)
+			minDur, _ := time.ParseDuration(value)
+			conf.MinDuration = minDur
 		}
 		if value, ok := p.input[Settings[MaxDuration]]; ok {
-			conf.MaxDuration, err = time.ParseDuration(value)
+			maxDur, _ := time.ParseDuration(value)
+			conf.MaxDuration = maxDur
 		}
 		if value, ok := p.input[Settings[MaxDestinations]]; ok {
 			conf.MaxDestinations, err = strconv.Atoi(value)

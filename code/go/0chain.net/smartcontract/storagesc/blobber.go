@@ -20,46 +20,25 @@ const blobberHealthTime = 60 * 60 // 1 Hour
 
 func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
-	allBlobbersBytes, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
-	if allBlobbersBytes == nil {
+	err := balances.GetTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
+	switch err {
+	case nil:
 		return allBlobbersList, nil
+	case util.ErrValueNotPresent:
+		return &StorageNodes{}, nil
+	default:
+		return nil, err
 	}
-	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return allBlobbersList, nil
-}
-
-func (sc *StorageSmartContract) getBlobberBytes(blobberID string,
-	balances cstate.StateContextI) (b []byte, err error) {
-
-	var (
-		blobber      StorageNode
-		blobberBytes util.Serializable
-	)
-
-	blobber.ID = blobberID
-	blobberBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
-
-	if err != nil {
-		return
-	}
-
-	return blobberBytes.Encode(), nil
 }
 
 func (sc *StorageSmartContract) getBlobber(blobberID string,
 	balances cstate.StateContextI) (blobber *StorageNode, err error) {
 
-	var b []byte
-	if b, err = sc.getBlobberBytes(blobberID, balances); err != nil {
-		return
-	}
-
 	blobber = new(StorageNode)
-	if err = blobber.Decode(b); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	blobber.ID = blobberID
+	err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
+	if err != nil {
+		return nil, err
 	}
 
 	return
@@ -77,7 +56,7 @@ func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
@@ -460,7 +439,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// update stats
-	sc.newRead(balances, commitRead.ReadMarker.ReadSize)
+	if err := sc.newRead(balances, commitRead.ReadMarker.ReadSize); err != nil {
+		return "", common.NewError("new read err: ", err.Error())
+	}
 
 	return
 }
@@ -667,6 +648,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
-	sc.newWrite(balances, commitConnection.WriteMarker.Size)
+	if err := sc.newWrite(balances, commitConnection.WriteMarker.Size); err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "new write err: %v", err)
+	}
 	return string(detailsBytes), err
 }

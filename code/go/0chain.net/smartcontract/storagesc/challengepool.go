@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore challengePoolStat
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 // challenge pool is a locked tokens for a duration for an allocation
 
 type challengePool struct {
@@ -166,33 +169,11 @@ type challengePoolStat struct {
 // smart contract methods
 //
 
-// getChallengePoolBytes of a client
-func (ssc *StorageSmartContract) getChallengePoolBytes(
-	allocationID datastore.Key, balances cstate.StateContextI) (b []byte,
-	err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getChallengePool of current client
 func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	balances cstate.StateContextI) (cp *challengePool, err error) {
-
-	var poolb []byte
-	poolb, err = ssc.getChallengePoolBytes(allocationID, balances)
-	if err != nil {
-		return
-	}
 	cp = newChallengePool()
-	err = cp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+	err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID), cp)
 	return
 }
 
@@ -202,22 +183,17 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 	creationDate, expiresAt common.Timestamp, balances cstate.StateContextI) (
 	cp *challengePool, err error) {
 
-	_, err = ssc.getChallengePoolBytes(allocationID, balances)
-
-	if err != nil && err != util.ErrValueNotPresent {
+	_, err = ssc.getChallengePool(allocationID, balances)
+	switch err {
+	case util.ErrValueNotPresent:
+		cp = newChallengePool()
+		cp.TokenPool.ID = challengePoolKey(ssc.ID, allocationID)
+		return cp, nil
+	case nil:
+		return nil, common.NewError("new_challenge_pool_failed", "already exist")
+	default:
 		return nil, common.NewError("new_challenge_pool_failed", err.Error())
 	}
-
-	if err == nil {
-		return nil, common.NewError("new_challenge_pool_failed",
-			"already exist")
-	}
-
-	err = nil // reset the util.ErrValueNotPresent
-
-	cp = newChallengePool()
-	cp.TokenPool.ID = challengePoolKey(ssc.ID, allocationID)
-	return
 }
 
 // create, fill and save challenge pool for new allocation

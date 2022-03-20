@@ -11,6 +11,12 @@ jobs:
     runs-on: [self-hosted, build]
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+
+      - name: Check msgp changes
+        run: ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
@@ -22,6 +28,12 @@ jobs:
     runs-on: [ self-hosted, build ]
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+
+      - name: Check msgp changes
+        run: ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
