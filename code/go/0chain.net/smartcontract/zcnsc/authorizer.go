@@ -106,7 +106,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 
 	// Dig pool for authorizer
 
-	transfer, response, err := authorizer.Staking.DigPool(tran.Hash, tran)
+	transfer, response, err := authorizer.LockingPool.DigPool(tran.Hash, tran)
 	if err != nil {
 		err = common.NewError(code, fmt.Sprintf("error digging pool, err: (%v)", err))
 		return "", err
@@ -184,7 +184,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// empty the authorizer's pool
-	pool := authorizer.Staking
+	pool := authorizer.LockingPool
 	if pool == nil {
 		msg := "pool is not created"
 		err := common.NewError(errorCode, msg)

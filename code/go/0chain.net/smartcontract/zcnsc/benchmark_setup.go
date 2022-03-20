@@ -53,7 +53,7 @@ func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, 
 		publicKey := publicKeys[i]
 
 		authorizer := NewAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
-		authorizer.Staking = createTokenPool(id)
+		authorizer.LockingPool = createTokenPool(id)
 
 		err := authorizer.Save(ctx)
 		if err != nil {

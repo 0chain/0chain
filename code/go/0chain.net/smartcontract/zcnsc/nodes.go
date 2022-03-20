@@ -160,11 +160,11 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 // ----- AuthorizerNode --------------------
 
 type AuthorizerNode struct {
-	ID        string                    `json:"id"`
-	PublicKey string                    `json:"public_key"`
-	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
-	URL       string                    `json:"url"`
-	Config    *AuthorizerConfig         `json:"config"`
+	ID          string                    `json:"id"`
+	PublicKey   string                    `json:"public_key"`
+	LockingPool *tokenpool.ZcnLockingPool `json:"staking"`
+	URL         string                    `json:"url"`
+	Config      *AuthorizerConfig         `json:"config"`
 }
 
 // NewAuthorizer To review: tokenLock init values
@@ -175,7 +175,7 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 		ID:        ID,
 		PublicKey: PK,
 		URL:       URL,
-		Staking: &tokenpool.ZcnLockingPool{
+		LockingPool: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
 					ID:      "", // must be filled when DigPool is invoked. Usually this is a trx.Hash
@@ -249,8 +249,8 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		an.URL = *urlStr
 	}
 
-	if an.Staking == nil {
-		an.Staking = &tokenpool.ZcnLockingPool{
+	if an.LockingPool == nil {
+		an.LockingPool = &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{},
 			},
@@ -260,7 +260,7 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 	staking, ok := objMap["staking"]
 	if ok && staking != nil {
 		tokenlock := &TokenLock{}
-		err = an.Staking.Decode(*staking, tokenlock)
+		err = an.LockingPool.Decode(*staking, tokenlock)
 		if err != nil {
 			return err
 		}
@@ -288,7 +288,7 @@ func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
 }
 
 func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	d := authorizerNodeDecode{Staking: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
+	d := authorizerNodeDecode{LockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
 	o, err := d.UnmarshalMsg(data)
 	if err != nil {
 		return nil, err
@@ -331,10 +331,10 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 	}
 
 	return &AuthorizerNode{
-		ID:        ev.AuthorizerID,
-		URL:       ev.URL,
-		PublicKey: "",  // fetch this from MPT
-		Staking:   nil, // fetch this from MPT
+		ID:          ev.AuthorizerID,
+		URL:         ev.URL,
+		PublicKey:   "",  // fetch this from MPT
+		LockingPool: nil, // fetch this from MPT
 	}, nil
 }
 

@@ -323,14 +323,14 @@ func (z *authorizerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "PublicKey"
 	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
 	o = msgp.AppendString(o, z.PublicKey)
-	// string "Staking"
+	// string "LockingPool"
 	o = append(o, 0xa7, 0x53, 0x74, 0x61, 0x6b, 0x69, 0x6e, 0x67)
-	if z.Staking == nil {
+	if z.LockingPool == nil {
 		o = msgp.AppendNil(o)
 	} else {
-		o, err = z.Staking.MarshalMsg(o)
+		o, err = z.LockingPool.MarshalMsg(o)
 		if err != nil {
-			err = msgp.WrapError(err, "Staking")
+			err = msgp.WrapError(err, "LockingPool")
 			return
 		}
 	}
@@ -384,20 +384,20 @@ func (z *authorizerNodeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "PublicKey")
 				return
 			}
-		case "Staking":
+		case "LockingPool":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
 				if err != nil {
 					return
 				}
-				z.Staking = nil
+				z.LockingPool = nil
 			} else {
-				if z.Staking == nil {
-					z.Staking = new(tokenpool.ZcnLockingPool)
+				if z.LockingPool == nil {
+					z.LockingPool = new(tokenpool.ZcnLockingPool)
 				}
-				bts, err = z.Staking.UnmarshalMsg(bts)
+				bts, err = z.LockingPool.UnmarshalMsg(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "Staking")
+					err = msgp.WrapError(err, "LockingPool")
 					return
 				}
 			}
@@ -462,10 +462,10 @@ func (z *authorizerNodeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *authorizerNodeDecode) Msgsize() (s int) {
 	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 8
-	if z.Staking == nil {
+	if z.LockingPool == nil {
 		s += msgp.NilSize
 	} else {
-		s += z.Staking.Msgsize()
+		s += z.LockingPool.Msgsize()
 	}
 	s += 4 + msgp.StringPrefixSize + len(z.URL) + 7
 	if z.Config == nil {

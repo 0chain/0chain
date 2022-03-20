@@ -363,7 +363,7 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 
 	node := NewAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
-	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
+	_, _, _ = node.LockingPool.DigPool(tr.Hash, tr)
 
 	ctx.authorizers[node.GetKey()] = &Authorizer{
 		Scheme: scheme,

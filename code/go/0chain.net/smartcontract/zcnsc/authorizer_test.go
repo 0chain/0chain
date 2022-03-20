@@ -86,20 +86,20 @@ func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
-	transfer, resp, err := an.Staking.DigPool(tr.Hash, tr)
+	transfer, resp, err := an.LockingPool.DigPool(tr.Hash, tr)
 
 	require.NoError(t, err, "must be able to dig pool")
 	require.NotNil(t, transfer)
 	require.NotNil(t, resp)
 
-	// Staking params
-	require.Equal(t, an.Staking.ID, tr.Hash)
-	require.Equal(t, an.Staking.Balance, state.Balance(tr.Value))
+	// LockingPool params
+	require.Equal(t, an.LockingPool.ID, tr.Hash)
+	require.Equal(t, an.LockingPool.Balance, state.Balance(tr.Value))
 
 	// Transfer params
 	transferDigPoolEqualityCheck(t, transfer, tr)
 	// Response params
-	responseDigPoolEqualityCheck(t, resp, tr, &an.Staking.ID, &stringEmpty)
+	responseDigPoolEqualityCheck(t, resp, tr, &an.LockingPool.ID, &stringEmpty)
 
 	err = sc.AddTransfer(transfer)
 	require.NoError(t, err, "must be able to add transfer")
@@ -110,7 +110,7 @@ func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
-	transfer, resp, err := an.Staking.DigPool(tr.Hash, tr)
+	transfer, resp, err := an.LockingPool.DigPool(tr.Hash, tr)
 
 	require.NoError(t, err, "must be able to dig pool")
 	require.NotNil(t, transfer)
@@ -119,7 +119,7 @@ func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
 	// Transfer params
 	transferDigPoolEqualityCheck(t, transfer, tr)
 	// Response params
-	responseDigPoolEqualityCheck(t, resp, tr, &an.Staking.ID, &stringEmpty)
+	responseDigPoolEqualityCheck(t, resp, tr, &an.LockingPool.ID, &stringEmpty)
 }
 
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
@@ -284,7 +284,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 func Test_Can_DigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
-	_, _, err := an.Staking.DigPool(tr.Hash, tr)
+	_, _, err := an.LockingPool.DigPool(tr.Hash, tr)
 	require.NoError(t, err)
 }
 
@@ -295,8 +295,8 @@ func Test_Can_EmptyPool(t *testing.T) {
 
 	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
 
-	_, _, _ = an.Staking.DigPool(tr.Hash, tr)
-	_, _, err = an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
+	_, _, _ = an.LockingPool.DigPool(tr.Hash, tr)
+	_, _, err = an.LockingPool.EmptyPool(gn.ID, tr.ClientID, tr)
 
 	require.NoError(t, err)
 }
@@ -304,12 +304,12 @@ func Test_Can_EmptyPool(t *testing.T) {
 func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
-	require.NotNil(t, node.Staking.TokenLockInterface)
+	require.NotNil(t, node.LockingPool.TokenLockInterface)
 
 	newNode := &AuthorizerNode{}
 	err := newNode.Decode(node.Encode())
 	require.NoError(t, err)
-	require.NotNil(t, newNode.Staking.TokenLockInterface)
+	require.NotNil(t, newNode.LockingPool.TokenLockInterface)
 }
 
 // With this test, the ability to Save nodes to context is tested
@@ -320,11 +320,11 @@ func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 //	an := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 //	err = ans.AddAuthorizer(an)
 //	require.NoError(t, err)
-//	require.NotNil(t, an.Staking.TokenLockInterface)
+//	require.NotNil(t, an.LockingPool.TokenLockInterface)
 //
 //	node := ans.NodeMap[tr.ClientID]
 //	require.NotNil(t, node)
-//	require.NotNil(t, node.Staking.TokenLockInterface)
+//	require.NotNil(t, node.LockingPool.TokenLockInterface)
 //
 //	// without saving, it won't be possible to get nodes
 //	err = ans.Save(ctx)
@@ -334,7 +334,7 @@ func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 //	require.NoError(t, err)
 //	node = ans2.NodeMap[tr.ClientID]
 //	require.NotNil(t, node)
-//	require.NotNil(t, node.Staking.TokenLockInterface)
+//	require.NotNil(t, node.LockingPool.TokenLockInterface)
 //}
 
 func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
@@ -343,7 +343,7 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	// Init
 	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx, 10)
 	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
-	require.NotNil(t, node.Staking.TokenLockInterface)
+	require.NotNil(t, node.LockingPool.TokenLockInterface)
 
 	// Add
 	err := node.Save(ctx)
@@ -355,7 +355,7 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, newNode)
-	require.NotNil(t, newNode.Staking.TokenLockInterface)
+	require.NotNil(t, newNode.LockingPool.TokenLockInterface)
 }
 
 func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
@@ -371,7 +371,7 @@ func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 
 	// FillFromContext
 	node := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
-	require.NotNil(t, node.Staking.TokenLockInterface)
+	require.NotNil(t, node.LockingPool.TokenLockInterface)
 }
 
 func Test_UpdateAuthorizerSettings(t *testing.T) {
@@ -440,7 +440,7 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx, 10)
 
 	node := GetAuthorizerNodeFromCtx(t, ctx, authorizerID)
-	_, _, err := node.Staking.EmptyPool(ADDRESS, tr.ClientID, tr)
+	_, _, err := node.LockingPool.EmptyPool(ADDRESS, tr.ClientID, tr)
 	require.NoError(t, err)
 
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
@@ -459,7 +459,7 @@ func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
 	node := GetAuthorizerNodeFromCtx(t, ctx, authorizerID)
 
 	gn, err := GetGlobalNode(ctx)
-	transfer, resp, err := node.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
+	transfer, resp, err := node.LockingPool.EmptyPool(gn.ID, tr.ClientID, tr)
 	require.NoError(t, err)
 
 	transferEmptyPoolEqualityCheck(t, transfer, tr)
