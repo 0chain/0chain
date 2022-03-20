@@ -14,10 +14,9 @@ type (
 	// BlockRequest represents struct for collecting reports from the nodes
 	// about handled block's requests.
 	BlockRequest struct {
-		NodeID  string `json:"miner_id"`
-		Hash    string `json:"hash"`
-		Round   int    `json:"round"`
-		Handler string `json:"path"`
+		NodeID string `json:"miner_id"`
+		Hash   string `json:"hash"`
+		Round  int    `json:"round"`
 
 		// optional field
 		SenderID string `json:"sender_id,omitempty"`
@@ -82,6 +81,21 @@ func (bi *BlockRequests) GetBySenderIDAndHash(senderID, hash string) *BlockReque
 		}
 	}
 	return nil
+}
+
+// CountWithHash counts number of stored BlockRequest with BlockRequest.Hash
+// equals to the provided hash.
+func (bi *BlockRequests) CountWithHash(hash string) int {
+	bi.listMu.Lock()
+	defer bi.listMu.Unlock()
+
+	numReq := 0
+	for _, req := range bi.list {
+		if req.Hash == hash {
+			numReq++
+		}
+	}
+	return numReq
 }
 
 // Encode encodes BlockRequest to the bytes.

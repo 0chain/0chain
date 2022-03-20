@@ -120,6 +120,9 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	case s.MinerNotarisedBlockRequestor != nil:
 		isTestingFunc = s.MinerNotarisedBlockRequestor.IsTesting
 
+	case s.FBRequestor != nil:
+		isTestingFunc = s.FBRequestor.IsTesting
+
 	default:
 		return false
 	}

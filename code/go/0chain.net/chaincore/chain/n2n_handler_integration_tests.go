@@ -28,43 +28,32 @@ func SetupX2MRequestors() {
 	setupX2MRequestors()
 
 	if crpc.Client().State().ClientStatsCollectorEnabled {
-		BlockStateChangeRequestor = BlockStateChangeRequestorStats(BlockStateChangeRequestor)
-		MinerNotarizedBlockRequestor = MinerNotarisedBlockRequestor(MinerNotarizedBlockRequestor)
+		BlockStateChangeRequestor = BlockRequestor(BlockStateChangeRequestor, stats.BRBlockStateChange, "block")
+		MinerNotarizedBlockRequestor = BlockRequestor(MinerNotarizedBlockRequestor, stats.BRMinerNotarisedBlock, "block")
 	}
 }
 
-// BlockStateChangeRequestorStats represents a middleware for collecting stats about client's block state change requests.
-func BlockStateChangeRequestorStats(requestor node.EntityRequestor) node.EntityRequestor {
-	return func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) node.SendHandler {
-		if !crpc.Client().State().ClientStatsCollectorEnabled {
-			return requestor(urlParams, handler)
-		}
+func SetupX2SRequestors() {
+	setupX2SRequestors()
 
-		rs := &stats.BlockStateChangeRequest{
-			NodeID: node.Self.ID,
-			Block:  urlParams.Get("block"),
-		}
-		if err := crpc.Client().AddBlockStateChangeRequestorStats(rs); err != nil {
-			log.Panicf("Conductor: error while adding client stats: %v", err)
-		}
-
-		return requestor(urlParams, handler)
+	if crpc.Client().State().ClientStatsCollectorEnabled {
+		FBRequestor = BlockRequestor(FBRequestor, stats.BRFB, "hash")
 	}
 }
 
-func MinerNotarisedBlockRequestor(requestor node.EntityRequestor) node.EntityRequestor {
+func BlockRequestor(requestor node.EntityRequestor, requestorType stats.BlockRequestor, blockHashKey string) node.EntityRequestor {
 	return func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) node.SendHandler {
 		if !crpc.Client().State().ClientStatsCollectorEnabled {
 			return requestor(urlParams, handler)
 		}
 
 		rNum, _ := strconv.Atoi(urlParams.Get("round"))
-		rs := &stats.MinerNotarisedBlockRequest{
+		rs := &stats.BlockRequest{
 			NodeID: node.Self.ID,
 			Round:  rNum,
-			Block:  urlParams.Get("block"),
+			Hash:   urlParams.Get(blockHashKey),
 		}
-		if err := crpc.Client().AddMinerNotarisedBlockRequestorStats(rs); err != nil {
+		if err := crpc.Client().AddBlockClientStats(rs, requestorType); err != nil {
 			log.Panicf("Conductor: error while adding client stats: %v", err)
 		}
 

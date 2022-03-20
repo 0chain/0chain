@@ -321,7 +321,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	return deco.ID, blobs
 }
 
-func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
+func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
 	balances chainState.StateContextI) {
 
 	var _, err = balances.InsertTrieNode(key, val)
@@ -329,9 +329,9 @@ func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
 }
 
 func setConfig(t testing.TB, balances chainState.StateContextI) (
-	conf *scConfig) {
+	conf *Config) {
 
-	conf = new(scConfig)
+	conf = new(Config)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true

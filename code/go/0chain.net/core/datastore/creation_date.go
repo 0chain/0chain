@@ -11,6 +11,7 @@ type CreationTrackable interface {
 	GetCreationTime() common.Timestamp
 }
 
+//go:generate msgp -io=false -tests=false -v
 /*CreationDateField - Can be used to add a creation date functionality to an entity */
 type CreationDateField struct {
 	CreationDate common.Timestamp `json:"creation_date"`

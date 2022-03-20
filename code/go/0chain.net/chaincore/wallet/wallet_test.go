@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -244,22 +243,10 @@ func createWallets(num int) []*Wallet {
 }
 
 func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
-	ss, err := mpt.GetNodeValue(util.Path(clientID))
+	s := &state.State{}
+	err := mpt.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		return nil, err
-	}
-
-	s, ok := ss.(*state.State)
-	if !ok {
-		ssv, ok := ss.(*util.SecureSerializableValue)
-		if !ok {
-			return nil, errors.New("unexpected type")
-		}
-		s := &state.State{}
-		if err := s.Decode(ssv.Encode()); err != nil {
-			return nil, err
-		}
-		return s, nil
 	}
 
 	return s, nil

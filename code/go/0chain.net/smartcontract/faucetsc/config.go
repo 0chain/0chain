@@ -1,12 +1,13 @@
 package faucetsc
 
 import (
-	"0chain.net/core/datastore"
 	"time"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 )
+
+//go:generate msgp -io=false -tests=false -v
 
 type Setting int
 
@@ -41,7 +42,7 @@ type FaucetConfig struct {
 	GlobalLimit     state.Balance  `json:"global_limit"`
 	IndividualReset time.Duration  `json:"individual_reset"`
 	GlobalReset     time.Duration  `json:"global_rest"`
-	OwnerId         datastore.Key  `json:"owner_id"`
+	OwnerId         string         `json:"owner_id"`
 	Cost            map[string]int `json:"cost"`
 }
 

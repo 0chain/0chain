@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -526,10 +527,12 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&lockRequest{
+				lr := &lockRequest{
 					Duration:     viper.GetDuration(bk.StorageReadPoolMinLockPeriod),
 					AllocationID: getMockAllocationId(0),
-				})
+				}
+				bytes, _ := json.Marshal(lr)
+				log.Println("lock_pool_duration:", lr.Duration)
 				return bytes
 			}(),
 		},

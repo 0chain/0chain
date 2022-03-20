@@ -28,3 +28,13 @@ run-test:
 	@echo "Start testing..."
 	@cd $(root_path)/code/go/0chain.net && go test -tags bn256 -cover ./...
 	@echo "Tests completed."
+
+install-msgp:
+	@echo "Install msgp..."
+	./docker.local/bin/install.msgp.sh
+	@echo "Msgp installed."
+
+msgp:
+	@echo "Run msgp..."
+	@cd $(root_path)/code/go/0chain.net && go generate -run=msgp ./...
+	@echo "Run msgp completed."

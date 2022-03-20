@@ -37,9 +37,8 @@ func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 	ctx := MakeMockStateContext()
 	for _, authorizerKey := range authorizersID {
 		node := &AuthorizerNode{ID: authorizerKey}
-		nodes, err := ctx.GetTrieNode(node.GetKey())
+		err := ctx.GetTrieNode(node.GetKey(), node)
 		require.NoError(t, err)
-		require.NotNil(t, nodes)
 	}
 }
 
@@ -138,10 +137,8 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 
 	authorizeNode, _ := GetAuthorizerNode(authorizerID, ctx)
 
-	node, err := ctx.GetTrieNode(authorizeNode.GetKey())
-
+	err = ctx.GetTrieNode(authorizeNode.GetKey(), authorizeNode)
 	require.NoError(t, err)
-	require.NotNil(t, node)
 }
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
@@ -194,8 +191,8 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
 	ctx := MakeMockStateContext()
 	au := AuthorizerNode{ID: authorizersID[0]}
-	authParam := &AuthorizerParameter{
-		PublicKey: authorizers[au.GetKey()].Node.PublicKey,
+	authParam := AuthorizerParameter{
+		PublicKey: ctx.authorizers[au.GetKey()].Node.PublicKey,
 		URL:       "hhh",
 	}
 	data, _ := authParam.Encode()
@@ -274,7 +271,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 				Balance: 0,
 			},
 		},
-		TokenLockInterface: TokenLock{
+		TokenLockInterface: &TokenLock{
 			StartTime: common.Now(),
 			Duration:  0,
 		},
@@ -353,12 +350,10 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	require.NoError(t, err)
 
 	// FillFromContext
-	blob, err := ctx.GetTrieNode(node.GetKey())
-	require.NoError(t, err)
-	require.NotNil(t, blob)
 	newNode := &AuthorizerNode{}
-	err = newNode.Decode(blob.Encode())
+	err = ctx.GetTrieNode(node.GetKey(), newNode)
 	require.NoError(t, err)
+
 	require.NotNil(t, newNode)
 	require.NotNil(t, newNode.Staking.TokenLockInterface)
 }
