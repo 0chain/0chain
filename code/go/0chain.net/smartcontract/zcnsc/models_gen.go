@@ -68,27 +68,27 @@ func (z AuthorizerSignature) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *TokenLock) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
+func (tl *TokenLock) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, tl.Msgsize())
 	// map header, size 3
 	// string "StartTime"
 	o = append(o, 0x83, 0xa9, 0x53, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69, 0x6d, 0x65)
-	o, err = z.StartTime.MarshalMsg(o)
+	o, err = tl.StartTime.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "StartTime")
 		return
 	}
 	// string "Duration"
 	o = append(o, 0xa8, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	o = msgp.AppendDuration(o, z.Duration)
+	o = msgp.AppendDuration(o, tl.Duration)
 	// string "Owner"
 	o = append(o, 0xa5, 0x4f, 0x77, 0x6e, 0x65, 0x72)
-	o = msgp.AppendString(o, z.Owner)
+	o = msgp.AppendString(o, tl.Owner)
 	return
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *TokenLock) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (tl *TokenLock) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -106,19 +106,19 @@ func (z *TokenLock) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "StartTime":
-			bts, err = z.StartTime.UnmarshalMsg(bts)
+			bts, err = tl.StartTime.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "StartTime")
 				return
 			}
 		case "Duration":
-			z.Duration, bts, err = msgp.ReadDurationBytes(bts)
+			tl.Duration, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Duration")
 				return
 			}
 		case "Owner":
-			z.Owner, bts, err = msgp.ReadStringBytes(bts)
+			tl.Owner, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Owner")
 				return
@@ -136,7 +136,7 @@ func (z *TokenLock) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *TokenLock) Msgsize() (s int) {
-	s = 1 + 10 + z.StartTime.Msgsize() + 9 + msgp.DurationSize + 6 + msgp.StringPrefixSize + len(z.Owner)
+func (tl *TokenLock) Msgsize() (s int) {
+	s = 1 + 10 + tl.StartTime.Msgsize() + 9 + msgp.DurationSize + 6 + msgp.StringPrefixSize + len(tl.Owner)
 	return
 }

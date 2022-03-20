@@ -130,6 +130,28 @@ func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable
 	return util.ErrValueNotPresent
 }
 
+func (m *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
+	if strings.Contains(key, UserNodeType) {
+		if userNode, ok := node.(*UserNode); ok {
+			m.userNodes[key] = userNode
+			return key, nil
+		} else {
+			return key, fmt.Errorf("failed to convert key: %s to UserNode: %v", key, node)
+		}
+	}
+
+	if strings.Contains(key, AuthorizerNodeType) {
+		return key, fmt.Errorf("authorizer not supported, key: %s", key)
+	}
+
+	if strings.Contains(key, GlobalNodeType) {
+		m.globalNode = node.(*GlobalNode)
+		return key, nil
+	}
+
+	return "", fmt.Errorf("node with key: %s is not supported", key)
+}
+
 func MakeMockStateContext() *mockStateContext {
 	ctx := &mockStateContext{
 		StateContextI: &mocks.StateContextI{},

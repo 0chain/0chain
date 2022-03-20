@@ -64,62 +64,62 @@ func (z *AuthorizerConfig) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
+func (gn *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, gn.Msgsize())
 	// map header, size 10
 	// string "ID"
 	o = append(o, 0x8a, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
+	o = msgp.AppendString(o, gn.ID)
 	// string "MinMintAmount"
 	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.MinMintAmount.MarshalMsg(o)
+	o, err = gn.MinMintAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinMintAmount")
 		return
 	}
 	// string "MinBurnAmount"
 	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x42, 0x75, 0x72, 0x6e, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.MinBurnAmount.MarshalMsg(o)
+	o, err = gn.MinBurnAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinBurnAmount")
 		return
 	}
 	// string "MinStakeAmount"
 	o = append(o, 0xae, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.MinStakeAmount.MarshalMsg(o)
+	o, err = gn.MinStakeAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinStakeAmount")
 		return
 	}
 	// string "MaxFee"
 	o = append(o, 0xa6, 0x4d, 0x61, 0x78, 0x46, 0x65, 0x65)
-	o, err = z.MaxFee.MarshalMsg(o)
+	o, err = gn.MaxFee.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MaxFee")
 		return
 	}
 	// string "PercentAuthorizers"
 	o = append(o, 0xb2, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x7a, 0x65, 0x72, 0x73)
-	o = msgp.AppendFloat64(o, z.PercentAuthorizers)
+	o = msgp.AppendFloat64(o, gn.PercentAuthorizers)
 	// string "MinAuthorizers"
 	o = append(o, 0xae, 0x4d, 0x69, 0x6e, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x7a, 0x65, 0x72, 0x73)
-	o = msgp.AppendInt64(o, z.MinAuthorizers)
+	o = msgp.AppendInt64(o, gn.MinAuthorizers)
 	// string "BurnAddress"
 	o = append(o, 0xab, 0x42, 0x75, 0x72, 0x6e, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73)
-	o = msgp.AppendString(o, z.BurnAddress)
+	o = msgp.AppendString(o, gn.BurnAddress)
 	// string "OwnerId"
 	o = append(o, 0xa7, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x49, 0x64)
-	o = msgp.AppendString(o, z.OwnerId)
+	o = msgp.AppendString(o, gn.OwnerId)
 	// string "Cost"
 	o = append(o, 0xa4, 0x43, 0x6f, 0x73, 0x74)
-	o = msgp.AppendMapHeader(o, uint32(len(z.Cost)))
-	keys_za0001 := make([]string, 0, len(z.Cost))
-	for k := range z.Cost {
+	o = msgp.AppendMapHeader(o, uint32(len(gn.Cost)))
+	keys_za0001 := make([]string, 0, len(gn.Cost))
+	for k := range gn.Cost {
 		keys_za0001 = append(keys_za0001, k)
 	}
 	msgp.Sort(keys_za0001)
 	for _, k := range keys_za0001 {
-		za0002 := z.Cost[k]
+		za0002 := gn.Cost[k]
 		o = msgp.AppendString(o, k)
 		o = msgp.AppendInt(o, za0002)
 	}
@@ -127,7 +127,7 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (gn *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -145,55 +145,55 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			gn.ID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ID")
 				return
 			}
 		case "MinMintAmount":
-			bts, err = z.MinMintAmount.UnmarshalMsg(bts)
+			bts, err = gn.MinMintAmount.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinMintAmount")
 				return
 			}
 		case "MinBurnAmount":
-			bts, err = z.MinBurnAmount.UnmarshalMsg(bts)
+			bts, err = gn.MinBurnAmount.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinBurnAmount")
 				return
 			}
 		case "MinStakeAmount":
-			bts, err = z.MinStakeAmount.UnmarshalMsg(bts)
+			bts, err = gn.MinStakeAmount.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinStakeAmount")
 				return
 			}
 		case "MaxFee":
-			bts, err = z.MaxFee.UnmarshalMsg(bts)
+			bts, err = gn.MaxFee.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxFee")
 				return
 			}
 		case "PercentAuthorizers":
-			z.PercentAuthorizers, bts, err = msgp.ReadFloat64Bytes(bts)
+			gn.PercentAuthorizers, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "PercentAuthorizers")
 				return
 			}
 		case "MinAuthorizers":
-			z.MinAuthorizers, bts, err = msgp.ReadInt64Bytes(bts)
+			gn.MinAuthorizers, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinAuthorizers")
 				return
 			}
 		case "BurnAddress":
-			z.BurnAddress, bts, err = msgp.ReadStringBytes(bts)
+			gn.BurnAddress, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "BurnAddress")
 				return
 			}
 		case "OwnerId":
-			z.OwnerId, bts, err = msgp.ReadStringBytes(bts)
+			gn.OwnerId, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "OwnerId")
 				return
@@ -205,11 +205,11 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Cost")
 				return
 			}
-			if z.Cost == nil {
-				z.Cost = make(map[string]int, zb0002)
-			} else if len(z.Cost) > 0 {
-				for key := range z.Cost {
-					delete(z.Cost, key)
+			if gn.Cost == nil {
+				gn.Cost = make(map[string]int, zb0002)
+			} else if len(gn.Cost) > 0 {
+				for key := range gn.Cost {
+					delete(gn.Cost, key)
 				}
 			}
 			for zb0002 > 0 {
@@ -226,7 +226,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					err = msgp.WrapError(err, "Cost", za0001)
 					return
 				}
-				z.Cost[za0001] = za0002
+				gn.Cost[za0001] = za0002
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -241,10 +241,10 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *GlobalNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 7 + z.MaxFee.Msgsize() + 19 + msgp.Float64Size + 15 + msgp.Int64Size + 12 + msgp.StringPrefixSize + len(z.BurnAddress) + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
-	if z.Cost != nil {
-		for za0001, za0002 := range z.Cost {
+func (gn *GlobalNode) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(gn.ID) + 14 + gn.MinMintAmount.Msgsize() + 14 + gn.MinBurnAmount.Msgsize() + 15 + gn.MinStakeAmount.Msgsize() + 7 + gn.MaxFee.Msgsize() + 19 + msgp.Float64Size + 15 + msgp.Int64Size + 12 + msgp.StringPrefixSize + len(gn.BurnAddress) + 8 + msgp.StringPrefixSize + len(gn.OwnerId) + 5 + msgp.MapHeaderSize
+	if gn.Cost != nil {
+		for za0001, za0002 := range gn.Cost {
 			_ = za0002
 			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
 		}
@@ -253,20 +253,20 @@ func (z *GlobalNode) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z UserNode) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
+func (un UserNode) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, un.Msgsize())
 	// map header, size 2
 	// string "ID"
 	o = append(o, 0x82, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
+	o = msgp.AppendString(o, un.ID)
 	// string "Nonce"
 	o = append(o, 0xa5, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
-	o = msgp.AppendInt64(o, z.Nonce)
+	o = msgp.AppendInt64(o, un.Nonce)
 	return
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (un *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -284,13 +284,13 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			un.ID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ID")
 				return
 			}
 		case "Nonce":
-			z.Nonce, bts, err = msgp.ReadInt64Bytes(bts)
+			un.Nonce, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Nonce")
 				return
@@ -308,8 +308,8 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z UserNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 6 + msgp.Int64Size
+func (un UserNode) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(un.ID) + 6 + msgp.Int64Size
 	return
 }
 
