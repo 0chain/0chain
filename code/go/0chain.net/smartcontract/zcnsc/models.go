@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/smartcontract/stakepool"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -230,12 +228,6 @@ func (pk *AuthorizerParameter) Encode() (data []byte, err error) {
 func (pk *AuthorizerParameter) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
-}
-
-// ----------- LockingPool pool --------------------------
-
-type StakingPool struct {
-	stakepool.StakePool
 }
 
 // ----------  TokenLock -----------------

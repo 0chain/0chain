@@ -29,12 +29,14 @@ type GlobalNode struct {
 	MinMintAmount      state.Balance  `json:"min_mint_amount"`
 	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
 	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
+	MinLockAmount      int64          `json:"min_lock_amount"`
 	MaxFee             state.Balance  `json:"max_fee"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	BurnAddress        string         `json:"burn_address"`
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
+	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
@@ -162,9 +164,9 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 type AuthorizerNode struct {
 	ID          string                    `json:"id"`
 	PublicKey   string                    `json:"public_key"`
-	LockingPool *tokenpool.ZcnLockingPool `json:"staking"`
 	URL         string                    `json:"url"`
 	Config      *AuthorizerConfig         `json:"config"`
+	LockingPool *tokenpool.ZcnLockingPool `json:"lock_pool"`
 }
 
 // NewAuthorizer To review: tokenLock init values
