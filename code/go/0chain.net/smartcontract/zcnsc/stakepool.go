@@ -185,7 +185,11 @@ func (gn *GlobalNode) validateStakeRange(min, max state.Balance) (err error) {
 	return
 }
 
-func (zcn *ZCNSmartContract) DistributeRewards(t *transaction.Transaction, input []byte, ctx cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) DistributeRewards(
+	t *transaction.Transaction,
+	input []byte,
+	ctx cstate.StateContextI,
+) (resp string, err error) {
 	return "", nil
 }
 
@@ -234,7 +238,11 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 	return
 }
 
-func (zcn *ZCNSmartContract) DeleteFromDelegatePool(t *transaction.Transaction, input []byte, ctx cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
+	t *transaction.Transaction,
+	input []byte,
+	ctx cstate.StateContextI,
+) (resp string, err error) {
 	const code = "stake_pool_unlock_failed"
 	var spr stakePoolRequest
 
@@ -278,7 +286,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(t *transaction.Transaction, 
 func toJson(val interface{}) string {
 	var b, err = json.Marshal(val)
 	if err != nil {
-		panic(err) // must not happen
+		panic(err)
 	}
 	return string(b)
 }

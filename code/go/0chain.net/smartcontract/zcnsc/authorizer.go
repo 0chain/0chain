@@ -3,8 +3,6 @@ package zcnsc
 import (
 	"fmt"
 
-	"0chain.net/core/util"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -22,7 +20,11 @@ import (
 // ContractMap contains all the SC addresses
 // ClientID is an authorizerID - used to search for authorizer
 // ToClient is an SC address
-func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) AddAuthorizer(
+	tran *transaction.Transaction,
+	inputData []byte,
+	ctx cstate.StateContextI,
+) (response string, err error) {
 	const (
 		code = "failed to add authorizer"
 	)
@@ -33,7 +35,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		authorizerID        = tran.ClientID   // sender address
 		recipientID         = tran.ToClientID // smart contract address
 		authorizer          *AuthorizerNode
-		err                 error
 	)
 
 	if authorizerID == "" {
@@ -69,21 +70,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	authorizerPublicKey = params.PublicKey
 	authorizerURL = params.URL
 
-	// Check existing Authorizer
-
-	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
-	if err == nil && authorizer != nil {
-		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Warn("get authorizer node", zap.Error(err))
-		return "", err
-	}
-
-	if err != nil && err == util.ErrNodeNotFound {
-		Logger.Error("get authorizer node", zap.Error(err))
-		return "", err
-	}
-
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
@@ -92,62 +78,84 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	// compare the global min of authorizerNode Authorizer to that of the transaction amount
-	if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
-		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", globalNode.MinStakeAmount, tran.Value)
+	// Check existing Authorizer
+
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
+	if err == nil && authorizer != nil {
+		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(code, msg)
-		Logger.Error("min stake amount > transaction value", zap.Error(err))
-		return "", err
+		Logger.Warn("get authorizer node", zap.Error(err))
+
+		// create stake pool for the validator to count its rewards
+		//var sp *stakePool
+		//sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, params.StakePoolSettings, ctx)
+		//if err != nil {
+		//	return "", common.NewError(code, "get or create stake pool error: "+err.Error())
+		//}
+		//if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
+		//	return "", common.NewError(code, "saving stake pool error: "+err.Error())
+		//}
+	} else {
+
+		// compare the global min of authorizerNode Authorizer to that of the transaction amount
+		if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
+			msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'",
+				globalNode.MinStakeAmount, tran.Value)
+			err = common.NewError(code, msg)
+			Logger.Error("min stake amount > transaction value", zap.Error(err))
+			return "", err
+		}
+
+		// Create Authorizer instance
+
+		authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
+
+		// Dig pool for authorizer
+
+		var transfer *state.Transfer
+		transfer, response, err = authorizer.LockingPool.DigPool(tran.Hash, tran)
+		if err != nil {
+			err = common.NewError(code, fmt.Sprintf("error digging pool, err: (%v)", err))
+			return "", err
+		}
+
+		err = ctx.AddTransfer(transfer)
+		if err != nil {
+			msg := "Error: '%v', transaction.ClientId: '%s', transaction.ToClientId: '%s', transfer.ClientID: '%s', transfer.ToClientID: '%s'"
+			err = common.NewError(
+				code,
+				fmt.Sprintf(
+					msg,
+					err,
+					authorizerID,
+					recipientID,
+					transfer.ClientID,
+					transfer.ToClientID,
+				),
+			)
+			return "", err
+		}
+
+		err = authorizer.Save(ctx)
+		if err != nil {
+			msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
+			err = common.NewError(code, msg)
+			Logger.Error("saving authorizer node", zap.Error(err))
+			return "", err
+		}
+
+		ev, err := authorizer.ToEvent()
+		if err != nil {
+			msg := fmt.Sprintf("error marshalling authorizer(authorizerID: %v) to event, err: %v", authorizerID, err)
+			err = common.NewError(code, msg)
+			Logger.Error("emitting event", zap.Error(err))
+			return "", err
+		}
+
+		ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
 	}
 
-	// Create Authorizer instance
-
-	authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
-
-	// Dig pool for authorizer
-
-	transfer, response, err := authorizer.LockingPool.DigPool(tran.Hash, tran)
-	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("error digging pool, err: (%v)", err))
-		return "", err
-	}
-
-	err = ctx.AddTransfer(transfer)
-	if err != nil {
-		msg := "Error: '%v', transaction.ClientId: '%s', transaction.ToClientId: '%s', transfer.ClientID: '%s', transfer.ToClientID: '%s'"
-		err = common.NewError(
-			code,
-			fmt.Sprintf(
-				msg,
-				err,
-				authorizerID,
-				recipientID,
-				transfer.ClientID,
-				transfer.ToClientID,
-			),
-		)
-		return "", err
-	}
-
-	err = authorizer.Save(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("saving authorizer node", zap.Error(err))
-		return "", err
-	}
-
-	ev, err := authorizer.ToEvent()
-	if err != nil {
-		msg := fmt.Sprintf("error marshalling authorizer(authorizerID: %v) to event, err: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("emitting event", zap.Error(err))
-		return "", err
-	}
-
-	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
-
-	return response, err
+	return
 }
 
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -216,8 +218,9 @@ func (bp *BurnPayload) Decode(input []byte) error {
 // ------- AuthorizerParameter ------------
 
 type AuthorizerParameter struct {
-	PublicKey string `json:"public_key"`
-	URL       string `json:"url"`
+	PublicKey         string                      `json:"public_key"`
+	URL               string                      `json:"url"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
 func (pk *AuthorizerParameter) Encode() (data []byte, err error) {

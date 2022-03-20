@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
@@ -162,11 +164,12 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 // ----- AuthorizerNode --------------------
 
 type AuthorizerNode struct {
-	ID          string                    `json:"id"`
-	PublicKey   string                    `json:"public_key"`
-	URL         string                    `json:"url"`
-	Config      *AuthorizerConfig         `json:"config"`
-	LockingPool *tokenpool.ZcnLockingPool `json:"lock_pool"`
+	ID                string                      `json:"id"`
+	PublicKey         string                      `json:"public_key"`
+	URL               string                      `json:"url"`
+	Config            *AuthorizerConfig           `json:"config"`
+	LockingPool       *tokenpool.ZcnLockingPool   `json:"lock_pool"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
 // NewAuthorizer To review: tokenLock init values
