@@ -1,6 +1,6 @@
 package benchmark
 
-//go:generate msgp -io=false -tests=false -unexported=true
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 type BenchDataMpt struct {
 	Clients     []string `json:"clients"`

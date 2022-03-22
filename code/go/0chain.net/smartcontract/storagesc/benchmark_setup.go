@@ -157,14 +157,15 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
+		//for i := viper.GetInt(sc.NumAllocations); i >= 0; i-- {
 		allocationID := getMockAllocationId(i)
 		startClients := i % len(clients)
-		for j := 0; j < viper.GetInt(sc.NumAllocationPlayer); j++ {
+		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
 			cIndex := (startClients + j) % len(clients)
 			if wps[cIndex] == nil {
 				wps[cIndex] = new(writePool)
 			}
-			for k := 0; k < viper.GetInt(sc.NumAllocationPlayerPools); k++ {
+			for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 				wap := allocationPool{
 					ExpireAt:     expiration,
 					AllocationID: allocationID,
@@ -197,12 +198,12 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationID := getMockAllocationId(i)
 		startClients := i % len(clients)
-		for j := 0; j < viper.GetInt(sc.NumAllocationPlayer); j++ {
+		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
 			cIndex := (startClients + j) % len(clients)
 			if rps[cIndex] == nil {
 				rps[cIndex] = new(readPool)
 			}
-			for k := 0; k < viper.GetInt(sc.NumAllocationPlayerPools); k++ {
+			for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 				rap := allocationPool{
 					ExpireAt:     expiration,
 					AllocationID: allocationID,
@@ -232,9 +233,9 @@ func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
 	fps := make([]fundedPools, len(clients), len(clients))
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		startClients := i % len(clients)
-		for j := 0; j < viper.GetInt(sc.NumAllocationPlayer); j++ {
+		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
 			cIndex := (startClients + j) % len(clients)
-			for k := 0; k < viper.GetInt(sc.NumAllocationPlayerPools); k++ {
+			for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 				fps[cIndex] = append(fps[cIndex], getMockWritePoolId(i, cIndex, k))
 				fps[cIndex] = append(fps[cIndex], getMockReadPoolId(i, cIndex, k))
 			}
@@ -373,7 +374,7 @@ func AddMockValidators(
 		validator := &ValidationNode{
 			ID:                id,
 			BaseURL:           id + ".com",
-			PublicKey:         publicKeys[i],
+			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
@@ -608,7 +609,7 @@ func getMockAllocationId(allocation int) string {
 }
 
 func getMockClientFromAllocationIndex(allocation, numClinets int) int {
-	return (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPlayerPools)))
+	return (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools)))
 }
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {

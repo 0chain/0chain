@@ -18,7 +18,6 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,9 +38,9 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 	bk.Vesting:          vestingsc.BenchmarkTests,
 	bk.VestingRest:      vestingsc.BenchmarkRestTests,
 	bk.MultiSig:         multisigsc.BenchmarkTests,
-	bk.ZCNSCBridge:      zcnsc.BenchmarkTests,
-	bk.ZCNSCBridgeRest:  zcnsc.BenchmarkRestTests,
-	bk.Control:          control.BenchmarkTests,
+	//bk.ZCNSCBridge:      zcnsc.BenchmarkTests, todo fix
+	//bk.ZCNSCBridgeRest: zcnsc.BenchmarkRestTests,
+	bk.Control: control.BenchmarkTests,
 }
 
 func init() {
@@ -65,6 +64,11 @@ var rootCmd = &cobra.Command{
 	Short: "Benchmark 0chain smart-contract",
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered in benchmark function", r)
+			}
+		}()
 		totalTimer := time.Now()
 		// path to config file can only come from command line options
 		loadPath, configPath := loadPath(cmd.Flags())

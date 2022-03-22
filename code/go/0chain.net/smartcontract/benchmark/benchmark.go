@@ -74,6 +74,7 @@ type SimulatorParameter int
 
 const (
 	SimulationNumClients SimulatorParameter = iota
+	SimulationActiveNumClients
 	SimulationNumMiners
 	SimulationNumActiveMiners
 	SimulationNumSharders
@@ -81,8 +82,8 @@ const (
 	SimulationNumAllocations
 	SimulationNumBlobbersPerAllocation
 	SimulationNumBlobbers
-	SimulationNumAllocationPlayerPools
-	SimulationNumAllocationPlayer
+	SimulationNumAllocationPayerPools
+	SimulationNumAllocationPayer
 	SimulationNumBlobberDelegates
 	SimulationNumCurators
 	SimulationNumValidators
@@ -210,33 +211,37 @@ func (s Source) String() string {
 	}
 }
 
+var parameterName = []string{
+	"num_clients",
+	"num_active_clients",
+	"num_miners",
+	"num_active_miners",
+	"nun_sharders",
+	"nun_active_sharders",
+	"num_allocations",
+	"num_blobbers_per_Allocation",
+	"num_blobbers",
+	"num_allocation_payers_pools",
+	"num_allocation_payers",
+	"num_blobber_delegates",
+	"num_curators",
+	"num_validators",
+	"num_free_storage_assigners",
+	"num_miner_delegates",
+	"num_sharder_delegates",
+	"num_vesting_destinations_client",
+	"num_write_redeem_allocation",
+	"num_challenges_blobber",
+	"num_authorizers",
+}
+
 func (w SimulatorParameter) String() string {
-	return [...]string{
-		"num_clients",
-		"num_miners",
-		"num_active_miners",
-		"nun_sharders",
-		"nun__active_sharders",
-		"num_allocations",
-		"num_blobbers_per_Allocation",
-		"num_blobbers",
-		"num_allocation_payers_pools",
-		"num_allocation_payers",
-		"num_blobber_delegates",
-		"num_curators",
-		"num_validators",
-		"num_free_storage_assigners",
-		"num_miner_delegates",
-		"num_sharder_delegates",
-		"num_vesting_destinations_client",
-		"num_write_redeem_allocation",
-		"num_challenges_blobber",
-		"num_authorizers",
-	}[w]
+	return parameterName[w]
 }
 
 var (
 	NumClients                   = Simulation + SimulationNumClients.String()
+	NumActiveClients             = Simulation + SimulationActiveNumClients.String()
 	NumMiners                    = Simulation + SimulationNumMiners.String()
 	NumActiveMiners              = Simulation + SimulationNumActiveMiners.String()
 	NumSharders                  = Simulation + SimulationNumSharders.String()
@@ -244,8 +249,8 @@ var (
 	NumAllocations               = Simulation + SimulationNumAllocations.String()
 	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
 	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
-	NumAllocationPlayerPools     = Simulation + SimulationNumAllocationPlayerPools.String()
-	NumAllocationPlayer          = Simulation + SimulationNumAllocationPlayer.String()
+	NumAllocationPayerPools      = Simulation + SimulationNumAllocationPayerPools.String()
+	NumAllocationPayer           = Simulation + SimulationNumAllocationPayer.String()
 	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
 	NumCurators                  = Simulation + SimulationNumCurators.String()
 	NumValidators                = Simulation + SimulationNumValidators.String()

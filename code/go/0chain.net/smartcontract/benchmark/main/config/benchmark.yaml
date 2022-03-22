@@ -1,14 +1,15 @@
 simulation:
-  num_clients: 100000
+  num_clients: 1000
+  num_active_clients: 1000
   num_miners: 100
   num_active_miners: 100
   nun_sharders: 100
-  num_active_sharders: 25
-  num_allocations: 100000
-  num_blobbers: 1000
-  num_validators: 1000
-  num_allocation_payers: 2 # number of clients contributing pools to an allocation
-  num_allocation_payers_pools: 2  # number of allocation pools each contributor has
+  nun_active_sharders: 25
+  num_allocations: 1000000
+  num_blobbers: 10000
+  num_validators: 10000
+  num_allocation_payers: 1 # number of clients contributing pools to an allocation
+  num_allocation_payers_pools: 1  # number of allocation pools each contributor has
   num_blobbers_per_Allocation: 40 # ideally make this even
   num_blobber_delegates: 10
   num_miner_delegates: 10
@@ -24,6 +25,17 @@ options:
   verbose: true
   test_suites:
     - "storage"
+    - "storage_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "interest_pool"
+    - "interest_pool_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
@@ -143,3 +155,4 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
+

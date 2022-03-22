@@ -71,6 +71,9 @@ func runSuite(
 					)
 					b.StartTimer()
 					err = bm.Run(balances, b)
+					if err != nil {
+						mockUpdateState(bm.Transaction(), balances)
+					}
 				}
 			})
 			benchmarkResult = append(
