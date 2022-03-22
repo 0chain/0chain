@@ -263,7 +263,7 @@ type Foo struct {
 ```
 
 Note:
-1. `msgp` does not support type alias, so please do not use `datastore.Key` in MPT data struct, it is an alias of
+1. `msgp` does not support system type alias, so please do not use `datastore.Key` in MPT data struct, it is an alias of
 system type `string`.
 2. The `//go:generate msgp -io=false ...` works on file level, i.e, we only need to define it once a file,
 so please check if it is already defined before adding.
