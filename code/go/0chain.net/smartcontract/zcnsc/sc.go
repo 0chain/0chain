@@ -39,7 +39,7 @@ type ZCNSmartContract struct {
 func NewZCNSmartContract() smartcontractinterface.SmartContractInterface {
 	var contract = &ZCNSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
-		nil,
+		make(map[string]smartContractFunction),
 	}
 
 	contract.InitSC()
