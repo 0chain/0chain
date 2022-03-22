@@ -26,15 +26,6 @@ func (wp *writePool) allocTotal(allocID string,
 	return wp.Pools.allocTotal(allocID, now)
 }
 
-func (wp *writePool) allocBlobberTotal(allocID, blobberID string, now int64) state.Balance { //nolint: unused
-
-	return wp.Pools.allocBlobberTotal(allocID, blobberID, now)
-}
-
-func (wp *writePool) allocationCut(allocID string) []*allocationPool { //nolint: unused
-	return wp.Pools.allocationCut(allocID)
-}
-
 func Test_writePool_Encode_Decode(t *testing.T) {
 	var rpe, rpd writePool
 	rpe.Pools.add(&allocationPool{

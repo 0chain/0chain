@@ -451,38 +451,6 @@ func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
 	return // false, hasn't
 }
 
-// of DKG miners sorted list
-func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode, //nolint: unused
-	balances cstate.StateContextI) (has bool) {
-
-	var pmb = gn.prevMagicBlock(balances)
-
-	for _, nd := range list {
-		if pmb.Miners.HasNode(nd.ID) {
-			return true
-		}
-	}
-
-	return // false, hasn't
-}
-
-// Receive list of ranked miners and extract miners of previous MB preserving
-// order. The given list not modified.
-func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode, //nolint: unused
-	balances cstate.StateContextI) (prev []*SimpleNode) {
-
-	var pmb = gn.prevMagicBlock(balances)
-	prev = make([]*SimpleNode, 0, len(list))
-
-	for _, node := range list {
-		if pmb.Miners.HasNode(node.ID) {
-			prev = append(prev, node)
-		}
-	}
-
-	return // false, hasn't
-}
-
 // hasPrevSharderInList checks if there are nodes in previous magic block sharder list
 func hasPrevSharderInList(prevMB *block.MagicBlock, nodes []*MinerNode) bool {
 	for _, n := range nodes {
@@ -743,10 +711,6 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
-func (ps *poolStat) decode(input []byte) error { //nolint: unused
-	return json.Unmarshal(input, ps)
-}
-
 type delegatePoolStat struct {
 	ID           string        `json:"id"`            // pool ID
 	Balance      state.Balance `json:"balance"`       //
@@ -950,13 +914,6 @@ func min(a, b int) int {
 		return b
 	}
 	return a
-}
-
-func max(a, b int) int { //nolint: unused, deadcode
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // The min_n is checked before the calculateTKN call, so, the n >= min_n.

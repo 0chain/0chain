@@ -59,14 +59,6 @@ func init() {
 	block.SetupEntity(memorystore.GetStorageProvider())
 }
 
-type (
-	stakePoolConfig struct { //nolint unused
-		MinLock          int64         `json:"min_lock"`
-		InterestRate     float64       `json:"interest_rate"`
-		InterestInterval time.Duration `json:"interest_interval"`
-	}
-)
-
 func TestChain_HandleSCRest_Status(t *testing.T) {
 	const (
 		clientID     = "client id"

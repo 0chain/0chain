@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/url"
-	"strconv"
 	"sync"
 
 	"0chain.net/chaincore/smartcontract"
@@ -18,10 +17,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/rcrowley/go-metrics"
-
-	. "0chain.net/core/logging"
 )
 
 const (
@@ -169,40 +165,6 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
 	}
 	return scFunc(t, input, gn, balances)
-}
-
-func getHostnameAndPort(burl string) (string, int, error) { //nolint unused
-	hostName := ""
-	port := 0
-
-	//ToDo: does rudimentary checks. Add more checks
-	u, err := url.Parse(burl)
-	if err != nil {
-		return hostName, port, errors.New(burl + " is not a valid url. " + err.Error())
-	}
-
-	if u.Scheme != "http" { //|| u.scheme == "https"  we don't support
-		return hostName, port, errors.New(burl + " is not a valid url. It does not have scheme http")
-	}
-
-	sp := u.Port()
-	if sp == "" {
-		return hostName, port, errors.New(burl + " is not a valid url. It does not have port number")
-	}
-
-	p, err := strconv.Atoi(sp)
-	if err != nil {
-		return hostName, port, errors.New(burl + " is not a valid url. " + err.Error())
-	}
-
-	hostName = u.Hostname()
-
-	if govalidator.IsDNSName(hostName) || govalidator.IsIPv4(hostName) {
-		return hostName, p, nil
-	}
-
-	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + hostName)
-	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
 func getGlobalNode(

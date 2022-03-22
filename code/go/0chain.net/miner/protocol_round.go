@@ -1509,10 +1509,6 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 	}
 }
 
-func isNilRound(r round.RoundI) bool { //nolint: deadcode, unused
-	return r == nil || r == round.RoundI((*Round)(nil))
-}
-
 func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 
 	var (

@@ -11,7 +11,6 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
@@ -165,29 +164,6 @@ func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 	blobbers, err = ssc.getBlobbersList(balances)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(blobbers.Nodes))
-}
-
-func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract, //nolint unused
-	allocID, clientID string, toks int64, tp int64, dur time.Duration,
-	balances *testBalances) {
-
-	var tx = transaction.Transaction{
-		Value:        toks,
-		ClientID:     clientID,
-		CreationDate: common.Timestamp(tp),
-	}
-
-	var keep = balances.txn // back up
-
-	balances.txn = &tx
-	var _, err = ssc.writePoolLock(&tx, mustEncode(t, &lockRequest{
-		AllocationID: allocID,
-		Duration:     dur,
-	}), balances)
-	require.NoError(t, err)
-
-	balances.txn = keep // restore
-
 }
 
 // - create allocation

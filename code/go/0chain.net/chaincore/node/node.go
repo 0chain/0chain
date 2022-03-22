@@ -649,11 +649,6 @@ func (n *Node) getOptimalLargeMessageSendTime() float64 {
 	return sendTime
 }
 
-func (n *Node) getTime(uri string) float64 { //nolint: unused
-	pullTimer := n.GetTimer(uri)
-	return pullTimer.Mean()
-}
-
 func (n *Node) SetNode(old *Node) {
 	// Copy timers and size to new map from clone
 	if n == old {

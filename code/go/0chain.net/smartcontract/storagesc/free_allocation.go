@@ -48,10 +48,6 @@ type freeStorageUpgradeInput struct {
 	Marker       string `json:"marker"`
 }
 
-func (frm *freeStorageUpgradeInput) decode(b []byte) error { //nolint unused
-	return json.Unmarshal(b, frm)
-}
-
 type newFreeStorageAssignerInfo struct {
 	Name            string  `json:"name"`
 	PublicKey       string  `json:"public_key"`

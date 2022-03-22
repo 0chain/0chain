@@ -52,41 +52,6 @@ func (tb *testBalances) requireAllBeZeros(t *testing.T) { //nolint
 	}
 }
 
-func (tb *testBalances) requireSpecifiedBeEqual(t *testing.T, //nolint: unused
-	clients []*Client, value state.Balance, message string) {
-
-	for _, client := range clients {
-		require.EqualValues(t, value, tb.balances[client.id], message)
-	}
-}
-
-func (tb *testBalances) requireTotalAmountBeEqual(t *testing.T, //nolint: unused
-	expected state.Balance) {
-
-	var total state.Balance
-	for id, value := range tb.balances {
-		if id == ADDRESS {
-			continue
-		}
-		total += value
-	}
-
-	require.EqualValues(t, expected, total, "total amount of tokens is wrong")
-}
-
-func (tb *testBalances) requireNodeAndStakersSumUpTo(t *testing.T, //nolint: unused
-	node *Client, stakers []*Client, expected state.Balance) {
-
-	var total state.Balance
-	for _, staker := range stakers {
-		total += tb.balances[staker.id]
-	}
-	total += tb.balances[node.id]
-
-	require.EqualValues(t, expected, total,
-		"total amount distributed among node and its stakers is wrong")
-}
-
 func (tb *testBalances) GetBlock() *block.Block {
 	return tb.block
 }

@@ -235,14 +235,6 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	return
 }
 
-// free staked capacity of related blobber
-func (sp *stakePool) capacity(now common.Timestamp, writePrice state.Balance) (free int64) { //nolint: unused
-
-	var total, offers = sp.stake(), sp.TotalOffers
-	free = int64((float64(total-offers) / float64(writePrice)) * GB)
-	return
-}
-
 type delegatePoolStat struct {
 	ID         string        `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance
@@ -275,18 +267,6 @@ type stakePoolStat struct {
 
 	// Settings of the stake pool
 	Settings stakepool.StakePoolSettings `json:"settings"`
-}
-
-func (stat *stakePoolStat) encode() (b []byte) { //nolint: unused
-	var err error
-	if b, err = json.Marshal(stat); err != nil {
-		panic(err) // must never happen
-	}
-	return
-}
-
-func (stat *stakePoolStat) decode(input []byte) error { //nolint: unused
-	return json.Unmarshal(input, stat)
 }
 
 //

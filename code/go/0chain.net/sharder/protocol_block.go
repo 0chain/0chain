@@ -32,7 +32,7 @@ func init() {
 }
 
 /*UpdatePendingBlock - update the pending block */
-func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) { //nolint: unused
+func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
 
 }
 
@@ -617,19 +617,6 @@ func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 	//}
 }
 
-func (sc *Chain) storeRoundSummary(ctx context.Context, r *round.Round) { //nolint: unused
-	var err error
-	for {
-		err = sc.StoreRound(r)
-		if err != nil {
-			Logger.Error("db error (save round summary)", zap.Int64("round", r.Number), zap.Error(err))
-			time.Sleep(time.Second)
-			continue
-		}
-		break
-	}
-}
-
 func (sc *Chain) storeBlockSummary(ctx context.Context, bs *block.BlockSummary) {
 	var err error
 	for {
@@ -663,7 +650,7 @@ func (sc *Chain) storeBlock(b *block.Block) error {
 	return err
 }
 
-func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) error { //nolint: unused
+func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) error {
 	err := sc.StoreTransactions(b)
 	//	Logger.Error(caller,
 	//		zap.Int64("round", b.Round),
@@ -674,6 +661,6 @@ func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) err
 }
 
 // NotarizedBlockFetched -
-func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) { //nolint: unused
+func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// sc.processBlock(ctx, b)
 }

@@ -670,15 +670,6 @@ func (f *formulaeFinalizeAllocation) _challengePool() int64 {
 	return f.challengePoolBalance
 }
 
-func (f *formulaeFinalizeAllocation) _minLockTotal() int64 { //nolint: unused
-	var total int64 = 0
-	for i := range f.allocation.BlobberDetails {
-		total += f._minLockPayment(i)
-	}
-
-	return total
-}
-
 func (f *formulaeFinalizeAllocation) _minLockPayment(blobber int) int64 {
 	require.True(f.t, blobber < len(f.allocation.BlobberDetails))
 	var details = f.allocation.BlobberDetails[blobber]
@@ -928,13 +919,6 @@ func (f formulaeCommitNewAllocation) sizePerUsedBlobber() int64 {
 	return (writeSize + numBlobbersUsed - 1) / numBlobbersUsed
 }
 
-func (f formulaeCommitNewAllocation) offerBlobber(index int) int64 { //nolint: unused
-	var amount = sizeInGB(f.sizePerUsedBlobber())
-	var writePrice = float64(f.blobbers[index].Terms.WritePrice)
-
-	return int64(amount * writePrice)
-}
-
 func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string) int64 {
 	var thisBlobber, ok = f.blobbers.get(id)
 	require.True(t, ok)
@@ -942,13 +926,6 @@ func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string
 	var newAllocament = f.sizePerUsedBlobber()
 
 	return usedAlready + newAllocament
-}
-
-func (f formulaeCommitNewAllocation) offerExpiration() common.Timestamp { //nolint: unused
-	var expiration = f.request.Expiration
-	var challangeTime = f.request.MaxChallengeCompletionTime
-
-	return expiration + toSeconds(challangeTime)
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,

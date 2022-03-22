@@ -291,10 +291,6 @@ var GlobalSettingInfo = map[string]struct {
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
 
-func scConfigKey(scKey string) datastore.Key { //nolint unused
-	return datastore.Key(scKey + ":configurations")
-}
-
 type GlobalSettings struct {
 	Version int64             `json:"version"`
 	Fields  map[string]string `json:"fields"`

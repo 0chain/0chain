@@ -44,16 +44,6 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
-func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) { //nolint unused
-	for i, b := range list {
-		if b.ID == update.ID {
-			list[i], ok = update, true
-			return
-		}
-	}
-	return
-}
-
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
@@ -444,15 +434,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	return
-}
-
-func sizePrice(size int64, price state.Balance) float64 { //nolint unused
-	return sizeInGB(size) * float64(price)
-}
-
-// (expire - last_challenge_time) /  (allocation duration)
-func allocLeftRatio(start, expire, last common.Timestamp) float64 { //nolint unused
-	return float64(expire-last) / float64(expire-start)
 }
 
 // commitMoveTokens moves tokens on connection commit (on write marker),

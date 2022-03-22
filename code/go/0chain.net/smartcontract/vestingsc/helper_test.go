@@ -95,46 +95,6 @@ func newTestVestingSC() (vsc *VestingSmartContract) {
 	return
 }
 
-func (c *Client) trigger(t *testing.T, vsc *VestingSmartContract, //nolint: unused
-	poolID datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		tr poolRequest
-	)
-	balances.(*testBalances).txn = tx
-	tr.PoolID = poolID
-	return vsc.trigger(tx, mustEncode(t, &tr), balances)
-}
-
-func (c *Client) stop(t *testing.T, vsc *VestingSmartContract, //nolint: unused
-	poolID, dest datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		sr stopRequest
-	)
-	balances.(*testBalances).txn = tx
-	sr.PoolID = poolID
-	sr.Destination = dest
-	return vsc.stop(tx, mustEncode(t, &sr), balances)
-}
-
-func (c *Client) unlock(t *testing.T, vsc *VestingSmartContract, //nolint: unused
-	poolID datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		ur poolRequest
-	)
-	balances.(*testBalances).txn = tx
-	ur.PoolID = poolID
-	return vsc.unlock(tx, mustEncode(t, &ur), balances)
-}
-
 func (c *Client) add(t *testing.T, vsc *VestingSmartContract,
 	ar *addRequest, value state.Balance, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
@@ -142,17 +102,4 @@ func (c *Client) add(t *testing.T, vsc *VestingSmartContract,
 	var tx = newTransaction(c.id, ADDRESS, value, now)
 	balances.(*testBalances).txn = tx
 	return vsc.add(tx, mustEncode(t, ar), balances)
-}
-
-func (c *Client) delete(t *testing.T, vsc *VestingSmartContract, //nolint: unused
-	poolID datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		dr poolRequest
-	)
-	balances.(*testBalances).txn = tx
-	dr.PoolID = poolID
-	return vsc.unlock(tx, mustEncode(t, &dr), balances)
 }

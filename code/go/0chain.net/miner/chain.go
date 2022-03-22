@@ -140,9 +140,6 @@ type Chain struct {
 	// view change process control
 	viewChangeProcess
 
-	// not. blocks pulling joining at VC
-	pullingPin int64 //nolint: unused
-
 	// restart round event (rre)
 	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
@@ -184,14 +181,6 @@ func (mc *Chain) unsubRestartRoundEvent(subq chan struct{}) {
 	case <-mc.restartRoundEventWorkerIsDoneChannel: // worker context is done
 	case mc.unsubRestartRoundEventChannel <- subq:
 	}
-}
-
-func (mc *Chain) startPulling() (ok bool) { //nolint
-	return atomic.CompareAndSwapInt64(&mc.pullingPin, 0, 1)
-}
-
-func (mc *Chain) stopPulling() (ok bool) { //nolint
-	return atomic.CompareAndSwapInt64(&mc.pullingPin, 1, 0)
 }
 
 // SetDiscoverClients set the discover clients parameter

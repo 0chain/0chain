@@ -17,15 +17,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,7 +35,6 @@ type cmdMagicBlock struct {
 	dkgs map[string]*bls.DKG
 	// summaries collection
 	summaries       map[int]*bls.DKGSummary
-	states          *state.InitStates //nolint: structcheck,unused
 	originalIndices map[string]int
 }
 
@@ -160,23 +156,6 @@ func verifyKeys(hexSecKey, hexPubKey, hexId string) error {
 	if id != hexId {
 		return errors.New("id is not valid")
 	}
-	return nil
-}
-
-func verifySummaries(cmd *cmdMagicBlock, key datastore.Key, index int) error { //nolint unused
-
-	dkgs := cmd.summaries[index]
-	dkgs.ID = strconv.FormatInt(cmd.block.MagicBlockNumber, 10)
-
-	if err := dkgs.Verify(bls.ComputeIDdkg(key), cmd.block.Mpks.GetMpkMap()); err != nil {
-		if config.DevConfiguration.ViewChange {
-			logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
-		} else {
-			logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
-		}
-
-	}
-
 	return nil
 }
 

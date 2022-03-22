@@ -925,12 +925,6 @@ func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	return false, ErrInsufficientChain
 }
 
-func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) { //nolint: unused
-	c.stakeMutex.Lock()
-	defer c.stakeMutex.Unlock()
-	c.minersStake[minerID] = stake
-}
-
 func (c *Chain) getMiningStake(minerID datastore.Key) int {
 	return c.minersStake[minerID]
 }

@@ -83,16 +83,6 @@ func (usp *UserStakePools) Save(
 	return
 }
 
-// remove the entire user stake pools node
-func (usp *UserStakePools) remove( //nolint: unused
-	p spenum.Provider,
-	clientID datastore.Key,
-	balances chainstate.StateContextI,
-) (err error) {
-	_, err = balances.DeleteTrieNode(UserStakePoolsKey(p, clientID))
-	return
-}
-
 // GetUserStakePool of given client
 func GetUserStakePool(
 	p spenum.Provider,
