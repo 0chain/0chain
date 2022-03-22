@@ -239,7 +239,7 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 
 	err := target.Decode(node.Encode())
 	require.NoError(t, err)
-	require.Equal(t, target.LockingPool.ID, "11")
+	require.Equal(t, "11", target.LockingPool.ID)
 	require.Equal(t, int64(target.LockingPool.Balance), tr.Value)
 }
 

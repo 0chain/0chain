@@ -262,7 +262,7 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		}
 	}
 
-	staking, ok := objMap["staking"]
+	staking, ok := objMap["lock_pool"]
 	if ok && staking != nil {
 		tokenlock := &TokenLock{}
 		err = an.LockingPool.Decode(*staking, tokenlock)

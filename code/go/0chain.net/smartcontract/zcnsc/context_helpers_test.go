@@ -141,7 +141,15 @@ func (m *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerial
 	}
 
 	if strings.Contains(key, AuthorizerNodeType) {
-		return key, fmt.Errorf("authorizer not supported, key: %s", key)
+		if authorizer, ok := node.(*AuthorizerNode); ok {
+			m.authorizers[key] = &Authorizer{
+				Scheme: nil,
+				Node:   authorizer,
+			}
+			return key, nil
+		} else {
+			return key, fmt.Errorf("authorizer not supported, key: %s", key)
+		}
 	}
 
 	if strings.Contains(key, GlobalNodeType) {
