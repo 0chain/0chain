@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -88,6 +89,9 @@ func AddMockAllocations(
 			})
 		}
 
+		if i%100000 == 0 {
+			fmt.Println("making allocations, i", i)
+		}
 		if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
 			log.Fatal(err)
 		}
