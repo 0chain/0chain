@@ -82,7 +82,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 			),
 		),
 		"/": common.UserRateLimit(
-			HomePageAndNotFoundHandlerFunc("/"),
+			HomePageAndNotFoundHandler,
 		),
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
@@ -215,16 +215,14 @@ func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 // StartTime - time when the server has started.
 var StartTime time.Time
 
-/*HomePageAndNotFoundHandlerFunc - returns handler which returns home page or 404 if not matching home path */
-func HomePageAndNotFoundHandlerFunc(homePage string) common.ReqRespHandlerf {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != homePage {
-			NotFoundPageHandler(w, r)
-			return
-		}
-
-		HomePageHandler(w, r)
+/*HomePageAndNotFoundHandler - catch all handler that returns home page for root path and 404 for other paths */
+func HomePageAndNotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		NotFoundPageHandler(w, r)
+		return
 	}
+
+	HomePageHandler(w, r)
 }
 
 /*HomePageHandler - provides basic info when accessing the home page of the server */
