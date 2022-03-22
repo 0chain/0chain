@@ -82,7 +82,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 			),
 		),
 		"/": common.UserRateLimit(
-			HomePageHandler,
+			HomePageAndNotFoundHandlerFunc("/"),
 		),
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
@@ -215,6 +215,18 @@ func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 // StartTime - time when the server has started.
 var StartTime time.Time
 
+/*HomePageAndNotFoundHandlerFunc - returns handler which returns home page or 404 if not matching home path */
+func HomePageAndNotFoundHandlerFunc(homePage string) common.ReqRespHandlerf {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != homePage {
+			NotFoundPageHandler(w, r)
+			return
+		}
+
+		HomePageHandler(w, r)
+	}
+}
+
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
@@ -223,6 +235,11 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	selfNode := node.Self.Underlying()
 	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>build_tag:%v</li></ul></div>\n",
 		selfNode.GetPseudoName(), sc.GetKey(), selfNode.GetKey(), selfNode.PublicKey, build.BuildTag)
+}
+
+/*NotFoundPageHandler - provides the 404 page */
+func NotFoundPageHandler(w http.ResponseWriter, r *http.Request) {
+	common.Respond(w, r, nil, common.ErrNoResource)
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
