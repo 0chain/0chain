@@ -61,7 +61,7 @@ func TestAddChallenge(t *testing.T) {
 		errorMsg   string
 	}
 
-	parametersToArgs := func(p parameters) args {
+	parametersToArgs := func(p parameters, ssc *StorageSmartContract) args {
 
 		blobberChallenge := partitions.NewRandomSelector(
 			ALL_BLOBBERS_CHALLENGE_KEY,
@@ -120,9 +120,12 @@ func TestAddChallenge(t *testing.T) {
 			bID = bcItem.Name()
 		}
 
-		allocChall := new(AllocationChallenge)
-		storageChall := new(StorageChallenge)
-		blobberChall := new(BlobberChallenge)
+		allocChall, err := ssc.getAllocationChallenge("", balances)
+		require.NoError(t, err)
+		storageChall, err := ssc.getStorageChallenge("", balances)
+		require.NoError(t, err)
+		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
+		require.NoError(t, err)
 
 		return args{
 			alloc: &StorageAllocation{
@@ -207,10 +210,10 @@ func TestAddChallenge(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			args := parametersToArgs(tt.parameters)
 			var ssc = &StorageSmartContract{
 				SmartContract: sci.NewSC(ADDRESS),
 			}
+			args := parametersToArgs(tt.parameters, ssc)
 
 			resp, err := ssc.addChallenge(args.alloc,
 				args.storageChallenge,
