@@ -102,7 +102,11 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 		txnSummary := txn.GetSummary()
 		txnSummary.Round = b.Round
 		sTxns[idx] = txnSummary
-		sc.BlockTxnCache.Add(txn.Hash, txnSummary) //nolint: errcheck
+		if err := sc.BlockTxnCache.Add(txn.Hash, txnSummary); err != nil {
+			logging.Logger.Warn("save transaction to cache failed",
+				zap.String("txn", txn.Hash),
+				zap.Error(err))
+		}
 	}
 
 	delay := time.Millisecond

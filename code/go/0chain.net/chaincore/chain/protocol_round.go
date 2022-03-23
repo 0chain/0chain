@@ -48,11 +48,11 @@ func init() {
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
-	metrics.Register("finalization_lag", FinalizationLagMetric) //nolint: errcheck
+	_ = metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
-//iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,
-//returns this block
+// ComputeFinalizedBlock iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,
+// returns this block
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
 	isIn := func(blocks []*block.Block, hash string) bool {
 		for _, b := range blocks {

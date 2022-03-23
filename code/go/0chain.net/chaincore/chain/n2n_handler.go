@@ -83,7 +83,10 @@ func SetupX2XResponders(c *Chain) {
 //StateNodesHandler - return a list of state nodes
 func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	// this is needed as we get multiple values for the same key
-	r.ParseForm() //nolint: errcheck
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+
 	nodes := r.Form["nodes"]
 	c := GetServerChain()
 	keys := make([]util.Key, len(nodes))

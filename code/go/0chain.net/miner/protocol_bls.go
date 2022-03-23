@@ -96,10 +96,14 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
-			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false) //nolint: errcheck
+			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
+				return err
+			}
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false) //nolint: errcheck
+				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -111,7 +115,14 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	newDKG.AggregateSecretKeyShares()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
-	newDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
+	mpks, err := mb.Mpks.GetMpkMap()
+	if err != nil {
+		return err
+	}
+
+	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
+		return err
+	}
 
 	if err = mc.SetDKG(newDKG, mb.StartingRound); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))

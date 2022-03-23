@@ -110,7 +110,10 @@ func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][
 		dkg.msk = append(dkg.msk, secretKey)
 	}
 	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
-	dkg.AggregatePublicKeyShares(mpks)
+	if err := dkg.AggregatePublicKeyShares(mpks); err != nil {
+		panic(err)
+	}
+
 	for k, v := range shares {
 		var secreteShare Key
 		err := secreteShare.SetHexString(v)
@@ -305,7 +308,7 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 }
 
 //AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
-func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) {
+func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
 	dkg.gmpkMutex.Lock()
 	defer dkg.gmpkMutex.Unlock()
 	dkg.gmpk = make(map[PartyID]PublicKey)
@@ -313,11 +316,15 @@ func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) {
 		var pk PublicKey
 		for _, mpk := range mpks {
 			var pkj PublicKey
-			pkj.Set(mpk, &k) //nolint: errcheck
+			if err := pkj.Set(mpk, &k); err != nil {
+				return err
+			}
 			pk.Add(&pkj)
 		}
 		dkg.gmpk[k] = pk
 	}
+
+	return nil
 }
 
 // GetPublicKeyByID - returns public key by party id
@@ -327,7 +334,7 @@ func (dkg *DKG) GetPublicKeyByID(id PartyID) PublicKey {
 	return dkg.gmpk[id]
 }
 
-/*CreateQualSet - Each party aggregates the received shares from other party which is calculated for that party */
+// DeleteFromSet - Each party aggregates the received shares from other party which is calculated for that party */
 func (dkg *DKG) DeleteFromSet(nodes []string) {
 	dkg.secretSharesMutex.Lock()
 	defer dkg.secretSharesMutex.Unlock()
@@ -351,14 +358,16 @@ func ValidateShare(jpk []PublicKey, sij bls.SecretKey, id PartyID) bool {
 	return expectedSijPK.IsEqual(sijPK)
 }
 
-func ConvertStringToMpk(strMpk []string) []PublicKey {
+func ConvertStringToMpk(strMpk []string) ([]PublicKey, error) {
 	var mpk []PublicKey
 	for _, str := range strMpk {
-		var publickKey PublicKey
-		publickKey.SetHexString(str) //nolint: errcheck
-		mpk = append(mpk, publickKey)
+		var pk PublicKey
+		if err := pk.SetHexString(str); err != nil {
+			return nil, err
+		}
+		mpk = append(mpk, pk)
 	}
-	return mpk
+	return mpk, nil
 }
 
 //

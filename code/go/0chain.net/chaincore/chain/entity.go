@@ -542,7 +542,7 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 
 func (c *Chain) getInitialState(tokens state.Balance) util.MPTSerializable {
 	balance := &state.State{}
-	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000") //nolint: errcheck
+	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	balance.Balance = tokens
 	return balance
 }
@@ -599,10 +599,12 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 
 // AddLoadedFinalizedBlocks - adds the genesis block to the chain.
 func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
-	c.UpdateMagicBlock(lfmb.MagicBlock) //nolint: errcheck
+	err := c.UpdateMagicBlock(lfmb.MagicBlock)
+	if err != nil {
+		logging.Logger.Warn("update magic block failed", zap.Error(err))
+	}
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
-	// c.LatestDeterministicBlock left as genesis
 	c.blocks[lfb.Hash] = lfb
 }
 

@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 const (
@@ -170,7 +172,13 @@ func (vn *ValueNode) SetValue(value MPTSerializable) {
 /*Encode - overwrite interface method */
 func (vn *ValueNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, vn) //nolint: errcheck
+
+	if err := writeNodePrefix(buf, vn); err != nil {
+		// TODO: the Encode() interface should return error
+		logging.Logger.Error("value node encode failed", zap.Error(err))
+		return nil
+	}
+
 	v := vn.GetValueBytes()
 	if len(v) > 0 {
 		buf.Write(v)
@@ -216,7 +224,11 @@ func (ln *LeafNode) GetHash() string {
 /*GetHashBytes - implement interface */
 func (ln *LeafNode) GetHashBytes() []byte {
 	buf := bytes.NewBuffer(nil)
-	binary.Write(buf, binary.LittleEndian, ln.GetOrigin()) //nolint: errcheck
+	if err := binary.Write(buf, binary.LittleEndian, ln.GetOrigin()); err != nil {
+		// TODO: return error
+		logging.Logger.Error("leaf node GetHashBytes failed", zap.Error(err))
+		return nil
+	}
 	ln.encode(buf)
 	return encryption.RawHash(buf.Bytes())
 }
@@ -224,7 +236,11 @@ func (ln *LeafNode) GetHashBytes() []byte {
 /*Encode - implement interface */
 func (ln *LeafNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, ln) //nolint: errcheck
+	if err := writeNodePrefix(buf, ln); err != nil {
+		// TODO: return error
+		logging.Logger.Error("leaf node Encode failed", zap.Error(err))
+		return nil
+	}
 	ln.encode(buf)
 	return buf.Bytes()
 }
@@ -346,7 +362,10 @@ func (fn *FullNode) GetHashBytes() []byte {
 /*Encode - implement interface */
 func (fn *FullNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, fn) //nolint: errcheck
+	if err := writeNodePrefix(buf, fn); err != nil {
+		logging.Logger.Error("full node encode failed", zap.Error(err))
+		return nil
+	}
 	fn.encode(buf)
 	return buf.Bytes()
 }
@@ -516,7 +535,10 @@ func (en *ExtensionNode) GetHashBytes() []byte {
 /*Encode - implement interface */
 func (en *ExtensionNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	writeNodePrefix(buf, en) //nolint: errcheck
+	if err := writeNodePrefix(buf, en); err != nil {
+		logging.Logger.Error("extension node encode failed", zap.Error(err))
+		return nil
+	}
 	en.encode(buf)
 	return buf.Bytes()
 }
@@ -616,7 +638,7 @@ func CreateNode(r io.Reader) (Node, error) {
 		panic(fmt.Sprintf("unkown node type: %v", code))
 	}
 	var ot OriginTracker
-	ot.Read(r) //nolint: errcheck
+	_ = ot.Read(r)
 	node.SetOriginTracker(&ot)
 	buf, err = ioutil.ReadAll(r)
 	if err != nil {

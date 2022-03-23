@@ -474,7 +474,14 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		btvTimer.UpdateSince(ts)
 		if mc.discoverClients {
-			go mc.SaveClients(b.GetClients()) //nolint: errcheck
+			go func() {
+				if err := mc.SaveClients(b.GetClients()); err != nil {
+					logging.Logger.Warn("validate transactions, save discovered clients failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+				}
+			}()
 		}
 		return nil
 	})
@@ -509,9 +516,15 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 			logging.Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
-	mc.FinalizeBlock(ctx, b) //nolint: errcheck
+	if err := mc.FinalizeBlock(ctx, b); err != nil {
+		logging.Logger.Warn("finalize block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+	}
+
 	go mc.SendFinalizedBlock(context.Background(), b)
-	fr := mc.GetRound(b.Round) //nolint:typecheck
+	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
 	}
@@ -740,7 +753,11 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
 		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
-		go mc.deleteTxns(iterInfo.invalidTxns) //nolint: errcheck
+		go func() {
+			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
+				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+			}
+		}()
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))

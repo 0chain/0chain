@@ -7,6 +7,8 @@ import (
 	"sort"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/node"
 )
@@ -94,5 +96,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 	//TODO: make CORS more restrictive
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bNodes) //nolint: errcheck
+	if err := json.NewEncoder(w).Encode(bNodes); err != nil {
+		logging.Logger.Error("http write json failed", zap.Error(err))
+	}
 }

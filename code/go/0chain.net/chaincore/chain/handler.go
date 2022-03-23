@@ -946,8 +946,10 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 <title>DKG process informations</title></head><body>
 <h1>DKG process disabled</h1></body></html>`)
 
-		w.Write(ss) //nolint: errcheck
-		return
+		if _, err := w.Write(ss); err != nil {
+			logging.Logger.Error("diagnostics DKG handler - http write failed", zap.Error(err))
+			return
+		}
 	}
 
 	var (
@@ -1716,9 +1718,8 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 	if contract == "" {
 		contract = "global"
-	} else { //nolint: staticcheck
-		//TODO: get the smart contract as an optional parameter and pick the right state hash
 	}
+
 	mptRootHash := util.ToHex(mpt.GetRoot())
 	fileName := fmt.Sprintf("mpt_%v_%v_%v.txt", contract, lfb.Round, mptRootHash)
 	file, err := ioutil.TempFile("", fileName)

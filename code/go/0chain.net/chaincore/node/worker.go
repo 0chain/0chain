@@ -187,7 +187,7 @@ func (n *Node) MemoryUsage() {
 		// Average increase in file size for each update => 10 kB
 		if viper.GetBool("logging.memlog") {
 			buf := new(bytes.Buffer)
-			pprof.Lookup("goroutine").WriteTo(buf, 1) //nolint: errcheck
+			_ = pprof.Lookup("goroutine").WriteTo(buf, 1)
 			logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
 		}
 	}

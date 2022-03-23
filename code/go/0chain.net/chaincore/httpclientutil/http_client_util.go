@@ -104,7 +104,13 @@ func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg.Add(len(urls))
 
 	for _, u := range urls {
-		go SendPostRequest(u, data, ID, pkey, &wg) //nolint: errcheck
+		go func(url string) {
+			if _, err := SendPostRequest(url, data, ID, pkey, &wg); err != nil {
+				logging.N2n.Error("send post request failed",
+					zap.String("url", url),
+					zap.Error(err))
+			}
+		}(u)
 	}
 	wg.Wait()
 }
@@ -136,7 +142,13 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
-		go sendTransactionToURL(txnURL, txn, ID, pkey, nil) //nolint: errcheck
+		go func(url string) {
+			if _, err := sendTransactionToURL(url, txn, ID, pkey, nil); err != nil {
+				logging.N2n.Error("send transaction failed",
+					zap.String("url", url),
+					zap.Error(err))
+			}
+		}(txnURL)
 	}
 }
 

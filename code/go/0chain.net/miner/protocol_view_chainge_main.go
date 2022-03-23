@@ -277,7 +277,10 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 			"setting hex string: %v", err)
 	}
 
-	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+	mpk, err := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+	if err != nil {
+		return nil, err
+	}
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
 		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),

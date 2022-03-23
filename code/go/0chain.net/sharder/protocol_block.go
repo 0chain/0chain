@@ -48,7 +48,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
-	sc.BlockCache.Add(b.Hash, b) //nolint: errcheck
+	if err := sc.BlockCache.Add(b.Hash, b); err != nil {
+		Logger.Warn("update finalized block, add block to cache failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+	}
+
 	if fr == nil {
 		fr = round.NewRound(b.Round)
 	}

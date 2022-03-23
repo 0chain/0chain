@@ -160,8 +160,11 @@ func (bdb *BlockDB) WriteData(record Record) error {
 		return err
 	}
 	if bdb.compress {
-		cbytes := compDe.Compress(buffer.Bytes())
-		buffer = bytes.NewBuffer(cbytes)
+		cb, err := compDe.Compress(buffer.Bytes())
+		if err != nil {
+			return err
+		}
+		buffer = bytes.NewBuffer(cb)
 	}
 	data := buffer.Bytes()
 	dlen := int32(len(data))
@@ -236,8 +239,11 @@ func (bdb *BlockDB) saveHeader() error {
 			return err
 		}
 		if bdb.compress {
-			cbytes := compDe.Compress(buffer.Bytes())
-			buffer = bytes.NewBuffer(cbytes)
+			cb, err := compDe.Compress(buffer.Bytes())
+			if err != nil {
+				return err
+			}
+			buffer = bytes.NewBuffer(cb)
 		}
 		_, err = buffer.WriteTo(headerFile)
 	}

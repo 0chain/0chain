@@ -148,7 +148,7 @@ func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 	return shuffled
 }
 
-// Print - print this pool. This will be used for http response and Read method
+// Print - print this pool. This will be used for http response and read method
 // should be able to consume it
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes(false)

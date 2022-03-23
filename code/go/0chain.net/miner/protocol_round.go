@@ -304,7 +304,11 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 
 	// NOTE: If there are not enough txns, this will not advance further even
 	// though rest of the network is. That's why this is a goroutine.
-	go mc.GenerateRoundBlock(ctx, mr) //nolint: errcheck
+	go func() {
+		if _, err := mc.GenerateRoundBlock(ctx, mr); err != nil {
+			logging.Logger.Warn("generate round block failed", zap.Error(err))
+		}
+	}()
 }
 
 // GetBlockToExtend - Get the block to extend from the given round.
@@ -660,7 +664,10 @@ func (mc *Chain) getOrSetBlockNotarizing(hash string) (isNotarizing bool, finish
 		task := mc.notarizingBlocksTasks[hash]
 		delete(mc.notarizingBlocksTasks, hash)
 		//TODO refactor cache addition
-		mc.notarizingBlocksResults.Add(hash, result) //nolint: errcheck
+		if err := mc.notarizingBlocksResults.Add(hash, result); err != nil {
+			logging.Logger.Warn("cache notarizing block result failed", zap.Error(err))
+		}
+
 		close(task)
 		mc.nbmMutex.Unlock()
 	}

@@ -11,7 +11,7 @@ import (
 
 //CompDe - an interface that provides compression/decompression
 type CompDe interface {
-	Compress([]byte) []byte
+	Compress([]byte) ([]byte, error)
 	Decompress([]byte) ([]byte, error)
 	Encoding() string
 }
@@ -56,11 +56,11 @@ func (zstd *ZStdCompDe) SetLevel(level int) {
 }
 
 //Compress - implement interface
-func (zstd *ZStdCompDe) Compress(data []byte) []byte {
+func (zstd *ZStdCompDe) Compress(data []byte) ([]byte, error) {
 	if zstd.level == 0 {
-		return gozstd.Compress(nil, data)
+		return gozstd.Compress(nil, data), nil
 	} else {
-		return gozstd.CompressLevel(nil, data, zstd.level)
+		return gozstd.CompressLevel(nil, data, zstd.level), nil
 	}
 }
 
@@ -120,13 +120,23 @@ func NewZLibCompDe() *ZLibCompDe {
 	return &ZLibCompDe{}
 }
 
-//Compress - implement interface
-func (zlibcd *ZLibCompDe) Compress(data []byte) []byte {
+// Compress - implement interface
+func (zlibcd *ZLibCompDe) Compress(data []byte) ([]byte, error) {
 	bf := bytes.NewBuffer(nil)
-	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
-	w.Write(data) //nolint: errcheck
-	w.Close()     //nolint: errcheck
-	return bf.Bytes()
+	w, err := zlib.NewWriterLevel(bf, zlib.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := w.Write(data); err != nil {
+		return nil, err
+	}
+
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+
+	return bf.Bytes(), nil
 }
 
 //Decompress - implement interface

@@ -269,7 +269,12 @@ func main() {
 			}
 		}
 		dkgShare.SecretShares = oldDKGShare.SecretShares
-		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), magicBlock.Mpks.GetMpkMap()); err != nil {
+		mpks, err := magicBlock.Mpks.GetMpkMap()
+		if err != nil {
+			logging.Logger.Panic("Get mpks map failed", zap.Error(err))
+		}
+
+		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
 			if config.DevConfiguration.ViewChange {
 				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {

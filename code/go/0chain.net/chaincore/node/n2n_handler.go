@@ -180,15 +180,17 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 var NoDataErr = common.NewError("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
-	io.Copy(ioutil.Discard, reader) //nolint: errcheck
-	reader.Close()                  //nolint: errcheck
+	_, _ = io.Copy(ioutil.Discard, reader)
+	_ = reader.Close()
 }
 
 func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(buffer) //nolint: errcheck
+		if _, err := cbuffer.ReadFrom(buffer); err != nil {
+			return nil, err
+		}
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr
@@ -208,7 +210,9 @@ func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata dat
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(reader) //nolint: errcheck
+		if _, err := cbuffer.ReadFrom(reader); err != nil {
+			return 0, nil, err
+		}
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
@@ -245,7 +249,7 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	}
 }
 
-func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {
+func getResponseData(options *SendOptions, entity datastore.Entity) (*bytes.Buffer, error) {
 	var buffer *bytes.Buffer
 	if options.CODEC == datastore.CodecJSON {
 		buffer = datastore.ToJSON(entity)
@@ -253,10 +257,13 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 		buffer = datastore.ToMsgpack(entity)
 	}
 	if options.Compress {
-		cbytes := compDecomp.Compress(buffer.Bytes())
-		buffer = bytes.NewBuffer(cbytes)
+		cb, err := compDecomp.Compress(buffer.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		buffer = bytes.NewBuffer(cb)
 	}
-	return buffer
+	return buffer, nil
 }
 
 func validateChain(sender *Node, r *http.Request) bool {

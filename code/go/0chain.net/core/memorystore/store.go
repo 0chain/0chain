@@ -431,18 +431,24 @@ func (ms *Store) multiDeleteFromCollectionAux(ctx context.Context, entityMetadat
 
 func (ms *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) int64 {
 	con := GetEntityCon(ctx, entityMetadata)
-	con.Send("ZCARD", collectionName) //nolint: errcheck
-	con.Flush()                       //nolint: errcheck
+	if err := con.Send("ZCARD", collectionName); err != nil {
+		return -1
+	}
+
+	if err := con.Flush(); err != nil {
+		return -1
+	}
+
 	data, err := con.Receive()
 	if err != nil {
 		return -1
-	} else {
-		val, ok := data.(int64)
-		if !ok {
-			return -1
-		}
-		return val
 	}
+
+	val, ok := data.(int64)
+	if !ok {
+		return -1
+	}
+	return val
 }
 
 func encode(entity datastore.Entity) *bytes.Buffer {

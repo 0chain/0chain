@@ -224,14 +224,23 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		timeout = options.Timeout
 	}
 	return func(entity datastore.Entity) SendHandler {
-		data := getResponseData(options, entity).Bytes()
+		buf, err := getResponseData(options, entity)
+		if err != nil {
+			logging.N2n.Error("getResponseData failed", zap.Error(err))
+		}
+
+		data := buf.Bytes()
 
 		toPull := options.Pull
 		if len(data) > LargeMessageThreshold || toPull {
 			toPull = true
 			key := p2pKey(uri, entity.GetKey())
 			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
-			pushDataCache.Add(key, pdce) //nolint: errcheck
+			if err := pushDataCache.Add(key, pdce); err != nil {
+				logging.Logger.Error("pull data add to cache failed",
+					zap.String("key", key),
+					zap.Error(err))
+			}
 		}
 
 		preparedSignatures, err := prepareSenderSign(entity, 5)
@@ -485,8 +494,10 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
-			logging.N2n.Error("message received - request from unrecognized node", zap.String("from", nodeID),
-				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
+			logging.N2n.Error("message received - request from unrecognized node",
+				zap.String("from", nodeID),
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI))
 			return
 		}
 
@@ -500,7 +511,13 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 
 		buf := bytes.Buffer{}
-		buf.ReadFrom(r.Body) //nolint: errcheck
+		if _, err := buf.ReadFrom(r.Body); err != nil {
+			logging.N2n.Error("message received - read body failed",
+				zap.String("from", nodeID),
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
 
 		go func() {
 			senderValidateFunc := func() error {

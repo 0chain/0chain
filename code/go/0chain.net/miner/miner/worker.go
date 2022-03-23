@@ -241,7 +241,9 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
-		w.Initialize(c.ClientSignatureScheme()) //nolint: errcheck
+		if err := w.Initialize(c.ClientSignatureScheme()); err != nil {
+			panic(err)
+		}
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed

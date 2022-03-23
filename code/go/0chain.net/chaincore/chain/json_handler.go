@@ -436,5 +436,10 @@ func JSONHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data) //nolint: errcheck
+
+	if _, err = w.Write(data); err != nil {
+		logging.Logger.Error("http write failed",
+			zap.String("url", r.URL.String()),
+			zap.Error(err))
+	}
 }

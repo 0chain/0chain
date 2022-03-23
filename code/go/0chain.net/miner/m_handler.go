@@ -223,7 +223,11 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		}
 
 		// send notarized block
-		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID) //nolint: errcheck
+		go func() {
+			if _, err := mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID); err != nil {
+				logging.Logger.Error("send notarized block failed", zap.Error(err))
+			}
+		}()
 
 		logging.Logger.Info("Reject VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),

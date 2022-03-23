@@ -202,7 +202,10 @@ func hasField(r *http.Request, field string) (ok bool) {
 
 func skipFormField(skip string, r *http.Request) (q *http.Request, err error) {
 
-	r.ParseMultipartForm(0) //nolint: errcheck
+	if err := r.ParseMultipartForm(0); err != nil {
+		return nil, err
+	}
+
 	if r.MultipartForm == nil {
 		return r, nil
 	}
@@ -290,7 +293,10 @@ func simpleRoundTrip(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	copyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body) //nolint: errcheck
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		log.Printf("http write failed: %v\n", err)
+	}
 }
 
 func handle(w http.ResponseWriter, r *http.Request, markers, filter string) {
@@ -464,7 +470,11 @@ func main() {
 
 	// start the proxy
 	go func() { log.Fatal(s.ListenAndServe()) }()
-	defer s.Shutdown(back) //nolint: errcheck
+	defer func() {
+		if err := s.Shutdown(back); err != nil {
+			log.Printf("shutdown error: %\ns", err)
+		}
+	}()
 
 	if len(run) == 0 {
 		waitSigInt()

@@ -160,7 +160,13 @@ func (sc *Chain) cacheProcessingBlock(hash string) bool {
 			return false
 		}
 
-		sc.processingBlocks.Add(hash, struct{}{}) //nolint: errcheck
+		if err := sc.processingBlocks.Add(hash, struct{}{}); err != nil {
+			Logger.Warn("cache process block failed",
+				zap.String("block", hash),
+				zap.Error(err))
+			sc.pbMutex.Unlock()
+			return false
+		}
 		sc.pbMutex.Unlock()
 		return true
 	default:

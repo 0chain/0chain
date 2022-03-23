@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"0chain.net/core/cache"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -301,7 +303,9 @@ func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	cacher.Add(co.GetKey(), co) //nolint: errcheck
+	if err := cacher.Add(co.GetKey(), co); err != nil {
+		logging.Logger.Warn("put client to cache failed", zap.Error(err))
+	}
 	return response, nil
 }
 

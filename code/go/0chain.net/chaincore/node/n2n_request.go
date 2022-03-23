@@ -423,7 +423,11 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				options.CODEC = CODEC_MSGPACK
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
-			buffer = getResponseData(options, entity)
+			buffer, err = getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
+				return
+			}
 		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
@@ -439,13 +443,19 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		sdata := buffer.Bytes()
-		w.Write(sdata) //nolint: errcheck
+		sData := buffer.Bytes()
+		if _, err := w.Write(sData); err != nil {
+			logging.N2n.Error("message received - http write failed",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
+
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}
-			updatePullStats(sender, uri, len(sdata), ts)
+			updatePullStats(sender, uri, len(sData), ts)
 		}
 		logging.N2n.Info("message received", zap.Int("from", sender.SetIndex),
 			zap.Int("to", Self.Underlying().SetIndex),
@@ -480,7 +490,11 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				options.CODEC = CODEC_MSGPACK
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
-			buffer = getResponseData(options, entity)
+			buffer, err = getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
+				return
+			}
 		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
@@ -495,8 +509,14 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		sdata := buffer.Bytes()
-		w.Write(sdata) //nolint: errcheck
+		sData := buffer.Bytes()
+		if _, err := w.Write(sData); err != nil {
+			logging.N2n.Error("message received - http write failed",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
+
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()

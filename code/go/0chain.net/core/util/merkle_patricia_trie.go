@@ -873,7 +873,7 @@ func (mpt *MerklePatriciaTrie) matchingPrefix(p1 Path, p2 Path) Path {
 
 func (mpt *MerklePatriciaTrie) indent(w io.Writer, depth byte) {
 	for i := byte(0); i < depth; i++ {
-		w.Write([]byte(" ")) //nolint: errcheck
+		_, _ = w.Write([]byte(" "))
 	}
 }
 
@@ -883,26 +883,26 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 	}
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		fmt.Fprintf(w, "err %v %v\n", ToHex(key), err) //nolint: errcheck
+		_, _ = fmt.Fprintf(w, "err %v %v\n", ToHex(key), err)
 		return err
 	}
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
-		fmt.Fprintf(w, "L:%v (prefix:%v path:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Prefix), string(nodeImpl.Path), node.GetOrigin()) //nolint: errcheck
+		_, _ = fmt.Fprintf(w, "L:%v (prefix:%v path:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Prefix), string(nodeImpl.Path), node.GetOrigin())
 	case *ExtensionNode:
-		fmt.Fprintf(w, "E:%v (path:%v,child:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin()) //nolint: errcheck
-		mpt.pp(w, nodeImpl.NodeKey, depth+2, true)                                                                                           //nolint: errcheck
+		_, _ = fmt.Fprintf(w, "E:%v (path:%v,child:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin())
+		_ = mpt.pp(w, nodeImpl.NodeKey, depth+2, true)
 	case *FullNode:
-		w.Write([]byte("F:"))                                           //nolint: errcheck
-		fmt.Fprintf(w, "%v (,origin:%v)", ToHex(key), node.GetOrigin()) //nolint: errcheck
-		w.Write([]byte("\n"))                                           //nolint: errcheck
+		_, _ = w.Write([]byte("F:"))
+		_, _ = fmt.Fprintf(w, "%v (,origin:%v)", ToHex(key), node.GetOrigin())
+		_, _ = w.Write([]byte("\n"))
 		for idx, cnode := range nodeImpl.Children {
 			if cnode == nil {
 				continue
 			}
 			mpt.indent(w, depth+1)
-			w.Write([]byte(fmt.Sprintf("%.2d ", idx))) //nolint: errcheck
-			mpt.pp(w, cnode, depth+2, false)           //nolint: errcheck
+			_, _ = w.Write([]byte(fmt.Sprintf("%.2d ", idx)))
+			_ = mpt.pp(w, cnode, depth+2, false)
 		}
 	}
 	return nil
@@ -923,7 +923,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	var missingNodes int64
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
-			missingNodeHander(ctx, path, key) //nolint: errcheck
+			_ = missingNodeHander(ctx, path, key)
 			missingNodes++
 			return nil
 		}

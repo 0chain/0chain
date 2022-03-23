@@ -120,7 +120,7 @@ func newPullingCache(cacheSize, chanSize int) *pullingCache {
 
 type pullHandlerFunc func(ctx context.Context) bool
 
-// addIfNotExist checks if the entity id is in the cache, add it if not exist, and return false
+// pullOrCacheRequest checks if the entity id is in the cache, add it if not exist, and return false
 // to indicate the entity was not in the cache, otherwise reject it and return true.
 func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullHandler pullHandlerFunc) {
 	c.mutex.Lock()
@@ -129,7 +129,10 @@ func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullH
 	case cache.ErrKeyNotFound:
 		ch := make(chan pullHandlerFunc, c.chanSize)
 		ch <- pullHandler
-		c.cache.Add(key, ch) //nolint: errcheck
+		if err := c.cache.Add(key, ch); err != nil {
+			logging.Logger.Warn("cache pull handler func failed", zap.Error(err))
+		}
+
 		c.mutex.Unlock()
 
 		go c.runHandler(ctx, key, ch)
