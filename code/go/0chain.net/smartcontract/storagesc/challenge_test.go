@@ -120,12 +120,9 @@ func TestAddChallenge(t *testing.T) {
 			bID = bcItem.Name()
 		}
 
-		allocChall, err := ssc.getAllocationChallenge("", balances)
-		require.NoError(t, err)
-		storageChall, err := ssc.getStorageChallenge("", balances)
-		require.NoError(t, err)
-		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
-		require.NoError(t, err)
+		allocChall, _ := ssc.getAllocationChallenge("", balances)
+		storageChall, _ := ssc.getStorageChallenge("", balances)
+		blobberChall, _ := ssc.getBlobberChallenge(bID, balances)
 
 		return args{
 			alloc: &StorageAllocation{
