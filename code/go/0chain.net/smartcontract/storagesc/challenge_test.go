@@ -120,6 +120,10 @@ func TestAddChallenge(t *testing.T) {
 			bID = bcItem.Name()
 		}
 
+		allocChall := new(AllocationChallenge)
+		storageChall := new(StorageChallenge)
+		blobberChall := new(BlobberChallenge)
+
 		return args{
 			alloc: &StorageAllocation{
 				Blobbers:   blobbers,
@@ -127,10 +131,10 @@ func TestAddChallenge(t *testing.T) {
 				DataShards: p.dataShards,
 				Stats:      &StorageAllocationStats{},
 			},
-			allocChallengeObj:   nil,
-			storageChallenge:    nil,
+			allocChallengeObj:   allocChall,
+			storageChallenge:    storageChall,
 			blobberAllocation:   blobberMap[bID],
-			blobberChallengeObj: nil,
+			blobberChallengeObj: blobberChall,
 			validators:          validators,
 			r:                   r,
 			blobberID:           bID,
