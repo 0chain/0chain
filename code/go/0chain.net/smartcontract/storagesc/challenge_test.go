@@ -125,10 +125,12 @@ func TestAddChallenge(t *testing.T) {
 		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
 			allocChall = new(AllocationChallenge)
 		}
-		storageChall, err := ssc.getStorageChallenge("", balances)
-		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
-			storageChall = new(StorageChallenge)
-		}
+		var storageChallenge = new(StorageChallenge)
+		storageChallenge.TotalValidators = p.numValidators
+		storageChallenge.BlobberID = bID
+		storageChallenge.AllocationRoot = blobberMap[bID].AllocationRoot
+		storageChallenge.Created = creationDate
+
 		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
 		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
 			blobberChall = new(BlobberChallenge)
@@ -142,7 +144,7 @@ func TestAddChallenge(t *testing.T) {
 				Stats:      &StorageAllocationStats{},
 			},
 			allocChallengeObj:   allocChall,
-			storageChallenge:    storageChall,
+			storageChallenge:    storageChallenge,
 			blobberAllocation:   blobberMap[bID],
 			blobberChallengeObj: blobberChall,
 			validators:          validators,
