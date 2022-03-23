@@ -121,12 +121,30 @@ func TestAddChallenge(t *testing.T) {
 			bID = bcItem.Name()
 		}
 
+		selectedValidators := make([]*ValidationNode, 0)
+		randSlice, err := validators.GetRandomSlice(r, balances)
+		require.NoError(t, err)
+
+		perm := r.Perm(len(randSlice))
+		for i := 0; i < minInt(len(randSlice), p.dataShards+1); i++ {
+			if randSlice[perm[i]].Name() != bID {
+				selectedValidators = append(selectedValidators,
+					&ValidationNode{
+						ID:      randSlice[perm[i]].Name(),
+						BaseURL: randSlice[perm[i]].Data(),
+					})
+			}
+			if len(selectedValidators) >= p.dataShards {
+				break
+			}
+		}
+
 		allocChall, err := ssc.getAllocationChallenge("", balances)
 		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
 			allocChall = new(AllocationChallenge)
 		}
 		var storageChallenge = new(StorageChallenge)
-		storageChallenge.TotalValidators = p.numValidators
+		storageChallenge.TotalValidators = len(selectedValidators)
 		storageChallenge.BlobberID = bID
 		storageChallenge.AllocationRoot = blobberMap[bID].AllocationRoot
 		storageChallenge.Created = creationDate
