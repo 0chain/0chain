@@ -104,7 +104,6 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 			return err
 		}
 		il.Key = key
-		return nil
 	}
 	return nil
 }

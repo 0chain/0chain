@@ -50,6 +50,8 @@ type RandPartition interface {
 	GetRandomSlice(*rand.Rand, state.StateContextI) ([]PartitionItem, error)
 }
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 type PartitionLocation struct {
 	Location  int
 	Timestamp common.Timestamp

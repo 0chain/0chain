@@ -34,7 +34,10 @@ func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, readSize
 	return err
 }
 
-func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) error {
+func (sc *StorageSmartContract) newChallenge(
+	statectx c_state.StateContextI,
+	challengeTimestamp common.Timestamp,
+	challenges int64) error {
 
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
@@ -43,8 +46,8 @@ func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, cha
 		return err
 	}
 
-	stats.Stats.OpenChallenges++
-	stats.Stats.TotalChallenges++
+	stats.Stats.OpenChallenges += challenges
+	stats.Stats.TotalChallenges += challenges
 	stats.LastChallengedSize = stats.Stats.UsedSize
 	stats.LastChallengedTime = challengeTimestamp
 	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)

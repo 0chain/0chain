@@ -125,60 +125,30 @@ func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 	return bc, nil
 }
 
-func (sc *StorageSmartContract) getStorageChallengeBytes(challengeID string,
-	balances c_state.StateContextI) (b []byte, err error) {
-
-	var (
-		chall = new(StorageChallenge)
-		seri  util.Serializable
-	)
-	chall.ID = challengeID
-	if seri, err = balances.GetTrieNode(chall.GetKey(sc.ID)); err != nil {
-		return
-	}
-	return seri.Encode(), nil
-}
-
 func (sc *StorageSmartContract) getStorageChallenge(challengeID string,
 	balances c_state.StateContextI) (challenge *StorageChallenge, err error) {
 
-	var b []byte
-	if b, err = sc.getStorageChallengeBytes(challengeID, balances); err != nil {
-		return
-	}
 	challenge = new(StorageChallenge)
-	if err = challenge.Decode(b); err != nil {
-		return nil, fmt.Errorf("decoding storage_challenge: %v", err)
+	challenge.ID = challengeID
+	err = balances.GetTrieNode(challenge.GetKey(sc.ID), challenge)
+	if err != nil {
+		return nil, err
 	}
-	return
-}
 
-func (sc *StorageSmartContract) getAllocationChallengeBytes(allocID string,
-	balances c_state.StateContextI) (b []byte, err error) {
-
-	var (
-		ac   AllocationChallenge
-		seri util.Serializable
-	)
-	ac.AllocationID = allocID
-	if seri, err = balances.GetTrieNode(ac.GetKey(sc.ID)); err != nil {
-		return
-	}
-	return seri.Encode(), nil
+	return challenge, nil
 }
 
 func (sc *StorageSmartContract) getAllocationChallenge(allocID string,
 	balances c_state.StateContextI) (ac *AllocationChallenge, err error) {
 
-	var b []byte
-	if b, err = sc.getAllocationChallengeBytes(allocID, balances); err != nil {
-		return
-	}
 	ac = new(AllocationChallenge)
-	if err = ac.Decode(b); err != nil {
-		return nil, fmt.Errorf("decoding allocation_challenge: %v", err)
+	ac.AllocationID = allocID
+	err = balances.GetTrieNode(ac.GetKey(sc.ID), ac)
+	if err != nil {
+		return nil, err
 	}
-	return
+
+	return ac, nil
 }
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
@@ -958,7 +928,10 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			}
 		}
 	}
-	sc.newChallenge(balances, t.CreationDate, totalChallenges)
+	if err = sc.newChallenge(balances, t.CreationDate, totalChallenges); err != nil {
+		return common.NewErrorf("adding_challenge_error",
+			"error storing new challenge stats: %v", err)
+	}
 	return nil
 }
 

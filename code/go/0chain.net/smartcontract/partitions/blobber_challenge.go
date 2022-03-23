@@ -2,13 +2,14 @@ package partitions
 
 import (
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"encoding/json"
 	"errors"
 	"fmt"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //------------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ func (bcn *BlobberChallengeNode) Name() string {
 //------------------------------------------------------------------------------
 
 type blobberChallengeItemList struct {
-	Key     datastore.Key          `json:"-"`
+	Key     string                 `json:"-"`
 	Items   []BlobberChallengeNode `json:"items"`
 	Changed bool                   `json:"-"`
 }
@@ -62,19 +63,13 @@ func (il *blobberChallengeItemList) save(balances state.StateContextI) error {
 }
 
 func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateContextI) error {
-	val, err := balances.GetTrieNode(key)
+	err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		il = &blobberChallengeItemList{
-			Key: key,
-		}
+		il.Key = key
 	}
-	if err := il.Decode(val.Encode()); err != nil {
-		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	il.Key = key
 	return nil
 }
 

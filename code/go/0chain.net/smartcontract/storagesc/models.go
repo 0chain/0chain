@@ -153,9 +153,9 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	*sn = BlobberChallenge(*d)
 
-	sn.ChallengeMap = make(map[string]*StorageChallenge)
-	for _, challenge := range sn.Challenges {
-		sn.ChallengeMap[challenge.ID] = challenge
+	sn.ChallengeIDMap = make(map[string]bool)
+	for _, challenge := range sn.ChallengeIDs {
+		sn.ChallengeIDMap[challenge] = true
 	}
 	return o, nil
 }

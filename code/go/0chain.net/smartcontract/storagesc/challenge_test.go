@@ -41,14 +41,18 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	type args struct {
-		alloc         *StorageAllocation
-		validators    partitions.RandPartition
-		challengeID   string
-		creationDate  common.Timestamp
-		r             *rand.Rand
-		challengeSeed int64
-		blobberID     string
-		balances      cstate.StateContextI
+		alloc               *StorageAllocation
+		storageChallenge    *StorageChallenge
+		blobberChallengeObj *BlobberChallenge
+		allocChallengeObj   *AllocationChallenge
+		blobberAllocation   *BlobberAllocation
+		validators          partitions.RandPartition
+		challengeID         string
+		creationDate        common.Timestamp
+		r                   *rand.Rand
+		challengeSeed       int64
+		blobberID           string
+		balances            cstate.StateContextI
 	}
 
 	type want struct {
@@ -67,7 +71,7 @@ func TestAddChallenge(t *testing.T) {
 		)
 
 		balances := &mockStateContext{
-			store: make(map[datastore.Key]util.Serializable),
+			store: make(map[datastore.Key]util.MPTSerializable),
 		}
 
 		var blobbers []*StorageNode
@@ -123,9 +127,13 @@ func TestAddChallenge(t *testing.T) {
 				DataShards: p.dataShards,
 				Stats:      &StorageAllocationStats{},
 			},
-			validators: validators,
-			r:          r,
-			blobberID:  bID,
+			allocChallengeObj:   nil,
+			storageChallenge:    nil,
+			blobberAllocation:   blobberMap[bID],
+			blobberChallengeObj: nil,
+			validators:          validators,
+			r:                   r,
+			blobberID:           bID,
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.MPTSerializable),
 			},
@@ -200,8 +208,12 @@ func TestAddChallenge(t *testing.T) {
 				SmartContract: sci.NewSC(ADDRESS),
 			}
 
-			resp, err := ssc.addChallenge(args.alloc, args.blobberID, args.validators, args.challengeID,
-				args.creationDate, args.r, args.challengeSeed, args.balances)
+			resp, err := ssc.addChallenge(args.alloc,
+				args.storageChallenge,
+				args.blobberChallengeObj,
+				args.allocChallengeObj,
+				args.blobberAllocation,
+				args.balances)
 			validate(t, resp, err, tt.parameters, tt.want)
 		})
 	}
