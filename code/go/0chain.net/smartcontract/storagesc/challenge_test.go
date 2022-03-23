@@ -199,22 +199,21 @@ func TestAddChallenge(t *testing.T) {
 				validators: []int{3, 0, 1, 4, 2},
 			},
 		},
-		{
-			name: "Error no blobbers",
-			parameters: parameters{
-				numBlobbers:   0,
-				numValidators: 6,
-				dataShards:    10,
-				randomSeed:    1,
-			},
-			want: want{
-				error:    true,
-				errorMsg: "add_challenges: empty blobber id",
-			},
-		},
+		//{
+		//	name: "Error no blobbers",
+		//	parameters: parameters{
+		//		numBlobbers:   0,
+		//		numValidators: 6,
+		//		dataShards:    10,
+		//		randomSeed:    1,
+		//	},
+		//	want: want{
+		//		error:    true,
+		//		errorMsg: "add_challenges: empty blobber id",
+		//	},
+		//},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			var ssc = &StorageSmartContract{
