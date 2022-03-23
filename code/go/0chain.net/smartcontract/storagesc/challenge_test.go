@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -120,9 +121,18 @@ func TestAddChallenge(t *testing.T) {
 			bID = bcItem.Name()
 		}
 
-		allocChall, _ := ssc.getAllocationChallenge("", balances)
-		storageChall, _ := ssc.getStorageChallenge("", balances)
-		blobberChall, _ := ssc.getBlobberChallenge(bID, balances)
+		allocChall, err := ssc.getAllocationChallenge("", balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			allocChall = new(AllocationChallenge)
+		}
+		storageChall, err := ssc.getStorageChallenge("", balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			storageChall = new(StorageChallenge)
+		}
+		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			blobberChall = new(BlobberChallenge)
+		}
 
 		return args{
 			alloc: &StorageAllocation{
