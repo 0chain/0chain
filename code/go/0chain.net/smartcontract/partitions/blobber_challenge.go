@@ -13,7 +13,7 @@ import (
 //------------------------------------------------------------------------------
 
 type BlobberChallengeNode struct {
-	ID string `json:"id"`
+	BlobberID string `json:"blobber_id"`
 }
 
 func (bcn *BlobberChallengeNode) Encode() []byte {
@@ -33,7 +33,7 @@ func (bcn *BlobberChallengeNode) Data() string {
 }
 
 func (bcn *BlobberChallengeNode) Name() string {
-	return bcn.ID
+	return bcn.BlobberID
 }
 
 //------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateC
 func (il *blobberChallengeItemList) add(it PartitionItem) error {
 
 	il.Items = append(il.Items, BlobberChallengeNode{
-		ID: it.Name(),
+		BlobberID: it.Name(),
 	})
 	il.Changed = true
 	return nil

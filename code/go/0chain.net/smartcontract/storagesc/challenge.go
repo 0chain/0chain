@@ -726,9 +726,6 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
 
-	var tp = time.Now()
-	defer sc.addGenerateChallengesStat(tp, &err)
-
 	var stats = &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	//var statsBytes util.Serializable

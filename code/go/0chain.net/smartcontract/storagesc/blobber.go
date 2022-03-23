@@ -639,7 +639,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	// partition blobber challenge
 	//todo: handle allocations are all deleted
 	pData := &partitions.BlobberChallengeNode{
-		ID: details.BlobberID,
+		BlobberID: details.BlobberID,
 	}
 
 	pAllocData := &partitions.BlobberChallengeAllocationNode{
