@@ -132,7 +132,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 
 func existInDelegatesOfNodes(id string, nodes []*MinerNode) bool {
 	for _, n := range nodes {
-		if n.DelegateWallet == id {
+		if n.Settings.DelegateWallet == id {
 			return true
 		}
 	}

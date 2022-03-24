@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -18,22 +20,18 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:                edbSharder.SharderID,
-		N2NHost:           edbSharder.N2NHost,
-		Host:              edbSharder.Host,
-		Port:              edbSharder.Port,
-		Path:              edbSharder.Path,
-		PublicKey:         edbSharder.PublicKey,
-		ShortName:         edbSharder.ShortName,
-		BuildTag:          edbSharder.BuildTag,
-		TotalStaked:       int64(edbSharder.TotalStaked),
-		Delete:            edbSharder.Delete,
-		DelegateWallet:    edbSharder.DelegateWallet,
-		ServiceCharge:     edbSharder.ServiceCharge,
-		NumberOfDelegates: edbSharder.NumberOfDelegates,
-		MinStake:          edbSharder.MinStake,
-		MaxStake:          edbSharder.MaxStake,
-		LastHealthCheck:   edbSharder.LastHealthCheck,
+		ID:          edbSharder.SharderID,
+		N2NHost:     edbSharder.N2NHost,
+		Host:        edbSharder.Host,
+		Port:        edbSharder.Port,
+		Path:        edbSharder.Path,
+		PublicKey:   edbSharder.PublicKey,
+		ShortName:   edbSharder.ShortName,
+		BuildTag:    edbSharder.BuildTag,
+		TotalStaked: int64(edbSharder.TotalStaked),
+		Delete:      edbSharder.Delete,
+
+		LastHealthCheck: edbSharder.LastHealthCheck,
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbSharder.Latitude,
 			Longitude: edbSharder.Longitude,
@@ -44,6 +42,15 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 
 	return MinerNode{
 		SimpleNode: &msn,
+		StakePool: &stakepool.StakePool{
+			Settings: stakepool.StakePoolSettings{
+				DelegateWallet:  edbSharder.DelegateWallet,
+				ServiceCharge:   edbSharder.ServiceCharge,
+				MaxNumDelegates: edbSharder.NumberOfDelegates,
+				MinStake:        edbSharder.MinStake,
+				MaxStake:        edbSharder.MaxStake,
+			},
+		},
 	}
 
 }
@@ -61,11 +68,11 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		BuildTag:          sn.BuildTag,
 		TotalStaked:       state.Balance(sn.TotalStaked),
 		Delete:            sn.Delete,
-		DelegateWallet:    sn.DelegateWallet,
-		ServiceCharge:     sn.ServiceCharge,
-		NumberOfDelegates: sn.NumberOfDelegates,
-		MinStake:          sn.MinStake,
-		MaxStake:          sn.MaxStake,
+		DelegateWallet:    sn.Settings.DelegateWallet,
+		ServiceCharge:     sn.Settings.ServiceCharge,
+		NumberOfDelegates: sn.Settings.MaxNumDelegates,
+		MinStake:          sn.Settings.MinStake,
+		MaxStake:          sn.Settings.MaxStake,
 		LastHealthCheck:   sn.LastHealthCheck,
 		Rewards:           sn.Reward,
 		Active:            sn.Status == node.NodeStatusActive,
@@ -112,11 +119,11 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"build_tag":           sn.BuildTag,
 			"total_staked":        sn.TotalStaked,
 			"delete":              sn.Delete,
-			"delegate_wallet":     sn.DelegateWallet,
-			"service_charge":      sn.ServiceCharge,
-			"number_of_delegates": sn.NumberOfDelegates,
-			"min_stake":           sn.MinStake,
-			"max_stake":           sn.MaxStake,
+			"delegate_wallet":     sn.Settings.DelegateWallet,
+			"service_charge":      sn.Settings.ServiceCharge,
+			"number_of_delegates": sn.Settings.MaxNumDelegates,
+			"min_stake":           sn.Settings.MinStake,
+			"max_stake":           sn.Settings.MaxStake,
 			"last_health_check":   sn.LastHealthCheck,
 			"rewards":             sn.Reward,
 			"longitude":           0,

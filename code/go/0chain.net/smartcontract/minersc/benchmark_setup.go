@@ -51,12 +51,12 @@ func AddMockNodes(
 		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.Now))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
-		newNode.NumberOfDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.MinStake = state.Balance(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.MaxStake = state.Balance(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
+		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
+		newNode.Settings.MinStake = state.Balance(viper.GetInt64(benchmark.MinerMinStake))
+		newNode.Settings.MaxStake = state.Balance(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
-		newNode.DelegateWallet = newNode.ID
+		newNode.Settings.DelegateWallet = newNode.ID
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes

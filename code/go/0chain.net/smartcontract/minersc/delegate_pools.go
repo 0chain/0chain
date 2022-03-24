@@ -36,9 +36,9 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	}
 
 	numDelegates := mn.numDelegates()
-	if numDelegates >= mn.NumberOfDelegates {
+	if numDelegates >= mn.Settings.MaxNumDelegates {
 		return "", common.NewErrorf("delegate_pool_add",
-			"max delegates already reached: %d (%d)", numDelegates, mn.NumberOfDelegates)
+			"max delegates already reached: %d (%d)", numDelegates, mn.Settings.MaxNumDelegates)
 	}
 
 	if numDelegates >= gn.MaxDelegates {
@@ -46,13 +46,13 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
 	}
 
-	if t.Value < int64(mn.MinStake) {
+	if t.Value < int64(mn.Settings.MinStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is less than min allowed: %d < %d", t.Value, mn.MinStake)
+			"stake is less than min allowed: %d < %d", t.Value, mn.Settings.MinStake)
 	}
-	if t.Value > int64(mn.MaxStake) {
+	if t.Value > int64(mn.Settings.MaxStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is greater than max allowed: %d > %d", t.Value, mn.MaxStake)
+			"stake is greater than max allowed: %d > %d", t.Value, mn.Settings.MaxStake)
 	}
 
 	if err := mn.LockPool(t, spenum.Miner, mn.ID, spenum.Pending, balances); err != nil {

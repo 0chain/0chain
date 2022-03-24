@@ -2,8 +2,12 @@ package stakepool
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -130,6 +134,12 @@ func (sp *StakePool) MintRewards(
 ) (state.Balance, error) {
 	var reward state.Balance
 	var err error
+	logging.Logger.Info("piers MintRewards",
+		zap.String("delegate wallet", sp.Settings.DelegateWallet),
+		zap.String("client id", clientId),
+		zap.Any("sp.Reward", sp.Reward),
+		zap.Any("sp.Settings", sp.Settings),
+	)
 	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
 		reward, err = sp.MintServiceCharge(balances)
 		if err != nil {
@@ -138,6 +148,9 @@ func (sp *StakePool) MintRewards(
 		if len(poolId) == 0 {
 			return reward, nil
 		}
+	}
+	if len(poolId) == 0 {
+		return 0, errors.New("no pool id from which to release funds found")
 	}
 
 	dPool, ok := sp.Pools[poolId]

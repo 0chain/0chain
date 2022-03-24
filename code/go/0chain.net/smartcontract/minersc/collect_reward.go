@@ -34,16 +34,24 @@ func (ssc *MinerSmartContract) collectReward(
 			"invalid provider type: %s", prr.ProviderType.String())
 	}
 
-	usp, err := stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't get related user stake pools: %v", err)
+	var err error
+	var usp *stakepool.UserStakePools
+	var providerID = prr.ProviderId
+	logging.Logger.Info("piers collectReward",
+		zap.Any("Input", prr),
+	)
+	if len(prr.PoolId) > 0 {
+		usp, err = stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
+		if err != nil {
+			return "", common.NewErrorf("collect_reward_failed",
+				"can't get related user stake pools: %v", err)
+		}
+
+		if len(prr.ProviderId) == 0 {
+			providerID = usp.Find(prr.PoolId)
+		}
 	}
 
-	var providerID = prr.ProviderId
-	if len(prr.ProviderId) == 0 {
-		providerID = usp.Find(prr.PoolId)
-	}
 	if len(providerID) == 0 {
 		return "", common.NewErrorf("collect_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
@@ -61,6 +69,7 @@ func (ssc *MinerSmartContract) collectReward(
 	if err != nil {
 		return "", common.NewError("collect_reward_failed", err.Error())
 	}
+	logging.Logger.Info("piers miner", zap.Any("miner", provider))
 
 	_, err = provider.StakePool.MintRewards(
 		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)

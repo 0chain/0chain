@@ -21,29 +21,34 @@ func (ssc *StorageSmartContract) collectReward(
 			"can't decode request: %v", err)
 	}
 
-	usp, err := stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"can't get related user stake pools: %v", err)
+	var err error
+	var usp *stakepool.UserStakePools
+	var providerID = prr.ProviderId
+	if len(prr.PoolId) > 0 {
+		usp, err = stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
+		if err != nil {
+			return "", common.NewErrorf("collect_reward_failed",
+				"can't get related user stake pools: %v", err)
+		}
+
+		if len(prr.ProviderId) == 0 {
+			providerID = usp.Find(prr.PoolId)
+		}
 	}
 
-	providerId := prr.ProviderId
-	if len(providerId) == 0 {
-		providerId = usp.Find(prr.PoolId)
-	}
-	if len(providerId) == 0 {
+	if len(providerID) == 0 {
 		return "", common.NewErrorf("pay_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
 	}
 
-	sp, err := ssc.getStakePool(providerId, balances)
+	sp, err := ssc.getStakePool(providerID, balances)
 	if err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
 			"can't get related stake pool: %v", err)
 	}
 
 	_, err = sp.MintRewards(
-		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
+		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
 			"error emptying account, %v", err)
@@ -54,7 +59,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"error saving user stake pool, %v", err)
 	}
 
-	if err := sp.save(ssc.ID, providerId, balances); err != nil {
+	if err := sp.save(ssc.ID, providerID, balances); err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
 			"error saving stake pool, %v", err)
 	}

@@ -314,13 +314,13 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var miner = &MinerNode{
 		SimpleNode: &SimpleNode{
-			ID:             minerID,
-			TotalStaked:    100,
-			ServiceCharge:  zChainYaml.ServiceCharge,
-			DelegateWallet: minerID,
+			ID:          minerID,
+			TotalStaked: 100,
 		},
 		StakePool: stakepool.NewStakePool(),
 	}
+	miner.Settings.ServiceCharge = zChainYaml.ServiceCharge
+	miner.Settings.DelegateWallet = minerID
 	miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
@@ -333,13 +333,13 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	for i := 0; i < numberOfSharders; i++ {
 		sharder := &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID:             sharderIDs[i],
-				TotalStaked:    100,
-				ServiceCharge:  zChainYaml.ServiceCharge,
-				DelegateWallet: sharderIDs[i],
+				ID:          sharderIDs[i],
+				TotalStaked: 100,
 			},
 			StakePool: stakepool.NewStakePool(),
 		}
+		miner.Settings.ServiceCharge = zChainYaml.ServiceCharge
+		miner.Settings.DelegateWallet = minerID
 		miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
 		sharders = append(sharders, sharder)
 	}

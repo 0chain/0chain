@@ -92,17 +92,21 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:                encryption.Hash("my new miner"),
-					PublicKey:         "miner's public key",
-					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
-					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
-					N2NHost:           "new n2n_host",
-					Host:              "new host",
-					Port:              1234,
+					ID:        encryption.Hash("my new miner"),
+					PublicKey: "miner's public key",
+					N2NHost:   "new n2n_host",
+					Host:      "new host",
+					Port:      1234,
 				},
-				StakePool: stakepool.NewStakePool(),
+				StakePool: &stakepool.StakePool{
+					Pools: make(map[string]*stakepool.DelegatePool),
+					Settings: stakepool.StakePoolSettings{
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					},
+				},
 			}).Encode(),
 		},
 		{
@@ -111,15 +115,20 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:                encryption.Hash("my new sharder"),
-					PublicKey:         "sharder's public key",
-					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
-					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
-					N2NHost:           "new n2n_host",
-					Host:              "new host",
-					Port:              1234,
+					ID:        encryption.Hash("my new sharder"),
+					PublicKey: "sharder's public key",
+					N2NHost:   "new n2n_host",
+					Host:      "new host",
+					Port:      1234,
+				},
+				StakePool: &stakepool.StakePool{
+					Pools: make(map[string]*stakepool.DelegatePool),
+					Settings: stakepool.StakePoolSettings{
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					},
 				},
 			}).Encode(),
 		},
@@ -259,11 +268,16 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:                GetMockNodeId(0, spenum.Miner),
-					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
-					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					ID: GetMockNodeId(0, spenum.Miner),
+				},
+				StakePool: &stakepool.StakePool{
+					Pools: make(map[string]*stakepool.DelegatePool),
+					Settings: stakepool.StakePoolSettings{
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					},
 				},
 			}).Encode(),
 		},
@@ -275,11 +289,16 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:                GetMockNodeId(0, spenum.Sharder),
-					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
-					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					ID: GetMockNodeId(0, spenum.Sharder),
+				},
+				StakePool: &stakepool.StakePool{
+					Pools: make(map[string]*stakepool.DelegatePool),
+					Settings: stakepool.StakePoolSettings{
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					},
 				},
 			}).Encode(),
 		},

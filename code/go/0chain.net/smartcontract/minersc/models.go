@@ -752,15 +752,15 @@ type SimpleNode struct {
 	// DelegateWallet grabs node rewards (excluding stake rewards) and
 	// controls the node setting. If the DelegateWallet hasn't been provided,
 	// then node ID used (for genesis nodes, for example).
-	DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
+	//	DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
 	// ServiceChange is % that miner node grabs where it's generator.
-	ServiceCharge float64 `json:"service_charge"` // %
+	///	ServiceCharge float64 `json:"service_charge"` // %
 	// NumberOfDelegates is max allowed number of delegate pools.
-	NumberOfDelegates int `json:"number_of_delegates"`
+	//	NumberOfDelegates int `json:"number_of_delegates"`
 	// MinStake allowed by node.
-	MinStake state.Balance `json:"min_stake"`
+	//	MinStake state.Balance `json:"min_stake"`
 	// MaxStake allowed by node.
-	MaxStake state.Balance `json:"max_stake"`
+	//	MaxStake state.Balance `json:"max_stake"`
 
 	// NodeType used for delegate pools statistic.
 	NodeType NodeType `json:"node_type,omitempty"`
