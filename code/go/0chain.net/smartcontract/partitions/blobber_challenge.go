@@ -1,12 +1,13 @@
 package partitions
 
 import (
-	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -74,6 +75,12 @@ func (il *blobberChallengeItemList) get(key datastore.Key, balances state.StateC
 }
 
 func (il *blobberChallengeItemList) add(it PartitionItem) error {
+
+	for _, bc := range il.Items {
+		if bc.Name() == it.Name() {
+			return errors.New("blobber challenge item already exists")
+		}
+	}
 
 	il.Items = append(il.Items, BlobberChallengeNode{
 		BlobberID: it.Name(),
