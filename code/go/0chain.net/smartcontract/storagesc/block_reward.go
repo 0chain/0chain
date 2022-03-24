@@ -26,7 +26,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		totalQStake float64
 		weight      []float64
 		totalWeight float64
-		conf        *scConfig
 	)
 
 	// TODO: move all the maths constants with right name once finalized to the sc.yaml
@@ -42,7 +41,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		mu = 1
 	)
 
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	conf, err := ssc.getConfig(balances, true)
+	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get smart contract configurations: "+err.Error())
 	}
