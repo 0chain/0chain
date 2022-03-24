@@ -158,7 +158,7 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 				Balance: 100,
 			},
 		},
-		TokenLockInterface: TokenLock{
+		TokenLockInterface: &TokenLock{
 			StartTime: 0,
 			Duration:  0,
 			Owner:     "id",

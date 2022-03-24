@@ -18,18 +18,16 @@ type testBalances struct {
 	balances      map[datastore.Key]state.Balance
 	txn           *transaction.Transaction
 	transfers     []*state.Transfer
-	tree          map[datastore.Key]util.Serializable
+	tree          map[datastore.Key]util.MPTSerializable
 	block         *block.Block
 	blockSharders []string
 	lfmb          *block.Block
-	events        []event.Event
 }
 
 func newTestBalances() *testBalances {
 	return &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
-		tree:     make(map[datastore.Key]util.Serializable),
-		block:    &block.Block{},
+		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
@@ -104,26 +102,17 @@ func (tb *testBalances) GetBlockSharders(*block.Block) []string {
 }
 
 // stubs
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI         { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction   { return nil }
-func (tb *testBalances) Validate() error                            { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                    { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error         { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer            { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {}
-func (tb *testBalances) GetEventDB() *event.EventDb                 { return nil }
-func (sc *testBalances) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
-	sc.events = append(sc.events, event.Event{
-		BlockNumber: sc.block.Round,
-		TxHash:      sc.txn.Hash,
-		Type:        int(eventType),
-		Tag:         int(tag),
-		Index:       index,
-		Data:        data,
-	})
-}
-func (tb *testBalances) EmitError(error)          {}
-func (tb *testBalances) GetEvents() []event.Event { return tb.events }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
+func (tb *testBalances) Validate() error                                           { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                                   { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error                        { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer                           { return nil }
+func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)                {}
+func (tb *testBalances) GetEventDB() *event.EventDb                                { return nil }
+func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (tb *testBalances) EmitError(error)                                           {}
+func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
@@ -148,23 +137,27 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key) (
-	node util.Serializable, err error) {
-
+func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	if encryption.IsHash(key) {
-		return nil, common.NewError("failed to get trie node",
+		return common.NewError("failed to get trie node",
 			"key is too short")
 	}
 
-	var ok bool
-	if node, ok = tb.tree[key]; !ok {
-		return nil, util.ErrValueNotPresent
+	node, ok := tb.tree[key]
+	if !ok {
+		return util.ErrValueNotPresent
 	}
-	return
+	d, err := node.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (_ datastore.Key, _ error) {
+	node util.MPTSerializable) (_ datastore.Key, _ error) {
 
 	tb.tree[key] = node
 	return

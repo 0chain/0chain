@@ -22,7 +22,7 @@ func Test_newInterestPool(t *testing.T) {
 		{
 			name: "new interest pool",
 			want: &interestPool{
-				ZcnLockingPool: &tokenpool.ZcnLockingPool{},
+				ZcnLockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}},
 			},
 		},
 	}

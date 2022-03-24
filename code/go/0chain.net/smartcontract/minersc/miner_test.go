@@ -68,10 +68,11 @@ func TestDeleteMiner(t *testing.T) {
 
 			var un stakepool.UserStakePools
 			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
-			balances.On(
-				"GetTrieNode",
-				stakepool.UserStakePoolsKey(spenum.Miner, mn.DelegateWallet),
-			).Return(un, nil).Once()
+			balances.On("GetTrieNode", un.GetKey(), mock.MatchedBy(func(n *UserNode) bool {
+				*n = *un
+				return true
+			})).Return(nil).Once()
+			balances.On("DeleteTrieNode", un.GetKey()).Return("", nil).Once()
 		}
 
 		balances.On(
@@ -79,7 +80,11 @@ func TestDeleteMiner(t *testing.T) {
 			stakepool.UserStakePoolsKey(spenum.Miner, mn.DelegateWallet),
 		).Return("", nil).Once()
 
-		balances.On("GetTrieNode", mn.GetKey()).Return(mn, nil).Once()
+		balances.On("GetTrieNode", mn.GetKey(), mock.MatchedBy(func(n *MinerNode) bool {
+			*n = *mn
+			return true
+		})).Return(nil).Once()
+
 		balances.On(
 			"InsertTrieNode",
 			mn.GetKey(),
@@ -89,11 +94,11 @@ func TestDeleteMiner(t *testing.T) {
 		).Return("", nil).Once()
 
 		pn := &PhaseNode{}
-		balances.On("GetTrieNode", pn.GetKey()).Return(nil, util.ErrValueNotPresent).Once()
+		balances.On("GetTrieNode", pn.GetKey(), mock.AnythingOfType("*minersc.PhaseNode")).Return(util.ErrValueNotPresent).Once()
 		mockBlock := &block.Block{}
 		mockBlock.Round = mockRoundNumber
 		balances.On("GetBlock").Return(mockBlock).Twice()
-		balances.On("GetTrieNode", DKGMinersKey).Return(nil, util.ErrValueNotPresent).Once()
+		balances.On("GetTrieNode", DKGMinersKey, mock.AnythingOfType("*minersc.DKGMinerNodes")).Return(util.ErrValueNotPresent).Once()
 
 		mnInput := &MinerNode{
 			SimpleNode: &SimpleNode{

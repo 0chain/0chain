@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -30,10 +29,11 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
+
+//go:generate msgp -io=false -tests=false -v
 
 var validate *validator.Validate
 
@@ -249,7 +249,7 @@ type GlobalNode struct {
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
-	OwnerId              datastore.Key  `json:"owner_id"`
+	OwnerId              string         `json:"owner_id"`
 	Cost                 map[string]int `json:"cost"`
 }
 
@@ -398,7 +398,7 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 	balances cstate.StateContextI) (has bool) {
 
 	if len(mpks.Mpks) == 0 {
-		Logger.Error("empty miners mpks keys")
+		logging.Logger.Error("empty miners mpks keys")
 		return
 	}
 
@@ -410,7 +410,7 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 		}
 	}
 
-	Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
+	logging.Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
 	return // false, hasn't
 }
 
@@ -419,7 +419,7 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 	balances cstate.StateContextI) (has bool) {
 
 	if len(gsos.Shares) == 0 {
-		Logger.Error("empty sharder or sign keys")
+		logging.Logger.Error("empty sharder or sign keys")
 		return
 	}
 
@@ -431,7 +431,7 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 		}
 	}
 
-	Logger.Debug("has no prev miner in GSoS",
+	logging.Logger.Debug("has no prev miner in GSoS",
 		zap.Int64("prev_mb_round", pmb.StartingRound),
 		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
 	)
@@ -459,8 +459,8 @@ func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
 
 	var pmb = gn.prevMagicBlock(balances)
 
-	for _, node := range list {
-		if pmb.Miners.HasNode(node.ID) {
+	for _, nd := range list {
+		if pmb.Miners.HasNode(nd.ID) {
 			return true
 		}
 	}
@@ -536,7 +536,7 @@ func (gn *GlobalNode) epochDecline() {
 	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
 
 	// log about the epoch declining
-	Logger.Info("miner sc: epoch decline",
+	logging.Logger.Info("miner sc: epoch decline",
 		zap.Int64("round", gn.LastRound),
 		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
 		zap.Float64("prev_reward_rate", rr),
@@ -769,7 +769,7 @@ type SimpleNode struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
-	Status int `json:"-"`
+	Status int `json:"-" msg:"-"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
@@ -785,44 +785,10 @@ func (smn *SimpleNode) Validate() error {
 	return validate.Struct(smn)
 }
 
-type MinerNodes struct {
-	Nodes []*MinerNode
-}
-
-func (mn *MinerNodes) Encode() []byte {
-	buff, _ := json.Marshal(mn)
-	return buff
-}
-
-func (mn *MinerNodes) Decode(input []byte) error {
-	err := json.Unmarshal(input, mn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (mn *MinerNodes) GetHash() string {
-	return util.ToHex(mn.GetHashBytes())
-}
-
-func (mn *MinerNodes) GetHashBytes() []byte {
-	return encryption.RawHash(mn.Encode())
-}
-
-func (mn *MinerNodes) FindNodeById(id string) *MinerNode {
-	for _, minerNode := range mn.Nodes {
-		if minerNode.ID == id {
-			return minerNode
-		}
-	}
-	return nil
-}
-
 type ViewChangeLock struct {
-	DeleteViewChangeSet bool          `json:"delete_view_change_set"`
-	DeleteVC            int64         `json:"delete_after_view_change"`
-	Owner               datastore.Key `json:"owner"`
+	DeleteViewChangeSet bool   `json:"delete_view_change_set"`
+	DeleteVC            int64  `json:"delete_after_view_change"`
+	Owner               string `json:"owner"`
 }
 
 func (vcl *ViewChangeLock) IsLocked(entity interface{}) bool {
@@ -1068,17 +1034,13 @@ func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 // getDKGMinersList gets dkg miners list
 func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
-	allMinersDKGBytes, err := state.GetTrieNode(DKGMinersKey)
+	err := state.GetTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 
-		return dkgMiners, nil
-	}
-
-	if err := dkgMiners.Decode(allMinersDKGBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("decode DKGMinersKey failed, err: %v", err)
+		return NewDKGMinerNodes(), nil
 	}
 
 	return dkgMiners, nil
@@ -1092,14 +1054,10 @@ func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) e
 }
 
 func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
-	mpksBytes, err := state.GetTrieNode(MinersMPKKey)
+	mpks := block.NewMpks()
+	err := state.GetTrieNode(MinersMPKKey, mpks)
 	if err != nil {
 		return nil, err
-	}
-
-	mpks := block.NewMpks()
-	if err := mpks.Decode(mpksBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode node MinersMPKKey, err: %v", err)
 	}
 
 	return mpks, nil
@@ -1111,14 +1069,10 @@ func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
 }
 
 func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
-	magicBlockBytes, err := state.GetTrieNode(MagicBlockKey)
+	magicBlock := block.NewMagicBlock()
+	err := state.GetTrieNode(MagicBlockKey, magicBlock)
 	if err != nil {
 		return nil, err
-	}
-
-	magicBlock := block.NewMagicBlock()
-	if err = magicBlock.Decode(magicBlockBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode MagicBlockKey, err: %v", err)
 	}
 
 	return magicBlock, nil
@@ -1131,13 +1085,9 @@ func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) 
 
 func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
 	var gsos = block.NewGroupSharesOrSigns()
-	groupBytes, err := state.GetTrieNode(GroupShareOrSignsKey)
+	err := state.GetTrieNode(GroupShareOrSignsKey, gsos)
 	if err != nil {
 		return nil, err
-	}
-
-	if err = gsos.Decode(groupBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode GroupShareOrSignKey, err: %v", err)
 	}
 
 	return gsos, nil
@@ -1184,13 +1134,9 @@ func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) err
 }
 
 func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
-	nodesBytes, err := balances.GetTrieNode(key)
-	if err != nil {
-		return nil, err
-	}
-
 	nodesList := &MinerNodes{}
-	if err = nodesList.Decode(nodesBytes.Encode()); err != nil {
+	err := balances.GetTrieNode(key, nodesList)
+	if err != nil {
 		return nil, err
 	}
 

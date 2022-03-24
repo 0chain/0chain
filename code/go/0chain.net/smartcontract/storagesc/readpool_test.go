@@ -105,15 +105,15 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 
 		rp *readPool
 
-		_, err = ssc.getReadPoolBytes(clientID, balances)
+		_, err = ssc.getReadPool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	rp = new(readPool)
 	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-	b, err := ssc.getReadPoolBytes(clientID, balances)
+	b, err := ssc.getReadPool(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, rp.Encode(), b)
+	assert.EqualValues(t, rp, b)
 }
 
 func TestStorageSmartContract_getReadPool(t *testing.T) {
@@ -170,7 +170,7 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
-		conf scConfig
+		conf Config
 		err  error
 	)
 	conf.ReadPool = rpc

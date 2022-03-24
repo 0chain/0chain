@@ -22,6 +22,9 @@ import (
 	"0chain.net/core/datastore"
 )
 
+//msgp:ignore GlobalSetting
+//go:generate msgp -io=false -tests=false -v
+
 type GlobalSetting int
 
 const (
@@ -526,26 +529,15 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
-	val, err := balances.GetTrieNode(GLOBALS_KEY)
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
-	var err error
-	var poolb []byte
-	if poolb, err = getGlobalSettingsBytes(balances); err != nil {
+	gl := newGlobalSettings()
+
+	err := balances.GetTrieNode(GLOBALS_KEY, gl)
+	if err != nil {
 		return nil, err
 	}
-	gl := newGlobalSettings()
-	err = gl.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return gl, err
+
+	return gl, nil
 }
 
 func (msc *MinerSmartContract) updateGlobals(

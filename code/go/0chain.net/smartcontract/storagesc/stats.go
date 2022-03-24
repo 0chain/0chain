@@ -1,85 +1,63 @@
 package storagesc
 
 import (
-	"0chain.net/core/common"
 	c_state "0chain.net/chaincore/chain/state"
-	. "0chain.net/core/logging"
+	"0chain.net/core/common"
+	"0chain.net/core/util"
 )
 
-func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) {
+func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
-	if statsBytes != nil {
-		err = stats.Decode(statsBytes.Encode())
-		if err != nil {
-			Logger.Error("storage stats decode error")
-			return
-		}
+	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		stats.Stats.NumWrites++
+		stats.Stats.UsedSize += writeSize
+		_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+		return err
+	default:
+		return err
 	}
-	
-	stats.Stats.NumWrites++
-	stats.Stats.UsedSize += writeSize
-	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
-
 }
 
-func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) {
+func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
-	if err != nil {
-		return
+	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
+	if err != nil && err != util.ErrValueNotPresent {
+		return err
 	}
-	if statsBytes != nil {
-		err = stats.Decode(statsBytes.Encode())
-		if err != nil {
-			Logger.Error("storage stats decode error")
-			return
-		}
-	}
-	
-	stats.Stats.NumReads+=numReads
-	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+
+	stats.Stats.NumReads += numReads
+	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	return err
 }
 
-func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) {
+func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, challengeTimestamp common.Timestamp) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
-	if err != nil {
-		return
+	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
+	if err != nil && err != util.ErrValueNotPresent {
+		return err
 	}
-	if statsBytes != nil {
-		err = stats.Decode(statsBytes.Encode())
-		if err != nil {
-			Logger.Error("storage stats decode error")
-			return
-		}
-	}
-	
+
 	stats.Stats.OpenChallenges++
 	stats.Stats.TotalChallenges++
 	stats.LastChallengedSize = stats.Stats.UsedSize
 	stats.LastChallengedTime = challengeTimestamp
-	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	return err
 }
 
 func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI, challengedPassed bool) {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
+	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
 	if err != nil {
 		return
 	}
-	if statsBytes != nil {
-		err = stats.Decode(statsBytes.Encode())
-		if err != nil {
-			Logger.Error("storage stats decode error")
-			return
-		}
-	}
-	
+
 	stats.Stats.OpenChallenges--
 	if challengedPassed {
 		stats.Stats.SuccessChallenges++

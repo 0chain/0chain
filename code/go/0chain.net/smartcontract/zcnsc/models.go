@@ -14,6 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AuthorizerParameter poolStat
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 const (
 	AuthorizerNodeType    = "authnode"
 	AuthorizerNewNodeType = "create"
@@ -228,7 +231,7 @@ func (pk *AuthorizerParameter) Decode(input []byte) error {
 type TokenLock struct {
 	StartTime common.Timestamp `json:"start_time"`
 	Duration  time.Duration    `json:"duration"`
-	Owner     datastore.Key    `json:"owner"`
+	Owner     string           `json:"owner"`
 }
 
 func (tl TokenLock) IsLocked(entity interface{}) bool {

@@ -76,7 +76,7 @@ func TestAddChallenge(t *testing.T) {
 			partitions.ItemValidator,
 		)
 		balances := &mockStateContext{
-			store: make(map[datastore.Key]util.Serializable),
+			store: make(map[datastore.Key]util.MPTSerializable),
 		}
 		for i := 0; i < p.numValidators; i++ {
 			_, err := validators.Add(
@@ -97,7 +97,7 @@ func TestAddChallenge(t *testing.T) {
 			validators: validators,
 			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
 			balances: &mockStateContext{
-				store: make(map[datastore.Key]util.Serializable),
+				store: make(map[datastore.Key]util.MPTSerializable),
 			},
 		}
 	}
@@ -192,7 +192,7 @@ func TestBlobberReward(t *testing.T) {
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
 	var writePoolBalances = []int64{23423, 33333333, 234234234}
 	var otherWritePools = 4
-	var scYaml = scConfig{
+	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 30 * time.Minute,
@@ -265,7 +265,7 @@ func TestBlobberPenalty(t *testing.T) {
 	var writePoolBalances = []int64{23423, 33333333, 234234234}
 	var size = int64(123000)
 	var otherWritePools = 4
-	var scYaml = scConfig{
+	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
@@ -325,7 +325,7 @@ func TestBlobberPenalty(t *testing.T) {
 
 func testBlobberPenalty(
 	t *testing.T,
-	scYaml scConfig,
+	scYaml Config,
 	blobberYaml mockBlobberYaml,
 	validatorYamls []mockBlobberYaml,
 	stakes []int64,
@@ -382,7 +382,7 @@ func testBlobberPenalty(
 
 func testBlobberReward(
 	t *testing.T,
-	scYaml scConfig,
+	scYaml Config,
 	blobberYaml mockBlobberYaml,
 	validatorYamls []mockBlobberYaml,
 	stakes []int64,
@@ -439,7 +439,7 @@ func testBlobberReward(
 
 func setupChallengeMocks(
 	t *testing.T,
-	scYaml scConfig,
+	scYaml Config,
 	blobberYaml mockBlobberYaml,
 	validatorYamls []mockBlobberYaml,
 	stakes []int64,
@@ -489,7 +489,6 @@ func setupChallengeMocks(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -498,7 +497,7 @@ func setupChallengeMocks(
 			nil,
 		),
 		clientBalance: zcnToBalance(3),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -569,7 +568,7 @@ func setupChallengeMocks(
 
 type formulaeBlobberReward struct {
 	t                                                  *testing.T
-	scYaml                                             scConfig
+	scYaml                                             Config
 	blobberYaml                                        mockBlobberYaml
 	validatorYamls                                     []mockBlobberYaml
 	stakes                                             []int64

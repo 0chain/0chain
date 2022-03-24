@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-
 	"0chain.net/smartcontract"
 
 	// "encoding/json"

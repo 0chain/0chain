@@ -14,7 +14,11 @@ import (
 )
 
 func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
-	gn := ip.getGlobalNode(balances, "funcName")
+	gn, err := ip.getGlobalNode(balances, "funcName")
+	if err != nil {
+		return nil, err
+	}
+
 	const pfx = "smart_contracts.interestpoolsc."
 	return &smartcontract.StringMap{
 		Fields: map[string]string{
@@ -29,10 +33,15 @@ func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, 
 }
 
 func (ip *InterestPoolSmartContract) getPoolsStats(_ context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	un := ip.getUserNode(params.Get("client_id"), balances)
+	un, err := ip.getUserNode(params.Get("client_id"), balances)
+	if err != nil {
+		return nil, common.NewErrInternal("can't user node", err.Error())
+	}
+
 	if len(un.Pools) == 0 {
 		return nil, common.NewErrNoResource("can't find user node")
 	}
+
 	t := time.Now()
 	stats := &poolStats{}
 	for _, pool := range un.Pools {
@@ -61,5 +70,5 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 }
 
 func (ip *InterestPoolSmartContract) getLockConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
-	return ip.getGlobalNode(balances, "updateVariables"), nil
+	return ip.getGlobalNode(balances, "updateVariables")
 }
