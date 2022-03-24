@@ -122,3 +122,39 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 	//require.Equal(t, lfmb.Hash, b.Hash)
 
 }
+
+func TestHomePageAndNotFoundHandler(t *testing.T) {
+	t.Run("request to root path must return home page", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "http://localhost:7071/", nil)
+		w := httptest.NewRecorder()
+
+		c := Provider().(*Chain)
+		SetServerChain(c)
+		defer SetServerChain(nil) // ensure to reset after test
+
+		HomePageAndNotFoundHandler(w, req)
+
+		body, err := ioutil.ReadAll(w.Result().Body)
+
+		wantSubstring := `I am Miner000 working on the chain`
+
+		require.NoError(t, err)
+		require.Contains(t, string(body), wantSubstring)
+		require.Equal(t, 200, w.Result().StatusCode)
+	})
+
+	t.Run("request to non-root path must return 404", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "http://localhost:7071/unknown", nil)
+		w := httptest.NewRecorder()
+
+		HomePageAndNotFoundHandler(w, req)
+
+		body, err := ioutil.ReadAll(w.Result().Body)
+
+		wantSubstring := `{"code":"resource_not_found","error":"resource_not_found: can't retrieve resource"}`
+
+		require.NoError(t, err)
+		require.Contains(t, string(body), wantSubstring)
+		require.Equal(t, 404, w.Result().StatusCode)
+	})
+}
