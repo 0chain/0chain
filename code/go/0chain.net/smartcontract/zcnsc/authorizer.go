@@ -3,6 +3,8 @@ package zcnsc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -14,9 +16,6 @@ import (
 
 // AddAuthorizer sc API function
 // Transaction must include ClientID, ToClientID, PublicKey, Hash, Value
-// inputData is a publicKey in case public key in Tx is missing
-// Either PK or inputData must be present
-// balances have `GetTriedNode` implemented to get nodes
 // ContractMap contains all the SC addresses
 // ClientID is an authorizerID - used to search for authorizer
 // ToClient is an SC address
@@ -85,18 +84,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(code, msg)
 		Logger.Warn("get authorizer node", zap.Error(err))
-
-		// create stake pool for the validator to count its rewards
-		//var sp *stakePool
-		//sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, params.StakePoolSettings, ctx)
-		//if err != nil {
-		//	return "", common.NewError(code, "get or create stake pool error: "+err.Error())
-		//}
-		//if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
-		//	return "", common.NewError(code, "saving stake pool error: "+err.Error())
-		//}
 	} else {
-
 		// compare the global min of authorizerNode Authorizer to that of the transaction amount
 		if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
 			msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'",
@@ -153,6 +141,17 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		}
 
 		ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
+	}
+
+	// create stake pool for the validator to count its rewards'
+
+	var sp *stakePool
+	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, params.StakePoolSettings, ctx)
+	if err != nil {
+		return "", common.NewError(code, "get or create stake pool error: "+err.Error())
+	}
+	if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
+		return "", common.NewError(code, "saving stake pool error: "+err.Error())
 	}
 
 	return
