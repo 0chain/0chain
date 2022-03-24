@@ -365,49 +365,6 @@ func (rs *randomSelector) Msgsize() int {
 
 type randomSelectorDecode randomSelector
 
-func (rs *randomSelector) Migrate(
-	toKey datastore.Key,
-	balances state.StateContextI,
-) error {
-	err := balances.GetTrieNode(toKey, rs)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-
-			for i := 0; i < rs.NumPartitions; i++ {
-
-				partition, err := rs.getPartition(i, balances)
-				if err != nil {
-					return err
-				}
-				_, err = balances.InsertTrieNode(PartitionKey(toKey, i), partition)
-				if err != nil {
-					return err
-				}
-
-				_, err = balances.DeleteTrieNode(rs.partitionKey(i))
-				if err != nil {
-					return err
-				}
-
-			}
-			_, err = balances.InsertTrieNode(toKey, rs)
-			if err != nil {
-				return fmt.Errorf("error inserting node: %v", err)
-			}
-
-			_, err = balances.DeleteTrieNode(rs.Name)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		return errors.New("partition to migrate to is already populated")
-	}
-	return nil
-}
-
 func (rs *randomSelector) UpdateItem(
 	partIndex int,
 	it PartitionItem,

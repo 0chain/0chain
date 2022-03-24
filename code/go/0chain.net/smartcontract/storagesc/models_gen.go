@@ -2190,9 +2190,9 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 15
 	// string "ID"
-	o = append(o, 0x89, 0xa2, 0x49, 0x44)
+	o = append(o, 0x8f, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
@@ -2219,6 +2219,12 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Used"
 	o = append(o, 0xa4, 0x55, 0x73, 0x65, 0x64)
 	o = msgp.AppendInt64(o, z.Used)
+	// string "BytesWritten"
+	o = append(o, 0xac, 0x42, 0x79, 0x74, 0x65, 0x73, 0x57, 0x72, 0x69, 0x74, 0x74, 0x65, 0x6e)
+	o = msgp.AppendInt64(o, z.BytesWritten)
+	// string "DataRead"
+	o = append(o, 0xa8, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64)
+	o = msgp.AppendFloat64(o, z.DataRead)
 	// string "LastHealthCheck"
 	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
 	o, err = z.LastHealthCheck.MarshalMsg(o)
@@ -2226,14 +2232,30 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "LastHealthCheck")
 		return
 	}
+	// string "PublicKey"
+	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
+	o = msgp.AppendString(o, z.PublicKey)
 	// string "SavedData"
 	o = append(o, 0xa9, 0x53, 0x61, 0x76, 0x65, 0x64, 0x44, 0x61, 0x74, 0x61)
 	o = msgp.AppendInt64(o, z.SavedData)
+	// string "DataReadLastRewardRound"
+	o = append(o, 0xb7, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendFloat64(o, z.DataReadLastRewardRound)
+	// string "LastRewardDataReadRound"
+	o = append(o, 0xb7, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendInt64(o, z.LastRewardDataReadRound)
 	// string "StakePoolSettings"
 	o = append(o, 0xb1, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
 	o, err = z.StakePoolSettings.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "StakePoolSettings")
+		return
+	}
+	// string "RewardPartition"
+	o = append(o, 0xaf, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e)
+	o, err = z.RewardPartition.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "RewardPartition")
 		return
 	}
 	return
@@ -2322,10 +2344,28 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Used")
 				return
 			}
+		case "BytesWritten":
+			z.BytesWritten, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BytesWritten")
+				return
+			}
+		case "DataRead":
+			z.DataRead, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DataRead")
+				return
+			}
 		case "LastHealthCheck":
 			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "LastHealthCheck")
+				return
+			}
+		case "PublicKey":
+			z.PublicKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "PublicKey")
 				return
 			}
 		case "SavedData":
@@ -2334,10 +2374,28 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "SavedData")
 				return
 			}
+		case "DataReadLastRewardRound":
+			z.DataReadLastRewardRound, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DataReadLastRewardRound")
+				return
+			}
+		case "LastRewardDataReadRound":
+			z.LastRewardDataReadRound, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LastRewardDataReadRound")
+				return
+			}
 		case "StakePoolSettings":
 			bts, err = z.StakePoolSettings.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "StakePoolSettings")
+				return
+			}
+		case "RewardPartition":
+			bts, err = z.RewardPartition.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "RewardPartition")
 				return
 			}
 		default:
@@ -2354,7 +2412,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 5 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 5 + msgp.Int64Size + 13 + msgp.Int64Size + 9 + msgp.Float64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + z.RewardPartition.Msgsize()
 	return
 }
 
