@@ -364,14 +364,8 @@ func testCancelAllocation(
 	for i, blobberChallenges := range challenges {
 		var bc = BlobberChallenge{
 			BlobberID: strconv.Itoa(i),
-			//Challenges: []*StorageChallenge{},
 		}
-		//for _, created := range blobberChallenges {
-		//	bc.Challenges = append(bc.Challenges, &StorageChallenge{
-		//		AllocationID: sAllocation.ID,
-		//		Created:      created,
-		//	})
-		//}
+
 		var ac = AllocationChallenge{
 			AllocationID: sAllocation.ID,
 			Challenges:   []*StorageChallenge{},
@@ -389,17 +383,11 @@ func testCancelAllocation(
 		require.NoError(t, err)
 	}
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 	require.EqualValues(t, "canceled", resp)
-
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
 	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
@@ -453,17 +441,11 @@ func testFinalizeAllocation(
 		state.Balance(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
 	)
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 	require.EqualValues(t, "finalized", resp)
-
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
 	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
@@ -582,10 +564,6 @@ func setupMocksFinishAllocation(
 	sAllocation.WritePoolOwners = []string{sAllocation.Owner}
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
-
-	var allications = Allocations{}
-	allications.List.add(sAllocation.ID)
-	_, err = ctx.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allications)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{

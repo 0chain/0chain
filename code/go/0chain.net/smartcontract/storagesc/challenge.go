@@ -77,8 +77,8 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 	}
 	idx := 0
 	if found && idx < len(blobberChallengeObj.ChallengeIDs) {
-		blobberChallengeObj.ChallengeIDs = append(
-			blobberChallengeObj.ChallengeIDs[:idx], blobberChallengeObj.ChallengeIDs[idx+1:]...)
+
+		blobberChallengeObj.ChallengeIDs = blobberChallengeObj.ChallengeIDs[1:]
 		allocChallenge, err := sc.getAllocationChallenge(challengeCompleted.AllocationID, balances)
 		if err != nil {
 			Logger.Error("error fetching allocation challenge (complete_challenge)",
@@ -592,21 +592,24 @@ func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
 	}
 }
 
-func (sc *StorageSmartContract) selectAllocationForChallenge(
+func (sc *StorageSmartContract) getAllocationForChallenge(
 	t *transaction.Transaction,
 	allocID string,
 	balances c_state.StateContextI) (alloc *StorageAllocation, err error) {
+
 	alloc, err = sc.getAllocation(allocID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, common.NewErrorf("adding_challenge_error",
-			"unexpected error getting allocation: %v", err)
-	}
-	if err == util.ErrValueNotPresent {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
 		Logger.Error("client state has invalid allocations",
 			zap.Any("selected_allocation", allocID))
 		return nil, common.NewErrorf("invalid_allocation",
 			"client state has invalid allocations")
+	default:
+		return nil, common.NewErrorf("adding_challenge_error",
+			"unexpected error getting allocation: %v", err)
 	}
+
 	if alloc.Expiration < t.CreationDate {
 		return nil, nil
 	}
@@ -655,7 +658,7 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 			continue
 		}
 
-		randomIndex := rand.Intn(len(bcPartition))
+		randomIndex := r.Intn(len(bcPartition))
 		bcItem := bcPartition[randomIndex]
 
 		blobberID := bcItem.Name()
@@ -674,12 +677,12 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 				"error getting random slice from blobber challenge allocation partition")
 			continue
 		}
-		randomIndex = rand.Intn(len(bcAllocPartition))
+		randomIndex = r.Intn(len(bcAllocPartition))
 		bcAllocItem := bcAllocPartition[randomIndex]
 
 		allocID := bcAllocItem.Name()
 
-		alloc, err := sc.selectAllocationForChallenge(d.t, allocID, balances)
+		alloc, err := sc.getAllocationForChallenge(d.t, allocID, balances)
 		if err != nil {
 			errChan <- err
 			continue

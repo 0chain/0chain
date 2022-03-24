@@ -206,11 +206,6 @@ func AddMockAllocations(
 			}
 		}
 	}
-
-	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func addMockAllocation(

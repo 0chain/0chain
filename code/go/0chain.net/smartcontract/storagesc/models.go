@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/partitions"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"math/bits"
 	"strings"
 	"time"
+
+	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -27,7 +28,6 @@ import (
 var (
 	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
 	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
-	ALL_ALLOCATIONS_KEY        = ADDRESS + encryption.Hash("all_allocations")
 	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
 )
 
@@ -236,17 +236,15 @@ func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 }
 
 type StorageChallenge struct {
-	Created common.Timestamp `json:"created"` // needed
-	ID      string           `json:"id"`      //needed
-	PrevID  string           `json:"prev_id"` // needed
-	//Validators      []*ValidationNode `json:"validators"` // to be removed
-	TotalValidators int    `json:"total_validators"`
-	RandomNumber    int64  `json:"seed"`
-	AllocationID    string `json:"allocation_id"`
-	//Blobber        *StorageNode       `json:"blobber"`
-	BlobberID      string             `json:"blobber_id"`
-	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response,omitempty"` //needed
+	Created         common.Timestamp   `json:"created"`
+	ID              string             `json:"id"`
+	PrevID          string             `json:"prev_id"`
+	TotalValidators int                `json:"total_validators"`
+	RandomNumber    int64              `json:"seed"`
+	AllocationID    string             `json:"allocation_id"`
+	BlobberID       string             `json:"blobber_id"`
+	AllocationRoot  string             `json:"allocation_root"`
+	Response        *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {

@@ -51,23 +51,6 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	return clientAlloc.Allocations, nil
 }
 
-func (sc *StorageSmartContract) getAllAllocationsList(
-	balances chainstate.StateContextI) (*Allocations, error) {
-
-	allocationList := &Allocations{}
-
-	err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY, allocationList)
-	switch err {
-	case util.ErrValueNotPresent:
-		return &Allocations{}, nil
-	case nil:
-		return allocationList, nil
-	default:
-		return nil, common.NewError("getAllAllocationsList_failed",
-			"Failed to retrieve existing allocations list")
-	}
-}
-
 func (sc *StorageSmartContract) removeUserAllocation(
 	oldUser string,
 	alloc *StorageAllocation,
@@ -129,11 +112,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewErrorf("add_allocation_failed",
 			"Failed to get allocation list: %v", err)
 	}
-	all, err := sc.getAllAllocationsList(balances)
-	if err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"Failed to get allocation list: %v", err)
-	}
 
 	ta := &StorageAllocation{}
 	if err = balances.GetTrieNode(alloc.GetKey(sc.ID), ta); err == nil {
@@ -147,13 +125,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 
 	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
 		return "", common.NewError("add_allocation_failed", err.Error())
-	}
-
-	all.List.add(alloc.ID)
-
-	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"saving all allocations list: %v", err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
@@ -1553,22 +1524,6 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	alloc.Finalized = true
 
-	var all *Allocations
-	if all, err = sc.getAllAllocationsList(balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"getting all allocations list: "+err.Error())
-	}
-
-	if !all.List.remove(alloc.ID) {
-		return common.NewError("fini_alloc_failed",
-			"invalid state: allocation not found in all allocations list")
-	}
-
-	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
-	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving all allocations list: "+err.Error())
-	}
 	return nil
 }
 
