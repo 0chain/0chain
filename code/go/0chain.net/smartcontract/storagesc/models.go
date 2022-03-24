@@ -165,12 +165,6 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 		sn.ChallengeIDMap = make(map[string]bool)
 	}
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
-		if len(sn.ChallengeIDs) > 0 {
-			lastChallengeID := sn.ChallengeIDs[len(sn.ChallengeIDs)-1]
-			challenge.PrevID = lastChallengeID
-		} else if sn.LatestCompletedChallenge != nil {
-			challenge.PrevID = sn.LatestCompletedChallenge.ID
-		}
 		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
 		sn.ChallengeIDMap[challenge.ID] = true
 		return true
@@ -221,12 +215,6 @@ func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 		sn.ChallengeMap = make(map[string]*StorageChallenge)
 	}
 	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
-		if len(sn.Challenges) > 0 {
-			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
-			challenge.PrevID = lastChallenge.ID
-		} else if sn.LatestCompletedChallenge != nil {
-			challenge.PrevID = sn.LatestCompletedChallenge.ID
-		}
 		sn.Challenges = append(sn.Challenges, challenge)
 		sn.ChallengeMap[challenge.ID] = challenge
 		return true
@@ -236,15 +224,12 @@ func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 }
 
 type StorageChallenge struct {
-	Created         common.Timestamp   `json:"created"`
-	ID              string             `json:"id"`
-	PrevID          string             `json:"prev_id"`
-	TotalValidators int                `json:"total_validators"`
-	RandomNumber    int64              `json:"seed"`
-	AllocationID    string             `json:"allocation_id"`
-	BlobberID       string             `json:"blobber_id"`
-	AllocationRoot  string             `json:"allocation_root"`
-	Response        *ChallengeResponse `json:"challenge_response,omitempty"`
+	Created         common.Timestamp `json:"created"`
+	ID              string           `json:"id"`
+	TotalValidators int              `json:"total_validators"`
+	AllocationID    string           `json:"allocation_id"`
+	BlobberID       string           `json:"blobber_id"`
+	Responded       bool             `json:"responded"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {

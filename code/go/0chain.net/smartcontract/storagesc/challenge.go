@@ -104,7 +104,9 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 
 		}
 
-		challengeCompleted.Response = challengeResponse
+		if challengeResponse != nil {
+			challengeCompleted.Responded = true
+		}
 		blobberChallengeObj.LatestCompletedChallenge = challengeCompleted
 	}
 
@@ -415,7 +417,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if !ok {
 		if blobberChall.LatestCompletedChallenge != nil &&
 			challResp.ID == blobberChall.LatestCompletedChallenge.ID &&
-			blobberChall.LatestCompletedChallenge.Response != nil {
+			blobberChall.LatestCompletedChallenge.Responded == true {
 
 			return "Challenge Already redeemed by Blobber", nil
 		}
@@ -486,8 +488,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	// verification, or partial verification
 	if pass && fresh {
 
-		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
-			&challResp, balances)
+		completed := sc.completeChallengeForBlobber(blobberChall, challReq, &challResp, balances)
 		if !completed {
 			return "", common.NewError("challenge_out_of_order",
 				"First challenge on the list is not same as the one"+
@@ -534,8 +535,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	if enoughFails || (pass && !fresh) {
 
-		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
-			&challResp, balances)
+		completed := sc.completeChallengeForBlobber(blobberChall, challReq, &challResp, balances)
 		if !completed {
 			return "", common.NewError("challenge_out_of_order",
 				"First challenge on the list is not same as the one"+
@@ -623,10 +623,9 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 }
 
 type challengeInput struct {
-	cr            *rand.Rand
-	t             *transaction.Transaction
-	challengeSeed uint64
-	challengeID   string
+	cr          *rand.Rand
+	t           *transaction.Transaction
+	challengeID string
 }
 
 type challengeOutput struct {
@@ -743,9 +742,7 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 		storageChallenge.ID = d.challengeID
 		storageChallenge.TotalValidators = len(selectedValidators)
 		storageChallenge.BlobberID = blobberID
-		storageChallenge.RandomNumber = int64(d.challengeSeed)
 		storageChallenge.AllocationID = alloc.ID
-		storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
 		storageChallenge.Created = creationDate
 
 		blobberChallengeObj, err := sc.getBlobberChallenge(blobberID, balances)
@@ -847,10 +844,9 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		}
 		cr := rand.New(rand.NewSource(int64(challengeSeed)))
 		data <- challengeInput{
-			cr:            cr,
-			t:             t,
-			challengeID:   challengeID,
-			challengeSeed: challengeSeed,
+			cr:          cr,
+			t:           t,
+			challengeID: challengeID,
 		}
 	}
 	close(data)

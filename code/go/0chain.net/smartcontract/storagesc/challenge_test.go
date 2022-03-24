@@ -146,7 +146,6 @@ func TestAddChallenge(t *testing.T) {
 		var storageChallenge = new(StorageChallenge)
 		storageChallenge.TotalValidators = len(selectedValidators)
 		storageChallenge.BlobberID = bID
-		storageChallenge.AllocationRoot = blobberMap[bID].AllocationRoot
 		storageChallenge.Created = creationDate
 
 		blobberChall, err := ssc.getBlobberChallenge(bID, balances)

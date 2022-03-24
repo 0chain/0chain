@@ -2198,9 +2198,9 @@ func (z *StorageAllocationStats) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 6
 	// string "Created"
-	o = append(o, 0x89, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+	o = append(o, 0x86, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o, err = z.Created.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Created")
@@ -2209,35 +2209,18 @@ func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "ID"
 	o = append(o, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
-	// string "PrevID"
-	o = append(o, 0xa6, 0x50, 0x72, 0x65, 0x76, 0x49, 0x44)
-	o = msgp.AppendString(o, z.PrevID)
 	// string "TotalValidators"
 	o = append(o, 0xaf, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73)
 	o = msgp.AppendInt(o, z.TotalValidators)
-	// string "RandomNumber"
-	o = append(o, 0xac, 0x52, 0x61, 0x6e, 0x64, 0x6f, 0x6d, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72)
-	o = msgp.AppendInt64(o, z.RandomNumber)
 	// string "AllocationID"
 	o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
 	o = msgp.AppendString(o, z.AllocationID)
 	// string "BlobberID"
 	o = append(o, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
-	// string "AllocationRoot"
-	o = append(o, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
-	o = msgp.AppendString(o, z.AllocationRoot)
-	// string "Response"
-	o = append(o, 0xa8, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65)
-	if z.Response == nil {
-		o = msgp.AppendNil(o)
-	} else {
-		o, err = z.Response.MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "Response")
-			return
-		}
-	}
+	// string "Responded"
+	o = append(o, 0xa9, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.Responded)
 	return
 }
 
@@ -2271,22 +2254,10 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "ID")
 				return
 			}
-		case "PrevID":
-			z.PrevID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "PrevID")
-				return
-			}
 		case "TotalValidators":
 			z.TotalValidators, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalValidators")
-				return
-			}
-		case "RandomNumber":
-			z.RandomNumber, bts, err = msgp.ReadInt64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "RandomNumber")
 				return
 			}
 		case "AllocationID":
@@ -2301,28 +2272,11 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BlobberID")
 				return
 			}
-		case "AllocationRoot":
-			z.AllocationRoot, bts, err = msgp.ReadStringBytes(bts)
+		case "Responded":
+			z.Responded, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "AllocationRoot")
+				err = msgp.WrapError(err, "Responded")
 				return
-			}
-		case "Response":
-			if msgp.IsNil(bts) {
-				bts, err = msgp.ReadNilBytes(bts)
-				if err != nil {
-					return
-				}
-				z.Response = nil
-			} else {
-				if z.Response == nil {
-					z.Response = new(ChallengeResponse)
-				}
-				bts, err = z.Response.UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "Response")
-					return
-				}
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -2338,12 +2292,7 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageChallenge) Msgsize() (s int) {
-	s = 1 + 8 + z.Created.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 7 + msgp.StringPrefixSize + len(z.PrevID) + 16 + msgp.IntSize + 13 + msgp.Int64Size + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 9
-	if z.Response == nil {
-		s += msgp.NilSize
-	} else {
-		s += z.Response.Msgsize()
-	}
+	s = 1 + 8 + z.Created.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + msgp.IntSize + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.BoolSize
 	return
 }
 

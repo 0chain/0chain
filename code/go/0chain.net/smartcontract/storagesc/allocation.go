@@ -1197,7 +1197,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			d.Stats = new(StorageAllocationStats) // make sure
 		}
 
-		if c.Response != nil || c.AllocationID != alloc.ID {
+		if c.Responded == true || c.AllocationID != alloc.ID {
 			continue // already accepted, already rewarded/penalized
 		}
 		var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
