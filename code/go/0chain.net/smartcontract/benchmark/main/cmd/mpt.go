@@ -165,8 +165,6 @@ func setUpMpt(
 	log.Println("registering miners and sharders")
 	storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
 	log.Println("added free storage assigners")
-	storagesc.AddMockStats(balances)
-	log.Println("added storage stats")
 	storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
 	log.Println("added read redeems")
 	faucetsc.AddMockGlobalNode(balances)

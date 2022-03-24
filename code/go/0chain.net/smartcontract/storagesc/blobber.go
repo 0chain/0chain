@@ -1,11 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/partitions"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/partitions"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -439,12 +440,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker in db:", err.Error())
 	}
 
-	// update stats
-	if err := sc.newRead(balances, commitRead.ReadMarker.ReadSize); err != nil {
-		return "", common.NewError("new read err: ", err.Error())
-	}
-
-	return
+	return // ok, the response and nil
 }
 
 func sizePrice(size int64, price state.Balance) float64 {
@@ -713,8 +709,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
-	if err := sc.newWrite(balances, commitConnection.WriteMarker.Size); err != nil {
-		return "", common.NewErrorf("commit_connection_failed", "new write err: %v", err)
-	}
+
 	return string(detailsBytes), err
 }

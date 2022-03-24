@@ -552,25 +552,6 @@ func AddMockFreeStorageAssigners(
 	}
 }
 
-func AddMockStats(
-	balances cstate.StateContextI,
-) {
-	_, _ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
-		Stats: &StorageAllocationStats{
-			UsedSize:                  1000,
-			NumWrites:                 1000,
-			ReadsSize:                 1000 * 64 * KB,
-			TotalChallenges:           1000,
-			OpenChallenges:            1000,
-			SuccessChallenges:         1000,
-			FailedChallenges:          1000,
-			LastestClosedChallengeTxn: "latest closed challenge transaction",
-		},
-		LastChallengedSize: 100,
-		LastChallengedTime: 1,
-	})
-}
-
 func AddMockWriteRedeems(
 	clients, publicKeys []string,
 	balances cstate.StateContextI,

@@ -346,11 +346,6 @@ func testCommitBlobberRead(
 	//sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId
 	require.NoError(t, sPool.save(ssc.ID, blobberId, ctx))
 
-	ss := &StorageStats{}
-	ss.Stats = &StorageAllocationStats{}
-	_, err = ctx.InsertTrieNode(ss.GetKey(ssc.ID), ss)
-	require.NoError(t, err)
-
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
 		return err
@@ -362,16 +357,7 @@ func testCommitBlobberRead(
 	newSp, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
 
-	stats := &StorageStats{}
-	stats.Stats = &StorageAllocationStats{}
-	err = ctx.GetTrieNode(stats.GetKey(ssc.ID), stats)
-	require.NoError(t, err)
-	sv, err := stats.MarshalMsg(nil)
-	require.NoError(t, err)
-	_, err = stats.UnmarshalMsg(sv)
-	require.NoError(t, err)
-
-	confirmCommitBlobberRead(t, f, resp, stats, newRp, newSp, ctx)
+	confirmCommitBlobberRead(t, f, resp, newRp, newSp, ctx)
 	return nil
 }
 
@@ -379,7 +365,6 @@ func confirmCommitBlobberRead(
 	t *testing.T,
 	f formulaeCommitBlobberRead,
 	resp string,
-	stats *StorageStats,
 	newReadPool *readPool,
 	newStakePool *stakePool,
 	ctx *mockStateContext,

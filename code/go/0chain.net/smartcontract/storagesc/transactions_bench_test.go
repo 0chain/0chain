@@ -239,8 +239,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
-	var stats StorageStats
-	stats.Stats = new(StorageAllocationStats)
 	for _, allocID := range allocs {
 		var alloc *StorageAllocation
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -252,11 +250,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
-		stats.Stats.NumWrites += 10    // total stats
-		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
 	}
-	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-	require.NoError(b, err)
 
 	// 5. merge all transactions into p node db
 	b.Log("merge all into p node db")
@@ -284,12 +278,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 				{
 					// revert the stats to allow generation
 					tp += 1
-					err = balances.GetTrieNode(stats.GetKey(ssc.ID), &stats)
-					require.NoError(b, err)
-					stats.LastChallengedSize = 0
-					stats.LastChallengedTime = 0
-					_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-					require.NoError(b, err)
 
 					tp += 1
 					blk.PrevHash = encryption.Hash(fmt.Sprintf("block-%d", i))
@@ -386,8 +374,6 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
-	var stats StorageStats
-	stats.Stats = new(StorageAllocationStats)
 	for _, allocID := range allocs {
 		var alloc *StorageAllocation
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -399,11 +385,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
-		stats.Stats.NumWrites += 10    // total stats
-		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
 	}
-	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-	require.NoError(b, err)
 
 	// 5. merge all transactions into p node db
 	b.Log("merge all into p node db")

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -505,7 +504,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		balances.InsertTrieNode(challReq.GetKey(sc.ID), challReq)
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
-		sc.challengeResolved(balances, true)
 
 		var partial = 1.0
 		if success < threshold {
@@ -552,7 +550,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.OpenChallenges--
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
-		sc.challengeResolved(balances, false)
 		Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
 		err = sc.blobberPenalty(t, alloc, prev, blobberChall, details,
@@ -785,38 +782,6 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
 
-	var stats = &StorageStats{}
-	stats.Stats = &StorageAllocationStats{}
-	//var statsBytes util.Serializable
-
-	err = balances.GetTrieNode(stats.GetKey(sc.ID), stats)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		return nil
-	default:
-		// unexpected MPT error
-		return err
-	}
-
-	lastChallengeTime := stats.LastChallengedTime
-	if lastChallengeTime == 0 {
-		lastChallengeTime = t.CreationDate
-	}
-	numMins := int64((t.CreationDate - lastChallengeTime) / 60)
-	sizeDiffMB := (stats.Stats.UsedSize - stats.LastChallengedSize) / (1024 * 1024)
-
-	if numMins == 0 && sizeDiffMB == 0 {
-		return nil
-	}
-
-	if numMins == 0 {
-		numMins = 1
-	}
-	if sizeDiffMB == 0 {
-		sizeDiffMB = 1
-	}
-
 	// SC configurations
 	var conf *Config
 	if conf, err = sc.getConfig(balances, false); err != nil {
@@ -824,12 +789,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	var rated = conf.ChallengeGenerationRate * float64(numMins*sizeDiffMB)
-	if rated < 1 {
-		rated = 1
-	}
-	numChallenges := int64(math.Min(rated,
-		float64(conf.MaxChallengesPerGeneration)))
+	numChallenges := conf.MaxChallengesPerGeneration
 	hashString := encryption.Hash(t.Hash + b.PrevHash)
 	var randomSeed uint64
 	randomSeed, err = strconv.ParseUint(hashString[0:16], 16, 64)
@@ -872,9 +832,9 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		go sc.asyncGenerateChallenges(blobberChallengeList, validators, r, t.CreationDate, data, errChan, output, &wg, balances)
 	}
 
-	for i := int64(0); i < numChallenges; i++ {
+	for i := 0; i < numChallenges; i++ {
 
-		challengeID := encryption.Hash(hashString + strconv.FormatInt(i, 10))
+		challengeID := encryption.Hash(hashString + strconv.FormatInt(int64(i), 10))
 		var challengeSeed uint64
 		challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
 		if err != nil {
@@ -927,10 +887,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 				timer.Update(time.Since(tp))
 			}
 		}
-	}
-	if err = sc.newChallenge(balances, t.CreationDate, totalChallenges); err != nil {
-		return common.NewErrorf("adding_challenge_error",
-			"error storing new challenge stats: %v", err)
 	}
 	return nil
 }

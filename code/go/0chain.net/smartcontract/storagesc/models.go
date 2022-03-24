@@ -28,7 +28,6 @@ var (
 	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
 	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
 	ALL_ALLOCATIONS_KEY        = ADDRESS + encryption.Hash("all_allocations")
-	STORAGE_STATS_KEY          = ADDRESS + encryption.Hash("all_storage")
 	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
 )
 
@@ -1397,27 +1396,4 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 	signatureScheme.SetPublicKey(vt.ValidatorKey)
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
-}
-
-type StorageStats struct {
-	Stats              *StorageAllocationStats `json:"stats"`
-	LastChallengedSize int64                   `json:"last_challenged_size"`
-	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
-}
-
-func (sn *StorageStats) GetKey(_ string) datastore.Key {
-	return STORAGE_STATS_KEY
-}
-
-func (sn *StorageStats) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sn *StorageStats) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
 }
