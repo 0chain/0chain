@@ -67,12 +67,11 @@ func TestDeleteSharder(t *testing.T) {
 
 			var un stakepool.UserStakePools
 			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
-			balances.On("GetTrieNode", un.GetKey(),
-				mock.MatchedBy(func(n *UserNode) bool {
-					*n = *un
+			balances.On("GetTrieNode", stakepool.UserStakePoolsKey(spenum.Sharder, id),
+				mock.MatchedBy(func(n *stakepool.UserStakePools) bool {
 					return true
 				})).Return(nil).Once()
-			balances.On("DeleteTrieNode", un.GetKey()).Return("", nil).Once()
+			balances.On("DeleteTrieNode", stakepool.UserStakePoolsKey(spenum.Sharder, id)).Return("", nil).Once()
 		}
 
 		balances.On("GetTrieNode", GetSharderKey(mockDeletedSharderId),

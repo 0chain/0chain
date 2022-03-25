@@ -1,39 +1,32 @@
 package minersc
 
 import (
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
+	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-	"sort"
-
-	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
 )
 
-//msgp:ignore MinerNode dp
-//go:generate msgp -io=false -tests=false -unexported -v
+////////////msgp:ignore MinerNode dp
 
-//
-// miner / sharder
-//
+//go:generate msgp -io=false -tests=false -unexported -v
 
 // MinerNode struct that holds information about the registering miner.
 type MinerNode struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
-	Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
-	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
+	*SimpleNode          `json:"simple_miner"`
+	*stakepool.StakePool `json:"stake_pool"`
 }
 
 func NewMinerNode() *MinerNode {
-	mn := &MinerNode{SimpleNode: &SimpleNode{}}
-	mn.Pending = make(map[string]*sci.DelegatePool)
-	mn.Active = make(map[string]*sci.DelegatePool)
-	mn.Deleting = make(map[string]*sci.DelegatePool)
+	mn := &MinerNode{
+		SimpleNode: &SimpleNode{},
+		StakePool:  stakepool.NewStakePool(),
+	}
 	return mn
 }
 
@@ -53,17 +46,19 @@ func (mn *MinerNode) GetKey() datastore.Key {
 func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
 	charge, rest state.Balance) {
 
-	charge = state.Balance(float64(fees) * mn.ServiceCharge)
+	charge = state.Balance(float64(fees) * mn.Settings.ServiceCharge)
 	rest = fees - charge
 	return
 }
 
 func (mn *MinerNode) numDelegates() int {
-	return len(mn.Pending) + len(mn.Active)
-}
-
-func (mn *MinerNode) numActiveDelegates() int {
-	return len(mn.Active)
+	var count int
+	for _, pool := range mn.Pools {
+		if pool.Status == spenum.Pending || pool.Status == spenum.Active {
+			count++
+		}
+	}
+	return count
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
@@ -73,91 +68,48 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	return nil
 }
 
+// Encode implements util.Serializable interface.
+func (mn *MinerNode) Encode() []byte {
+	var b, err = json.Marshal(mn)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// Decode implements util.Serializable interface.
+func (mn *MinerNode) Decode(p []byte) error {
+	return json.Unmarshal(p, mn)
+}
+
 // minerNodeDecode represents a MinerNode that use ViewChangeLock as tokenLockInterface
 // it is for decoding MinerNode bytes
 type minerNodeDecode struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*delegatePool `json:"pending,omitempty"`
-	Active      map[string]*delegatePool `json:"active,omitempty"`
-	Deleting    map[string]*delegatePool `json:"deleting,omitempty"`
+	*SimpleNode          `json:"simple_miner"`
+	*stakepool.StakePool `json:"stake_pool"`
 }
 
 func newMinerNodeDecode() *minerNodeDecode {
 	mn := &minerNodeDecode{SimpleNode: &SimpleNode{}}
-	mn.Pending = make(map[string]*delegatePool)
-	mn.Active = make(map[string]*delegatePool)
-	mn.Deleting = make(map[string]*delegatePool)
+	mn.StakePool = stakepool.NewStakePool()
 	return mn
 }
 
 func newDecodeFromMinerNode(mn *MinerNode) *minerNodeDecode {
 	n := newMinerNodeDecode()
 	n.SimpleNode = mn.SimpleNode
-	for k, pl := range mn.Pending {
-		n.Pending[k] = newDelegatePool(pl)
-	}
-
-	for k, pl := range mn.Active {
-		n.Active[k] = newDelegatePool(pl)
-	}
-
-	for k, pl := range mn.Deleting {
-		n.Deleting[k] = newDelegatePool(pl)
-	}
-
+	n.StakePool = mn.StakePool.Copy()
 	return n
 }
 
 func (n *minerNodeDecode) toMinerNode() *MinerNode {
 	mn := NewMinerNode()
 	mn.SimpleNode = n.SimpleNode
-	mn.Pending = make(map[string]*sci.DelegatePool, len(n.Pending))
-	for k, pl := range n.Pending {
-		mn.Pending[k] = pl.toDelegatePool()
-	}
-
-	mn.Active = make(map[string]*sci.DelegatePool, len(n.Active))
-	for k, pl := range n.Active {
-		mn.Active[k] = pl.toDelegatePool()
-	}
-
-	mn.Deleting = make(map[string]*sci.DelegatePool, len(n.Deleting))
-	for k, pl := range n.Deleting {
-		mn.Deleting[k] = pl.toDelegatePool()
-	}
-
+	mn.StakePool = n.StakePool.Copy()
 	return mn
 }
 
-// delegatePool is for decoding delegate pool with ViewChangeLock as the TokenLockInterface
-type delegatePool struct {
-	*sci.PoolStats `json:"stats"`
-	*ZcnTokenPool  `json:"pool"`
-}
-
-// toDelegatePool converts the pool struct to *delegatePool
-func (dpl *delegatePool) toDelegatePool() *sci.DelegatePool {
-	dp := sci.NewDelegatePool()
-	dp.PoolStats = dpl.PoolStats
-	dp.ZcnPool = dpl.ZcnPool
-	dp.TokenLockInterface = dpl.ViewChangeLock
-	return dp
-}
-
-func newDelegatePool(dp *sci.DelegatePool) *delegatePool {
-	pl := &delegatePool{
-		PoolStats: dp.PoolStats,
-		ZcnTokenPool: &ZcnTokenPool{
-			ZcnPool: dp.ZcnPool,
-		},
-	}
-
-	if dp.TokenLockInterface != nil {
-		pl.ViewChangeLock = dp.TokenLockInterface.(*ViewChangeLock)
-	}
-	return pl
-}
-
+/*
 // ZcnTokenPool represents the struct for decoding pool in delegatePool
 type ZcnTokenPool struct {
 	tokenpool.ZcnPool `json:"pool"`
@@ -202,7 +154,7 @@ func (mn *MinerNode) Msgsize() int {
 	d := newDecodeFromMinerNode(mn)
 	return d.Msgsize()
 }
-
+*/
 func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	mn.N2NHost = params.Get("n2n_host")
 	mn.ID = params.Get("id")
@@ -213,6 +165,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	return nil
 }
 
+/*
 func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 	var keys []string
 	for k := range mn.Active {
@@ -225,3 +178,4 @@ func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 	}
 	return
 }
+*/

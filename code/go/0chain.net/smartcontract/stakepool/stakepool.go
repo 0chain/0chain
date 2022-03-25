@@ -56,6 +56,17 @@ func NewStakePool() *StakePool {
 	}
 }
 
+func (sp *StakePool) Copy() *StakePool {
+	spCopy := NewStakePool()
+	for k, v := range sp.Pools {
+		spCopy.Pools[k] = v
+	}
+	spCopy.Settings = sp.Settings
+	spCopy.Reward = sp.Reward
+	spCopy.Minter = sp.Minter
+	return spCopy
+}
+
 func (sp *StakePool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(sp); err != nil {

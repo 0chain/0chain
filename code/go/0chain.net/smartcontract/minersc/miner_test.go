@@ -46,7 +46,7 @@ func TestDeleteMiner(t *testing.T) {
 		}
 		mn := NewMinerNode()
 		mn.ID = mockDeletedMinerId
-		mn.DelegateWallet = mockDeletedMinerId
+		mn.Settings.DelegateWallet = mockDeletedMinerId
 		for i := 0; i < p.activePools; i++ {
 			id := "active pool " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
@@ -68,16 +68,15 @@ func TestDeleteMiner(t *testing.T) {
 
 			var un stakepool.UserStakePools
 			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
-			balances.On("GetTrieNode", un.GetKey(), mock.MatchedBy(func(n *UserNode) bool {
-				*n = *un
+			balances.On("GetTrieNode", stakepool.UserStakePoolsKey(spenum.Miner, id), mock.MatchedBy(func(n *stakepool.UserStakePools) bool {
 				return true
 			})).Return(nil).Once()
-			balances.On("DeleteTrieNode", un.GetKey()).Return("", nil).Once()
+			balances.On("DeleteTrieNode", stakepool.UserStakePoolsKey(spenum.Miner, id)).Return("", nil).Once()
 		}
 
 		balances.On(
 			"DeleteTrieNode",
-			stakepool.UserStakePoolsKey(spenum.Miner, mn.DelegateWallet),
+			stakepool.UserStakePoolsKey(spenum.Miner, mn.Settings.DelegateWallet),
 		).Return("", nil).Once()
 
 		balances.On("GetTrieNode", mn.GetKey(), mock.MatchedBy(func(n *MinerNode) bool {
