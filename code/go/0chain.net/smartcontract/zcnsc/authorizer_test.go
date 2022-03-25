@@ -3,6 +3,8 @@ package zcnsc_test
 import (
 	"math/rand"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/chaincore/chain"
@@ -69,7 +71,16 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	ctx := MakeMockStateContext()
 	tr := CreateAddAuthorizerTransaction("auth0", ctx, 10)
 
-	params := &AuthorizerParameter{PublicKey: tr.PublicKey}
+	params := &AuthorizerParameter{
+		PublicKey: tr.PublicKey,
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "100",
+			MinStake:        100,
+			MaxStake:        100,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
+		},
+	}
 	data, _ := params.Encode()
 
 	_, err := contract.AddAuthorizer(tr, data, ctx)
@@ -194,6 +205,13 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	authParam := AuthorizerParameter{
 		PublicKey: ctx.authorizers[au.GetKey()].Node.PublicKey,
 		URL:       "hhh",
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "100",
+			MinStake:        100,
+			MaxStake:        100,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
+		},
 	}
 	data, _ := authParam.Encode()
 
@@ -231,7 +249,17 @@ func Test_Should_FailWithoutInputData(t *testing.T) {
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	pk := &AuthorizerParameter{PublicKey: "public Key", URL: "https://localhost:9876"}
+	pk := &AuthorizerParameter{
+		PublicKey: "public Key",
+		URL:       "https://localhost:9876",
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "100",
+			MinStake:        100,
+			MaxStake:        100,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
+		},
+	}
 	data, _ := json.Marshal(pk)
 	tr := CreateAddAuthorizerTransaction("client0", ctx, 10)
 	tr.PublicKey = ""

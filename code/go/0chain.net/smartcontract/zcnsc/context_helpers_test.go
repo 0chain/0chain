@@ -57,9 +57,10 @@ func mockSetValue(v interface{}) interface{} {
 
 type mockStateContext struct {
 	*mocks.StateContextI
-	userNodes   map[string]*UserNode
-	authorizers map[string]*Authorizer
-	globalNode  *GlobalNode
+	userNodes    map[string]*UserNode
+	authorizers  map[string]*Authorizer
+	globalNode   *GlobalNode
+	stakingPools map[string]*StakePool
 }
 
 func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
@@ -157,6 +158,15 @@ func (m *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerial
 		return key, nil
 	}
 
+	if strings.Contains(key, StakePoolNodeType) {
+		if stakePool, ok := node.(*StakePool); ok {
+			m.stakingPools[key] = stakePool
+			return key, nil
+		} else {
+			return key, fmt.Errorf("failed to convert key: %s to StakePool: %v", key, node)
+		}
+	}
+
 	return "", fmt.Errorf("node with key: %s is not supported", key)
 }
 
@@ -191,6 +201,10 @@ func MakeMockStateContext() *mockStateContext {
 	for _, id := range authorizersID {
 		createTestAuthorizer(ctx, id)
 	}
+
+	// StakePools
+
+	ctx.stakingPools = make(map[string]*StakePool)
 
 	// Transfers
 

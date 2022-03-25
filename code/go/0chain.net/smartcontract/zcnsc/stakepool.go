@@ -38,13 +38,13 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 
 // ----------- LockingPool pool --------------------------
 
-type stakePool struct {
+type StakePool struct {
 	stakepool.StakePool
 }
 
-func newStakePool() *stakePool {
+func newStakePool() *StakePool {
 	bsp := stakepool.NewStakePool()
-	return &stakePool{
+	return &StakePool{
 		StakePool: *bsp,
 	}
 }
@@ -59,7 +59,7 @@ func stakePoolID(scKey, providerID string) datastore.Key {
 }
 
 // Encode to []byte
-func (sp *stakePool) Encode() (b []byte) {
+func (sp *StakePool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(sp); err != nil {
 		panic(err) // must never happen
@@ -68,18 +68,18 @@ func (sp *stakePool) Encode() (b []byte) {
 }
 
 // Decode from []byte
-func (sp *stakePool) Decode(input []byte) error {
+func (sp *StakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
 }
 
 // save the stake pool
-func (sp *stakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
+func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, providerID), sp)
 	return
 }
 
 // The stake() returns total stake size including delegate pools want to unstake.
-func (sp *stakePool) stake() (stake state.Balance) {
+func (sp *StakePool) stake() (stake state.Balance) {
 	for _, dp := range sp.Pools {
 		stake += dp.Balance
 	}
@@ -87,7 +87,7 @@ func (sp *stakePool) stake() (stake state.Balance) {
 }
 
 // empty a delegate pool if possible, call update before the empty
-func (sp *stakePool) empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {
+func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
 		return false, fmt.Errorf("no such delegate pool: %q", poolID)
@@ -113,7 +113,7 @@ func (sp *stakePool) empty(sscID, poolID, clientID string, balances cstate.State
 //
 
 // getStakePool of given authorizer
-func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances cstate.StateContextI) (sp *stakePool, err error) {
+func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances cstate.StateContextI) (sp *StakePool, err error) {
 	sp = newStakePool()
 	err = balances.GetTrieNode(stakePoolKey(zcn.ID, authorizerID), sp)
 	if err != nil {
@@ -134,7 +134,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	providerType spenum.Provider,
 	settings stakepool.StakePoolSettings,
 	balances cstate.StateContextI,
-) (*stakePool, error) {
+) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
@@ -214,7 +214,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewErrorf(code, "invalid request: %v", err)
 	}
 
-	var sp *stakePool
+	var sp *StakePool
 	if sp, err = zcn.getStakePool(spr.AuthorizerID, ctx); err != nil {
 		return "", common.NewErrorf(code, "can't get stake pool: %v", err)
 	}
@@ -248,7 +248,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf(code, "can't decode request: %v", err)
 	}
-	var sp *stakePool
+	var sp *StakePool
 	if sp, err = zcn.getStakePool(spr.AuthorizerID, ctx); err != nil {
 		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
 	}

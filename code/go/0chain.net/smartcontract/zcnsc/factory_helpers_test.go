@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/chain/state"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -79,6 +81,13 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI, 
 	payload := &AuthorizerParameter{
 		PublicKey: txn.PublicKey,
 		URL:       "https://localhost:9876",
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "100",
+			MinStake:        100,
+			MaxStake:        100,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
+		},
 	}
 
 	bytes, err := payload.Encode()
@@ -95,6 +104,13 @@ func CreateAuthorizerParam() *AuthorizerParameter {
 	return &AuthorizerParameter{
 		PublicKey: "public key",
 		URL:       "http://localhost:2344",
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "100",
+			MinStake:        100,
+			MaxStake:        100,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
+		},
 	}
 }
 

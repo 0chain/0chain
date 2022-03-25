@@ -23,6 +23,7 @@ const (
 	AuthorizerNodeType    = "authnode"
 	AuthorizerNewNodeType = "create"
 	GlobalNodeType        = "globalnode"
+	StakePoolNodeType     = "stakepool"
 	UserNodeType          = "usernode"
 )
 

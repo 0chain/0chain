@@ -77,6 +77,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
+	// create stake pool for the validator to count its rewards'
+
+	var createOrUpdateStakePool = func() (err error) {
+		var sp *StakePool
+		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, params.StakePoolSettings, ctx)
+		if err != nil {
+			return common.NewError(code, "failed to get or create stake pool: "+err.Error())
+		}
+		if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
+			return common.NewError(code, "failed to save stake pool: "+err.Error())
+		}
+		return err
+	}
+
 	// Check existing Authorizer
 
 	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
@@ -84,6 +98,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(code, msg)
 		Logger.Warn("get authorizer node", zap.Error(err))
+		_ = createOrUpdateStakePool()
+		return "", err
 	} else {
 		// compare the global min of authorizerNode Authorizer to that of the transaction amount
 		if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
@@ -140,18 +156,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 			return "", err
 		}
 
+		err = createOrUpdateStakePool()
+		if err != nil {
+			err = common.NewError(code, "failed to create or update stake pool")
+			Logger.Error("saving or creating stake pool", zap.Error(err))
+			return "", err
+		}
+
 		ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
-	}
-
-	// create stake pool for the validator to count its rewards'
-
-	var sp *stakePool
-	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, params.StakePoolSettings, ctx)
-	if err != nil {
-		return "", common.NewError(code, "get or create stake pool error: "+err.Error())
-	}
-	if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
-		return "", common.NewError(code, "saving stake pool error: "+err.Error())
 	}
 
 	return
