@@ -19,6 +19,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		dataRead          []float64
 		successChallenges []int
 		delegatesBal      [][]state.Balance
+		serviceCharge     []float64
 	}
 
 	type result struct {
@@ -44,6 +45,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 			sp := newStakePool()
 			sp.Settings.DelegateWallet = bID
+			sp.Settings.ServiceCharge = p.serviceCharge[i]
 			for j, bal := range p.delegatesBal[i] {
 				dp := new(stakepool.DelegatePool)
 				dp.Balance = bal
@@ -94,10 +96,11 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				dataRead:          []float64{2},
 				successChallenges: []int{10},
 				delegatesBal:      [][]state.Balance{{1, 0, 3}},
+				serviceCharge:     []float64{.1},
 			},
 			result: result{
-				blobberRewards:          []state.Balance{500},
-				blobberDelegatesRewards: [][]state.Balance{{125, 0, 375}},
+				blobberRewards:          []state.Balance{50},
+				blobberDelegatesRewards: [][]state.Balance{{112, 0, 337}},
 			},
 		},
 		{
@@ -110,10 +113,11 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				dataRead:          []float64{2, 15},
 				successChallenges: []int{5, 2},
 				delegatesBal:      [][]state.Balance{{1, 0, 3}, {1, 6, 3}},
+				serviceCharge:     []float64{.1, .1},
 			},
 			result: result{
-				blobberRewards:          []state.Balance{159, 340},
-				blobberDelegatesRewards: [][]state.Balance{{39, 0, 119}, {34, 204, 102}},
+				blobberRewards:          []state.Balance{15, 34},
+				blobberDelegatesRewards: [][]state.Balance{{35, 0, 107}, {30, 183, 91}},
 			},
 		},
 	}
