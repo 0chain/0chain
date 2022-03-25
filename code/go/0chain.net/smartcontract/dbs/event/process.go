@@ -49,7 +49,6 @@ const (
 	TagRemoveCurator
 	TagAddOrOverwriteDelegatePool
 	TagStakePoolReward
-	TagUpdateTotalStake
 	TagUpdateDelegatePool
 )
 
@@ -235,13 +234,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.rewardUpdate(spu)
-	case TagUpdateTotalStake:
-		var spu UpdateTotalStake
-		err := json.Unmarshal([]byte(event.Data), &spu)
-		if err != nil {
-			return err
-		}
-		return edb.updateBlobberTotalStake(spu)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

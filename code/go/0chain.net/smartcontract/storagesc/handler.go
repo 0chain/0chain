@@ -60,6 +60,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 			MaxNumDelegates: blobber.NumDelegates,
 			ServiceCharge:   blobber.ServiceCharge,
 		},
+		TotalStake: blobber.TotalStake,
 	}, nil
 }
 
