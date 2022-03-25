@@ -1178,36 +1178,36 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		alloc.Stats = &StorageAllocationStats{}
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberDetails))
-	var failed, succesful int64 = 0, 0
+	var failed, successful int64 = 0, 0
 
 	allocChallenge, err := sc.getAllocationChallenge(alloc.ID, balances)
-	if err != nil {
+	switch err {
+	case util.ErrValueNotPresent:
+	case nil:
+		for _, c := range allocChallenge.Challenges {
+			blobberID := c.BlobberID
+			d, ok := alloc.BlobberMap[blobberID]
+			if !ok {
+				continue
+			}
+
+			if d.Stats == nil {
+				d.Stats = new(StorageAllocationStats) // make sure
+			}
+
+			if c.Responded == true || c.AllocationID != alloc.ID {
+				continue // already accepted, already rewarded/penalized
+			}
+			var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
+			if expire < now {
+				d.Stats.FailedChallenges++
+			} else {
+				d.Stats.SuccessChallenges++
+			}
+		}
+
+	default:
 		return nil, fmt.Errorf("getting allocation challenge: %v", err)
-	}
-
-	var blobberFound = make(map[string]bool)
-	for _, c := range allocChallenge.Challenges {
-		blobberID := c.BlobberID
-		d, ok := alloc.BlobberMap[blobberID]
-		if !ok {
-			continue
-		}
-
-		if d.Stats == nil {
-			d.Stats = new(StorageAllocationStats) // make sure
-		}
-
-		if c.Responded == true || c.AllocationID != alloc.ID {
-			continue // already accepted, already rewarded/penalized
-		}
-		var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
-		if expire < now {
-			d.Stats.FailedChallenges++
-		} else {
-			d.Stats.SuccessChallenges++
-		}
-
-		blobberFound[blobberID] = true
 	}
 
 	for _, d := range alloc.BlobberDetails {
@@ -1221,13 +1221,13 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// success rate for the blobber allocation
 		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(d.Stats.SuccessChallenges)/float64(d.Stats.TotalChallenges))
-		succesful += d.Stats.SuccessChallenges
+		successful += d.Stats.SuccessChallenges
 		failed += d.Stats.FailedChallenges
 	}
 
-	alloc.Stats.SuccessChallenges = succesful
+	alloc.Stats.SuccessChallenges = successful
 	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
+	alloc.Stats.TotalChallenges = alloc.Stats.SuccessChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
