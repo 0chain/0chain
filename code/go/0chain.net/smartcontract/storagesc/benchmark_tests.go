@@ -748,7 +748,7 @@ func BenchmarkTests(
 			) (string, error) {
 				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
 				if challengesEnabled {
-					err := ssc.generateChallenges(txn, balances.GetBlock(), nil, balances)
+					err := ssc.generateChallenge(txn, balances.GetBlock(), nil, balances)
 					if err != nil {
 						return "", nil
 					}

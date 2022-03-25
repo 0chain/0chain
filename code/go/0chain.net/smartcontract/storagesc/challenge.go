@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"sync"
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -644,10 +643,9 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 	creationDate common.Timestamp,
 	data <-chan challengeInput,
 	result chan<- challengeOutput,
-	wg *sync.WaitGroup,
 	balances c_state.StateContextI) {
 
-	defer wg.Done()
+	defer close(result)
 
 	for d := range data {
 		bcPartition, err := blobberChallengeList.GetRandomSlice(d.cr, balances)
@@ -794,6 +792,87 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 	}
 }
 
+func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
+	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
+
+	hashString := encryption.Hash(t.Hash + b.PrevHash)
+	var randomSeed uint64
+	randomSeed, err = strconv.ParseUint(hashString[0:16], 16, 64)
+	if err != nil {
+		Logger.Error("Error in creating seed for creating challenges",
+			zap.Error(err))
+		return err
+	}
+	r := rand.New(rand.NewSource(int64(randomSeed)))
+
+	// select allocations for the challenges
+
+	validators, err := getValidatorsList(balances)
+	if err != nil {
+		return common.NewErrorf("adding_challenge_error",
+			"error getting the validators list: %v", err)
+	}
+
+	blobberChallengeList, err := getBlobbersChallengeList(balances)
+	if err != nil {
+		return common.NewErrorf("adding_challenge_error",
+			"error getting the blobber challenge list: %v", err)
+	}
+
+	var (
+		data   = make(chan challengeInput)
+		output = make(chan challengeOutput)
+	)
+	defer close(data)
+
+	go sc.asyncGenerateChallenges(blobberChallengeList, validators, r, t.CreationDate, data, output, balances)
+
+	challengeID := encryption.Hash(hashString + strconv.FormatInt(int64(1), 10))
+	var challengeSeed uint64
+	challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
+	if err != nil {
+		return common.NewErrorf("adding_challenge_error",
+			"Error in creating challenge seed: %v", err)
+	}
+
+	cr := rand.New(rand.NewSource(int64(challengeSeed)))
+
+	data <- challengeInput{
+		cr:          cr,
+		t:           t,
+		challengeID: challengeID,
+	}
+
+	result, ok := <-output
+	if !ok {
+		return common.NewErrorf("generate_challenge",
+			"unable to generate challenge")
+	}
+
+	if result.error != nil {
+		return result.error
+	}
+	var (
+		tp    = time.Now()
+		alloc = result.alloc
+	)
+	_, err = sc.addChallenge(alloc, result.storageChallenge,
+		result.blobberChallenge,
+		result.allocChallenge,
+		result.blobberAlloc,
+		balances)
+	if err != nil {
+		return common.NewErrorf("adding_challenge_error",
+			"Error in adding challenge: %v", err)
+	}
+	if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
+		if timer, ok := tm.(metrics.Timer); ok {
+			timer.Update(time.Since(tp))
+		}
+	}
+	return nil
+}
+
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
 
@@ -838,12 +917,10 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	var (
 		data   = make(chan challengeInput, numChallenges)
 		output = make(chan challengeOutput, numChallenges)
-		wg     sync.WaitGroup
 	)
 
 	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go sc.asyncGenerateChallenges(blobberChallengeList, validators, r, t.CreationDate, data, output, &wg, balances)
+		go sc.asyncGenerateChallenges(blobberChallengeList, validators, r, t.CreationDate, data, output, balances)
 	}
 
 	for i := 0; i < numChallenges; i++ {
@@ -864,11 +941,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		}
 	}
 	close(data)
-
-	go func() {
-		wg.Wait()
-		close(output)
-	}()
 
 	for result := range output {
 

@@ -286,7 +286,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 				}
 				b.StartTimer()
 
-				err = ssc.generateChallenges(tx, blk, nil, balances)
+				err = ssc.generateChallenge(tx, blk, nil, balances)
 				require.NoError(b, err)
 			}
 			b.ReportAllocs()
