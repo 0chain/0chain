@@ -343,7 +343,7 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
-type rewardPartitionLocation struct {
+type RewardPartitionLocation struct {
 	Index      int              `json:"index"`
 	StartRound int64            `json:"start_round"`
 	Timestamp  common.Timestamp `json:"timestamp"`
@@ -366,7 +366,7 @@ type StorageNode struct {
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	RewardPartition   rewardPartitionLocation     `json:"reward_partition"`
+	RewardPartition   RewardPartitionLocation     `json:"reward_partition"`
 }
 
 // validate the blobber configurations

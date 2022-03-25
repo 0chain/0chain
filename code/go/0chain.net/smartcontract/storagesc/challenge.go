@@ -489,7 +489,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					"can't add to ongoing partition list "+err.Error())
 			}
 
-			blobber.RewardPartition = rewardPartitionLocation{
+			blobber.RewardPartition = RewardPartitionLocation{
 				Index:      partIndex,
 				StartRound: rewardRound,
 				Timestamp:  t.CreationDate,
