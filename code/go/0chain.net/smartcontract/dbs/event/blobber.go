@@ -42,6 +42,7 @@ type Blobber struct {
 	UnstakeTotal       int64 `json:"unstake_total"`
 	Reward             int64 `json:"reward"`
 	TotalServiceCharge int64 `json:"total_service_charge"`
+	TotalStake         int64 `json:"total_stake"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
@@ -56,6 +57,18 @@ type BlobberLatLong struct {
 type blobberAggregateStats struct {
 	Reward             int64 `json:"reward"`
 	TotalServiceCharge int64 `json:"total_service_charge"`
+}
+
+type UpdateTotalStake struct {
+	BlobberID  string
+	TotalStake int64
+}
+
+func (edb *EventDb) updateBlobberTotalStake(uts UpdateTotalStake) error {
+	return edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: uts.BlobberID}).
+		Updates(map[string]interface{}{
+			"total_stake": uts.TotalStake,
+		}).Error
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
@@ -164,6 +177,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"reward":                    blobber.Reward,
 			"total_service_charge":      blobber.TotalServiceCharge,
 			"saved_data":                blobber.SavedData,
+			"total_stake":               blobber.TotalStake,
 		})
 	return result.Error
 }
