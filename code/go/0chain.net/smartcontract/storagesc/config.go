@@ -141,6 +141,9 @@ type Config struct {
 	// at once for a blobber-allocation pair with size difference for the
 	// moment of the generation.
 	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
+	// ValidatorsPerChallenge is the number of validators to select per
+	// challenges.
+	ValidatorsPerChallenge int `json:"validators_per_challenge"`
 	// ChallengeGenerationRate is number of challenges generated for a MB/min.
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
@@ -265,6 +268,10 @@ func (sc *Config) validate() (err error) {
 	if sc.MaxChallengesPerGeneration <= 0 {
 		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
 			sc.MaxChallengesPerGeneration)
+	}
+	if sc.ValidatorsPerChallenge <= 0 {
+		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
+			sc.ValidatorsPerChallenge)
 	}
 	if sc.ChallengeGenerationRate < 0 {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
@@ -421,6 +428,8 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
 	conf.MaxChallengesPerGeneration = scc.GetInt(
 		pfx + "max_challenges_per_generation")
+	conf.ValidatorsPerChallenge = scc.GetInt(
+		pfx + "validators_per_challenge")
 	conf.ChallengeGenerationRate = scc.GetFloat64(
 		pfx + "challenge_rate_per_mb_min")
 

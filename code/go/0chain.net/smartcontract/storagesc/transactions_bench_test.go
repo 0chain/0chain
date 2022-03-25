@@ -446,7 +446,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 					challBytes string
 				)
 				challBytes, err = ssc.addChallenge(alloc, valids, challID,
-					common.Timestamp(tp), r, tp, balances)
+					common.Timestamp(tp), r, tp, conf.ValidatorsPerChallenge, balances)
 				require.NoError(b, err)
 
 				var chall StorageChallenge
