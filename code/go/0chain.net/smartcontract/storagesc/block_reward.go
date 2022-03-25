@@ -1,6 +1,11 @@
 package storagesc
 
 import (
+	"fmt"
+	"math"
+	"math/rand"
+	"strconv"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -9,11 +14,7 @@ import (
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"fmt"
 	"go.uber.org/zap"
-	"math"
-	"math/rand"
-	"strconv"
 )
 
 func (ssc *StorageSmartContract) blobberBlockRewards(
@@ -76,8 +77,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
 	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"Error getting random partition: "+err.Error())
+		logging.Logger.Error("blobber_block_rewards_failed",
+			zap.String("getting random partition", err.Error()))
+		return nil
 	}
 	qualifyingBlobberIds := make([]string, len(blobberPartition), len(blobberPartition))
 
