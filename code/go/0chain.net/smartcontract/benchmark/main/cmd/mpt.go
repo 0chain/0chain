@@ -268,7 +268,7 @@ func setUpMpt(
 	stakePools := storagesc.GetMockBlobberStakePools(clients, balances)
 	stakePools = stakePools
 	log.Println("created blobber stake pools\t", time.Since(timer))
-	///*
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -291,7 +291,7 @@ func setUpMpt(
 		storagesc.AddMockReadPools(clients, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
 	}()
-	//*/
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -304,7 +304,7 @@ func setUpMpt(
 		storagesc.AddMockWritePools(clients, balances)
 		log.Println("added allocation write pools\t", time.Since(timer))
 	}()
-	///*
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -448,7 +448,7 @@ func setUpMpt(
 
 	var benchData benchmark.BenchData
 	privateKeys = privateKeys
-	///*
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -457,7 +457,6 @@ func setUpMpt(
 		log.Println("added control objects\t", time.Since(timer))
 	}()
 
-	//var benchData benchmark.BenchData
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -474,7 +473,7 @@ func setUpMpt(
 		viper.Set(benchmark.MptRoot, string((root)))
 		log.Println("saved simulation parameters\t", time.Since(timer))
 	}()
-	//*/
+
 	wg.Wait()
 
 	log.Println("mpt generation took:", time.Since(mptGenTime))

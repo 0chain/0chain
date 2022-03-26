@@ -34,7 +34,7 @@ type item struct {
 func (i *item) Encode() []byte {
 	var b, err = json.Marshal(i)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err)
 	}
 	return b
 }
@@ -50,7 +50,7 @@ type itemArray struct {
 func (is *itemArray) Encode() []byte {
 	var b, err = json.Marshal(is)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err)
 	}
 	return b
 }

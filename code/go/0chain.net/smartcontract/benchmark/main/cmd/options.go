@@ -92,7 +92,6 @@ func getTestSuites(
 			suite = benchmarkSources[code](data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)
-			//suites = append(suites, benchmarkSources[code](data, &BLS0ChainScheme{}))
 		} else {
 			log.Fatal(fmt.Errorf("Invalid test source %s", name))
 		}
