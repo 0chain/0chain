@@ -354,7 +354,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (resp string, err error) {
 
-	Logger.Info("verify_challenge called at round", zap.Int64("round", balances.GetBlock().Round))
+	Logger.Info("verify_challenge called",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.String("block_hash", balances.GetBlock().Hash))
 
 	var challResp ChallengeResponse
 

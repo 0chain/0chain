@@ -20,7 +20,10 @@ import (
 func (ssc *StorageSmartContract) blobberBlockRewards(
 	balances cstate.StateContextI,
 ) (err error) {
-	logging.Logger.Info("blobberBlockRewards started", zap.Int64("round", balances.GetBlock().Round))
+	logging.Logger.Info("blobberBlockRewards started",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.String("block_hash", balances.GetBlock().Hash))
+
 	var (
 		stakePools  []*stakePool
 		stakeTotals []float64
@@ -120,7 +123,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			reward := bbr * weightRatio
 			logging.Logger.Info("blobber_block_rewards_pass",
 				zap.Float64("reward", reward),
-				zap.String("blobber id", qualifyingBlobberIds[i]))
+				zap.String("blobber id", qualifyingBlobberIds[i]),
+				zap.Int64("round", balances.GetBlock().Round),
+				zap.String("block_hash", balances.GetBlock().Hash))
 
 			if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
 				return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
