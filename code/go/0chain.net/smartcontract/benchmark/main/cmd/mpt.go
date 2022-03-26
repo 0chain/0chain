@@ -192,7 +192,7 @@ func setUpMpt(
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
 		timer = time.Now()
-		eventDb, err := event.NewEventDb(dbs.DbAccess{
+		eventDb, err = event.NewEventDb(dbs.DbAccess{
 			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
 			Name:            viper.GetString(benchmark.EventDbName),
 			User:            viper.GetString(benchmark.EventDbUser),
