@@ -228,6 +228,7 @@ func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
 	}
 }
 
+<<<<<<< HEAD
 func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
 	var (
 		ndb  = mpt.GetNodeDB()
@@ -240,6 +241,21 @@ func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
 		return // nil
 	}
 	return root.GetHashBytes() // root key
+=======
+// calculates hash of all sorted keys in the NodeDB
+func calculateKeysHash(t *testing.T, ndb NodeDB) string {
+	sponge := valuesSponge{}
+	err := ndb.Iterate(context.TODO(), dbKeysSpongeHandler(&sponge))
+	require.NoError(t, err)
+	sort.Strings(sponge.values)
+	hash := sha3.New256()
+	for _, key := range sponge.values {
+		b, err := hex.DecodeString(key)
+		require.NoError(t, err)
+		hash.Write(b)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+>>>>>>> 5b4d2cae2 (Fix unit test)
 }
 
 func TestMPT_blockGenerationFlow(t *testing.T) {
@@ -253,7 +269,7 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 	// prior block DB and hash
 	var (
 		priorDB   NodeDB = stateDB
-		priorHash        = computeMPTRoot(t, mpt)
+		priorHash        = mpt.GetRoot()
 	)
 
 	// in loop:

@@ -148,6 +148,9 @@ func (ps *PartialState) ComputeProperties() error {
 	return nil
 }
 
+// Validate does nothing but to meet the Entity interface, the ComputeProperties
+// have done the validation, and usually this function is called after the
+// ComputeProperties
 func (ps *PartialState) Validate(_ context.Context) error {
 	return nil
 }

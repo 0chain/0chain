@@ -287,6 +287,13 @@ func (mndb *MemoryNodeDB) ComputeRoot() (root Node, err error) {
 	return root, nil
 }
 
+// Validate validates the nodes
+func (mndb *MemoryNodeDB) Validate(root Node) error {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
+	return mndb.validate(root)
+}
+
 // validate - validate this MemoryNodeDB w.r.t the given root
 //  It should not contain any node that can't be reachable from the root.
 //  Note: The root itself can reach nodes not present in this db
