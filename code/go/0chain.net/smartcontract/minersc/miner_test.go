@@ -12,7 +12,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	. "0chain.net/smartcontract/minersc" //nolint: typecheck
+	. "0chain.net/smartcontract/minersc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

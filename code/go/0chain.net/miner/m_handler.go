@@ -282,7 +282,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
-	var lfb = mc.GetLatestFinalizedBlock() //nolint:typecheck
+	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {
 		logging.Logger.Debug("handle verify block", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil

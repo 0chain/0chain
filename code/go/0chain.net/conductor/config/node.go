@@ -111,10 +111,14 @@ func (n *Node) Stop() (err error) {
 		return fmt.Errorf("command %v: kill: %v", n.Name, err)
 	}
 	if stdin, ok := startCmd.Stdin.(*os.File); ok {
-		stdin.Close() //nolint // ignore error
+		if err := stdin.Close(); err != nil {
+			return err
+		}
 	}
 	if stderr, ok := startCmd.Stderr.(*os.File); ok {
-		stderr.Close() //nolint // ignore error
+		if err := stderr.Close(); err != nil {
+			return err
+		}
 	}
 
 	if n.WorkDir == "" {

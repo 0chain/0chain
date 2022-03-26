@@ -156,7 +156,7 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 
 	var (
 		round = b.Round
-		lfmbr = mc.GetLatestFinalizedMagicBlockRound(round) //nolint:typecheck
+		lfmbr = mc.GetLatestFinalizedMagicBlockRound(round)
 
 		offsetRound = mbRoundOffset(round)
 		nextVCRound = mc.NextViewChange()
@@ -394,7 +394,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				if cancel {
 					return
 				}
-				if mc.GetCurrentRound() > b.Round { //nolint: typecheck
+				if mc.GetCurrentRound() > b.Round {
 					cancel = true
 					roundMismatch = true
 					return

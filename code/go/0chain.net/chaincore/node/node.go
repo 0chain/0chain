@@ -33,33 +33,6 @@ func RegisterNode(node *Node) {
 	nodes[node.GetKey()] = node
 }
 
-/*DeregisterNode - deregister a node */
-func DeregisterNode(nodeID string) {
-
-	return // TODO (sfxdx): temporary disable nodes deregistering
-
-	nodesMutex.Lock() //nolint: govet
-	defer nodesMutex.Unlock()
-	delete(nodes, nodeID)
-}
-
-// DeregisterNodes unregisters all nodes not from given list.
-func DeregisterNodes(keep map[string]struct{}) {
-	return // never deregister nodes for now
-
-	nodesMutex.Lock() //nolint: govet
-	defer nodesMutex.Unlock()
-
-	var newNodes = make(map[string]*Node)
-	for k := range keep {
-		if n, ok := nodes[k]; ok {
-			newNodes[k] = n
-		}
-	}
-
-	nodes = newNodes // replace with new list
-}
-
 // CopyNodes returns copy of all registered nodes.
 func CopyNodes() (cp map[string]*Node) {
 	nodesMutex.RLock()
@@ -285,7 +258,10 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
-	node.SetID(nc["id"].(string)) //nolint: errcheck
+	if err := node.SetID(nc["id"].(string)); err != nil {
+		return nil, err
+	}
+
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
 	} else {
@@ -558,10 +534,6 @@ func (n *Node) IsActive() bool {
 
 func serveMetricKey(uri string) string {
 	return "p?" + uri
-}
-
-func isPullRequestURI(uri string) bool { //nolint
-	return strings.HasPrefix(uri, "p?")
 }
 
 func isGetRequest(uri string) bool {
