@@ -17,11 +17,6 @@ var (
 	controlMKey = datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + encryption.Hash("control_all"))
 )
 
-func getControlMKey(index int) datastore.Key {
-	return datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" +
-		encryption.Hash("control_m"+strconv.Itoa(index)))
-}
-
 func getControlNKey(index int) datastore.Key {
 	return datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" +
 		encryption.Hash("control_n"+strconv.Itoa(index)))
