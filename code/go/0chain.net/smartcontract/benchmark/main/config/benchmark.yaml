@@ -1,30 +1,40 @@
 simulation:
-  num_clients: 5000
-  num_active_clients: 5000
-  num_miners: 25
-  num_active_miners: 25
-  nun_sharders: 25
-  nun_active_sharders: 25
-  num_allocations: 500000
-  num_blobbers: 5000
-  num_validators: 5000
+  num_clients: 30000
+  num_active_clients: 30000
+  num_miners: 110
+  num_active_miners: 110
+  nun_sharders: 30
+  nun_active_sharders: 30
+  num_allocations: 300000
+  num_blobbers: 3000
+  num_validators: 3000
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
   num_blobbers_per_Allocation: 40 # ideally make this even
-  num_blobber_delegates: 1
-  num_miner_delegates: 1
-  num_sharder_delegates: 1
+  num_blobber_delegates: 100
+  num_miner_delegates: 100
+  num_sharder_delegates: 100
   num_curators: 1
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
   num_write_redeem_allocation: 1
   num_challenges_blobber: 1
-  num_authorisers: 2
+  num_authorisers: 05
 
 options:
   verbose: true
   test_suites:
     - "storage"
+    - "storage_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "interest_pool"
+    - "interest_pool_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
@@ -85,7 +95,7 @@ smart_contracts:
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
-    max_challenges_per_generation: 100
+    max_challenges_per_generation: 1
     readpool:
       min_lock: 0.3
       min_lock_period: 1m

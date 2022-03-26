@@ -93,7 +93,7 @@ var rootCmd = &cobra.Command{
 		results := runSuites(suites, mpt, root, data)
 		log.Println()
 		log.Println("tests took", time.Since(testsTimer))
-		log.Println("benchmark took", time.Since(totalTimer), "\n")
+		log.Println("benchmark took", time.Since(totalTimer))
 		printResults(results)
 	},
 }

@@ -477,7 +477,7 @@ func setUpMpt(
 	//*/
 	wg.Wait()
 
-	log.Println("mpt generation took:", time.Since(mptGenTime), "\n")
+	log.Println("mpt generation took:", time.Since(mptGenTime))
 
 	return pMpt, balances.GetState().GetRoot(), benchData
 }
