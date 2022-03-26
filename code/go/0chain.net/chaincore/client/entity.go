@@ -143,15 +143,19 @@ func Provider() datastore.Entity {
 }
 
 // ComputeProperties - implement interface
-func (c *Client) ComputeProperties() {
+func (c *Client) ComputeProperties() error {
 	c.EntityCollection = cliEntityCollection
-	c.computePublicKeyBytes()
+	return c.computePublicKeyBytes()
 }
 
-func (c *Client) computePublicKeyBytes() {
-	b, _ := hex.DecodeString(c.PublicKey)
+func (c *Client) computePublicKeyBytes() error {
+	b, err := hex.DecodeString(c.PublicKey)
+	if err != nil {
+		return err
+	}
 	c.PublicKeyBytes = b
 	c.ID = encryption.Hash(b)
+	return nil
 }
 
 // SetPublicKey - set the public key

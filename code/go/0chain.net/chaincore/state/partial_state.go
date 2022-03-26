@@ -16,7 +16,14 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrHashMismatch = errors.New("Root hash mistatch")
+var (
+	// ErrPartialStateRootMismatch is returned when computed root does not match the partialState.Hash
+	ErrPartialStateRootMismatch = errors.New("partial state root hash mismatch")
+	// ErrMalformedPartialState is returned when detected the partialState.Nodes may have duplicate nodes
+	ErrMalformedPartialState = errors.New("malformed partial state")
+	// ErrPartialStateNilNodes is returned when partial state.Nodes slice is nil
+	ErrPartialStateNilNodes = errors.New("partial state has no nodes")
+)
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
@@ -26,14 +33,6 @@ type PartialState struct {
 	Nodes     []util.Node `json:"-" msgpack:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
-}
-
-//NewPartialState - create a new partial state object with initialization
-func NewPartialState(key util.Key) *PartialState {
-	ps := datastore.GetEntityMetadata("partial_state").Instance().(*PartialState)
-	ps.Hash = key
-	ps.ComputeProperties()
-	return ps
 }
 
 var partialStateEntityMetadata *datastore.EntityMetadataImpl
@@ -97,35 +96,60 @@ func SetupPartialState(store datastore.Store) {
 }
 
 //NewNodeDB - create a node db from the changes
-func (ps *PartialState) newNodeDB() *util.MemoryNodeDB {
+func (ps *PartialState) newNodeDB() (*util.MemoryNodeDB, error) {
 	mndb := util.NewMemoryNodeDB()
 	for _, n := range ps.Nodes {
 		if err := mndb.PutNode(n.GetHashBytes(), n); err != nil {
-			logging.Logger.Warn("put node failed", zap.Error(err))
+			return nil, err
 		}
 	}
-	return mndb
+	return mndb, nil
 }
 
-//ComputeProperties - implement interface
-func (ps *PartialState) ComputeProperties() {
-	mndb := ps.newNodeDB()
-	root := mndb.ComputeRoot()
-	if root != nil {
-		if bytes.Equal(root.GetHashBytes(), ps.Hash) {
-			ps.mndb = mndb
-			ps.root = root
-		} else {
-			logging.Logger.Error("partial state root hash mismatch", zap.Any("hash", ps.Hash), zap.Any("root", root.GetHashBytes()))
-		}
-	} else {
-		logging.Logger.Error("partial state root is null", zap.Int("nodes", len(ps.Nodes)))
+// ComputeProperties - implement interface
+func (ps *PartialState) ComputeProperties() error {
+	if len(ps.Nodes) == 0 {
+		return ErrPartialStateNilNodes
 	}
+
+	mnDB, err := ps.newNodeDB()
+	if err != nil {
+		return err
+	}
+
+	var (
+		dbSize   = int(mnDB.Size(context.Background()))
+		nodesNum = len(ps.Nodes)
+	)
+
+	if dbSize != nodesNum {
+		logging.Logger.Error("malformed partial state, the db size must be the same as the nodes number",
+			zap.Int("db size", dbSize),
+			zap.Int("nodes num", nodesNum))
+
+		return ErrMalformedPartialState
+	}
+
+	root, err := mnDB.ComputeRoot()
+	if err != nil {
+		logging.Logger.Error("partial state compute root failed", zap.Error(err))
+		return err
+	}
+
+	if !bytes.Equal(root.GetHashBytes(), ps.Hash) {
+		logging.Logger.Error("partial state root hash mismatch",
+			zap.String("hash", util.ToHex(ps.Hash)),
+			zap.String("root", util.ToHex(root.GetHashBytes())))
+		return ErrPartialStateRootMismatch
+	}
+
+	ps.mndb = mnDB
+	ps.root = root
+	return nil
 }
 
-//Validate - implement interface
-func (ps *PartialState) Validate(ctx context.Context) error {
-	return ps.mndb.Validate(ps.root)
+func (ps *PartialState) Validate(_ context.Context) error {
+	return nil
 }
 
 /*GetRoot - get the root of this set of changes */

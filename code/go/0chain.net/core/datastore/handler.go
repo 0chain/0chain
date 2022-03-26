@@ -82,8 +82,7 @@ func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, err
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", object)
 	}
-	entity.ComputeProperties()
-	if err := entity.Validate(ctx); err != nil {
+	if err := entity.ComputeProperties(); err != nil {
 		return nil, err
 	}
 	if DoAsync(ctx, entity) {

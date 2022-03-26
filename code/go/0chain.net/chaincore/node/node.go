@@ -281,14 +281,18 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 }
 
 /*ComputeProperties - implement entity interface */
-func (n *Node) ComputeProperties() {
-	n.Client.ComputeProperties()
+func (n *Node) ComputeProperties() error {
+	if err := n.Client.ComputeProperties(); err != nil {
+		return err
+	}
+
 	if n.Host == "" {
 		n.Host = "localhost"
 	}
 	if n.N2NHost == "" {
 		n.N2NHost = n.Host
 	}
+	return nil
 }
 
 /*GetURLBase - get the end point base */

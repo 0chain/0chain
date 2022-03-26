@@ -43,8 +43,8 @@ func (c *Confirmation) GetKey() datastore.Key {
 }
 
 /*ComputeProperties - implement interface */
-func (c *Confirmation) ComputeProperties() {
-
+func (c *Confirmation) ComputeProperties() error {
+	return nil
 }
 
 //Validate - implement entity interface

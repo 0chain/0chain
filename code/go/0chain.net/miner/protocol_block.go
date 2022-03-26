@@ -886,6 +886,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	b.SetClientState(blockState)
+	b.SetStateChangesCount(blockState)
 	bgTimer.UpdateSince(start)
 	logging.Logger.Debug("generate block (assemble+update)",
 		zap.Int64("round", b.Round),

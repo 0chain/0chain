@@ -30,6 +30,12 @@ var TXN_TIME_TOLERANCE int64
 var transactionCount uint64 = 0
 var redis_txns string
 
+// ErrTxnMissingPublicKey is returned if the transaction does not have ClientID and public key
+var (
+	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
+	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
+)
+
 func init() {
 	redis_txns = os.Getenv("REDIS_TXNS")
 }
@@ -80,12 +86,12 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 }
 
 /*ComputeProperties - Entity implementation */
-func (t *Transaction) ComputeProperties() {
+func (t *Transaction) ComputeProperties() error {
 	t.EntityCollection = txnEntityCollection
 	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
-	t.ComputeClientID()
+	return t.ComputeClientID()
 }
 
 type smartContractTransactionData struct {
@@ -115,27 +121,30 @@ func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) 
 }
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */
-func (t *Transaction) ComputeClientID() {
-	if t.PublicKey != "" {
-		if t.ClientID == "" {
-			// Doing this is OK because the transaction signature has ClientID
-			// that won't pass verification if some other client's public is put in
-			id, err := client.GetIDFromPublicKey(t.PublicKey)
-			if err != nil {
-				panic(err)
-			}
-
-			t.ClientID = id
-		}
-	} else {
-		if t.ClientID == "" {
-			logging.Logger.Error("invalid transaction", zap.String("txn", datastore.ToJSON(t).String()))
-		}
+func (t *Transaction) ComputeClientID() error {
+	if t.ClientID != "" {
+		return nil
 	}
 
-	if t.ClientID == "" {
-		logging.Logger.Error("invalid transaction, client id is empty")
+	if t.PublicKey == "" {
+		logging.Logger.Error("invalid transaction",
+			zap.Error(ErrTxnMissingPublicKey),
+			zap.String("txn", datastore.ToJSON(t).String()))
+		return ErrTxnMissingPublicKey
 	}
+
+	// Doing this is OK because the transaction signature has ClientID
+	// that won't pass verification if some other client's public is put in
+	id, err := client.GetIDFromPublicKey(t.PublicKey)
+	if err != nil {
+		logging.Logger.Error("invalid transaction public key",
+			zap.String("public key", t.PublicKey),
+			zap.Error(err))
+		return ErrTxnInvalidPublicKey
+	}
+
+	t.ClientID = id
+	return nil
 }
 
 /*ValidateWrtTime - validate entityt w.r.t given time (as now) */

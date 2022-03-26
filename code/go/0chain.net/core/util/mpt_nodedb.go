@@ -32,6 +32,8 @@ var (
 	// ErrValueNotPresent - error indicating given path is not present in the
 	// db.
 	ErrValueNotPresent = errors.New("value not present")
+	// ErrNilPartialStateRoot is returned when partialState.ComputeRoot() gets nil root
+	ErrNilPartialStateRoot = errors.New("partial state root is nil")
 )
 
 // global node db version
@@ -189,8 +191,8 @@ func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHan
 	return mndb.iterate(ctx, handler)
 }
 
-/*Size - implement interface */
-func (mndb *MemoryNodeDB) Size(ctx context.Context) int64 {
+// Size - implement interface
+func (mndb *MemoryNodeDB) Size(_ context.Context) int64 {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
 	return int64(len(mndb.Nodes))
@@ -252,8 +254,8 @@ func (mndb *MemoryNodeDB) Reachable(from, to Node) (ok bool) {
 	return mndb.reachable(from, to)
 }
 
-/*ComputeRoot - compute root from partial set of nodes in this db */
-func (mndb *MemoryNodeDB) ComputeRoot() (root Node) {
+// ComputeRoot - compute root from partial set of nodes in this db */
+func (mndb *MemoryNodeDB) ComputeRoot() (root Node, err error) {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
 	_ = mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) error {
@@ -272,17 +274,23 @@ func (mndb *MemoryNodeDB) ComputeRoot() (root Node) {
 		}
 		return nil
 	})
-	return root
+
+	if root == nil {
+		return nil, ErrNilPartialStateRoot
+	}
+
+	err = mndb.validate(root)
+	if err != nil {
+		return nil, err
+	}
+
+	return root, nil
 }
 
-/*Validate - validate this MemoryNodeDB w.r.t the given root
-  It should not contain any node that can't be reachable from the root.
-  Note: The root itself can reach nodes not present in this db
-*/
-func (mndb *MemoryNodeDB) Validate(root Node) error {
-	mndb.mutex.RLock()
-	defer mndb.mutex.RUnlock()
-
+// validate - validate this MemoryNodeDB w.r.t the given root
+//  It should not contain any node that can't be reachable from the root.
+//  Note: The root itself can reach nodes not present in this db
+func (mndb *MemoryNodeDB) validate(root Node) error {
 	nodes := map[StrKey]Node{
 		StrKey(root.GetHashBytes()): root,
 	}
