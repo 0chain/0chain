@@ -147,7 +147,7 @@ func TestBlobbers(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, blobber.BaseURL, sn.BaseURL)
 
-	update := dbs.DbUpdates{
+	update := DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"base_url":   "new base url",

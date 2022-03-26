@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 )
@@ -208,7 +207,7 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
+func (edb *EventDb) updateMiner(updates DbUpdates) error {
 
 	var miner = Miner{MinerID: updates.Id}
 	exists, err := miner.exists(edb)

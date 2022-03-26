@@ -7,7 +7,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -105,7 +104,7 @@ func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) err
 
 func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
 
-	dbUpdates := dbs.DbUpdates{
+	dbUpdates := event.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"n2n_host":            sn.N2NHost,

@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs"
-
 	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/datastore"

@@ -5,13 +5,11 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/smartcontract/dbs"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 )
 
-type StakePoolReward dbs.StakePoolReward
+type StakePoolReward event.StakePoolReward
 
 func NewStakePoolReward(pId string, pType spenum.Provider) *StakePoolReward {
 	var spu StakePoolReward

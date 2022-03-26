@@ -190,7 +190,7 @@ func TestMiners(t *testing.T) {
 	require.EqualValues(t, miner.Path, mn.Path)
 
 	// Miner - Update event
-	update := dbs.DbUpdates{
+	update := DbUpdates{
 		Id: mn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",

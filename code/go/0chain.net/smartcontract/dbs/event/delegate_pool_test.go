@@ -108,7 +108,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	var before int64
 	eventDb.Get().Table("delegate_pools").Count(&before)
 
-	var spr dbs.StakePoolReward
+	var spr StakePoolReward
 	spr.ProviderId = "provider_id"
 	spr.ProviderType = int(spenum.Blobber)
 	spr.Reward = 17

@@ -6,11 +6,10 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
 
-type DelegatePoolUpdate dbs.DelegatePoolUpdate
+type DelegatePoolUpdate event.DelegatePoolUpdate
 
 func newDelegatePoolUpdate(pId string, pType spenum.Provider) *DelegatePoolUpdate {
 	var spu DelegatePoolUpdate

@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 )
 
@@ -64,7 +63,7 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 }
 
 func (edb *EventDb) updateReward(reward int64, dp DelegatePool) error {
-	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
+	dpu := NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
 
 	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {
 		dpu.Updates["total_penalty"] = dp.TotalPenalty - reward
@@ -110,7 +109,7 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePo
 	return dps, nil
 }
 
-func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
+func (edb *EventDb) updateDelegatePool(updates DelegatePoolUpdate) error {
 	var dp = DelegatePool{
 		ProviderID:   updates.ProviderId,
 		ProviderType: updates.ProviderType,

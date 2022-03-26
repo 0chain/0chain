@@ -6,8 +6,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"0chain.net/smartcontract/dbs"
-
 	"go.uber.org/zap"
 
 	"0chain.net/core/logging"
@@ -94,7 +92,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addOrOverwriteBlobber(blobber)
 	case TagUpdateBlobber:
-		var updates dbs.DbUpdates
+		var updates DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)
 		if err != nil {
 			return err
@@ -166,7 +164,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addOrOverwriteMiner(miner)
 	case TagUpdateMiner:
-		var updates dbs.DbUpdates
+		var updates DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)
 		if err != nil {
 			return err
@@ -189,7 +187,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addOrOverwriteSharder(sharder)
 	case TagUpdateSharder:
-		var updates dbs.DbUpdates
+		var updates DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)
 		if err != nil {
 			return err
@@ -221,14 +219,14 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addOrOverwriteDelegatePool(sp)
 	case TagUpdateDelegatePool:
-		var spUpdate dbs.DelegatePoolUpdate
+		var spUpdate DelegatePoolUpdate
 		err := json.Unmarshal([]byte(event.Data), &spUpdate)
 		if err != nil {
 			return err
 		}
 		return edb.updateDelegatePool(spUpdate)
 	case TagStakePoolReward:
-		var spu dbs.StakePoolReward
+		var spu StakePoolReward
 		err := json.Unmarshal([]byte(event.Data), &spu)
 		if err != nil {
 			return err

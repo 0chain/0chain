@@ -3,8 +3,6 @@ package event
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
-
 	"gorm.io/gorm"
 
 	"0chain.net/chaincore/state"
@@ -91,7 +89,7 @@ func (edb *EventDb) validatorAggregateStats(id string) (*validatorAggregateStats
 	return &validator, nil
 }
 
-func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
+func (edb *EventDb) updateValidator(updates DbUpdates) error {
 	var validator = Validator{ValidatorID: updates.Id}
 	exists, err := validator.exists(edb)
 

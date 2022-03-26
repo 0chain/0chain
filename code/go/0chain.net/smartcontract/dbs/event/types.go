@@ -1,4 +1,4 @@
-package dbs
+package event
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`

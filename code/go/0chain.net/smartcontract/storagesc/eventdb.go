@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/dbs/event"
 )
@@ -47,7 +46,7 @@ func emitAddOrOverwriteBlobber(
 }
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
-	data, err := json.Marshal(&dbs.DbUpdates{
+	data, err := json.Marshal(&event.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"base_url":                  sn.BaseURL,

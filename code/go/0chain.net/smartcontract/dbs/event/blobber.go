@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
-
 	"gorm.io/gorm"
 )
 
@@ -126,7 +124,7 @@ func (edb *EventDb) deleteBlobber(id string) error {
 	return result.Error
 }
 
-func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
+func (edb *EventDb) updateBlobber(updates DbUpdates) error {
 	var blobber = Blobber{BlobberID: updates.Id}
 	exists, err := blobber.exists(edb)
 

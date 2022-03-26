@@ -8,7 +8,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -112,7 +111,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 
 	logging.Logger.Info("emitting update miner event")
 
-	dbUpdates := dbs.DbUpdates{
+	dbUpdates := event.DbUpdates{
 		Id: mn.ID,
 		Updates: map[string]interface{}{
 			"n2n_host":            mn.N2NHost,

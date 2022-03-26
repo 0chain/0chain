@@ -4,11 +4,9 @@ import (
 	"fmt"
 
 	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract/dbs"
 )
 
-func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
+func (edb *EventDb) rewardUpdate(spu StakePoolReward) error {
 
 	if spu.Reward != 0 {
 		err := edb.rewardProvider(spu)
@@ -34,13 +32,13 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 	return nil
 }
 
-func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
+func (edb *EventDb) rewardProvider(spu StakePoolReward) error {
 	if spu.Reward == 0 {
 		return nil
 	}
 
 	var err error
-	update := dbs.NewDbUpdates(spu.ProviderId)
+	update := NewDbUpdates(spu.ProviderId)
 
 	switch spenum.Provider(spu.ProviderType) {
 	case spenum.Blobber:

@@ -188,7 +188,7 @@ func TestSharders(t *testing.T) {
 	require.EqualValues(t, sharder.Path, sn.Path)
 
 	// Sharder - Update event
-	update := dbs.DbUpdates{
+	update := DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",

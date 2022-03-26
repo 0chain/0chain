@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/dbs"
 )
 
 type Sharder struct {
@@ -210,7 +209,7 @@ func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, offs
 	return sharders, query.Scan(&sharders).Error
 }
 
-func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
+func (edb *EventDb) updateSharder(updates DbUpdates) error {
 
 	var sharder = Sharder{SharderID: updates.Id}
 	exists, err := sharder.exists(edb)
