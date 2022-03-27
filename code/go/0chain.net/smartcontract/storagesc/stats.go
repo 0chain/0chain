@@ -21,7 +21,7 @@ func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSi
 	}
 }
 
-func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) error {
+func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, readSize int64) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
@@ -29,7 +29,7 @@ func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads
 		return err
 	}
 
-	stats.Stats.NumReads += numReads
+	stats.Stats.ReadsSize += readSize
 	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 	return err
 }
