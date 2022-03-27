@@ -249,8 +249,6 @@ type GlobalNode struct {
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
 	OwnerId              datastore.Key  `json:"owner_id"`
 	CooldownPeriod       int64          `json:"cooldown_period"`
-	RewardRoundFrequency int64          `json:"reward_round_frequency"`
-	OwnerId              string         `json:"owner_id"`
 	Cost                 map[string]int `json:"cost"`
 }
 
