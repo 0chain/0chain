@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/partitions"
 
@@ -48,32 +48,17 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 	return found
 }
 
-func (sc *StorageSmartContract) getBlobberChallengeBytes(blobberID string,
-	balances c_state.StateContextI) (b []byte, err error) {
-
-	var (
-		bc   BlobberChallenge
-		seri util.Serializable
-	)
-	bc.BlobberID = blobberID
-	if seri, err = balances.GetTrieNode(bc.GetKey(sc.ID)); err != nil {
-		return
-	}
-	return seri.Encode(), nil
-}
-
 func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 	balances c_state.StateContextI) (bc *BlobberChallenge, err error) {
 
-	var b []byte
-	if b, err = sc.getBlobberChallengeBytes(blobberID, balances); err != nil {
-		return
-	}
 	bc = new(BlobberChallenge)
-	if err = bc.Decode(b); err != nil {
-		return nil, fmt.Errorf("decoding blobber_challenge: %v", err)
+	bc.BlobberID = blobberID
+	err = balances.GetTrieNode(bc.GetKey(sc.ID), bc)
+	if err != nil {
+		return nil, err
 	}
-	return
+
+	return bc, nil
 }
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
@@ -82,7 +67,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	details *BlobberAllocation, validators []string, partial float64,
 	balances c_state.StateContextI) (err error) {
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
@@ -142,7 +127,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	err = sp.DistributeRewards(blobberReward, bc.BlobberID, stakepool.Blobber, balances)
+	err = sp.DistributeRewards(blobberReward, bc.BlobberID, spenum.Blobber, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -213,7 +198,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	details *BlobberAllocation, validators []string,
 	balances c_state.StateContextI) (err error) {
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
@@ -521,17 +506,18 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	var stats = &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	var statsBytes util.Serializable
-	statsBytes, err = balances.GetTrieNode(stats.GetKey(sc.ID))
-	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected MPT error
+	//var statsBytes util.Serializable
+
+	err = balances.GetTrieNode(stats.GetKey(sc.ID), stats)
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		return nil
+	default:
+		// unexpected MPT error
+		return err
 	}
-	if statsBytes != nil {
-		if err = stats.Decode(statsBytes.Encode()); err != nil {
-			Logger.Error("storage stats decode error")
-			return
-		}
-	}
+
 	lastChallengeTime := stats.LastChallengedTime
 	if lastChallengeTime == 0 {
 		lastChallengeTime = t.CreationDate
@@ -551,7 +537,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	}
 
 	// SC configurations
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, false); err != nil {
 		return common.NewErrorf("generate_challenges",
 			"can't get SC configurations: %v", err)
@@ -732,13 +718,11 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
 
-	blobberChallengeBytes, _ := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
-	if blobberChallengeBytes != nil {
-		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
-		if err != nil {
-			return "", common.NewError("blobber_challenge_decode_error",
-				"Error decoding the blobber challenge")
-		}
+	err = balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+	default:
+		return "", err
 	}
 
 	storageChallenge.Created = creationDate
@@ -757,6 +741,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
-	sc.newChallenge(balances, storageChallenge.Created)
+	if err := sc.newChallenge(balances, storageChallenge.Created); err != nil {
+		return "", err
+	}
 	return string(challengeBytes), err
 }

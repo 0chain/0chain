@@ -2,19 +2,21 @@ package stakepool
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type UserStakePools struct {
-	Pools map[datastore.Key][]datastore.Key `json:"pools"`
+	Pools map[string][]string `json:"pools"`
 }
 
-func UserStakePoolsKey(p Provider, clientID datastore.Key) datastore.Key {
+func UserStakePoolsKey(p spenum.Provider, clientID datastore.Key) datastore.Key {
 	return datastore.Key(p.String() + ":stakepool:user_pools:" + clientID)
 }
 
@@ -73,7 +75,7 @@ func (usp *UserStakePools) Decode(p []byte) error {
 
 // save the user stake pools
 func (usp *UserStakePools) Save(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (err error) {
@@ -83,7 +85,7 @@ func (usp *UserStakePools) Save(
 
 // remove the entire user stake pools node
 func (usp *UserStakePools) remove(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (err error) {
@@ -91,54 +93,35 @@ func (usp *UserStakePools) remove(
 	return
 }
 
-func getUserStakePoolBytes(
-	p Provider,
-	clientID datastore.Key,
-	balances chainstate.StateContextI,
-) (b []byte, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(UserStakePoolsKey(p, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getUserStakePool of given client
 func GetUserStakePool(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (usp *UserStakePools, err error) {
-	var poolb []byte
-	if poolb, err = getUserStakePoolBytes(p, clientID, balances); err != nil {
-		return
-	}
+
 	usp = NewUserStakePools()
-	err = usp.Decode(poolb)
+	err = balances.GetTrieNode(UserStakePoolsKey(p, clientID), usp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+
+	return usp, nil
 }
 
 // getOrCreateUserStakePool of given client
 func getOrCreateUserStakePool(
-	p Provider,
+	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (usp *UserStakePools, err error) {
-	var poolb []byte
-	poolb, err = getUserStakePoolBytes(p, clientID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	if err == util.ErrValueNotPresent {
+	usp, err = GetUserStakePool(p, clientID, balances)
+	switch err {
+	case nil:
+		return usp, nil
+	case util.ErrValueNotPresent:
 		return NewUserStakePools(), nil
+	default:
+		return nil, err
 	}
-
-	usp = NewUserStakePools()
-	err = usp.Decode(poolb)
-	return
 }

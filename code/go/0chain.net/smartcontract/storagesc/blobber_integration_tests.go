@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package storagesc
@@ -16,7 +17,7 @@ import (
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI) (err error) {
 	// check for duplicates
 	for _, b := range blobbers.Nodes {

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -72,7 +74,7 @@ type splResponse struct {
 
 func TestStakePoolLock(t *testing.T) {
 	var err error
-	scYaml = &scConfig{
+	scYaml = &Config{
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
@@ -125,7 +127,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -134,7 +135,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 		),
 		clientBalance: state.Balance(clientBalance),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -158,7 +159,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		}
 	}
 	var usp = stakepool.NewUserStakePools()
-	require.NoError(t, usp.Save(stakepool.Blobber, txn.ClientID, ctx))
+	require.NoError(t, usp.Save(spenum.Blobber, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
@@ -169,7 +170,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	newStakePool, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
 	var newUsp *stakepool.UserStakePools
-	newUsp, err = stakepool.GetUserStakePool(stakepool.Blobber, txn.ClientID, ctx)
+	newUsp, err = stakepool.GetUserStakePool(spenum.Blobber, txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)
@@ -205,6 +206,6 @@ type formulaeStakePoolLock struct {
 	value         int64
 	clientBalance int64
 	delegates     []mockStakePool
-	scYaml        scConfig
+	scYaml        Config
 	now           common.Timestamp
 }

@@ -15,7 +15,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -113,7 +112,7 @@ func makeTestNode(pbK string) (*node.Node, error) {
 	}
 
 	nc := map[interface{}]interface{}{
-		"type":       int8(1),
+		"type":       node.NodeTypeSharder,
 		"public_ip":  "public ip",
 		"n2n_ip":     "n2n_ip",
 		"port":       8080,
@@ -161,11 +160,20 @@ func TestNewBlock(t *testing.T) {
 }
 
 func TestBlock_GetVerificationTickets(t *testing.T) {
-	sign, err := crpcutils.Sign(encryption.Hash("data"))
+	scheme := encryption.NewBLS0ChainScheme()
+	if err := scheme.GenerateKeys(); err != nil {
+		t.Fatal(err)
+	}
+	sign, err := scheme.Sign(encryption.Hash("data"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	anotherSign, err := crpcutils.Sign(encryption.Hash("data"))
+
+	anotherScheme := encryption.NewBLS0ChainScheme()
+	if err := anotherScheme.GenerateKeys(); err != nil {
+		t.Fatal(err)
+	}
+	anotherSign, err := anotherScheme.Sign(encryption.Hash("data"))
 	if err != nil {
 		t.Fatal(err)
 	}

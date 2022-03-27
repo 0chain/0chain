@@ -36,37 +36,100 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-/*SetupHandlers sets up the necessary API end points */
-func SetupHandlers(c Chainer) {
-	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
-	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
+const (
+	getBlockV1Pattern = "/v1/block/get"
+)
 
-	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(GetBlockHandler)))
-	}
-	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
-	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
-	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler(c))))
-	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
-	http.HandleFunc("/v1/block/get/fee_stats", common.UserRateLimit(common.ToJSONResponse(LatestBlockFeeStatsHandler)))
-
-	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
-	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
-	http.HandleFunc("/_diagnostics/current_mb_nodes", common.UserRateLimit(DiagnosticsNodesHandler))
-	http.HandleFunc("/_diagnostics/dkg_process", common.UserRateLimit(DiagnosticsDKGHandler))
-	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
-
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(
-		datastore.ToJSONEntityReqResponse(
-			datastore.DoAsyncEntityJSONHandler(
-				memorystore.WithConnectionEntityJSONHandler(
-					PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
+	m := map[string]func(http.ResponseWriter, *http.Request){
+		"/v1/chain/get": common.Recover(
+			common.ToJSONResponse(
+				memorystore.WithConnectionHandler(
+					GetChainHandler,
+				),
+			),
+		),
+		"/v1/chain/put": common.Recover(
+			datastore.ToJSONEntityReqResponse(
+				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
+				chainEntityMetadata,
+			),
+		),
+		"/v1/block/get/latest_finalized": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedBlockHandler,
+			),
+		),
+		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedMagicBlockSummaryHandler,
+			),
+		),
+		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedMagicBlockHandler(c),
+			),
+		),
+		"/v1/block/get/recent_finalized": common.UserRateLimit(
+			common.ToJSONResponse(
+				RecentFinalizedBlockHandler,
+			),
+		),
+		"/v1/block/get/fee_stats": common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestBlockFeeStatsHandler,
+			),
+		),
+		"/": common.UserRateLimit(
+			HomePageAndNotFoundHandler,
+		),
+		"/_diagnostics": common.UserRateLimit(
+			DiagnosticsHomepageHandler,
+		),
+		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+			DiagnosticsNodesHandler,
+		),
+		"/_diagnostics/dkg_process": common.UserRateLimit(
+			DiagnosticsDKGHandler,
+		),
+		"/_diagnostics/round_info": common.UserRateLimit(
+			RoundInfoHandler,
+		),
+		"/v1/transaction/put": common.UserRateLimit(
+			datastore.ToJSONEntityReqResponse(
+				datastore.DoAsyncEntityJSONHandler(
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+					transaction.TransactionEntityChannel,
+				),
+				transactionEntityMetadata,
+			),
+		),
+		"/_diagnostics/state_dump": common.UserRateLimit(
+			StateDumpHandler,
+		),
+		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+			common.ToJSONResponse(
+				LFBTicketHandler,
+			),
+		),
+	}
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		m[getBlockV1Pattern] = common.UserRateLimit(
+			common.ToJSONResponse(
+				GetBlockHandler,
+			),
+		)
+	}
 
-	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
+	return m
+}
 
-	http.HandleFunc("/v1/block/get/latest_finalized_ticket", common.N2NRateLimit(common.ToJSONResponse(LFBTicketHandler)))
+/*setupHandlers sets up the necessary API end points */
+func setupHandlers(handlersMap map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlersMap {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {
@@ -152,6 +215,16 @@ func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 // StartTime - time when the server has started.
 var StartTime time.Time
 
+/*HomePageAndNotFoundHandler - catch all handler that returns home page for root path and 404 for other paths */
+func HomePageAndNotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		NotFoundPageHandler(w, r)
+		return
+	}
+
+	HomePageHandler(w, r)
+}
+
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
@@ -160,6 +233,11 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	selfNode := node.Self.Underlying()
 	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>build_tag:%v</li></ul></div>\n",
 		selfNode.GetPseudoName(), sc.GetKey(), selfNode.GetKey(), selfNode.PublicKey, build.BuildTag)
+}
+
+/*NotFoundPageHandler - provides the 404 page */
+func NotFoundPageHandler(w http.ResponseWriter, r *http.Request) {
+	common.Respond(w, r, nil, common.ErrNoResource)
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
@@ -430,20 +508,17 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	} else if snt == node.NodeTypeSharder {
 		var (
-			lfb       = c.GetLatestFinalizedBlock()
-			seri, err = c.GetBlockStateNode(lfb, minersc.PhaseKey)
+			lfb = c.GetLatestFinalizedBlock()
+			pn  minersc.PhaseNode
+			err = c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
 
 			phase    minersc.Phase = minersc.Unknown
 			restarts int64         = -1
-
-			pn minersc.PhaseNode
 		)
 
 		if err == nil {
-			if err = pn.Decode(seri.Encode()); err == nil {
-				phase = pn.Phase
-				restarts = pn.Restarts
-			}
+			phase = pn.Phase
+			restarts = pn.Restarts
 		}
 
 		fmt.Fprintf(w, "<tr class='active'>")
@@ -614,6 +689,11 @@ func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
 func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
+	isJSON := r.Header.Get("Accept") == "application/json"
+	if isJSON {
+		JSONHandler(w, r)
+		return
+	}
 	HomePageHandler(w, r)
 	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime.Format(common.DateTimeFormat), time.Since(StartTime))
 	sc.healthSummary(w, r)
@@ -623,19 +703,19 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
 	selfNodeType := node.Self.Underlying().Type
-	if selfNodeType == node.NodeTypeMiner && config.Development() {
+	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
 		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
-	if selfNodeType == node.NodeTypeSharder {
+	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
 		fmt.Fprintf(w, "<li><a href='_health_check'>/_health_check</a></li>")
 	}
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
-	if selfNodeType == node.NodeTypeMiner && config.Development() {
+	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
 	}
 	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
@@ -644,7 +724,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
-	if selfNodeType == node.NodeTypeMiner {
+	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
 		//ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
@@ -825,14 +905,13 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 	dkgi.CMB = cmb
 
 	var (
-		lfb  = c.GetLatestFinalizedBlock()
-		seri util.Serializable
+		lfb = c.GetLatestFinalizedBlock()
 	)
 
 	type keySeri struct {
-		name string            // for errors
-		key  string            // key
-		inst util.Serializable // instance
+		name string               // for errors
+		key  string               // key
+		inst util.MPTSerializable // instance
 	}
 
 	for _, ks := range []keySeri{
@@ -845,16 +924,14 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		{"gsos", minersc.GroupShareOrSignsKey, dkgi.GSoS},
 		{"MB", minersc.MagicBlockKey, dkgi.MB},
 	} {
-		seri, err = c.GetBlockStateNode(lfb, ks.key)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
-		}
-		if err == util.ErrValueNotPresent {
+		err = c.GetBlockStateNode(lfb, ks.key, ks.inst)
+		if err != nil {
+			if err != util.ErrValueNotPresent {
+				return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
+			}
+
 			err = nil // reset the error and leave the value blank
 			continue
-		}
-		if err = ks.inst.Decode(seri.Encode()); err != nil {
-			return nil, fmt.Errorf("can't decode %s node: %v", ks.name, err)
 		}
 	}
 
@@ -1230,7 +1307,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	// Calculate and update fee
-	if err := txn.ValidateFee(); err != nil {
+	if err := txn.ValidateFee(sc.Config.TxnExempt(), sc.Config.MinTxnFee()); err != nil {
 		return nil, err
 	}
 

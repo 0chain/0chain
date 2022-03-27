@@ -142,23 +142,13 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	if mc.IsActiveInChain() && remote == false {
 
 		var (
-			sp        = getStatePath(selfNode)
-			list, err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp)
+			sp  = getStatePath(selfNode)
+			err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp, allNodesList)
 		)
 
 		if err != nil {
 			logging.Logger.Error("failed to get block state node",
 				zap.Any("error", err), zap.String("path", sp))
-			return false
-		}
-
-		if list == nil {
-			return false
-		}
-
-		if err = allNodesList.Decode(list.Encode()); err != nil {
-			logging.Logger.Error("failed to decode block state node",
-				zap.Any("error", err))
 			return false
 		}
 
@@ -602,8 +592,7 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 	err error) {
 
-	var seri util.Serializable
-	seri, err = c.GetBlockStateNode(b, minersc.PhaseKey)
+	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
@@ -612,12 +601,6 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 
 	if err == util.ErrValueNotPresent {
 		err = nil // not a real error, Miner SC just is not started (yet)
-		return
-	}
-
-	if err = pn.Decode(seri.Encode()); err != nil {
-		err = fmt.Errorf("get_block_phase -- can't decode: %v, block %d",
-			err, b.Round)
 		return
 	}
 

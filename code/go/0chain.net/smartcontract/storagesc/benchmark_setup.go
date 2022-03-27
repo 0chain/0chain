@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/smartcontract/partitions"
@@ -396,7 +398,7 @@ func GetMockStakePools(
 	for cId, usp := range usps {
 		if usp != nil {
 			_, err := balances.InsertTrieNode(
-				stakepool.UserStakePoolsKey(stakepool.Blobber, clients[cId]), usp,
+				stakepool.UserStakePoolsKey(spenum.Blobber, clients[cId]), usp,
 			)
 			if err != nil {
 				panic(err)
@@ -586,8 +588,8 @@ func getMockChallengeId(blobber, index int) string {
 
 func SetMockConfig(
 	balances cstate.StateContextI,
-) (conf *scConfig) {
-	conf = new(scConfig)
+) (conf *Config) {
+	conf = new(Config)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true

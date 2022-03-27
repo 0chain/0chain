@@ -1,16 +1,17 @@
 package minersc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"encoding/json"
-	"fmt"
 )
 
-func sharderTableToSharderNode(edbSharder *event.Sharder) *MinerNode {
+func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
@@ -37,10 +38,15 @@ func sharderTableToSharderNode(edbSharder *event.Sharder) *MinerNode {
 			GeneratorFees:    edbSharder.Fees,
 		},
 		LastHealthCheck: edbSharder.LastHealthCheck,
-		Status:          status,
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbSharder.Latitude,
+			Longitude: edbSharder.Longitude,
+		},
+		NodeType: NodeTypeSharder,
+		Status:   status,
 	}
 
-	return &MinerNode{
+	return MinerNode{
 		SimpleNode: &msn,
 	}
 
@@ -68,8 +74,8 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		Rewards:           sn.Stat.GeneratorRewards,
 		Fees:              sn.Stat.GeneratorFees,
 		Active:            sn.Status == node.NodeStatusActive,
-		Longitude:         0,
-		Latitude:          0,
+		Longitude:         sn.Geolocation.Longitude,
+		Latitude:          sn.Geolocation.Latitude,
 	}
 }
 

@@ -8,6 +8,12 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/core/datastore"
+
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -20,6 +26,42 @@ import (
 )
 
 const cantGetBlobberMsg = "can't get blobber"
+
+func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
+	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
+	if err != nil {
+		return StorageNode{}, err
+	}
+	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
+	if err != nil {
+		return StorageNode{}, err
+	}
+	return StorageNode{
+		ID:      blobber.BlobberID,
+		BaseURL: blobber.BaseURL,
+		Geolocation: StorageNodeGeolocation{
+			Latitude:  blobber.Latitude,
+			Longitude: blobber.Longitude,
+		},
+		Terms: Terms{
+			ReadPrice:               state.Balance(blobber.ReadPrice),
+			WritePrice:              state.Balance(blobber.WritePrice),
+			MinLockDemand:           blobber.MinLockDemand,
+			MaxOfferDuration:        maxOfferDuration,
+			ChallengeCompletionTime: challengeCompletionTime,
+		},
+		Capacity:        blobber.Capacity,
+		Used:            blobber.Used,
+		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  blobber.DelegateWallet,
+			MinStake:        state.Balance(blobber.MinStake),
+			MaxStake:        state.Balance(blobber.MaxStake),
+			MaxNumDelegates: blobber.NumDelegates,
+			ServiceCharge:   blobber.ServiceCharge,
+		},
+	}, nil
+}
 
 // Deprecated
 
@@ -65,6 +107,7 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	if blobberID == "" {
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
+
 	if balances.GetEventDB() == nil {
 		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
 	}
@@ -280,15 +323,16 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		allocationObj := &StorageAllocation{}
 		allocationObj.ID = allocationID
 
-		allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID))
-		if err != nil {
+		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
+		switch err {
+		case nil:
+			result = append(result, allocationObj)
+		case util.ErrValueNotPresent:
 			continue
-		}
-		if err := allocationObj.Decode(allocationBytes.Encode()); err != nil {
+		default:
 			msg := fmt.Sprintf("can't decode allocation with id '%s'", allocationID)
 			return nil, common.NewErrInternal(msg, err.Error())
 		}
-		result = append(result, allocationObj)
 	}
 	return result, nil
 }
@@ -344,14 +388,11 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = allocationID
 
-	allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID))
+	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
-	err = allocationObj.Decode(allocationBytes.Encode())
-	if err != nil {
-		return nil, common.NewErrInternal("can't decode allocation", err.Error())
-	}
+
 	return allocationObj, nil
 }
 
@@ -371,22 +412,15 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 		ClientID:  clientID,
 	}
 
-	var commitReadBytes util.Serializable
-	commitReadBytes, err = balances.GetTrieNode(commitRead.GetKey(ssc.ID))
-	if err != nil && err != util.ErrValueNotPresent {
+	err = balances.GetTrieNode(commitRead.GetKey(ssc.ID), commitRead)
+	switch err {
+	case nil:
+		return commitRead.ReadMarker, nil // ok
+	case util.ErrValueNotPresent:
+		return make(map[string]string), nil
+	default:
 		return nil, common.NewErrInternal("can't get read marker", err.Error())
 	}
-
-	if commitReadBytes == nil {
-		return make(map[string]string), nil
-	}
-
-	if err = commitRead.Decode(commitReadBytes.Encode()); err != nil {
-		return nil, common.NewErrInternal("can't decode read marker", err.Error())
-	}
-
-	return commitRead.ReadMarker, nil // ok
-
 }
 
 func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
@@ -396,17 +430,19 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 	var (
 		allocationID = params.Get("allocation_id")
 		authTicket   = params.Get("auth_ticket")
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		sortString   = params.Get("sort")
+		limit        = 0
+		offset       = 0
+		isDescending = false
 	)
-
-	if allocationID == "" && authTicket == "" {
-		return nil, common.NewErrInternal("Expecting params: allocation_id OR auth_ticket")
-	}
 
 	if balances.GetEventDB() == nil {
 		return nil, common.NewErrNoResource("db not initialized")
 	}
 
-	query := new(event.ReadMarker)
+	query := event.ReadMarker{}
 	if allocationID != "" {
 		query.AllocationID = allocationID
 	}
@@ -415,7 +451,34 @@ func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
 		query.AuthTicket = authTicket
 	}
 
-	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQuery(query)
+	if offsetString != "" {
+		o, err := strconv.Atoi(offsetString)
+		if err != nil {
+			return nil, errors.New("offset is invalid")
+		}
+		offset = o
+	}
+
+	if limitString != "" {
+		l, err := strconv.Atoi(limitString)
+		if err != nil {
+			return nil, errors.New("limit is invalid")
+		}
+		limit = l
+	}
+
+	if sortString != "" {
+		switch sortString {
+		case "desc":
+			isDescending = true
+		case "asc":
+			isDescending = false
+		default:
+			return nil, errors.New("sort value is invalid")
+		}
+	}
+
+	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQueryPaginated(query, offset, limit, isDescending)
 	if err != nil {
 		return nil, common.NewErrInternal("can't get read markers", err.Error())
 	}
@@ -513,18 +576,19 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 
 	// return "404", if blobber not registered
 	blobber := StorageNode{ID: blobberID}
-	if _, err := balances.GetTrieNode(blobber.GetKey(ssc.ID)); err != nil {
+	if err := balances.GetTrieNode(blobber.GetKey(ssc.ID), &blobber); err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
 	}
 
 	// return "200" with empty list, if no challenges are found
 	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
 	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
-	if blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID)); err == nil {
-		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
-		if err != nil {
-			return nil, common.NewErrInternal("fail decoding blobber challenge", err.Error())
-		}
+	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		return blobberChallengeObj, nil
+	default:
+		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
 	}
 
 	// for k, v := range blobberChallengeObj.ChallengeMap {
@@ -535,7 +599,7 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 
 	// return populate or empty list of challenges
 	// don't return error, if no challenges (expected by blobbers)
-	return &blobberChallengeObj, nil
+	//return &blobberChallengeObj, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
@@ -549,12 +613,9 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	blobberChallengeObj.BlobberID = blobberID
 	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
 
-	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
+	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
 	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
-	}
-	if err := blobberChallengeObj.Decode(blobberChallengeBytes.Encode()); err != nil {
-		return "", common.NewErrInternal("can't decode blobber challenge", err.Error())
 	}
 
 	challengeID := params.Get("challenge")
@@ -563,6 +624,105 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	}
 
 	return blobberChallengeObj.ChallengeMap[challengeID], nil
+}
+
+// statistic for all locked tokens of a stake pool
+func (ssc *StorageSmartContract) getStakePoolStatHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	blobberID := datastore.Key(params.Get("blobber_id"))
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	delegatePools, err := balances.GetEventDB().GetDelegatePools(blobberID, int(spenum.Blobber))
+	if err != nil {
+		return "", common.NewErrInternal("can't find user stake pool", err.Error())
+	}
+
+	return spStats(*blobber, delegatePools), nil
+}
+
+func spStats(
+	blobber event.Blobber,
+	delegatePools []event.DelegatePool,
+) *stakePoolStat {
+	stat := new(stakePoolStat)
+	stat.ID = blobber.BlobberID
+	stat.UnstakeTotal = state.Balance(blobber.UnstakeTotal)
+	stat.Capacity = blobber.Capacity
+	stat.WritePrice = state.Balance(blobber.WritePrice)
+	stat.OffersTotal = state.Balance(blobber.OffersTotal)
+	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
+	stat.Settings = stakepool.StakePoolSettings{
+		DelegateWallet:  blobber.DelegateWallet,
+		MinStake:        state.Balance(blobber.MinStake),
+		MaxStake:        state.Balance(blobber.MaxStake),
+		MaxNumDelegates: blobber.NumDelegates,
+		ServiceCharge:   blobber.ServiceCharge,
+	}
+	stat.Rewards = state.Balance(blobber.Reward)
+	for _, dp := range delegatePools {
+		dpStats := delegatePoolStat{
+			ID:           dp.PoolID,
+			Balance:      state.Balance(dp.Balance),
+			DelegateID:   dp.DelegateID,
+			Rewards:      state.Balance(dp.Reward),
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			TotalReward:  state.Balance(dp.TotalReward),
+			TotalPenalty: state.Balance(dp.TotalPenalty),
+			RoundCreated: dp.RoundCreated,
+		}
+		stat.Balance += dpStats.Balance
+		stat.Delegate = append(stat.Delegate, dpStats)
+	}
+	return stat
+}
+
+type userPoolStat struct {
+	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
+}
+
+func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	clientID := datastore.Key(params.Get("client_id"))
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	pools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Blobber))
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	var ups = new(userPoolStat)
+	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
+	for _, pool := range pools {
+		var dps = delegatePoolStat{
+			ID:           pool.PoolID,
+			Balance:      state.Balance(pool.Balance),
+			DelegateID:   pool.DelegateID,
+			Rewards:      state.Balance(pool.Reward),
+			TotalPenalty: state.Balance(pool.TotalPenalty),
+			TotalReward:  state.Balance(pool.TotalReward),
+			Status:       spenum.PoolStatus(pool.Status).String(),
+			RoundCreated: pool.RoundCreated,
+		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dps)
+	}
+
+	return ups, nil
 }
 
 func (ssc *StorageSmartContract) GetBlockByHashHandler(_ context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {

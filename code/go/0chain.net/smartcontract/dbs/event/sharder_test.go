@@ -1,16 +1,21 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"context"
-	"encoding/json"
+	"github.com/guregu/null"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -220,4 +225,51 @@ func TestSharders(t *testing.T) {
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
 
+}
+
+func TestSharderFilter(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer eventDb.drop()
+	assert.NoError(t, err, "error while migrating database")
+	createSharders(t, eventDb, 10)
+	t.Run("sharders which are active", func(t *testing.T) {
+		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		for _, sharder := range sharders {
+			assert.Equal(t, true, sharder.Active, "all sharder should be active")
+		}
+		assert.Equal(t, 5, len(sharders), "only active sharders hould be returned")
+	})
+	t.Run("sharders which are not active", func(t *testing.T) {
+		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		for _, sharder := range sharders {
+			assert.Equal(t, false, sharder.Active, "all sharder should be inactive")
+		}
+		assert.Equal(t, 5, len(sharders), "only inactive sharders hould be returned")
+	})
+}
+
+func createSharders(t *testing.T, eventDb *EventDb, count int) {
+	for i := 0; i < count; i++ {
+		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
+		err := eventDb.addSharder(s)
+		assert.NoError(t, err, "There should be no error")
+	}
 }

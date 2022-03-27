@@ -39,9 +39,7 @@ func TestConfigHandler(t *testing.T) {
 		var msc = &MinerSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
-		balances.On("GetTrieNode", GlobalNodeKey).Return(
-			nil, util.ErrValueNotPresent,
-		).Once()
+		balances.On("GetTrieNode", GlobalNodeKey, mock.AnythingOfType("*minersc.GlobalNode")).Return(util.ErrValueNotPresent).Once()
 
 		config.SmartContractConfig.SetConfigType(p.configType)
 		err := config.SmartContractConfig.ReadConfig(bytes.NewBuffer(p.localConfig))

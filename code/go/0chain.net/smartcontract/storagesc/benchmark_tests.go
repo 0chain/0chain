@@ -4,8 +4,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -524,10 +527,12 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&lockRequest{
+				lr := &lockRequest{
 					Duration:     viper.GetDuration(bk.StorageReadPoolMinLockPeriod),
 					AllocationID: getMockAllocationId(0),
-				})
+				}
+				bytes, _ := json.Marshal(lr)
+				log.Println("lock_pool_duration:", lr.Duration)
 				return bytes
 			}(),
 		},
@@ -632,7 +637,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
 					PoolId:       getMockBlobberStakePoolId(0, 0),
-					ProviderType: stakepool.Blobber,
+					ProviderType: spenum.Blobber,
 				})
 				return bytes
 			}(),

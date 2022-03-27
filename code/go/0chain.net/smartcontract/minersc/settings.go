@@ -40,6 +40,7 @@ const (
 	MaxMint
 	OwnerId
 	CooldownPeriod
+	Cost
 )
 
 var (
@@ -64,6 +65,7 @@ var (
 		"max_mint",
 		"owner_id",
 		"cooldown_period",
+		"cost",
 	}
 	NumberOfSettings = len(SettingName)
 
@@ -91,6 +93,7 @@ var (
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
 		"owner_id":               {OwnerId, smartcontract.Key},
 		"cooldown_period":        {CooldownPeriod, smartcontract.Int64},
+		"cost":                   {Cost, smartcontract.Cost},
 	}
 )
 
@@ -212,6 +215,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)
 		}
 		gn.setKey(key, change)
+	case smartcontract.Cost:
 	default:
 		return fmt.Errorf("unsupported type setting %v", smartcontract.ConfigTypeName[Settings[key].ConfigType])
 	}

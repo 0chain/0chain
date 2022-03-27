@@ -50,6 +50,7 @@ var (
 
 	ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
 	ErrPreviousStateNotComputed = common.NewError("prev_state_not_computed", "Previous state not computed")
+	ErrCostTooBig               = common.NewError("cost_too_big", "Block cost is too big")
 
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
 	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
@@ -855,7 +856,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	bState := CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
 
 	beginStateRoot := bState.GetRoot()
-
+	b.Events = []event.Event{}
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
@@ -918,13 +919,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 	}
 
-	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func(events []event.Event) {
-			c.GetEventDb().AddEvents(ctx, events)
-		}(b.Events)
-		b.Events = nil
-	}
-
 	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
@@ -973,6 +967,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	bState := CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
 
 	beginState := b.ClientState.GetRoot()
+	b.Events = []event.Event{}
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
@@ -1038,13 +1033,6 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	err := emitBlockEvent(b.PrevBlock)
 	if err != nil {
 		logging.Logger.Error("emit block event error", zap.Error(err))
-	}
-
-	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func(events []event.Event) {
-			c.GetEventDb().AddEvents(ctx, events)
-		}(b.Events)
-		b.Events = nil
 	}
 
 	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {

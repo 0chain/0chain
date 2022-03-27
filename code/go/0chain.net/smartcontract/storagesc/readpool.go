@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/smartcontract"
@@ -19,12 +21,15 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore readPoolRedeem
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 //
 // client read pool (consist of allocation pools)
 //
 
 func readPoolKey(scKey, clientID string) datastore.Key {
-	return datastore.Key(scKey + ":readpool:" + clientID)
+	return scKey + ":readpool:" + clientID
 }
 
 // readPool represents client's read pool consist of allocation read pools
@@ -62,46 +67,6 @@ func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI)
 
 	_, err = balances.InsertTrieNode(readPoolKey(sscKey, clientID), rp)
 	return
-}
-
-func (rp *readPool) movePartToBlobber(
-	sscKey string,
-	ap *allocationPool,
-	sp *stakePool,
-	value float64,
-	balances cstate.StateContextI,
-) error {
-	blobberCharge := sp.Settings.ServiceCharge * float64(value)
-	if blobberCharge > float64(ap.Balance) {
-		return fmt.Errorf("allocation pool balance %v not enough to cover reward %v",
-			ap.Balance, blobberCharge)
-	}
-	ap.Balance -= state.Balance(blobberCharge)
-	sp.Reward += state.Balance(blobberCharge)
-
-	valueLeft := value - blobberCharge
-
-	if valueLeft == 0 {
-		return nil
-	}
-
-	var stake = float64(sp.stake())
-	if stake == 0 {
-		return errors.New("no stake pools found")
-	}
-
-	for _, pool := range sp.Pools {
-		ratio := float64(pool.Balance) / stake
-		move := float64(valueLeft) * ratio
-		if state.Balance(move) > ap.Balance {
-			return fmt.Errorf("allocation pool balance %v not enough to cover stake pool reward %v",
-				ap.Balance, blobberCharge)
-		}
-		pool.Reward += state.Balance(move)
-		ap.Balance -= state.Balance(move)
-	}
-
-	return nil
 }
 
 // The readPoolRedeem represents part of response of read markers redeeming.
@@ -152,10 +117,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			move, bp.Balance = value, bp.Balance-value
 		}
 
-		err = rp.movePartToBlobber(sscKey, ap, sp, float64(move), balances)
-		if err != nil {
-			return // fatal, can't move, can't continue, rollback all
-		}
+		ap.Balance -= state.Balance(value)
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
@@ -174,6 +136,11 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	if moved < value {
 		return "", fmt.Errorf("not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
+	}
+
+	err = sp.DistributeRewards(float64(value), blobID, spenum.Blobber, balances)
+	if err != nil {
+		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
 	// remove empty allocation pools
@@ -214,40 +181,24 @@ func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
 // smart contract methods
 //
 
-// getReadPoolBytes of a client
-func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
-	balances cstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	balances cstate.StateContextI) (rp *readPool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
-		return
-	}
 	rp = new(readPool)
-	err = rp.Decode(poolb)
+	err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID), rp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+	return rp, nil
 }
 
 // newReadPool SC function creates new read pool for a client.
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 
-	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
-
+	rp := new(readPool)
+	err = balances.GetTrieNode(readPoolKey(ssc.ID, t.ClientID), rp)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
@@ -256,7 +207,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 		return "", common.NewError("new_read_pool_failed", "already exist")
 	}
 
-	var rp = new(readPool)
+	rp = new(readPool)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}

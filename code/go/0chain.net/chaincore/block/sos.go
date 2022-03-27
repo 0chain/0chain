@@ -12,6 +12,8 @@ import (
 	"0chain.net/core/encryption"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type ShareOrSigns struct {
 	ID           string                      `json:"id"`
 	ShareOrSigns map[string]*bls.DKGKeyShare `json:"share_or_sign"`
