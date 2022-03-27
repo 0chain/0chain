@@ -722,9 +722,9 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 
 		currentNonce = futures[i].Nonce
 		tii.currentTxns = append(tii.currentTxns, futures[i])
-		//will not sorted by fee here but at least will be sorted by nonce correctly, can improve it
-		sort.SliceStable(tii.currentTxns, func(i, j int) bool { return tii.currentTxns[i].Nonce < tii.currentTxns[i].Nonce })
 	}
+	//will not sorted by fee here but at least will be sorted by nonce correctly, can improve it
+	sort.SliceStable(tii.currentTxns, func(i, j int) bool { return tii.currentTxns[i].Nonce < tii.currentTxns[j].Nonce })
 
 	if i > -1 {
 		tii.futureTxns[txn.ClientID] = futures[i:]

@@ -39,7 +39,7 @@ func (sn *SelfNode) SetNonce(nonce int64) {
 func (sn *SelfNode) GetNextNonce() int64 {
 	sn.mx.Lock()
 	defer sn.mx.Unlock()
-	if sn.refreshTime.Add(NONCE_REFRESH_PERIOD).Before(time.Now()) {
+	if time.Since(sn.refreshTime) > NONCE_REFRESH_PERIOD {
 		return 0
 	}
 	sn.nonce = sn.nonce + 1
