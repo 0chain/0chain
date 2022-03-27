@@ -1,13 +1,15 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"encoding/json"
 	"fmt"
+
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":fundedpools:" + clientID)
@@ -56,36 +58,19 @@ func (fp *fundedPools) Decode(p []byte) error {
 	return json.Unmarshal(p, fp)
 }
 
-// getReadPoolBytes of a client
-func (ssc *StorageSmartContract) getFundedPoolsBytes(
-	clientID datastore.Key,
-	balances cstate.StateContextI,
-) ([]byte, error) {
-	var val util.Serializable
-	val, err := balances.GetTrieNode(fundedPoolsKey(ssc.ID, clientID))
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 // getReadPool of current client
 func (ssc *StorageSmartContract) getFundedPools(
 	clientID datastore.Key,
 	balances cstate.StateContextI,
 ) (*fundedPools, error) {
-	var poolb []byte
-	var err error
 	fp := new(fundedPools)
-	if poolb, err = ssc.getFundedPoolsBytes(clientID, balances); err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
+	err := balances.GetTrieNode(fundedPoolsKey(ssc.ID, clientID), fp)
+	switch err {
+	case nil:
 		return fp, nil
+	case util.ErrValueNotPresent:
+		return new(fundedPools), nil
+	default:
+		return nil, err
 	}
-	err = fp.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return fp, nil
 }

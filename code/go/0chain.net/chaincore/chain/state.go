@@ -149,7 +149,10 @@ func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.Mer
 	return c.updateState(ctx, b, bState, txn)
 }
 
-func (c *Chain) EstimateTransactionCost(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (int, error) {
+func (c *Chain) EstimateTransactionCost(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
@@ -180,8 +183,7 @@ func (c *Chain) NewStateContext(
 	txn *transaction.Transaction,
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
-		txn,
+	return bcstate.NewStateContext(b, s, txn,
 		c.GetBlockSharders,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
@@ -325,9 +327,12 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to transfer amount",
+				zap.Any("txn type", txn.TransactionType),
+				zap.String("txn data", txn.TransactionData),
 				zap.Any("transfer_ClientID", transfer.ClientID),
 				zap.Any("to_ClientID", transfer.ToClientID),
-				zap.Any("amount", transfer.Amount))
+				zap.Any("amount", transfer.Amount),
+				zap.Error(err))
 			return
 		}
 	}
@@ -434,6 +439,9 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	if fs.Balance < amount {
+		logging.Logger.Error("transfer amount - insufficient balance",
+			zap.Any("balance", fs.Balance),
+			zap.Any("transfer", amount))
 		return transaction.ErrInsufficientBalance
 	}
 	ts, err := c.GetStateById(clientState, toClient)
@@ -590,14 +598,13 @@ func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID stri
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
-	ss, err := clientState.GetNodeValue(util.Path(clientID))
+	err := clientState.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return s, err
 	}
-	s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	return s, nil
 }
 
@@ -607,7 +614,8 @@ the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
+	st := &state.State{}
+	err := b.ClientState.GetNodeValue(util.Path(clientID), st)
 	if err != nil {
 		if !b.IsStateComputed() {
 			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
@@ -618,7 +626,6 @@ func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) 
 		}
 		return nil, err
 	}
-	st := c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	return st, nil
 }
 

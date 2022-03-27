@@ -35,10 +35,8 @@ func init() {
 
 // type aliases
 type (
-	NodeID           = config.NodeID
 	NodeName         = config.NodeName
 	Round            = config.Round
-	RoundName        = config.RoundName
 	Number           = config.Number
 	ExpectMagicBlock = config.ExpectMagicBlock
 )
@@ -757,15 +755,6 @@ func (r *Runner) proceedWaiting() (err error) {
 		}
 	}
 	return
-}
-
-func isOk(cs []reportFlowDirective) (ok bool) {
-	for _, c := range cs {
-		if !c.success {
-			return false
-		}
-	}
-	return true
 }
 
 func okString(t bool) string {

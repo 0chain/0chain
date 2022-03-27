@@ -15,7 +15,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 		pool := newInterestPool()
 		pool.ID = getInterestPoolId(i)
 		pool.Balance = 100 * 1e10
-		pool.TokenLockInterface = &tokenLock{
+		pool.TokenLockInterface = &TokenLock{
 			Duration: viper.GetDuration(benchmark.InterestPoolMinLockPeriod),
 			Owner:    client,
 		}

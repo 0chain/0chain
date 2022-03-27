@@ -124,9 +124,8 @@ type Chain struct {
 
 	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
-	clientStateDeserializer state.DeserializerI
-	stateDB                 util.NodeDB
-	stateMutex              *sync.RWMutex
+	stateDB    util.NodeDB
+	stateMutex *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *finalizeBlockWithReply
@@ -260,19 +259,18 @@ func getNodePath(path string) util.Path {
 	return util.Path(encryption.Hash(path))
 }
 
-func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
-	seri util.Serializable, err error) {
+func (mc *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSerializable) error {
 
 	mc.stateMutex.Lock()
 	defer mc.stateMutex.Unlock()
 
 	if block.ClientState == nil {
-		return nil, common.NewErrorf("get_block_state_node",
+		return common.NewErrorf("get_block_state_node",
 			"client state is nil, round %d", block.Round)
 	}
 
 	s := CreateTxnMPT(block.ClientState)
-	return s.GetNodeValue(getNodePath(path))
+	return s.GetNodeValue(getNodePath(path), v)
 }
 
 func mbRoundOffset(rn int64) int64 {
@@ -477,7 +475,6 @@ func (c *Chain) Initialize() {
 	//c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
-	c.clientStateDeserializer = &state.Deserializer{}
 	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB
 	//c.stateDB = util.NewMemoryNodeDB()
@@ -543,7 +540,7 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
+func (c *Chain) getInitialState(tokens state.Balance) util.MPTSerializable {
 	balance := &state.State{}
 	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	balance.Balance = state.Balance(tokens)
@@ -1316,15 +1313,10 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 		return nil, errors.New("client state is nil")
 	}
 
-	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
-	if err != nil {
-		return nil, err
-	}
-
 	gl := &minersc.GlobalSettings{
 		Fields: make(map[string]string),
 	}
-	err = gl.Decode(val.Encode())
+	err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)), gl)
 	if err != nil {
 		return nil, err
 	}

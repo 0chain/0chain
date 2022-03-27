@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -17,6 +18,9 @@ import (
 const (
 	floatToBalance = 10 * 1000 * 1000 * 1000
 )
+
+//msgp:ignore freeStorageAllocationInput newFreeStorageAssignerInfo
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
 	Assigner   string           `json:"assigner"`
@@ -130,7 +134,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var conf *scConfig
+	var conf *Config
 	var err error
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner",
@@ -222,7 +226,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"unmarshal request: %v", err)
 	}
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"can't get config: %v", err)
@@ -314,7 +318,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"unmarshal request: %v", err)
 	}
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"can't get config: %v", err)
@@ -357,32 +361,16 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	return resp, nil
 }
 
-func (ssc *StorageSmartContract) getFreeStorageAssignerBytes(
-	clientID datastore.Key,
-	balances cstate.StateContextI,
-) ([]byte, error) {
-	var val util.Serializable
-	val, err := balances.GetTrieNode(freeStorageAssignerKey(ssc.ID, clientID))
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 // getWritePool of current client
 func (ssc *StorageSmartContract) getFreeStorageAssigner(
 	clientID datastore.Key,
 	balances cstate.StateContextI,
 ) (*freeStorageAssigner, error) {
-	var err error
-	var aBytes []byte
-	if aBytes, err = ssc.getFreeStorageAssignerBytes(clientID, balances); err != nil {
+	fsa := new(freeStorageAssigner)
+	err := balances.GetTrieNode(freeStorageAssignerKey(ssc.ID, clientID), fsa)
+	if err != nil {
 		return nil, err
 	}
 
-	fsa := new(freeStorageAssigner)
-	if err := fsa.Decode(aBytes); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
 	return fsa, nil
 }

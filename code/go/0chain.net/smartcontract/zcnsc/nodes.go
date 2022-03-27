@@ -19,6 +19,9 @@ import (
 	"0chain.net/smartcontract"
 )
 
+//msgp:ignore AuthorizerNode
+//go:generate msgp -v -io=false -tests=false -unexported
+
 // ------------- GlobalNode ------------------------
 
 type GlobalNode struct {
@@ -30,7 +33,7 @@ type GlobalNode struct {
 	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	BurnAddress        string         `json:"burn_address"`
-	OwnerId            datastore.Key  `json:"owner_id"`
+	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
 }
 
@@ -179,7 +182,7 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 					Balance: 0,  // filled when we dig pool
 				},
 			},
-			TokenLockInterface: TokenLock{
+			TokenLockInterface: &TokenLock{
 				StartTime: 0,
 				Duration:  0,
 				Owner:     ID,
@@ -275,6 +278,24 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 	}
 
 	return nil
+}
+
+type authorizerNodeDecode AuthorizerNode
+
+func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
+	d := authorizerNodeDecode(*an)
+	return d.MarshalMsg(o)
+}
+
+func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := authorizerNodeDecode{Staking: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*an = AuthorizerNode(d)
+	return o, nil
 }
 
 func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {

@@ -184,7 +184,7 @@ func addMockAllocation(
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,
-			NumReads:                  1,
+			ReadsSize:                 64 * KB,
 			TotalChallenges:           1,
 			OpenChallenges:            1,
 			SuccessChallenges:         1,
@@ -486,7 +486,7 @@ func AddMockStats(
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1000,
 			NumWrites:                 1000,
-			NumReads:                  1000,
+			ReadsSize:                 1000 * 64 * KB,
 			TotalChallenges:           1000,
 			OpenChallenges:            1000,
 			SuccessChallenges:         1000,
@@ -511,7 +511,7 @@ func AddMockWriteRedeems(
 				BlobberID:       getMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
 				AllocationID:    getMockAllocationId(i),
 				OwnerID:         clients[client],
-				ReadCounter:     viper.GetInt64(sc.NumWriteRedeemAllocation),
+				ReadSize:        viper.GetInt64(sc.NumWriteRedeemAllocation) * 64 * KB,
 				PayerID:         clients[client],
 			}
 			commitRead := &ReadConnection{
@@ -588,8 +588,8 @@ func getMockChallengeId(blobber, index int) string {
 
 func SetMockConfig(
 	balances cstate.StateContextI,
-) (conf *scConfig) {
-	conf = new(scConfig)
+) (conf *Config) {
+	conf = new(Config)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
