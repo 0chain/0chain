@@ -100,23 +100,29 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/docker.local/config/0dns.yaml b/docker.local/config/0dns.yaml
---- a/docker.local/config/0dns.yaml	(revision d6e1dbb34837c4221e20f280f221b3a206674cfe)
-+++ b/docker.local/config/0dns.yaml	(date 1617002353074)
-@@ -9,11 +9,11 @@
-   signature_scheme: "bls0chain"
-
+--- a/docker.local/config/0dns.yaml
++++ b/docker.local/config/0dns.yaml
+@@ -1,8 +1,8 @@
+ version: 1.0
+ 
  port: 9091
 -use_https: true
 -use_path: true
 +use_https: false
 +use_path: false
-
+ 
+ logging:
+   level: "info"
+@@ -13,7 +13,7 @@ server_chain:
+   signature_scheme: "bls0chain"
+ 
  handlers:
 -  rate_limit: 5 # 5 per second
 +  rate_limit: 1000 # 1000 per second
+ 
+ worker:
+   magic_block_worker: 5 # in seconds
 
- mongo:
-   url: mongodb://mongodb:27017
 Index: docker.local/docker-clean/Dockerfile
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
