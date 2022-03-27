@@ -175,8 +175,8 @@ type AuthorizerNode struct {
 // NewAuthorizer To review: tokenLock init values
 // PK = authorizer node public key
 // ID = authorizer node public id = Client ID
-func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
-	return &AuthorizerNode{
+func NewAuthorizer(ID string, PK string, URL string, sps *stakepool.StakePoolSettings) *AuthorizerNode {
+	a := &AuthorizerNode{
 		ID:        ID,
 		PublicKey: PK,
 		URL:       URL,
@@ -197,15 +197,63 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 			Fee: 0,
 		},
 	}
+
+	if sps != nil {
+		a.StakePoolSettings = stakepool.StakePoolSettings{
+			DelegateWallet:  sps.DelegateWallet,
+			MinStake:        sps.MinStake,
+			MaxStake:        sps.MaxStake,
+			MaxNumDelegates: sps.MaxNumDelegates,
+			ServiceCharge:   sps.ServiceCharge,
+		}
+	}
+
+	return a
 }
 
 func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 	if cfg == nil {
 		return errors.New("config not initialized")
 	}
+
 	an.Config = cfg
 
 	return nil
+}
+
+func (an *AuthorizerNode) UpdateStakePoolSettings(sps *stakepool.StakePoolSettings) bool {
+	if sps == nil {
+		return false
+	}
+
+	changed := false
+
+	if an.StakePoolSettings.MinStake != sps.MinStake {
+		an.StakePoolSettings.MinStake = sps.MinStake
+		changed = true
+	}
+
+	if an.StakePoolSettings.MaxStake != sps.MaxStake {
+		an.StakePoolSettings.MaxStake = sps.MaxStake
+		changed = true
+	}
+
+	if an.StakePoolSettings.DelegateWallet != sps.DelegateWallet {
+		an.StakePoolSettings.DelegateWallet = sps.DelegateWallet
+		changed = true
+	}
+
+	if an.StakePoolSettings.MaxNumDelegates != sps.MaxNumDelegates {
+		an.StakePoolSettings.MaxNumDelegates = sps.MaxNumDelegates
+		changed = true
+	}
+
+	if an.StakePoolSettings.ServiceCharge != sps.ServiceCharge {
+		an.StakePoolSettings.ServiceCharge = sps.ServiceCharge
+		changed = true
+	}
+
+	return changed
 }
 
 func (an *AuthorizerNode) GetKey() string {
@@ -280,6 +328,17 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		}
 
 		an.Config = cfg
+	}
+
+	stakepoolSettings, ok := objMap["stake_pool_settings"]
+	if ok {
+		var sp = &stakepool.StakePoolSettings{}
+		err = json.Unmarshal(*stakepoolSettings, sp)
+		if err != nil {
+			return err
+		}
+
+		an.StakePoolSettings = *sp
 	}
 
 	return nil

@@ -3,41 +3,79 @@ package zcnsc_test
 import (
 	"testing"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/smartcontract/stakepool"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_WhenAuthorizerExists_StakePool_IsUpdated(t *testing.T) {
+func Test_StakingPoolSettingsCanBeCreatedOrUpdatedOnExistingAuthorizer(t *testing.T) {
+	// Prerequisites: authorizer and stakepool exist
+	// Test: update stake pool and verify
+
+	const authorizerID = "auth0"
+
+	// Default authorizer transaction
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
-	tr := CreateAddAuthorizerTransaction("auth0", ctx, 10)
+	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
 
+	// Add authorizer
+	resp, err := contract.AddAuthorizer(tr, CreateAuthorizerParamPayload(), ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, resp)
+
+	// Check nodes state
+	node, err := GetAuthorizerNode(authorizerID, ctx)
+	require.NoError(t, err)
+	require.NotNil(t, node)
+
+	// Check settings
+	require.Equal(t, state.Balance(100), node.StakePoolSettings.MinStake)
+	require.Equal(t, state.Balance(100), node.StakePoolSettings.MaxStake)
+	require.Equal(t, 100, node.StakePoolSettings.MaxNumDelegates)
+	require.Equal(t, float64(100), node.StakePoolSettings.ServiceCharge)
+	require.Equal(t, "100", node.StakePoolSettings.DelegateWallet)
+
+	// New update
 	params := &AuthorizerParameter{
 		PublicKey: tr.PublicKey,
 		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
+			DelegateWallet:  "200",
+			MinStake:        200,
+			MaxStake:        200,
+			MaxNumDelegates: 200,
+			ServiceCharge:   200,
 		},
 	}
 
 	data, _ := params.Encode()
 
-	_, err := contract.AddAuthorizer(tr, data, ctx)
-	require.NoError(t, err)
-
-	_, err = contract.AddAuthorizer(tr, data, ctx)
+	resp, err = contract.AddAuthorizer(tr, data, ctx)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "already exists")
+	require.Empty(t, resp)
+
+	// Check nodes state
+	node, err = GetAuthorizerNode(authorizerID, ctx)
+	require.NoError(t, err)
+	require.NotNil(t, node)
+
+	// Check settings
+	require.Equal(t, state.Balance(200), node.StakePoolSettings.MinStake)
+	require.Equal(t, state.Balance(200), node.StakePoolSettings.MaxStake)
+	require.Equal(t, 200, node.StakePoolSettings.MaxNumDelegates)
+	require.Equal(t, float64(200), node.StakePoolSettings.ServiceCharge)
+	require.Equal(t, "200", node.StakePoolSettings.DelegateWallet)
+}
+
+func Test_WhenAuthorizerExists_StakePool_IsUpdated(t *testing.T) {
 }
 
 func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
-	tr := CreateAddAuthorizerTransaction("auth0", ctx, 10)
+	tr := CreateAddAuthorizerTransaction("auth0", ctx)
 
 	params := &AuthorizerParameter{
 		PublicKey: tr.PublicKey,
@@ -60,9 +98,9 @@ func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
 }
 
 func Test_WhenAuthorizerDoesNotExists_StakePool_IsUpdatedOrCreated(t *testing.T) {
-	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
-	tr := CreateAddAuthorizerTransaction("auth0", ctx, 10)
+	contract := CreateZCNSmartContract()
+	tr := CreateAddAuthorizerTransaction("auth0", ctx)
 
 	params := &AuthorizerParameter{
 		PublicKey: tr.PublicKey,

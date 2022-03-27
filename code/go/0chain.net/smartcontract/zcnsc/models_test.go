@@ -248,7 +248,7 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876", nil)
 	_, _, _ = node.LockingPool.DigPool(tr.Hash, tr)
 	node.LockingPool.ID = "11"
 

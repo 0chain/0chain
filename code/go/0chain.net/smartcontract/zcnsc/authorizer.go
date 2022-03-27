@@ -3,6 +3,12 @@ package zcnsc
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
+	"github.com/hashicorp/go-multierror"
+
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -29,11 +35,12 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerPublicKey = tran.PublicKey // authorizer public key
-		authorizerURL       = ""
-		authorizerID        = tran.ClientID   // sender address
-		recipientID         = tran.ToClientID // smart contract address
-		authorizer          *AuthorizerNode
+		authorizerPublicKey           = tran.PublicKey // authorizer public key
+		authorizerURL                 = ""
+		authorizerStakingPoolSettings stakepool.StakePoolSettings
+		authorizerID                  = tran.ClientID   // sender address
+		recipientID                   = tran.ToClientID // smart contract address
+		authorizer                    *AuthorizerNode
 	)
 
 	if authorizerID == "" {
@@ -68,6 +75,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	authorizerPublicKey = params.PublicKey
 	authorizerURL = params.URL
+	authorizerStakingPoolSettings = params.StakePoolSettings
 
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
@@ -81,7 +89,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	var createOrUpdateStakePool = func() (err error) {
 		var sp *StakePool
-		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, params.StakePoolSettings, ctx)
+		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, authorizerStakingPoolSettings, ctx)
 		if err != nil {
 			return common.NewError(code, "failed to get or create stake pool: "+err.Error())
 		}
@@ -95,11 +103,25 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err == nil && authorizer != nil {
-		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Warn("get authorizer node", zap.Error(err))
-		_ = createOrUpdateStakePool()
-		return "", err
+		errs := fmt.Errorf("authorizer(authorizerID: %v) already exists", authorizerID)
+		err = createOrUpdateStakePool()
+		if err != nil {
+			errs = multierror.Append(errs, errors.Wrap(err, "failed to get or create stake pool"))
+		} else {
+			errs = errors.Wrap(errs, "create or update stake pool completed successfully")
+		}
+
+		if authorizer.UpdateStakePoolSettings(&authorizerStakingPoolSettings) {
+			err = authorizer.Save(ctx)
+			if err != nil {
+				errs = multierror.Append(errs, errors.Wrap(err, "failed to update stake pool settings"))
+			} else {
+				errs = errors.Wrap(errs, "update pool settings completed successfully")
+			}
+		}
+
+		Logger.Error(code, zap.Error(errs))
+		return "", errs
 	} else {
 		// compare the global min of authorizerNode Authorizer to that of the transaction amount
 		if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
@@ -112,7 +134,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 		// Create Authorizer instance
 
-		authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
+		authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL, &authorizerStakingPoolSettings)
 
 		// Dig pool for authorizer
 

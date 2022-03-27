@@ -139,6 +139,8 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
+	changed := false
+
 	// the stake pool can be created by related validator
 	sp, err := zcn.getStakePool(authorizerId, balances)
 	if err != nil {
@@ -146,16 +148,36 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
 		sp = newStakePool()
-		sp.Settings.DelegateWallet = settings.DelegateWallet
 		sp.Minter = cstate.MinterStorage
+		sp.Settings.DelegateWallet = settings.DelegateWallet
+		changed = true
 	}
 
-	sp.Settings.MinStake = settings.MinStake
-	sp.Settings.MaxStake = settings.MaxStake
-	sp.Settings.ServiceCharge = settings.ServiceCharge
-	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+	if sp.Settings.MinStake != settings.MinStake {
+		sp.Settings.MinStake = settings.MinStake
+		changed = true
+	}
 
-	return sp, nil
+	if sp.Settings.MaxStake != settings.MaxStake {
+		sp.Settings.MaxStake = settings.MaxStake
+		changed = true
+	}
+
+	if sp.Settings.ServiceCharge != settings.ServiceCharge {
+		sp.Settings.ServiceCharge = settings.ServiceCharge
+		changed = true
+	}
+
+	if sp.Settings.MaxNumDelegates != settings.MaxNumDelegates {
+		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+		changed = true
+	}
+
+	if changed {
+		return sp, nil
+	} else {
+		return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerId)
+	}
 }
 
 func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *GlobalNode) error {

@@ -46,7 +46,7 @@ func (n *Authorizer) Verify(sig, hash string) (bool, error) {
 }
 
 func CreateDefaultTransactionToZcnsc() *transaction.Transaction {
-	return CreateAddAuthorizerTransaction(defaultClient, MakeMockStateContext(), tokens)
+	return CreateAddAuthorizerTransaction(defaultClient, MakeMockStateContext())
 }
 
 func addTransactionData(tr *transaction.Transaction, methodName string, input []byte) {
@@ -59,7 +59,7 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI, amount float64) *transaction.Transaction {
+func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 
@@ -67,7 +67,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI, 
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        zcnAddressId,
-		Value:             int64(zcnToBalance(amount)),
+		Value:             int64(zcnToBalance(1)),
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
@@ -78,23 +78,8 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI, 
 		OutputHash:        "",
 	}
 
-	payload := &AuthorizerParameter{
-		PublicKey: txn.PublicKey,
-		URL:       "https://localhost:9876",
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
-		},
-	}
-
-	bytes, err := payload.Encode()
-	if err != nil {
-		panic(err.Error())
-	}
-
+	payload := &AuthorizerParameter{}
+	bytes, _ := payload.Encode()
 	addTransactionData(txn, AddAuthorizer, bytes)
 
 	return txn
@@ -112,6 +97,12 @@ func CreateAuthorizerParam() *AuthorizerParameter {
 			ServiceCharge:   100,
 		},
 	}
+}
+
+func CreateAuthorizerParamPayload() []byte {
+	p := CreateAuthorizerParam()
+	encode, _ := p.Encode()
+	return encode
 }
 
 func CreateZCNSmartContract() *ZCNSmartContract {
