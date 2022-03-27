@@ -19,6 +19,7 @@ type Confirmation struct {
 	Round                 int64         `json:"round"`
 	Status                int           `json:"transaction_status" msgpack:"sot"`
 	RoundRandomSeed       int64         `json:"round_random_seed"`
+	StateChangesCount     int           `json:"state_changes_count"`
 	MerkleTreeRoot        string        `json:"merkle_tree_root"`
 	MerkleTreePath        *util.MTPath  `json:"merkle_tree_path"`
 	ReceiptMerkleTreeRoot string        `json:"receipt_merkle_tree_root"`
