@@ -1,26 +1,22 @@
 package zcnsc_test
 
 import (
-	"math/rand"
-
-	"0chain.net/smartcontract/stakepool"
-
-	cstate "0chain.net/chaincore/chain/state"
-
-	"0chain.net/chaincore/chain"
-	"0chain.net/core/logging"
-	. "0chain.net/smartcontract/zcnsc"
-	"go.uber.org/zap"
-
 	"encoding/json"
+	"math/rand"
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/stakepool"
+	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 var (
