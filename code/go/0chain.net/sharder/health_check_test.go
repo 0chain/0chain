@@ -1,8 +1,11 @@
 package sharder
 
 import (
+	"context"
 	"reflect"
 	"testing"
+
+	"0chain.net/chaincore/block"
 )
 
 func init() {
@@ -141,6 +144,30 @@ func TestGetRangeBounds(t *testing.T) {
 				roundRange: 1,
 			},
 		},
+		{
+			name: "Test_GetRangeBounds_OK3",
+			args: args{
+				roundEdge:  5, // random chosen number
+				roundRange: -10,
+			},
+			want: RangeBounds{
+				roundLow:   1,
+				roundHigh:  5,
+				roundRange: 5,
+			},
+		},
+		{
+			name: "Test_GetRangeBounds_OK4",
+			args: args{
+				roundEdge:  -5, // random chosen number
+				roundRange: 1,
+			},
+			want: RangeBounds{
+				roundLow:   1,
+				roundHigh:  1,
+				roundRange: 1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -216,6 +243,59 @@ func TestSyncStats_getCycleControl(t *testing.T) {
 
 			if got := bss.getCycleControl(tt.args.scanMode); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getCycleControl() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_SetCycleBounds(t *testing.T) {
+	ch := makeTestChain(t)
+
+	tests := []struct {
+		name     string
+		sc       *Chain
+		scanMode HealthCheckScan
+		lfb      *block.Block
+		wantCB   CycleBounds
+	}{
+		{
+			name:     "OK_DeepScan_When_LFB_Equal_Zero",
+			sc:       ch,
+			scanMode: DeepScan,
+			lfb:      block.NewBlock(ch.GetKey(), 0),
+			wantCB:   CycleBounds{currentRound: 0, highRound: 1, lowRound: 1, window: 0},
+		},
+		{
+			name:     "OK_ProximityScan_When_LFB_Equal_Zero",
+			sc:       ch,
+			scanMode: ProximityScan,
+			lfb:      block.NewBlock(ch.GetKey(), 0),
+			wantCB:   CycleBounds{currentRound: 0, highRound: 1, lowRound: 1, window: 0},
+		},
+		{
+			name:     "OK_DeepScan_When_LFB_Not_Equal_Zero",
+			sc:       ch,
+			scanMode: DeepScan,
+			lfb:      block.NewBlock(ch.GetKey(), 100),
+			wantCB:   CycleBounds{currentRound: 0, highRound: 100, lowRound: 1, window: 99},
+		},
+		{
+			name:     "OK_ProximityScan_When_LFB_Not_Equal_Zero",
+			sc:       ch,
+			scanMode: ProximityScan,
+			lfb:      block.NewBlock(ch.GetKey(), 100),
+			wantCB:   CycleBounds{currentRound: 0, highRound: 100, lowRound: 1, window: 99},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		tt.sc.SetLatestFinalizedBlock(tt.lfb)
+		t.Run(tt.name, func(t *testing.T) {
+			tt.sc.setCycleBounds(context.Background(), tt.scanMode)
+			got := tt.sc.BlockSyncStats.cycle[tt.scanMode].bounds
+			if !reflect.DeepEqual(got, tt.wantCB) {
+				t.Errorf("setCycleBounds() = %v, want %v", got, tt.wantCB)
 			}
 		})
 	}
