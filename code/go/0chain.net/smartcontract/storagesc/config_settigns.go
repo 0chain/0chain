@@ -141,7 +141,7 @@ var (
 
 	Settings = map[string]struct {
 		setting    Setting
-		configType smartcontract.ConfigType
+		configType smartcontract.ConfigDataType
 	}{
 		"max_mint":                      {MaxMint, smartcontract.StateBalance},
 		"time_unit":                     {TimeUnit, smartcontract.Duration},
@@ -571,8 +571,8 @@ func (ssc *StorageSmartContract) updateSettings(
 			"can't get config: "+err.Error())
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
-		return conf.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() (bool, error) {
+		return conf.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

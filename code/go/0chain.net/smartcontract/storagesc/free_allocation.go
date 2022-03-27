@@ -141,8 +141,8 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't get config: %v", err)
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner("add_free_storage_assigner", func() bool {
-		return conf.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("add_free_storage_assigner", func() (bool, error) {
+		return conf.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

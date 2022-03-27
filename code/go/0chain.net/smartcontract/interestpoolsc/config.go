@@ -36,8 +36,8 @@ func (ip *InterestPoolSmartContract) updateVariables(
 	inputData []byte,
 	balances c_state.StateContextI,
 ) (string, error) {
-	if err := smartcontractinterface.AuthorizeWithOwner("update_variables", func() bool {
-		return gn.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("update_variables", func() (bool, error) {
+		return gn.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

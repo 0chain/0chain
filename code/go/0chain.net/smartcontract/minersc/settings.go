@@ -1,10 +1,11 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"fmt"
 	"strconv"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/smartcontract"
 
@@ -69,7 +70,7 @@ var (
 
 	Settings = map[string]struct {
 		Setting    Setting
-		ConfigType smartcontract.ConfigType
+		ConfigType smartcontract.ConfigDataType
 	}{
 		"min_stake":              {MinStake, smartcontract.StateBalance},
 		"max_stake":              {MaxStake, smartcontract.StateBalance},
@@ -233,9 +234,9 @@ func (msc *MinerSmartContract) updateSettings(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() (bool, error) {
 		get, _ := gn.Get(OwnerId)
-		return get == t.ClientID
+		return get == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

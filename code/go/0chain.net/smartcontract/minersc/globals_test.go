@@ -149,6 +149,30 @@ func TestUpdateGlobals(t *testing.T) {
 				msg:   "update_globals: validation: server_chain.health_check.deep_scan.enabled cannot be modified via a transaction",
 			},
 		},
+		{
+			title: "not_global_key",
+			parameters: parameters{
+				client: owner,
+				inputMap: map[string]string{
+					"server_chain.dbs.events.user": "abc",
+				},
+			},
+			want: want{
+				error: true,
+				msg:   "update_globals: validation: 'server_chain.dbs.events.user' is a local setting specific to a each provider and cannot be updated via a transaction",
+			},
+		},
+		{
+			title: "empty input map",
+			parameters: parameters{
+				client:   owner,
+				inputMap: map[string]string{},
+			},
+			want: want{
+				error: true,
+				msg:   "update_globals: no change is defined by client. returning...",
+			},
+		},
 	}
 	for _, test := range testCases {
 		t.Run(test.title, func(t *testing.T) {
