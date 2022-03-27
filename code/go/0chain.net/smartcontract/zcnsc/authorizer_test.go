@@ -169,7 +169,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	// Try adding one more authorizer
 	address, err = sc.AddAuthorizer(tr, data, ctx)
 	require.Error(t, err, "must be able to add only one authorizer")
-	require.Contains(t, err.Error(), "failed to add authorizer")
+	require.Contains(t, err.Error(), "already exists")
 	require.Empty(t, address)
 
 	// Check nodes state
