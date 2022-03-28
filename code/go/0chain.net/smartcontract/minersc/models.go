@@ -247,7 +247,7 @@ type GlobalNode struct {
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
-	OwnerId              datastore.Key  `json:"owner_id"`
+	OwnerId              string         `json:"owner_id"`
 	CooldownPeriod       int64          `json:"cooldown_period"`
 	Cost                 map[string]int `json:"cost"`
 }
