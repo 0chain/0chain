@@ -94,6 +94,7 @@ const (
 	SimulationNumWriteRedeemAllocation
 	SimulationNumChallengesBlobber
 	SimulationNumAuthorizers
+	SimulationNumRewardPartitionBlobber
 	NumberSimulationParameters
 )
 
@@ -244,6 +245,7 @@ var parameterName = []string{
 	"num_write_redeem_allocation",
 	"num_challenges_blobber",
 	"num_authorizers",
+	"num_reward_partition_blobber",
 }
 
 func (w SimulatorParameter) String() string {
@@ -272,6 +274,7 @@ var (
 	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
 	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
 	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
+	NumRewardPartitionBlobber    = Simulation + SimulationNumRewardPartitionBlobber.String()
 )
 
 type BenchTestI interface {

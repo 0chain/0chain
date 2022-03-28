@@ -314,6 +314,18 @@ func AddMockBlobbers(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*StorageNode {
+
+	numRewardPartitionBlobbers := viper.GetInt(sc.NumRewardPartitionBlobber)
+	numBlobbers := viper.GetInt(sc.NumBlobbers)
+	if numRewardPartitionBlobbers > numBlobbers {
+		log.Fatal("reward_partition_blobber cannot be greater than total blobbers")
+	}
+
+	partition, err := getActivePassedBlobbersList(balances, viper.GetInt64(sc.StorageBlockRewardTriggerPeriod))
+	if err != nil {
+		panic(err)
+	}
+
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
@@ -371,8 +383,27 @@ func AddMockBlobbers(
 				panic(result.Error)
 			}
 		}
+
+		if i < numRewardPartitionBlobbers {
+			_, err = partition.Add(&partitions.BlobberRewardNode{
+				ID:                blobber.ID,
+				SuccessChallenges: 10,
+				WritePrice:        blobber.Terms.WritePrice,
+				ReadPrice:         blobber.Terms.ReadPrice,
+				TotalData:         sizeInGB(int64(i * 1000)),
+				DataRead:          float64(i) * 0.1,
+			}, balances)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
-	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+	if err != nil {
+		panic(err)
+	}
+
+	err = partition.Save(balances)
 	if err != nil {
 		panic(err)
 	}
