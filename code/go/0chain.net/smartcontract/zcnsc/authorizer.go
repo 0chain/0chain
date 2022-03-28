@@ -108,7 +108,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		if err != nil {
 			errs = multierror.Append(errs, errors.Wrap(err, "failed to get or create stake pool"))
 		} else {
-			errs = errors.Wrap(errs, "create or update stake pool completed successfully")
+			Logger.Info("create or update stake pool completed successfully")
 		}
 
 		if authorizer.UpdateStakePoolSettings(&authorizerStakingPoolSettings) {
@@ -116,7 +116,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 			if err != nil {
 				errs = multierror.Append(errs, errors.Wrap(err, "failed to update stake pool settings"))
 			} else {
-				errs = errors.Wrap(errs, "update pool settings completed successfully")
+				Logger.Info("update pool settings completed successfully")
 			}
 		}
 

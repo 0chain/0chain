@@ -175,9 +175,9 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 
 	if changed {
 		return sp, nil
-	} else {
-		return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerId)
 	}
+
+	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerId)
 }
 
 func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *GlobalNode) error {
