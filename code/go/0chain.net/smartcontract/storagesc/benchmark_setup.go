@@ -267,7 +267,7 @@ func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
 	}
 }
 
-// Deprecated: only used for challenge generated which is being rewritten
+// only used for challenge generated which is being rewritten
 func AddMockAllAllocations(balances cstate.StateContextI) {
 	var allocations Allocations
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
