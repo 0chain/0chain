@@ -1,0 +1,33 @@
+name: Merge Alert 
+on:
+  push:
+    branches: [ alert1 ]
+    
+  pull_request:
+
+jobs:
+  miner:
+    runs-on: [self-hosted, build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: technote-space/get-diff-action@v6
+        with:
+#           PATTERNS: |
+#             +(src|__tests__)/**/*.ts
+#             !src/exclude.ts
+          FILES: |
+            docker.local/config/0chain.yaml
+            docker.local/config/sc.yaml   
+
+      - name: "Check if should send slack notification"
+        if: failure()
+        id: send-slack-notification
+        uses: peter-murray/value-as-flag-action@0.0.1
+        with:
+          value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+          default: false
+
+      - name: "Notify Slack"
+        if: failure() && steps.send-slack-notification.outputs.value == 'true'
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":" View the test results on Github: https://github.com/0chain/system_test/actions/runs/${{ github.run_id }}"}' ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
