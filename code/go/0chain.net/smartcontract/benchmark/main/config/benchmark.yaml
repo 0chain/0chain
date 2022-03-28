@@ -1,23 +1,25 @@
 simulation:
-  num_clients: 1000
-  num_miners: 1000
-  num_active_miners: 100
-  num_sharders: 100
-  num_active_sharders: 25
-  num_allocations: 1000
-  num_blobbers: 100
-  num_validators: 100
-  num_allocation_payers: 2 # number of clients contributing pools to an allocation
-  num_allocation_payers_pools: 2  # number of allocation pools each contributor has
+  num_clients: 30000
+  num_active_clients: 30000
+  num_miners: 110
+  num_active_miners: 110
+  nun_sharders: 30
+  nun_active_sharders: 30
+  num_allocations: 300000
+  num_blobbers: 3000
+  num_validators: 3000
+  num_allocation_payers: 1 # number of clients contributing pools to an allocation
+  num_allocation_payers_pools: 1  # number of allocation pools each contributor has
   num_blobbers_per_Allocation: 40 # ideally make this even
-  num_blobber_delegates: 10
-  num_miner_delegates: 10
-  num_sharder_delegates: 10
-  num_curators: 3
-  num_free_storage_assigners: 10
-  num_vesting_destinations_client: 10
-  num_write_redeem_allocation: 10
-  num_challenges_blobber: 100
+  num_blobber_delegates: 100
+  num_miner_delegates: 100
+  num_sharder_delegates: 100
+  num_curators: 1
+  num_free_storage_assigners: 1
+  num_vesting_destinations_client: 1
+  num_write_redeem_allocation: 1
+  num_challenges_blobber: 1
+  num_authorisers: 05
 
 options:
   verbose: true
@@ -33,9 +35,8 @@ options:
     - "vesting"
     - "vesting_rest"
     - "multi_sig"
-    - "zcnscbridge"
-    - "zcnscbridge_rest"
   omitted_tests:
+  save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
 dbs:
   events:
@@ -94,7 +95,7 @@ smart_contracts:
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
-    max_challenges_per_generation: 100
+    max_challenges_per_generation: 1
     readpool:
       min_lock: 0.3
       min_lock_period: 1m
@@ -157,5 +158,6 @@ internal:
   satisfactory: 1ms
   time_unit: 1ms
   colour: true
-  control_m: 250000
-  control_n: 900
+  control_m: 25000
+  control_n: 90
+

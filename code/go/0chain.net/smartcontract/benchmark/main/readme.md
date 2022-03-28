@@ -11,6 +11,20 @@ To run
 go build -tags bn256 && ./main benchmark | column -t -s,
 ```
 
+It can take a long time to generate a MPT for the simulation. To help with this 
+it is possible to save a MPT for use later, set the options.save_path key in
+[benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
+```yaml
+options:
+  save_path: ./saved_data
+```
+You can now reuse this database using the load option in the command line
+```bash
+go build -tags bn256 && ./main benchmark --load saved_data  | column -t -s,
+```
+
+-
+
 To run only a subset of the test suits
 ```bash
 go build -tags bn256
