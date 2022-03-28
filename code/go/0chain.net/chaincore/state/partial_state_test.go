@@ -15,8 +15,6 @@ import (
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 func init() {
@@ -628,39 +626,5 @@ func newValueNode(version string, v int64) *valueNode {
 	return &valueNode{
 		Version: version,
 		Value:   v,
-	}
-}
-
-func TestPartialUnmarshalMsgpack(t *testing.T) {
-	n := util.NewValueNode()
-	n.OriginTracker.SetOrigin(100)
-	n.Value = newValueNode("1000", 2022)
-
-	ps := PartialState{
-		Version: "1",
-		Nodes: []util.Node{
-			n,
-		},
-	}
-	ps.SetKey(encryption.Hash("data"))
-
-	d, err := msgpack.Marshal(&ps)
-	require.NoError(t, err)
-
-	var ps2 PartialState
-	if err := msgpack.Unmarshal(d, &ps2); err != nil {
-		panic(err)
-	}
-
-	for _, nd := range ps2.Nodes {
-		require.Equal(t, util.Sequence(100), nd.GetOriginTracker().GetVersion())
-		nv := nd.(*util.ValueNode).Value
-		vv := valueNode{}
-		if err := vv.Decode(nv.Encode()); err != nil {
-			panic(err)
-		}
-
-		require.Equal(t, "1000", vv.Version)
-		require.Equal(t, int64(2022), vv.Value)
 	}
 }

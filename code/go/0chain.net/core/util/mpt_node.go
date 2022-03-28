@@ -31,10 +31,11 @@ var PathElements = []byte("0123456789abcdef")
 
 /*Node - a node interface */
 type Node interface {
+	Serializable
+	Hashable
+	OriginTrackerI
 	Clone() Node
 	GetNodeType() byte
-	SecureSerializableValueI
-	OriginTrackerI
 	GetOriginTracker() OriginTrackerI
 	SetOriginTracker(ot OriginTrackerI)
 }
@@ -101,7 +102,7 @@ func (otn *OriginTrackerNode) GetOriginTracker() OriginTrackerI {
 
 /*ValueNode - any node that holds a value should implement this */
 type ValueNode struct {
-	Value              Serializable `json:"v"`
+	Value              MPTSerializable `json:"v"`
 	*OriginTrackerNode `json:"o,omitempty"`
 }
 
@@ -134,40 +135,45 @@ func (vn *ValueNode) GetHash() string {
 
 /*GetHashBytes - implement SecureSerializableValue interface */
 func (vn *ValueNode) GetHashBytes() []byte {
-	if vn.Value == nil {
+	v := vn.GetValueBytes()
+	if len(v) == 0 {
 		return nil
 	}
-	return encryption.RawHash(vn.Value.Encode())
+
+	return encryption.RawHash(v)
 }
 
 /*GetValue - get the value store in this node */
-func (vn *ValueNode) GetValue() Serializable {
+func (vn *ValueNode) GetValue() MPTSerializable {
 	return vn.Value
 }
 
-/*SetValue - set the value stored in this node */
-func (vn *ValueNode) SetValue(value Serializable) {
-	vn.Value = value
+// GetValueBytes returns the value bytes store in this node
+func (vn *ValueNode) GetValueBytes() []byte {
+	if vn.Value == nil {
+		return nil
+	}
+
+	v, err := vn.Value.MarshalMsg(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return v
 }
 
-/*HasValue - check if the value stored is empty */
-func (vn *ValueNode) HasValue() bool {
-	if vn.Value == nil {
-		return false
-	}
-	encoding := vn.Value.Encode()
-	if encoding == nil || len(encoding) == 0 {
-		return false
-	}
-	return true
+/*SetValue - set the value stored in this node */
+func (vn *ValueNode) SetValue(value MPTSerializable) {
+	vn.Value = value
 }
 
 /*Encode - overwrite interface method */
 func (vn *ValueNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
 	writeNodePrefix(buf, vn)
-	if vn.HasValue() {
-		buf.Write(vn.GetValue().Encode())
+	v := vn.GetValueBytes()
+	if len(v) > 0 {
+		buf.Write(v)
 	}
 	return buf.Bytes()
 }
@@ -175,7 +181,7 @@ func (vn *ValueNode) Encode() []byte {
 /*Decode - overwrite interface method */
 func (vn *ValueNode) Decode(buf []byte) error {
 	pspv := &SecureSerializableValue{}
-	err := pspv.Decode(buf)
+	_, err := pspv.UnmarshalMsg(buf)
 	if err != nil {
 		return err
 	}
@@ -192,7 +198,7 @@ type LeafNode struct {
 }
 
 /*NewLeafNode - create a new leaf node */
-func NewLeafNode(prefix, path Path, origin Sequence, value Serializable) *LeafNode {
+func NewLeafNode(prefix, path Path, origin Sequence, value MPTSerializable) *LeafNode {
 	ln := &LeafNode{}
 	ln.OriginTrackerNode = NewOriginTrackerNode()
 	ln.Path = path
@@ -215,22 +221,6 @@ func (ln *LeafNode) GetHashBytes() []byte {
 	return encryption.RawHash(buf.Bytes())
 }
 
-/*Clone - implement interface */
-func (ln *LeafNode) Clone() Node {
-	clone := &LeafNode{}
-	clone.OriginTrackerNode = ln.OriginTrackerNode.Clone()
-	clone.Prefix = concat(ln.Prefix)
-	clone.Path = concat(ln.Path)
-	// path will never be updated inplace and so ok
-	clone.SetValue(ln.GetValue())
-	return clone
-}
-
-/*GetNodeType - implement interface */
-func (ln *LeafNode) GetNodeType() byte {
-	return NodeTypeLeafNode
-}
-
 /*Encode - implement interface */
 func (ln *LeafNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
@@ -249,7 +239,12 @@ func (ln *LeafNode) encode(buf *bytes.Buffer) {
 	}
 	buf.WriteByte(Separator)
 	if ln.HasValue() {
-		buf.Write(ln.GetValue().Encode())
+		v, err := ln.GetValue().MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		buf.Write(v)
 	}
 }
 
@@ -274,13 +269,29 @@ func (ln *LeafNode) Decode(buf []byte) error {
 	return nil
 }
 
+/*Clone - implement interface */
+func (ln *LeafNode) Clone() Node {
+	clone := &LeafNode{}
+	clone.OriginTrackerNode = ln.OriginTrackerNode.Clone()
+	clone.Prefix = concat(ln.Prefix)
+	clone.Path = concat(ln.Path)
+	// path will never be updated inplace and so ok
+	clone.SetValue(ln.GetValue())
+	return clone
+}
+
+/*GetNodeType - implement interface */
+func (ln *LeafNode) GetNodeType() byte {
+	return NodeTypeLeafNode
+}
+
 /*HasValue - implement interface */
 func (ln *LeafNode) HasValue() bool {
-	return ln.Value != nil && ln.Value.HasValue()
+	return ln.Value != nil && ln.Value.Value != nil
 }
 
 /*GetValue - implement interface */
-func (ln *LeafNode) GetValue() Serializable {
+func (ln *LeafNode) GetValue() MPTSerializable {
 	if !ln.HasValue() {
 		return nil
 	}
@@ -288,11 +299,19 @@ func (ln *LeafNode) GetValue() Serializable {
 }
 
 /*SetValue - implement interface */
-func (ln *LeafNode) SetValue(value Serializable) {
+func (ln *LeafNode) SetValue(value MPTSerializable) {
 	if ln.Value == nil {
 		ln.Value = NewValueNode()
 	}
 	ln.Value.SetValue(value)
+}
+
+func (ln *LeafNode) GetValueBytes() []byte {
+	if ln.Value == nil {
+		return nil
+	}
+
+	return ln.Value.GetValueBytes()
 }
 
 /*FullNode - a branch node that can contain 16 children and a value */
@@ -303,7 +322,7 @@ type FullNode struct {
 }
 
 /*NewFullNode - create a new full node */
-func NewFullNode(value Serializable) *FullNode {
+func NewFullNode(value MPTSerializable) *FullNode {
 	fn := &FullNode{}
 	fn.OriginTrackerNode = NewOriginTrackerNode()
 	fn.SetValue(value)
@@ -339,7 +358,11 @@ func (fn *FullNode) encode(buf *bytes.Buffer) {
 		buf.WriteByte(Separator)
 	}
 	if fn.HasValue() {
-		buf.Write(fn.GetValue().Encode())
+		v, err := fn.GetValue().MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+		buf.Write(v)
 	}
 }
 
@@ -431,19 +454,27 @@ func (fn *FullNode) PutChild(hex byte, child []byte) {
 
 /*HasValue - implement interface */
 func (fn *FullNode) HasValue() bool {
-	return fn.Value != nil && fn.Value.HasValue()
+	return fn.Value != nil && fn.Value.Value != nil
 }
 
 /*GetValue - implement interface */
-func (fn *FullNode) GetValue() Serializable {
+func (fn *FullNode) GetValue() MPTSerializable {
 	if fn.Value == nil {
 		return nil
 	}
 	return fn.Value.GetValue()
 }
 
+func (fn *FullNode) GetValueBytes() []byte {
+	if fn.Value == nil {
+		return nil
+	}
+
+	return fn.Value.GetValueBytes()
+}
+
 /*SetValue - implement interface */
-func (fn *FullNode) SetValue(value Serializable) {
+func (fn *FullNode) SetValue(value MPTSerializable) {
 	if fn.Value == nil {
 		fn.Value = NewValueNode()
 	}
@@ -478,20 +509,6 @@ func (en *ExtensionNode) GetHashBytes() []byte {
 	return encryption.RawHash(buf.Bytes())
 }
 
-/*Clone - implement interface */
-func (en *ExtensionNode) Clone() Node {
-	clone := &ExtensionNode{}
-	clone.OriginTrackerNode = en.OriginTrackerNode.Clone()
-	clone.Path = en.Path       // path will never be updated inplace and so ok
-	clone.NodeKey = en.NodeKey // nodekey will never be updated inplace and so ok
-	return clone
-}
-
-/*GetNodeType - implement interface */
-func (en *ExtensionNode) GetNodeType() byte {
-	return NodeTypeExtensionNode
-}
-
 /*Encode - implement interface */
 func (en *ExtensionNode) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
@@ -516,6 +533,20 @@ func (en *ExtensionNode) Decode(buf []byte) error {
 	buf = buf[idx+1:]
 	en.NodeKey = buf
 	return nil
+}
+
+/*Clone - implement interface */
+func (en *ExtensionNode) Clone() Node {
+	clone := &ExtensionNode{}
+	clone.OriginTrackerNode = en.OriginTrackerNode.Clone()
+	clone.Path = en.Path       // path will never be updated inplace and so ok
+	clone.NodeKey = en.NodeKey // nodekey will never be updated inplace and so ok
+	return clone
+}
+
+/*GetNodeType - implement interface */
+func (en *ExtensionNode) GetNodeType() byte {
+	return NodeTypeExtensionNode
 }
 
 /*GetValueNode - get the value node associated with this node*/
@@ -547,7 +578,7 @@ func GetSerializationPrefix(node Node) byte {
 	case *ExtensionNode:
 		return NodeTypeExtensionNode
 	default:
-		panic("uknown node type")
+		panic("unknown node type")
 	}
 }
 

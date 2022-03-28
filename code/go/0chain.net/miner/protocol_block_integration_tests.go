@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
@@ -5,17 +6,20 @@ package miner
 import (
 	"context"
 	"errors"
+	"log"
 	"math/rand"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -72,6 +76,76 @@ func hasDST(pb, b []*transaction.Transaction) (has bool) {
 		}
 	}
 	return false // has not
+}
+
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	mc.updateFinalizedBlock(ctx, b)
+
+	if isTestingOnUpdateFinalizedBlock(b.Round) {
+		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
+			log.Panicf("Conductor: error while sending round info result: %v", err)
+		}
+	}
+}
+
+func isTestingOnUpdateFinalizedBlock(round int64) bool {
+	s := crpc.Client().State()
+	var isTestingFunc func(round int64, generator bool, typeRank int) bool
+	switch {
+	case s.ExtendNotNotarisedBlock != nil:
+		isTestingFunc = s.ExtendNotNotarisedBlock.IsTesting
+
+	case s.BreakingSingleBlock != nil:
+		isTestingFunc = s.BreakingSingleBlock.IsTesting
+
+	case s.SendInsufficientProposals != nil:
+		isTestingFunc = s.SendInsufficientProposals.IsTesting
+
+	case s.NotarisingNonExistentBlock != nil:
+		isTestingFunc = s.NotarisingNonExistentBlock.IsTesting
+
+	case s.ResendProposedBlock != nil:
+		isTestingFunc = s.ResendProposedBlock.IsTesting
+
+	case s.ResendNotarisation != nil:
+		isTestingFunc = s.ResendNotarisation.IsTesting
+
+	case s.BadTimeoutVRFS != nil:
+		isTestingFunc = s.BadTimeoutVRFS.IsTesting
+
+	case s.BlockStateChangeRequestor != nil && s.BlockStateChangeRequestor.GetType() != cases.BSCRChangeNode:
+		isTestingFunc = s.BlockStateChangeRequestor.IsTesting
+
+	case s.MinerNotarisedBlockRequestor != nil:
+		isTestingFunc = s.MinerNotarisedBlockRequestor.IsTesting
+
+	case s.FBRequestor != nil:
+		isTestingFunc = s.FBRequestor.IsTesting
+
+	default:
+		return false
+	}
+
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
+	return isTestingFunc(round, nodeType == generator, typeRank)
+}
+
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+	if isIgnoringGenerateBlock(b.Round) {
+		return nil
+	}
+
+	return mc.generateBlockWorker.Run(ctx, func() error {
+		return mc.generateBlock(ctx, b, minerChain, waitOver)
+	})
+}
+
+func isIgnoringGenerateBlock(rNum int64) bool {
+	cfg := crpc.Client().State().NotarisingNonExistentBlock
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(rNum)
+	// we need to ignore generating block phase on configured round and on the Generator1 node
+	return cfg != nil && cfg.OnRound == rNum && nodeType == generator && typeRank == 1
 }
 
 func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {

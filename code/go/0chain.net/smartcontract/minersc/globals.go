@@ -22,6 +22,9 @@ import (
 	"0chain.net/core/datastore"
 )
 
+//msgp:ignore GlobalSetting
+//go:generate msgp -io=false -tests=false -v
+
 type GlobalSetting int
 
 const (
@@ -40,6 +43,7 @@ const (
 	Owner   // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
+	BlockMaxCost
 	BlockMaxByteSize
 	BlockReplicators
 	BlockGenerationTimout        // todo from miner.update
@@ -123,6 +127,7 @@ var GlobalSettingName = []string{
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
+	"server_chain.block.max_block_cost",
 	"server_chain.block.max_byte_size",
 	"server_chain.block.replicators",
 	"server_chain.block.generation.timeout",
@@ -220,6 +225,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
+	GlobalSettingName[BlockMaxCost]:                      {smartcontract.Int, true},
 	GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
 	GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
 	GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, false},
@@ -523,26 +529,15 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
-	val, err := balances.GetTrieNode(GLOBALS_KEY)
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
-	var err error
-	var poolb []byte
-	if poolb, err = getGlobalSettingsBytes(balances); err != nil {
+	gl := newGlobalSettings()
+
+	err := balances.GetTrieNode(GLOBALS_KEY, gl)
+	if err != nil {
 		return nil, err
 	}
-	gl := newGlobalSettings()
-	err = gl.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return gl, err
+
+	return gl, nil
 }
 
 func (msc *MinerSmartContract) updateGlobals(

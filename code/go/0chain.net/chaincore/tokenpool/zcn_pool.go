@@ -6,8 +6,9 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 )
+
+//go:generate msgp -io=false -v
 
 type ZcnPool struct {
 	TokenPool
@@ -31,11 +32,11 @@ func (p *ZcnPool) SetBalance(value state.Balance) {
 	p.Balance = value
 }
 
-func (p *ZcnPool) GetID() datastore.Key {
+func (p *ZcnPool) GetID() string {
 	return p.ID
 }
 
-func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
+func (p *ZcnPool) DigPool(id string, txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if txn.Value < 0 {
 		return nil, "", common.NewError("digging pool failed", "insufficient funds")
 	}
@@ -44,11 +45,11 @@ func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*stat
 	p.TokenPool.Balance = state.Balance(txn.Value)
 
 	tpr := &TokenPoolTransferResponse{
-		TxnHash: txn.Hash, // transaction hash
-		FromClient: txn.ClientID, // authorizer node id
-		ToPool: p.ID, // transaction hash
-		ToClient: txn.ToClientID, // smart contracts address
-		Value: state.Balance(txn.Value),
+		TxnHash:    txn.Hash,       // transaction hash
+		FromClient: txn.ClientID,   // authorizer node id
+		ToPool:     p.ID,           // transaction hash
+		ToClient:   txn.ToClientID, // smart contracts address
+		Value:      state.Balance(txn.Value),
 	}
 
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))
@@ -76,7 +77,7 @@ func (p *ZcnPool) TransferTo(op TokenPoolI, value state.Balance, _ interface{}) 
 	return nil, string(tpr.Encode()), nil
 }
 
-func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, _ interface{}) (*state.Transfer, string, error) {
+func (p *ZcnPool) DrainPool(fromClientID, toClientID string, value state.Balance, _ interface{}) (*state.Transfer, string, error) {
 	if value > p.Balance {
 		return nil, "", common.NewError("draining pool failed", "value exceeds balance")
 	}
@@ -86,7 +87,7 @@ func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.
 	return transfer, string(tpr.Encode()), nil
 }
 
-func (p *ZcnPool) EmptyPool(fromClientID, toClientID datastore.Key, _ interface{}) (*state.Transfer, string, error) {
+func (p *ZcnPool) EmptyPool(fromClientID, toClientID string, _ interface{}) (*state.Transfer, string, error) {
 	if p.Balance == 0 {
 		return nil, "", common.NewError("emptying pool failed", "pool already empty")
 	}

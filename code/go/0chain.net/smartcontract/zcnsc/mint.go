@@ -7,6 +7,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 	"github.com/pkg/errors"
 )
 
@@ -53,29 +54,27 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	// get user node
 	un, err := GetUserNode(trans.ClientID, ctx)
-	if err != nil && payload.Nonce != 1 {
-		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
-		return
-	}
-
-	if un == nil {
+	switch err {
+	case nil:
+		if un.Nonce+1 != payload.Nonce {
+			err = common.NewError(
+				code,
+				fmt.Sprintf(
+					"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
+					payload.Nonce,
+					payload.ReceivingClientID,
+					un.Nonce,
+					un.ID,
+					info,
+				),
+			)
+			return
+		}
+	case util.ErrValueNotPresent:
 		err = common.NewError(code, "user node is nil "+info)
 		return
-	}
-
-	// check nonce is correct (current + 1)
-	if un.Nonce+1 != payload.Nonce {
-		err = common.NewError(
-			code,
-			fmt.Sprintf(
-				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-				payload.Nonce,
-				payload.ReceivingClientID,
-				un.Nonce,
-				un.ID,
-				info,
-			),
-		)
+	default:
+		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
 		return
 	}
 

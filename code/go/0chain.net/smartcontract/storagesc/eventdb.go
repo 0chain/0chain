@@ -3,56 +3,16 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-
-	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/core/common"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
-	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
-	if err != nil {
-		return StorageNode{}, err
-	}
-	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
-	if err != nil {
-		return StorageNode{}, err
-	}
-	return StorageNode{
-		ID:      blobber.BlobberID,
-		BaseURL: blobber.BaseURL,
-		Geolocation: StorageNodeGeolocation{
-			Latitude:  blobber.Latitude,
-			Longitude: blobber.Longitude,
-		},
-		Terms: Terms{
-			ReadPrice:               state.Balance(blobber.ReadPrice),
-			WritePrice:              state.Balance(blobber.WritePrice),
-			MinLockDemand:           blobber.MinLockDemand,
-			MaxOfferDuration:        maxOfferDuration,
-			ChallengeCompletionTime: challengeCompletionTime,
-		},
-		Capacity:        blobber.Capacity,
-		Used:            blobber.Used,
-		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  blobber.DelegateWallet,
-			MinStake:        state.Balance(blobber.MinStake),
-			MaxStake:        state.Balance(blobber.MaxStake),
-			MaxNumDelegates: blobber.NumDelegates,
-			ServiceCharge:   blobber.ServiceCharge,
-		},
-	}, nil
-}
-
-func emitAddOrOverwriteBlobber(sn *StorageNode, balances cstate.StateContextI) error {
+func emitAddOrOverwriteBlobber(
+	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
+) error {
 	data, err := json.Marshal(&event.Blobber{
 		BlobberID:               sn.ID,
 		BaseURL:                 sn.BaseURL,
@@ -63,15 +23,20 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, balances cstate.StateContextI) e
 		MinLockDemand:           sn.Terms.MinLockDemand,
 		MaxOfferDuration:        sn.Terms.MaxOfferDuration.String(),
 		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
-		Capacity:                sn.Capacity,
-		Used:                    sn.Used,
-		LastHealthCheck:         int64(sn.LastHealthCheck),
-		DelegateWallet:          sn.StakePoolSettings.DelegateWallet,
-		MinStake:                int64(sn.StakePoolSettings.MaxStake),
-		MaxStake:                int64(sn.StakePoolSettings.MaxStake),
-		NumDelegates:            sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:           sn.StakePoolSettings.ServiceCharge,
-		SavedData:               sn.SavedData,
+
+		Capacity:        sn.Capacity,
+		Used:            sn.Used,
+		LastHealthCheck: int64(sn.LastHealthCheck),
+
+		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+		MinStake:       int64(sn.StakePoolSettings.MaxStake),
+		MaxStake:       int64(sn.StakePoolSettings.MaxStake),
+		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+		ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
+
+		OffersTotal:  int64(sp.TotalOffers),
+		UnstakeTotal: int64(sp.TotalUnStake),
+		Reward:       int64(sp.Reward),
 	})
 	if err != nil {
 		return fmt.Errorf("marshalling blobber: %v", err)

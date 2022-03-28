@@ -37,9 +37,8 @@ func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 	ctx := MakeMockStateContext()
 	for _, authorizerKey := range authorizersID {
 		node := &AuthorizerNode{ID: authorizerKey}
-		nodes, err := ctx.GetTrieNode(node.GetKey())
+		err := ctx.GetTrieNode(node.GetKey(), node)
 		require.NoError(t, err)
-		require.NotNil(t, nodes)
 	}
 }
 
@@ -68,19 +67,22 @@ func Test_Basic_GetUserNode_ReturnsUserNode(t *testing.T) {
 func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
-	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx, 10)
+	tr := CreateAddAuthorizerTransaction("auth0", ctx, 10)
 
-	publicKey := &AuthorizerParameter{PublicKey: tr.PublicKey}
-	data, _ := publicKey.Encode()
+	params := &AuthorizerParameter{PublicKey: tr.PublicKey}
+	data, _ := params.Encode()
 
 	_, err := contract.AddAuthorizer(tr, data, ctx)
+	require.NoError(t, err)
+
+	_, err = contract.AddAuthorizer(tr, data, ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already exists")
 }
 
 func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 	sc := MakeMockStateContext()
-	an := CreateAuthorizer("id", "public key", "https://localhost:9876")
+	an := NewAuthorizer("id", "public key", "https://localhost:9876")
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
@@ -104,7 +106,7 @@ func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 }
 
 func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
-	an := CreateAuthorizer("id", "public key", "https://localhost:9876")
+	an := NewAuthorizer("id", "public key", "https://localhost:9876")
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
@@ -135,10 +137,8 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 
 	authorizeNode, _ := GetAuthorizerNode(authorizerID, ctx)
 
-	node, err := ctx.GetTrieNode(authorizeNode.GetKey())
-
+	err = ctx.GetTrieNode(authorizeNode.GetKey(), authorizeNode)
 	require.NoError(t, err)
-	require.NotNil(t, node)
 }
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
@@ -175,24 +175,24 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 	globalNode, err := GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, int64(11), globalNode.MinStakeAmount)
+	require.Equal(t, state.Balance(11), globalNode.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = int64(100)
+	node.MinStakeAmount = state.Balance(100 * 1e10)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
 	globalNode, err = GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, int64(100), globalNode.MinStakeAmount)
+	require.Equal(t, state.Balance(100*1e10), globalNode.MinStakeAmount)
 }
 
 func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
 	ctx := MakeMockStateContext()
 	au := AuthorizerNode{ID: authorizersID[0]}
 	authParam := AuthorizerParameter{
-		PublicKey: authorizers[au.GetKey()].Node.PublicKey,
+		PublicKey: ctx.authorizers[au.GetKey()].Node.PublicKey,
 		URL:       "hhh",
 	}
 	data, _ := authParam.Encode()
@@ -204,7 +204,7 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	tr.Value = 99
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = 100
+	node.MinStakeAmount = state.Balance(100 * 1e10)
 	err := node.Save(ctx)
 	require.NoError(t, err)
 
@@ -271,7 +271,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 				Balance: 0,
 			},
 		},
-		TokenLockInterface: TokenLock{
+		TokenLockInterface: &TokenLock{
 			StartTime: common.Now(),
 			Duration:  0,
 		},
@@ -283,7 +283,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 
 func Test_Can_DigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	an := CreateAuthorizer(tr.ClientID, "key", "https://localhost:9876")
+	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
 	_, _, err := an.Staking.DigPool(tr.Hash, tr)
 	require.NoError(t, err)
 }
@@ -293,7 +293,7 @@ func Test_Can_EmptyPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	gn, err := GetGlobalNode(balances)
 
-	an := CreateAuthorizer(tr.ClientID, "key", "https://localhost:9876")
+	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
 
 	_, _, _ = an.Staking.DigPool(tr.Hash, tr)
 	_, _, err = an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
@@ -303,7 +303,7 @@ func Test_Can_EmptyPool(t *testing.T) {
 
 func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	require.NotNil(t, node.Staking.TokenLockInterface)
 
 	newNode := &AuthorizerNode{}
@@ -317,7 +317,7 @@ func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 //	ctx := MakeMockStateContext()
 //
 //	tr := CreateAddAuthorizerTransaction("client0", 10)
-//	an := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+//	an := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 //	err = ans.AddAuthorizer(an)
 //	require.NoError(t, err)
 //	require.NotNil(t, an.Staking.TokenLockInterface)
@@ -342,7 +342,7 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 
 	// Init
 	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx, 10)
-	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	require.NotNil(t, node.Staking.TokenLockInterface)
 
 	// Add
@@ -350,12 +350,10 @@ func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	require.NoError(t, err)
 
 	// FillFromContext
-	blob, err := ctx.GetTrieNode(node.GetKey())
-	require.NoError(t, err)
-	require.NotNil(t, blob)
 	newNode := &AuthorizerNode{}
-	err = newNode.Decode(blob.Encode())
+	err = ctx.GetTrieNode(node.GetKey(), newNode)
 	require.NoError(t, err)
+
 	require.NotNil(t, newNode)
 	require.NotNil(t, newNode.Staking.TokenLockInterface)
 }
@@ -374,6 +372,36 @@ func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	// FillFromContext
 	node := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node.Staking.TokenLockInterface)
+}
+
+func Test_UpdateAuthorizerSettings(t *testing.T) {
+	ctx := MakeMockStateContext()
+
+	// Init
+	var data []byte
+	tr := CreateDefaultTransactionToZcnsc()
+	sc := CreateZCNSmartContract()
+
+	// Add
+	_, _ = sc.AddAuthorizer(tr, data, ctx)
+
+	// Get node and change its setting
+	node := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node)
+
+	cfg := &AuthorizerConfig{
+		Fee: state.Balance(111),
+	}
+
+	err := node.UpdateConfig(cfg)
+	require.NoError(t, err)
+	err = node.Save(ctx)
+	require.NoError(t, err)
+
+	// Get node and check its setting
+	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node.Config)
+	require.Equal(t, state.Balance(111), node.Config.Fee)
 }
 
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {

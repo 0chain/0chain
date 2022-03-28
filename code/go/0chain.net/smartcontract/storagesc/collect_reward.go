@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 // collectReward mints tokens for delegate rewards.
@@ -46,7 +47,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"error emptying account, %v", err)
 	}
 
-	if err := usp.Save(stakepool.Blobber, txn.ClientID, balances); err != nil {
+	if err := usp.Save(spenum.Blobber, txn.ClientID, balances); err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
 			"error saving user stake pool, %v", err)
 	}

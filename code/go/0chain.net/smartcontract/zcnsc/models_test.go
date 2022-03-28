@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
@@ -156,7 +158,7 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 				Balance: 100,
 			},
 		},
-		TokenLockInterface: TokenLock{
+		TokenLockInterface: &TokenLock{
 			StartTime: 0,
 			Duration:  0,
 			Owner:     "id",
@@ -170,10 +172,65 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 	require.Equal(t, int(target.Balance), 100)
 }
 
+func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {
+	type PartialState struct {
+		ID     string            `json:"id"`
+		Config *AuthorizerConfig `json:"config"`
+	}
+
+	target := &AuthorizerNode{}
+	source := &PartialState{
+		Config: &AuthorizerConfig{
+			Fee: state.Balance(222),
+		},
+	}
+
+	bytes, err := json.Marshal(source)
+	require.NoError(t, err)
+
+	err = json.Unmarshal(bytes, target)
+	require.NoError(t, err)
+
+	require.Equal(t, state.Balance(222), target.Config.Fee)
+}
+
+func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
+	type PartialState struct {
+		ID     string            `json:"id"`
+		Config *AuthorizerConfig `json:"config"`
+	}
+
+	source := &AuthorizerNode{
+		Config: &AuthorizerConfig{
+			Fee: state.Balance(222),
+		},
+	}
+
+	target := &PartialState{}
+	err := json.Unmarshal(source.Encode(), target)
+
+	require.NoError(t, err)
+	require.Equal(t, state.Balance(222), target.Config.Fee)
+}
+
+func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
+	source := &AuthorizerNode{
+		Config: &AuthorizerConfig{
+			Fee: state.Balance(222),
+		},
+	}
+
+	target := &AuthorizerNode{}
+	err := target.Decode(source.Encode())
+	require.NoError(t, err)
+	require.NotNil(t, target.Staking)
+	require.Equal(t, state.Balance(222), target.Config.Fee)
+}
+
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := CreateAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
+	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 	node.Staking.ID = "11"
 
@@ -184,6 +241,64 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, target.Staking.ID, "11")
 	require.Equal(t, int64(target.Staking.Balance), tr.Value)
+}
+
+func Test_AuthorizerNodeSerialization(t *testing.T) {
+	source := &AuthorizerNode{
+		ID:        "aaa",
+		PublicKey: "bbb",
+		Staking: &tokenpool.ZcnLockingPool{
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					ID:      "ccc",
+					Balance: 111,
+				},
+			},
+			TokenLockInterface: nil,
+		},
+		URL: "ddd",
+		Config: &AuthorizerConfig{
+			Fee: 222,
+		},
+	}
+
+	target := &AuthorizerNode{}
+
+	err := target.Decode(source.Encode())
+	require.NoError(t, err)
+}
+
+func Test_UpdateAuthorizerConfigTest(t *testing.T) {
+	type AuthorizerConfigSource struct {
+		Fee state.Balance `json:"fee"`
+	}
+
+	type AuthorizerNodeSource struct {
+		ID     string                  `json:"id"`
+		Config *AuthorizerConfigSource `json:"config"`
+	}
+
+	source := &AuthorizerNodeSource{
+		ID: "12345678",
+		Config: &AuthorizerConfigSource{
+			Fee: state.Balance(999),
+		},
+	}
+	target := &AuthorizerNode{}
+
+	bytes, err := json.Marshal(source)
+	require.NoError(t, err)
+
+	err = target.Decode(bytes)
+	require.NoError(t, err)
+
+	err = target.Decode(bytes)
+	require.NoError(t, err)
+
+	require.Equal(t, "", target.URL)
+	require.Equal(t, "", target.PublicKey)
+	require.Equal(t, "12345678", target.ID)
+	require.Equal(t, state.Balance(999), target.Config.Fee)
 }
 
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, error) {

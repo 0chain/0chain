@@ -2,6 +2,12 @@ package miner
 
 /*This file contains the Miner To Miner send/receive messages */
 import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strconv"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -9,17 +15,10 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"context"
-	"encoding/hex"
-	"fmt"
 	"go.uber.org/zap"
-	"net/http"
-	"strconv"
 )
 
 var (
-	// RoundStartSender - Start a new round.
-	RoundStartSender node.EntitySendHandler
 	// RoundVRFSender - Send the round vrf.
 	RoundVRFSender node.EntitySendHandler
 	// VerifyBlockSender - Send the block to a node.
@@ -33,14 +32,9 @@ var (
 	MinerNotarizedBlockSender node.EntitySendHandler
 	// DKGShareSender - Send dkg share to a node
 	DKGShareSender node.EntityRequestor
-	// ChainStartSender - Send whether or not to start chain
-	ChainStartSender node.EntityRequestor
 	// MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized
 	// block to a node.
 	MinerLatestFinalizedBlockRequestor node.EntityRequestor
-	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
-	// magic block to a node.
-	BlockRequestor node.EntityRequestor
 )
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
@@ -61,49 +55,85 @@ func SetupM2MSenders() {
 
 }
 
-/*SetupM2MReceivers - setup receivers for miner to miner communication */
-func SetupM2MReceivers(c node.Chainer) {
-	http.HandleFunc("/v1/_m2m/round/vrf_share",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/verification_ticket",
-		common.N2NRateLimit(node.StopOnBlockSyncingHandler(c,
+const (
+	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf_share"
+)
+
+func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	reqRespHandlerfMap := map[string]common.ReqRespHandlerf{
+		vrfsShareRoundM2MV1Pattern: node.ToN2NReceiveEntityHandler(
+			VRFShareHandler,
+			nil,
+		),
+		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
 			node.ToN2NReceiveEntityHandler(
-				VerificationTicketReceiptHandler, nil))))
-	http.HandleFunc("/v1/_m2m/block/verify",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(
-			VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
-	http.HandleFunc("/v1/_m2m/block/notarization",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/notarized_block",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(
-			NotarizedBlockHandler, nil)))
+				VerificationTicketReceiptHandler,
+				nil,
+			),
+		),
+		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
+			memorystore.WithConnectionEntityJSONHandler(
+				VerifyBlockHandler,
+				datastore.GetEntityMetadata("block")),
+			nil,
+		),
+		"/v1/_m2m/block/notarization": node.ToN2NReceiveEntityHandler(
+			NotarizationReceiptHandler,
+			nil,
+		),
+		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
+			NotarizedBlockHandler,
+			nil,
+		),
+	}
+
+	handlersMap := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range reqRespHandlerfMap {
+		handlersMap[pattern] = common.N2NRateLimit(handler)
+	}
+	return handlersMap
 }
 
-/*SetupX2MResponders - setup responders */
-func SetupX2MResponders() {
-	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
+const (
+	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized_block/get"
+)
 
-	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
-	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NSendEntityHandler(SignShareRequestHandler)))
-	http.HandleFunc("/v1/_m2m/chain/start", common.N2NRateLimit(node.ToN2NSendEntityHandler(StartChainRequestHandler)))
+func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
+	sendHandlerMap := map[string]common.JSONResponderF{
+		getNotarizedBlockX2MV1Pattern: NotarizedBlockSendHandler,
+		"/v1/_x2m/state/get":          PartialStateHandler,
+		"/v1/_m2m/dkg/share":          SignShareRequestHandler,
+		"/v1/_m2m/chain/start":        StartChainRequestHandler,
+	}
+
+	x2mRespMap := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range sendHandlerMap {
+		x2mRespMap[pattern] = common.N2NRateLimit(
+			node.ToN2NSendEntityHandler(
+				handler,
+			),
+		)
+	}
+	return x2mRespMap
+}
+
+func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlers {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
 func SetupM2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
-
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
-	BlockRequestor = node.RequestEntityHandler("/v1/block/get", options, blockEntityMetadata)
 }
 
 func SetupM2MRequestors() {
 	dkgShareEntityMetadata := datastore.GetEntityMetadata("dkg_share")
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
-
-	chainStartEntityMetadata := datastore.GetEntityMetadata("start_chain")
-	ChainStartSender = node.RequestEntityHandler("/v1/_m2m/chain/start", options, chainStartEntityMetadata)
 }
 
 // VRFShareHandler - handle the vrf share.
@@ -374,11 +404,9 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	return nil, nil
 }
 
-// NotarizationReceiptHandler - handles the receipt of a notarization
+// notarizationReceiptHandler - handles the receipt of a notarization
 // for a block.
-func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
-	interface{}, error) {
-
+func notarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	var notarization, ok = entity.(*Notarization)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
@@ -482,8 +510,8 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	return nil, nil
 }
 
-// NotarizedBlockSendHandler - handles a request for a notarized block.
-func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// notarizedBlockSendHandler - handles a request for a notarized block.
+func notarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return getNotarizedBlock(ctx, r)
 }
 

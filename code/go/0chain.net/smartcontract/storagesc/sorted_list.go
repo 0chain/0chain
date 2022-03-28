@@ -4,10 +4,12 @@ import (
 	"sort"
 )
 
-// a unique sorted list of strings for O(logN) access
-type sortedList []string
+//go:generate msgp -io=false -tests=false -v
 
-func (sl sortedList) getIndex(id string) (i int, ok bool) {
+// SortedList represents a unique sorted list of strings for O(logN) access
+type SortedList []string
+
+func (sl SortedList) getIndex(id string) (i int, ok bool) {
 	i = sort.Search(len(sl), func(i int) bool {
 		return sl[i] >= id
 	})
@@ -20,11 +22,11 @@ func (sl sortedList) getIndex(id string) (i int, ok bool) {
 	return // not found
 }
 
-func (sl *sortedList) removeByIndex(i int) {
+func (sl *SortedList) removeByIndex(i int) {
 	(*sl) = append((*sl)[:i], (*sl)[i+1:]...)
 }
 
-func (sl *sortedList) remove(id string) (ok bool) {
+func (sl *SortedList) remove(id string) (ok bool) {
 	var i int
 	if i, ok = sl.getIndex(id); !ok {
 		return // false
@@ -33,7 +35,7 @@ func (sl *sortedList) remove(id string) (ok bool) {
 	return true // removed
 }
 
-func (sl *sortedList) add(id string) (ok bool) {
+func (sl *SortedList) add(id string) (ok bool) {
 	if len(*sl) == 0 {
 		(*sl) = append((*sl), id)
 		return true // added
@@ -57,10 +59,10 @@ func (sl *sortedList) add(id string) (ok bool) {
 
 // sorted blobbers
 
-// a unique sorted list of blobbers for O(logN) access
-type sortedBlobbers []*StorageNode
+// SortedBlobbers represents a unique sorted list of blobbers for O(logN) access
+type SortedBlobbers []*StorageNode
 
-func (sb sortedBlobbers) getIndex(id string) (i int, ok bool) {
+func (sb SortedBlobbers) getIndex(id string) (i int, ok bool) {
 	i = sort.Search(len(sb), func(i int) bool {
 		return sb[i].ID >= id
 	})
@@ -73,7 +75,7 @@ func (sb sortedBlobbers) getIndex(id string) (i int, ok bool) {
 	return // not found
 }
 
-func (sb sortedBlobbers) get(id string) (b *StorageNode, ok bool) {
+func (sb SortedBlobbers) get(id string) (b *StorageNode, ok bool) {
 	var i = sort.Search(len(sb), func(i int) bool {
 		return sb[i].ID >= id
 	})
@@ -86,11 +88,11 @@ func (sb sortedBlobbers) get(id string) (b *StorageNode, ok bool) {
 	return // not found
 }
 
-func (sb *sortedBlobbers) removeByIndex(i int) {
+func (sb *SortedBlobbers) removeByIndex(i int) {
 	(*sb) = append((*sb)[:i], (*sb)[i+1:]...)
 }
 
-func (sb *sortedBlobbers) remove(id string) (ok bool) {
+func (sb *SortedBlobbers) remove(id string) (ok bool) {
 	var i int
 	if i, ok = sb.getIndex(id); !ok {
 		return // false
@@ -99,7 +101,7 @@ func (sb *sortedBlobbers) remove(id string) (ok bool) {
 	return true // removed
 }
 
-func (sb *sortedBlobbers) add(b *StorageNode) (ok bool) {
+func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 	if len(*sb) == 0 {
 		(*sb) = append((*sb), b)
 		return true // added
@@ -123,7 +125,7 @@ func (sb *sortedBlobbers) add(b *StorageNode) (ok bool) {
 }
 
 // replace if found
-func (sb *sortedBlobbers) update(b *StorageNode) (ok bool) {
+func (sb *SortedBlobbers) update(b *StorageNode) (ok bool) {
 	var i int
 	if i, ok = sb.getIndex(b.ID); !ok {
 		return
@@ -132,7 +134,7 @@ func (sb *sortedBlobbers) update(b *StorageNode) (ok bool) {
 	return
 }
 
-func (sb sortedBlobbers) copy() (cp []*StorageNode) {
+func (sb SortedBlobbers) copy() (cp []*StorageNode) {
 	cp = make([]*StorageNode, 0, len(sb))
 	for _, b := range sb {
 		cp = append(cp, b)

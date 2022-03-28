@@ -39,6 +39,7 @@ const (
 	RewardDeclineRate
 	MaxMint
 	OwnerId
+	Cost
 )
 
 var (
@@ -62,6 +63,7 @@ var (
 		"reward_decline_rate",
 		"max_mint",
 		"owner_id",
+		"cost",
 	}
 	NumberOfSettings = len(SettingName)
 
@@ -88,6 +90,7 @@ var (
 		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
 		"owner_id":               {OwnerId, smartcontract.Key},
+		"cost":                   {Cost, smartcontract.Cost},
 	}
 )
 
@@ -207,6 +210,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)
 		}
 		gn.setKey(key, change)
+	case smartcontract.Cost:
 	default:
 		return fmt.Errorf("unsupported type setting %v", smartcontract.ConfigTypeName[Settings[key].ConfigType])
 	}

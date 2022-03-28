@@ -11,8 +11,10 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type GroupSharesOrSigns struct {
-	mutex  sync.RWMutex             `json:"-" msgpack:"-"`
+	mutex  sync.RWMutex             `json:"-" msgpack:"-" msg:"-"`
 	Shares map[string]*ShareOrSigns `json:"shares"`
 }
 

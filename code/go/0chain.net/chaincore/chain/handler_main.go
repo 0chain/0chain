@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package chain
@@ -30,4 +31,9 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 
 		return lfmb, nil
 	}
+}
+
+// SetupHandlers sets up the necessary API end points.
+func SetupHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
 }

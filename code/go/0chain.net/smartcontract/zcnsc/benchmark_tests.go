@@ -56,37 +56,37 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 	return createTestSuite(
 		[]benchTest{
 			{
-				name:     benchmark.Zcn + AddAuthorizerFunc,
+				name:     benchmark.ZcnSc + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
 				txn:      createTransaction(data.Clients[indexOfNewAuth], data.PublicKeys[indexOfNewAuth]),
 				input:    createAuthorizerPayload(data, indexOfNewAuth),
 			},
 			{
-				name:     benchmark.Zcn + DeleteAuthorizerFunc,
+				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
 				txn:      createTransaction(authToDelete.ID, authToDelete.PublicKey),
 				input:    nil,
 			},
 			{
-				name:     benchmark.Zcn + BurnFunc,
+				name:     benchmark.ZcnSc + BurnFunc,
 				endpoint: sc.Burn,
 				txn:      createRandomBurnTransaction(data.Clients, data.PublicKeys),
 				input:    createBurnPayloadForZCNSCBurn(),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + ".1Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + ".1Confirmation",
 				endpoint: sc.Mint,
 				txn:      createRandomTransaction(),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + ".10Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + ".10Confirmation",
 				endpoint: sc.Mint,
 				txn:      createRandomTransaction(),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + "100Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + "100Confirmation",
 				endpoint: sc.Mint,
 				txn:      createRandomTransaction(),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),

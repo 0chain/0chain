@@ -22,6 +22,8 @@ import (
 	"0chain.net/core/viper"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 var nodes = make(map[string]*Node)
 var nodesMutex = &sync.RWMutex{}
 
@@ -142,26 +144,26 @@ type Node struct {
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
 	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
-	LastActiveTime time.Time     `json:"-" msgpack:"-" yaml:"-"`
-	ErrorCount     int64         `json:"-" msgpack:"-" yaml:"-"`
-	CommChannel    chan struct{} `json:"-" msgpack:"-" yaml:"-"`
+	LastActiveTime time.Time     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	ErrorCount     int64         `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	CommChannel    chan struct{} `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	//These are approximiate as we are not going to lock to update
-	sent       int64 `json:"-" msgpack:"-" yaml:"-"` // messages sent to this node
-	sendErrors int64 `json:"-" msgpack:"-" yaml:"-"` // failed message sent to this node
-	received   int64 `json:"-" msgpack:"-" yaml:"-"` // messages received from this node
+	sent       int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // messages sent to this node
+	sendErrors int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // failed message sent to this node
+	received   int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" yaml:"-"`
-	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" yaml:"-"`
+	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
 	largeMessageSendTime uint64 `yaml:"-"`
 	smallMessageSendTime uint64 `yaml:"-"`
 
-	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
-	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
+	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
-	mutex sync.RWMutex `json:"-" msgpack:"-" yaml:"-"`
+	mutex sync.RWMutex `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
-	ProtocolStats interface{} `json:"-" msgpack:"-" yaml:"-"`
+	ProtocolStats interface{} `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
 	idBytes []byte `yaml:"-"`
 

@@ -1,13 +1,10 @@
 package control
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
 	"0chain.net/smartcontract/minersc"
-
-	"0chain.net/core/common"
 
 	"github.com/spf13/viper"
 
@@ -83,12 +80,9 @@ func controlIndividual(balances cstate.StateContextI) error {
 	var itArray []item
 	for i := 0; i < n; i++ {
 		var it item
-		val, err := balances.GetTrieNode(getControlNKey(i))
+		err := balances.GetTrieNode(getControlNKey(i), &it)
 		if err != nil {
 			return err
-		}
-		if err := it.Decode(val.Encode()); err != nil {
-			return fmt.Errorf("%w: %s", common.ErrDecoding, err)
 		}
 		itArray = append(itArray, it)
 	}
@@ -104,12 +98,9 @@ func controlUpdateIndividual(balances cstate.StateContextI) error {
 
 	for i := 0; i < n; i++ {
 		var it item
-		val, err := balances.GetTrieNode(getControlNKey(i))
+		err := balances.GetTrieNode(getControlNKey(i), &it)
 		if err != nil {
 			return err
-		}
-		if err := it.Decode(val.Encode()); err != nil {
-			return fmt.Errorf("%w: %s", common.ErrDecoding, err)
 		}
 
 		it.Field = 1
@@ -129,13 +120,11 @@ func controlArray(balances cstate.StateContextI) error {
 	}
 
 	var ia itemArray
-	val, err := balances.GetTrieNode(controlMKey)
+	err := balances.GetTrieNode(controlMKey, &ia)
 	if err != nil {
 		return err
 	}
-	if err := ia.Decode(val.Encode()); err != nil {
-		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+
 	return nil
 }
 
@@ -147,12 +136,9 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 	}
 
 	var ia itemArray
-	val, err := balances.GetTrieNode(controlMKey)
+	err := balances.GetTrieNode(controlMKey, &ia)
 	if err != nil {
 		return err
-	}
-	if err := ia.Decode(val.Encode()); err != nil {
-		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 
 	ia.Fields = append(ia.Fields, 1)
@@ -165,14 +151,7 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 }
 
 func allMiners(balances cstate.StateContextI) error {
-	nodesBytes, err := balances.GetTrieNode(minersc.AllMinersKey)
-	if err != nil {
-		return err
-	}
-
 	nodesList := &minersc.MinerNodes{}
-	if err = nodesList.Decode(nodesBytes.Encode()); err != nil {
-		return err
-	}
-	return nil
+	err := balances.GetTrieNode(minersc.AllMinersKey, nodesList)
+	return err
 }

@@ -5,6 +5,9 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+
+	"0chain.net/conductor/conductrpc/stats"
+	"0chain.net/conductor/config/cases"
 )
 
 // Executor used by a Flow to perform a flow directive.
@@ -78,6 +81,32 @@ type Executor interface {
 	StorageTree(st *Bad) (err error)
 	ValidatorProof(vp *Bad) (err error)
 	Challenges(cs *Bad) (err error)
+
+	// MinersNum returns number of miner nodes.
+	MinersNum() int
+
+	// GetMonitorID returns ID of the Monitor.
+	GetMonitorID() string
+
+	// EnableServerStatsCollector enables server stats collecting.
+	EnableServerStatsCollector() error
+
+	// GetServerStatsCollector returns current server stats collector.
+	GetServerStatsCollector() *stats.NodesServerStats
+
+	// EnableClientStatsCollector enables client stats collecting.
+	EnableClientStatsCollector() error
+
+	// GetClientStatsCollector returns current client stats collector.
+	GetClientStatsCollector() *stats.NodesClientStats
+
+	SaveLogs() error
+
+	// ConfigureTestCase runs cases.TestCase's configuring with cases.TestCaseConfigurator configuration.
+	ConfigureTestCase(cases.TestCaseConfigurator) error
+
+	// MakeTestCaseCheck runs cases.TestCase's final check with TestCaseCheck configuration.
+	MakeTestCaseCheck(*TestCaseCheck) error
 }
 
 //

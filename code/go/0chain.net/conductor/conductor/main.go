@@ -35,10 +35,8 @@ func init() {
 
 // type aliases
 type (
-	NodeID           = config.NodeID
 	NodeName         = config.NodeName
 	Round            = config.Round
-	RoundName        = config.RoundName
 	Number           = config.Number
 	ExpectMagicBlock = config.ExpectMagicBlock
 )
@@ -148,6 +146,8 @@ type Runner struct {
 	server  *conductrpc.Server
 	conf    *config.Config
 	verbose bool
+
+	currTestCaseName string
 
 	// state
 
@@ -757,15 +757,6 @@ func (r *Runner) proceedWaiting() (err error) {
 	return
 }
 
-func isOk(cs []reportFlowDirective) (ok bool) {
-	for _, c := range cs {
-		if !c.success {
-			return false
-		}
-	}
-	return true
-}
-
 func okString(t bool) string {
 	if t {
 		return "[PASS]"
@@ -888,6 +879,12 @@ func (r *Runner) Run() (err error, success bool) {
 					log.Printf("[ERR] at the end of %d test case: %v", i, err)
 					if mustFail {
 						log.Printf("[The error is expected result of the test case]")
+					}
+
+					if testCase.Flow.IsSavingLogs() {
+						if err := r.SaveLogs(); err != nil {
+							log.Printf("Warning: error while saving logs: %v", err)
+						}
 					}
 
 					continue cases
