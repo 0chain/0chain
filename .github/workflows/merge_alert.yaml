@@ -20,7 +20,6 @@ jobs:
             docker.local/config/sc.yaml   
 
       - name: "Check if should send slack notification"
-        if: failure()
         id: send-slack-notification
         uses: peter-murray/value-as-flag-action@0.0.1
         with:
@@ -28,6 +27,6 @@ jobs:
           default: false
 
       - name: "Notify Slack"
-        if: failure() && steps.send-slack-notification.outputs.value == 'true'
+        if: steps.send-slack-notification.outputs.value == 'true'
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":" View the test results on Github: https://github.com/0chain/system_test/actions/runs/${{ github.run_id }}"}' ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
