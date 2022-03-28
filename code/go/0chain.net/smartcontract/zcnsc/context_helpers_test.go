@@ -4,7 +4,6 @@ package zcnsc_test
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -31,29 +30,29 @@ func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
 }
 
-func mockSetValue(v interface{}) interface{} {
-	return mock.MatchedBy(func(c interface{}) bool {
-		cv := reflect.ValueOf(c)
-		if cv.Kind() != reflect.Ptr {
-			panic(fmt.Sprintf("%t must be a pointer, %v", v, cv.Kind()))
-		}
-
-		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.Ptr {
-			if vv.Type() != cv.Type() {
-				return false
-			}
-			cv.Elem().Set(vv.Elem())
-		} else {
-			if vv.Type() != cv.Elem().Type() {
-				return false
-			}
-
-			cv.Elem().Set(vv)
-		}
-		return true
-	})
-}
+//func mockSetValue(v interface{}) interface{} {
+//	return mock.MatchedBy(func(c interface{}) bool {
+//		cv := reflect.ValueOf(c)
+//		if cv.Kind() != reflect.Ptr {
+//			panic(fmt.Sprintf("%t must be a pointer, %v", v, cv.Kind()))
+//		}
+//
+//		vv := reflect.ValueOf(v)
+//		if vv.Kind() == reflect.Ptr {
+//			if vv.Type() != cv.Type() {
+//				return false
+//			}
+//			cv.Elem().Set(vv.Elem())
+//		} else {
+//			if vv.Type() != cv.Elem().Type() {
+//				return false
+//			}
+//
+//			cv.Elem().Set(vv)
+//		}
+//		return true
+//	})
+//}
 
 type mockStateContext struct {
 	*mocks.StateContextI

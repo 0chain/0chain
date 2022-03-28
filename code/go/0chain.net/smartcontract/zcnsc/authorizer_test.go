@@ -272,16 +272,14 @@ func Test_Cannot_Delete_AuthorizerFromAnotherClient(t *testing.T) {
 	ctx := MakeMockStateContext()
 	authorizerID := authorizersID[0]
 
-	var data []byte
-	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx)
-	sc := CreateZCNSmartContract()
-
 	node, err := GetAuthorizerNode(authorizerID, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	tr = CreateAddAuthorizerTransaction("another client", ctx)
+	tr := CreateAddAuthorizerTransaction("another client", ctx)
+	var data []byte
 
+	sc := CreateZCNSmartContract()
 	authorizer, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.Empty(t, authorizer)
 	require.Error(t, err)

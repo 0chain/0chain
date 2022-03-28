@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -54,10 +53,6 @@ func stakePoolKey(scKey, providerID string) datastore.Key {
 	return scKey + ":stakepool:" + providerID
 }
 
-func stakePoolID(scKey, providerID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, providerID))
-}
-
 // Encode to []byte
 func (sp *StakePool) Encode() (b []byte) {
 	var err error
@@ -79,12 +74,12 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 }
 
 // The stake() returns total stake size including delegate pools want to unstake.
-func (sp *StakePool) stake() (stake state.Balance) {
-	for _, dp := range sp.Pools {
-		stake += dp.Balance
-	}
-	return
-}
+//func (sp *StakePool) stake() (stake state.Balance) {
+//	for _, dp := range sp.Pools {
+//		stake += dp.Balance
+//	}
+//	return
+//}
 
 // empty a delegate pool if possible, call update before the empty
 func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {

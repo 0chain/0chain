@@ -35,8 +35,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerPublicKey           = tran.PublicKey // authorizer public key
-		authorizerURL                 = ""
+		authorizerPublicKey           string
+		authorizerURL                 string
 		authorizerStakingPoolSettings stakepool.StakePoolSettings
 		authorizerID                  = tran.ClientID   // sender address
 		recipientID                   = tran.ToClientID // smart contract address
