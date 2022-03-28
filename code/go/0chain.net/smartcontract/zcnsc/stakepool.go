@@ -270,20 +270,9 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
 	}
 
-	unstake, err := sp.empty(zcn.ID, spr.PoolID, t.ClientID, ctx)
+	_, err = sp.empty(zcn.ID, spr.PoolID, t.ClientID, ctx)
 	if err != nil {
-		return "", common.NewErrorf(code,
-			"unlocking tokens: %v", err)
-	}
-
-	// the tokens can't be unlocked due to opened offers, but we mark it
-	// as 'unstake' and returns maximal time to wait to unlock the pool
-	if !unstake {
-		// save the pool and return special result
-		if err = sp.save(zcn.ID, spr.AuthorizerID, ctx); err != nil {
-			return "", common.NewErrorf(code, "saving stake pool: %v", err)
-		}
-		return toJson(&unlockResponse{Unstake: false}), nil
+		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
 	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, spr.PoolID, ctx)
