@@ -20,7 +20,7 @@ func GetViper(loadPath string) {
 	viper.AddConfigPath("../config/")
 	viper.AddConfigPath("./testdata/")
 	viper.AddConfigPath("./config/")
-	viper.AddConfigPath(path)
+	viper.AddConfigPath(loadPath)
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("..")
 	err := viper.ReadInConfig()
