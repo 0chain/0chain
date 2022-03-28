@@ -697,7 +697,19 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
-	conf.BlockReward = &blockReward{}
+	conf.BlockReward = new(blockReward)
+	conf.BlockReward.BlockReward = state.Balance(viper.GetFloat64(sc.StorageBlockReward) * 1e10)
+	conf.BlockReward.BlockRewardChangePeriod = viper.GetInt64(sc.StorageBlockRewardChangePeriod)
+	conf.BlockReward.BlockRewardChangeRatio = viper.GetFloat64(sc.StorageBlockRewardChangeRatio)
+	conf.BlockReward.QualifyingStake = state.Balance(viper.GetFloat64(sc.StorageBlockRewardQualifyingStake) * 1e10)
+
+	conf.BlockReward.TriggerPeriod = viper.GetInt64(sc.StorageBlockRewardTriggerPeriod)
+	conf.BlockReward.setWeightsFromRatio(
+		viper.GetFloat64(sc.StorageBlockRewardSharderRatio),
+		viper.GetFloat64(sc.StorageBlockRewardMinerRatio),
+		viper.GetFloat64(sc.StorageBlockRewardBlobberRatio),
+	)
+
 	conf.ExposeMpt = true
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)

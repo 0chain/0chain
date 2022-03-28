@@ -429,9 +429,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
 	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
 
-	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
-	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_weight")
-	conf.BlockReward.BlobberWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
