@@ -62,7 +62,7 @@ func AddControlObjects(
 	if m == 0 || n > m {
 		return
 	}
-	fields := make([]int64, m, m)
+	fields := make([]int64, m)
 	for i := 0; i < m; i++ {
 		fields[i] = int64(i)
 	}
