@@ -13,11 +13,11 @@ import (
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
+	"github.com/spf13/viper"
 )
 
 const (
 	authRangeStart = 0
-	authRangeEnd   = 200
 )
 
 var (
@@ -30,7 +30,7 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 	fmt.Printf("Setting up benchmarks with %d clients\n", len(clients))
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
-	addMockAuthorizers(clients, publicKeys, balances, authRangeStart, authRangeEnd)
+	addMockAuthorizers(clients, publicKeys, balances, authRangeStart)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -47,8 +47,8 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
 
-func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start, end int) {
-	for i := start; i < end; i++ {
+func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start int) {
+	for i := start; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
 
