@@ -250,6 +250,8 @@ func testCommitBlobberRead(
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}
 
+	setConfig(t, ctx)
+
 	var client = &Client{
 		balance: 10000,
 		scheme:  encryption.NewBLS0ChainScheme(),
