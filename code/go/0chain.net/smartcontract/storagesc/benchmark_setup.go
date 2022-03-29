@@ -122,6 +122,11 @@ func AddMockChallenges(
 	challenges := make([]BlobberChallenge, len(blobbers), len(blobbers))
 	allocationChall := make([]AllocationChallenge, numAllocations, numAllocations)
 
+	partition, err := getBlobbersChallengeList(balances)
+	if err != nil {
+		panic(err)
+	}
+
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		numAllocBlobbers := viper.GetInt(sc.NumBlobbersPerAllocation)
 		startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
@@ -137,16 +142,56 @@ func AddMockChallenges(
 			)
 		}
 	}
+	blobAlloc := make(map[string]map[string]bool)
 
+	// adding blobber challenges and blobber challenge partition
 	for _, ch := range challenges {
 		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
 		if err != nil {
 			panic(err)
 		}
+
+		_, err = partition.Add(&partitions.BlobberChallengeNode{
+			BlobberID: ch.BlobberID,
+		}, balances)
+		if err != nil {
+			panic(err)
+		}
+	}
+	err = partition.Save(balances)
+	if err != nil {
+		panic(err)
 	}
 
+	// adding allocation challenges
 	for _, ch := range allocationChall {
 		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		if err != nil {
+			panic(err)
+		}
+		for _, b := range ch.Challenges {
+			if _, ok := blobAlloc[b.BlobberID]; !ok {
+				blobAlloc[b.BlobberID] = make(map[string]bool)
+			}
+			blobAlloc[b.BlobberID][ch.AllocationID] = true
+		}
+	}
+
+	// adding blobber challenge allocation partition
+	for blobberID, val := range blobAlloc {
+		aPart, err := getBlobbersChallengeAllocationList(blobberID, balances)
+		if err != nil {
+			panic(err)
+		}
+		for allocID := range val {
+			_, err = aPart.Add(&partitions.BlobberChallengeAllocationNode{
+				ID: allocID,
+			}, balances)
+			if err != nil {
+				panic(err)
+			}
+		}
+		err = aPart.Save(balances)
 		if err != nil {
 			panic(err)
 		}
