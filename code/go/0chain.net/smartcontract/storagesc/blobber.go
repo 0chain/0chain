@@ -650,12 +650,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		bcPartition, err := getBlobbersChallengeList(balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
-				"error fetching blobber challenge partition")
+				"error fetching blobber challenge partition: "+err.Error())
 		}
 		loc, err := bcPartition.Add(pData, balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
-				"error adding to blobber challenge partition")
+				"error adding to blobber challenge partition: "+err.Error())
 		}
 		blobber.ChallengeLocation = partitions.NewPartitionLocation(loc, t.CreationDate)
 
