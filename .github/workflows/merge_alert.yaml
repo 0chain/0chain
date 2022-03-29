@@ -8,7 +8,7 @@ on:
    
 jobs:
   test:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, conductor-test]
     steps:
       - uses: actions/checkout@v2
         with:
