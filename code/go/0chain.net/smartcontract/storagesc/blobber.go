@@ -624,10 +624,16 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
+	// this should be replaced with getBlobber() once storageNode is normalised
 	blobberChallLocation, err := sc.getBlobberChallengePartitionLocation(t.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"error fetching blobber")
+		if err == util.ErrValueNotPresent {
+			blobberChallLocation = new(BlobberChallengePartitionLocation)
+			blobberChallLocation.ID = t.ClientID
+		} else {
+			return "", common.NewError("commit_connection_failed",
+				"error fetching blobber challenge partition location")
+		}
 	}
 
 	// partition blobber challenge
