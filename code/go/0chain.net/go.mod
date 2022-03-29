@@ -18,7 +18,6 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/herumi/bls v0.0.0-20210511012341-3f3850a6eac7
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72

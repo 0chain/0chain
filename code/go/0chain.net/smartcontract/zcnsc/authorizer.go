@@ -10,7 +10,6 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -95,25 +94,25 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err == nil && authorizer != nil {
-		errs := fmt.Errorf("authorizer(authorizerID: %v) already exists", authorizerID)
-		err = createOrUpdateStakePool()
-		if err != nil {
-			errs = multierror.Append(errs, errors.Wrap(err, "failed to get or create stake pool"))
+		erra := fmt.Errorf("authorizer(authorizerID: %v) already exists", authorizerID)
+		errb := createOrUpdateStakePool()
+		if errb != nil {
+			err = errors.Wrapf(erra, "failed to get or create stake pool: %v", errb)
 		} else {
 			Logger.Info("create or update stake pool completed successfully")
 		}
 
 		if authorizer.UpdateStakePoolSettings(&authorizerStakingPoolSettings) {
-			err = authorizer.Save(ctx)
-			if err != nil {
-				errs = multierror.Append(errs, errors.Wrap(err, "failed to update stake pool settings"))
+			errc := authorizer.Save(ctx)
+			if errc != nil {
+				err = errors.Wrapf(err, "failed to update stake pool settings: %v", errc)
 			} else {
 				Logger.Info("update pool settings completed successfully")
 			}
 		}
 
-		Logger.Error(code, zap.Error(errs))
-		return "", errs
+		Logger.Error(code, zap.Error(err))
+		return "", err
 	} else {
 		// compare the global min of authorizerNode Authorizer to that of the transaction amount
 		if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
