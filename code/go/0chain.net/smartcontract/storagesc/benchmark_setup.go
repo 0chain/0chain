@@ -144,6 +144,13 @@ func AddMockChallenges(
 			panic(err)
 		}
 	}
+
+	for _, ch := range allocationChall {
+		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func AddMockClientAllocation(
@@ -292,9 +299,7 @@ func setupMockChallenges(
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
 		storageChall := &StorageChallenge{
-			ID: getMockChallengeId(bIndex, i),
-			//Validators:   selValidators,
-			//Blobber:      blobber,
+			ID:              getMockChallengeId(bIndex, i),
 			AllocationID:    allocationId,
 			TotalValidators: len(selValidators),
 			BlobberID:       blobber.ID,
