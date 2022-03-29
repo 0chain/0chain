@@ -26,7 +26,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		zap.String("block_hash", balances.GetBlock().Hash))
 
 	var (
-		stakePools  []*stakePool
 		totalQStake float64
 		weight      []float64
 		totalWeight float64
@@ -84,19 +83,28 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			zap.String("getting random partition", err.Error()))
 		return nil
 	}
+
+	type spResp struct {
+		index int
+		sp    *stakePool
+	}
+
 	var wg sync.WaitGroup
 	errorChan := make(chan error, len(blobberPartition))
-	spChan := make(chan *stakePool, len(blobberPartition))
-	for _, b := range blobberPartition {
+	spChan := make(chan spResp, len(blobberPartition))
+	for i, b := range blobberPartition {
 		wg.Add(1)
-		go func(b partitions.PartitionItem) {
+		go func(b partitions.PartitionItem, i int) {
 			defer wg.Done()
 			if sp, err := ssc.getStakePool(b.Name(), balances); err != nil {
 				errorChan <- err
 			} else {
-				spChan <- sp
+				spChan <- spResp{
+					index: i,
+					sp:    sp,
+				}
 			}
-		}(b)
+		}(b, i)
 	}
 	wg.Wait()
 	close(errorChan)
@@ -108,8 +116,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		}
 	}
 
-	for sp := range spChan {
-		stakePools = append(stakePools, sp)
+	stakePools := make([]*stakePool, len(blobberPartition))
+	for resp := range spChan {
+		stakePools[resp.index] = resp.sp
 	}
 
 	qualifyingBlobberIds := make([]string, len(blobberPartition), len(blobberPartition))
