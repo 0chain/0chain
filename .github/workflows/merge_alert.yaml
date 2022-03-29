@@ -22,7 +22,7 @@ jobs:
         if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml')
         run: |
           echo "Your 0chain.yaml file has been modified."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.SHAHNAWAZ_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
       
       - name: Run step when a file changes
         if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml')
