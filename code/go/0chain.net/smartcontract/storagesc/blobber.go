@@ -556,6 +556,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err := json.Marshal(details)
+	if err != nil {
+		return "", common.NewError("commit_connection_failed",
+			"error marshalling allocation blobber details")
+	}
 
 	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
 		return "", common.NewError("commit_connection_failed",

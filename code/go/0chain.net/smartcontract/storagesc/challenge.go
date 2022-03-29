@@ -874,6 +874,10 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	}
 
 	listLen, err := validators.Size(balances)
+	if err != nil {
+		return common.NewErrorf("adding_challenge_error",
+			"error checking validator size: %v", err)
+	}
 	if listLen == 0 {
 		return common.NewErrorf("adding_challenge_error",
 			"no available validators")

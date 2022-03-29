@@ -118,7 +118,7 @@ func (rs *randomSelector) Remove(
 
 	replacment := lastPart.cutTail()
 	if replacment == nil {
-		fmt.Errorf("empty last partitions, currpt data")
+		return fmt.Errorf("empty last partitions, currpt data")
 	}
 	err = part.add(replacment)
 	if err != nil {
