@@ -3,20 +3,16 @@ package zcnsc
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-
-	"github.com/hashicorp/go-multierror"
-
-	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -38,7 +34,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		authorizerID = tran.ClientID   // sender address
 		recipientID  = tran.ToClientID // smart contract address
 		authorizer   *AuthorizerNode
-		err          error
 	)
 
 	if authorizerID == "" {
@@ -73,7 +68,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	authorizerPublicKey := params.PublicKey
 	authorizerURL := params.URL
-  authorizerStakingPoolSettings = params.StakePoolSettings
+	authorizerStakingPoolSettings := params.StakePoolSettings
 
 	// Check existing Authorizer
 
