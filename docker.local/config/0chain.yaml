@@ -1,4 +1,4 @@
-#0chain.yaml config map 
+#0chain.yaml config file
 version: 1.0
 
 logging:
