@@ -1,24 +1,31 @@
 name: Merge Alert 
+
 on:
   push:
-    branches: [ alert1 ]
-    
+   branches: 
+     - alert1
   pull_request:
-
+   
 jobs:
-  miner:
-    runs-on: [self-hosted, build]
+  test:
+    runs-on: ubuntu-18.04  
     steps:
       - uses: actions/checkout@v2
-      - uses: technote-space/get-diff-action@v6
         with:
-#           PATTERNS: |
-#             +(src|__tests__)/**/*.ts
-#             !src/exclude.ts
-          FILES: |
-            docker.local/config/0chain.yaml
-            docker.local/config/sc.yaml   
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
-      - name: "Notify Slack"
+      - name: Get changed files using defaults
+        id: changed-files
+        uses: tj-actions/changed-files@v18.4
+             
+      - name: Run step when a file changes
+        if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml')
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":" testing https://github.com/0chain/system_test/actions/runs/${{ github.run_id }}"}' ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          echo "Your 0chain.yaml file has been modified."
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.SHAHNAWAZ_WEBHOOK_URL }}
+      
+      - name: Run step when a file changes
+        if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml')
+        run: |
+          echo "Your sc.yaml file has been modified."
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your sc.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
