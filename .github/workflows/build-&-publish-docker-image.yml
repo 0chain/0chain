@@ -175,9 +175,9 @@ jobs:
           explorer_image: latest
           zproxy_image: staging
           zsearch_image: staging
-          zbox_cli_branch: ${{ inputs.zbox_cli_branch }}
-          zwallet_cli_branch: ${{ inputs.zwallet_cli_branch }}
-          custom_go_sdk_version: ${{ env.GOSDK_SHA }}
+          zbox_cli_branch: staging
+          zwallet_cli_branch: staging
+          custom_go_sdk_version: staging
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
