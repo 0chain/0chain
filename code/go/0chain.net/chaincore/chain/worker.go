@@ -358,15 +358,13 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	}()
 
 	for {
-		select {
-		case <-timer.C:
-			Logger.Debug("Do prune client state worker")
-			c.pruneClientState(ctx)
-			if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
-				timer = time.NewTimer(time.Second)
-			} else {
-				timer = time.NewTimer(tick)
-			}
+		<-timer.C
+		Logger.Debug("Do prune client state worker")
+		c.pruneClientState(ctx)
+		if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
+			timer = time.NewTimer(time.Second)
+		} else {
+			timer = time.NewTimer(tick)
 		}
 	}
 }

@@ -919,14 +919,13 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 	}
 
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
 			zap.String("minerID", b.MinerID),
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
-			zap.Int("changes", bState.GetChangeCount()),
 			zap.String("begin_client_state", util.ToHex(beginStateRoot)),
 			zap.String("computed_state_hash", util.ToHex(bState.GetRoot())),
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
@@ -1035,7 +1034,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("emit block event error", zap.Error(err))
 	}
 
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
 			zap.Int64("round", b.Round),
@@ -1108,7 +1107,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	if b.Hash != bsc.Block {
 		return ErrBlockHashMismatch
 	}
-	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bsc.Hash) {
 		return ErrBlockStateHashMismatch
 	}
 	root := bsc.GetRoot()
@@ -1134,7 +1133,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return err
 	}
 
-	if bytes.Compare(b.ClientStateHash, clientState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, clientState.GetRoot()) {
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
 

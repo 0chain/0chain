@@ -67,7 +67,9 @@ func (un *UserNode) Decode(input []byte) error {
 			if err != nil {
 				return err
 			}
-			un.Pools[tempPool.ID] = tempPool
+			if err := un.addPool(tempPool); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

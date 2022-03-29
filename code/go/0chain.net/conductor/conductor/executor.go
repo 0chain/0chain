@@ -168,7 +168,9 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		log.Print("stopping ", n.Name, "...")
 		if err := n.Stop(); err != nil {
 			log.Printf("stopping %s: %v", n.Name, err)
-			n.Kill()
+			if err := n.Kill(); err != nil {
+				log.Printf("kill failed: %v", err)
+			}
 		}
 		log.Print(n.Name, " stopped")
 	}

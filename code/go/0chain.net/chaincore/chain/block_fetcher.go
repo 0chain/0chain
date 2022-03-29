@@ -206,7 +206,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			var bfr, ok = fetching[rpl.Hash]
 			if !ok {
 				panic("BlockFetcher, invalid state: missing block fetch request")
-				continue
 			}
 
 			// got the correct response
@@ -252,8 +251,6 @@ func (bf *BlockFetcher) gotError(ctx context.Context, got chan BlockFetchReply,
 	case <-ctx.Done():
 	case got <- BlockFetchReply{Hash: hash, Err: err}:
 	}
-
-	return
 }
 
 func (bf *BlockFetcher) gotBlock(ctx context.Context, got chan BlockFetchReply,
@@ -263,8 +260,6 @@ func (bf *BlockFetcher) gotBlock(ctx context.Context, got chan BlockFetchReply,
 	case <-ctx.Done():
 	case got <- BlockFetchReply{Hash: b.Hash, Block: b}:
 	}
-
-	return
 }
 
 func (bf *BlockFetcher) fetchFromMiners(ctx context.Context,
@@ -416,28 +411,26 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	}()
 
 	for {
-		select {
-		case fb, ok := <-blockC:
-			if !ok {
-				return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
-			}
-
-			b, err := validateBlock(fb)
-			switch err {
-			case nil:
-			case context.Canceled,
-				context.DeadlineExceeded:
-				return nil, err
-			default:
-				continue
-			}
-
-			// stop requesting on first block accepted
-			cancel()
-			<-doneC
-
-			return b, nil
+		fb, ok := <-blockC
+		if !ok {
+			return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
 		}
+
+		b, err := validateBlock(fb)
+		switch err {
+		case nil:
+		case context.Canceled,
+			context.DeadlineExceeded:
+			return nil, err
+		default:
+			continue
+		}
+
+		// stop requesting on first block accepted
+		cancel()
+		<-doneC
+
+		return b, nil
 	}
 }
 
@@ -496,49 +489,47 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 	}()
 
 	for {
-		select {
-		case nb, ok := <-blockC:
-			if !ok {
-				logging.Logger.Debug("fetch_nb_from_miners - no notarized block given",
-					zap.Any("duration", time.Since(ts)))
-				return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
-			}
+		nb, ok := <-blockC
+		if !ok {
+			logging.Logger.Debug("fetch_nb_from_miners - no notarized block given",
+				zap.Any("duration", time.Since(ts)))
+			return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
+		}
 
-			if err = nb.Validate(ctx); err != nil {
-				logging.Logger.Error("fetch_nb_from_miners - invalid",
+		if err = nb.Validate(ctx); err != nil {
+			logging.Logger.Error("fetch_nb_from_miners - invalid",
+				zap.Int64("round", nb.Round), zap.String("block", hash),
+				zap.Any("block_obj", nb), zap.Error(err))
+			continue
+		}
+
+		if withVerification {
+			err = c.VerifyBlockNotarization(ctx, nb)
+			switch err {
+			case nil:
+			case context.Canceled, context.DeadlineExceeded:
+				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
 					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Any("block_obj", nb), zap.Error(err))
+					zap.Any("duration", time.Since(ts)),
+					zap.Error(err))
+				return nil, err
+			default:
+				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
+					zap.Int64("round", nb.Round), zap.String("block", hash),
+					zap.Error(err))
 				continue
 			}
-
-			if withVerification {
-				err = c.VerifyBlockNotarization(ctx, nb)
-				switch err {
-				case nil:
-				case context.Canceled, context.DeadlineExceeded:
-					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
-						zap.Int64("round", nb.Round), zap.String("block", hash),
-						zap.Any("duration", time.Since(ts)),
-						zap.Error(err))
-					return nil, err
-				default:
-					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
-						zap.Int64("round", nb.Round), zap.String("block", hash),
-						zap.Error(err))
-					continue
-				}
-			}
-
-			// cancel further requests
-			cancel()
-			<-doneC
-
-			logging.Logger.Debug("fetch_nb_from_miners -- ok",
-				zap.String("block", nb.Hash),
-				zap.Int64("round", nb.Round),
-				zap.Int("verification_tickers", nb.VerificationTicketsSize()))
-			return nb, nil
 		}
+
+		// cancel further requests
+		cancel()
+		<-doneC
+
+		logging.Logger.Debug("fetch_nb_from_miners -- ok",
+			zap.String("block", nb.Hash),
+			zap.Int64("round", nb.Round),
+			zap.Int("verification_tickers", nb.VerificationTicketsSize()))
+		return nb, nil
 	}
 }
 

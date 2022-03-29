@@ -96,7 +96,7 @@ type SendOptions struct {
 	Pull               bool
 }
 
-/*MessageFilterI - tells wether the given message should be processed or not
+/*MessageFilterI - tells whether the given message should be processed or not
 * This will be useful since if for example a notarized block is received multiple times
 * the cost of decoding and decompressing can be avoided */
 type MessageFilterI interface {
@@ -113,8 +113,7 @@ var httpClient *http.Client
 var n2nTrace = &httptrace.ClientTrace{}
 
 func init() {
-	var transport *http.Transport
-	transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -181,22 +180,17 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 var NoDataErr = common.NewError("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
-	io.Copy(ioutil.Discard, reader)
-	reader.Close()
-}
-
-func getDataAndClose(reader io.ReadCloser) []byte {
-	buf := &bytes.Buffer{}
-	io.Copy(buf, reader)
-	reader.Close()
-	return buf.Bytes()
+	_, _ = io.Copy(ioutil.Discard, reader)
+	_ = reader.Close()
 }
 
 func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(buffer)
+		if _, err := cbuffer.ReadFrom(buffer); err != nil {
+			return nil, err
+		}
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr
@@ -216,7 +210,9 @@ func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata dat
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(reader)
+		if _, err := cbuffer.ReadFrom(reader); err != nil {
+			return 0, nil, err
+		}
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
@@ -233,29 +229,27 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	entity := entityMetadata.Instance()
 	switch codec {
 	case CodecMsgpack:
-		if err := datastore.FromMsgpack(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromMsgpack(reader, entity); err != nil {
 			logging.N2n.Error("msgpack decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	case CodecJSON:
-		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromJSON(reader, entity); err != nil {
 			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	default:
-		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromJSON(reader, entity); err != nil {
 			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	}
-	logging.N2n.Error("unknown_encoding", zap.String("encoding", codec))
-	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
-func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {
+func getResponseData(options *SendOptions, entity datastore.Entity) (*bytes.Buffer, error) {
 	var buffer *bytes.Buffer
 	if options.CODEC == datastore.CodecJSON {
 		buffer = datastore.ToJSON(entity)
@@ -263,10 +257,13 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 		buffer = datastore.ToMsgpack(entity)
 	}
 	if options.Compress {
-		cbytes := compDecomp.Compress(buffer.Bytes())
-		buffer = bytes.NewBuffer(cbytes)
+		cb, err := compDecomp.Compress(buffer.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		buffer = bytes.NewBuffer(cb)
 	}
-	return buffer
+	return buffer, nil
 }
 
 func validateChain(sender *Node, r *http.Request) bool {
