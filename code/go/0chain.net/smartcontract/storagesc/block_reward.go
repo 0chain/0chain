@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -83,10 +84,37 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			zap.String("getting random partition", err.Error()))
 		return nil
 	}
+	var wg sync.WaitGroup
+	errorChan := make(chan error, len(blobberPartition))
+	spChan := make(chan *stakePool, len(blobberPartition))
+	for _, b := range blobberPartition {
+		wg.Add(1)
+		go func(b partitions.PartitionItem) {
+			defer wg.Done()
+			if sp, err := ssc.getStakePool(b.Name(), balances); err != nil {
+				errorChan <- err
+			} else {
+				spChan <- sp
+			}
+		}(b)
+	}
+	wg.Wait()
+	close(errorChan)
+	close(spChan)
+
+	for err := range errorChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	for sp := range spChan {
+		stakePools = append(stakePools, sp)
+	}
+
 	qualifyingBlobberIds := make([]string, len(blobberPartition), len(blobberPartition))
 
 	for i, b := range blobberPartition {
-		var sp *stakePool
 		var blobber partitions.BlobberRewardNode
 
 		err = blobber.Decode(b.Encode())
@@ -94,17 +122,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			return common.NewError("blobber_block_rewards_failed",
 				"can't decode blobber reward node: "+err.Error())
 		}
-		if sp, err = ssc.getStakePool(b.Name(), balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"can't get related stake pool: "+err.Error())
-		}
+		sp := stakePools[i]
 
 		stake := float64(sp.stake())
 
 		gamma := maths.GetGamma(A, B, alpha, blobber.TotalData, blobber.DataRead)
 		zeta := maths.GetZeta(I, K, mu, float64(blobber.WritePrice), float64(blobber.ReadPrice))
 		qualifyingBlobberIds[i] = blobber.ID
-		stakePools = append(stakePools, sp)
 		totalQStake += stake
 		blobberWeight := (gamma*zeta*float64(blobber.SuccessChallenges) + 1) * stake
 		weight = append(weight, blobberWeight)
