@@ -1406,21 +1406,23 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		blocks = append(blocks, b)
 	}
 
-	sort.SliceStable(blocks, func(i, j int) bool {
-		b1, b2 := blocks[i], blocks[j]
-		rank1, rank2 := math.MaxInt64, math.MaxInt64
-		if m1 := mb.Miners.GetNode(b1.MinerID); m1 != nil {
-			rank1 = rnd.GetMinerRank(m1)
-		}
-		if m2 := mb.Miners.GetNode(b2.MinerID); m2 != nil {
-			rank2 = rnd.GetMinerRank(m2)
-		}
-		if rank1 == rank2 {
-			return b1.RoundTimeoutCount > b2.RoundTimeoutCount ||
-				b1.CreationDate > b2.CreationDate
-		}
-		return rank1 < rank2
-	})
+	if roundHasRanks {
+		sort.SliceStable(blocks, func(i, j int) bool {
+			b1, b2 := blocks[i], blocks[j]
+			rank1, rank2 := math.MaxInt64, math.MaxInt64
+			if m1 := mb.Miners.GetNode(b1.MinerID); m1 != nil {
+				rank1 = rnd.GetMinerRank(m1)
+			}
+			if m2 := mb.Miners.GetNode(b2.MinerID); m2 != nil {
+				rank2 = rnd.GetMinerRank(m2)
+			}
+			if rank1 == rank2 {
+				return b1.RoundTimeoutCount > b2.RoundTimeoutCount ||
+					b1.CreationDate > b2.CreationDate
+			}
+			return rank1 < rank2
+		})
+	}
 
 	fmt.Fprintf(w, "<h3>Block Verification and Notarization</h3>")
 
@@ -1496,6 +1498,9 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "</table>")
 
+	if !roundHasRanks {
+		return
+	}
 	// VRFS
 	vrfSharesMap := rnd.GetVRFShares()
 	vrfShares := make([]*round.VRFShare, 0, len(vrfSharesMap))

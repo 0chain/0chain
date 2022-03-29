@@ -1,11 +1,16 @@
 package miner
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/user"
 	"strconv"
@@ -13,6 +18,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -562,4 +569,99 @@ func setupSelf() func() {
 		clean()
 		s.Close()
 	}
+}
+
+func generateProposedBlockToRound(t *testing.T, r *Round, n *node.Node) {
+	for {
+		b := block.NewBlock("", r.Number)
+		b.MinerID = n.Client.ID
+		randomData := make([]byte, 10)
+		read, err := rand.Reader.Read(randomData)
+		require.NoError(t, err)
+		require.Equal(t, read, len(randomData))
+		txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(randomData)}}
+		b.Txns = append(b.Txns, &txn)
+		b.AddTransaction(&txn)
+		b.TxnsMap = make(map[string]bool)
+		b.TxnsMap[txn.Hash] = true
+		b.HashBlock()
+		if _, added := r.AddProposedBlock(b); added {
+			break
+		}
+	}
+}
+
+func TestRoundInfoHandler(t *testing.T) {
+	clean := SetUpSingleSelf()
+	defer clean()
+	ctx := common.GetRootContext()
+	ctx = memorystore.WithConnection(ctx)
+	defer memorystore.Close(ctx)
+
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+
+	gb := SetupGenesisBlock()
+	mc.AddGenesisBlock(gb)
+
+	b := block.Provider().(*block.Block)
+	b.ChainID = datastore.ToKey(config.GetServerChainID())
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	mClient, err := makeTestMinioClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
+		usr.HomeDir, string(os.PathSeparator)), mClient))
+
+	r := CreateRound(1)
+	// need at least 2 blocks from miners to trigger sorting
+	mb := mc.GetMagicBlock(r.Number)
+	miners := mb.Miners.Nodes
+	generateProposedBlockToRound(t, r, miners[0])
+	generateProposedBlockToRound(t, r, miners[1])
+
+	runRequest := func() (body string) {
+		var err error
+		req, _ := http.NewRequest(http.MethodGet, "/_diagnostics/round_info", nil)
+		w := httptest.NewRecorder()
+		var loggedMessages bytes.Buffer
+		writer := bufio.NewWriter(&loggedMessages)
+		core := zapcore.NewCore(
+			zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig()),
+			zapcore.AddSync(writer),
+			zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+				return true
+			}),
+		)
+		logging.Logger = zap.New(core, zap.Development())
+		chain.RoundInfoHandler(w, req)
+		bodybytes, err := ioutil.ReadAll(w.Result().Body)
+		require.NoError(t, err)
+		require.Equal(t, 200, w.Result().StatusCode)
+		err = writer.Flush()
+		require.NoError(t, err)
+		body = string(bodybytes)
+		require.NotContains(t, loggedMessages.String(), `DPANIC`)
+		return
+	}
+
+	blocksSubstring := `Block Verification and Notarization`
+	vrfSubstring := `VRF Shares`
+
+	// call RoundInfoHandler on a round without seed and ranks
+	body := runRequest()
+	require.Contains(t, body, blocksSubstring)
+	require.NotContains(t, body, vrfSubstring)
+
+	r.SetRandomSeed(time.Now().UnixNano(), len(miners))
+
+	// call RoundInfoHandler on a round with seed and ranks
+	body = runRequest()
+	require.Contains(t, string(body), blocksSubstring)
+	require.Contains(t, string(body), vrfSubstring)
 }
