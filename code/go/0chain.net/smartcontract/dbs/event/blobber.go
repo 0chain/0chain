@@ -42,6 +42,11 @@ type Blobber struct {
 	TotalServiceCharge int64 `json:"total_service_charge"`
 	TotalStake         int64 `json:"total_stake"`
 
+	Name        string `json:"name" gorm:"name"`
+	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
+	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
+	Description string `json:"description" gorm:"description"`
+
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
@@ -176,6 +181,10 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"total_service_charge":      blobber.TotalServiceCharge,
 			"saved_data":                blobber.SavedData,
 			"total_stake":               blobber.TotalStake,
+			"name":                      blobber.Name,
+			"website_url":               blobber.WebsiteUrl,
+			"logo_url":                  blobber.LogoUrl,
+			"description":               blobber.Description,
 		})
 	return result.Error
 }

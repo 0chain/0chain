@@ -61,6 +61,12 @@ func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 			ServiceCharge:   blobber.ServiceCharge,
 		},
 		TotalStake: blobber.TotalStake,
+		Information: Info{
+			Name:        blobber.Name,
+			WebsiteUrl:  blobber.WebsiteUrl,
+			LogoUrl:     blobber.LogoUrl,
+			Description: blobber.Description,
+		},
 	}, nil
 }
 

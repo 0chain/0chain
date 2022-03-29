@@ -18,8 +18,6 @@ type BenchTest struct {
 	endpoint func(
 		cstate.StateContextI,
 	) error
-	txn   *transaction.Transaction
-	input []byte
 }
 
 func (bt BenchTest) Name() string {

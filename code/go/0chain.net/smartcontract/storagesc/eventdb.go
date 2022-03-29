@@ -37,6 +37,10 @@ func emitAddOrOverwriteBlobber(
 		UnstakeTotal: int64(sp.TotalUnStake),
 		Reward:       int64(sp.Reward),
 		TotalStake:   int64(sp.stake()),
+		Name:         sn.Information.Name,
+		WebsiteUrl:   sn.Information.WebsiteUrl,
+		Description:  sn.Information.Description,
+		LogoUrl:      sn.Information.LogoUrl,
 	})
 	if err != nil {
 		return fmt.Errorf("marshalling blobber: %v", err)

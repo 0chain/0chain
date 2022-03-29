@@ -126,8 +126,10 @@ func (sp *stakePool) empty(
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
 	if sp.stake()-sp.TotalOffers-dp.Balance < 0 {
-		sp.TotalUnStake += dp.Balance
-		dp.Status = spenum.Unstaking
+		if dp.Status != spenum.Unstaking {
+			sp.TotalUnStake += dp.Balance
+			dp.Status = spenum.Unstaking
+		}
 		return true, nil
 	}
 

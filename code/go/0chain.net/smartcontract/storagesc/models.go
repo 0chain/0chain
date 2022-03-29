@@ -329,6 +329,14 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
+// Info represents general information about blobber node
+type Info struct {
+	Name        string `json:"name"`
+	WebsiteUrl  string `json:"website_url"`
+	LogoUrl     string `json:"logo_url"`
+	Description string `json:"description"`
+}
+
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	ID              string                 `json:"id"`
@@ -343,6 +351,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 	TotalStake        int64                       `json:"total_stake"`
+	Information       Info                        `json:"info"`
 }
 
 // validate the blobber configurations
@@ -411,7 +420,7 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 type StorageAllocationStats struct {
 	UsedSize                  int64  `json:"used_size"`
 	NumWrites                 int64  `json:"num_of_writes"`
-	NumReads                  int64  `json:"num_of_reads"`
+	ReadsSize                 int64  `json:"reads_size"`
 	TotalChallenges           int64  `json:"total_challenges"`
 	OpenChallenges            int64  `json:"num_open_challenges"`
 	SuccessChallenges         int64  `json:"num_success_challenges"`
@@ -1230,11 +1239,11 @@ type ReadMarker struct {
 	AllocationID    string           `json:"allocation_id"`
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
-	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
-	ReadSize        float64          `json:"read_size"`
+	ReadSize        int64            `json:"read_size"`
+	ReadSizeInGB    float64          `json:"read_size_in_gb`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
@@ -1252,11 +1261,7 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 	return true
 }
 
-func (rm *ReadMarker) verifyAuthTicket(
-	alloc *StorageAllocation,
-	now common.Timestamp,
-	balances chainstate.StateContextI,
-) (err error) {
+func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances chainstate.StateContextI) (err error) {
 	// owner downloads, pays itself, no ticket needed
 	if rm.PayerID == alloc.Owner {
 		return
@@ -1271,34 +1276,21 @@ func (rm *ReadMarker) verifyAuthTicket(
 func (rm *ReadMarker) GetHashData() string {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID,
 		rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID,
-		rm.ReadCounter, rm.Timestamp)
+		rm.ReadSize, rm.Timestamp)
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
-	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
-		rm.Timestamp == 0 {
+func (rm *ReadMarker) Verify(balances chainstate.StateContextI) error {
+	if rm.ReadSize <= 0 || rm.BlobberID == "" || rm.ClientID == "" || rm.Timestamp == 0 {
+		return common.NewError("invalid_read_marker", "length validations of fields failed")
+	}
 
+	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); !ok {
 		return common.NewError("invalid_read_marker",
-			"length validations of fields failed")
+			"Signature verification failed for the read marker")
 	}
 
-	if prevRM != nil {
-		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID ||
-			rm.Timestamp < prevRM.Timestamp ||
-			rm.ReadCounter < prevRM.ReadCounter {
-
-			return common.NewError("invalid_read_marker",
-				"validations with previous marker failed.")
-		}
-	}
-
-	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); ok {
-		return nil
-	}
-
-	return common.NewError("invalid_read_marker",
-		"Signature verification failed for the read marker")
+	return nil
 }
 
 type ValidationTicket struct {
