@@ -118,7 +118,7 @@ func AddMockChallenges(
 	validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
-	challenges := make([]BlobberChallenge, len(blobbers), len(blobbers))
+	challenges := make([]BlobberChallenge, len(blobbers))
 
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		numAllocBlobbers := viper.GetInt(sc.NumBlobbersPerAllocation)
@@ -150,7 +150,7 @@ func AddMockClientAllocation(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	cas := make([]*ClientAllocation, len(clients), len(clients))
+	cas := make([]*ClientAllocation, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		if cas[cIndex] == nil {
@@ -172,7 +172,7 @@ func AddMockClientAllocation(
 }
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {
-	wps := make([]*writePool, len(clients), len(clients))
+	wps := make([]*writePool, len(clients))
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -211,7 +211,7 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 }
 
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
-	rps := make([]*readPool, len(clients), len(clients))
+	rps := make([]*readPool, len(clients))
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -249,7 +249,7 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 }
 
 func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
-	fps := make([]fundedPools, len(clients), len(clients))
+	fps := make([]fundedPools, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		startClients := i % len(clients)
 		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
