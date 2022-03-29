@@ -188,17 +188,6 @@ type StorageChallenge struct {
 	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
-func (sc *StorageChallenge) getStats() (success, fail int) {
-	for _, vt := range sc.Response.ValidationTickets {
-		if vt.Result {
-			success++
-		} else {
-			fail++
-		}
-	}
-	return
-}
-
 type ValidationNode struct {
 	ID                string                      `json:"id"`
 	BaseURL           string                      `json:"url"`
@@ -342,7 +331,6 @@ func (sng StorageNodeGeolocation) validate() error {
 	}
 	return nil
 }
-
 
 type RewardPartitionLocation struct {
 	Index      int              `json:"index"`
