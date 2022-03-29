@@ -18,13 +18,13 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v18.4
              
-      - name: Run step when a file changes
+      - name: Run step when a 0chain.yaml file changes
         if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml')
         run: |
           echo "Your 0chain.yaml file has been modified."
           curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
       
-      - name: Run step when a file changes
+      - name: Run step when a sc.yaml file changes
         if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml')
         run: |
           echo "Your sc.yaml file has been modified."
