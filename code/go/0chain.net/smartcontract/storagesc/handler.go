@@ -58,6 +58,12 @@ func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 			MaxNumDelegates: blobber.NumDelegates,
 			ServiceCharge:   blobber.ServiceCharge,
 		},
+		Information: Info{
+			Name:        blobber.Name,
+			WebsiteUrl:  blobber.WebsiteUrl,
+			LogoUrl:     blobber.LogoUrl,
+			Description: blobber.Description,
+		},
 	}, nil
 }
 
