@@ -416,7 +416,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if !ok {
 		if blobberChall.LatestCompletedChallenge != nil &&
 			challResp.ID == blobberChall.LatestCompletedChallenge.ID &&
-			blobberChall.LatestCompletedChallenge.Responded == true {
+			blobberChall.LatestCompletedChallenge.Responded {
 
 			return "Challenge Already redeemed by Blobber", nil
 		}
@@ -582,23 +582,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	return "", common.NewError("not_enough_validations",
 		"Not enough validations, no successful validations")
-}
-
-func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
-	err *error) {
-
-	if (*err) != nil {
-		return // failed call, don't calculate stat
-	}
-
-	var tm = sc.SmartContractExecutionStats["generate_challenges"]
-	if tm == nil {
-		return // missing timer (unexpected)
-	}
-
-	if timer, ok := tm.(metrics.Timer); ok {
-		timer.Update(time.Since(tp))
-	}
 }
 
 func (sc *StorageSmartContract) getAllocationForChallenge(

@@ -119,8 +119,8 @@ func AddMockChallenges(
 	balances cstate.StateContextI,
 ) {
 	numAllocations := viper.GetInt(sc.NumAllocations)
-	challenges := make([]BlobberChallenge, len(blobbers), len(blobbers))
-	allocationChall := make([]AllocationChallenge, numAllocations, numAllocations)
+	challenges := make([]BlobberChallenge, len(blobbers))
+	allocationChall := make([]AllocationChallenge, numAllocations)
 
 	partition, err := getBlobbersChallengeList(balances)
 	if err != nil {
