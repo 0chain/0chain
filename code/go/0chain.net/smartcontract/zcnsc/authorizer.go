@@ -8,7 +8,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/hashicorp/go-multierror"
@@ -69,21 +68,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	authorizerPublicKey := params.PublicKey
 	authorizerURL := params.URL
 	authorizerStakingPoolSettings := params.StakePoolSettings
-
-	// Check existing Authorizer
-
-	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
-	if err == nil && authorizer != nil {
-		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Warn("get authorizer node", zap.Error(err))
-		return "", err
-	}
-
-	if err != nil && err == util.ErrNodeNotFound {
-		Logger.Error("get authorizer node", zap.Error(err))
-		return "", err
-	}
 
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
