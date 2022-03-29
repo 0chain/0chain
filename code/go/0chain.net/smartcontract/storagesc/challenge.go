@@ -501,9 +501,15 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.SuccessChallenges++
 		details.Stats.OpenChallenges--
 
-		balances.InsertTrieNode(challReq.GetKey(sc.ID), challReq)
+		_, err = balances.InsertTrieNode(challReq.GetKey(sc.ID), challReq)
+		if err != nil {
+			return "", common.NewError("verify_challenge_error", err.Error())
+		}
 
-		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		_, err = balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		if err != nil {
+			return "", common.NewError("verify_challenge_error", err.Error())
+		}
 
 		var partial = 1.0
 		if success < threshold {
@@ -548,7 +554,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.FailedChallenges++
 		details.Stats.OpenChallenges--
 
-		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		_, err := balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		if err != nil {
+			return "", common.NewError("challenge_penalty_error", err.Error())
+		}
+
 		Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
 		err = sc.blobberPenalty(t, alloc, prev, blobberChall, details,

@@ -297,6 +297,7 @@ func testCommitBlobberRead(
 		Owner: payerId,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
+	require.NoError(t, err)
 
 	var rPool = readPool{
 		Pools: []*allocationPool{},

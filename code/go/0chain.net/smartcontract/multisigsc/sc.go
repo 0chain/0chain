@@ -355,7 +355,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 	// Start by trying to find an existing proposal.
 	p, err := ms.getProposal(v.getProposalRef(), balances)
 	if err != nil {
-		//return proposal{}, nil
+		return proposal{}, err
 	}
 
 	// Treat expired-but-not-yet-pruned proposals identically to pruned

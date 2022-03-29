@@ -5,16 +5,14 @@ import (
 	"time"
 )
 
-type (
-	// CollectionMemberField describes an entity with a list of
-	// EntityCollection that will automatically put that entity into the list.
-	CollectionMemberField struct {
-		EntityCollection *EntityCollection `json:"-" msgpack:"-"`
-		CollectionScore  int64             `json:"-" msgpack:"-"`
+// CollectionMemberField describes an entity with a list of
+// EntityCollection that will automatically put that entity into the list.
+type CollectionMemberField struct {
+	EntityCollection *EntityCollection `json:"-" msgpack:"-"`
+	CollectionScore  int64             `json:"-" msgpack:"-"`
 
-		mutex sync.RWMutex
-	}
-)
+	mutex sync.RWMutex
+}
 
 // GetCollectionName implements CollectionEntity.GetCollectionName method of interface.
 func (d *CollectionMemberField) GetCollectionName() string {
@@ -53,4 +51,12 @@ func (d *CollectionMemberField) InitCollectionScore() {
 	score := GetCollectionScore(now)
 
 	d.SetCollectionScore(score)
+}
+
+// Clone returns a clone of this collection
+func (d *CollectionMemberField) Clone() *CollectionMemberField {
+	return &CollectionMemberField{
+		EntityCollection: d.EntityCollection.Clone(),
+		CollectionScore:  d.CollectionScore,
+	}
 }

@@ -109,6 +109,9 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	err = validateNodeSettings(newSharder, gn, "add_sharder")
+	if err != nil {
+		return "", common.NewErrorf("add_sharder", "validate node setting failed: %v", zap.Error(err))
+	}
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -186,41 +189,40 @@ func (msc *MinerSmartContract) DeleteSharder(
 	return "", nil
 }
 
-func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) (err error) {
-	var pn *PhaseNode
-	if pn, err = GetPhaseNode(balances); err != nil {
-		return
+func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
+	pn, err := GetPhaseNode(balances)
+	if err != nil {
+		return err
 	}
-	if pn.Phase == Unknown {
-		err = common.NewError("failed to delete from view change", "phase is unknown")
-		return
-	}
-	if pn.Phase != Wait {
-		sharders := &MinerNodes{}
-		if sharders, err = getShardersKeepList(balances); err != nil {
-			logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
-				zap.Error(err))
-			return common.NewErrorf("delete_sharder_from_view_change",
-				"failed to get sharders list: %v", err)
-		}
-		for i, v := range sharders.Nodes {
-			if v.ID == sn.ID {
-				sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
 
-				if err = emitDeleteSharder(sn.ID, balances); err != nil {
-					return
-				}
-				break
-			}
-		}
-		if _, err = balances.InsertTrieNode(ShardersKeepKey, sharders); err != nil {
-			return
-		}
-	} else {
-		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
-		return
+	if pn.Phase == Unknown {
+		return common.NewError("failed to delete from view change", "phase is unknown")
 	}
-	return
+
+	if pn.Phase == Wait {
+		return common.NewError("failed to delete from view change", "magic block has already been created for next view change")
+	}
+
+	sharders, err := getShardersKeepList(balances)
+	if err != nil {
+		logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
+			zap.Error(err))
+		return common.NewErrorf("delete_sharder_from_view_change",
+			"failed to get sharders list: %v", err)
+	}
+	for i, v := range sharders.Nodes {
+		if v.ID == sn.ID {
+			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
+
+			if err = emitDeleteSharder(sn.ID, balances); err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	_, err = balances.InsertTrieNode(ShardersKeepKey, sharders)
+	return err
 }
 
 //------------- local functions ---------------------

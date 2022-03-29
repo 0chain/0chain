@@ -25,8 +25,6 @@ import (
 	"0chain.net/core/util"
 )
 
-const cantGetBlobberMsg = "can't get blobber"
-
 func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
@@ -294,6 +292,9 @@ func (msc *StorageSmartContract) GetWriteMarkerHandler(
 		return nil, errors.New("limitString value was not valid")
 	}
 	isDescending, err := strconv.ParseBool(isDescendingString)
+	if err != nil {
+		return nil, errors.New("is_descending value was not valid")
+	}
 	if balances.GetEventDB() == nil {
 		return nil, errors.New("no event database found")
 	}

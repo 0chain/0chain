@@ -171,8 +171,8 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
-		require.EqualValues(t, want.error, err != nil)
 		if want.error {
+			require.Error(t, err)
 			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
@@ -676,13 +676,6 @@ func (f formulaeBlobberReward) validatorsReward() int64 {
 	return int64(totalReward * validatorCut)
 }
 
-func (f formulaeBlobberReward) validatorReward() int64 {
-	var total = float64(f.validatorsReward())
-	var numberValidators = float64(len(f.validators))
-
-	return int64(total / numberValidators)
-}
-
 func (f formulaeBlobberReward) blobberReward() int64 {
 	var totalReward = float64(f.reward())
 	var validatorReward = float64(f.validatorsReward())
@@ -711,18 +704,6 @@ func (f formulaeBlobberReward) validatorServiceCharge(validator string) int64 {
 	return int64(rewardPerValidator * serviceCharge)
 }
 
-func (f formulaeBlobberReward) blobberDelegateReward(index int) int64 {
-	require.True(f.t, index < len(f.stakes))
-	var totalStake = 0.0
-	for _, stake := range f.stakes {
-		totalStake += float64(stake)
-	}
-	var delegateStake = float64(f.stakes[index])
-	var totalDelegateReward = float64(f.blobberReward() - f.blobberServiceCharge())
-
-	return int64(totalDelegateReward * delegateStake / totalStake)
-}
-
 func (f formulaeBlobberReward) indexFromValidator(validator string) int {
 	for i, v := range f.validators {
 		if v == validator {
@@ -743,30 +724,6 @@ func (f formulaeBlobberReward) validatorDelegateReward(validator string, delegat
 	var validatorReward = float64(f.validatorsReward()) / float64(len(f.validators))
 	var deleatesReward = validatorReward - float64(f.validatorServiceCharge(validator))
 	return int64(deleatesReward * delegateStake / totalStake)
-}
-
-func (f formulaeBlobberReward) totalMoved() int64 {
-	var reward = float64(f.reward())
-	var validators = float64((f.validatorsReward()))
-	var partial = f.partial
-	var movedBack = (reward - validators) * (1 - partial)
-
-	return int64(reward - movedBack)
-}
-
-func (f formulaeBlobberReward) blobberPenalty() int64 {
-	var totalAction = float64(f.reward())
-	var validatorReward = float64(f.validatorsReward())
-	var blobberRisk = totalAction - validatorReward
-	var slash = f.scYaml.BlobberSlash
-	var slashedAmount = int64(blobberRisk * slash)
-	var offer = int64(sizeInGB(f.size) * float64(zcnToInt64(f.blobberYaml.writePrice)))
-
-	if offer <= slashedAmount {
-		return offer
-	} else {
-		return slashedAmount
-	}
 }
 
 func (f formulaeBlobberReward) delegatePenalty(index int) int64 {

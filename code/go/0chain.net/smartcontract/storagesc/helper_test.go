@@ -3,7 +3,6 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +25,6 @@ import (
 )
 
 // test helpers
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -65,7 +60,7 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	client = new(Client)
 	client.balance = balance
@@ -185,7 +180,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	blob = new(Client)
 	blob.terms = terms
@@ -215,7 +210,7 @@ func addValidator(t testing.TB, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (valid *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	valid = new(Client)
 	valid.scheme = scheme
@@ -402,6 +397,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.ID = challID
 	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
 	storChall.TotalValidators = len(valSlice)
+
 	storChall.AllocationID = allocID
 	storChall.BlobberID = blobber.ID
 

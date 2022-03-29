@@ -271,7 +271,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 	type parameters struct {
 		assigner freeStorageAssigner
 		marker   freeStorageMarker
-		exists   bool
 	}
 
 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {

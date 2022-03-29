@@ -35,7 +35,7 @@ func (ssc *StorageSmartContract) addToFundedPools(
 	}
 	*pools = append(*pools, poolId)
 	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, clientId), pools)
-	return nil
+	return err
 }
 
 func (ssc *StorageSmartContract) isFundedPool(

@@ -159,7 +159,7 @@ func (rs *randomSelector) AddRand(
 	}
 	moving := partition.cutTail()
 	if moving == nil {
-		fmt.Errorf("empty partitions, currpt data")
+		return -1, fmt.Errorf("empty partitions, corrupt data")
 	}
 	err = partition.add(item)
 	if err != nil {
