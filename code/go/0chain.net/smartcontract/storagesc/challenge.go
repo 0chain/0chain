@@ -550,6 +550,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		if err != nil {
 			return "", common.NewError("verify_challenge", err.Error())
 		}
+
 		sc.challengeResolved(balances, true)
 
 		var partial = 1.0
@@ -596,7 +597,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		details.Stats.FailedChallenges++
 		details.Stats.OpenChallenges--
 
-		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		_, err := balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
+		if err != nil {
+			return "", common.NewError("challenge_penalty_error", err.Error())
+		}
+
 		sc.challengeResolved(balances, false)
 		Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
@@ -839,6 +844,9 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	selectedValidators := make([]*ValidationNode, 0)
 	randSlice, err := validators.GetRandomSlice(r, balances)
+	if err != nil {
+		return "", err
+	}
 
 	perm := r.Perm(len(randSlice))
 	for i := 0; i < minInt(len(randSlice), alloc.DataShards+1); i++ {
@@ -880,17 +888,26 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return string(challengeBytes), err
 	}
 
-	balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	_, err = balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	if err != nil {
+		return "", err
+	}
 
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
-	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", err
+	}
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
+	if err != nil {
+		return "", errors.New("marshal storage challenge failed")
+	}
 	if err := sc.newChallenge(balances, storageChallenge.Created); err != nil {
 		return "", err
 	}
-	return string(challengeBytes), err
+	return string(challengeBytes), nil
 }

@@ -242,7 +242,6 @@ func (aps *allocationPools) add(ap *allocationPool) {
 	// insert next after the found one
 	*aps = append((*aps)[:i], append(allocationPools{ap},
 		(*aps)[i:]...)...)
-	return
 }
 
 func (aps allocationPools) allocationCut(allocID string) (

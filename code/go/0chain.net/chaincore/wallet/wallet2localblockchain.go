@@ -44,7 +44,9 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 	if config.DevConfiguration.IsFeeEnabled {
 		txn.Fee = fee
 	}
-	txn.Sign(w.SignatureScheme)
+	if _, err := txn.Sign(w.SignatureScheme); err != nil {
+		panic(err)
+	}
 	return txn
 }
 
@@ -59,7 +61,9 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 		txn.Fee = fee
 	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
-	txn.Sign(w.SignatureScheme)
+	if _, err := txn.Sign(w.SignatureScheme); err != nil {
+		panic(err)
+	}
 	return txn
 }
 
@@ -78,6 +82,8 @@ func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Trans
 	if config.DevConfiguration.IsFeeEnabled {
 		txn.Fee = fee
 	}
-	txn.Sign(w.SignatureScheme)
+	if _, err := txn.Sign(w.SignatureScheme); err != nil {
+		panic(err)
+	}
 	return txn
 }
