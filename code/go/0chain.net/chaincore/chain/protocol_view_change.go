@@ -41,7 +41,7 @@ const (
 )
 
 // RegisterClient registers client on BC.
-func (mc *Chain) RegisterClient() {
+func (c *Chain) RegisterClient() {
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var (
 			clientMetadataProvider = datastore.GetEntityMetadata("client")
@@ -62,7 +62,7 @@ func (mc *Chain) RegisterClient() {
 	}
 
 	var (
-		mb               = mc.GetCurrentMagicBlock()
+		mb               = c.GetCurrentMagicBlock()
 		miners           = mb.Miners.CopyNodesMap()
 		registered       = 0
 		thresholdByCount = config.GetThresholdCount()
@@ -101,7 +101,7 @@ func (mc *Chain) RegisterClient() {
 		zap.Int("consensus", consensus))
 }
 
-func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
+func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 	getStatePathFunc := func(n *node.Node) string {
 		switch n.Type {
 		case node.NodeTypeMiner:
@@ -127,10 +127,10 @@ func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
 		}
 		return ""
 	}
-	return mc.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
+	return c.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
 }
 
-func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
+func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
 
 	var (
@@ -139,11 +139,11 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 		selfNodeKey  = selfNode.GetKey()
 	)
 
-	if mc.IsActiveInChain() && remote == false {
+	if c.IsActiveInChain() && !remote {
 
 		var (
 			sp  = getStatePath(selfNode)
-			err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp, allNodesList)
+			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, allNodesList)
 		)
 
 		if err != nil {
@@ -155,7 +155,7 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	} else {
 
 		var (
-			mb       = mc.GetCurrentMagicBlock()
+			mb       = c.GetCurrentMagicBlock()
 			sharders = mb.Sharders.N2NURLs()
 			relPath  = getAPIPath(selfNode)
 			err      error
@@ -182,10 +182,10 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	return false
 }
 
-func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
+func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
 	var (
-		active = mc.IsActiveInChain()
-		mb     = mc.GetCurrentMagicBlock()
+		active = c.IsActiveInChain()
+		mb     = c.GetCurrentMagicBlock()
 
 		found, pastTime bool
 		urls            []string
@@ -209,7 +209,7 @@ func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Trans
 
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
 		if active {
-			lfb := mc.GetLatestFinalizedBlock()
+			lfb := c.GetLatestFinalizedBlock()
 			pastTime = lfb != nil &&
 				!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		} else {
@@ -229,10 +229,10 @@ func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Trans
 	return found
 }
 
-func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
+func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	selfNode := node.Self.Underlying()
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		mc.ID, selfNode.PublicKey)
+		c.ID, selfNode.PublicKey)
 
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
@@ -265,20 +265,20 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	mb := mc.GetCurrentMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
 
-func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
+func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
 	selfNode := node.Self.Underlying()
 	if selfNode.Type != node.NodeTypeSharder {
 		return nil, errors.New("only sharder")
 	}
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		mc.ID, selfNode.PublicKey)
+		c.ID, selfNode.PublicKey)
 
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
@@ -295,14 +295,14 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	mb := mc.GetCurrentMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
 
-func (mc *Chain) IsRegisteredSharderKeep(ctx context.Context, remote bool) bool {
-	return mc.isRegisteredEx(ctx,
+func (c *Chain) IsRegisteredSharderKeep(ctx context.Context, remote bool) bool {
+	return c.isRegisteredEx(ctx,
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeSharder {
 				return minersc.ShardersKeepKey
@@ -364,7 +364,6 @@ func isValueZero(v reflect.Value) bool {
 	default:
 		panic("reflect.Value.IsZero")
 	}
-	return false
 }
 
 // The isZero returns true if given value is zero. It can be replaced with

@@ -82,7 +82,7 @@ func controlIndividual(balances cstate.StateContextI) error {
 		if err != nil {
 			return err
 		}
-		itArray = append(itArray, it)
+		itArray = append(itArray, it) //nolint
 	}
 	return nil
 }

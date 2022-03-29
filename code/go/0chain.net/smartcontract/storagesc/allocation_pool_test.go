@@ -21,17 +21,6 @@ func (aps allocationPools) gimmeAll() (total state.Balance) {
 	return
 }
 
-func (aps allocationPools) total(now int64) (total state.Balance) {
-
-	for _, ap := range aps {
-		if ap.ExpireAt < common.Timestamp(now) {
-			continue
-		}
-		total += ap.Balance
-	}
-	return
-}
-
 func (aps allocationPools) allocTotal(allocID string, now int64) (
 	total state.Balance) {
 

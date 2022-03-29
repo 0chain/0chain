@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package chain
@@ -10,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (mc *Chain) SetupSC(ctx context.Context) {
+func (c *Chain) SetupSC(ctx context.Context) {
 	logging.Logger.Info("SetupSC start...")
 	// create timer with 0 duration to start it immediately
 	tm := time.NewTimer(0)
@@ -28,7 +29,7 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 				defer cancel()
 
 				go func() {
-					isRegistered := mc.isRegistered(cctx)
+					isRegistered := c.isRegistered(cctx)
 
 					select {
 					case isRegisteredC <- isRegistered:
@@ -48,14 +49,14 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 				}
 
 				logging.Logger.Debug("Request to register node")
-				txn, err := mc.RegisterNode()
+				txn, err := c.RegisterNode()
 				if err != nil {
 					logging.Logger.Warn("failed to register node in SC -- init_setup_sc",
 						zap.Error(err))
 					return
 				}
 
-				if txn != nil && mc.ConfirmTransaction(ctx, txn) {
+				if txn != nil && c.ConfirmTransaction(ctx, txn) {
 					logging.Logger.Debug("Register node transaction confirmed")
 					return
 				}

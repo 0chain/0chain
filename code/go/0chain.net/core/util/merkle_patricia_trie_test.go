@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -227,21 +226,6 @@ func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
 		sponge.values = append(sponge.values, string(hex.EncodeToString(key)))
 		return nil
 	}
-}
-
-// calculates hash of all sorted keys in the NodeDB
-func calculateKeysHash(t *testing.T, ndb NodeDB) string {
-	sponge := valuesSponge{}
-	err := ndb.Iterate(context.TODO(), dbKeysSpongeHandler(&sponge))
-	require.NoError(t, err)
-	sort.Strings(sponge.values)
-	hash := sha3.New256()
-	for _, key := range sponge.values {
-		b, err := hex.DecodeString(key)
-		require.NoError(t, err)
-		hash.Write(b)
-	}
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
