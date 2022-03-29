@@ -2378,9 +2378,9 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 10
+	// map header, size 11
 	// string "ID"
-	o = append(o, 0x8a, 0xa2, 0x49, 0x44)
+	o = append(o, 0x8b, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
@@ -2434,6 +2434,7 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 			err = msgp.WrapError(err, "ChallengeLocation")
 			return
 		}
+	}
 	// string "Information"
 	o = append(o, 0xab, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	o, err = z.Information.MarshalMsg(o)
@@ -2561,6 +2562,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					err = msgp.WrapError(err, "ChallengeLocation")
 					return
 				}
+			}
 		case "Information":
 			bts, err = z.Information.UnmarshalMsg(bts)
 			if err != nil {
@@ -2587,7 +2589,7 @@ func (z *StorageNode) Msgsize() (s int) {
 	} else {
 		s += z.ChallengeLocation.Msgsize()
 	}
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 5 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + z.Information.Msgsize()
+	s += 12 + z.Information.Msgsize()
 	return
 }
 

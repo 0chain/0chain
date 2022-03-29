@@ -118,7 +118,9 @@ func AddMockChallenges(
 	validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
+	numAllocations := viper.GetInt(sc.NumAllocations)
 	challenges := make([]BlobberChallenge, len(blobbers), len(blobbers))
+	allocationChall := make([]AllocationChallenge, numAllocations, numAllocations)
 
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		numAllocBlobbers := viper.GetInt(sc.NumBlobbersPerAllocation)
@@ -131,14 +133,12 @@ func AddMockChallenges(
 				blobbers[bIndex],
 				&challenges[bIndex],
 				validators,
+				&allocationChall[i],
 			)
 		}
 	}
 
 	for _, ch := range challenges {
-		if len(ch.Challenges) > 0 {
-			ch.LatestCompletedChallenge = ch.Challenges[0]
-		}
 		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
 		if err != nil {
 			panic(err)
@@ -264,18 +264,6 @@ func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
 		if _, err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp); err != nil {
 			log.Fatal(err)
 		}
-	}
-}
-
-// only used for challenge generated which is being rewritten
-func AddMockAllAllocations(balances cstate.StateContextI) {
-	var allocations Allocations
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		allocations.List.add(getMockAllocationId(i))
-	}
-	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 
