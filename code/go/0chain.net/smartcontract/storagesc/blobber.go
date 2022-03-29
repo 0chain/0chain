@@ -46,6 +46,19 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
+func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
+	balances cstate.StateContextI) (blobberChallLocation *BlobberChallengePartitionLocation, err error) {
+
+	blobberChallLocation = new(BlobberChallengePartitionLocation)
+	blobberChallLocation.ID = blobberID
+	err = balances.GetTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
@@ -611,7 +624,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	blobber, err := sc.getBlobber(t.ClientID, balances)
+	blobberChallLocation, err := sc.getBlobberChallengePartitionLocation(t.ClientID, balances)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"error fetching blobber")
@@ -627,7 +640,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		ID: details.AllocationID,
 	}
 
-	if blobber.ChallengeLocation == nil {
+	if blobberChallLocation.PartitionLocation == nil {
 		logging.Logger.Info("commit_connection",
 			zap.String("blobber doesn't exists in blobber challenge partition:", t.ClientID))
 		bcPartition, err := getBlobbersChallengeList(balances)
@@ -640,9 +653,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", common.NewError("commit_connection_failed",
 				"error adding to blobber challenge partition: "+err.Error())
 		}
-		blobber.ChallengeLocation = partitions.NewPartitionLocation(loc, t.CreationDate)
+		blobberChallLocation.PartitionLocation = partitions.NewPartitionLocation(loc, t.CreationDate)
 
-		_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+		_, err = balances.InsertTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error saving blobber")

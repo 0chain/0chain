@@ -421,9 +421,10 @@ type StorageNode struct {
 	PublicKey       string                 `json:"-" msg:"-"`
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.StakePoolSettings   `json:"stake_pool_settings"`
-	ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
-	Information       Info                        `json:"info"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	// ChallengeLocation to be replaced for BlobberChallengePartitionLocation once StorageNode is normalised
+	//ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
+	Information Info `json:"info"`
 }
 
 // validate the blobber configurations
@@ -458,6 +459,29 @@ func (sn *StorageNode) Encode() []byte {
 
 func (sn *StorageNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// BlobberChallengePartitionLocation is a temporary object. should be removed once StorageNode is normalised
+type BlobberChallengePartitionLocation struct {
+	ID                string                        `json:"id"`
+	PartitionLocation *partitions.PartitionLocation `json:"challenge_location"`
+}
+
+func (bcpl *BlobberChallengePartitionLocation) GetKey(globalKey string) datastore.Key {
+	return globalKey + bcpl.ID + "blobber_challenge_partition"
+}
+
+func (bcpl *BlobberChallengePartitionLocation) Encode() []byte {
+	buff, _ := json.Marshal(bcpl)
+	return buff
+}
+
+func (bcpl *BlobberChallengePartitionLocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, bcpl)
 	if err != nil {
 		return err
 	}
