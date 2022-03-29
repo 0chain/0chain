@@ -91,6 +91,9 @@ func AddMockNodes(
 		dkgMiners.SimpleNodes = nodeMap
 		dkgMiners.T = viper.GetInt(benchmark.InternalT)
 		_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+		if err != nil {
+			panic(err)
+		}
 
 		mpks := block.NewMpks()
 		for key := range nodeMap {
@@ -101,10 +104,16 @@ func AddMockNodes(
 
 		}
 		_, err = balances.InsertTrieNode(MinersMPKKey, mpks)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
 			Nodes: allNodes.Nodes[1:],
 		})
+		if err != nil {
+			panic(err)
+		}
 	}
 	_, err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {

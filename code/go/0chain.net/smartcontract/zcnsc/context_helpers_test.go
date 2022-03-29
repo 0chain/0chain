@@ -30,30 +30,6 @@ func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
 }
 
-//func mockSetValue(v interface{}) interface{} {
-//	return mock.MatchedBy(func(c interface{}) bool {
-//		cv := reflect.ValueOf(c)
-//		if cv.Kind() != reflect.Ptr {
-//			panic(fmt.Sprintf("%t must be a pointer, %v", v, cv.Kind()))
-//		}
-//
-//		vv := reflect.ValueOf(v)
-//		if vv.Kind() == reflect.Ptr {
-//			if vv.Type() != cv.Type() {
-//				return false
-//			}
-//			cv.Elem().Set(vv.Elem())
-//		} else {
-//			if vv.Type() != cv.Elem().Type() {
-//				return false
-//			}
-//
-//			cv.Elem().Set(vv)
-//		}
-//		return true
-//	})
-//}
-
 type mockStateContext struct {
 	*mocks.StateContextI
 	userNodes    map[string]*UserNode
@@ -215,121 +191,108 @@ func MakeMockStateContext() *mockStateContext {
 	/// GetClientBalance
 
 	ctx.
-		On("GetClientBalance", mock.AnythingOfType("string")).
-		Return(5, nil)
+		On("GetClientBalance", mock.AnythingOfType("string")).Return(5, nil)
 
 	/// AddTransfer
 
 	ctx.
-		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).
-		Return(
-			func(transfer *state.Transfer) error {
-				transfers = append(transfers, transfer)
-				return nil
-			})
+		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
+		func(transfer *state.Transfer) error {
+			transfers = append(transfers, transfer)
+			return nil
+		})
 
 	/// GetTransfers
 
-	ctx.
-		On("GetTransfers").
-		Return(func() []*state.Transfer {
-			return transfers
-		})
+	ctx.On("GetTransfers").Return(func() []*state.Transfer {
+		return transfers
+	})
 
 	/// DeleteTrieNode
 
-	ctx.
-		On("DeleteTrieNode", mock.AnythingOfType("string")).
-		Return(
-			func(key datastore.Key) datastore.Key {
-				if strings.Contains(key, AuthorizerNodeType) {
-					delete(ctx.authorizers, key)
-					return key
-				}
-				return ""
-			},
-			func(_ datastore.Key) error {
-				return nil
-			})
+	ctx.On("DeleteTrieNode", mock.AnythingOfType("string")).Return(
+		func(key datastore.Key) datastore.Key {
+			if strings.Contains(key, AuthorizerNodeType) {
+				delete(ctx.authorizers, key)
+				return key
+			}
+			return ""
+		},
+		func(_ datastore.Key) error {
+			return nil
+		})
 
 	/// InsertTrieNode
 
-	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")).
-		Return(
-			func(key datastore.Key, node util.MPTSerializable) util.MPTSerializable {
-				if strings.Contains(key, UserNodeType) {
-					ctx.userNodes[key] = node.(*UserNode)
-					return node
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")).Return(
+		func(key datastore.Key, node util.MPTSerializable) util.MPTSerializable {
+			if strings.Contains(key, UserNodeType) {
+				ctx.userNodes[key] = node.(*UserNode)
+				return node
+			}
+			if strings.Contains(key, AuthorizerNodeType) {
+				authorizerNode := node.(*AuthorizerNode)
+				ctx.authorizers[key] = &Authorizer{
+					Scheme: nil,
+					Node:   authorizerNode,
 				}
-				if strings.Contains(key, AuthorizerNodeType) {
-					authorizerNode := node.(*AuthorizerNode)
-					ctx.authorizers[key] = &Authorizer{
-						Scheme: nil,
-						Node:   authorizerNode,
-					}
-					return authorizerNode
-				}
+				return authorizerNode
+			}
 
-				return nil
-			},
-			func(_ datastore.Key) error {
-				return nil
-			})
+			return nil
+		},
+		func(_ datastore.Key) error {
+			return nil
+		})
 
-	ctx.
-		On("InsertTrieNode", ctx.globalNode.GetKey(), mock.AnythingOfType("*zcnsc.GlobalNode")).
-		Return(
-			func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
-				ctx.globalNode = node.(*GlobalNode)
-				return ""
-			},
-			func(_ datastore.Key, _ util.MPTSerializable) error {
-				return nil
-			})
+	ctx.On("InsertTrieNode", ctx.globalNode.GetKey(),
+		mock.AnythingOfType("*zcnsc.GlobalNode")).Return(
+		func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
+			ctx.globalNode = node.(*GlobalNode)
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
+			return nil
+		})
 
 	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")).
-		Return(
-			func(key datastore.Key, node util.MPTSerializable) datastore.Key {
-				n := node.(*UserNode)
-				ctx.userNodes[key] = n
-				return ""
-			},
-			func(_ datastore.Key, _ util.MPTSerializable) error {
-				return nil
-			})
+		On("InsertTrieNode", mock.AnythingOfType("string"),
+			mock.AnythingOfType("*zcnsc.UserNode")).Return(
+		func(key datastore.Key, node util.MPTSerializable) datastore.Key {
+			n := node.(*UserNode)
+			ctx.userNodes[key] = n
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
+			return nil
+		})
 
-	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNode")).
-		Return(
-			func(key datastore.Key, node util.MPTSerializable) datastore.Key {
-				if strings.Contains(key, UserNodeType) {
-					ctx.userNodes[key] = node.(*UserNode)
-					return key
-				}
-				if strings.Contains(key, AuthorizerNodeType) {
-					authorizerNode := node.(*AuthorizerNode)
-					ctx.authorizers[key] = &Authorizer{
-						Scheme: nil,
-						Node:   authorizerNode,
-					}
-				}
-
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"),
+		mock.AnythingOfType("*zcnsc.AuthorizerNode")).Return(
+		func(key datastore.Key, node util.MPTSerializable) datastore.Key {
+			if strings.Contains(key, UserNodeType) {
+				ctx.userNodes[key] = node.(*UserNode)
 				return key
-			},
-			func(_ datastore.Key, _ util.MPTSerializable) error {
-				return nil
-			})
+			}
+			if strings.Contains(key, AuthorizerNodeType) {
+				authorizerNode := node.(*AuthorizerNode)
+				ctx.authorizers[key] = &Authorizer{
+					Scheme: nil,
+					Node:   authorizerNode,
+				}
+			}
 
-	ctx.
-		On("AddMint", mock.AnythingOfType("*state.Mint")).
-		Return(nil)
+			return key
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
+			return nil
+		})
+
+	ctx.On("AddMint", mock.AnythingOfType("*state.Mint")).Return(nil)
 
 	// EventsDB
 
-	ctx.On(
-		"EmitEvent",
+	ctx.On("EmitEvent",
 		mock.AnythingOfType("event.EventType"),
 		mock.AnythingOfType("event.EventTag"),
 		mock.AnythingOfType("string"), // authorizerID
@@ -339,8 +302,7 @@ func MakeMockStateContext() *mockStateContext {
 			fmt.Println(".")
 		})
 
-	ctx.On(
-		"EmitEvent",
+	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagAddAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID

@@ -35,12 +35,10 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerPublicKey           string
-		authorizerURL                 string
-		authorizerStakingPoolSettings stakepool.StakePoolSettings
-		authorizerID                  = tran.ClientID   // sender address
-		recipientID                   = tran.ToClientID // smart contract address
-		authorizer                    *AuthorizerNode
+		authorizerID = tran.ClientID   // sender address
+		recipientID  = tran.ToClientID // smart contract address
+		authorizer   *AuthorizerNode
+		err          error
 	)
 
 	if authorizerID == "" {
@@ -73,9 +71,24 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	authorizerPublicKey = params.PublicKey
-	authorizerURL = params.URL
-	authorizerStakingPoolSettings = params.StakePoolSettings
+	authorizerPublicKey := params.PublicKey
+	authorizerURL := params.URL
+  authorizerStakingPoolSettings = params.StakePoolSettings
+
+	// Check existing Authorizer
+
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
+	if err == nil && authorizer != nil {
+		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
+		err = common.NewError(code, msg)
+		Logger.Warn("get authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	if err != nil && err == util.ErrNodeNotFound {
+		Logger.Error("get authorizer node", zap.Error(err))
+		return "", err
+	}
 
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {

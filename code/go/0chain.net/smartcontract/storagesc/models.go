@@ -329,6 +329,14 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
+// Info represents general information about blobber node
+type Info struct {
+	Name        string `json:"name"`
+	WebsiteUrl  string `json:"website_url"`
+	LogoUrl     string `json:"logo_url"`
+	Description string `json:"description"`
+}
+
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	ID              string                 `json:"id"`
@@ -342,6 +350,7 @@ type StorageNode struct {
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	Information       Info                        `json:"info"`
 }
 
 // validate the blobber configurations
@@ -1092,7 +1101,9 @@ func (wm *WriteMarker) VerifySignature(
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1233,14 +1244,16 @@ type ReadMarker struct {
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
 	ReadSize        int64            `json:"read_size"`
-	ReadSizeInGB    float64          `json:"read_size_in_gb`
+	ReadSizeInGB    float64          `json:"read_size_in_gb"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1300,7 +1313,9 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(vt.ValidatorKey)
+	if err := signatureScheme.SetPublicKey(vt.ValidatorKey); err != nil {
+		return false, err
+	}
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
 }
