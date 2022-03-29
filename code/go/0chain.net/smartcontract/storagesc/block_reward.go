@@ -26,7 +26,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	var (
 		stakePools  []*stakePool
-		stakeTotals []float64
 		totalQStake float64
 		weight      []float64
 		totalWeight float64
@@ -106,7 +105,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		zeta := maths.GetZeta(I, K, mu, float64(blobber.WritePrice), float64(blobber.ReadPrice))
 		qualifyingBlobberIds[i] = blobber.ID
 		stakePools = append(stakePools, sp)
-		stakeTotals = append(stakeTotals, stake)
 		totalQStake += stake
 		blobberWeight := (gamma*zeta*float64(blobber.SuccessChallenges) + 1) * stake
 		weight = append(weight, blobberWeight)
