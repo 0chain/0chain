@@ -121,7 +121,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		stakePools[resp.index] = resp.sp
 	}
 
-	qualifyingBlobberIds := make([]string, len(blobberPartition), len(blobberPartition))
+	qualifyingBlobberIds := make([]string, len(blobberPartition))
 
 	for i, b := range blobberPartition {
 		var blobber partitions.BlobberRewardNode
