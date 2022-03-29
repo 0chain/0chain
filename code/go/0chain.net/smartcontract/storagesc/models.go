@@ -401,6 +401,14 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
+// Info represents general information about blobber node
+type Info struct {
+	Name        string `json:"name"`
+	WebsiteUrl  string `json:"website_url"`
+	LogoUrl     string `json:"logo_url"`
+	Description string `json:"description"`
+}
+
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	ID              string                 `json:"id"`
@@ -415,6 +423,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings   `json:"stake_pool_settings"`
 	ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
+	Information       Info                        `json:"info"`
 }
 
 // validate the blobber configurations
