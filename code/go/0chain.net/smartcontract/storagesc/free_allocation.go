@@ -48,10 +48,6 @@ type freeStorageUpgradeInput struct {
 	Marker       string `json:"marker"`
 }
 
-func (frm *freeStorageUpgradeInput) decode(b []byte) error {
-	return json.Unmarshal(b, frm)
-}
-
 type newFreeStorageAssignerInfo struct {
 	Name            string  `json:"name"`
 	PublicKey       string  `json:"public_key"`
@@ -215,7 +211,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 ) (string, error) {
 	var err error
 	var inputObj freeStorageAllocationInput
-	if err := json.Unmarshal(input, &inputObj); err != nil {
+	if err := inputObj.decode(input); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"unmarshal input: %v", err)
 	}

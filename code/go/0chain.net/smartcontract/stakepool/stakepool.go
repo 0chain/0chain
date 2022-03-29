@@ -178,8 +178,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
 
-	var serviceCharge float64
-	serviceCharge = sp.Settings.ServiceCharge * value
+	serviceCharge := sp.Settings.ServiceCharge * value
 	if state.Balance(serviceCharge) > 0 {
 		reward := state.Balance(serviceCharge)
 		sp.Reward += reward

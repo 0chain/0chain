@@ -44,10 +44,6 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	return
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
-	tb.balances[key] = b
-}
-
 func (tb *testBalances) setTransaction(t testing.TB,
 	txn *transaction.Transaction) {
 

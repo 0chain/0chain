@@ -27,13 +27,13 @@ type mockStateContext struct {
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         { return }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
 func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
 func (sc *mockStateContext) Validate() error                                           { return nil }
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }

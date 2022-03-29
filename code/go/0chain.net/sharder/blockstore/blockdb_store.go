@@ -114,6 +114,10 @@ func (bdbs *BlockDBStore) Write(b *block.Block) error {
 // ReadWithBlockSummary - implement interface
 func (bdbs *BlockDBStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
 	db, err := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(bs.Hash, bs.Round), 64, bdbs.compress)
+	if err != nil {
+		return nil, err
+	}
+
 	block := bdbs.blockMetadataProvider.Instance().(*block.Block)
 	bh := &blockHeader{Block: block}
 	db.SetDBHeader(bh)

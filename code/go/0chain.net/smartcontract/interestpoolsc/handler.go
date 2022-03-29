@@ -19,7 +19,6 @@ func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, 
 		return nil, err
 	}
 
-	const pfx = "smart_contracts.interestpoolsc."
 	return &smartcontract.StringMap{
 		Fields: map[string]string{
 			Settings[MinLock]:       fmt.Sprintf("%0v", gn.MinLock),

@@ -1127,7 +1127,9 @@ func (wm *WriteMarker) VerifySignature(
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1275,7 +1277,9 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1335,7 +1339,9 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(vt.ValidatorKey)
+	if err := signatureScheme.SetPublicKey(vt.ValidatorKey); err != nil {
+		return false, err
+	}
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
 }

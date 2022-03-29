@@ -1,12 +1,13 @@
 package common
 
 import (
-	"0chain.net/core/logging"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var (
@@ -34,9 +35,15 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 					data["code"] = are.Code
 				}
 				buf := bytes.NewBuffer(nil)
-				json.NewEncoder(buf).Encode(data)
+				if err := json.NewEncoder(buf).Encode(data); err != nil {
+					Error500(w, "json encode failed")
+					return
+				}
+
 				w.WriteHeader(http.StatusInternalServerError)
-				buf.WriteTo(w)
+				if _, err := buf.WriteTo(w); err != nil {
+					logging.Logger.Error("http write failed", zap.Error(err))
+				}
 			}
 		}()
 		handler(w, r)

@@ -60,16 +60,37 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 	if data != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			json.NewEncoder(w).Encode(data)
+			if err := json.NewEncoder(w).Encode(data); err != nil {
+				Error500(w, "json encode failed")
+				return
+			}
 		} else {
 			w.Header().Set("Content-Encoding", "gzip")
 			gzw := gzip.NewWriter(w)
 			defer gzw.Close()
-			json.NewEncoder(gzw).Encode(data)
+			if err := json.NewEncoder(gzw).Encode(data); err != nil {
+				Error500(w, "json encode failed")
+				return
+			}
 		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Error500 response with a 500 error and msg
+func Error500(w http.ResponseWriter, msg string) {
+	errorAny(w, 500, msg)
+}
+
+// errorAny writes error message with status code
+func errorAny(w http.ResponseWriter, status int, msg string) {
+	httpMsg := fmt.Sprintf("%d %s", status, http.StatusText(status))
+	if msg != "" {
+		httpMsg = fmt.Sprintf("%s - %s", httpMsg, msg)
+	}
+
+	http.Error(w, httpMsg, status)
 }
 
 func getContext(r *http.Request) (context.Context, error) {

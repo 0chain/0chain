@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,9 +13,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/viper"
 )
@@ -34,33 +31,6 @@ func RegisterNode(node *Node) {
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
 	nodes[node.GetKey()] = node
-}
-
-/*DeregisterNode - deregister a node */
-func DeregisterNode(nodeID string) {
-
-	return // TODO (sfxdx): temporary disable nodes deregistering
-
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-	delete(nodes, nodeID)
-}
-
-// DeregisterNodes unregisters all nodes not from given list.
-func DeregisterNodes(keep map[string]struct{}) {
-	return // never deregister nodes for now
-
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-
-	var newNodes = make(map[string]*Node)
-	for k := range keep {
-		if n, ok := nodes[k]; ok {
-			newNodes[k] = n
-		}
-	}
-
-	nodes = newNodes // replace with new list
 }
 
 // CopyNodes returns copy of all registered nodes.
@@ -276,62 +246,9 @@ func (n *Node) SetLastActiveTime(lat time.Time) {
 	n.LastActiveTime = lat
 }
 
-/*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
-func (n *Node) Equals(n2 *Node) bool {
-	if datastore.IsEqual(n.GetKey(), n2.GetKey()) {
-		return true
-	}
-	if n.Port == n2.Port && n.Host == n2.Host {
-		return true
-	}
-	return false
-}
-
-/*Print - print node's info that is consumable by Read */
+// Print - print node's info that is consumable by read
 func (n *Node) Print(w io.Writer) {
 	fmt.Fprintf(w, "%v,%v,%v,%v,%v\n", n.GetNodeType(), n.Host, n.Port, n.GetKey(), n.PublicKey)
-}
-
-/*Read - read a node config line and create the node */
-func Read(line string) (*Node, error) {
-	node := Provider()
-	fields := strings.Split(line, ",")
-	if len(fields) != 5 {
-		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v]", line))
-	}
-	switch fields[0] {
-	case "m":
-		node.Type = NodeTypeMiner
-	case "s":
-		node.Type = NodeTypeSharder
-	case "b":
-		node.Type = NodeTypeBlobber
-	default:
-		return nil, common.NewError("unknown_node_type", fmt.Sprintf("Unkown node type %v", fields[0]))
-	}
-	node.Host = fields[1]
-	if node.Host == "" {
-		if node.Port != config.Configuration.Port {
-			node.Host = config.Configuration.Host
-		} else {
-			panic(fmt.Sprintf("invalid node setup for %v\n", node.GetKey()))
-		}
-	}
-
-	port, err := strconv.ParseInt(fields[2], 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	node.Port = int(port)
-	node.SetID(fields[3])
-	node.Client.SetPublicKey(fields[4])
-	hash := encryption.Hash(node.PublicKeyBytes)
-	if node.ID != hash {
-		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
-	}
-	node.ComputeProperties()
-	Self.SetNodeIfPublicKeyIsEqual(node)
-	return node, nil
 }
 
 /*NewNode - read a node config line and create the node */
@@ -341,7 +258,10 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
-	node.SetID(nc["id"].(string))
+	if err := node.SetID(nc["id"].(string)); err != nil {
+		return nil, err
+	}
+
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
 	} else {
@@ -463,7 +383,7 @@ func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
 		metric = metrics.NewHistogram(metrics.NewUniformSample(256))
 		n.SizeByURI[uri] = metric
-		metrics.Register(metricID, metric)
+		_ = metrics.Register(metricID, metric)
 	}
 	return metric
 }
@@ -616,10 +536,6 @@ func serveMetricKey(uri string) string {
 	return "p?" + uri
 }
 
-func isPullRequestURI(uri string) bool {
-	return strings.HasPrefix(uri, "p?")
-}
-
 func isGetRequest(uri string) bool {
 	if strings.HasPrefix(uri, "p?") {
 		return true
@@ -647,11 +563,6 @@ func (n *Node) getOptimalLargeMessageSendTime() float64 {
 		return p2ptime
 	}
 	return sendTime
-}
-
-func (n *Node) getTime(uri string) float64 {
-	pullTimer := n.GetTimer(uri)
-	return pullTimer.Mean()
 }
 
 func (n *Node) SetNode(old *Node) {
@@ -732,10 +643,7 @@ func (n *Node) Clone() *Node {
 		CommChannel:               make(chan struct{}, 15),
 	}
 
-	cc := n.Client.Clone()
-	if cc != nil {
-		clone.Client = *cc
-	}
+	clone.Client.Copy(&n.Client)
 
 	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))
 	for k, v := range n.TimersByURI {
