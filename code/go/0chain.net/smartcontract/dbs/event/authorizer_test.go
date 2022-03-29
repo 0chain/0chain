@@ -46,8 +46,8 @@ func TestAuthorizers(t *testing.T) {
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
 		DelegateWallet:  "delegate wallet",
-		MinStake:        int64(state.Balance(53)),
-		MaxStake:        int64(state.Balance(57)),
+		MinStake:        state.Balance(53),
+		MaxStake:        state.Balance(57),
 		NumDelegates:    59,
 		ServiceCharge:   61.0,
 	}
@@ -59,8 +59,8 @@ func TestAuthorizers(t *testing.T) {
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
 		DelegateWallet:  "delegate wallet",
-		MinStake:        int64(state.Balance(52)),
-		MaxStake:        int64(state.Balance(57)),
+		MinStake:        state.Balance(52),
+		MaxStake:        state.Balance(57),
 		NumDelegates:    60,
 		ServiceCharge:   50.0,
 	}

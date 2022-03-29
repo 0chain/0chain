@@ -14,6 +14,10 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
+const (
+	GB = 1024 * 1024 * 1024
+)
+
 func init() {
 	logging.Logger = zap.NewNop()
 }

@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 )
 
 func TestZcnPool_Encode(t *testing.T) {
@@ -117,7 +116,7 @@ func TestZcnPool_DigPool_Err(t *testing.T) {
 		TokenPool TokenPool
 	}
 	type args struct {
-		id  datastore.Key
+		id  string
 		txn *transaction.Transaction
 	}
 	tests := []struct {
@@ -164,8 +163,8 @@ func TestZcnPool_EmptyPool_Err(t *testing.T) {
 		TokenPool TokenPool
 	}
 	type args struct {
-		fromClientID datastore.Key
-		toClientID   datastore.Key
+		fromClientID string
+		toClientID   string
 		entity       interface{}
 	}
 	tests := []struct {

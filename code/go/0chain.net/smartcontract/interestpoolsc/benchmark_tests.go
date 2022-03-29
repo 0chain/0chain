@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	sc "0chain.net/smartcontract"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -39,14 +40,17 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	var isc = InterestPoolSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	isc.setSC(isc.SmartContract, &smartcontract.BCContext{})
-	un := isc.getUserNode(bt.txn.ClientID, balances)
-	gn := isc.getGlobalNode(balances, bt.endpoint)
-	var err error
+	un, err := isc.getUserNode(bt.txn.ClientID, balances)
+	require.NoError(b, err)
+
+	gn, err := isc.getGlobalNode(balances, bt.endpoint)
+	require.NoError(b, err)
+
 	switch bt.endpoint {
 	case "lock":
 		_, err = isc.lock(bt.Transaction(), un, gn, bt.input, balances)

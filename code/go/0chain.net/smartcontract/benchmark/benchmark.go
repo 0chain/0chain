@@ -1,6 +1,8 @@
 package benchmark
 
 import (
+	"encoding/json"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -72,6 +74,7 @@ type SimulatorParameter int
 
 const (
 	SimulationNumClients SimulatorParameter = iota
+	SimulationActiveNumClients
 	SimulationNumMiners
 	SimulationNumActiveMiners
 	SimulationNumSharders
@@ -79,8 +82,8 @@ const (
 	SimulationNumAllocations
 	SimulationNumBlobbersPerAllocation
 	SimulationNumBlobbers
-	SimulationNumAllocationPlayerPools
-	SimulationNumAllocationPlayer
+	SimulationNumAllocationPayerPools
+	SimulationNumAllocationPayer
 	SimulationNumBlobberDelegates
 	SimulationNumCurators
 	SimulationNumValidators
@@ -90,6 +93,7 @@ const (
 	SimulationNumVestingDestinationsClient
 	SimulationNumWriteRedeemAllocation
 	SimulationNumChallengesBlobber
+	SimulationNumAuthorizers
 	NumberSimulationParameters
 )
 
@@ -103,7 +107,7 @@ const (
 	FaucetSc       = "faucetsc."
 	InterestPoolSC = "interestpoolsc."
 	VestingSc      = "vestingsc."
-	Zcn            = "zcn."
+	ZcnSc          = "zcnsc."
 	DbsEvents      = "dbs.Events."
 
 	Fas = "free_allocation_settings."
@@ -120,10 +124,13 @@ const (
 	Colour                  = Internal + "colour"
 	ControlM                = Internal + "control_m"
 	ControlN                = Internal + "control_n"
+	MptRoot                 = Internal + "mpt_root"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"
 	OptionOmittedTests = Options + "omitted_tests"
+	OptionLoadPath     = Options + "load_path"
+	OptionSavePath     = Options + "save_path"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
@@ -175,13 +182,13 @@ const (
 	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
 	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
 
-	MinMintAmount      = SmartContract + Zcn + "min_mint_amount"
-	PercentAuthorizers = SmartContract + Zcn + "percent_authorizers"
-	MinAuthorizers     = SmartContract + Zcn + "min_authorizers"
-	MinBurnAmount      = SmartContract + Zcn + "min_burn_amount"
-	MinStakeAmount     = SmartContract + Zcn + "min_stake_amount"
-	BurnAddress        = SmartContract + Zcn + "burn_address"
-	MaxFee             = SmartContract + Zcn + "max_fee"
+	MinMintAmount      = SmartContract + ZcnSc + "min_mint_amount"
+	PercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
+	MinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
+	MinBurnAmount      = SmartContract + ZcnSc + "min_burn_amount"
+	MinStakeAmount     = SmartContract + ZcnSc + "min_stake_amount"
+	BurnAddress        = SmartContract + ZcnSc + "burn_address"
+	MaxFee             = SmartContract + ZcnSc + "max_fee"
 
 	EventDbEnabled         = DbsEvents + "enabled"
 	EventDbName            = DbsEvents + "name"
@@ -204,32 +211,37 @@ func (s Source) String() string {
 	}
 }
 
+var parameterName = []string{
+	"num_clients",
+	"num_active_clients",
+	"num_miners",
+	"num_active_miners",
+	"nun_sharders",
+	"nun_active_sharders",
+	"num_allocations",
+	"num_blobbers_per_Allocation",
+	"num_blobbers",
+	"num_allocation_payers_pools",
+	"num_allocation_payers",
+	"num_blobber_delegates",
+	"num_curators",
+	"num_validators",
+	"num_free_storage_assigners",
+	"num_miner_delegates",
+	"num_sharder_delegates",
+	"num_vesting_destinations_client",
+	"num_write_redeem_allocation",
+	"num_challenges_blobber",
+	"num_authorizers",
+}
+
 func (w SimulatorParameter) String() string {
-	return [...]string{
-		"num_clients",
-		"num_miners",
-		"num_active_miners",
-		"nun_sharders",
-		"nun__active_sharders",
-		"num_allocations",
-		"num_blobbers_per_Allocation",
-		"num_blobbers",
-		"num_allocation_payers_pools",
-		"num_allocation_payers",
-		"num_blobber_delegates",
-		"num_curators",
-		"num_validators",
-		"num_free_storage_assigners",
-		"num_miner_delegates",
-		"num_sharder_delegates",
-		"num_vesting_destinations_client",
-		"num_write_redeem_allocation",
-		"num_challenges_blobber",
-	}[w]
+	return parameterName[w]
 }
 
 var (
 	NumClients                   = Simulation + SimulationNumClients.String()
+	NumActiveClients             = Simulation + SimulationActiveNumClients.String()
 	NumMiners                    = Simulation + SimulationNumMiners.String()
 	NumActiveMiners              = Simulation + SimulationNumActiveMiners.String()
 	NumSharders                  = Simulation + SimulationNumSharders.String()
@@ -237,8 +249,8 @@ var (
 	NumAllocations               = Simulation + SimulationNumAllocations.String()
 	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
 	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
-	NumAllocationPlayerPools     = Simulation + SimulationNumAllocationPlayerPools.String()
-	NumAllocationPlayer          = Simulation + SimulationNumAllocationPlayer.String()
+	NumAllocationPayerPools      = Simulation + SimulationNumAllocationPayerPools.String()
+	NumAllocationPayer           = Simulation + SimulationNumAllocationPayer.String()
 	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
 	NumCurators                  = Simulation + SimulationNumCurators.String()
 	NumValidators                = Simulation + SimulationNumValidators.String()
@@ -248,6 +260,7 @@ var (
 	NumVestingDestinationsClient = Simulation + SimulationNumVestingDestinationsClient.String()
 	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
 	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
+	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
 )
 
 type BenchTestI interface {
@@ -295,9 +308,19 @@ func (ts *TestSuite) removeBenchmark(benchToRemove string) bool {
 }
 
 type BenchData struct {
-	Clients     []string
-	PublicKeys  []string
-	PrivateKeys []string
-	Sharders    []string
-	EventDb     *event.EventDb
+	BenchDataMpt
+	EventDb *event.EventDb
+}
+
+func (bd *BenchData) Encode() (b []byte) {
+	var err error
+	if b, err = json.Marshal(bd); err != nil {
+		log.Fatal(err)
+	}
+	return
+}
+
+// Decode from []byte
+func (bd *BenchData) Decode(input []byte) error {
+	return json.Unmarshal(input, bd)
 }

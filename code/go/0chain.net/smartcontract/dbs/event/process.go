@@ -30,6 +30,7 @@ const (
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddAuthorizer
+	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
@@ -62,9 +63,8 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
-		newEvents := edb.removeDuplicate(ctx, events)
-		edb.addEvents(ctx, newEvents)
-		for _, event := range newEvents {
+		edb.addEvents(ctx, events)
+		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeStats:

@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,7 +29,6 @@ func SetupX2MResponders() {
 		handlers[getNotarizedBlockX2MV1Pattern],
 		chain.BlockStatsConfigurator{
 			HashKey:      "block",
-			Handler:      getNotarizedBlockX2MV1Pattern,
 			SenderHeader: node.HeaderNodeID,
 		},
 	)
@@ -92,13 +92,20 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 
 // NotarizedBlockSendHandler - handles a request for a notarized block.
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	var (
+		minerInformer = createMinerInformer(r)
+		requestorID   = r.Header.Get(node.HeaderNodeID)
+	)
+
+	if isPreparingStateForFBRequestorTestCase(minerInformer, requestorID) {
+		return nil, errors.New("conductor expected error")
+	}
+
 	cfg := crpc.Client().State().MinerNotarisedBlockRequestor
 	if cfg == nil {
 		return notarizedBlockSendHandler(ctx, r)
 	}
 
-	minerInformer := createMinerInformer(r)
-	requestorID := r.Header.Get(node.HeaderNodeID)
 	selfInfo := cases.SelfInfo{
 		IsSharder: node.Self.Type == node.NodeTypeSharder,
 		ID:        node.Self.ID,
@@ -128,6 +135,14 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 	default:
 		return notarizedBlockSendHandler(ctx, r)
 	}
+}
+
+func isPreparingStateForFBRequestorTestCase(mi *cases.MinerInformer, requestorID string) bool {
+	cfg := crpc.Client().State().FBRequestor
+	if cfg == nil || mi == nil || mi.GetRoundNumber() != cfg.OnRound {
+		return false
+	}
+	return !mi.IsGenerator(requestorID) && mi.GetTypeRank(requestorID) == 0 // Replica0
 }
 
 func createMinerInformer(r *http.Request) *cases.MinerInformer {

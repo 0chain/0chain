@@ -1,5 +1,7 @@
 package spenum
 
+//go:generate msgp -v -io=false -tests=false
+
 type Provider int
 
 const (

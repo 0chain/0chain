@@ -32,6 +32,8 @@ type (
 
 		Ignored int
 
+		Resulted bool
+
 		statsCollector *stats.NodesClientStats
 
 		mu sync.Mutex

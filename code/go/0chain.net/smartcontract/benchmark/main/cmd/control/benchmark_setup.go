@@ -11,14 +11,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 var (
 	controlMKey = datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + encryption.Hash("control_all"))
 )
-
-func getControlMKey(index int) datastore.Key {
-	return datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" +
-		encryption.Hash("control_m"+strconv.Itoa(index)))
-}
 
 func getControlNKey(index int) datastore.Key {
 	return datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" +
@@ -32,7 +29,7 @@ type item struct {
 func (i *item) Encode() []byte {
 	var b, err = json.Marshal(i)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err)
 	}
 	return b
 }
@@ -48,7 +45,7 @@ type itemArray struct {
 func (is *itemArray) Encode() []byte {
 	var b, err = json.Marshal(is)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err)
 	}
 	return b
 }
@@ -65,7 +62,7 @@ func AddControlObjects(
 	if m == 0 || n > m {
 		return
 	}
-	fields := make([]int64, m, m)
+	fields := make([]int64, m)
 	for i := 0; i < m; i++ {
 		fields[i] = int64(i)
 	}

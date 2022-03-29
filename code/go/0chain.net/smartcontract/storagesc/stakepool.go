@@ -20,24 +20,12 @@ import (
 	"0chain.net/core/util"
 )
 
-type stakePoolSettings struct {
-	// DelegateWallet for pool owner.
-	DelegateWallet string `json:"delegate_wallet"`
-	// MinStake allowed.
-	MinStake state.Balance `json:"min_stake"`
-	// MaxStake allowed.
-	MaxStake state.Balance `json:"max_stake"`
-	// NumDelegates maximum allowed.
-	MaxNumDelegates int `json:"num_delegates"`
-	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
-	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
-	// then the blobber can't be registered / updated.
-	ServiceCharge float64 `json:"service_charge"`
-}
+//msgp:ignore unlockResponse stakePoolStat stakePoolRequest delegatePoolStat rewardsStat
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 func validateStakePoolSettings(
 	sps stakepool.StakePoolSettings,
-	conf *scConfig,
+	conf *Config,
 ) error {
 	err := conf.validateStakeRange(sps.MinStake, sps.MaxStake)
 	if err != nil {
@@ -138,8 +126,10 @@ func (sp *stakePool) empty(
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
 	if sp.stake()-sp.TotalOffers-dp.Balance < 0 {
-		sp.TotalUnStake += dp.Balance
-		dp.Status = spenum.Unstaking
+		if dp.Status != spenum.Unstaking {
+			sp.TotalUnStake += dp.Balance
+			dp.Status = spenum.Unstaking
+		}
 		return true, nil
 	}
 
@@ -167,11 +157,6 @@ func (sp *stakePool) addOffer(amount state.Balance) {
 func (sp *stakePool) extendOffer(delta state.Balance) (err error) {
 	sp.TotalOffers += delta
 	return
-}
-
-type stakePoolUpdateInfo struct {
-	stake  state.Balance // stake of all delegate pools
-	offers state.Balance // offers stake
 }
 
 // slash represents blobber penalty; it returns number of tokens moved in
@@ -267,7 +252,7 @@ func (sp *stakePool) capacity(now common.Timestamp,
 }
 
 // update the pool to get the stat
-func (sp *stakePool) stat(_ *scConfig, _ string,
+func (sp *stakePool) stat(_ *Config, _ string,
 	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
@@ -317,10 +302,10 @@ type rewardsStat struct {
 }
 
 type delegatePoolStat struct {
-	ID         datastore.Key `json:"id"`          // blobber ID
+	ID         string        `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance
-	DelegateID datastore.Key `json:"delegate_id"` // wallet
-	Rewards    state.Balance `json:"rewards"`     // current
+	DelegateID string        `json:"delegate_id"` // wallet
+	Rewards    state.Balance `json:"rewards"`     // total for all time
 	UnStake    bool          `json:"unstake"`     // want to unstake
 
 	TotalReward  state.Balance `json:"total_reward"`
@@ -330,7 +315,7 @@ type delegatePoolStat struct {
 }
 
 type stakePoolStat struct {
-	ID      datastore.Key `json:"pool_id"` // pool ID
+	ID      string        `json:"pool_id"` // pool ID
 	Balance state.Balance `json:"balance"` // total balance
 	Unstake state.Balance `json:"unstake"` // total unstake amount
 
@@ -366,32 +351,17 @@ func (stat *stakePoolStat) decode(input []byte) error {
 // smart contract methods
 //
 
-// getStakePoolBytes of a blobber
-func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
-		return
-	}
 	sp = newStakePool()
-	err = sp.Decode(poolb)
+	err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID), sp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+
+	return sp, nil
 }
 
 // initial or successive method should be used by add_blobber/add_validator
@@ -399,7 +369,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 
 // get existing stake pool or create new one not saving it
 func (ssc *StorageSmartContract) getOrUpdateStakePool(
-	conf *scConfig,
+	conf *Config,
 	providerId datastore.Key,
 	providerType spenum.Provider,
 	settings stakepool.StakePoolSettings,
@@ -428,8 +398,8 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 }
 
 type stakePoolRequest struct {
-	BlobberID datastore.Key `json:"blobber_id,omitempty"`
-	PoolID    datastore.Key `json:"pool_id,omitempty"`
+	BlobberID string `json:"blobber_id,omitempty"`
+	PoolID    string `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
@@ -451,7 +421,7 @@ type unlockResponse struct {
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get SC configurations: %v", err)

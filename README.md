@@ -2,19 +2,20 @@
 
 ## Table of Contents
 
-- [Initial Setup](#initial-setup) 
+- [Initial Setup](#initial-setup)
   - [Host Machine Network Setup](#host-machine-network-setup)
-  - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders) 
+  - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
   - [Setup Network](#setup-network)
 - [Building and Starting the Nodes](#building-the-nodes)
-- [Building the Nodes](#building-the-nodes)  
+- [Building the Nodes](#building-the-nodes)
 - [Generating Test Transactions](#generating-test-transactions)
 - [Troubleshooting](#troubleshooting)
+- [Development](#Development)
 - [Debugging](#debugging)
 - [Unit tests](#unit-tests)
 - [Creating The Magic Block](#creating-the-magic-block)
 - [Initial states](#initial-states)
-- [Miscellaneous](#miscellaneous) 
+- [Miscellaneous](#miscellaneous)
   - [Cleanup](#cleanup)
   - [Minio Setup](#minio)
 - [Integration tests](#integration-tests)
@@ -237,7 +238,45 @@ Redis used for transactions:
 ../bin/run.sharder.sh cassandra cqlsh
 ```
 
-## Dependencies for local compilation
+## Development
+
+## Install msgp
+
+Run the following command to install the msgp tool:
+
+```sh
+make install-msgp
+```
+
+We are using [msgp](https://github.com/0chain/msgp) to encode/decode data that store in MPT, it is unnecessary
+to touch it unless there are data struct changes or new type of data structs need to store in MPT.
+
+
+When we need to add a new data struct to MPT, for example:
+
+```go
+//go:generate msgp -io=false -tests=false -v
+type Foo struct {
+	Name string
+}
+
+```
+
+Note:
+1. `msgp` does not support system type alias, so please do not use `datastore.Key` in MPT data struct, it is an alias of
+system type `string`.
+2. The `//go:generate msgp -io=false ...` works on file level, i.e, we only need to define it once a file,
+so please check if it is already defined before adding.
+
+Then run the following command from the project root to generate methods for serialization.
+
+```sh
+make msgp
+```
+
+A new file will then be generated as {file}_gen.go in the same dir where the data struct is defined.
+
+### Dependencies for local compilation
 
 You need to install `rocksdb` and `herumi/bls`, refer to `docker.local/build.base/Dockerfile.build_base` for necessary steps.
 
@@ -262,7 +301,7 @@ go build -tags "bn256 development"
 
 ### Debug builds of 0chain
 
-If you want to run a debug 0chain build you can follow the details contained in the 
+If you want to run a debug 0chain build you can follow the details contained in the
 [`0chain/local` folder](https://github.com/0chain/0chain/blob/debug_builds/local/README.md).
 
 Only one miner and one sharder can be run on any single machine, so you will need at least
@@ -337,7 +376,7 @@ The base image includes all the dependencies required to test the 0chain code.
 Now run the script containing unit tests .
 
 ```
-./docker.local/bin/unit_test.sh 
+./docker.local/bin/unit_test.sh
 ```
 
 The list of packages is optional, and if provided runs only the tests from those packages. Command for running unit tests with specific packages .
@@ -356,15 +395,15 @@ This `FROM`step does the required preparation and specifies the underlying OS ar
 
 #### Step 2: ENV SRC_DIR=/0chain
 
- The SRC_DIR  variable is a reference to a filepath which contains the code from your pull request. Here `/0chain` directory is specified as it is the one which was cloned. 
+ The SRC_DIR  variable is a reference to a filepath which contains the code from your pull request. Here `/0chain` directory is specified as it is the one which was cloned.
 
-#### Step 3: Setting the `GO111Module` variable to `ON` 
+#### Step 3: Setting the `GO111Module` variable to `ON`
 
-`GO111MODULE` is an environment variable that can be set when using `go` for changing how Go imports packages. It was introduced to help ensure a smooth transition to the module system. 
+`GO111MODULE` is an environment variable that can be set when using `go` for changing how Go imports packages. It was introduced to help ensure a smooth transition to the module system.
 
 `GO111MODULE=on` will force using Go modules even if the project is in your GOPATH. Requires `go.mod` to work.
 
- Note: The default behavior in Go 1.16 is now **GO111MODULE**=on 
+ Note: The default behavior in Go 1.16 is now **GO111MODULE**=on
 
 #### Step 4: COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
@@ -402,10 +441,10 @@ ok      0chain.net/chaincore/client     0.328s  coverage: 30.8% of statements
 ok      0chain.net/chaincore/httpclientutil     2.048s  coverage: 91.7% of statements
 ok      0chain.net/chaincore/node       0.011s  coverage: 8.9% of statements
 ok      0chain.net/chaincore/round      0.048s  coverage: 97.1% of statements
-ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statements                                                                             
-ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%                                                                               
+ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statements
+ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%
 ?       0chain.net/chaincore/state      [no test files]
-ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem                                                                             
+ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem
 ok      0chain.net/chaincore/tokenpool  10.034s coverage: 100.0% of statements
 ok      0chain.net/chaincore/transaction        0.029s  coverage: 0.4% of statements [no tests to run]
 ok      0chain.net/chaincore/wallet     6.600s  coverage: 40.0% of statements
@@ -469,20 +508,20 @@ To create the magic block.
 
 The magic block and the dkg summary json files will appear in the docker.local/config under the name given in the configuration file.
 
-The magic_block_file setting in the 0chain.yaml file needs to be updated with the new name of the magic block created. 
+The magic_block_file setting in the 0chain.yaml file needs to be updated with the new name of the magic block created.
 
 Update the miner config file so it is set to the new dkg summaries. To do this edit the docker.local/build.miner/b0docker-compose.yml file. On line 55 is a flag "--dkg_file" set it to the dkg summary files created with the magic block.
 
 ## Initial states
 
-The balance for the various nodes is setup in a `initial_state.yaml` file. 
+The balance for the various nodes is setup in a `initial_state.yaml` file.
 This file is a list of node ids and token amounts.
 
-The initial state yaml file is entered as a command line argument when 
-running a sharder or miner, falling that the `0chain.yaml` 
+The initial state yaml file is entered as a command line argument when
+running a sharder or miner, falling that the `0chain.yaml`
 `network.inital_states` entry is used to find the initial state file.
 
-An example, that can be used with the preset ids, can be found at 
+An example, that can be used with the preset ids, can be found at
 [0chian/docker.local/config/inital_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
 
 ## Miscellaneous
@@ -543,15 +582,15 @@ Sample config
 ```
 minio:
   # Enable or disable minio backup, Do not enable with deep scan ON
-  enabled: false 
+  enabled: false
   # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  worker_frequency: 3600 
+  worker_frequency: 3600
   # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  num_workers: 5 
+  num_workers: 5
   # Use SSL for connection or not
-  use_ssl: false 
+  use_ssl: false
   # How old the block should be to be considered for moving to cloud
-  old_block_round_range: 20000000 
+  old_block_round_range: 20000000
   # Delete local copy of block once it's moved to cloud
   delete_local_copy: true
 ```
@@ -582,13 +621,13 @@ Below is an example of conductor test suite.
 
 ```
 # Under `enable` is the list of sets that will be run.
-enable: 
+enable:
   - "Miner down/up"
   - "Blobber tests"
 
 # Test sets defines the test cases it covers.
-sets: 
-  - name: "Miner down/up" 
+sets:
+  - name: "Miner down/up"
     tests:
       - "Miner: 50 (switch to contribute)"
       - "Miner: 100 (switch to share)"
@@ -597,17 +636,17 @@ sets:
       - "All blobber tests"
 
 # Test cases defines the execution flow for the tests.
-tests: 
+tests:
   - name: "Miner: 50 (switch to contribute)"
-    flow: 
+    flow:
     # Flow is a series of directives.
-    # The directive can either be built-in in the conductor 
+    # The directive can either be built-in in the conductor
     # or custom command defined in "conductor.config.yaml"
-      - set_monitor: "sharder-1" # Most directive refer to node by name, these are defined in `conductor.config.yaml` 
+      - set_monitor: "sharder-1" # Most directive refer to node by name, these are defined in `conductor.config.yaml`
       - cleanup_bc: {} # A sample built-in command that triggers stop on all nodes and clean up.
       - start: ['sharder-1']
       - start: ['miner-1', 'miner-2', 'miner-3']
-      - wait_phase: 
+      - wait_phase:
           phase: 'contribute'
       - stop: ['miner-1']
       - start: ['miner-1']
@@ -754,7 +793,7 @@ Install zwalletcli
 (cd zwalletcli && make install)
 ```
 
-Patch 0dns for the latest 0chain network configuration .  
+Patch 0dns for the latest 0chain network configuration .
 
 ```
 (cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
@@ -790,12 +829,12 @@ Run blobber tests
 
 ```
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2) 
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2)
 ```
 
 ### Adding new Tests
 
-New tests can be easily added  to the conductor check [Updating conductor tests](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#updating-conductor-tests) in the conductor documentation for more information. 
+New tests can be easily added  to the conductor check [Updating conductor tests](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#updating-conductor-tests) in the conductor documentation for more information.
 
 ### Enabling or Disabling Tests
 

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -14,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"go.uber.org/zap"
 )
 
 /*SetupNodeHandlers - setup the handlers for the chain */
@@ -34,8 +35,6 @@ var (
 	// ShardersBlockStateChangeRequestor is the same, but from sharders.
 	// ShardersBlockStateChangeRequestor node.EntityRequestor
 
-	// PartialStateRequestor - request partial state from a given root.
-	PartialStateRequestor node.EntityRequestor
 	// StateNodesRequestor - request a set of state nodes given their keys.
 	StateNodesRequestor node.EntityRequestor
 	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
@@ -58,14 +57,11 @@ func setupX2MRequestors() {
 	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
 	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
 
-	partialStateEntityMetadata := datastore.GetEntityMetadata("partial_state")
-	PartialStateRequestor = node.RequestEntityHandler("/v1/_x2m/state/get", options, partialStateEntityMetadata)
-
 	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
 	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
 }
 
-func SetupX2SRequestors() {
+func setupX2SRequestors() {
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
