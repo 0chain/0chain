@@ -190,13 +190,11 @@ func MakeMockStateContext() *mockStateContext {
 
 	/// GetClientBalance
 
-	ctx.
-		On("GetClientBalance", mock.AnythingOfType("string")).Return(5, nil)
+	ctx.On("GetClientBalance", mock.AnythingOfType("string")).Return(5, nil)
 
 	/// AddTransfer
 
-	ctx.
-		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
+	ctx.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {
 			transfers = append(transfers, transfer)
 			return nil
@@ -255,9 +253,8 @@ func MakeMockStateContext() *mockStateContext {
 			return nil
 		})
 
-	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"),
-			mock.AnythingOfType("*zcnsc.UserNode")).Return(
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"),
+		mock.AnythingOfType("*zcnsc.UserNode")).Return(
 		func(key datastore.Key, node util.MPTSerializable) datastore.Key {
 			n := node.(*UserNode)
 			ctx.userNodes[key] = n
@@ -319,8 +316,7 @@ func MakeMockStateContext() *mockStateContext {
 			events[id] = authorizerNode
 		})
 
-	ctx.On(
-		"EmitEvent",
+	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagUpdateAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
