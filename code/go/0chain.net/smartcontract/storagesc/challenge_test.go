@@ -48,10 +48,7 @@ func TestAddChallenge(t *testing.T) {
 		allocChallengeObj   *AllocationChallenge
 		blobberAllocation   *BlobberAllocation
 		validators          partitions.RandPartition
-		challengeID         string
-		creationDate        common.Timestamp
 		r                   *rand.Rand
-		challengeSeed       int64
 		blobberID           string
 		balances            cstate.StateContextI
 	}
