@@ -12,7 +12,7 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -66,7 +66,7 @@ func (ipsc *StorageSmartContract) GetCost(t *transaction.Transaction, funcName s
 	return cost, nil
 }
 
-func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
+func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) {
 	ssc.SmartContract = sc
 	ssc.SmartContract.RestHandlers["/get_mpt_key"] = ssc.GetMptKey
 	// sc configurations
