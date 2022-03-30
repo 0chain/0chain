@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewMpks(t *testing.T) {
@@ -198,7 +199,9 @@ func TestMpks_GetMpkMap(t *testing.T) {
 
 	mpkMap := make(map[bls.PartyID][]bls.PublicKey)
 	for k, v := range mpk.Mpks {
-		mpkMap[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
+		mpks, err := bls.ConvertStringToMpk(v.Mpk)
+		require.NoError(t, err)
+		mpkMap[bls.ComputeIDdkg(k)] = mpks
 	}
 
 	type fields struct {
@@ -220,9 +223,9 @@ func TestMpks_GetMpkMap(t *testing.T) {
 			mpks := &Mpks{
 				Mpks: tt.fields.Mpks,
 			}
-			if got := mpks.GetMpkMap(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetMpkMap() = %v, want %v", got, tt.want)
-			}
+			got, err := mpks.GetMpkMap()
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

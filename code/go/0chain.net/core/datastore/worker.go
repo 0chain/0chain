@@ -103,7 +103,7 @@ type EntityChunkBuilder struct {
 
 func (ecb *EntityChunkBuilder) Run(ctx context.Context) {
 	ecb.Chunk = ecb.ChunkProvider.Create(ecb.ChunkSize)
-	for true {
+	for {
 		if ecb.MaxHoldupTime > 0 {
 			select {
 			case <-ctx.Done():

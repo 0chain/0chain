@@ -368,7 +368,7 @@ func setupTempRocksDBDir() func() {
 	}
 }
 
-func setupSelfNodeKeys() {
+func setupSelfNodeKeys() { //nolint
 	keys := "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0\naa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
 	breader := bytes.NewBuffer([]byte(keys))
 	sigScheme := encryption.NewED25519Scheme()
@@ -502,7 +502,7 @@ func SetUpSingleSelf() func() {
 	}
 }
 
-func setupSelf() func() {
+func setupSelf() func() { //nolint
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
 	if err != nil {

@@ -51,9 +51,7 @@ func TestAddCurator(t *testing.T) {
 			ID:    p.info.AllocationId,
 			Owner: p.clientId,
 		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
+		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID), mockSetValue(&sa)).Return(nil).Once()
 
 		balances.On(
@@ -156,9 +154,7 @@ func TestRemoveCurator(t *testing.T) {
 			ID:    p.info.AllocationId,
 			Owner: p.clientId,
 		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
+		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID), mockSetValue(&sa)).Return(nil).Once()
 
 		balances.On(

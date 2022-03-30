@@ -29,7 +29,7 @@ func newTestBalances() *testBalances {
 	}
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
+func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) { //nolint
 	tb.balances[key] = b
 }
 
