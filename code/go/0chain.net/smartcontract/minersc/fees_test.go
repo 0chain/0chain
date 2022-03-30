@@ -78,18 +78,6 @@ func extractBlockSharders(sharders []*sharder, n int) (bs []string) {
 	return
 }
 
-func getBlockSharders(sharders []*sharder, bs []string) (got []*sharder) {
-	got = make([]*sharder, 0, len(bs))
-	for _, sh := range sharders {
-		for _, id := range bs {
-			if sh.sharder.id == id {
-				got = append(got, sh)
-			}
-		}
-	}
-	return
-}
-
 func createPreviousMagicBlock(miners []*miner, sharders []*sharder) (
 	b *block.Block) {
 

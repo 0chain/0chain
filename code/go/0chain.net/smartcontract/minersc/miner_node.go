@@ -30,10 +30,6 @@ func NewMinerNode() *MinerNode {
 	return mn
 }
 
-func getMinerKey(mid string) string {
-	return ADDRESS + mid
-}
-
 func GetSharderKey(sid string) datastore.Key {
 	return ADDRESS + sid
 }

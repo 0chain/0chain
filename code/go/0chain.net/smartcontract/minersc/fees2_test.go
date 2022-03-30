@@ -29,7 +29,6 @@ const (
 	signatureSchemeType = encryption.SignatureSchemeEd25519
 	minerPk             = datastore.Key("25206bf74fb1afa8045acd269ef76890d8a1e34d89eb681c042ac58dbc080e30")
 	selfId              = datastore.Key("mySelfId")
-	sharderId           = "sharder"
 	delegateId          = "delegate"
 	maxDelegates        = 1000
 	errDelta            = 4 // for testing values with rounding errors

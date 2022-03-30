@@ -113,7 +113,7 @@ func (rs *randomSelector) Remove(
 
 	replacment := lastPart.cutTail()
 	if replacment == nil {
-		fmt.Errorf("empty last partitions, currpt data")
+		return fmt.Errorf("empty last partitions, currpt data")
 	}
 	part.add(replacment)
 	if rs.Callback != nil {
@@ -151,7 +151,7 @@ func (rs *randomSelector) AddRand(
 	}
 	moving := partition.cutTail()
 	if moving == nil {
-		fmt.Errorf("empty partitions, currpt data")
+		return -1, fmt.Errorf("empty partitions, corrupt data")
 	}
 	partition.add(item)
 

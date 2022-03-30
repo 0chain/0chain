@@ -148,7 +148,7 @@ func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 	return shuffled
 }
 
-// Print - print this pool. This will be used for http response and Read method
+// Print - print this pool. This will be used for http response and read method
 // should be able to consume it
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes(false)
@@ -330,7 +330,7 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 }
 
 func (np *Pool) MarshalMsg(o []byte) ([]byte, error) {
-	d := poolDecode(*np)
+	d := poolDecode(*np) //nolint: govet
 	return d.MarshalMsg(o)
 }
 
@@ -355,7 +355,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 }
 
 func (np *Pool) Msgsize() int {
-	d := poolDecode(*np)
+	d := poolDecode(*np) //nolint: govet
 	return d.Msgsize()
 }
 

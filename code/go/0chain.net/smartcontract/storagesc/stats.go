@@ -3,7 +3,9 @@ package storagesc
 import (
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"go.uber.org/zap"
 )
 
 func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) error {
@@ -21,7 +23,7 @@ func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSi
 	}
 }
 
-func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads int64) error {
+func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, readSize int64) error {
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
@@ -29,7 +31,7 @@ func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads
 		return err
 	}
 
-	stats.Stats.NumReads += numReads
+	stats.Stats.ReadsSize += readSize
 	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 	return err
 }
@@ -55,6 +57,7 @@ func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI
 	stats.Stats = &StorageAllocationStats{}
 	err := statectx.GetTrieNode(stats.GetKey(sc.ID), stats)
 	if err != nil {
+		logging.Logger.Error("resolve challenge failed", zap.Error(err))
 		return
 	}
 
@@ -64,5 +67,8 @@ func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI
 	} else {
 		stats.Stats.FailedChallenges++
 	}
-	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	_, err = statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
+	if err != nil {
+		logging.Logger.Error("resolve challenge failed", zap.Error(err))
+	}
 }

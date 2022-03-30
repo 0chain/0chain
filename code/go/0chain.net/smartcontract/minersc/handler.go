@@ -26,8 +26,6 @@ import (
 
 const (
 	cantGetMinerNodeMsg = "can't get miner node"
-	inactiveNodes       = -1
-	activeNodes         = 1
 )
 
 type userPools struct {
