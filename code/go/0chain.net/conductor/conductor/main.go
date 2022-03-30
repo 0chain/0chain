@@ -598,9 +598,6 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if !ok {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
-	if r.verbose {
-		// log.Print(" [INF] round ", re.Round)
-	}
 
 	// set last round
 	r.lastAcceptedRound = struct {

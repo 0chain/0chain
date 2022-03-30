@@ -214,7 +214,7 @@ func (t testWallet) getMPTWalletForSigner(signerClientID string) mptwallet.Walle
 	return mptwallet.Wallet{} // Never reached.
 }
 
-func (t testWallet) toWallet() multisigsc.Wallet {
+func (t testWallet) toWallet() multisigsc.Wallet { //nolint
 	var signerThresholdIDs []string
 	var signerPublicKeys []string
 

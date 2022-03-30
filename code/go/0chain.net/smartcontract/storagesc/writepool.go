@@ -40,10 +40,6 @@ func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
 	return wp.Pools.blobberCut(allocID, blobberID, now)
 }
 
-func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) {
-	wp.Pools.removeEmpty(allocID, ap)
-}
-
 // Encode implements util.Serializable interface.
 func (wp *writePool) Encode() []byte {
 	var b, err = json.Marshal(wp)

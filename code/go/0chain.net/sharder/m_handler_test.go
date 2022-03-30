@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -30,9 +31,6 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 
-	sc := makeTestChain(t)
-	sc.SetLatestFinalizedBlock(b)
-
 	type args struct {
 		ctx context.Context
 		r   *http.Request
@@ -53,11 +51,12 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			sc := &sharder.MockChainer{}
+			sc.On("GetLatestFinalizedBlock").Return(b)
+			sc.On("GetBlockChannel").Return(make(chan *block.Block, 1))
+			sc.On("ForceFinalizeRound()")
 
-			sc := sharder.GetSharderChain()
-			sc.SetLatestFinalizedBlock(b)
-
-			got, err := sharder.LatestFinalizedBlockHandler(tt.args.ctx, tt.args.r)
+			got, err := sharder.LatestFinalizedBlockHandler(sc)(tt.args.ctx, tt.args.r)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LatestFinalizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -168,11 +167,11 @@ func TestNotarizedBlockHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setLFB {
-				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
-			}
+			sc := &sharder.MockChainer{}
+			sc.On("GetLatestFinalizedBlock").Return(b)
+			sc.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
 
-			got, err := sharder.NotarizedBlockHandler(tt.args.ctx, tt.args.entity)
+			got, err := sharder.NotarizedBlockHandler(sc)(tt.args.ctx, tt.args.entity)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NotarizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -216,11 +215,12 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tt.setLFB {
-				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
-			}
+			sc := &sharder.MockChainer{}
+			sc.On("GetLatestFinalizedBlock").Return(b)
+			sc.On("GetBlockChannel").Return(make(chan *block.Block, 1))
+			sc.On("ForceFinalizeRound()")
 
-			got, err := sharder.NotarizedBlockKickHandler(tt.args.ctx, tt.args.entity)
+			got, err := sharder.NotarizedBlockKickHandler(sc)(tt.args.ctx, tt.args.entity)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NotarizedBlockKickHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return

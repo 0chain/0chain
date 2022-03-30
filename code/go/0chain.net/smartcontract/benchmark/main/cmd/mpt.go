@@ -159,7 +159,6 @@ func setUpMpt(
 	timer := time.Now()
 	clients, publicKeys, privateKeys := addMockClients(pMpt)
 	log.Println("added clients\t", time.Since(timer))
-	publicKeys = publicKeys
 
 	timer = time.Now()
 	faucetsc.FundMockFaucetSmartContract(pMpt)
@@ -214,13 +213,11 @@ func setUpMpt(
 
 	var wg sync.WaitGroup
 
-	var blobbers []*storagesc.StorageNode
-	var validators []*storagesc.ValidationNode
-	var miners, sharders []string
-	blobbers = blobbers
-	validators = validators
-	miners = miners
-	sharders = sharders
+	var (
+		blobbers         []*storagesc.StorageNode
+		validators       []*storagesc.ValidationNode
+		miners, sharders []string
+	)
 
 	wg.Add(1)
 	go func() {
@@ -266,7 +263,6 @@ func setUpMpt(
 
 	timer = time.Now()
 	stakePools := storagesc.GetMockBlobberStakePools(clients, balances)
-	stakePools = stakePools
 	log.Println("created blobber stake pools\t", time.Since(timer))
 
 	wg.Add(1)
@@ -447,7 +443,6 @@ func setUpMpt(
 	// todo add zcnsc.Setup back once fixed
 
 	var benchData benchmark.BenchData
-	privateKeys = privateKeys
 
 	wg.Add(1)
 	go func() {

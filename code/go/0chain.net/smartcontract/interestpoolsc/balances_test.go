@@ -30,10 +30,6 @@ func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 	tb.balances[key] = b
 }
 
-func (tb *testBalances) setLFMB(lfmb *block.Block) {
-	tb.lfmb = lfmb
-}
-
 func (tb *testBalances) GetBlock() *block.Block {
 	return tb.block
 }

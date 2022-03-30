@@ -306,7 +306,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}

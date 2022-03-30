@@ -59,7 +59,6 @@ const (
 	transactionHash  = "12345678"
 	clientId         = "sally"
 	errDelta         = 6 // for testing values with rounding errors
-	offerId          = "offer"
 	errStakePoolLock = "stake_pool_lock_failed: "
 	errStakeTooSmall = "too small stake to lock"
 )
