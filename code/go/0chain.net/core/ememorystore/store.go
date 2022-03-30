@@ -82,8 +82,7 @@ func (ems *Store) InsertIfNE(ctx context.Context, entity datastore.Entity) error
 	if err == nil {
 		return common.NewError("entity_already_exists", "Entity already exists")
 	}
-	ems.Write(ctx, entity)
-	return nil
+	return ems.Write(ctx, entity)
 }
 
 func (ems *Store) Delete(ctx context.Context, entity datastore.Entity) error {

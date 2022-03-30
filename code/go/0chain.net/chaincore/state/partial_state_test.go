@@ -459,7 +459,7 @@ func TestPartialState_UnmarshalPartialState(t *testing.T) {
 			name: "OK",
 			args: args{
 				obj: map[string]interface{}{
-					"root":    ps.Hash,
+					"root":    []byte(ps.Hash),
 					"version": ps.Version,
 					"nodes": []interface{}{
 						base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(util.NodeTypeValueNode) + "node")),

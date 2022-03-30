@@ -58,6 +58,10 @@ func (bdb *BlockDB) SetIndex(index Index) {
 func (bdb *BlockDB) Create() error {
 	dir := filepath.Dir(bdb.file)
 	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return err
+	}
+
 	if bdb.index == nil {
 		bdb.SetIndex(newMapIndex())
 	}
@@ -147,15 +151,20 @@ func (bdb *BlockDB) WriteData(record Record) error {
 	if err != nil {
 		return err
 	}
-	bdb.index.SetOffset(record.GetKey(), offset)
+	if err := bdb.index.SetOffset(record.GetKey(), offset); err != nil {
+		return err
+	}
 	buffer := bytes.NewBuffer(nil)
 	err = record.Encode(buffer)
 	if err != nil {
 		return err
 	}
 	if bdb.compress {
-		cbytes := compDe.Compress(buffer.Bytes())
-		buffer = bytes.NewBuffer(cbytes)
+		cb, err := compDe.Compress(buffer.Bytes())
+		if err != nil {
+			return err
+		}
+		buffer = bytes.NewBuffer(cb)
 	}
 	data := buffer.Bytes()
 	dlen := int32(len(data))
@@ -190,7 +199,9 @@ func (bdb *BlockDB) Iterate(ctx context.Context, handler DBIteratorHandler, rp R
 
 //Save - implement interface
 func (bdb *BlockDB) Save() error {
-	bdb.saveHeader()
+	if err := bdb.saveHeader(); err != nil {
+		return err
+	}
 	return bdb.Close()
 }
 
@@ -228,8 +239,11 @@ func (bdb *BlockDB) saveHeader() error {
 			return err
 		}
 		if bdb.compress {
-			cbytes := compDe.Compress(buffer.Bytes())
-			buffer = bytes.NewBuffer(cbytes)
+			cb, err := compDe.Compress(buffer.Bytes())
+			if err != nil {
+				return err
+			}
+			buffer = bytes.NewBuffer(cb)
 		}
 		_, err = buffer.WriteTo(headerFile)
 	}

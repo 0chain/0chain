@@ -36,13 +36,15 @@ func (ed *ED25519Scheme) GenerateKeys() error {
 func (ed *ED25519Scheme) ReadKeys(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
-	if result == false {
+	if !result {
 		return ErrKeyRead
 	}
 	publicKey := scanner.Text()
-	ed.SetPublicKey(publicKey)
+	if err := ed.SetPublicKey(publicKey); err != nil {
+		return err
+	}
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return ErrKeyRead
 	}
 	privateKey := scanner.Text()

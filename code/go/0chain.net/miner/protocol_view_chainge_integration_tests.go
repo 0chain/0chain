@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
@@ -338,10 +339,12 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 			"setting hex string: %v", err)
 	}
 
-	var (
-		mpk       = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-		mpkString []string
-	)
+	mpk, err = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+	if err != nil {
+		return nil, err
+	}
+
+	var mpkString []string
 	for _, pk := range mpk {
 		mpkString = append(mpkString, pk.GetHexString())
 	}

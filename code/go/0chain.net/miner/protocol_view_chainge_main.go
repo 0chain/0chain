@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package miner
@@ -66,7 +67,9 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		}
 
 		var signatureScheme = chain.GetServerChain().GetSignatureScheme()
-		signatureScheme.SetPublicKey(n.PublicKey)
+		if err := signatureScheme.SetPublicKey(n.PublicKey); err != nil {
+			return nil, err
+		}
 
 		var err error
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
@@ -274,7 +277,10 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 			"setting hex string: %v", err)
 	}
 
-	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+	mpk, err := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+	if err != nil {
+		return nil, err
+	}
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
 		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
