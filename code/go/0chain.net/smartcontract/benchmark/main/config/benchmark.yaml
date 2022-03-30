@@ -96,6 +96,7 @@ smart_contracts:
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
     max_challenges_per_generation: 1
+    validators_per_challenge: 2
     readpool:
       min_lock: 0.3
       min_lock_period: 1m
