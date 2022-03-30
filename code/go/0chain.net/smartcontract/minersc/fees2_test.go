@@ -370,7 +370,10 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	require.NoError(t, err)
 
-	confirmResults(t, *globalNode, runtime, f, ctx)
+	mn, err := getMinerNode(txn.ClientID, ctx)
+	require.NoError(t, err)
+
+	confirmResults(t, *globalNode, runtime, f, mn, ctx)
 
 	return err
 }

@@ -151,9 +151,8 @@ func (sp *StakePool) MintRewards(
 	if !ok {
 		return 0, fmt.Errorf("cannot find rewards for %s", poolId)
 	}
-	reward += dPool.Reward
 
-	if reward > 0 {
+	if dPool.Reward > 0 {
 		minter, err := cstate.GetMinter(sp.Minter)
 		if err != nil {
 			return 0, err
@@ -161,10 +160,11 @@ func (sp *StakePool) MintRewards(
 		if err := balances.AddMint(&state.Mint{
 			Minter:     minter,
 			ToClientID: clientId,
-			Amount:     reward,
+			Amount:     dPool.Reward,
 		}); err != nil {
 			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
+		reward += dPool.Reward
 		dPool.Reward = 0
 	}
 

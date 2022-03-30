@@ -47,7 +47,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.MintRewards(
+	minted, err := sp.MintRewards(
 		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
@@ -63,5 +63,25 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("pay_reward_failed",
 			"error saving stake pool, %v", err)
 	}
+	if minted == 0 {
+		return "", nil
+	}
+
+	conf, err := ssc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"can't get config: %v", err)
+	}
+	conf.Minted += minted
+	if conf.Minted > conf.MaxMint {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
+	}
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"cannot save config: %v", err)
+	}
+
 	return "", nil
 }

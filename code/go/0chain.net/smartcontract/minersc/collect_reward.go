@@ -16,7 +16,7 @@ import (
 func (ssc *MinerSmartContract) collectReward(
 	txn *transaction.Transaction,
 	input []byte,
-	_ *GlobalNode,
+	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
 	var prr stakepool.CollectRewardRequest
@@ -61,7 +61,7 @@ func (ssc *MinerSmartContract) collectReward(
 	if err != nil {
 		return "", common.NewError("collect_reward_failed", err.Error())
 	}
-	_, err = provider.StakePool.MintRewards(
+	minted, err := provider.StakePool.MintRewards(
 		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
@@ -72,5 +72,16 @@ func (ssc *MinerSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"error saving stake pool, %v", err)
 	}
+
+	gn.Minted += minted
+	if !gn.canMint() {
+		return "", common.NewErrorf("collect_reward_failed",
+			"max mint %v exceeded, %v", gn.MaxMint, gn.Minted)
+	}
+	if err = gn.save(balances); err != nil {
+		return "", common.NewErrorf("collect_reward_failed",
+			"saving global node: %v", err)
+	}
+
 	return "", nil
 }
