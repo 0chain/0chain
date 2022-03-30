@@ -127,12 +127,12 @@ func TestValidateSimpleNode(t *testing.T) {
 	assert.NoError(t, sn.Validate(), "len(id) == 64")
 
 	sn = &SimpleNode{
-		ID:             "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
+		ID: "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
 	}
 	assert.Error(t, sn.Validate(), "len(id) != 64")
 
 	sn = &SimpleNode{
-		ID:             "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
+		ID: "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
 	}
 	assert.NoError(t, sn.Validate(), "len(id) == 64")
 }

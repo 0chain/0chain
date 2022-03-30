@@ -6,11 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -28,16 +29,16 @@ type mockStateContext struct {
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
-func (sc *mockStateContext) Validate() error                                           { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                       {}
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                      { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction                { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer             { return nil }
+func (sc *mockStateContext) Validate() error                                         { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme          { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)               {}
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)   { return "", nil }
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) { return 0, nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock            { return nil }
 func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
@@ -47,9 +48,9 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 		Data:        data,
 	})
 }
-func (sc *mockStateContext) EmitError(error)                                           {}
-func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
-func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
+func (sc *mockStateContext) EmitError(error)            {}
+func (sc *mockStateContext) GetEvents() []event.Event   { return nil }
+func (tb *mockStateContext) GetEventDB() *event.EventDb { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
@@ -108,23 +109,15 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 	require.True(t, len(cNodes) <= len(delegates))
 	var count = 0
 	for i, node := range cNodes {
-		node.Active = make(map[string]*sci.DelegatePool)
+		node.Pools = make(map[string]*stakepool.DelegatePool)
 		var staked int64 = 0
 		for j, delegate := range delegates[i] {
 			count++
-			node.Active[strconv.Itoa(j)] = &sci.DelegatePool{
-				PoolStats: &sci.PoolStats{
-					DelegateID: datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j)),
-				},
-				ZcnLockingPool: &tokenpool.ZcnLockingPool{
-					ZcnPool: tokenpool.ZcnPool{
-						TokenPool: tokenpool.TokenPool{
-							ID:      strconv.Itoa(i*maxDelegates + j),
-							Balance: zcnToBalance(delegate),
-						},
-					},
-				},
-			}
+			var dp stakepool.DelegatePool
+			dp.Balance = zcnToBalance(delegate)
+			dp.DelegateID = datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j))
+			dp.Status = spenum.Active
+			node.Pools[strconv.Itoa(j)] = &dp
 			staked += int64(zcnToBalance(delegate))
 		}
 		node.TotalStaked = staked
