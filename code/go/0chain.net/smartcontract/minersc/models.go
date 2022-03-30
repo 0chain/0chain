@@ -248,6 +248,7 @@ type GlobalNode struct {
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
 	OwnerId              string         `json:"owner_id"`
+	CooldownPeriod       int64          `json:"cooldown_period"`
 	Cost                 map[string]int `json:"cost"`
 }
 
@@ -272,6 +273,7 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
+	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
 	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
 }
 
@@ -358,6 +360,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MaxMint, nil
 	case OwnerId:
 		return gn.OwnerId, nil
+	case CooldownPeriod:
+		return gn.CooldownPeriod, nil
 	case Cost:
 		return gn.Cost, nil
 	default:
@@ -652,6 +656,9 @@ type SimpleNode struct {
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
 	Status int `json:"-" msg:"-"`
+
+	//LastSettingUpdateRound will be set to round number when settings were updated
+	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
