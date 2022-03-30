@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const passedBlobbersPartitionSize = 50
+const passedBlobbersPartitionSize = 5
 
 func BlobberRewardKey(round int64) datastore.Key {
 	var sb strings.Builder
