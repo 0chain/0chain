@@ -361,8 +361,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		fees             = msc.sumFee(mb, true)
 		minerf, sharderf = gn.splitByShareRatio(fees)
 	)
-	//Logger.Info("piers payFees before DistributeRewards",
-	//	zap.Float64("(minerr+minerf)", float64(minerr+minerf)))
 	if err := mn.StakePool.DistributeRewards(
 		float64(minerr+minerf), mn.ID, spenum.Miner, balances,
 	); err != nil {

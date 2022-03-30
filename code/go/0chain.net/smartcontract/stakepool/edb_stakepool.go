@@ -29,8 +29,6 @@ func (spu StakePoolReward) Emit(
 	if err != nil {
 		return err
 	}
-	//logging.Logger.Info("piers StakePoolReward Emit",
-	//	zap.Any("event", spu))
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
