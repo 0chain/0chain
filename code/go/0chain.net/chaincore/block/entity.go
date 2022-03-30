@@ -568,7 +568,7 @@ func (b *Block) GetBlockState() int8 {
 }
 
 /*GetClients - get all the clients of this block */
-func (b *Block) GetClients() []*client.Client {
+func (b *Block) GetClients() ([]*client.Client, error) {
 	cmap := make(map[string]*client.Client)
 	for _, t := range b.Txns {
 		if t.PublicKey == "" {
@@ -580,7 +580,9 @@ func (b *Block) GetClients() []*client.Client {
 		c, err := client.GetClientFromCache(t.ClientID)
 		if err != nil {
 			c = client.NewClient()
-			c.SetPublicKey(t.PublicKey)
+			if err := c.SetPublicKey(t.PublicKey); err != nil {
+				return nil, err
+			}
 		}
 
 		cmap[t.PublicKey] = c
@@ -591,7 +593,7 @@ func (b *Block) GetClients() []*client.Client {
 		clients[idx] = c
 		idx++
 	}
-	return clients
+	return clients, nil
 }
 
 /*GetStateStatus - indicates if the client state of the block is computed */

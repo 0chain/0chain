@@ -308,7 +308,9 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 	if err != nil {
 		co = client.NewClient()
 		co.ID = t.ClientID
-		co.SetPublicKey(t.PublicKey)
+		if err := co.SetPublicKey(t.PublicKey); err != nil {
+			return nil, err
+		}
 		if err := client.PutClientCache(co); err != nil {
 			return nil, err
 		}
@@ -319,7 +321,9 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 			return nil, errors.New("get signature scheme failed, empty public key in transaction")
 		}
 		co.ID = t.ClientID
-		co.SetPublicKey(t.PublicKey)
+		if err := co.SetPublicKey(t.PublicKey); err != nil {
+			return nil, err
+		}
 		if err := client.PutClientCache(co); err != nil {
 			return nil, err
 		}

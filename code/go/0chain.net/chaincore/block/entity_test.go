@@ -2481,7 +2481,7 @@ func TestBlock_GetClients(t *testing.T) {
 			fields: fields{UnverifiedBlockBody: b.UnverifiedBlockBody},
 			want: func() []*client.Client {
 				cl := client.NewClient()
-				cl.SetPublicKey(b.Txns[1].PublicKey)
+				require.NoError(t, cl.SetPublicKey(b.Txns[1].PublicKey))
 
 				return []*client.Client{
 					cl,
@@ -2509,9 +2509,9 @@ func TestBlock_GetClients(t *testing.T) {
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-			if got := b.GetClients(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetClients() = %v, want %v", got, tt.want)
-			}
+			got, err := b.GetClients()
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
