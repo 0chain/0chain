@@ -4,8 +4,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -85,7 +88,7 @@ func BenchmarkTests(
 					AllocationID:    getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Timestamp:       now,
-					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
+					ReadSize:        64 * KB,
 					PayerID:         data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
@@ -495,10 +498,12 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&lockRequest{
+				lr := &lockRequest{
 					Duration:     viper.GetDuration(bk.StorageReadPoolMinLockPeriod),
 					AllocationID: getMockAllocationId(0),
-				})
+				}
+				bytes, _ := json.Marshal(lr)
+				log.Println("lock_pool_duration:", lr.Duration)
 				return bytes
 			}(),
 		},
@@ -603,7 +608,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
 					PoolId:       getMockBlobberStakePoolId(0, 0),
-					ProviderType: stakepool.Blobber,
+					ProviderType: spenum.Blobber,
 				})
 				return bytes
 			}(),
@@ -692,6 +697,7 @@ func BenchmarkTests(
 					"challenge_enabled":                    "true",
 					"challenge_rate_per_mb_min":            "1.0",
 					"max_challenges_per_generation":        "100",
+					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
 					"block_reward.block_reward":           "1000",

@@ -8,15 +8,15 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 // compile-time resolution
@@ -27,7 +27,7 @@ var LFBTicketSender node.EntitySendHandler
 
 // - Setup LFBTicketSender on initialization
 // - Register LFB Ticket entity meta data
-func init() {
+func setupLFBTicketSender() {
 	// 1. Setup LFBTicketSender.
 	var options = node.SendOptions{
 		Timeout:            node.TimeoutSmallMessage,
@@ -81,7 +81,7 @@ type LFBTicket struct {
 	IsOwn     bool     `json:"-"`          // is own
 }
 
-func (lfbt *LFBTicket) addSender(sharder string) {
+func (lfbt *LFBTicket) addSender(sharder string) { //nolint
 	for _, sh := range lfbt.Senders {
 		if sharder == sh {
 			return // already hae
@@ -190,7 +190,6 @@ func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 	case c.unsubLFBTicket <- sub:
 	case <-c.lfbTickerWorkerIsDone:
 	}
-	return
 }
 
 // GetLatestLFBTicket

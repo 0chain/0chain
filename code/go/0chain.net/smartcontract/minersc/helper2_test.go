@@ -22,18 +22,18 @@ import (
 type mockStateContext struct {
 	ctx                        cstate.StateContext
 	block                      *block.Block
-	store                      map[datastore.Key]util.Serializable
+	store                      map[datastore.Key]util.MPTSerializable
 	sharders                   []string
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         { return }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
 func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
 func (sc *mockStateContext) Validate() error                                           { return nil }
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
@@ -63,11 +63,18 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-	return sc.store[key], nil
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	vv := sc.store[key]
+	d, err := vv.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
 }

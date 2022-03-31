@@ -18,7 +18,7 @@ import (
 type mockStateContext struct {
 	ctx           cstate.StateContext
 	clientBalance state.Balance
-	store         map[datastore.Key]util.Serializable
+	store         map[datastore.Key]util.MPTSerializable
 }
 
 type mockBlobberYaml struct {
@@ -26,12 +26,12 @@ type mockBlobberYaml struct {
 	readPrice               float64
 	writePrice              float64
 	challengeCompletionTime time.Duration
-	MaxOfferDuration        time.Duration
+	MaxOfferDuration        int64
 	minLockDemand           float64
 }
 
 var (
-	scYaml          = &scConfig{}
+	scYaml          = &Config{}
 	creationDate    = common.Timestamp(100)
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
@@ -41,7 +41,7 @@ var (
 	storageScId = approvedMinters[2]
 )
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)           { return }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)           {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI          { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction    { return nil }
 func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer { return nil }
@@ -53,7 +53,7 @@ func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, s
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
 func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
@@ -82,15 +82,21 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	var val, ok = sc.store[key]
 	if !ok {
-		return nil, util.ErrValueNotPresent
+		return util.ErrValueNotPresent
 	}
-	return val, nil
+	d, err := val.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
 }

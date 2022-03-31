@@ -19,6 +19,8 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 //
 // client write pool (consist of allocation pools)
 //
@@ -36,10 +38,6 @@ func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
 	return wp.Pools.blobberCut(allocID, blobberID, now)
-}
-
-func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) {
-	wp.Pools.removeEmpty(allocID, ap)
 }
 
 // Encode implements util.Serializable interface.
@@ -142,32 +140,16 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 // smart contract methods
 //
 
-// getWritePoolBytes of a client
-func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	balances chainState.StateContextI) (wp *writePool, err error) {
-
-	var poolb []byte
-	if poolb, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
-		return
-	}
 	wp = new(writePool)
-	err = wp.Decode(poolb)
+	err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+
+	return wp, nil
 }
 
 func (ssc *StorageSmartContract) createEmptyWritePool(

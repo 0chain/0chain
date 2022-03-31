@@ -21,13 +21,13 @@ func (t *Txn) GetHashBytes() []byte {
 	return encryption.RawHash(t.Data)
 }
 
-func (t *Txn) Encode() []byte {
-	return []byte(t.Data)
+func (t *Txn) MarshalMsg([]byte) ([]byte, error) {
+	return []byte(t.Data), nil
 }
 
-func (t *Txn) Decode(data []byte) error {
+func (t *Txn) UnmarshalMsg(data []byte) ([]byte, error) {
 	t.Data = string(data)
-	return nil
+	return nil, nil
 }
 
 func TestMerkleTreeComputeTree(t *testing.T) {

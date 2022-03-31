@@ -27,7 +27,6 @@ const (
 	signatureSchemeType = encryption.SignatureSchemeEd25519
 	minerPk             = datastore.Key("25206bf74fb1afa8045acd269ef76890d8a1e34d89eb681c042ac58dbc080e30")
 	selfId              = datastore.Key("mySelfId")
-	sharderId           = "sharder"
 	delegateId          = "delegate"
 	maxDelegates        = 1000
 	errDelta            = 4 // for testing values with rounding errors
@@ -263,7 +262,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -283,7 +281,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			PrevBlock: &block.Block{},
 		},
 		sharders: sharderIDs,
-		store:    make(map[datastore.Key]util.Serializable),
+		store:    make(map[datastore.Key]util.MPTSerializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
 				Miners:   minersPool,

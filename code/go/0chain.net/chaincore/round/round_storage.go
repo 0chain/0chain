@@ -127,7 +127,7 @@ func (s *roundStartingStorage) putToSlice(round int64) {
 	}
 }
 
-func (s *roundStartingStorage) check(round int64) error {
+func (s *roundStartingStorage) check(round int64) error { //nolint
 	return nil
 }
 

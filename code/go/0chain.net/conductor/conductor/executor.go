@@ -168,7 +168,9 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		log.Print("stopping ", n.Name, "...")
 		if err := n.Stop(); err != nil {
 			log.Printf("stopping %s: %v", n.Name, err)
-			n.Kill()
+			if err := n.Kill(); err != nil {
+				log.Printf("kill failed: %v", err)
+			}
 		}
 		log.Print(n.Name, " stopped")
 	}
@@ -828,6 +830,12 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 
 		case *cases.MinerNotarisedBlockRequestor:
 			state.MinerNotarisedBlockRequestor = cfg
+
+		case *cases.FBRequestor:
+			state.FBRequestor = cfg
+
+		case *cases.MissingLFBTickets:
+			state.MissingLFBTicket = cfg
 
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())

@@ -17,8 +17,6 @@ import (
 )
 
 var (
-	// LatestRoundRequestor -
-	LatestRoundRequestor node.EntityRequestor
 	// RoundRequestor -
 	RoundRequestor node.EntityRequestor
 	// RoundSummariesRequestor -
@@ -35,7 +33,6 @@ var (
 func SetupS2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundEntityMetadata := datastore.GetEntityMetadata("round")
-	LatestRoundRequestor = node.RequestEntityHandler("/v1/_s2s/latest_round/get", options, roundEntityMetadata)
 
 	RoundRequestor = node.RequestEntityHandler("/v1/_s2s/round/get", options, roundEntityMetadata)
 
@@ -166,7 +163,7 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 }
 
 // LatestRoundRequestHandler - returns latest finalized round info.
-func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (
+func LatestRoundRequestHandler(_ context.Context, _ *http.Request) (
 	resp interface{}, err error) {
 	var (
 		sc = GetSharderChain()
@@ -219,8 +216,8 @@ func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface
 	return nil, common.InvalidRequest("block hash is required")
 }
 
-// RoundBlockRequestHandler -
-func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// roundBlockRequestHandler -
+func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	hash := r.FormValue("hash")
 	var b *block.Block

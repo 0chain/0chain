@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore StorageAllocation BlobberChallenge
+//go:generate msgp -io=false -tests=false -v
+
 var (
 	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
 	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
@@ -58,7 +61,7 @@ func (sn *ClientAllocation) GetHashBytes() []byte {
 }
 
 type Allocations struct {
-	List sortedList
+	List SortedList
 }
 
 func (a *Allocations) has(id string) (ok bool) {
@@ -95,7 +98,7 @@ type ChallengeResponse struct {
 type BlobberChallenge struct {
 	BlobberID                string                       `json:"blobber_id"`
 	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-"`
+	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
 	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
 }
 
@@ -126,6 +129,29 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 		sn.ChallengeMap[challenge.ID] = challenge
 	}
 	return nil
+}
+
+type BlobberChallengeDecode BlobberChallenge
+
+func (sn *BlobberChallenge) MarshalMsg(o []byte) ([]byte, error) {
+	d := BlobberChallengeDecode(*sn)
+	return d.MarshalMsg(o)
+}
+
+func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &BlobberChallengeDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*sn = BlobberChallenge(*d)
+
+	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeMap[challenge.ID] = challenge
+	}
+	return o, nil
 }
 
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
@@ -162,7 +188,7 @@ type StorageChallenge struct {
 type ValidationNode struct {
 	ID                string                      `json:"id"`
 	BaseURL           string                      `json:"url"`
-	PublicKey         string                      `json:"-"`
+	PublicKey         string                      `json:"-" msg:"-"`
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
@@ -244,7 +270,7 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
 }
 
 // validate a received terms
-func (t *Terms) validate(conf *scConfig) (err error) {
+func (t *Terms) validate(conf *Config) (err error) {
 	if t.ReadPrice < 0 {
 		return errors.New("negative read_price")
 	}
@@ -303,6 +329,14 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
+// Info represents general information about blobber node
+type Info struct {
+	Name        string `json:"name"`
+	WebsiteUrl  string `json:"website_url"`
+	LogoUrl     string `json:"logo_url"`
+	Description string `json:"description"`
+}
+
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	ID              string                 `json:"id"`
@@ -312,14 +346,15 @@ type StorageNode struct {
 	Capacity        int64                  `json:"capacity"` // total blobber capacity
 	Used            int64                  `json:"used"`     // allocated capacity
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
-	PublicKey       string                 `json:"-"`
+	PublicKey       string                 `json:"-" msg:"-"`
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	Information       Info                        `json:"info"`
 }
 
 // validate the blobber configurations
-func (sn *StorageNode) validate(conf *scConfig) (err error) {
+func (sn *StorageNode) validate(conf *Config) (err error) {
 	if err = sn.Terms.validate(conf); err != nil {
 		return
 	}
@@ -357,7 +392,7 @@ func (sn *StorageNode) Decode(input []byte) error {
 }
 
 type StorageNodes struct {
-	Nodes sortedBlobbers
+	Nodes SortedBlobbers
 }
 
 func (sn *StorageNodes) Decode(input []byte) error {
@@ -384,7 +419,7 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 type StorageAllocationStats struct {
 	UsedSize                  int64  `json:"used_size"`
 	NumWrites                 int64  `json:"num_of_writes"`
-	NumReads                  int64  `json:"num_of_reads"`
+	ReadsSize                 int64  `json:"reads_size"`
 	TotalChallenges           int64  `json:"total_challenges"`
 	OpenChallenges            int64  `json:"num_open_challenges"`
 	SuccessChallenges         int64  `json:"num_success_challenges"`
@@ -567,7 +602,7 @@ type StorageAllocation struct {
 	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
-	BlobberMap        map[string]*BlobberAllocation `json:"-"`
+	BlobberMap        map[string]*BlobberAllocation `json:"-" msg:"-"`
 	IsImmutable       bool                          `json:"is_immutable"`
 
 	// Requested ranges.
@@ -590,7 +625,7 @@ type StorageAllocation struct {
 	// transaction.
 	Canceled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-"`
+	UsedSize int64 `json:"-" msg:"-"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
 	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
@@ -608,103 +643,7 @@ type StorageAllocation struct {
 	Curators []string `json:"curators"`
 }
 
-func (sa *StorageAllocation) bSize() int64 {
-	var size = sa.DataShards + sa.ParityShards
-	return (sa.Size + int64(size-1)) / int64(size)
-}
-
-func (sa *StorageAllocation) removeBlobber(
-	blobbers []*StorageNode,
-	removeId string,
-	ssc *StorageSmartContract,
-	balances chainstate.StateContextI,
-) error {
-	remove, found := sa.BlobberMap[removeId]
-	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
-	}
-	delete(sa.BlobberMap, removeId)
-
-	found = false
-	for i, d := range sa.Blobbers {
-		if d.ID == removeId {
-			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
-			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
-	}
-
-	found = false
-	for i, d := range blobbers {
-		if d.ID == removeId {
-			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
-			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
-	}
-
-	blobber, err := ssc.getBlobber(removeId, balances)
-	if err != nil {
-		return err
-	}
-	blobber.Used -= sa.bSize()
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (sa *StorageAllocation) changeBlobbers(
-	blobbers []*StorageNode,
-	addId, removeId string,
-	ssc *StorageSmartContract,
-	balances chainstate.StateContextI,
-) error {
-	beforeSize := sa.bSize()
-	if len(removeId) > 0 {
-		if err := sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
-			return err
-		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
-
-	_, found := sa.BlobberMap[addId]
-	if found {
-		return fmt.Errorf("allocatino already has blobber %s", addId)
-	}
-
-	addedBlobber, err := ssc.getBlobber(addId, balances)
-	if err != nil {
-		return err
-	}
-	sa.Blobbers = append(sa.Blobbers, addedBlobber)
-	blobbers = append(blobbers, addedBlobber)
-	sa.BlobberMap[addId] = &BlobberAllocation{}
-	afterSize := sa.bSize()
-	if afterSize != beforeSize {
-		delta := afterSize - beforeSize
-		for _, b := range sa.Blobbers {
-			b.Used += delta
-		}
-		for _, b := range blobbers {
-			b.Used += delta
-		}
-	}
-
-	return nil
-}
+type StorageAllocationDecode StorageAllocation
 
 // The restMinLockDemand returns number of tokens required as min_lock_demand;
 // if a blobber receive write marker, then some token moves to related
@@ -773,7 +712,7 @@ func (sa *StorageAllocation) getAllocationPools(
 }
 
 func (sa *StorageAllocation) validate(now common.Timestamp,
-	conf *scConfig) (err error) {
+	conf *Config) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
 		return errors.New("invalid read_price range")
@@ -1081,6 +1020,30 @@ func (sn *StorageAllocation) Encode() []byte {
 	return buff
 }
 
+func (sn *StorageAllocation) MarshalMsg(o []byte) ([]byte, error) {
+	d := StorageAllocationDecode(*sn)
+	return d.MarshalMsg(o)
+}
+
+func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &StorageAllocationDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*sn = StorageAllocation(*d)
+
+	sn.BlobberMap = make(map[string]*BlobberAllocation)
+	for _, blobberAllocation := range sn.BlobberDetails {
+		if blobberAllocation.Stats != nil {
+			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+		}
+		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
+	}
+	return o, nil
+}
+
 type BlobberCloseConnection struct {
 	AllocationRoot     string       `json:"allocation_root"`
 	PrevAllocationRoot string       `json:"prev_allocation_root"`
@@ -1138,7 +1101,9 @@ func (wm *WriteMarker) VerifySignature(
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1275,18 +1240,20 @@ type ReadMarker struct {
 	AllocationID    string           `json:"allocation_id"`
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
-	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
-	ReadSize        float64          `json:"read_size"`
+	ReadSize        int64            `json:"read_size"`
+	ReadSizeInGB    float64          `json:"read_size_in_gb"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1297,11 +1264,7 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 	return true
 }
 
-func (rm *ReadMarker) verifyAuthTicket(
-	alloc *StorageAllocation,
-	now common.Timestamp,
-	balances chainstate.StateContextI,
-) (err error) {
+func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances chainstate.StateContextI) (err error) {
 	// owner downloads, pays itself, no ticket needed
 	if rm.PayerID == alloc.Owner {
 		return
@@ -1316,34 +1279,21 @@ func (rm *ReadMarker) verifyAuthTicket(
 func (rm *ReadMarker) GetHashData() string {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID,
 		rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID,
-		rm.ReadCounter, rm.Timestamp)
+		rm.ReadSize, rm.Timestamp)
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
-	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
-		rm.Timestamp == 0 {
+func (rm *ReadMarker) Verify(balances chainstate.StateContextI) error {
+	if rm.ReadSize <= 0 || rm.BlobberID == "" || rm.ClientID == "" || rm.Timestamp == 0 {
+		return common.NewError("invalid_read_marker", "length validations of fields failed")
+	}
 
+	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); !ok {
 		return common.NewError("invalid_read_marker",
-			"length validations of fields failed")
+			"Signature verification failed for the read marker")
 	}
 
-	if prevRM != nil {
-		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID ||
-			rm.Timestamp < prevRM.Timestamp ||
-			rm.ReadCounter < prevRM.ReadCounter {
-
-			return common.NewError("invalid_read_marker",
-				"validations with previous marker failed.")
-		}
-	}
-
-	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); ok {
-		return nil
-	}
-
-	return common.NewError("invalid_read_marker",
-		"Signature verification failed for the read marker")
+	return nil
 }
 
 type ValidationTicket struct {
@@ -1363,7 +1313,9 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(vt.ValidatorKey)
+	if err := signatureScheme.SetPublicKey(vt.ValidatorKey); err != nil {
+		return false, err
+	}
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
 }

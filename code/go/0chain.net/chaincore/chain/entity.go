@@ -90,7 +90,7 @@ type Chain struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	mutexViewChangeMB sync.RWMutex
+	mutexViewChangeMB sync.RWMutex //nolint: structcheck, unused
 
 	//Chain config goes into this object
 	Config
@@ -124,9 +124,8 @@ type Chain struct {
 
 	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
-	clientStateDeserializer state.DeserializerI
-	stateDB                 util.NodeDB
-	stateMutex              *sync.RWMutex
+	stateDB    util.NodeDB
+	stateMutex *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *finalizeBlockWithReply
@@ -150,8 +149,8 @@ type Chain struct {
 	// bcStuckTimeThreshold is the threshold time for checking if a BC is stuck
 	bcStuckTimeThreshold time.Duration
 
-	retry_wait_time  int
-	retry_wait_mutex *sync.Mutex
+	retryWaitTime  int
+	retryWaitMutex *sync.Mutex
 
 	blockFetcher *BlockFetcher
 
@@ -260,19 +259,18 @@ func getNodePath(path string) util.Path {
 	return util.Path(encryption.Hash(path))
 }
 
-func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
-	seri util.Serializable, err error) {
+func (c *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSerializable) error {
 
-	mc.stateMutex.Lock()
-	defer mc.stateMutex.Unlock()
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
 
 	if block.ClientState == nil {
-		return nil, common.NewErrorf("get_block_state_node",
+		return common.NewErrorf("get_block_state_node",
 			"client state is nil, round %d", block.Round)
 	}
 
 	s := CreateTxnMPT(block.ClientState)
-	return s.GetNodeValue(getNodePath(path))
+	return s.GetNodeValue(getNodePath(path), v)
 }
 
 func mbRoundOffset(rn int64) int64 {
@@ -353,9 +351,9 @@ func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
 func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
 	pmb *block.MagicBlock) {
 
-	var round = mbRoundOffset(mb.StartingRound)
+	r := mbRoundOffset(mb.StartingRound)
 
-	return c.GetPrevMagicBlock(round)
+	return c.GetPrevMagicBlock(r)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -428,7 +426,7 @@ func Provider() datastore.Entity {
 	c.roundsMutex = &sync.RWMutex{}
 	c.eventMutex = &sync.RWMutex{}
 
-	c.retry_wait_mutex = &sync.Mutex{}
+	c.retryWaitMutex = &sync.Mutex{}
 	c.genTimeoutMutex = &sync.Mutex{}
 	c.stateMutex = &sync.RWMutex{}
 	c.stakeMutex = &sync.Mutex{}
@@ -477,7 +475,6 @@ func (c *Chain) Initialize() {
 	//c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
-	c.clientStateDeserializer = &state.Deserializer{}
 	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB
 	//c.stateDB = util.NewMemoryNodeDB()
@@ -543,10 +540,10 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
+func (c *Chain) getInitialState(tokens state.Balance) util.MPTSerializable {
 	balance := &state.State{}
-	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	balance.Balance = state.Balance(tokens)
+	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	balance.Balance = tokens
 	return balance
 }
 
@@ -554,7 +551,9 @@ func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
 func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
-		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
+		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
+			logging.Logger.Error("chain.stateDB insert failed", zap.Error(err))
+		}
 	}
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
@@ -573,7 +572,9 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gb.MagicBlock = genesisMagicBlock
-	c.UpdateMagicBlock(gb.MagicBlock)
+	if err := c.UpdateMagicBlock(gb.MagicBlock); err != nil {
+		panic(err)
+	}
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, genesisRandomSeed)
 	gb.SetRoundRandomSeed(genesisRandomSeed)
@@ -587,22 +588,24 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	if b.Round != 0 {
 		return
 	}
-	c.UpdateMagicBlock(b.MagicBlock)
+	if err := c.UpdateMagicBlock(b.MagicBlock); err != nil {
+		panic(err)
+	}
 	c.SetLatestFinalizedMagicBlock(b)
 	c.SetLatestFinalizedBlock(b)
 	c.SetLatestDeterministicBlock(b)
 	c.blocks[b.Hash] = b
-	return
 }
 
-// AddLoadedFinalizedBlock - adds the genesis block to the chain.
+// AddLoadedFinalizedBlocks - adds the genesis block to the chain.
 func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
-	c.UpdateMagicBlock(lfmb.MagicBlock)
+	err := c.UpdateMagicBlock(lfmb.MagicBlock)
+	if err != nil {
+		logging.Logger.Warn("update magic block failed", zap.Error(err))
+	}
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
-	// c.LatestDeterministicBlock left as genesis
 	c.blocks[lfb.Hash] = lfb
-	return
 }
 
 /*AddBlock - adds a block to the cache */
@@ -782,8 +785,7 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 
 // GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	var miners []*node.Node
-	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
+	miners := r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
@@ -923,12 +925,6 @@ func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 			zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate), zap.Int("visited", visited))
 	}
 	return false, ErrInsufficientChain
-}
-
-func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
-	c.stakeMutex.Lock()
-	defer c.stakeMutex.Unlock()
-	c.minersStake[minerID] = stake
 }
 
 func (c *Chain) getMiningStake(minerID datastore.Key) int {
@@ -1086,15 +1082,15 @@ func (c *Chain) GetGenerationTimeout() int {
 }
 
 func (c *Chain) GetRetryWaitTime() int {
-	c.retry_wait_mutex.Lock()
-	defer c.retry_wait_mutex.Unlock()
-	return c.retry_wait_time
+	c.retryWaitMutex.Lock()
+	defer c.retryWaitMutex.Unlock()
+	return c.retryWaitTime
 }
 
 func (c *Chain) SetRetryWaitTime(newWaitTime int) {
-	c.retry_wait_mutex.Lock()
-	defer c.retry_wait_mutex.Unlock()
-	c.retry_wait_time = newWaitTime
+	c.retryWaitMutex.Lock()
+	defer c.retryWaitMutex.Unlock()
+	c.retryWaitTime = newWaitTime
 }
 
 /*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
@@ -1304,7 +1300,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 }
 
-func (mc *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
+func (c *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
 	if pb == nil || pb.ClientState == nil {
 		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", pb)
 	}
@@ -1316,15 +1312,10 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 		return nil, errors.New("client state is nil")
 	}
 
-	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
-	if err != nil {
-		return nil, err
-	}
-
 	gl := &minersc.GlobalSettings{
 		Fields: make(map[string]string),
 	}
-	err = gl.Decode(val.Encode())
+	err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)), gl)
 	if err != nil {
 		return nil, err
 	}
@@ -1332,8 +1323,8 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 	return gl, nil
 }
 
-func (mc *Chain) updateConfig(pb *block.Block) {
-	clientState, err := mc.getClientState(pb)
+func (c *Chain) updateConfig(pb *block.Block) {
+	clientState, err := c.getClientState(pb)
 	if err != nil {
 		// This might happen after stopping and starting the miners
 		// and the MPT has not been setup yet.
@@ -1352,7 +1343,7 @@ func (mc *Chain) updateConfig(pb *block.Block) {
 		return
 	}
 
-	err = mc.Config.Update(configMap)
+	err = c.Config.Update(configMap)
 	if err != nil {
 		logging.Logger.Error("cannot update global settings",
 			zap.Int64("start of round", pb.Round),
@@ -1440,17 +1431,10 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 
-	var (
-		prev = c.GetMagicBlock(newMagicBlock.StartingRound - 1) //
-		keep = collectNodes(prev, newMagicBlock)                // this and new
-	)
-
 	c.SetupNodes(newMagicBlock)
 
 	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo(newMagicBlock)
-
-	node.DeregisterNodes(keep)
 
 	// reset the monitor
 	ResetStatusMonitor(newMagicBlock.StartingRound)
@@ -1467,22 +1451,6 @@ func (c *Chain) SetupNodes(mb *block.MagicBlock) {
 	}
 }
 
-// collect nodes from given MBs
-func collectNodes(mbs ...*block.MagicBlock) (keep map[string]struct{}) {
-	keep = make(map[string]struct{})
-	for _, mb := range mbs {
-		if mb == nil {
-			continue
-		}
-		for _, pool := range []*node.Pool{mb.Miners, mb.Sharders} {
-			for _, k := range pool.Keys() {
-				keep[k] = struct{}{}
-			}
-		}
-	}
-	return
-}
-
 func (c *Chain) SetLatestOwnFinalizedBlockRound(r int64) {
 	c.lfbMutex.Lock()
 	defer c.lfbMutex.Unlock()
@@ -1497,7 +1465,7 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 	return c.latestOwnFinalizedBlockRound
 }
 
-// SetLatestFinalizedBlock - set the latest finalized block.
+// SetLatestFinalizedMagicBlock - set the latest finalized block.
 // TODO: this should be called when UpdateMagicBlock is called successfully
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
@@ -1621,7 +1589,7 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	}
 }
 
-func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
+func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) ( //nolint: unused
 	err error) {
 
 	if c.viewChanger == nil {
@@ -1650,7 +1618,7 @@ func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
 	}
 }
 
-// UpdateBlock updates block
+// UpdateBlocks updates block
 func (c *Chain) UpdateBlocks(bs []*block.Block) {
 	for i := range bs {
 		r := c.GetRound(bs[i].Round)
@@ -1669,7 +1637,7 @@ func (c *Chain) UpdateBlocks(bs []*block.Block) {
 // magic block finalized. It called for every finalized block and used not
 // only for a ViewChange.
 type ViewChanger interface {
-	// ViewCahgne is method called for every finalized block.
+	// ViewChange is method called for every finalized block.
 	ViewChange(ctx context.Context, lfb *block.Block) (err error)
 }
 

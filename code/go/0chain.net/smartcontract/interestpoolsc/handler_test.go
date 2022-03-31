@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/common"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInterestPoolSmartContract_getPoolsStats(t *testing.T) {
@@ -133,7 +134,8 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 	notEmptyBlnc := func() *testBalances {
 		b := testBalance("", 0)
 		gn := newGlobalNode()
-		b.InsertTrieNode(gn.getKey(), gn)
+		_, err := b.InsertTrieNode(gn.getKey(), gn)
+		require.NoError(t, err)
 		return b
 	}
 	tests := []struct {
@@ -173,9 +175,7 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 				t.Errorf("getLockConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getLockConfig() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, got, tt.want)
 		})
 	}
 }

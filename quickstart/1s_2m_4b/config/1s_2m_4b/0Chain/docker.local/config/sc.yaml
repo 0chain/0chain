@@ -122,6 +122,8 @@ smart_contracts:
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once
     max_challenges_per_generation: 100
+    # number of validators per challenge
+    validators_per_challenge: 2
     # max delegates per stake pool allowed by SC
     max_delegates: 200
     # max_charge allowed for blobbers; the charge is part of blobber rewards

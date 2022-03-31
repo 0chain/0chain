@@ -179,18 +179,16 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 
 func (n *Node) MemoryUsage() {
 	ticker := time.NewTicker(5 * time.Minute)
-	for true {
-		select {
-		case <-ticker.C:
-			common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+	for {
+		<-ticker.C
+		common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
 
-			// Average time duration to add go routine logs to 0chain.log file => 618.184µs
-			// Average increase in file size for each update => 10 kB
-			if viper.GetBool("logging.memlog") {
-				buf := new(bytes.Buffer)
-				pprof.Lookup("goroutine").WriteTo(buf, 1)
-				logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
-			}
+		// Average time duration to add go routine logs to 0chain.log file => 618.184µs
+		// Average increase in file size for each update => 10 kB
+		if viper.GetBool("logging.memlog") {
+			buf := new(bytes.Buffer)
+			_ = pprof.Lookup("goroutine").WriteTo(buf, 1)
+			logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
 		}
 	}
 }

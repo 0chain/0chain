@@ -2,14 +2,14 @@ package datastore
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"encoding/json"
+	"go.uber.org/zap"
 
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 )
@@ -32,7 +32,7 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 			return
 		}
 		if r.Method == "OPTIONS" {
-			common.SetupCORSResponse(w, r)
+			common.SetupCORSResponse(w)
 			return
 		}
 		contentType := r.Header.Get("Content-type")

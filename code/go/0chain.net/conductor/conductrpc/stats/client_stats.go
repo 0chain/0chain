@@ -8,48 +8,81 @@ type (
 	// NodesClientStats represents struct with maps containing
 	// needed nodes client stats.
 	NodesClientStats struct {
-		blockStateChangeMu sync.Mutex
-
 		// BlockStateChange represents map which stores block state change requests stats.
-		// minerID -> BlockStateChangeRequests
-		BlockStateChange map[string]*BlockStateChangeRequests
+		// minerID -> BlockRequests
+		BlockStateChange map[string]*BlockRequests
+
+		minerNotarisedBlockMu sync.Mutex
 
 		// MinerNotarisedBlock represents map which stores miner notarised block requests stats.
-		// minerID -> MinerNotarisedBlockRequests
-		MinerNotarisedBlock map[string]*MinerNotarisedBlockRequests
+		// minerID -> BlockRequests
+		MinerNotarisedBlock map[string]*BlockRequests
+
+		fbMu sync.Mutex
+
+		// FB represents map which stores miner notarised block requests stats.
+		// minerID -> BlockRequests
+		FB map[string]*BlockRequests
 	}
 )
 
 // NewNodesClientStats creates initialised NodesClientStats.
 func NewNodesClientStats() *NodesClientStats {
 	return &NodesClientStats{
-		BlockStateChange:    make(map[string]*BlockStateChangeRequests),
-		MinerNotarisedBlock: make(map[string]*MinerNotarisedBlockRequests),
+		BlockStateChange:    make(map[string]*BlockRequests),
+		MinerNotarisedBlock: make(map[string]*BlockRequests),
+		FB:                  make(map[string]*BlockRequests),
 	}
 }
 
-// AddBlockStateChangeStats takes needed info from the BlockStateChangeRequest
+func (ncs *NodesClientStats) AddBlockStats(request *BlockRequest, requestorType BlockRequestor) {
+	switch requestorType {
+	case BRBlockStateChange:
+		ncs.addBlockStateChangeStats(request)
+
+	case BRMinerNotarisedBlock:
+		ncs.addMinerNotarisedBlockStats(request)
+
+	case BRFB:
+		ncs.addFBStats(request)
+	}
+}
+
+// addBlockStateChangeStats takes needed info from the BlockStateChangeRequest
 // and inserts it to the NodesClientStats.BlockStateChange map.
-func (nss *NodesClientStats) AddBlockStateChangeStats(rep *BlockStateChangeRequest) {
-	nss.blockStateChangeMu.Lock()
-	defer nss.blockStateChangeMu.Unlock()
+func (ncs *NodesClientStats) addBlockStateChangeStats(rep *BlockRequest) {
+	ncs.minerNotarisedBlockMu.Lock()
+	defer ncs.minerNotarisedBlockMu.Unlock()
 
-	_, ok := nss.BlockStateChange[rep.NodeID]
+	_, ok := ncs.BlockStateChange[rep.NodeID]
 	if !ok {
-		nss.BlockStateChange[rep.NodeID] = NewBlockStateChangeRequests()
+		ncs.BlockStateChange[rep.NodeID] = NewBlockRequests()
 	}
-	nss.BlockStateChange[rep.NodeID].Add(rep)
+	ncs.BlockStateChange[rep.NodeID].Add(rep)
 }
 
-// AddMinerNotarisedBlockStats takes needed info from the MinerNotarisedBlockRequest
+// addMinerNotarisedBlockStats takes needed info from the MinerNotarisedBlockRequest
 // and inserts it to the NodesClientStats.MinerNotarisedBlock map.
-func (nss *NodesClientStats) AddMinerNotarisedBlockStats(rep *MinerNotarisedBlockRequest) {
-	nss.blockStateChangeMu.Lock()
-	defer nss.blockStateChangeMu.Unlock()
+func (ncs *NodesClientStats) addMinerNotarisedBlockStats(rep *BlockRequest) {
+	ncs.fbMu.Lock()
+	defer ncs.fbMu.Unlock()
 
-	_, ok := nss.MinerNotarisedBlock[rep.NodeID]
+	_, ok := ncs.MinerNotarisedBlock[rep.NodeID]
 	if !ok {
-		nss.MinerNotarisedBlock[rep.NodeID] = NewMinerNotarisedBlockRequests()
+		ncs.MinerNotarisedBlock[rep.NodeID] = NewBlockRequests()
 	}
-	nss.MinerNotarisedBlock[rep.NodeID].Add(rep)
+	ncs.MinerNotarisedBlock[rep.NodeID].Add(rep)
+}
+
+// AddFBStats takes needed info from the MinerNotarisedBlockRequest
+// and inserts it to the NodesClientStats.FB map.
+func (ncs *NodesClientStats) addFBStats(rep *BlockRequest) {
+	ncs.fbMu.Lock()
+	defer ncs.fbMu.Unlock()
+
+	_, ok := ncs.FB[rep.NodeID]
+	if !ok {
+		ncs.FB[rep.NodeID] = NewBlockRequests()
+	}
+	ncs.FB[rep.NodeID].Add(rep)
 }

@@ -39,7 +39,6 @@ const (
 	scRestAPIGetDKGMiners  = "/getDkgList"
 	scRestAPIGetMinersMPKS = "/getMpksList"
 	scRestAPIGetMagicBlock = "/getMagicBlock"
-	scRestAPIGetMinerList  = "/getMinerList"
 )
 
 // PhaseFunc represents local VC function returns optional
@@ -266,21 +265,13 @@ func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.
 
 	if active {
 
-		var n util.Serializable
-		n, err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey)
+		mpks = block.NewMpks()
+		err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
 		if err != nil {
 			return
 		}
-		if n == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
 
-		mpks = block.NewMpks()
-		if err = mpks.Decode(n.Encode()); err != nil {
-			return nil, err
-		}
-
-		return
+		return mpks, nil
 	}
 
 	var (
@@ -309,22 +300,12 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 
 	if active {
 
-		var n util.Serializable
-		n, err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey)
+		dmn = minersc.NewDKGMinerNodes()
+		err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
 		if err != nil {
 			return
 		}
-		if n == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
-
-		dmn = minersc.NewDKGMinerNodes()
-		err = dmn.Decode(n.Encode())
-		if err != nil {
-			return nil, err
-		}
-
-		return
+		return dmn, nil
 	}
 
 	var (
@@ -410,7 +391,9 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 			return err
 		}
 		if k == node.Self.Underlying().GetKey() {
-			mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false)
+			if err := mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false); err != nil {
+				return err
+			}
 			foundSelf = true
 		}
 	}
@@ -539,21 +522,13 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 	active bool) (magicBlock *block.MagicBlock, err error) {
 
 	if active {
-		var n util.Serializable
-		n, err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey)
-		if err != nil {
-			return // error
-		}
-		if n == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
-
 		magicBlock = block.NewMagicBlock()
-		if err = magicBlock.Decode(n.Encode()); err != nil {
+		err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey, magicBlock)
+		if err != nil {
 			return nil, err
 		}
 
-		return // ok
+		return
 	}
 
 	var (
@@ -614,8 +589,8 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 		return 0, nil
 	}
 
-	var seri util.Serializable
-	seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
+	var gn minersc.GlobalNode
+	err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
 	if err != nil {
 		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),
@@ -624,17 +599,6 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 			zap.Any("state", lfb.ClientStateHash))
 		return 0, common.NewErrorf("block_next_vc",
 			"can't get miner SC global node, lfb: %d, error: %v (%s)",
-			lfb.Round, err, lfb.Hash)
-	}
-	var gn minersc.GlobalNode
-	if err = gn.Decode(seri.Encode()); err != nil {
-		logging.Logger.Error("block_next_vc -- can't decode miner SC global node",
-			zap.Error(err), zap.Int64("lfb", lfb.Round),
-			zap.Bool("is_state", lfb.IsStateComputed()),
-			zap.Bool("is_init", lfb.ClientState != nil),
-			zap.Any("state", lfb.ClientStateHash))
-		return 0, common.NewErrorf("block_next_vc",
-			"can't decode miner SC global node, lfb: %d, error: %v (%s)",
 			lfb.Round, err, lfb.Hash)
 	}
 
@@ -704,9 +668,15 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		var myShare, ok = share.ShareOrSigns[selfNodeKey]
 		if ok && myShare.Share != "" {
 			var share bls.Key
-			share.SetHexString(myShare.Share)
-			var validShare = vcdkg.ValidateShare(
-				bls.ConvertStringToMpk(mpks[key].Mpk), share)
+			if err := share.SetHexString(myShare.Share); err != nil {
+				return nil, err
+			}
+			mpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			if err != nil {
+				return nil, err
+			}
+
+			var validShare = vcdkg.ValidateShare(mpks, share)
 			if !validShare {
 				continue
 			}
@@ -726,8 +696,14 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		}
 	}
 	vcdkg.DeleteFromSet(miners)
+	mpkMap, err := magicBlock.Mpks.GetMpkMap()
+	if err != nil {
+		return nil, err
+	}
+	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
+		return nil, err
+	}
 
-	vcdkg.AggregatePublicKeyShares(magicBlock.Mpks.GetMpkMap())
 	vcdkg.AggregateSecretKeyShares()
 	vcdkg.StartingRound = magicBlock.StartingRound
 	vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
@@ -922,7 +898,9 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return
 	}
 
-	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+	if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
+		logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+	}
 
 	if lfmb.MagicBlockNumber <= 1 {
 		mc.updateMagicBlocks(lfmb)
@@ -936,7 +914,9 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+		if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
+			logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		}
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
@@ -945,14 +925,14 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	pfmb, err = mc.GetBlock(ctx, lfmb.LatestFinalizedMagicBlockHash)
 	if err == nil && pfmb.MagicBlock != nil &&
 		pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+		if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
+			logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		}
+
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
 
-	// load from sharders
-	// pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
-	// 	lfmb.MagicBlockNumber-1, 1)
 	pfmb, err = httpclientutil.FetchMagicBlockFromSharders(
 		ctx, lfmb.Sharders.N2NURLs(), lfmb.MagicBlockNumber-1, func(*block.Block) bool { return true })
 	if err != nil {
@@ -974,6 +954,8 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return // error
 	}
 
-	mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+	if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
+		logging.Logger.Warn("set dkgs from store", zap.Error(err))
+	}
 	mc.updateMagicBlocks(pfmb, lfmb) // ok
 }

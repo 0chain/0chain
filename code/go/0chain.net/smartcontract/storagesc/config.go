@@ -12,13 +12,14 @@ import (
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
+	return scKey + ":configurations"
 }
 
 type freeAllocationSettings struct {
@@ -73,8 +74,8 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 
 }
 
-// scConfig represents SC configurations ('storagesc:' from sc.yaml).
-type scConfig struct {
+// Config represents SC configurations ('storagesc:' from sc.yaml).
+type Config struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
 	// measured in tok / GB / time unit. Where the time unit is this
 	// configuration.
@@ -140,6 +141,9 @@ type scConfig struct {
 	// at once for a blobber-allocation pair with size difference for the
 	// moment of the generation.
 	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
+	// ValidatorsPerChallenge is the number of validators to select per
+	// challenges.
+	ValidatorsPerChallenge int `json:"validators_per_challenge"`
 	// ChallengeGenerationRate is number of challenges generated for a MB/min.
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
@@ -158,13 +162,13 @@ type scConfig struct {
 
 	// Allow direct access to MPT
 	ExposeMpt bool           `json:"expose_mpt"`
-	OwnerId   datastore.Key  `json:"owner_id"`
+	OwnerId   string         `json:"owner_id"`
 	Cost      map[string]int `json:"cost"`
 }
 
-func (sc *scConfig) validate() (err error) {
+func (sc *Config) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less than 1s: %s", sc.TimeUnit)
+		return fmt.Errorf("time_unit less than 1s: %v", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
@@ -265,6 +269,10 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
 			sc.MaxChallengesPerGeneration)
 	}
+	if sc.ValidatorsPerChallenge <= 0 {
+		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
+			sc.ValidatorsPerChallenge)
+	}
 	if sc.ChallengeGenerationRate < 0 {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
 			sc.ChallengeGenerationRate)
@@ -316,11 +324,7 @@ func (sc *scConfig) validate() (err error) {
 	return
 }
 
-func (conf *scConfig) canMint() bool {
-	return conf.Minted < conf.MaxMint
-}
-
-func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
+func (conf *Config) validateStakeRange(min, max state.Balance) (err error) {
 	if min < conf.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
@@ -335,7 +339,7 @@ func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 	return
 }
 
-func (conf *scConfig) Encode() (b []byte) {
+func (conf *Config) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(conf); err != nil {
 		panic(err) // must not happens
@@ -343,7 +347,7 @@ func (conf *scConfig) Encode() (b []byte) {
 	return
 }
 
-func (conf *scConfig) Decode(b []byte) error {
+func (conf *Config) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
 
@@ -351,23 +355,11 @@ func (conf *scConfig) Decode(b []byte) error {
 // rest handler and update function
 //
 
-// getConfigBytes returns encoded configurations or an error.
-func (ssc *StorageSmartContract) getConfigBytes(
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(ssc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configs from sc.yaml
-func getConfiguredConfig() (conf *scConfig, err error) {
+func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
 
-	conf = new(scConfig)
+	conf = new(Config)
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
@@ -432,6 +424,8 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
 	conf.MaxChallengesPerGeneration = scc.GetInt(
 		pfx + "max_challenges_per_generation")
+	conf.ValidatorsPerChallenge = scc.GetInt(
+		pfx + "validators_per_challenge")
 	conf.ChallengeGenerationRate = scc.GetFloat64(
 		pfx + "challenge_rate_per_mb_min")
 
@@ -461,7 +455,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 }
 
 func (ssc *StorageSmartContract) setupConfig(
-	balances chainState.StateContextI) (conf *scConfig, err error) {
+	balances chainState.StateContextI) (conf *Config, err error) {
 
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
@@ -476,27 +470,21 @@ func (ssc *StorageSmartContract) setupConfig(
 // getConfig
 func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
-	conf *scConfig, err error) {
+	conf *Config, err error) {
 
-	var confb []byte
-	confb, err = ssc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	conf = new(scConfig)
-
-	if err == util.ErrValueNotPresent {
+	conf = new(Config)
+	err = balances.GetTrieNode(scConfigKey(ssc.ID), conf)
+	switch err {
+	case util.ErrValueNotPresent:
 		if !setup {
 			return // value not present
 		}
 		return ssc.setupConfig(balances)
+	case nil:
+		return conf, nil
+	default:
+		return nil, err
 	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return
 }
 
 const cantGetConfigErrMsg = "can't get config"
@@ -506,7 +494,7 @@ func (ssc *StorageSmartContract) getConfigHandler(
 	params url.Values,
 	balances chainState.StateContextI,
 ) (resp interface{}, err error) {
-	var conf *scConfig
+	var conf *Config
 	conf, err = ssc.getConfig(balances, false)
 
 	if err != nil && err != util.ErrValueNotPresent {
@@ -529,7 +517,7 @@ func (ssc *StorageSmartContract) getWritePoolConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *writePoolConfig, err error) {
 
-	var scconf *scConfig
+	var scconf *Config
 	if scconf, err = ssc.getConfig(balances, setup); err != nil {
 		return
 	}
@@ -541,7 +529,7 @@ func (ssc *StorageSmartContract) getReadPoolConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *readPoolConfig, err error) {
 
-	var scconf *scConfig
+	var scconf *Config
 	if scconf, err = ssc.getConfig(balances, setup); err != nil {
 		return
 	}

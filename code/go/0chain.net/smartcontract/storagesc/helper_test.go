@@ -3,7 +3,6 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +25,6 @@ import (
 )
 
 // test helpers
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -65,7 +60,7 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	client = new(Client)
 	client.balance = balance
@@ -185,7 +180,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	blob = new(Client)
 	blob.terms = terms
@@ -215,7 +210,7 @@ func addValidator(t testing.TB, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (valid *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	valid = new(Client)
 	valid.scheme = scheme
@@ -321,7 +316,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	return deco.ID, blobs
 }
 
-func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
+func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
 	balances chainState.StateContextI) {
 
 	var _, err = balances.InsertTrieNode(key, val)
@@ -329,14 +324,15 @@ func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
 }
 
 func setConfig(t testing.TB, balances chainState.StateContextI) (
-	conf *scConfig) {
+	conf *Config) {
 
-	conf = new(scConfig)
+	conf = new(Config)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
+	conf.ValidatorsPerChallenge = 10
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
@@ -393,6 +389,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.ID = challID
 	storChall.PrevID = prevID
 	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
+	require.NoError(t, err)
 	for _, val := range valSlice {
 		storChall.Validators = append(storChall.Validators, &ValidationNode{
 			ID:      val.Name(),
@@ -407,7 +404,6 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
-	return
 }
 
 func newTestStorageSC() (ssc *StorageSmartContract) {

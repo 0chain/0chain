@@ -82,7 +82,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 			),
 		),
 		"/": common.UserRateLimit(
-			HomePageHandler,
+			HomePageAndNotFoundHandler,
 		),
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
@@ -215,6 +215,16 @@ func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 // StartTime - time when the server has started.
 var StartTime time.Time
 
+/*HomePageAndNotFoundHandler - catch all handler that returns home page for root path and 404 for other paths */
+func HomePageAndNotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		NotFoundPageHandler(w, r)
+		return
+	}
+
+	HomePageHandler(w, r)
+}
+
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
@@ -223,6 +233,11 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	selfNode := node.Self.Underlying()
 	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>build_tag:%v</li></ul></div>\n",
 		selfNode.GetPseudoName(), sc.GetKey(), selfNode.GetKey(), selfNode.PublicKey, build.BuildTag)
+}
+
+/*NotFoundPageHandler - provides the 404 page */
+func NotFoundPageHandler(w http.ResponseWriter, r *http.Request) {
+	common.Respond(w, r, nil, common.ErrNoResource)
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
@@ -493,20 +508,17 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	} else if snt == node.NodeTypeSharder {
 		var (
-			lfb       = c.GetLatestFinalizedBlock()
-			seri, err = c.GetBlockStateNode(lfb, minersc.PhaseKey)
+			lfb = c.GetLatestFinalizedBlock()
+			pn  minersc.PhaseNode
+			err = c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
 
 			phase    minersc.Phase = minersc.Unknown
 			restarts int64         = -1
-
-			pn minersc.PhaseNode
 		)
 
 		if err == nil {
-			if err = pn.Decode(seri.Encode()); err == nil {
-				phase = pn.Phase
-				restarts = pn.Restarts
-			}
+			phase = pn.Phase
+			restarts = pn.Restarts
 		}
 
 		fmt.Fprintf(w, "<tr class='active'>")
@@ -893,14 +905,13 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 	dkgi.CMB = cmb
 
 	var (
-		lfb  = c.GetLatestFinalizedBlock()
-		seri util.Serializable
+		lfb = c.GetLatestFinalizedBlock()
 	)
 
 	type keySeri struct {
-		name string            // for errors
-		key  string            // key
-		inst util.Serializable // instance
+		name string               // for errors
+		key  string               // key
+		inst util.MPTSerializable // instance
 	}
 
 	for _, ks := range []keySeri{
@@ -913,16 +924,14 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		{"gsos", minersc.GroupShareOrSignsKey, dkgi.GSoS},
 		{"MB", minersc.MagicBlockKey, dkgi.MB},
 	} {
-		seri, err = c.GetBlockStateNode(lfb, ks.key)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
-		}
-		if err == util.ErrValueNotPresent {
+		err = c.GetBlockStateNode(lfb, ks.key, ks.inst)
+		if err != nil {
+			if err != util.ErrValueNotPresent {
+				return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
+			}
+
 			err = nil // reset the error and leave the value blank
 			continue
-		}
-		if err = ks.inst.Decode(seri.Encode()); err != nil {
-			return nil, fmt.Errorf("can't decode %s node: %v", ks.name, err)
 		}
 	}
 
@@ -933,10 +942,14 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !config.DevConfiguration.ViewChange {
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-		w.Write([]byte(`<doctype html><html><head>
+		ss := []byte(`<doctype html><html><head>
 <title>DKG process informations</title></head><body>
-<h1>DKG process disabled</h1></body></html>`))
-		return
+<h1>DKG process disabled</h1></body></html>`)
+
+		if _, err := w.Write(ss); err != nil {
+			logging.Logger.Error("diagnostics DKG handler - http write failed", zap.Error(err))
+			return
+		}
 	}
 
 	var (
@@ -1705,9 +1718,8 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 	if contract == "" {
 		contract = "global"
-	} else {
-		//TODO: get the smart contract as an optional parameter and pick the right state hash
 	}
+
 	mptRootHash := util.ToHex(mpt.GetRoot())
 	fileName := fmt.Sprintf("mpt_%v_%v_%v.txt", contract, lfb.Round, mptRootHash)
 	file, err := ioutil.TempFile("", fileName)

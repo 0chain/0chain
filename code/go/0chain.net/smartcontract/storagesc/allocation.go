@@ -9,7 +9,10 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -24,14 +27,11 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 
 	alloc = new(StorageAllocation)
 	alloc.ID = allocID
-	var allocb util.Serializable
-	if allocb, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err != nil {
+	err = balances.GetTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
 		return nil, err
 	}
-	err = alloc.Decode(allocb.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+
 	return
 }
 
@@ -41,14 +41,15 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	allocationList := &Allocations{}
 	var clientAlloc ClientAllocation
 	clientAlloc.ClientID = clientID
-	allocationListBytes, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID))
-	if allocationListBytes == nil {
+	err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), &clientAlloc)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		return allocationList, nil
 	}
-	err = json.Unmarshal(allocationListBytes.Encode(), &clientAlloc)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, "failed to retrieve existing allocations list")
-	}
+
 	return clientAlloc.Allocations, nil
 }
 
@@ -57,16 +58,16 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 
 	allocationList := &Allocations{}
 
-	allocationListBytes, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY)
-	if allocationListBytes == nil {
+	err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY, allocationList)
+	switch err {
+	case util.ErrValueNotPresent:
+		return &Allocations{}, nil
+	case nil:
 		return allocationList, nil
-	}
-	err = json.Unmarshal(allocationListBytes.Encode(), allocationList)
-	if err != nil {
+	default:
 		return nil, common.NewError("getAllAllocationsList_failed",
 			"Failed to retrieve existing allocations list")
 	}
-	return allocationList, nil
 }
 
 func (sc *StorageSmartContract) removeUserAllocation(
@@ -136,7 +137,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"Failed to get allocation list: %v", err)
 	}
 
-	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err == nil {
+	ta := &StorageAllocation{}
+	if err = balances.GetTrieNode(alloc.GetKey(sc.ID), ta); err == nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
@@ -292,7 +294,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (string, error) {
-	var conf *scConfig
+	var conf *Config
 	var err error
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
@@ -311,7 +313,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 func (sc *StorageSmartContract) newAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
+	conf *Config,
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -426,7 +428,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, int64, error) {
 	var err error
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return nil, 0, fmt.Errorf("can't get config: %v", err)
 	}
@@ -498,7 +500,7 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(
-	conf *scConfig,
+	conf *Config,
 	alloc *StorageAllocation,
 ) error {
 	if uar.SetImmutable && alloc.IsImmutable {
@@ -728,6 +730,9 @@ func (sc *StorageSmartContract) adjustChallengePool(
 					return fmt.Errorf("adjust_challenge_pool: %v", err)
 				}
 				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
+				if err != nil {
+					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
+				}
 				changed = true
 			}
 		default:
@@ -973,7 +978,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, false); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
@@ -984,7 +989,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
+	conf *Config,
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -1451,7 +1456,7 @@ func (sc *StorageSmartContract) finishAllocation(
 					"ammount was short by %v", d.BlobberID, lack)
 			}
 
-			err = sps[i].DistributeRewards(float64(paid), d.BlobberID, stakepool.Blobber, balances)
+			err = sps[i].DistributeRewards(float64(paid), d.BlobberID, spenum.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
 					"%v from alocation poosl %v, minlock demand %v spent %v error %v",
@@ -1493,7 +1498,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				ratio  = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				reward = float64(cp.Balance) * ratio * passRates[i]
 			)
-			err = sps[i].DistributeRewards(reward, b.ID, stakepool.Blobber, balances)
+			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())

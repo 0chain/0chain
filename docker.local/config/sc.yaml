@@ -67,6 +67,9 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
+    # cooldown_period is round unit to prevent from DDOS attack
+    cooldown_period: 100
+
     cost:
       add_miner: 100
       add_sharder: 100
@@ -177,6 +180,8 @@ smart_contracts:
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once
     max_challenges_per_generation: 100
+    # number of validators per challenge
+    validators_per_challenge: 2
     # max delegates per stake pool allowed by SC
     max_delegates: 200
     # max_charge allowed for blobbers; the charge is part of blobber rewards
@@ -237,7 +242,7 @@ smart_contracts:
       stop: 100
       delete: 100
       vestingsc-update-settings: 100
-  zcn:
+  zcnsc:
     min_mint_amount: 1
     percent_authorizers: 0.7
     min_authorizers: 1

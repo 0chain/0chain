@@ -19,8 +19,6 @@ import (
 )
 
 var (
-	// RoundStartSender - Start a new round.
-	RoundStartSender node.EntitySendHandler
 	// RoundVRFSender - Send the round vrf.
 	RoundVRFSender node.EntitySendHandler
 	// VerifyBlockSender - Send the block to a node.
@@ -34,14 +32,9 @@ var (
 	MinerNotarizedBlockSender node.EntitySendHandler
 	// DKGShareSender - Send dkg share to a node
 	DKGShareSender node.EntityRequestor
-	// ChainStartSender - Send whether or not to start chain
-	ChainStartSender node.EntityRequestor
 	// MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized
 	// block to a node.
 	MinerLatestFinalizedBlockRequestor node.EntityRequestor
-	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
-	// magic block to a node.
-	BlockRequestor node.EntityRequestor
 )
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
@@ -133,19 +126,14 @@ func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request))
 /*SetupM2SRequestors - setup all requests to sharder by miner */
 func SetupM2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
-
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
-	BlockRequestor = node.RequestEntityHandler("/v1/block/get", options, blockEntityMetadata)
 }
 
 func SetupM2MRequestors() {
 	dkgShareEntityMetadata := datastore.GetEntityMetadata("dkg_share")
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
-
-	chainStartEntityMetadata := datastore.GetEntityMetadata("start_chain")
-	ChainStartSender = node.RequestEntityHandler("/v1/_m2m/chain/start", options, chainStartEntityMetadata)
 }
 
 // VRFShareHandler - handle the vrf share.
@@ -235,7 +223,11 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		}
 
 		// send notarized block
-		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID)
+		go func() {
+			if _, err := mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID); err != nil {
+				logging.Logger.Error("send notarized block failed", zap.Error(err))
+			}
+		}()
 
 		logging.Logger.Info("Reject VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),

@@ -307,36 +307,3 @@ func TestState_Set(t *testing.T) {
 		})
 	}
 }
-
-func TestDeserializer_Deserialize(t *testing.T) {
-	t.Parallel()
-
-	st := makeTestState()
-	st.TxnHash = ""
-	sv := util.SecureSerializableValue{Buffer: st.Encode()}
-
-	type args struct {
-		sv util.Serializable
-	}
-	tests := []struct {
-		name string
-		args args
-		want util.Serializable
-	}{
-		{
-			name: "OK",
-			args: args{sv: &sv},
-			want: st,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			bd := &Deserializer{}
-			got := bd.Deserialize(tt.args.sv)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}

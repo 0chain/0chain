@@ -17,8 +17,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/smartcontract/minersc"
+	"go.uber.org/zap"
 )
 
 type home struct {
@@ -29,7 +31,7 @@ type home struct {
 	BuildTag          string            `json:"build_tag"`
 	StartTime         time.Time         `json:"start_time"`
 	NodeType          string            `json:"node_type"`
-	isDevMode         bool              `json:"is_dev_mode"`
+	IsDevMode         bool              `json:"is_dev_mode"`
 	CurrentMagicBlock *block.MagicBlock `json:"current_magic_block"`
 	Miners            []nodeInfo        `json:"miners"`
 	Sharders          []nodeInfo        `json:"sharders"`
@@ -50,7 +52,7 @@ func jsonHome(ctx context.Context) home {
 		BuildTag:          build.BuildTag,
 		StartTime:         StartTime,
 		NodeType:          node.Self.Underlying().Type.String(),
-		isDevMode:         config.Development(),
+		IsDevMode:         config.Development(),
 		CurrentMagicBlock: mb,
 		Miners:            miners,
 		Sharders:          sharders,
@@ -158,7 +160,7 @@ type roundHealth struct {
 	Shares        int    `json:"shares"`
 	VRFThreshold  int    `json:"vrf_threshold"`
 	LFBTicket     int64  `json:"lfb_ticket"`
-	isActive      bool   `json:"is_active"`
+	IsActive      bool   `json:"is_active"`
 }
 
 type ChainHealth struct {
@@ -247,7 +249,7 @@ func (c *Chain) getRoundHealth(ctx context.Context) roundHealth {
 	}
 
 	return roundHealth{
-		isActive:      isActive,
+		IsActive:      isActive,
 		Round:         rn,
 		VRFs:          vrfMsg,
 		RRS:           rrs,
@@ -324,18 +326,20 @@ func (c *Chain) getInfraHealth() InfraHealth {
 		isLFBStateInitialized = lfb.ClientState != nil
 	case node.NodeTypeSharder:
 		var (
-			lfb                     = c.GetLatestFinalizedBlock()
-			seri, err               = c.GetBlockStateNode(lfb, minersc.PhaseKey)
-			phase     minersc.Phase = minersc.Unknown
-			restarts  int64         = -1
-			pn        minersc.PhaseNode
+			lfb      = c.GetLatestFinalizedBlock()
+			pn       minersc.PhaseNode
+			phase    minersc.Phase = minersc.Unknown
+			restarts int64         = -1
 		)
-		if err == nil {
-			if err = pn.Decode(seri.Encode()); err == nil {
-				phase = pn.Phase
-				restarts = pn.Restarts
-			}
+		err := c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
+		switch err {
+		case nil:
+			phase = pn.Phase
+			restarts = pn.Restarts
+		default:
+			logging.Logger.Warn("get block state node failed", zap.Error(err))
 		}
+
 		if !config.DevConfiguration.ViewChange {
 			isDKGProcessDisabled = true
 		} else {
@@ -432,5 +436,10 @@ func JSONHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+
+	if _, err = w.Write(data); err != nil {
+		logging.Logger.Error("http write failed",
+			zap.String("url", r.URL.String()),
+			zap.Error(err))
+	}
 }

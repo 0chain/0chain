@@ -16,16 +16,17 @@ import (
 func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
-	mbits, err := balances.GetTrieNode(pkey)
-	if err != nil && err != util.ErrValueNotPresent {
-		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
-			zap.String("key", pkey))
+	mn := NewMinerNode()
+	err := balances.GetTrieNode(pkey, mn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
+				zap.String("key", pkey))
+		}
 		return false
 	}
-	if mbits != nil {
-		return true
-	}
-	return false
+
+	return true
 }
 
 // AddMiner Function to handle miner register
@@ -286,6 +287,10 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
+	if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
+		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
+	}
+
 	if mn.Delete {
 		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
 	}
@@ -298,6 +303,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	mn.NumberOfDelegates = update.NumberOfDelegates
 	mn.MinStake = update.MinStake
 	mn.MaxStake = update.MaxStake
+	mn.LastSettingUpdateRound = balances.GetBlock().Round
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
@@ -339,12 +345,8 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 
 	mn := NewMinerNode()
 	mn.ID = id
-	ms, err := state.GetTrieNode(mn.GetKey())
+	err := state.GetTrieNode(mn.GetKey(), mn)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := mn.Decode(ms.Encode()); err != nil {
 		return nil, err
 	}
 
