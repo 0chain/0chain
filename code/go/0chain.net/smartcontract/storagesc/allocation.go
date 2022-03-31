@@ -828,8 +828,10 @@ func (sc *StorageSmartContract) extendAllocation(
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
 					err)
 			}
+			if err := emitUpdateBlobber(b, balances); err != nil {
+				return fmt.Errorf("error emitting blobber %s, error:%v", b.ID, err)
+			}
 		}
-
 	}
 
 	// update max challenge_completion_time
@@ -915,6 +917,9 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			if err = sp.save(sc.ID, ba.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
 					err)
+			}
+			if err := emitUpdateBlobber(b, balances); err != nil {
+				return fmt.Errorf("error emitting blobber %s, error:%v", b.ID, err)
 			}
 		}
 	}
@@ -1112,6 +1117,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				"cannot reduce when minting tokens")
 		}
 		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
+	} else if len(request.AddedBlobberId) > 0 {
+		err = sc.extendAllocation(t, alloc, blobbers, &request, mintTokens, balances)
 	}
 	if err != nil {
 		return "", err

@@ -783,7 +783,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	now common.Timestamp,
 	balances chainstate.StateContextI,
 ) error {
-	beforeSize := sa.bSize()
 	if len(removeId) > 0 {
 		if err := sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
 			return err
@@ -803,15 +802,6 @@ func (sa *StorageAllocation) changeBlobbers(
 		return err
 	}
 	afterSize := sa.bSize()
-	if afterSize != beforeSize {
-		delta := afterSize - beforeSize
-		for _, b := range sa.Blobbers {
-			b.Used += delta
-		}
-		for _, b := range blobbers {
-			b.Used += delta
-		}
-	}
 
 	sa.Blobbers = append(sa.Blobbers, addedBlobber)
 	blobbers = append(blobbers, addedBlobber)
@@ -825,10 +815,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 	if sa.validateAllocationBlobber(addedBlobber, sp, now) != nil {
 		return err
-	}
-	sp.addOffer(ba.Offer())
-	if err = sp.save(ssc.ID, addedBlobber.ID, balances); err != nil {
-		return fmt.Errorf("can't save blobber's stake pool: %v", err)
 	}
 
 	return nil
