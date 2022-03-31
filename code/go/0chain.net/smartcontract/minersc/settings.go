@@ -39,6 +39,7 @@ const (
 	RewardDeclineRate
 	MaxMint
 	OwnerId
+	CooldownPeriod
 	Cost
 )
 
@@ -63,6 +64,7 @@ var (
 		"reward_decline_rate",
 		"max_mint",
 		"owner_id",
+		"cooldown_period",
 		"cost",
 	}
 	NumberOfSettings = len(SettingName)
@@ -90,6 +92,7 @@ var (
 		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
 		"owner_id":               {OwnerId, smartcontract.Key},
+		"cooldown_period":        {CooldownPeriod, smartcontract.Int64},
 		"cost":                   {Cost, smartcontract.Cost},
 	}
 )
@@ -134,6 +137,8 @@ func (gn *GlobalNode) setInt64(key string, change int64) error {
 		gn.RewardRoundFrequency = change
 	case Epoch:
 		gn.Epoch = change
+	case CooldownPeriod:
+		gn.CooldownPeriod = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
