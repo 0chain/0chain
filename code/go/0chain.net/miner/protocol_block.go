@@ -110,6 +110,20 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	return brTxn
 }
 
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = b.MinerID
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = `{"name":"generate_challenge","input":{}}`
+	brTxn.Fee = 0
+	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
+	return brTxn
+}
+
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
 	ctxn := txn.Clone()
 	ctxn.OutputHash = ""
@@ -837,6 +851,16 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
+		}
+	}
+
+	challengesEnabled := config.SmartContractConfig.GetBool(
+		"smart_contracts.storagesc.challenge_enabled")
+	if challengesEnabled {
+		err = mc.processTxn(ctx, mc.createGenerateChallengeTxn(b), b, blockState, iterInfo.clients)
+		if err != nil {
+			logging.Logger.Error("generate block (generate_challenge)",
+				zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 

@@ -793,21 +793,25 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 
 	validators, err := getValidatorsList(balances)
 	if err != nil {
-		return common.NewErrorf("adding_challenge_error",
+		return common.NewErrorf("generate_challenge",
 			"error getting the validators list: %v", err)
 	}
 
 	blobberChallengeList, err := getBlobbersChallengeList(balances)
 	if err != nil {
-		return common.NewErrorf("adding_challenge_error",
+		return common.NewErrorf("generate_challenge",
 			"error getting the blobber challenge list: %v", err)
+	}
+	if listSize, err := blobberChallengeList.Size(balances); err == nil && listSize == 0 {
+		Logger.Info("skipping generate challenge: empty blobber challenge partition")
+		return nil
 	}
 
 	challengeID := encryption.Hash(hashString + strconv.FormatInt(int64(1), 10))
 	var challengeSeed uint64
 	challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
 	if err != nil {
-		return common.NewErrorf("adding_challenge_error",
+		return common.NewErrorf("generate_challenge",
 			"Error in creating challenge seed: %v", err)
 	}
 	cr := rand.New(rand.NewSource(int64(challengeSeed)))
