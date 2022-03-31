@@ -25,16 +25,37 @@ import (
 	"0chain.net/core/util"
 )
 
-func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
+type storageNodesResponse struct {
+	Nodes []storageNodeResponse
+}
+
+// StorageNode represents Blobber configurations.
+type storageNodeResponse struct {
+	ID              string                 `json:"id"`
+	BaseURL         string                 `json:"url"`
+	Geolocation     StorageNodeGeolocation `json:"geolocation"`
+	Terms           Terms                  `json:"terms"`    // terms
+	Capacity        int64                  `json:"capacity"` // total blobber capacity
+	Used            int64                  `json:"used"`     // allocated capacity
+	LastHealthCheck common.Timestamp       `json:"last_health_check"`
+	PublicKey       string                 `json:"-" msg:"-"`
+	SavedData       int64                  `json:"saved_data"`
+	// StakePoolSettings used initially to create and setup stake pool.
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	TotalStake        int64                       `json:"total_stake"`
+	Information       Info                        `json:"info"`
+}
+
+func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
-		return StorageNode{}, err
+		return storageNodeResponse{}, err
 	}
 	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
 	if err != nil {
-		return StorageNode{}, err
+		return storageNodeResponse{}, err
 	}
-	return StorageNode{
+	return storageNodeResponse{
 		ID:      blobber.BlobberID,
 		BaseURL: blobber.BaseURL,
 		Geolocation: StorageNodeGeolocation{
@@ -200,13 +221,13 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 
-	var sns StorageNodes
+	var sns storageNodesResponse
 	for _, blobber := range blobbers {
 		sn, err := blobberTableToStorageNode(blobber)
 		if err != nil {
 			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 		}
-		sns.Nodes.add(&sn)
+		sns.Nodes = append(sns.Nodes, sn)
 	}
 	return sns, nil
 }

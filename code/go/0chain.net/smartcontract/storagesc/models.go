@@ -350,7 +350,6 @@ type StorageNode struct {
 	SavedData       int64                  `json:"saved_data"`
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	TotalStake        int64                       `json:"total_stake"`
 	Information       Info                        `json:"info"`
 }
 
