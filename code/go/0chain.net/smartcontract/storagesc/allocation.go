@@ -353,29 +353,18 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 
-	var gbSize = sizeInGB(bSize) // size in gigabytes
+	sa.ID = t.Hash
 	allocatedBlobbers := make([]*StorageNode, 0)
 	for _, b := range blobberNodes {
-		var balloc BlobberAllocation
-		balloc.Stats = &StorageAllocationStats{}
-		balloc.Size = bSize
-		balloc.Terms = b.Terms
-		balloc.AllocationID = t.Hash
-		balloc.BlobberID = b.ID
-
-		sa.BlobberDetails = append(sa.BlobberDetails, &balloc)
+		balloc := newBlobberAllocation(bSize, sa, b, t.CreationDate)
+		sa.BlobberDetails = append(sa.BlobberDetails, balloc)
 		allocatedBlobbers = append(allocatedBlobbers, b)
-
-		// the Expiration and TimeUnit are already set for the 'sa' and we c
-		// an use the restDurationInTimeUnits method here
-		balloc.MinLockDemand = b.Terms.minLockDemand(gbSize,
-			sa.restDurationInTimeUnits(t.CreationDate))
 
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
 			sa.ChallengeCompletionTime = b.Terms.ChallengeCompletionTime
 		}
 
-		b.Used += balloc.Size
+		b.Used += bSize
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}
@@ -395,7 +384,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	})
 
 	sa.Blobbers = allocatedBlobbers
-	sa.ID = t.Hash
 	sa.StartTime = t.CreationDate
 	sa.Tx = t.Hash
 
@@ -1025,6 +1013,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get client's allocations list: "+err.Error())
 	}
+	logging.Logger.Info("piers updateAllocationRequestInternal",
+		zap.String("client", t.ClientID),
+		zap.String("ownerId", request.OwnerID),
+		zap.String("request Id", request.ID),
+		zap.Any("request", request),
+		zap.Any("clist", clist),
+	)
 
 	if !clist.has(request.ID) {
 		return "", common.NewErrorf("allocation_updating_failed",
@@ -1056,7 +1051,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if len(request.AddedBlobberId) > 0 {
-		if err := alloc.changeBlobbers(blobbers, request.AddedBlobberId, request.RemovedBlobberId, sc, balances); err != nil {
+		if err := alloc.changeBlobbers(
+			blobbers, request.AddedBlobberId, request.RemovedBlobberId, sc, t.CreationDate, balances,
+		); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
 	}

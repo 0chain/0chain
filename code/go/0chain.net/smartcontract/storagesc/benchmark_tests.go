@@ -196,11 +196,12 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				ClientID: data.Clients[0],
-				Value:    viper.GetInt64(bk.StorageMinAllocSize) * 1e10,
+				ClientID:     data.Clients[0],
+				CreationDate: now,
+				Value:        viper.GetInt64(bk.StorageMinAllocSize) * 1e10,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&updateAllocationRequest{
+				uar := updateAllocationRequest{
 					ID:               getMockAllocationId(0),
 					OwnerID:          data.Clients[0],
 					Size:             10000000,
@@ -208,7 +209,8 @@ func BenchmarkTests(
 					SetImmutable:     true,
 					RemovedBlobberId: getMockBlobberId(0),
 					AddedBlobberId:   getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
-				})
+				}
+				bytes, _ := json.Marshal(&uar)
 				return bytes
 			}(),
 		},

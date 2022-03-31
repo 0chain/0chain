@@ -531,6 +531,24 @@ type BlobberAllocation struct {
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
 }
 
+func newBlobberAllocation(
+	size int64,
+	allocation *StorageAllocation,
+	blobber *StorageNode,
+	date common.Timestamp,
+) *BlobberAllocation {
+	ba := &BlobberAllocation{}
+	ba.Stats = &StorageAllocationStats{}
+	ba.Size = size
+	ba.Terms = blobber.Terms
+	ba.AllocationID = allocation.ID
+	ba.BlobberID = blobber.ID
+	ba.MinLockDemand = blobber.Terms.minLockDemand(
+		sizeInGB(size), allocation.restDurationInTimeUnits(date),
+	)
+	return ba
+}
+
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
@@ -643,6 +661,52 @@ type StorageAllocation struct {
 	Curators []string `json:"curators"`
 }
 
+func (sa *StorageAllocation) validateAllocationBlobber(
+	blobber *StorageNode,
+	sp *stakePool,
+	now common.Timestamp,
+) error {
+	bSize := sa.bSize()
+	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+
+	// filter by max offer duration
+	if blobber.Terms.MaxOfferDuration < duration {
+		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
+			duration, blobber.ID, blobber.Terms.MaxOfferDuration)
+	}
+	// filter by read price
+	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by write price
+	if !sa.WritePriceRange.isMatch(blobber.Terms.WritePrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by blobber's capacity left
+	if blobber.Capacity-blobber.Used < bSize {
+		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
+			blobber.ID, blobber.Capacity-blobber.Used, bSize)
+	}
+	// filter by max challenge completion time
+	if blobber.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+		return fmt.Errorf("blobber %s challenge compledtion time %v exceeds maximum challenge completeion time %v",
+			blobber.ID, blobber.Terms.ChallengeCompletionTime, sa.MaxChallengeCompletionTime)
+	}
+
+	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
+		return fmt.Errorf("blobber %s failed health check", blobber.ID)
+	}
+
+	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
+			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
+	}
+
+	return nil
+}
+
 func (sa *StorageAllocation) bSize() int64 {
 	var size = sa.DataShards + sa.ParityShards
 	return (sa.Size + int64(size-1)) / int64(size)
@@ -676,8 +740,21 @@ func (sa *StorageAllocation) removeBlobber(
 	found = false
 	for i, d := range blobbers {
 		if d.ID == removeId {
-			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
-			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
+			blobbers[i] = blobbers[len(sa.Blobbers)-1]
+			blobbers = blobbers[:len(blobbers)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+	}
+
+	found = false
+	for i, d := range sa.BlobberDetails {
+		if d.BlobberID == removeId {
+			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.Blobbers)-1]
+			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
 			found = true
 			break
 		}
@@ -703,6 +780,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	blobbers []*StorageNode,
 	addId, removeId string,
 	ssc *StorageSmartContract,
+	now common.Timestamp,
 	balances chainstate.StateContextI,
 ) error {
 	beforeSize := sa.bSize()
@@ -724,9 +802,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return err
 	}
-	sa.Blobbers = append(sa.Blobbers, addedBlobber)
-	blobbers = append(blobbers, addedBlobber)
-	sa.BlobberMap[addId] = &BlobberAllocation{}
 	afterSize := sa.bSize()
 	if afterSize != beforeSize {
 		delta := afterSize - beforeSize
@@ -736,6 +811,24 @@ func (sa *StorageAllocation) changeBlobbers(
 		for _, b := range blobbers {
 			b.Used += delta
 		}
+	}
+
+	sa.Blobbers = append(sa.Blobbers, addedBlobber)
+	blobbers = append(blobbers, addedBlobber)
+	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	sa.BlobberMap[addId] = ba
+	sa.BlobberDetails = append(sa.BlobberDetails, ba)
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
+		return fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	if sa.validateAllocationBlobber(addedBlobber, sp, now) != nil {
+		return err
+	}
+	sp.addOffer(ba.Offer())
+	if err = sp.save(ssc.ID, addedBlobber.ID, balances); err != nil {
+		return fmt.Errorf("can't save blobber's stake pool: %v", err)
 	}
 
 	return nil
