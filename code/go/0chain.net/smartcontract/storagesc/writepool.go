@@ -200,7 +200,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if t.Value < int64(mld) {
+	if t.Value < int64(mld) || t.Value <= 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
 	}
