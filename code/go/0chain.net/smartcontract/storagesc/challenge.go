@@ -919,11 +919,13 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			challengeString string
 			alloc           = result.alloc
 		)
+
 		challengeString, err = sc.addChallenge(alloc, result.storageChallenge,
 			result.blobberChallenge,
 			result.allocChallenge,
 			result.blobberAlloc,
 			balances)
+
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err),
 				zap.Any("challengeString", challengeString))

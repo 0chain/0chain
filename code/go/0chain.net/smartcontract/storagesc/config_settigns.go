@@ -69,6 +69,7 @@ const (
 	ChallengeEnabled
 	ChallengeGenerationRate
 	MaxChallengesPerGeneration
+	ValidatorsPerChallenge
 	MaxDelegates
 
 	BlockRewardBlockReward
@@ -127,6 +128,7 @@ var (
 		"challenge_enabled",
 		"challenge_rate_per_mb_min",
 		"max_challenges_per_generation",
+		"validators_per_challenge",
 		"max_delegates",
 
 		"block_reward.block_reward",
@@ -185,6 +187,7 @@ var (
 		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
 		"challenge_rate_per_mb_min":            {ChallengeGenerationRate, smartcontract.Float64},
 		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
+		"validators_per_challenge":             {ValidatorsPerChallenge, smartcontract.Int},
 		"max_delegates":                        {MaxDelegates, smartcontract.Int},
 
 		"block_reward.block_reward":           {BlockRewardBlockReward, smartcontract.StateBalance},
@@ -227,6 +230,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.FailedChallengesToRevokeMinLock = change
 	case MaxChallengesPerGeneration:
 		conf.MaxChallengesPerGeneration = change
+	case ValidatorsPerChallenge:
+		conf.ValidatorsPerChallenge = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
@@ -528,6 +533,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ChallengeGenerationRate
 	case MaxChallengesPerGeneration:
 		return conf.MaxChallengesPerGeneration
+	case ValidatorsPerChallenge:
+		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:

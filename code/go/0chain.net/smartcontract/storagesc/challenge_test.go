@@ -10,10 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract/partitions"
-
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -22,6 +18,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,10 +33,10 @@ const (
 
 func TestAddChallenge(t *testing.T) {
 	type parameters struct {
-		numBlobbers   int
-		numValidators int
-		dataShards    int
-		randomSeed    int
+		numBlobbers            int
+		numValidators          int
+		validatorsPerChallenge int
+		randomSeed             int
 	}
 
 	type args struct {
@@ -154,7 +152,6 @@ func TestAddChallenge(t *testing.T) {
 			alloc: &StorageAllocation{
 				Blobbers:   blobbers,
 				BlobberMap: blobberMap,
-				DataShards: p.dataShards,
 				Stats:      &StorageAllocationStats{},
 			},
 			allocChallengeObj:   allocChall,
@@ -164,6 +161,7 @@ func TestAddChallenge(t *testing.T) {
 			validators:          validators,
 			r:                   r,
 			blobberID:           bID,
+
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.MPTSerializable),
 			},
@@ -178,8 +176,10 @@ func TestAddChallenge(t *testing.T) {
 		}
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
-		if p.numValidators > p.dataShards {
-			require.EqualValues(t, challenge.TotalValidators, p.dataShards)
+
+		if p.numValidators > p.validatorsPerChallenge {
+			require.EqualValues(t, challenge.TotalValidators, p.validatorsPerChallenge)
+
 		} else {
 			require.EqualValues(t, challenge.TotalValidators, p.numValidators-1)
 		}
@@ -188,46 +188,47 @@ func TestAddChallenge(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		parameters parameters
+		
+    parameters
 		want       want
 	}{
 		{
-			name: "OK validators > dataShards",
+			name: "OK validators > validatorsPerChallenge",
 			parameters: parameters{
-				numBlobbers:   10,
-				numValidators: 10,
-				dataShards:    4,
-				randomSeed:    1,
+				numBlobbers:            10,
+				numValidators:          10,
+				validatorsPerChallenge: 4,
+				randomSeed:             1,
 			},
 			want: want{
 				validators: []int{6, 3, 8, 4},
 			},
 		},
 		{
-			name: "OK dataShards > validators",
+			name: "OK validatorsPerChallenge > validators",
 			parameters: parameters{
-				numBlobbers:   6,
-				numValidators: 6,
-				dataShards:    10,
-				randomSeed:    1,
+				numBlobbers:            6,
+				numValidators:          6,
+				validatorsPerChallenge: 10,
+				randomSeed:             1,
 			},
 			want: want{
 				validators: []int{3, 0, 1, 4, 2},
 			},
 		},
-		//{
-		//	name: "Error no blobbers",
-		//	parameters: parameters{
-		//		numBlobbers:   0,
-		//		numValidators: 6,
-		//		dataShards:    10,
-		//		randomSeed:    1,
-		//	},
-		//	want: want{
-		//		error:    true,
-		//		errorMsg: "add_challenges: empty blobber id",
-		//	},
-		//},
+		{
+			name: "Error no blobbers",
+			parameters: parameters{
+				numBlobbers:            0,
+				numValidators:          6,
+				validatorsPerChallenge: 10,
+				randomSeed:             1,
+			},
+			want: want{
+				error:    true,
+				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -235,6 +236,7 @@ func TestAddChallenge(t *testing.T) {
 			var ssc = &StorageSmartContract{
 				SmartContract: sci.NewSC(ADDRESS),
 			}
+
 			args := parametersToArgs(tt.parameters, ssc)
 
 			resp, err := ssc.addChallenge(args.alloc,
@@ -243,6 +245,7 @@ func TestAddChallenge(t *testing.T) {
 				args.allocChallengeObj,
 				args.blobberAllocation,
 				args.balances)
+
 			validate(t, resp, err, tt.parameters, tt.want)
 		})
 	}

@@ -430,6 +430,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
 					challBytes string
 				)
+
 				storageChall, err := ssc.getStorageChallenge(challID, balances)
 				require.NoError(b, err)
 				blobberChall, err := ssc.getBlobberChallenge(blobberID, balances)
@@ -440,6 +441,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.True(b, ok)
 
 				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, allocChall, blobberAllocChall, balances)
+
 				require.NoError(b, err)
 
 				var chall StorageChallenge
