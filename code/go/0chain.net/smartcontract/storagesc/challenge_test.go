@@ -121,7 +121,7 @@ func TestAddChallenge(t *testing.T) {
 		require.NoError(t, err)
 
 		perm := r.Perm(len(randSlice))
-		for i := 0; i < minInt(len(randSlice), p.dataShards+1); i++ {
+		for i := 0; i < minInt(len(randSlice), p.validatorsPerChallenge+1); i++ {
 			if randSlice[perm[i]].Name() != bID {
 				selectedValidators = append(selectedValidators,
 					&ValidationNode{
@@ -129,7 +129,7 @@ func TestAddChallenge(t *testing.T) {
 						BaseURL: randSlice[perm[i]].Data(),
 					})
 			}
-			if len(selectedValidators) >= p.dataShards {
+			if len(selectedValidators) >= p.validatorsPerChallenge {
 				break
 			}
 		}
@@ -187,10 +187,10 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		
-    parameters
-		want       want
+		name string
+
+		parameters
+		want want
 	}{
 		{
 			name: "OK validators > validatorsPerChallenge",
