@@ -791,7 +791,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			challengeString string
 		)
 		challengeString, err = sc.addChallenge(alloc, validators, challengeID,
-			t.CreationDate, r, int64(challengeSeed), balances)
+			t.CreationDate, r, int64(challengeSeed), conf.ValidatorsPerChallenge, balances)
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err),
 				zap.Any("challengeString", challengeString))
@@ -809,7 +809,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	validators partitions.RandPartition, challengeID string,
 	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
-	balances c_state.StateContextI) (resp string, err error) {
+	validatorsPerChallenge int, balances c_state.StateContextI) (resp string, err error) {
 
 	sort.SliceStable(alloc.Blobbers, func(i, j int) bool {
 		return alloc.Blobbers[i].ID < alloc.Blobbers[j].ID
@@ -849,7 +849,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	perm := r.Perm(len(randSlice))
-	for i := 0; i < minInt(len(randSlice), alloc.DataShards+1); i++ {
+	for i := 0; i < minInt(len(randSlice), validatorsPerChallenge+1); i++ {
 		if randSlice[perm[i]].Name() != selectedBlobberObj.ID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
@@ -857,7 +857,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 					BaseURL: randSlice[perm[i]].Data(),
 				})
 		}
-		if len(selectedValidators) >= alloc.DataShards {
+		if len(selectedValidators) >= validatorsPerChallenge {
 			break
 		}
 	}
