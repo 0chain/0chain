@@ -947,6 +947,16 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberAllocation *BlobberAllocation,
 	balances c_state.StateContextI) (resp string, err error) {
 
+	if storageChallenge.BlobberID == "" {
+		return "", common.NewError("add_challenge",
+			"no blobber to add challenge to")
+	}
+
+	if blobberAllocation == nil {
+		return "", common.NewError("add_challenge",
+			"no blobber Allocation to add challenge to")
+	}
+
 	addedChallenge := blobberChallengeObj.addChallenge(storageChallenge)
 	if !addedChallenge {
 		challengeBytes, err := json.Marshal(storageChallenge)
