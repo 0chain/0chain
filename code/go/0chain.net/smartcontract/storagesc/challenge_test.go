@@ -226,7 +226,7 @@ func TestAddChallenge(t *testing.T) {
 			},
 			want: want{
 				error:    true,
-				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+				errorMsg: "add_challenge: no blobber to add challenge to",
 			},
 		},
 	}
