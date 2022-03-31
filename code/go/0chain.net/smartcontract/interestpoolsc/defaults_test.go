@@ -90,9 +90,36 @@ func testTxn(owner string, value int64) *transaction.Transaction {
 	}
 	t.ComputeOutputHash()
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	if err := scheme.GenerateKeys(); err != nil {
+		panic(err)
+	}
 	t.PublicKey = scheme.GetPublicKey()
-	t.Sign(scheme)
+	if _, err := t.Sign(scheme); err != nil {
+		panic(err)
+	}
+	return t
+}
+
+func testTxnForUnlock(client string, value int64) *transaction.Transaction {
+	t := &transaction.Transaction{
+		ClientID:          client,
+		ToClientID:        client,
+		ChainID:           config.GetMainChainID(),
+		TransactionData:   "testTxnDataOK",
+		TransactionOutput: fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, 1),
+		Value:             value,
+		TransactionType:   transaction.TxnTypeSmartContract,
+		CreationDate:      common.Now(),
+	}
+	t.ComputeOutputHash()
+	var scheme = encryption.NewBLS0ChainScheme()
+	if err := scheme.GenerateKeys(); err != nil {
+		panic(err)
+	}
+	t.PublicKey = scheme.GetPublicKey()
+	if _, err := t.Sign(scheme); err != nil {
+		panic(err)
+	}
 	return t
 }
 
@@ -106,6 +133,20 @@ func testBalance(client string, value int64) *testBalances {
 	}
 	if client != "" {
 		t.txn = testTxn(client, value)
+		t.setBalance(client, state.Balance(value))
+	}
+
+	return t
+}
+
+func testBalanceUnlock(client string, value int64) *testBalances {
+	t := &testBalances{
+		balances: make(map[datastore.Key]state.Balance),
+		tree:     make(map[datastore.Key]util.MPTSerializable),
+		txn:      testTxnForUnlock(client, 10),
+	}
+	if client != "" {
+		t.txn = testTxnForUnlock(client, value)
 		t.setBalance(client, state.Balance(value))
 	}
 
@@ -153,7 +194,9 @@ func testUserNode(client string, ip *interestPool) *UserNode {
 		Pools:    make(map[datastore.Key]*interestPool),
 	}
 	if ip != nil {
-		un.addPool(ip)
+		if err := un.addPool(ip); err != nil {
+			panic(err)
+		}
 	}
 	return un
 }

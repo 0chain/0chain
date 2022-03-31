@@ -134,7 +134,8 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 	notEmptyBlnc := func() *testBalances {
 		b := testBalance("", 0)
 		gn := newGlobalNode()
-		b.InsertTrieNode(gn.getKey(), gn)
+		_, err := b.InsertTrieNode(gn.getKey(), gn)
+		require.NoError(t, err)
 		return b
 	}
 	tests := []struct {

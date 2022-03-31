@@ -245,9 +245,13 @@ func main() {
 	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		genesisDKG := viper.GetInt64("network.genesis_dkg")
-		dkgShare, oldDKGShare := &bls.DKGSummary{
-			SecretShares: make(map[string]string),
-		}, &bls.DKGSummary{}
+		var (
+			oldDKGShare *bls.DKGSummary
+			dkgShare    = &bls.DKGSummary{
+				SecretShares: make(map[string]string),
+			}
+		)
+
 		dkgShare.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
 		if genesisDKG == 0 {
 			oldDKGShare, err = miner.ReadDKGSummaryFile(*dkgFile)
@@ -265,7 +269,12 @@ func main() {
 			}
 		}
 		dkgShare.SecretShares = oldDKGShare.SecretShares
-		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), magicBlock.Mpks.GetMpkMap()); err != nil {
+		mpks, err := magicBlock.Mpks.GetMpkMap()
+		if err != nil {
+			logging.Logger.Panic("Get mpks map failed", zap.Error(err))
+		}
+
+		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
 			if config.DevConfiguration.ViewChange {
 				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {
@@ -337,7 +346,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	scanner.Scan() // throw away the publickey
 	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
-	if result == false {
+	if !result {
 		return "", "", 0, "", "", errors.New("error reading Host")
 	}
 
@@ -345,7 +354,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	logging.Logger.Info("Host inside", zap.String("host", h))
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return "", "", 0, "", "", errors.New("error reading n2n host")
 	}
 
@@ -360,7 +369,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return h, n2nh, p, "", "", nil
 	}
 
@@ -368,7 +377,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	logging.Logger.Info("Path inside", zap.String("path", path))
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return h, n2nh, p, path, "", nil
 	}
 

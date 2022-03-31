@@ -1,8 +1,6 @@
 package cases
 
 import (
-	"sync"
-
 	"github.com/mitchellh/mapstructure"
 
 	"0chain.net/conductor/cases"
@@ -14,8 +12,6 @@ type (
 		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
 
 		minersNum int
-
-		mu sync.Mutex
 	}
 )
 

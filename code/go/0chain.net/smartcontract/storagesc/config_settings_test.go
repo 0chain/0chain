@@ -162,6 +162,7 @@ func TestUpdateSettings(t *testing.T) {
 					"challenge_enabled":                    "true",
 					"challenge_rate_per_mb_min":            "1.0",
 					"max_challenges_per_generation":        "100",
+					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
 					"block_reward.block_reward":           "1000",
@@ -305,7 +306,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}
@@ -366,6 +367,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"challenge_enabled":                    "true",
 					"challenge_rate_per_mb_min":            "1.0",
 					"max_challenges_per_generation":        "100",
+					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
 					"block_reward.block_reward":           "1000",
@@ -477,6 +479,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.ChallengeGenerationRate
 	case MaxChallengesPerGeneration:
 		return conf.MaxChallengesPerGeneration
+	case ValidatorsPerChallenge:
+		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:

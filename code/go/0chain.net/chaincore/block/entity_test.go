@@ -116,7 +116,7 @@ func makeTestNode(pbK string) (*node.Node, error) {
 		"public_ip":  "public ip",
 		"n2n_ip":     "n2n_ip",
 		"port":       8080,
-		"id":         "miners node id",
+		"id":         util.ToHex([]byte("miners node id")),
 		"public_key": pbK,
 	}
 	n, err := node.NewNode(nc)

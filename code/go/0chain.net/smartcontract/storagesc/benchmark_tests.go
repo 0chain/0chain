@@ -726,6 +726,7 @@ func BenchmarkTests(
 					"challenge_enabled":                    "true",
 					"challenge_rate_per_mb_min":            "1.0",
 					"max_challenges_per_generation":        "100",
+					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
 					"block_reward.block_reward":           "1000",
