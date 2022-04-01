@@ -959,10 +959,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		return common.NewErrorf("adding_challenge_error", err.Error())
 	}
 
-	var (
-		tp    = time.Now()
-		alloc = result.alloc
-	)
+	var alloc = result.alloc
 	_, err = sc.addChallenge(
 		alloc,
 		result.storageChallenge,
@@ -975,11 +972,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		return common.NewErrorf("adding_challenge_error",
 			"Error in adding challenge: %v", err)
 	}
-	if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
-		if timer, ok := tm.(metrics.Timer); ok {
-			timer.Update(time.Since(tp))
-		}
-	}
+
 	return nil
 }
 

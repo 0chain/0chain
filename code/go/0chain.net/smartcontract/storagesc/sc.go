@@ -218,29 +218,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		if resp, err = sc.commitBlobberRead(t, input, balances); err != nil {
 			return
 		}
-		//challengesEnabled := config.SmartContractConfig.GetBool(
-		//	"smart_contracts.storagesc.challenge_enabled")
-		//if challengesEnabled {
-		//	err = sc.generateChallenge(t, balances.GetBlock(), input, balances)
-		//	if err != nil {
-		//		return "", err
-		//	}
-		//}
 
 	case "commit_connection":
 		resp, err = sc.commitBlobberConnection(t, input, balances)
 		if err != nil {
 			return
 		}
-
-		//challengesEnabled := config.SmartContractConfig.GetBool(
-		//	"smart_contracts.storagesc.challenge_enabled")
-		//if challengesEnabled {
-		//	err = sc.generateChallenge(t, balances.GetBlock(), input, balances)
-		//	if err != nil {
-		//		return "", err
-		//	}
-		//}
 
 	// allocations
 
