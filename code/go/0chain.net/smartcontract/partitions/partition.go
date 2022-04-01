@@ -18,7 +18,7 @@ type PartitionItem interface {
 
 type PartitionItemList interface {
 	util.Serializable
-	add(it PartitionItem)
+	add(it PartitionItem) error
 	remove(item PartitionItem) error
 	cutTail() PartitionItem
 	changed() bool
@@ -26,6 +26,7 @@ type PartitionItemList interface {
 	itemRange(start, end int) []PartitionItem
 	save(balances state.StateContextI) error
 	get(key datastore.Key, balances state.StateContextI) error
+	update(it PartitionItem) error
 }
 
 type ChangePartitionCallback = func(PartitionItem, int, int, state.StateContextI) error
@@ -38,6 +39,8 @@ type Partition interface {
 	SetCallback(ChangePartitionCallback)
 	Size(state.StateContextI) (int, error)
 	Save(state.StateContextI) error
+	UpdateItem(partIndex int, it PartitionItem, balances state.StateContextI) error
+	GetItem(partIndex int, itemName string, balances state.StateContextI) (PartitionItem, error)
 }
 
 type RandPartition interface {
