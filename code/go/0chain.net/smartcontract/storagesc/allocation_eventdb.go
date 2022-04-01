@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
-	"fmt"
-	"time"
 )
 
 func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
@@ -99,7 +100,6 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
-			NumReads:                  alloc.NumReads,
 			TotalChallenges:           alloc.TotalChallenges,
 			OpenChallenges:            alloc.OpenChallenges,
 			SuccessChallenges:         alloc.SuccessfulChallenges,
@@ -178,7 +178,6 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 	if sa.Stats != nil {
 		alloc.NumWrites = sa.Stats.NumWrites
-		alloc.NumReads = sa.Stats.NumReads
 		alloc.TotalChallenges = sa.Stats.TotalChallenges
 		alloc.OpenChallenges = sa.Stats.OpenChallenges
 		alloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
