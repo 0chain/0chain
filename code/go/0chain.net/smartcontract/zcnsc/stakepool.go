@@ -37,14 +37,16 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 
 // ----------- LockingPool pool --------------------------
 
+//type stakePool stakepool.StakePool
+
 type StakePool struct {
 	stakepool.StakePool
 }
 
 func newStakePool() *StakePool {
-	bsp := stakepool.NewStakePool()
+	pool := stakepool.NewStakePool()
 	return &StakePool{
-		StakePool: *bsp,
+		StakePool: *pool,
 	}
 }
 
@@ -53,33 +55,11 @@ func stakePoolKey(scKey, providerID string) datastore.Key {
 	return scKey + ":stakepool:" + providerID
 }
 
-// Encode to []byte
-func (sp *StakePool) Encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(sp); err != nil {
-		panic(err) // must never happen
-	}
-	return
-}
-
-// Decode from []byte
-func (sp *StakePool) Decode(input []byte) error {
-	return json.Unmarshal(input, sp)
-}
-
 // save the stake pool
 func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, providerID), sp)
 	return
 }
-
-// The stake() returns total stake size including delegate pools want to unstake.
-//func (sp *StakePool) stake() (stake state.Balance) {
-//	for _, dp := range sp.Pools {
-//		stake += dp.Balance
-//	}
-//	return
-//}
 
 // empty a delegate pool if possible, call update before the empty
 func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {

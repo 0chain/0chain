@@ -17,17 +17,19 @@ import (
 )
 
 const (
-	ADDRESS                    = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	NAME                       = "zcnsc"
-	AddAuthorizerFunc          = "AddAuthorizer"
-	DeleteAuthorizerFunc       = "DeleteAuthorizer"
-	UpdateGlobalConfigFunc     = "update-global-config"
-	UpdateAuthorizerConfigFunc = "update-authorizer-config"
-	MintFunc                   = "mint"
-	BurnFunc                   = "burn"
-	AddToDelegatePoolFunc      = "addToDelegatePool"
-	DeleteFromDelegatePoolFunc = "deleteFromDelegatePool"
-	DistributeRewardsFunc      = "distributeRewards"
+	ADDRESS                       = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	NAME                          = "zcnsc"
+	AddAuthorizerFunc             = "AddAuthorizer"
+	DeleteAuthorizerFunc          = "DeleteAuthorizer"
+	UpdateGlobalConfigFunc        = "update-global-config"
+	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
+	MintFunc                      = "mint"
+	BurnFunc                      = "burn"
+	AddToDelegatePoolFunc         = "addToDelegatePool"
+	DeleteFromDelegatePoolFunc    = "deleteFromDelegatePool"
+	AddAuthorizerStakePoolFunc    = "addAuthorizerStakePool"
+	UpdateAuthorizerStakePoolFunc = "updateAuthorizerStakePool"
+	CollectRewardsFunc            = "collectRewardsFunc"
 )
 
 // ZCNSmartContract ...
@@ -48,14 +50,22 @@ func NewZCNSmartContract() smartcontractinterface.SmartContractInterface {
 }
 
 // InitSC ...
+//
 func (zcn *ZCNSmartContract) InitSC() {
-	zcn.smartContractFunctions[MintFunc] = zcn.Mint
-	zcn.smartContractFunctions[BurnFunc] = zcn.Burn
-	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
-	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
+	// Config
 	zcn.smartContractFunctions[UpdateGlobalConfigFunc] = zcn.UpdateGlobalConfig
 	zcn.smartContractFunctions[UpdateAuthorizerConfigFunc] = zcn.UpdateAuthorizerConfig
-	zcn.smartContractFunctions[DistributeRewardsFunc] = zcn.DistributeRewards
+	// Bridge related
+	zcn.smartContractFunctions[MintFunc] = zcn.Mint
+	zcn.smartContractFunctions[BurnFunc] = zcn.Burn
+	// Authorizer
+	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
+	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
+	// StakePool
+	zcn.smartContractFunctions[AddAuthorizerStakePoolFunc] = zcn.AddAuthorizerStakePool
+	zcn.smartContractFunctions[UpdateAuthorizerStakePoolFunc] = zcn.UpdateAuthorizerStakePool
+	// Rewards
+	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
 	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool
 	zcn.smartContractFunctions[DeleteFromDelegatePoolFunc] = zcn.DeleteFromDelegatePool
 }
@@ -87,10 +97,6 @@ func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ s
 		metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddToDelegatePoolFunc), nil)
 	zcn.SmartContractExecutionStats[DeleteFromDelegatePoolFunc] =
 		metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, DeleteFromDelegatePoolFunc), nil)
-
-	// Rewards
-	zcn.SmartContractExecutionStats[DistributeRewardsFunc] =
-		metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, DistributeRewardsFunc), nil)
 }
 
 // GetName ...

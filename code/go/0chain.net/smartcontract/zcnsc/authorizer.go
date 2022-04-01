@@ -182,6 +182,30 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	return
 }
 
+func (zcn *ZCNSmartContract) AddAuthorizerStakePool(
+	tran *transaction.Transaction,
+	inputData []byte,
+	ctx cstate.StateContextI,
+) (response string, err error) {
+	return
+}
+
+func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
+	tran *transaction.Transaction,
+	inputData []byte,
+	ctx cstate.StateContextI,
+) (response string, err error) {
+	return
+}
+
+func (zcn *ZCNSmartContract) CollectRewards(
+	tran *transaction.Transaction,
+	inputData []byte,
+	ctx cstate.StateContextI,
+) (response string, err error) {
+	return
+}
+
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
 	var (
 		authorizerID = tran.ClientID
