@@ -1097,8 +1097,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	sb.Nodes[0].Used += 10 * GB
 	sb.Nodes[1].Used += 10 * GB
 
-	// blobbers of the allocation
-	assert.EqualValues(t, sb.Nodes, aresp.BlobberDetails)
 	// blobbers saved in all blobbers list
 	allBlobbers, err = ssc.getBlobbersList(balances)
 	require.NoError(t, err)
