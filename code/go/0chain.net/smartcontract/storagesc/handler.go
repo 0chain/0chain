@@ -192,12 +192,10 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	params url.Values, balances cstate.StateContextI,
 ) (interface{}, error) {
 	if balances.GetEventDB() == nil {
-		return nil, errors.New("piers cannot get event database")
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 	blobbers, err := balances.GetEventDB().GetBlobbers()
 	if err != nil || len(blobbers) == 0 {
-		return nil, errors.New("piers cannot get blobbers from event database")
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 
@@ -205,7 +203,6 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	for _, blobber := range blobbers {
 		sn, err := blobberTableToStorageNode(blobber)
 		if err != nil {
-			return nil, errors.New("piers cannot get blobber from event database")
 			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 		}
 		sns.Nodes.add(&sn)

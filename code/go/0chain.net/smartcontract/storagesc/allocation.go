@@ -770,12 +770,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		oterms = append(oterms, details.Terms) // keep original terms will be changed
 		oldOffer := details.Offer()
 		var b = blobbers[i]
-		logging.Logger.Info("piers extendAllocation loop",
-			zap.Any("i", i),
-			zap.String("details blobber id", details.BlobberID),
-			zap.String("b.Id", b.ID),
-			zap.Any("b", b),
-		)
 		if b.ID != details.BlobberID {
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s and %s don't match", b.ID, details.BlobberID)
@@ -827,11 +821,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		newOffer := details.Offer()
-		logging.Logger.Info("piers compare offers",
-			zap.String("blobber id", b.ID),
-			zap.Any("old offer", oldOffer),
-			zap.Any("new offer", newOffer),
-		)
 		if newOffer != oldOffer {
 			var sp *stakePool
 			if sp, err = sc.getStakePool(details.BlobberID, balances); err != nil {
@@ -843,12 +832,10 @@ func (sc *StorageSmartContract) extendAllocation(
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
 					err)
 			}
-			logging.Logger.Info("piers extendAllocation about to emit",
-				zap.Any("blobber", b),
-			)
 			if err := emitUpdateBlobber(b, balances); err != nil {
 				return fmt.Errorf("error emitting blobber %s, error:%v", b.ID, err)
 			}
+
 		}
 	}
 
@@ -994,8 +981,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
 	}
-	resp, err = sc.updateAllocationRequestInternal(txn, input, conf, false, balances)
-	return resp, err
+	return sc.updateAllocationRequestInternal(txn, input, conf, false, balances)
 }
 
 func (sc *StorageSmartContract) updateAllocationRequestInternal(
@@ -1005,16 +991,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Info("piers Recovered in updateAllocationRequestInternal",
-				zap.Any("recover", r),
-			)
-			err = errors.New("piers recover from panic")
-		}
-	}()
-
-	logging.Logger.Info("piers updateAllocationRequestInternal start")
 	var all *StorageNodes // all blobbers list
 	if all, err = sc.getBlobbersList(balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
@@ -1046,13 +1022,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get client's allocations list: "+err.Error())
 	}
-	logging.Logger.Info("piers updateAllocationRequestInternal",
-		zap.String("client", t.ClientID),
-		zap.String("ownerId", request.OwnerID),
-		zap.String("request Id", request.ID),
-		zap.Any("request", request),
-		zap.Any("clist", clist),
-	)
 
 	if !clist.has(request.ID) {
 		return "", common.NewErrorf("allocation_updating_failed",

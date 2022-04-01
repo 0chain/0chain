@@ -202,13 +202,13 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				uar := updateAllocationRequest{
-					ID:           getMockAllocationId(0),
-					OwnerID:      data.Clients[0],
-					Size:         10000000,
-					Expiration:   common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
-					SetImmutable: true,
-					//RemovedBlobberId: getMockBlobberId(0),
-					AddedBlobberId: getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
+					ID:               getMockAllocationId(0),
+					OwnerID:          data.Clients[0],
+					Size:             10000000,
+					Expiration:       common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+					SetImmutable:     true,
+					RemovedBlobberId: getMockBlobberId(0),
+					AddedBlobberId:   getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes

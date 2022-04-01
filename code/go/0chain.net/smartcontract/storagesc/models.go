@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/core/logging"
-
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -668,7 +666,6 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	sp *stakePool,
 	now common.Timestamp,
 ) error {
-	logging.Logger.Info("piers validateAllocationBlobber")
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 
@@ -721,7 +718,6 @@ func (sa *StorageAllocation) removeBlobber(
 	ssc *StorageSmartContract,
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, error) {
-	logging.Logger.Info("piers removeBlobber")
 	remove, found := sa.BlobberMap[removeId]
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
@@ -740,11 +736,12 @@ func (sa *StorageAllocation) removeBlobber(
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
 	}
-
+	var removedBlobber *StorageNode
 	found = false
 	for i, d := range blobbers {
 		if d.ID == removeId {
-			*blobbers[i] = *blobbers[len(sa.Blobbers)-1]
+			removedBlobber = blobbers[i]
+			blobbers[i] = blobbers[len(sa.Blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
 			break
@@ -759,12 +756,20 @@ func (sa *StorageAllocation) removeBlobber(
 		if d.BlobberID == removeId {
 			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.Blobbers)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
+			removedBlobber.Used -= d.Size
 			found = true
 			break
 		}
 	}
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
+	}
+
+	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
+		return nil, fmt.Errorf("saving blobber %v, error: ", removedBlobber.ID, err)
+	}
+	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
+		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
 	}
 
 	blobber, err := ssc.getBlobber(removeId, balances)
@@ -788,7 +793,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
-	logging.Logger.Info("piers changeBlobbers")
 	if len(removeId) > 0 {
 		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
 			return nil, err
