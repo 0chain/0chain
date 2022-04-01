@@ -95,17 +95,6 @@ func addMockAllocation(
 			MinLockDemand:  mockMinLockDemand,
 			AllocationRoot: encryption.Hash("allocation root"),
 		})
-		sa.Blobbers = append(sa.Blobbers, &StorageNode{
-			ID:      bId,
-			BaseURL: bId + ".com",
-			Terms:   getMockBlobberTerms(),
-
-			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 100000,
-			Used:              0,
-			LastHealthCheck:   now,
-			PublicKey:         "",
-			StakePoolSettings: getMockStakePoolSettings(bId),
-		})
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {

@@ -707,7 +707,6 @@ type StorageAllocation struct {
 	ParityShards      int                           `json:"parity_shards"`
 	Size              int64                         `json:"size"`
 	Expiration        common.Timestamp              `json:"expiration_date"`
-	Blobbers          []*StorageNode                `json:"blobbers"`
 	Owner             string                        `json:"owner_id"`
 	OwnerPublicKey    string                        `json:"owner_public_key"`
 	Stats             *StorageAllocationStats       `json:"stats"`

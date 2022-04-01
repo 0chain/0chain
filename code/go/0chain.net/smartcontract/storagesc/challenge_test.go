@@ -150,7 +150,6 @@ func TestAddChallenge(t *testing.T) {
 
 		return args{
 			alloc: &StorageAllocation{
-				Blobbers:   blobbers,
 				BlobberMap: blobberMap,
 				Stats:      &StorageAllocationStats{},
 			},

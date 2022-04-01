@@ -670,10 +670,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// Update saved_data on storage node
 	var storageNode *StorageNode
-	for _, b := range alloc.Blobbers {
-		if b.ID == commitConnection.WriteMarker.BlobberID {
-			storageNode = b
-			break
+	if _, ok := alloc.BlobberMap[commitConnection.WriteMarker.BlobberID]; ok {
+		storageNode, err = sc.getBlobber(commitConnection.WriteMarker.BlobberID, balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"can't get blobber")
 		}
 	}
 

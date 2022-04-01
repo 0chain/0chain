@@ -365,7 +365,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
 	})
 
-	sa.Blobbers = allocatedBlobbers
 	sa.ID = t.Hash
 	sa.StartTime = t.CreationDate
 	sa.Tx = t.Hash
