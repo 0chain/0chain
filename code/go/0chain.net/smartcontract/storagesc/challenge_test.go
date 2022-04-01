@@ -173,6 +173,7 @@ func TestAddChallenge(t *testing.T) {
 			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
+
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
 
