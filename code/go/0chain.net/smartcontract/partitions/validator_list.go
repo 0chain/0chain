@@ -109,12 +109,35 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 }
 
 func (il *validatorItemList) add(it PartitionItem) error {
+	for _, bi := range il.Items {
+		if bi.Name() == it.Name() {
+			return errors.New("blobber item already exists")
+		}
+	}
+
 	il.Items = append(il.Items, ValidationNode{
 		Id:  it.Name(),
 		Url: string(it.Data()),
 	})
 	il.Changed = true
 	return nil
+}
+
+func (il *validatorItemList) update(it PartitionItem) error {
+	val, ok := it.(*ValidationNode)
+	if !ok {
+		return errors.New("invalid item")
+	}
+
+	for i := 0; i < il.length(); i++ {
+		if il.Items[i].Name() == it.Name() {
+			newItem := *val
+			il.Items[i] = newItem
+			il.Changed = true
+			return nil
+		}
+	}
+	return errors.New("item not found")
 }
 
 func (il *validatorItemList) remove(item PartitionItem) error {
@@ -169,28 +192,6 @@ func (il *validatorItemList) find(searchItem PartitionItem) int {
 		}
 	}
 	return notFound
-}
-
-func (il *validatorItemList) update(it PartitionItem) error {
-
-	val, ok := it.(*ValidationNode)
-	if !ok {
-		return errors.New("invalid item")
-	}
-
-	for i := 0; i < il.length(); i++ {
-		if il.Items[i].Name() == it.Name() {
-			newItem := *val
-			err := newItem.Decode(it.Encode())
-			if err != nil {
-				return fmt.Errorf("decoding error: %v", err)
-			}
-			il.Items[i] = newItem
-			il.Changed = true
-			return nil
-		}
-	}
-	return errors.New("item not found")
 }
 
 //------------------------------------------------------------------------------

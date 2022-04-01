@@ -367,6 +367,14 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 
+	conf.BlockReward = &blockReward{
+		BlockReward:             1000,
+		BlockRewardChangePeriod: 1000,
+		BlockRewardChangeRatio:  0.1,
+		TriggerPeriod:           30,
+		BlobberWeight:           0.5,
+	}
+
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return
 }

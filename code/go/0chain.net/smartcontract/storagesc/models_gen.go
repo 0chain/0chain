@@ -1683,6 +1683,80 @@ func (z *ReadMarker) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *RewardPartitionLocation) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "Index"
+	o = append(o, 0x83, 0xa5, 0x49, 0x6e, 0x64, 0x65, 0x78)
+	o = msgp.AppendInt(o, z.Index)
+	// string "StartRound"
+	o = append(o, 0xaa, 0x53, 0x74, 0x61, 0x72, 0x74, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendInt64(o, z.StartRound)
+	// string "Timestamp"
+	o = append(o, 0xa9, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70)
+	o, err = z.Timestamp.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Timestamp")
+		return
+	}
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *RewardPartitionLocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "Index":
+			z.Index, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Index")
+				return
+			}
+		case "StartRound":
+			z.StartRound, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "StartRound")
+				return
+			}
+		case "Timestamp":
+			bts, err = z.Timestamp.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Timestamp")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *RewardPartitionLocation) Msgsize() (s int) {
+	s = 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.Timestamp.Msgsize()
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 27
@@ -2463,9 +2537,9 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 10
+	// map header, size 16
 	// string "ID"
-	o = append(o, 0x8a, 0xa2, 0x49, 0x44)
+	o = append(o, 0xde, 0x0, 0x10, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
@@ -2492,6 +2566,12 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Used"
 	o = append(o, 0xa4, 0x55, 0x73, 0x65, 0x64)
 	o = msgp.AppendInt64(o, z.Used)
+	// string "BytesWritten"
+	o = append(o, 0xac, 0x42, 0x79, 0x74, 0x65, 0x73, 0x57, 0x72, 0x69, 0x74, 0x74, 0x65, 0x6e)
+	o = msgp.AppendInt64(o, z.BytesWritten)
+	// string "DataRead"
+	o = append(o, 0xa8, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64)
+	o = msgp.AppendFloat64(o, z.DataRead)
 	// string "LastHealthCheck"
 	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
 	o, err = z.LastHealthCheck.MarshalMsg(o)
@@ -2499,14 +2579,39 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "LastHealthCheck")
 		return
 	}
+	// string "PublicKey"
+	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
+	o = msgp.AppendString(o, z.PublicKey)
 	// string "SavedData"
 	o = append(o, 0xa9, 0x53, 0x61, 0x76, 0x65, 0x64, 0x44, 0x61, 0x74, 0x61)
 	o = msgp.AppendInt64(o, z.SavedData)
+	// string "DataReadLastRewardRound"
+	o = append(o, 0xb7, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendFloat64(o, z.DataReadLastRewardRound)
+	// string "LastRewardDataReadRound"
+	o = append(o, 0xb7, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendInt64(o, z.LastRewardDataReadRound)
 	// string "StakePoolSettings"
 	o = append(o, 0xb1, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
 	o, err = z.StakePoolSettings.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "StakePoolSettings")
+		return
+	}
+	// string "RewardPartition"
+	o = append(o, 0xaf, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e)
+	// map header, size 3
+	// string "Index"
+	o = append(o, 0x83, 0xa5, 0x49, 0x6e, 0x64, 0x65, 0x78)
+	o = msgp.AppendInt(o, z.RewardPartition.Index)
+	// string "StartRound"
+	o = append(o, 0xaa, 0x53, 0x74, 0x61, 0x72, 0x74, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendInt64(o, z.RewardPartition.StartRound)
+	// string "Timestamp"
+	o = append(o, 0xa9, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70)
+	o, err = z.RewardPartition.Timestamp.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "RewardPartition", "Timestamp")
 		return
 	}
 	// string "Information"
@@ -2602,10 +2707,28 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Used")
 				return
 			}
+		case "BytesWritten":
+			z.BytesWritten, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BytesWritten")
+				return
+			}
+		case "DataRead":
+			z.DataRead, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DataRead")
+				return
+			}
 		case "LastHealthCheck":
 			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "LastHealthCheck")
+				return
+			}
+		case "PublicKey":
+			z.PublicKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "PublicKey")
 				return
 			}
 		case "SavedData":
@@ -2614,11 +2737,64 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "SavedData")
 				return
 			}
+		case "DataReadLastRewardRound":
+			z.DataReadLastRewardRound, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DataReadLastRewardRound")
+				return
+			}
+		case "LastRewardDataReadRound":
+			z.LastRewardDataReadRound, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LastRewardDataReadRound")
+				return
+			}
 		case "StakePoolSettings":
 			bts, err = z.StakePoolSettings.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "StakePoolSettings")
 				return
+			}
+		case "RewardPartition":
+			var zb0003 uint32
+			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "RewardPartition")
+				return
+			}
+			for zb0003 > 0 {
+				zb0003--
+				field, bts, err = msgp.ReadMapKeyZC(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "RewardPartition")
+					return
+				}
+				switch msgp.UnsafeString(field) {
+				case "Index":
+					z.RewardPartition.Index, bts, err = msgp.ReadIntBytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "RewardPartition", "Index")
+						return
+					}
+				case "StartRound":
+					z.RewardPartition.StartRound, bts, err = msgp.ReadInt64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "RewardPartition", "StartRound")
+						return
+					}
+				case "Timestamp":
+					bts, err = z.RewardPartition.Timestamp.UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "RewardPartition", "Timestamp")
+						return
+					}
+				default:
+					bts, err = msgp.Skip(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "RewardPartition")
+						return
+					}
+				}
 			}
 		case "Information":
 			bts, err = z.Information.UnmarshalMsg(bts)
@@ -2640,7 +2816,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 5 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + z.Information.Msgsize()
+	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 5 + msgp.Int64Size + 13 + msgp.Int64Size + 9 + msgp.Float64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
 	return
 }
 

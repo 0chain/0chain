@@ -49,9 +49,9 @@ func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 
 func (il *itemList) add(it PartitionItem) error {
 
-	for _, bc := range il.Items {
-		if bc.Name() == it.Name() {
-			return errors.New("item_list item already exists")
+	for _, bi := range il.Items {
+		if bi.Name() == it.Name() {
+			return errors.New("item already exists")
 		}
 	}
 

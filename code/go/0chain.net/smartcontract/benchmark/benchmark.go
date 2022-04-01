@@ -94,6 +94,7 @@ const (
 	SimulationNumWriteRedeemAllocation
 	SimulationNumChallengesBlobber
 	SimulationNumAuthorizers
+	SimulationNumRewardPartitionBlobber
 	NumberSimulationParameters
 )
 
@@ -109,6 +110,8 @@ const (
 	VestingSc      = "vestingsc."
 	ZcnSc          = "zcnsc."
 	DbsEvents      = "dbs.Events."
+
+	BlockReward = "block_reward."
 
 	Fas = "free_allocation_settings."
 
@@ -174,6 +177,15 @@ const (
 	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 	StorageValidatorsPerChallenge        = SmartContract + StorageSc + "validators_per_challenge"
 
+	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
+	StorageBlockRewardTriggerPeriod   = SmartContract + StorageSc + BlockReward + "trigger_period"
+	StorageBlockRewardChangePeriod    = SmartContract + StorageSc + BlockReward + "block_reward_change_period"
+	StorageBlockRewardChangeRatio     = SmartContract + StorageSc + BlockReward + "block_reward_change_ratio"
+	StorageBlockRewardBlobberRatio    = SmartContract + StorageSc + BlockReward + "blobber_ratio"
+	StorageBlockRewardMinerRatio      = SmartContract + StorageSc + BlockReward + "miner_ratio"
+	StorageBlockRewardSharderRatio    = SmartContract + StorageSc + BlockReward + "sharder_ratio"
+	StorageBlockRewardQualifyingStake = SmartContract + StorageSc + BlockReward + "qualifying_stake"
+
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
 	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
@@ -234,6 +246,7 @@ var parameterName = []string{
 	"num_write_redeem_allocation",
 	"num_challenges_blobber",
 	"num_authorizers",
+	"num_reward_partition_blobber",
 }
 
 func (w SimulatorParameter) String() string {
@@ -262,6 +275,7 @@ var (
 	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
 	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
 	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
+	NumRewardPartitionBlobber    = Simulation + SimulationNumRewardPartitionBlobber.String()
 )
 
 type BenchTestI interface {

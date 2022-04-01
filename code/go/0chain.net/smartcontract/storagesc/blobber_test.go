@@ -612,7 +612,11 @@ func Test_flow_reward(t *testing.T) {
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			// todo fix validator delegates so that this does not error
 			require.Error(t, err)
-			require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
+			if i == 0 {
+				require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
+			} else {
+				require.True(t, strings.Contains(err.Error(), "can't add to ongoing partition list"))
+			}
 			require.Zero(t, resp)
 		}
 

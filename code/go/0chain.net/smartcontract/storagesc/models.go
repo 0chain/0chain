@@ -29,6 +29,7 @@ var (
 	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
 	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
 	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
+	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("active_passed_blobbers")
 )
 
 func getBlobberChallengeAllocationKey(blobberID string) string {
@@ -401,6 +402,12 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
+type RewardPartitionLocation struct {
+	Index      int              `json:"index"`
+	StartRound int64            `json:"start_round"`
+	Timestamp  common.Timestamp `json:"timestamp"`
+}
+
 // Info represents general information about blobber node
 type Info struct {
 	Name        string `json:"name"`
@@ -411,20 +418,25 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID              string                 `json:"id"`
-	BaseURL         string                 `json:"url"`
-	Geolocation     StorageNodeGeolocation `json:"geolocation"`
-	Terms           Terms                  `json:"terms"`    // terms
-	Capacity        int64                  `json:"capacity"` // total blobber capacity
-	Used            int64                  `json:"used"`     // allocated capacity
-	LastHealthCheck common.Timestamp       `json:"last_health_check"`
-	PublicKey       string                 `json:"-" msg:"-"`
-	SavedData       int64                  `json:"saved_data"`
+	ID                      string                 `json:"id"`
+	BaseURL                 string                 `json:"url"`
+	Geolocation             StorageNodeGeolocation `json:"geolocation"`
+	Terms                   Terms                  `json:"terms"`         // terms
+	Capacity                int64                  `json:"capacity"`      // total blobber capacity
+	Used                    int64                  `json:"used"`          // allocated capacity
+	BytesWritten            int64                  `json:"bytes_written"` // in bytes
+	DataRead                float64                `json:"data_read"`     // in GB
+	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
+	PublicKey               string                 `json:"-"`
+	SavedData               int64                  `json:"saved_data"`
+	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 	// ChallengeLocation to be replaced for BlobberChallengePartitionLocation once StorageNode is normalised
 	//ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
-	Information Info `json:"info"`
+	RewardPartition RewardPartitionLocation `json:"reward_partition"`
+	Information     Info                    `json:"info"`
 }
 
 // validate the blobber configurations

@@ -49,6 +49,7 @@ func (sc *mockStateContext) Validate() error                             { retur
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
+
 func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
@@ -77,7 +78,7 @@ func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
 }
 
 func (sc *mockStateContext) GetBlock() *block.Block {
-	return nil
+	return sc.ctx.GetBlock()
 }
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }

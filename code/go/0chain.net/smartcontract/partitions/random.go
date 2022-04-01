@@ -26,6 +26,8 @@ const (
 	ItemValidator
 	ItemBlobberChallenge
 	ItemBlobberChallengeAllocation
+	ItemBlobber
+	ItemBlobberReward
 )
 
 //------------------------------------------------------------------------------
@@ -80,8 +82,8 @@ func (rs *randomSelector) Add(
 	if len(rs.Partitions) == 0 || part.length() >= rs.PartitionSize {
 		part = rs.addPartition()
 	}
-	err = part.add(item)
-	if err != nil {
+
+	if err := part.add(item); err != nil {
 		return 0, err
 	}
 	return len(rs.Partitions) - 1, nil
@@ -120,8 +122,8 @@ func (rs *randomSelector) Remove(
 	if replacment == nil {
 		return fmt.Errorf("empty last partitions, currpt data")
 	}
-	err = part.add(replacment)
-	if err != nil {
+
+	if err := part.add(replacment); err != nil {
 		return err
 	}
 	if rs.Callback != nil {
@@ -161,9 +163,9 @@ func (rs *randomSelector) AddRand(
 	if moving == nil {
 		return -1, fmt.Errorf("empty partitions, corrupt data")
 	}
-	err = partition.add(item)
-	if err != nil {
-		return -1, err
+
+	if err := partition.add(item); err != nil {
+		return 0, err
 	}
 
 	movedTo, err := rs.Add(moving, balances)
@@ -223,6 +225,14 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 		}
 	} else if rs.ItemType == ItemBlobberChallengeAllocation {
 		newPartition = &blobberChallengeAllocationItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobber {
+		newPartition = &blobberItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberReward {
+		newPartition = &blobberRewardItemList{
 			Key: rs.partitionKey(rs.NumPartitions),
 		}
 	} else {
@@ -304,9 +314,14 @@ func (rs *randomSelector) getPartition(
 		part = &blobberChallengeItemList{}
 	} else if rs.ItemType == ItemBlobberChallengeAllocation {
 		part = &blobberChallengeAllocationItemList{}
+	} else if rs.ItemType == ItemBlobber {
+		part = &blobberItemList{}
+	} else if rs.ItemType == ItemBlobberReward {
+		part = &blobberRewardItemList{}
 	} else {
 		part = &validatorItemList{}
 	}
+
 	err := part.get(rs.partitionKey(i), balances)
 	if err != nil {
 		return nil, err
@@ -365,6 +380,8 @@ func (rs *randomSelector) Msgsize() int {
 	return d.Msgsize()
 }
 
+type randomSelectorDecode randomSelector
+
 func (rs *randomSelector) UpdateItem(
 	partIndex int,
 	it PartitionItem,
@@ -402,5 +419,3 @@ func (rs *randomSelector) GetItem(
 
 	return nil, errors.New("item not present")
 }
-
-type randomSelectorDecode randomSelector
