@@ -71,6 +71,14 @@ func (vn *ValidationNode) Name() string {
 	return vn.Id
 }
 
+// Copy implements PartitionItem interface.
+func (vn *ValidationNode) Copy() PartitionItem {
+	return &ValidationNode{
+		Id:  vn.Id,
+		Url: vn.Url,
+	}
+}
+
 //------------------------------------------------------------------------------
 
 type validatorItemList struct {
@@ -108,12 +116,35 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 	return nil
 }
 
+// getByIndex implements PartitionItemList interface.
+func (il *validatorItemList) getByIndex(idx int) (PartitionItem, error) {
+	if !(idx >= 0 && idx < il.length()) {
+		return nil, IndexOutOfBounds
+	}
+
+	return &il.Items[idx], nil
+}
+
 func (il *validatorItemList) add(it PartitionItem) {
 	il.Items = append(il.Items, ValidationNode{
 		Id:  it.Name(),
 		Url: string(it.Data()),
 	})
 	il.Changed = true
+}
+
+// set implements PartitionItemList interface.
+func (il *validatorItemList) set(idx int, item PartitionItem) error {
+	if !(idx >= 0 && idx < il.length()) {
+		return IndexOutOfBounds
+	}
+
+	il.Items[idx] = ValidationNode{
+		Id:  item.Name(),
+		Url: item.Data(),
+	}
+
+	return nil
 }
 
 func (il *validatorItemList) remove(item PartitionItem) error {

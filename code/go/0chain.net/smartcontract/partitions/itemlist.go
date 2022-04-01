@@ -46,6 +46,28 @@ func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 	return nil
 }
 
+// getByIndex implements PartitionItemList interface.
+func (il *itemList) getByIndex(idx int) (PartitionItem, error) {
+	if !(idx >= 0 && idx < il.length()) {
+		return nil, IndexOutOfBounds
+	}
+
+	return &il.Items[idx], nil
+}
+
+// set implements PartitionItemList interface.
+func (il *itemList) set(idx int, item PartitionItem) error {
+	if !(idx >= 0 && idx < il.length()) {
+		return IndexOutOfBounds
+	}
+
+	il.Items[idx] = StringItem{
+		Item: item.Name(),
+	}
+
+	return nil
+}
+
 func (il *itemList) add(it PartitionItem) {
 	il.Items = append(il.Items, StringItem{it.Name()})
 	il.Changed = true
@@ -127,6 +149,13 @@ func (si *StringItem) Decode(b []byte) error {
 
 func (si *StringItem) Data() string {
 	return ""
+}
+
+// Copy implements PartitionItem interface.
+func (si *StringItem) Copy() PartitionItem {
+	return &StringItem{
+		Item: si.Item,
+	}
 }
 
 func ItemFromString(name string) PartitionItem {

@@ -7,12 +7,10 @@ import (
 	"math/rand"
 	"strconv"
 
-	"0chain.net/core/util"
-
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-
-	"0chain.net/chaincore/chain/state"
+	"0chain.net/core/util"
 )
 
 const notFound = -1
@@ -198,6 +196,67 @@ func (rs *randomSelector) GetRandomSlice(
 	}
 
 	return rtv, nil
+}
+
+// Shuffle implements Partition interface.
+func (rs *randomSelector) Shuffle(firstItemIdx, firstPartitionSection int, r *rand.Rand, balances state.StateContextI) error {
+	if !(firstPartitionSection >= 0 && firstPartitionSection < len(rs.Partitions)) {
+		return IndexOutOfBounds
+	}
+
+	var (
+		firstPartition = rs.Partitions[firstPartitionSection]
+	)
+	if !(firstItemIdx >= 0 && firstItemIdx < firstPartition.length()) {
+		return IndexOutOfBounds
+	}
+
+	var (
+		secondPartitionIdx = r.Intn(len(rs.Partitions))
+		secondPartition    = rs.Partitions[secondPartitionIdx]
+		secondItemIdx      = r.Intn(secondPartition.length())
+	)
+	if err := rs.swap(firstPartitionSection, firstItemIdx, secondPartitionIdx, secondItemIdx); err != nil {
+		return fmt.Errorf("can't swap items: %w", err)
+	}
+
+	if err := rs.Save(balances); err != nil {
+		return fmt.Errorf("can't save partition: %w", err)
+	}
+
+	return nil
+}
+
+func (rs *randomSelector) swap(partitionA, itemA, partitionB, itemB int) error {
+	// validating indexes
+	switch {
+	case !(partitionA >= 0 && partitionA < len(rs.Partitions)):
+		return fmt.Errorf("partition A: %w", IndexOutOfBounds)
+
+	case !(partitionB >= 0 && partitionB < len(rs.Partitions)):
+		return fmt.Errorf("partition B: %w", IndexOutOfBounds)
+	}
+
+	a, err := rs.Partitions[partitionA].getByIndex(itemA)
+	if err != nil {
+		return fmt.Errorf("can't get item A from partition: %w", err)
+	}
+	a = a.Copy()
+
+	b, err := rs.Partitions[partitionB].getByIndex(itemB)
+	if err != nil {
+		return fmt.Errorf("can't get item B from partition: %w", err)
+	}
+	b = b.Copy()
+
+	if err = rs.Partitions[partitionA].set(itemA, b); err != nil {
+		return fmt.Errorf("can't set item A from partition: %w", err)
+	}
+	if err = rs.Partitions[partitionB].set(itemB, a); err != nil {
+		return fmt.Errorf("can't set item B from partition: %w", err)
+	}
+
+	return nil
 }
 
 func (rs *randomSelector) addPartition() PartitionItemList {

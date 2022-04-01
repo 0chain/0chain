@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/chaincore/mocks"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/mocks"
 	"0chain.net/core/util"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFuzzyRandom(t *testing.T) {
@@ -146,4 +146,141 @@ func TestFuzzyRandom(t *testing.T) {
 	}
 	require.EqualValues(t, count, len(items))
 
+}
+
+func Test_randomSelector_swap(t *testing.T) {
+	partition1, partition2 := mockValidatorsList(2), mockValidatorsList(2)
+
+	itemA, itemB := 0, 1
+
+	wantPartition1, wantPartition2 := copyValidatorsList(partition1), copyValidatorsList(partition2)
+	wantPartition1.Items[itemA], wantPartition2.Items[itemB] = wantPartition2.Items[itemB], wantPartition1.Items[itemA]
+
+	type (
+		fields struct {
+			Name          string
+			PartitionSize int
+			NumPartitions int
+			Partitions    []PartitionItemList
+			Callback      ChangePartitionCallback
+			ItemType      ItemType
+		}
+
+		args struct {
+			partitionA int
+			itemA      int
+			partitionB int
+			itemB      int
+		}
+	)
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *randomSelector
+		wantErr error
+	}{
+		{
+			name: "OK",
+			fields: fields{
+				Partitions: []PartitionItemList{
+					partition1,
+					partition2,
+				},
+			},
+			args: args{
+				partitionA: 0,
+				itemA:      itemA,
+				partitionB: 1,
+				itemB:      itemB,
+			},
+			want: &randomSelector{
+				Partitions: []PartitionItemList{
+					wantPartition1,
+					wantPartition2,
+				},
+			},
+		},
+		{
+			name: "partitionA_NegativeIndex_ERR",
+			fields: fields{
+				Partitions: []PartitionItemList{
+					partition1,
+					partition2,
+				},
+			},
+			args: args{
+				partitionA: -1,
+				itemA:      itemA,
+				partitionB: 1,
+				itemB:      itemB,
+			},
+			wantErr: IndexOutOfBounds,
+		},
+		{
+			name: "itemA_NegativeIndex_ERR",
+			fields: fields{
+				Partitions: []PartitionItemList{
+					partition1,
+					partition2,
+				},
+			},
+			args: args{
+				partitionA: 0,
+				itemA:      -1,
+				partitionB: 1,
+				itemB:      itemB,
+			},
+			wantErr: IndexOutOfBounds,
+		},
+		{
+			name: "partitionB_NegativeIndex_ERR",
+			fields: fields{
+				Partitions: []PartitionItemList{
+					partition1,
+					partition2,
+				},
+			},
+			args: args{
+				partitionA: 0,
+				itemA:      itemA,
+				partitionB: -1,
+				itemB:      itemB,
+			},
+			wantErr: IndexOutOfBounds,
+		},
+		{
+			name: "itemB_NegativeIndex_ERR",
+			fields: fields{
+				Partitions: []PartitionItemList{
+					partition1,
+					partition2,
+				},
+			},
+			args: args{
+				partitionA: 0,
+				itemA:      itemA,
+				partitionB: 1,
+				itemB:      -1,
+			},
+			wantErr: IndexOutOfBounds,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := &randomSelector{
+				Name:          tt.fields.Name,
+				PartitionSize: tt.fields.PartitionSize,
+				NumPartitions: tt.fields.NumPartitions,
+				Partitions:    tt.fields.Partitions,
+				Callback:      tt.fields.Callback,
+				ItemType:      tt.fields.ItemType,
+			}
+			err := rs.swap(tt.args.partitionA, tt.args.itemA, tt.args.partitionB, tt.args.itemB)
+			require.ErrorIs(t, err, tt.wantErr)
+			if tt.wantErr == nil {
+				require.Equal(t, tt.want, rs)
+			}
+		})
+	}
 }
