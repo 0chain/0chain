@@ -748,7 +748,6 @@ func (sc *StorageSmartContract) extendAllocation(
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (err error) {
-
 	var (
 		diff   = uar.getBlobbersSizeDiff(alloc) // size difference
 		size   = uar.getNewBlobbersSize(alloc)  // blobber size
@@ -771,6 +770,17 @@ func (sc *StorageSmartContract) extendAllocation(
 		oterms = append(oterms, details.Terms) // keep original terms will be changed
 		oldOffer := details.Offer()
 		var b = blobbers[i]
+		logging.Logger.Info("piers extendAllocation loop",
+			zap.Any("i", i),
+			zap.String("details blobber id", details.BlobberID),
+			zap.String("b.Id", b.ID),
+			zap.Any("b", b),
+		)
+		if b.ID != details.BlobberID {
+			return common.NewErrorf("allocation_extending_failed",
+				"blobber %s and %s don't match", b.ID, details.BlobberID)
+		}
+
 		if b.Capacity == 0 {
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s no longer provides its service", b.ID)
@@ -817,6 +827,11 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		newOffer := details.Offer()
+		logging.Logger.Info("piers compare offers",
+			zap.String("blobber id", b.ID),
+			zap.Any("old offer", oldOffer),
+			zap.Any("new offer", newOffer),
+		)
 		if newOffer != oldOffer {
 			var sp *stakePool
 			if sp, err = sc.getStakePool(details.BlobberID, balances); err != nil {
@@ -828,6 +843,9 @@ func (sc *StorageSmartContract) extendAllocation(
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
 					err)
 			}
+			logging.Logger.Info("piers extendAllocation about to emit",
+				zap.Any("blobber", b),
+			)
 			if err := emitUpdateBlobber(b, balances); err != nil {
 				return fmt.Errorf("error emitting blobber %s, error:%v", b.ID, err)
 			}
@@ -976,7 +994,8 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
 	}
-	return sc.updateAllocationRequestInternal(txn, input, conf, false, balances)
+	resp, err = sc.updateAllocationRequestInternal(txn, input, conf, false, balances)
+	return resp, err
 }
 
 func (sc *StorageSmartContract) updateAllocationRequestInternal(
@@ -986,7 +1005,16 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logging.Logger.Info("piers Recovered in updateAllocationRequestInternal",
+				zap.Any("recover", r),
+			)
+			err = errors.New("piers recover from panic")
+		}
+	}()
 
+	logging.Logger.Info("piers updateAllocationRequestInternal start")
 	var all *StorageNodes // all blobbers list
 	if all, err = sc.getBlobbersList(balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
@@ -1056,19 +1084,19 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if len(request.AddedBlobberId) > 0 {
-		if err := alloc.changeBlobbers(
+		blobbers, err = alloc.changeBlobbers(
 			blobbers, request.AddedBlobberId, request.RemovedBlobberId, sc, t.CreationDate, balances,
-		); err != nil {
+		)
+		if err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
 	}
 
+	if len(blobbers) != len(alloc.BlobberDetails) {
+		return "", common.NewError("allocation_updating_failed",
+			"error allocation blobber size mismatch")
+	}
 	if request.UpdateTerms {
-		if len(blobbers) != len(alloc.BlobberDetails) {
-			return "", common.NewError("allocation_updating_failed",
-				"error allocation blobber size mismatch")
-		}
-
 		for i, bd := range alloc.BlobberDetails {
 			if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
 				bd.Terms.WritePrice = blobbers[i].Terms.WritePrice

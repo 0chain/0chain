@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -666,6 +668,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	sp *stakePool,
 	now common.Timestamp,
 ) error {
+	logging.Logger.Info("piers validateAllocationBlobber")
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 
@@ -717,10 +720,11 @@ func (sa *StorageAllocation) removeBlobber(
 	removeId string,
 	ssc *StorageSmartContract,
 	balances chainstate.StateContextI,
-) error {
+) ([]*StorageNode, error) {
+	logging.Logger.Info("piers removeBlobber")
 	remove, found := sa.BlobberMap[removeId]
 	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
 	}
 	delete(sa.BlobberMap, removeId)
 
@@ -734,20 +738,20 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
 	}
 
 	found = false
 	for i, d := range blobbers {
 		if d.ID == removeId {
-			blobbers[i] = blobbers[len(sa.Blobbers)-1]
+			*blobbers[i] = *blobbers[len(sa.Blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
 			break
 		}
 	}
 	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
 	}
 
 	found = false
@@ -760,20 +764,20 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
 	}
 
 	blobber, err := ssc.getBlobber(removeId, balances)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	blobber.Used -= sa.bSize()
 	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return blobbers, nil
 }
 
 func (sa *StorageAllocation) changeBlobbers(
@@ -782,10 +786,12 @@ func (sa *StorageAllocation) changeBlobbers(
 	ssc *StorageSmartContract,
 	now common.Timestamp,
 	balances chainstate.StateContextI,
-) error {
+) ([]*StorageNode, error) {
+	var err error
+	logging.Logger.Info("piers changeBlobbers")
 	if len(removeId) > 0 {
-		if err := sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
-			return err
+		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+			return nil, err
 		}
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
@@ -794,13 +800,14 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	_, found := sa.BlobberMap[addId]
 	if found {
-		return fmt.Errorf("allocatino already has blobber %s", addId)
+		return nil, fmt.Errorf("allocatino already has blobber %s", addId)
 	}
 
 	addedBlobber, err := ssc.getBlobber(addId, balances)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	addedBlobber.Used += sa.bSize()
 	afterSize := sa.bSize()
 
 	sa.Blobbers = append(sa.Blobbers, addedBlobber)
@@ -811,13 +818,13 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
-		return fmt.Errorf("can't get blobber's stake pool: %v", err)
+		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	if sa.validateAllocationBlobber(addedBlobber, sp, now) != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return blobbers, nil
 }
 
 type StorageAllocationDecode StorageAllocation
