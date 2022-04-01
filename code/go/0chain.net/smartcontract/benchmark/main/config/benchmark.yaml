@@ -19,7 +19,7 @@ simulation:
   num_vesting_destinations_client: 1
   num_write_redeem_allocation: 1
   num_challenges_blobber: 1
-  num_authorisers: 05
+  num_authorisers: 12
 
 options:
   verbose: true

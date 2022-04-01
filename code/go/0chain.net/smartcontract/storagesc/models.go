@@ -720,7 +720,7 @@ func (sa *StorageAllocation) removeBlobber(
 ) ([]*StorageNode, error) {
 	remove, found := sa.BlobberMap[removeId]
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
 	}
 	delete(sa.BlobberMap, removeId)
 
@@ -734,7 +734,7 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
 	}
 	var removedBlobber *StorageNode
 	found = false
@@ -748,7 +748,7 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
 	}
 
 	found = false
@@ -762,7 +762,7 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
