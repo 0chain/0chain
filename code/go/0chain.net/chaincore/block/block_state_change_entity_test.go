@@ -100,9 +100,9 @@ func TestNewBlockStateChange(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBlockStateChange(tt.args.b); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewBlockStateChange() = %v, want %v", got, tt.want)
-			}
+			got, err := NewBlockStateChange(tt.args.b)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -236,7 +236,8 @@ func TestStateChange_MarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	b.HashBlock()
-	sc := NewBlockStateChange(b)
+	sc, err := NewBlockStateChange(b)
+	require.NoError(t, err)
 	var data = make(map[string]interface{})
 	data["block"] = sc.Block
 	want, err := sc.MarshalPartialStateJSON(data)
@@ -290,7 +291,8 @@ func TestStateChange_UnmarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	b.HashBlock()
-	sc := NewBlockStateChange(b)
+	sc, err := NewBlockStateChange(b)
+	require.NoError(t, err)
 	blob, err := sc.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
@@ -381,7 +383,8 @@ func TestStateChange_UnmarshalMsgpack(t *testing.T) {
 		t.Fatal(err)
 	}
 	b.HashBlock()
-	sc := NewBlockStateChange(b)
+	sc, err := NewBlockStateChange(b)
+	require.NoError(t, err)
 	blob, err := msgpack.Marshal(sc)
 	if err != nil {
 		t.Fatal(err)

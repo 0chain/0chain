@@ -125,10 +125,14 @@ func changeMPTNode(r *http.Request) (*block.StateChange, error) {
 	sChain := GetServerChain()
 	bl, err := sChain.getNotarizedBlock(context.Background(), r.FormValue("round"), r.FormValue("block"))
 	if err != nil {
-		log.Panicf("Conductor: error while fetching notarized block: %v")
+		log.Panicf("Conductor: error while fetching notarized block: %v", err)
 	}
 
-	bsc := block.NewBlockStateChange(bl)
+	bsc, err := block.NewBlockStateChange(bl)
+	if err != nil {
+		log.Panicf("Conductor: error while createing block state change: %v", err)
+	}
+
 	st := state.State{
 		TxnHashBytes: encryption.RawHash("txn hash"),
 		Round:        bl.Round,
@@ -169,7 +173,11 @@ func addMPTNode(r *http.Request) (*block.StateChange, error) {
 		log.Panicf("Conductor: error while fetching notarized block: %v")
 	}
 
-	bsc := block.NewBlockStateChange(bl)
+	bsc, err := block.NewBlockStateChange(bl)
+	if err != nil {
+		log.Panicf("Conductor: error while createing block state change: %v", err)
+	}
+
 	lastNode := bsc.Nodes[len(bsc.Nodes)-1]
 	st := state.State{
 		TxnHashBytes: encryption.RawHash("txn hash"),
@@ -193,7 +201,10 @@ func changePartialState(ctx context.Context, r *http.Request) (*block.StateChang
 		log.Panicf("Conductor: error while getting previous notarised block: %v", err)
 	}
 
-	prevBSC := block.NewBlockStateChange(prevBlock)
+	prevBSC, err := block.NewBlockStateChange(prevBlock)
+	if err != nil {
+		log.Panicf("Conductor: error while creating block state changes: %v", err)
+	}
 	prevBSC.Block = bl.Hash
 	return prevBSC, nil
 }
