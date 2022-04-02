@@ -17,6 +17,8 @@ import (
 
 const notFound = -1
 
+//msgp:ignore randomSelector
+//go:generate msgp -io=false -tests=false -unexported=true -v
 type ItemType int
 
 const (
@@ -27,11 +29,11 @@ const (
 //------------------------------------------------------------------------------
 
 type randomSelector struct {
-	Name          datastore.Key           `json:"name"`
+	Name          string                  `json:"name"`
 	PartitionSize int                     `json:"partition_size"`
 	NumPartitions int                     `json:"num_partitions"`
-	Partitions    []PartitionItemList     `json:"-"`
-	Callback      ChangePartitionCallback `json:"-"`
+	Partitions    []PartitionItemList     `json:"-" msg:"-"`
+	Callback      ChangePartitionCallback `json:"-" msg:"-"`
 	ItemType      ItemType                `json:"item_type"` // todo think of something better
 }
 
@@ -294,7 +296,10 @@ func (rs *randomSelector) getPartition(
 	return part, nil
 }
 
-func GetRandomSelector(key datastore.Key, balances state.StateContextI) (RandPartition, error) {
+func GetRandomSelector(
+	key datastore.Key,
+	balances state.StateContextI,
+) (RandPartition, error) {
 	var rs *randomSelector
 	raw, err := balances.GetTrieNode(key, rs)
 	if err != nil {
@@ -318,6 +323,31 @@ func (rs *randomSelector) Encode() []byte {
 
 func (rs *randomSelector) Decode(b []byte) error {
 	err := json.Unmarshal(b, rs)
-	rs.Partitions = make([]PartitionItemList, rs.NumPartitions, rs.NumPartitions)
+	rs.Partitions = make([]PartitionItemList, rs.NumPartitions)
 	return err
 }
+
+func (rs *randomSelector) MarshalMsg(o []byte) ([]byte, error) {
+	d := randomSelectorDecode(*rs)
+	return d.MarshalMsg(o)
+}
+
+func (rs *randomSelector) UnmarshalMsg(b []byte) ([]byte, error) {
+	d := &randomSelectorDecode{}
+	o, err := d.UnmarshalMsg(b)
+	if err != nil {
+		return nil, err
+	}
+
+	*rs = randomSelector(*d)
+
+	rs.Partitions = make([]PartitionItemList, d.NumPartitions)
+	return o, nil
+}
+
+func (rs *randomSelector) Msgsize() int {
+	d := randomSelectorDecode(*rs)
+	return d.Msgsize()
+}
+
+type randomSelectorDecode randomSelector

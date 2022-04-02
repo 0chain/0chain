@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -89,4 +90,23 @@ func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
 		}
 	}
 	return // false
+}
+
+type (
+	// TestCaseCheck represents generic configuration for making tests checks.
+	TestCaseCheck struct {
+		WaitTimeStr string `mapstructure:"wait_time"`
+		WaitTime    time.Duration
+	}
+)
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *TestCaseCheck) Decode(val interface{}) (err error) {
+	if err := mapstructure.Decode(val, c); err != nil {
+		return err
+	}
+	if c.WaitTime, err = time.ParseDuration(c.WaitTimeStr); err != nil {
+		return err
+	}
+	return nil
 }

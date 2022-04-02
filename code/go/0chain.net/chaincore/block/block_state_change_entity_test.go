@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/mocks"
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 func init() {
@@ -238,7 +239,7 @@ func TestStateChange_MarshalJSON(t *testing.T) {
 	sc := NewBlockStateChange(b)
 	var data = make(map[string]interface{})
 	data["block"] = sc.Block
-	want, err := sc.MartialPartialState(data)
+	want, err := sc.MarshalPartialStateJSON(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,4 +371,28 @@ func TestStateChange_UnmarshalJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStateChange_UnmarshalMsgpack(t *testing.T) {
+	b := NewBlock("", 1)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.HashBlock()
+	sc := NewBlockStateChange(b)
+	blob, err := msgpack.Marshal(sc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nsc := StateChange{}
+	err = msgpack.Unmarshal(blob, &nsc)
+	require.NoError(t, err)
+
+	require.Equal(t, nsc.Block, b.Hash)
+	require.Equal(t, nsc.StartRoot, sc.StartRoot)
+	require.Equal(t, nsc.Hash, sc.Hash)
+	require.Equal(t, nsc.Version, sc.Version)
 }

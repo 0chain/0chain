@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore info destInfo addRequest
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 // internal errors
 
 var errZeroVesting = errors.New("zero vesting for this destination and period")
@@ -54,7 +57,7 @@ func (sr *stopRequest) decode(b []byte) error {
 //
 
 type destination struct {
-	ID     datastore.Key `json:"id"`     // destination ID
+	ID     string        `json:"id"`     // destination ID
 	Amount state.Balance `json:"amount"` // amount to vest for the destination (initial)
 	Vested state.Balance `json:"vested"` // tokens already vested
 	// Last tokens transfer time. The Last is for statistic and represent
@@ -201,7 +204,7 @@ type vestingPool struct {
 	StartTime    common.Timestamp `json:"start_time"`   //
 	ExpireAt     common.Timestamp `json:"expire_at"`    //
 	Destinations destinations     `json:"destinations"` //
-	ClientID     datastore.Key    `json:"client_id"`    // the pool owner
+	ClientID     string           `json:"client_id"`    // the pool owner
 }
 
 // newVestingPool returns new empty uninitialized vesting pool.
@@ -517,11 +520,13 @@ type info struct {
 // helpers
 //
 
-func (vsc *VestingSmartContract) getPool(poolID datastore.Key, balances chainstate.StateContextI) (vp *vestingPool, err error) {
-	var raw util.Serializable
+func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
+	balances chainstate.StateContextI) (vp *vestingPool, err error) {
+
 	vp = newVestingPool()
-	if raw, err = balances.GetTrieNode(poolID, vp); err != nil {
-		return
+	raw, err := balances.GetTrieNode(poolID, vp)
+	if err != nil {
+		return nil, err
 	}
 
 	var ok bool

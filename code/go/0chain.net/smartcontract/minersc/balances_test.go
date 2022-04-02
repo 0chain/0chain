@@ -18,7 +18,7 @@ type testBalances struct {
 	balances      map[datastore.Key]state.Balance
 	txn           *transaction.Transaction
 	transfers     []*state.Transfer
-	tree          map[datastore.Key]util.Serializable
+	tree          map[datastore.Key]util.MPTSerializable
 	block         *block.Block
 	blockSharders []string
 	lfmb          *block.Block
@@ -27,7 +27,7 @@ type testBalances struct {
 func newTestBalances() *testBalances {
 	return &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
-		tree:     make(map[datastore.Key]util.Serializable),
+		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
@@ -137,23 +137,27 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) (
-	node util.Serializable, err error) {
-
+func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) (node util.MPTSerializable, err error) {
 	if encryption.IsHash(key) {
 		return nil, common.NewError("failed to get trie node",
 			"key is too short")
 	}
 
-	var ok bool
-	if node, ok = tb.tree[key]; !ok {
+	node, ok := tb.tree[key]
+	if !ok {
 		return nil, util.ErrValueNotPresent
 	}
-	return
+	d, err := node.MarshalMsg(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return nil, err
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) error {
+	node util.MPTSerializable) error {
 
 	tb.tree[key] = node
 	return nil

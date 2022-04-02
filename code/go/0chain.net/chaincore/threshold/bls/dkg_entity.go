@@ -6,6 +6,8 @@ import (
 	"0chain.net/core/datastore"
 )
 
+//go:generate msgp -io=false
+
 type DKGKeyShare struct {
 	datastore.IDField
 	Message string `json:"message"`

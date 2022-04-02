@@ -22,8 +22,8 @@ const (
 )
 
 var (
-	events            map[string]*AuthorizerNode
-	authorizers       = make(map[string]*Authorizer, len(authorizersID))
+	events map[string]*AuthorizerNode
+	//authorizers       = make(map[string]*Authorizer, len(authorizersID))
 	authorizersID     = []string{authorizerPrefixID + "_0", authorizerPrefixID + "_1", authorizerPrefixID + "_2"}
 	clients           = []string{clientPrefixID + "_0", clientPrefixID + "_1", clientPrefixID + "_2"}
 	defaultAuthorizer = authorizersID[0]
@@ -111,10 +111,11 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 		ID:                 ADDRESS,
 		MinMintAmount:      111,
 		PercentAuthorizers: 70,
+		MinAuthorizers:     1,
 		MinBurnAmount:      100,
 		MinStakeAmount:     200,
 		BurnAddress:        "0",
-		MinAuthorizers:     1,
+		MaxFee:             0,
 	}
 }
 
@@ -125,7 +126,7 @@ func createBurnPayload() *BurnPayload {
 	}
 }
 
-func CreateMintPayload(receiverId string) (payload *MintPayload, err error) {
+func CreateMintPayload(ctx *mockStateContext, receiverId string) (payload *MintPayload, err error) {
 	payload = &MintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
@@ -133,15 +134,15 @@ func CreateMintPayload(receiverId string) (payload *MintPayload, err error) {
 		ReceivingClientID: receiverId,
 	}
 
-	payload.Signatures, err = createTransactionSignatures(payload)
+	payload.Signatures, err = createTransactionSignatures(ctx, payload)
 
 	return
 }
 
-func createTransactionSignatures(m *MintPayload) ([]*AuthorizerSignature, error) {
+func createTransactionSignatures(ctx *mockStateContext, m *MintPayload) ([]*AuthorizerSignature, error) {
 	var sigs []*AuthorizerSignature
 
-	for _, authorizer := range authorizers {
+	for _, authorizer := range ctx.authorizers {
 		signature, err := authorizer.Sign(m.GetStringToSign())
 		if err != nil {
 			return nil, err
@@ -166,7 +167,7 @@ func createUserNode(id string, nonce int64) *UserNode {
 //
 //func CreateMockAuthorizer(clientId string, ctx state.StateContextI) (*AuthorizerNode, error) {
 //	tr := CreateAddAuthorizerTransaction(clientId, ctx, 100)
-//	authorizerNode := CreateAuthorizer(clientId, tr.PublicKey, "https://localhost:9876")
+//	authorizerNode := NewAuthorizer(clientId, tr.PublicKey, "https://localhost:9876")
 //	_, _, err := authorizerNode.Staking.DigPool(tr.Hash, tr)
 //	return authorizerNode, err
 //}

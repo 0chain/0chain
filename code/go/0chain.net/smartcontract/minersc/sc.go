@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"sync"
@@ -85,6 +86,21 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return msc.RestHandlers
+}
+
+func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
+	n, err := getGlobalNode(balances)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if n.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := n.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
 }
 
 //setSC setting up smartcontract. implementing the interface
@@ -217,16 +233,18 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	un := NewUserNode()
 	un.ID = id
 	raw, err := balances.GetTrieNode(un.GetKey(), un)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-	if raw == nil {
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		un = NewUserNode()
+		un.ID = id
 		return un, nil
 	}
-
 	var ok bool
 	if un, ok = raw.(*UserNode); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+	un.ID = id
 	return un, nil
 }

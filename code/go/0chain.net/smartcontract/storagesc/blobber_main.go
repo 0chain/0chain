@@ -1,4 +1,6 @@
+//go:build !integration_tests
 // +build !integration_tests
+
 // todo: it's a legacy ugly approach; refactor later
 
 package storagesc
@@ -6,13 +8,15 @@ package storagesc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 )
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check for duplicates
@@ -31,8 +35,8 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
-		&blobber.StakePoolSettings, balances)
+	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, spenum.Blobber,
+		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
 	}
@@ -43,7 +47,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// update the list
 	blobbers.Nodes.add(blobber)
-	if err := emitAddOrOverwriteBlobber(blobber, balances); err != nil {
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 

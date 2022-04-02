@@ -59,8 +59,8 @@ func (edb *EventDb) drop() error {
 	if err != nil {
 		return err
 	}
-  
-  err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
+
+	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
 	if err != nil {
 		return err
 	}
@@ -91,6 +91,11 @@ func (edb *EventDb) drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&DelegatePool{})
 	if err != nil {
 		return err
 	}

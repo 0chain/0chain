@@ -6,6 +6,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 )
 
 const allValidatorsPartitionSize = 50
@@ -35,12 +37,23 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID), nil)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("add_validator_failed",
-				"Failed to get validator."+err.Error())
+
+	tmp := &ValidationNode{}
+	raw, err := balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
+	switch err {
+	case nil:
+		var ok bool
+		if tmp, ok = raw.(*ValidationNode); !ok {
+			return "", fmt.Errorf("unexpected node type")
 		}
+		sc.statIncr(statUpdateValidator)
+	case util.ErrValueNotPresent:
+		_, err = sc.getBlobber(newValidator.ID, balances)
+		if err != nil {
+			return "", common.NewError("add_validator_failed",
+				"new validator id does not match a registered blobber: "+err.Error())
+		}
+
 		allValidatorsList, err := getValidatorsList(balances)
 		if err != nil {
 			return "", common.NewError("add_validator_failed",
@@ -64,11 +77,12 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 		sc.statIncr(statAddValidator)
 		sc.statIncr(statNumberOfValidators)
-	} else {
-		sc.statIncr(statUpdateValidator)
+	default:
+		return "", common.NewError("add_validator_failed",
+			"Failed to get validator."+err.Error())
 	}
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("add_vaidator",
 			"can't get SC configurations: %v", err)
@@ -76,8 +90,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
-		&newValidator.StakePoolSettings, balances)
+	sp, err = sc.getOrUpdateStakePool(conf, t.ClientID, spenum.Validator,
+		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())

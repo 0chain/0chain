@@ -206,7 +206,7 @@ func mustEncode(t *testing.T, val interface{}) []byte {
 	return b
 }
 
-func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
+func mustSave(t *testing.T, key datastore.Key, val util.MPTSerializable,
 	balances cstate.StateContextI) {
 
 	var err = balances.InsertTrieNode(key, val)

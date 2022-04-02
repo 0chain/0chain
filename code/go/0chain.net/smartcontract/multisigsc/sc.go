@@ -63,7 +63,11 @@ func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	ms.SmartContract = sc
 }
 
-func (ms MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {
+func (ms *MultiSigSmartContract) GetCost(t *transaction.Transaction, funcName string, balances state.StateContextI) (int, error) {
+	return 0, nil
+}
+
+func (ms *MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {
 	if LogTimingInfo {
 		start := time.Now().UnixNano()
 		defer printTimeTaken(start)
@@ -439,20 +443,23 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, bal
 }
 
 func (ms MultiSigSmartContract) walletExists(clientID string, balances c_state.StateContextI) (bool, error) {
-	//might be better to unmarshal wallet, but try to get it from cache
-	walletBytes, err := balances.GetTrieNode(getWalletKey(clientID), nil)
-	if err != nil {
+	w := &Wallet{}
+	raw, err := balances.GetTrieNode(getWalletKey(clientID), w)
+	switch err {
+	case nil:
+		return true, nil
+	case util.ErrValueNotPresent:
+		return false, nil
+	default:
+		if raw != nil {
+			return true, nil
+		}
 		return false, err
 	}
-
-	if walletBytes != nil {
-		return true, nil
-	}
-	return false, nil
-
 }
 
 func (ms MultiSigSmartContract) getWallet(clientID string, balances c_state.StateContextI) (Wallet, error) {
+
 	w := &Wallet{}
 	raw, err := balances.GetTrieNode(getWalletKey(clientID), w)
 
@@ -460,11 +467,11 @@ func (ms MultiSigSmartContract) getWallet(clientID string, balances c_state.Stat
 		// I/O error.
 		return Wallet{}, err
 	}
-
 	var ok bool
 	if w, ok = raw.(*Wallet); !ok {
 		return *w, fmt.Errorf("unexpected node type")
 	}
+
 	// Okay.
 	return *w, nil
 }
@@ -474,28 +481,24 @@ func (ms MultiSigSmartContract) putWallet(w Wallet, balances c_state.StateContex
 	//if err != nil {
 	//	return err
 	//}
-	err := balances.InsertTrieNode(w.getKey(), w)
+	err := balances.InsertTrieNode(w.getKey(), &w)
 	return err
 }
 
 func (ms MultiSigSmartContract) getProposal(ref proposalRef, balances c_state.StateContextI) (proposal, error) {
 	p := &proposal{}
 	raw, err := balances.GetTrieNode(getProposalKey(ref.ClientID, ref.ProposalID), p)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		return *p, nil
+	default:
+		var ok bool
+		if p, ok = raw.(*proposal); !ok {
+			return *p, fmt.Errorf("unexpected node type")
+		}
 
-	if err != nil {
-		// I/O error.
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
-			return proposal{}, err
-		} //else there are no propsals.
-		return proposal{}, nil
+		return proposal{}, err
 	}
-
-	var ok bool
-	if p, ok = raw.(*proposal); !ok {
-		return *p, fmt.Errorf("unexpected node type")
-	}
-	// Okay.
-	return *p, nil
 }
 
 func (ms MultiSigSmartContract) putProposal(p *proposal, balances c_state.StateContextI) error {
@@ -511,24 +514,17 @@ func (ms MultiSigSmartContract) putProposal(p *proposal, balances c_state.StateC
 func (ms MultiSigSmartContract) getOrCreateExpirationQueue(balances c_state.StateContextI) (expirationQueue, error) {
 	q := &expirationQueue{}
 	raw, err := balances.GetTrieNode(getExpirationQueueKey(), q)
-
-	if err != nil {
-		// I/O error.
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
-			return expirationQueue{}, err
-		} //else we will create queue
-
-	}
-
-	if raw == nil {
+	switch err {
+	case nil, util.ErrValueNotPresent:
 		return *q, nil
+	default:
+		var ok bool
+		if q, ok = raw.(*expirationQueue); !ok {
+			return *q, fmt.Errorf("unexpected node type")
+		}
+
+		return *q, err
 	}
-	var ok bool
-	if q, ok = raw.(*expirationQueue); !ok {
-		return *q, fmt.Errorf("unexpected node type")
-	}
-	// Okay.
-	return *q, nil
 }
 
 func (ms MultiSigSmartContract) putExpirationQueue(q *expirationQueue, balances c_state.StateContextI) error {

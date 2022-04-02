@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -82,4 +83,9 @@ func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractT
 		return transactionOutput, nil
 	}
 	return "", common.NewError("invalid_smart_contract_address", "Invalid Smart Contract address")
+}
+
+func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) (int, error) {
+	contractObj := getSmartContract(t.ToClientID)
+	return contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
 }

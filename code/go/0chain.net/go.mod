@@ -17,6 +17,7 @@ require (
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
+	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/herumi/bls v0.0.0-20210511012341-3f3850a6eac7
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
@@ -36,6 +37,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
+	github.com/tinylib/msgp v1.1.6
 	github.com/valyala/gozstd v1.14.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.7.0
@@ -47,3 +49,5 @@ require (
 	gorm.io/driver/postgres v1.2.1
 	gorm.io/gorm v1.22.2
 )
+
+replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62

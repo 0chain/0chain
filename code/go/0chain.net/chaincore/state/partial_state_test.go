@@ -1,4 +1,4 @@
-package state_test
+package state
 
 import (
 	"context"
@@ -8,15 +8,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-
-	. "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/mocks"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func init() {
@@ -481,8 +479,8 @@ func TestPartialState_UnmarshalPartialState(t *testing.T) {
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
 			}
-			if err := ps.UnmarshalPartialState(tt.args.obj); (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalPartialState() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ps.UnmarshalPartialStateJSON(tt.args.obj); (err != nil) != tt.wantErr {
+				t.Errorf("UnmarshalPartialStateJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -604,5 +602,29 @@ func TestPartialState_AddNode(t *testing.T) {
 			ps.AddNode(tt.args.node)
 			assert.Equal(t, tt.want, ps)
 		})
+	}
+}
+
+type valueNode struct {
+	Version string
+	Value   int64
+}
+
+func (v *valueNode) Encode() []byte {
+	d, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
+func (v *valueNode) Decode(b []byte) error {
+	return json.Unmarshal(b, v)
+}
+
+func newValueNode(version string, v int64) *valueNode {
+	return &valueNode{
+		Version: version,
+		Value:   v,
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/0chain/gorocksdb"
 	"github.com/stretchr/testify/require"
@@ -24,13 +25,13 @@ type keyNode struct {
 
 type testValue string
 
-func (tv testValue) Encode() (p []byte) {
-	return []byte(tv)
+func (tv testValue) MarshalMsg([]byte) ([]byte, error) {
+	return []byte(tv), nil
 }
 
-func (tv *testValue) Decode(p []byte) error {
+func (tv *testValue) UnmarshalMsg(p []byte) ([]byte, error) {
 	*tv = testValue(p)
-	return nil
+	return nil, nil
 }
 
 func getTestKeyValues(n int) (kns []keyNode) {
@@ -46,7 +47,7 @@ func getTestKeyValues(n int) (kns []keyNode) {
 		)
 
 		node.SetValue(&tv)
-		key = Key(node.GetHashBytes())
+		key = node.GetHashBytes()
 		kns = append(kns, keyNode{key, node})
 	}
 
@@ -496,6 +497,7 @@ func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 
 func TestPNodeDB_Full(t *testing.T) {
 
+	tm := time.Now()
 	const N = 100
 
 	var (
@@ -509,6 +511,7 @@ func TestPNodeDB_Full(t *testing.T) {
 	)
 	defer cleanup()
 
+	fmt.Println(time.Since(tm))
 	//
 	// get / put / delete
 	//
@@ -679,10 +682,10 @@ func TestMergeState(t *testing.T) {
 		require.EqualValues(t, n, lndb.Size(back))
 	})
 
-	var pndb, cleanup = newPNodeDB(t)
-	defer cleanup()
-
 	t.Run("pnode_db", func(t *testing.T) {
+		var pndb, cleanup = newPNodeDB(t)
+		defer cleanup()
+
 		require.NoError(t, MergeState(back, fmdb, pndb))
 		require.EqualValues(t, n, pndb.Size(back))
 	})
@@ -693,67 +696,6 @@ func noNodeNotFound(err error) error {
 		return nil
 	}
 	return err
-}
-
-// launch test with -race or make the case sense
-func TestNodeDB_parallel(t *testing.T) {
-
-	if testing.Short() {
-		t.Skip("skip the parallel tests due to -short flag")
-	}
-
-	const (
-		parallel = 100
-		n        = 100
-	)
-
-	var (
-		pndb, cleanup = newPNodeDB(t)
-
-		mndb = NewMemoryNodeDB()
-		lndb = NewLevelNodeDB(mndb, pndb, false)
-
-		kvs         = getTestKeyValues(n)
-		keys, nodes = getTestKeysAndValues(kvs)
-	)
-	defer cleanup()
-
-	for _, ndb := range []NodeDB{
-		pndb,
-		lndb,
-		mndb,
-	} {
-		ndb := ndb
-		t.Run(fmt.Sprintf("%T", ndb), func(t *testing.T) {
-			for i := 0; i < parallel; i++ {
-				i := i
-				t.Run("parallel access", func(t *testing.T) {
-					t.Parallel()
-					for j := 0; j < len(kvs); j++ {
-						var err error
-						switch (i + j) % 6 {
-						case 0:
-							_, err = ndb.GetNode(kvs[j].key)
-							require.NoError(t, noNodeNotFound(err))
-						case 1:
-							err = ndb.PutNode(kvs[j].key, kvs[j].node)
-							require.NoError(t, err)
-						case 2:
-							require.NoError(t, ndb.DeleteNode(kvs[j].key))
-						case 3:
-							_, err = ndb.MultiGetNode(keys)
-							require.NoError(t, noNodeNotFound(err))
-						case 4:
-							require.NoError(t, ndb.MultiPutNode(keys, nodes))
-						case 5:
-							require.NoError(t, ndb.MultiDeleteNode(keys))
-						}
-					}
-				})
-			}
-		})
-	}
-
 }
 
 func TestRaceMemoryNodeDB_Full(t *testing.T) {
@@ -1303,8 +1245,8 @@ func TestMemoryNodeDB_Validate(t *testing.T) {
 				mndb := NewMemoryNodeDB()
 				mpt := NewMerklePatriciaTrie(mndb, 1, nil)
 
-				n := NewFullNode(&AState{balance: 2})
-				err := mpt.Insert(n.GetHashBytes(), n)
+				n := &AState{balance: 2}
+				err := mpt.Insert(Path("astate_2"), n)
 				require.NoError(t, err)
 
 				return fields{

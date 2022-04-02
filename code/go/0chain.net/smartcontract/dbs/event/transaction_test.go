@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
@@ -105,21 +106,22 @@ func TestFindTransactionByHash(t *testing.T) {
 		compareTransactions(t, gotTrs, 0, 10)
 
 		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 0, 10)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 0, 5)
-		require.NoError(t, err)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", 0, 5)
+		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 5, 5)
-		require.NoError(t, err)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", 5, 5)
+		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 	})
 
 }
 
 func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
+	require.Equal(t, limit, len(gotTr), "Not all transactions were returned")
 	i := 0
 	for i = offset; i < limit; i++ {
 		tr := Transaction{
@@ -132,7 +134,6 @@ func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
 		tr.UpdatedAt = gotTr[i].UpdatedAt
 		require.Equal(t, tr, gotTr[i], "Transaction not matching")
 	}
-	require.Equal(t, len(gotTr), limit, "Not all transactions were returned")
 }
 
 func SetUpTransactionData(t *testing.T, eventDb *EventDb) {

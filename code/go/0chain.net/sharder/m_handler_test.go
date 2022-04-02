@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -61,9 +62,7 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 				t.Errorf("LatestFinalizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("LatestFinalizedBlockHandler() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, got, tt.want)
 		})
 	}
 }

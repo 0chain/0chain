@@ -22,7 +22,7 @@ type testBalances struct {
 	balances  map[datastore.Key]state.Balance
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
-	tree      map[datastore.Key]util.Serializable
+	tree      map[datastore.Key]util.MPTSerializable
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
@@ -31,7 +31,7 @@ type testBalances struct {
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	tb = &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
-		tree:     make(map[datastore.Key]util.Serializable),
+		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 
 	if mpts {
@@ -56,7 +56,7 @@ func (tb *testBalances) setTransaction(t testing.TB,
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                                    { return nil }
+func (tb *testBalances) GetBlock() *block.Block                                    { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
 func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
 func (tb *testBalances) GetBlockSharders(b *block.Block) []string                  { return nil }
@@ -105,8 +105,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) (
-	node util.Serializable, err error) {
+func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) (node util.MPTSerializable, err error) {
 
 	if encryption.IsHash(key) {
 		return nil, common.NewError("failed to get trie node",
@@ -114,18 +113,25 @@ func (tb *testBalances) GetTrieNode(key datastore.Key, templ util.Serializable) 
 	}
 
 	if tb.mpts != nil {
-		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)), templ)
+		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)), v)
 	}
 
-	var ok bool
-	if node, ok = tb.tree[key]; !ok {
+	nd, ok := tb.tree[key]
+	if !ok {
 		return nil, util.ErrValueNotPresent
 	}
-	return
+
+	d, err := nd.MarshalMsg(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) error {
+	node util.MPTSerializable) error {
 
 	if tb.mpts != nil {
 		if encryption.IsHash(key) {

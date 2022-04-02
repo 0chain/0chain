@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,10 +13,10 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
-
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/tinylib/msgp/msgp"
 )
 
 /*SetupStateHandlers - setup handlers to manage state */
@@ -85,15 +86,22 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	node, err := lfb.ClientState.GetNodeValue(util.Path(encryption.Hash(scAddress+key)), nil)
+	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
 	if err != nil {
 		return nil, err
 	}
-	if node == nil {
+	if len(d) == 0 {
 		return nil, common.NewError("key_not_found", "key was not found")
 	}
+
+	buf := &bytes.Buffer{}
+	_, err = msgp.UnmarshalAsJSON(buf, d)
+	if err != nil {
+		return nil, common.NewErrorf("decode error", "unmarshal as json failed: %v", err)
+	}
+
 	var retObj interface{}
-	err = json.Unmarshal(node.Encode(), &retObj)
+	err = json.NewDecoder(buf).Decode(&retObj)
 	if err != nil {
 		return nil, err
 	}

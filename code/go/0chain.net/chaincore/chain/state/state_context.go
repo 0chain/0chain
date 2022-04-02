@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"0chain.net/chaincore/block"
@@ -14,6 +15,18 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
+//msgp:ignore StateContext
+//go:generate msgp -io=false -tests=false -v
+
+type ApprovedMinter int
+
+const (
+	MinterMiner ApprovedMinter = iota
+	MinterInterestPool
+	MinterStorage
+	MinterZcn
+)
+
 var (
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
@@ -21,6 +34,13 @@ var (
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7", // storage SC
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"} //zcn SC
 )
+
+func GetMinter(minter ApprovedMinter) (string, error) {
+	if int(minter) >= len(approvedMinters) {
+		return "", fmt.Errorf("invalid minter %v", minter)
+	}
+	return approvedMinters[minter], nil
+}
 
 /*
 * The state context is available to the smart contract logic.

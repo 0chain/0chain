@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"errors"
-	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"

@@ -282,7 +282,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			PrevBlock: &block.Block{},
 		},
 		sharders: sharderIDs,
-		store:    make(map[datastore.Key]util.Serializable),
+		store:    make(map[datastore.Key]util.MPTSerializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
 				Miners:   minersPool,

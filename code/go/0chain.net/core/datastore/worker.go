@@ -125,14 +125,6 @@ func (ecb *EntityChunkBuilder) Run(ctx context.Context) {
 	}
 }
 
-func creationDate(entity Entity) time.Time {
-	cf, ok := entity.(CreationTrackable)
-	if ok {
-		return time.Unix(int64(cf.GetCreationTime()), 0)
-	}
-	return time.Now()
-}
-
 func (ecb *EntityChunkBuilder) addEntity(qe QueuedEntity) {
 	ecb.Chunk.Add(qe.Entity)
 	if ecb.Chunk.Size() == ecb.ChunkSize {

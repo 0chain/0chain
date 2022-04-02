@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -319,17 +320,21 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	var pn *PhaseNode
-	if pn, err = GetPhaseNode(balances); err != nil {
-		return
-	}
-	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"error inserting phase node: %v", err)
-	}
+	if config.DevConfiguration.ViewChange {
+		// TODO: cache the phase node so if when there's no view change happens, we
+		// can avoid unnecessary MPT access
+		var pn *PhaseNode
+		if pn, err = GetPhaseNode(balances); err != nil {
+			return
+		}
+		if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
+			return "", common.NewErrorf("pay_fees",
+				"error inserting phase node: %v", err)
+		}
 
-	if err = msc.adjustViewChange(gn, balances); err != nil {
-		return // adjusting view change error
+		if err = msc.adjustViewChange(gn, balances); err != nil {
+			return // adjusting view change error
+		}
 	}
 
 	var mb = balances.GetBlock()

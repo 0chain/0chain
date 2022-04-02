@@ -9,6 +9,8 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -v -io=false -tests=false -unexported=true
+
 func NewPopulatedValidatorSelector(
 	name string,
 	size int,
@@ -72,9 +74,9 @@ func (vn *ValidationNode) Name() string {
 //------------------------------------------------------------------------------
 
 type validatorItemList struct {
-	Key     datastore.Key    `json:"-"`
+	Key     string           `json:"-" msg:"-"`
 	Items   []ValidationNode `json:"items"`
-	Changed bool             `json:"-"`
+	Changed bool             `json:"-" msg:"-"`
 }
 
 func (il *validatorItemList) Encode() []byte {
@@ -94,24 +96,21 @@ func (il *validatorItemList) save(balances state.StateContextI) error {
 	return err
 }
 
-func getValidatorItemList(key datastore.Key, balances state.StateContextI) (*validatorItemList, error) {
-	var il *validatorItemList
+func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI) error {
 	raw, err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return nil, err
+			return err
 		}
-		il = &validatorItemList{
-			Key: key,
+		var ok bool
+		if il, ok = raw.(*validatorItemList); !ok {
+			return fmt.Errorf("unexpected node type")
 		}
-		return il, nil
+
+		il.Key = key
+		return nil
 	}
-	var ok bool
-	if il, ok = raw.(*validatorItemList); !ok {
-		return nil, fmt.Errorf("unexpected node type")
-	}
-	il.Key = key
-	return il, nil
+	return nil
 }
 
 func (il *validatorItemList) add(it PartitionItem) {

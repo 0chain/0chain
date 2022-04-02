@@ -9,10 +9,12 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 type itemList struct {
-	Key     datastore.Key `json:"-"`
-	Items   []StringItem  `json:"items"`
-	Changed bool          `json:"-"`
+	Key     string       `json:"-" msg:"-"`
+	Items   []StringItem `json:"items"`
+	Changed bool         `json:"-" msg:"-"`
 }
 
 func (il *itemList) Encode() []byte {
@@ -32,24 +34,20 @@ func (il *itemList) save(balances state.StateContextI) error {
 	return err
 }
 
-func getItemList(key datastore.Key, balances state.StateContextI) (*itemList, error) {
-	var il *itemList
+func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 	raw, err := balances.GetTrieNode(key, il)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return nil, err
+			return err
 		}
-		il = &itemList{
-			Key: key,
-		}
-		return il, nil
+		il.Key = key
 	}
 	var ok bool
 	if il, ok = raw.(*itemList); !ok {
-		return nil, fmt.Errorf("unexpected node type")
+		return fmt.Errorf("unexpected node type")
 	}
-	il.Key = key
-	return il, nil
+
+	return nil
 }
 
 func (il *itemList) add(it PartitionItem) {

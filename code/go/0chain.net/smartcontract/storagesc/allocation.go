@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -22,8 +25,8 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 
 	alloc = new(StorageAllocation)
 	alloc.ID = allocID
-	var raw util.Serializable
-	if raw, err = balances.GetTrieNode(alloc.GetKey(sc.ID), alloc); err != nil {
+	raw, err := balances.GetTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
 		return nil, err
 	}
 
@@ -31,6 +34,7 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 	if alloc, ok = raw.(*StorageAllocation); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return
 }
 
@@ -38,14 +42,17 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	balances chainstate.StateContextI) (*Allocations, error) {
 
 	allocationList := &Allocations{}
-	var clientAlloc = &ClientAllocation{ClientID: clientID}
-	raw, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), allocationList)
-	if err == util.ErrEncoding {
-		return nil, err
-	}
+	var clientAlloc *ClientAllocation
+	clientAlloc.ClientID = clientID
+	raw, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), clientAlloc)
 	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		return allocationList, nil
 	}
+
 	var ok bool
 	if clientAlloc, ok = raw.(*ClientAllocation); !ok {
 		return nil, fmt.Errorf("unexpected node type")
@@ -60,18 +67,21 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 	allocationList := &Allocations{}
 
 	raw, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY, allocationList)
-	if err == util.ErrEncoding {
-		return nil, err
-	}
-	if raw == nil {
+	switch err {
+	case util.ErrValueNotPresent:
+		return &Allocations{}, nil
+	case nil:
+		var ok bool
+		if allocationList, ok = raw.(*Allocations); !ok {
+			return nil, common.NewError("getAllAllocationsList_failed",
+				"bad node type")
+		}
+
 		return allocationList, nil
-	}
-	var ok bool
-	if allocationList, ok = raw.(*Allocations); !ok {
+	default:
 		return nil, common.NewError("getAllAllocationsList_failed",
 			"bad node type")
 	}
-	return allocationList, nil
 }
 
 func (sc *StorageSmartContract) removeUserAllocation(
@@ -141,7 +151,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"Failed to get allocation list: %v", err)
 	}
 
-	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID), nil); err == nil {
+	ta := &StorageAllocation{}
+	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID), ta); err == nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
@@ -297,7 +308,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (string, error) {
-	var conf *scConfig
+	var conf *Config
 	var err error
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
@@ -316,7 +327,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 func (sc *StorageSmartContract) newAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
+	conf *Config,
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -431,7 +442,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, int64, error) {
 	var err error
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return nil, 0, fmt.Errorf("can't get config: %v", err)
 	}
@@ -501,7 +512,7 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(
-	conf *scConfig,
+	conf *Config,
 	alloc *StorageAllocation,
 ) (err error) {
 	if uar.SetImmutable && alloc.IsImmutable {
@@ -931,7 +942,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
-		if err = checkFill(t, balances); err != nil {
+		if err = stakepool.CheckClientBalance(t, balances); err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 		var until = alloc.Until()
@@ -971,7 +982,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, false); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
@@ -982,7 +993,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
+	conf *Config,
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -1268,12 +1279,10 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 func (sc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
 	balances chainstate.StateContextI) (resp string, err error) {
-
 	var req lockRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
-
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
 	if err != nil {
@@ -1435,12 +1444,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				if pay > aps[apIndex].Balance {
 					pay = aps[apIndex].Balance
 				}
-				_, err := transferReward(sc.ID, aps[apIndex].ZcnPool, sps[i], pay, balances)
-				if err != nil {
-					return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
-						"%v from alocation poosl %v, minlock demand %v spent %v error %v",
-						lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
-				}
+				aps[apIndex].Balance -= state.Balance(pay)
 				if aps[apIndex].Balance == 0 {
 					apIndex++
 				}
@@ -1452,10 +1456,18 @@ func (sc *StorageSmartContract) finishAllocation(
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
 					"ammount was short by %v", d.BlobberID, lack)
 			}
+
+			err = sps[i].DistributeRewards(float64(paid), d.BlobberID, spenum.Blobber, balances)
+			if err != nil {
+				return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
+					"%v from alocation poosl %v, minlock demand %v spent %v error %v",
+					lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
+			}
 		}
 		d.Spent += paid
 		d.FinalReward += paid
 	}
+
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving allocation write pools: "+err.Error())
@@ -1479,24 +1491,22 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
-	var passPayments state.Balance = 0
+	var passPayments float64 = 0.0
 	for i, d := range alloc.BlobberDetails {
-		var b = blobbers[i] // related blobber
+		var b = blobbers[i]
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			var (
-				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-				move  = state.Balance(float64(cp.Balance) * ratio * passRates[i])
+				ratio  = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+				reward = float64(cp.Balance) * ratio * passRates[i]
 			)
-			var reward state.Balance
-			if reward, err = transferReward(sc.ID, *cp.ZcnPool, sps[i], move, balances); err != nil {
+			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, balances)
+			if err != nil {
 				return common.NewError("fini_alloc_failed",
-					"moving tokens to stake pool of "+d.BlobberID+": "+
-						err.Error())
+					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			sps[i].Rewards.Blobber += reward
-			d.Spent += move
-			d.FinalReward += move
-			passPayments += move
+			d.Spent += state.Balance(reward)
+			d.FinalReward += state.Balance(reward)
+			passPayments += reward
 		}
 
 		if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
@@ -1517,7 +1527,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
 	}
-	cp.Balance -= passPayments
+	cp.Balance -= state.Balance(passPayments)
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
 

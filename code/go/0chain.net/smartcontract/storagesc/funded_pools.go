@@ -1,12 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
-	"fmt"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":fundedpools:" + clientID)
@@ -56,21 +59,22 @@ func (fp *fundedPools) Decode(p []byte) error {
 }
 
 // getReadPool of current client
-func (ssc *StorageSmartContract) getFundedPools(clientID datastore.Key, balances cstate.StateContextI) (*fundedPools, error) {
-	var err error
+func (ssc *StorageSmartContract) getFundedPools(
+	clientID datastore.Key,
+	balances cstate.StateContextI,
+) (*fundedPools, error) {
 	fp := new(fundedPools)
-
-	var raw util.Serializable
-	raw, err = balances.GetTrieNode(fundedPoolsKey(ssc.ID, clientID), fp)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
+	raw, err := balances.GetTrieNode(fundedPoolsKey(ssc.ID, clientID), fp)
+	switch err {
+	case nil:
+		var ok bool
+		if fp, ok = raw.(*fundedPools); !ok {
+			return nil, fmt.Errorf("unexpected node type")
 		}
 		return fp, nil
+	case util.ErrValueNotPresent:
+		return new(fundedPools), nil
+	default:
+		return nil, err
 	}
-	var ok bool
-	if fp, ok = raw.(*fundedPools); !ok {
-		return nil, fmt.Errorf("unexpected node type")
-	}
-	return fp, nil
 }

@@ -200,7 +200,7 @@ type Round struct {
 	// notarization is received. For a verifier, this is the block that is
 	// currently the best block received for verification. Once a round is
 	// finalized, this is the finalized block of the given round.
-	Block     *block.Block `json:"-"`
+	Block     *block.Block `json:"-" msgpack:"-"`
 	BlockHash string       `json:"block_hash"`
 	VRFOutput string       `json:"vrf_output"` // TODO: VRFOutput == rbooutput?
 

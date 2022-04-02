@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -302,22 +303,20 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 					t.Errorf("wrong balance for %v: now %v : should %v", tt.args.t.ToClientID, stateBalance, balance)
 				}
 
-				savedGNode, err := tt.args.balances.GetTrieNode(tt.args.gn.getKey(), nil)
+				var savedGNode GlobalNode
+				savedGNode, err = tt.args.balances.GetTrieNode(tt.args.gn.getKey(), &savedGNode)
 				if err != nil {
 					t.Errorf("can not fetch already saved global node")
 				}
-				if !reflect.DeepEqual(savedGNode, tt.args.gn) {
-					t.Errorf("wrong saved node")
-				}
+				require.Equal(t, savedGNode, *tt.args.gn)
 
-				savedUNode, err := tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID), nil)
+				var savedUNode UserNode
+				savedGNode, err = tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID), &savedUNode)
 				if err != nil {
 					t.Errorf("can not fetch already saved user node")
 				}
 
-				if !reflect.DeepEqual(savedUNode, tt.args.un) {
-					t.Errorf("wrong saved node")
-				}
+				require.Equal(t, savedUNode, *tt.args.un)
 			}
 		})
 	}
@@ -559,7 +558,11 @@ func TestInterestPoolSmartContract_getUserNode(t *testing.T) {
 					SmartContractExecutionStats: map[string]interface{}{},
 				},
 			}
-			if got := ip.getUserNode(tt.args.id, tt.args.balances); !reflect.DeepEqual(got, tt.want) {
+
+			got, err := ip.getUserNode(tt.args.id, tt.args.balances)
+			require.NoError(t, err)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getUserNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -591,6 +594,8 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 
 	config.SetupDefaultSmartContractConfig()
 
+	node := testConfiguredGlobalNode()
+	node.Cost = map[string]int{}
 	tests := []test{
 		{
 			name: "empty_globalNode",
@@ -598,7 +603,7 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 				balances: testBalance("", 0),
 				funcName: "funcName",
 			},
-			want: testConfiguredGlobalNode(),
+			want: node,
 		},
 		{
 			name: "existing_globalNode",
@@ -618,7 +623,10 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 			ip := &InterestPoolSmartContract{
 				SmartContract: tt.fields.SmartContract,
 			}
-			if got := ip.getGlobalNode(tt.args.balances, tt.args.funcName); !reflect.DeepEqual(got, tt.want) {
+			got, err := ip.getGlobalNode(tt.args.balances, tt.args.funcName)
+			require.NoError(t, err)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getGlobalNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -772,9 +780,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Execute() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

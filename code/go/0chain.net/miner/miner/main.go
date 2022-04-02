@@ -72,7 +72,6 @@ func main() {
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-	transaction.SetTxnFee(viper.GetInt64("server_chain.transaction.min_fee"))
 
 	config.SetServerChainID(config.Configuration.ChainID)
 
@@ -443,6 +442,8 @@ func initN2NHandlers(c *miner.Chain) {
 	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
+
+	chain.SetupLFBTicketSender()
 }
 
 func initWorkers(ctx context.Context) {

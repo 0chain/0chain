@@ -64,11 +64,19 @@ func TestDeleteSharder(t *testing.T) {
 			un := NewUserNode()
 			un.ID = delegateId
 			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
-			balances.On("GetTrieNode", un.GetKey(), mock.AnythingOfType("*minersc.UserNode")).Return(un, nil).Once()
+			balances.On("GetTrieNode", un.GetKey(),
+				mock.MatchedBy(func(n *UserNode) bool {
+					*n = *un
+					return true
+				})).Return(un, nil).Once()
 			balances.On("DeleteTrieNode", un.GetKey()).Return(nil).Once()
 		}
 
-		balances.On("GetTrieNode", GetSharderKey(mockDeletedSharderId), mock.AnythingOfType("*minersc.MinerNode")).Return(mn, nil).Once()
+		balances.On("GetTrieNode", GetSharderKey(mockDeletedSharderId),
+			mock.MatchedBy(func(n *MinerNode) bool {
+				*n = *mn
+				return true
+			})).Return(mn, nil).Once()
 		balances.On(
 			"InsertTrieNode",
 			mn.GetKey(),

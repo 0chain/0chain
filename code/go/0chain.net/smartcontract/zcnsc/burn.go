@@ -37,7 +37,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// check burn amount
-	if trans.Value < gn.MinBurnAmount {
+	if state.Balance(trans.Value*1e10) < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
 			"amount (value) requested (%v) is lower than min burn amount (%v), %s",
 			trans.Value,

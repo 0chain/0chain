@@ -22,7 +22,7 @@ import (
 type mockStateContext struct {
 	ctx                        cstate.StateContext
 	block                      *block.Block
-	store                      map[datastore.Key]util.Serializable
+	store                      map[datastore.Key]util.MPTSerializable
 	sharders                   []string
 	LastestFinalizedMagicBlock *block.Block
 }
@@ -63,11 +63,18 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key, templ util.Serializable) (util.Serializable, error) {
-	return sc.store[key], nil
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	vv := sc.store[key]
+	d, err := vv.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) error {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) error {
 	sc.store[key] = node
 	return nil
 }

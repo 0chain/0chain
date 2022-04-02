@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -16,6 +18,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //
 // client write pool (consist of allocation pools)
@@ -139,21 +143,20 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 //
 // smart contract methods
 //
+
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	balances chainState.StateContextI) (wp *writePool, err error) {
-
 	wp = new(writePool)
-	var raw util.Serializable
-	raw, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
+	raw, err := balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
 	if err != nil {
-		return
+		return nil, err
 	}
 	var ok bool
 	if wp, ok = raw.(*writePool); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
-	return
+	return wp, nil
 }
 
 func (ssc *StorageSmartContract) createEmptyWritePool(
@@ -277,7 +280,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	// check client balance
-	if err = checkFill(t, balances); err != nil {
+	if err = stakepool.CheckClientBalance(t, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 

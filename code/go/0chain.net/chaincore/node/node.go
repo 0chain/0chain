@@ -21,6 +21,8 @@ import (
 	"0chain.net/core/viper"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 var nodes = make(map[string]*Node)
 var nodesMutex = &sync.RWMutex{}
 
@@ -98,11 +100,25 @@ var (
 	NodeStatusInactive = 1
 )
 
-var (
-	NodeTypeMiner   int8 = 0
-	NodeTypeSharder int8 = 1
-	NodeTypeBlobber int8 = 2
+type NodeType int8
+
+const (
+	NodeTypeMiner NodeType = iota
+	NodeTypeSharder
+	NodeTypeBlobber
 )
+
+func (n NodeType) String() string {
+	switch n {
+	case NodeTypeMiner:
+		return "Miner"
+	case NodeTypeSharder:
+		return "Sharder"
+	case NodeTypeBlobber:
+		return "Blobber"
+	}
+	return ""
+}
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
@@ -113,31 +129,31 @@ type Node struct {
 	Host           string        `json:"host" yaml:"public_ip"`
 	Port           int           `json:"port" yaml:"port"`
 	Path           string        `json:"path" yaml:"path"`
-	Type           int8          `json:"type" yaml:"-"`
+	Type           NodeType      `json:"type" yaml:"-"`
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
 	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
-	LastActiveTime time.Time     `json:"-" msgpack:"-" yaml:"-"`
-	ErrorCount     int64         `json:"-" msgpack:"-" yaml:"-"`
-	CommChannel    chan struct{} `json:"-" msgpack:"-" yaml:"-"`
+	LastActiveTime time.Time     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	ErrorCount     int64         `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	CommChannel    chan struct{} `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	//These are approximiate as we are not going to lock to update
-	sent       int64 `json:"-" msgpack:"-" yaml:"-"` // messages sent to this node
-	sendErrors int64 `json:"-" msgpack:"-" yaml:"-"` // failed message sent to this node
-	received   int64 `json:"-" msgpack:"-" yaml:"-"` // messages received from this node
+	sent       int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // messages sent to this node
+	sendErrors int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // failed message sent to this node
+	received   int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" yaml:"-"`
-	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" yaml:"-"`
+	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
 	largeMessageSendTime uint64 `yaml:"-"`
 	smallMessageSendTime uint64 `yaml:"-"`
 
-	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
-	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
+	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
-	mutex sync.RWMutex `json:"-" msgpack:"-" yaml:"-"`
+	mutex sync.RWMutex `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
-	ProtocolStats interface{} `json:"-" msgpack:"-" yaml:"-"`
+	ProtocolStats interface{} `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
 	idBytes []byte `yaml:"-"`
 
@@ -321,7 +337,7 @@ func Read(line string) (*Node, error) {
 /*NewNode - read a node config line and create the node */
 func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node := Provider()
-	node.Type = nc["type"].(int8)
+	node.Type = nc["type"].(NodeType)
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)

@@ -32,6 +32,7 @@ type MerklePatriciaTrieI interface {
 	GetRoot() Key
 
 	GetNodeValue(path Path, template Serializable) (Serializable, error)
+	GetNodeValueRaw(path Path) ([]byte, error)
 	Insert(path Path, value Serializable) error
 	Delete(path Path) error
 

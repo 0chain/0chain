@@ -170,7 +170,7 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
-		conf scConfig
+		conf Config
 		err  error
 	)
 	conf.ReadPool = rpc

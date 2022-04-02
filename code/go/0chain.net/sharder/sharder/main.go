@@ -219,7 +219,7 @@ func main() {
 			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
 		}
 	}
-	if selfNode.Type != node.NodeTypeSharder {
+	if node.NodeType(selfNode.Type) != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
 
@@ -448,6 +448,8 @@ func initN2NHandlers(c *chain.Chain) {
 	sharder.SetupS2SRequestors()
 	sharder.SetupS2SResponders()
 	sharder.SetupX2SResponders()
+
+	chain.SetupLFBTicketSender()
 }
 
 func initWorkers(ctx context.Context) {

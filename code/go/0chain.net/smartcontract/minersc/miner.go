@@ -16,10 +16,13 @@ import (
 func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
-	mbits, err := balances.GetTrieNode(pkey, nil)
-	if err != nil && err != util.ErrValueNotPresent {
-		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
-			zap.String("key", pkey))
+	mn := NewMinerNode()
+	mbits, err := balances.GetTrieNode(pkey, mn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
+				zap.String("key", pkey))
+		}
 		return false
 	}
 	if mbits != nil {
@@ -348,6 +351,7 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	if mn, ok = raw.(*MinerNode); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return mn, nil
 }
 

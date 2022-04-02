@@ -142,23 +142,13 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	if mc.IsActiveInChain() && remote == false {
 
 		var (
-			sp        = getStatePath(selfNode)
-			list, err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp)
+			sp  = getStatePath(selfNode)
+			err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp, allNodesList)
 		)
 
 		if err != nil {
 			logging.Logger.Error("failed to get block state node",
 				zap.Any("error", err), zap.String("path", sp))
-			return false
-		}
-
-		if list == nil {
-			return false
-		}
-
-		if err = allNodesList.Decode(list.Encode()); err != nil {
-			logging.Logger.Error("failed to decode block state node",
-				zap.Any("error", err))
 			return false
 		}
 
@@ -260,7 +250,10 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.NumberOfDelegates = viper.GetInt("number_of_delegates")
 	mn.MinStake = state.Balance(viper.GetFloat64("min_stake") * 1e10)
 	mn.MaxStake = state.Balance(viper.GetFloat64("max_stake") * 1e10)
-
+	mn.Geolocation = minersc.SimpleNodeGeolocation{
+		Latitude:  viper.GetFloat64("latitude"), // are these good to be added in 0chain.yaml?
+		Longitude: viper.GetFloat64("longitude"),
+	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
 		scData.Name = scNameAddMiner
@@ -599,8 +592,7 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 	err error) {
 
-	var seri util.Serializable
-	seri, err = c.GetBlockStateNode(b, minersc.PhaseKey)
+	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
@@ -609,12 +601,6 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 
 	if err == util.ErrValueNotPresent {
 		err = nil // not a real error, Miner SC just is not started (yet)
-		return
-	}
-
-	if err = pn.Decode(seri.Encode()); err != nil {
-		err = fmt.Errorf("get_block_phase -- can't decode: %v, block %d",
-			err, b.Round)
 		return
 	}
 

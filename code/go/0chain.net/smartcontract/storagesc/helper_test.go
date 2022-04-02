@@ -98,7 +98,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Capacity = c.cap
 	sn.Used = 0
 	sn.LastHealthCheck = 0
-	sn.StakePoolSettings.NumDelegates = 100
+	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
@@ -115,7 +115,7 @@ func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
 	vn.BaseURL = getValidatorURL(c.id)
-	vn.StakePoolSettings.NumDelegates = 100
+	vn.StakePoolSettings.MaxNumDelegates = 100
 	vn.StakePoolSettings.MinStake = 0
 	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
@@ -146,6 +146,10 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
+	blobber := new(StorageNode)
+	blobber.ID = c.id
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	require.NoError(t, err)
 	var input = c.addValidatorRequest(t)
 	return ssc.addValidator(tx, input, balances)
 }
@@ -317,7 +321,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	return deco.ID, blobs
 }
 
-func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
+func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
 	balances chainState.StateContextI) {
 
 	var err = balances.InsertTrieNode(key, val)
@@ -325,9 +329,9 @@ func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
 }
 
 func setConfig(t testing.TB, balances chainState.StateContextI) (
-	conf *scConfig) {
+	conf *Config) {
 
-	conf = new(scConfig)
+	conf = new(Config)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
@@ -414,8 +418,8 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 }
 
 func stakePoolTotal(sp *stakePool) (total state.Balance) {
-	for _, pool := range sp.orderedPools() {
-		total += pool.Balance
+	for _, id := range sp.OrderedPoolIds() {
+		total += sp.Pools[id].Balance
 	}
 	return
 }

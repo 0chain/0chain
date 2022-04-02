@@ -2,17 +2,44 @@ package vestingsc
 
 import (
 	"context"
+	"fmt"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func mockSetValue(v interface{}) interface{} {
+	return mock.MatchedBy(func(c interface{}) bool {
+		cv := reflect.ValueOf(c)
+		if cv.Kind() != reflect.Ptr {
+			panic(fmt.Sprintf("%t must be a pointer, %v", v, cv.Kind()))
+		}
+
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Ptr {
+			if vv.Type() != cv.Type() {
+				return false
+			}
+			cv.Elem().Set(vv.Elem())
+		} else {
+			if vv.Type() != cv.Elem().Type() {
+				return false
+			}
+
+			cv.Elem().Set(vv)
+		}
+		return true
+	})
+}
 
 func Test_toSeconds(t *testing.T) {
 	assert.Equal(t, common.Timestamp(1),
@@ -132,10 +159,8 @@ func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
 	})
 	vp.ID = poolKey(vsc.ID, txHash)
 	require.NoError(t, vp.save(balances))
-	var (
-		got *vestingPool
-	)
-	got, err = vsc.getPool(poolKey(vsc.ID, txHash), balances)
+
+	got, err := vsc.getPool(poolKey(vsc.ID, txHash), balances)
 	require.NoError(t, err)
 	assert.EqualValues(t, vp, got)
 }

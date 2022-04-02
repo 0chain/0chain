@@ -1,9 +1,12 @@
+//go:build integration_tests
 // +build integration_tests
 
 package storagesc
 
 import (
 	"fmt"
+
+	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
@@ -14,7 +17,7 @@ import (
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI) (err error) {
 	// check for duplicates
 	for _, b := range blobbers.Nodes {
@@ -32,8 +35,8 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// the stake pool can be created by related validator
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
-		&blobber.StakePoolSettings, balances)
+	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, stakepool.Blobber,
+		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return
 	}

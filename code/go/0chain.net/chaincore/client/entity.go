@@ -1,11 +1,12 @@
 package client
 
 import (
-	"0chain.net/core/cache"
 	"context"
 	"encoding/hex"
 	"errors"
 	"time"
+
+	"0chain.net/core/cache"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -27,16 +28,17 @@ func init() {
 	cacher = cache.NewLFUCache(10 * 1024)
 }
 
+//go:generate msgp -io=false -tests=false -v
 // Client - data structure that holds the client data
 type Client struct {
-	datastore.CollectionMemberField `json:"-" msgpack:"-" yaml:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	datastore.IDField               `yaml:",inline"`
 	datastore.VersionField          `yaml:"-"`
 	datastore.CreationDateField     `yaml:"-"`
 	PublicKey                       string                     `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes                  []byte                     `json:"-" msgpack:"-" yaml:"-"`
+	PublicKeyBytes                  []byte                     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	sigSchemeType                   string                     `yaml:"-"`
-	SigScheme                       encryption.SignatureScheme `json:"-" msgpack:"-" yaml:"-"`
+	SigScheme                       encryption.SignatureScheme `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 }
 
 // NewClient - create a new client object

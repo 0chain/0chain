@@ -1,17 +1,20 @@
 package vestingsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
 
+	"0chain.net/smartcontract"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //
 // index of vesting pools of a client
@@ -22,7 +25,7 @@ func clientPoolsKey(vscKey, clientID datastore.Key) datastore.Key {
 }
 
 type clientPools struct {
-	Pools []datastore.Key `json:"pools"`
+	Pools []string `json:"pools"`
 }
 
 func (cp *clientPools) Encode() (b []byte) {
@@ -96,21 +99,21 @@ func (cp *clientPools) save(vscKey, clientID datastore.Key,
 //
 // SC helpers
 //
+
 func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 	balances chainstate.StateContextI) (cp *clientPools, err error) {
 
-	var raw util.Serializable
 	cp = new(clientPools)
-	raw, err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID), cp)
+	raw, err := balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID), cp)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	var ok bool
 	if cp, ok = raw.(*clientPools); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
-	return
+	return cp, nil
 }
 
 func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,

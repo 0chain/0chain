@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -28,10 +27,11 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
+
+//go:generate msgp -io=false -tests=false -v
 
 var validate *validator.Validate
 
@@ -246,8 +246,9 @@ type GlobalNode struct {
 	Minted state.Balance `json:"minted"`
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
-	RewardRoundFrequency int64         `json:"reward_round_frequency"`
-	OwnerId              datastore.Key `json:"owner_id"`
+	RewardRoundFrequency int64          `json:"reward_round_frequency"`
+	OwnerId              string         `json:"owner_id"`
+	Cost                 map[string]int `json:"cost"`
 }
 
 func (gn *GlobalNode) readConfig() {
@@ -271,6 +272,7 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
+	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
 }
 
 func (gn *GlobalNode) validate() error {
@@ -356,6 +358,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MaxMint, nil
 	case OwnerId:
 		return gn.OwnerId, nil
+	case Cost:
+		return gn.Cost, nil
 	default:
 		return nil, errors.New("Setting not implemented")
 	}
@@ -392,7 +396,7 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 	balances cstate.StateContextI) (has bool) {
 
 	if len(mpks.Mpks) == 0 {
-		Logger.Error("empty miners mpks keys")
+		logging.Logger.Error("empty miners mpks keys")
 		return
 	}
 
@@ -404,7 +408,7 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 		}
 	}
 
-	Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
+	logging.Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
 	return // false, hasn't
 }
 
@@ -413,7 +417,7 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 	balances cstate.StateContextI) (has bool) {
 
 	if len(gsos.Shares) == 0 {
-		Logger.Error("empty sharder or sign keys")
+		logging.Logger.Error("empty sharder or sign keys")
 		return
 	}
 
@@ -425,7 +429,7 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 		}
 	}
 
-	Logger.Debug("has no prev miner in GSoS",
+	logging.Logger.Debug("has no prev miner in GSoS",
 		zap.Int64("prev_mb_round", pmb.StartingRound),
 		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
 	)
@@ -453,8 +457,8 @@ func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
 
 	var pmb = gn.prevMagicBlock(balances)
 
-	for _, node := range list {
-		if pmb.Miners.HasNode(node.ID) {
+	for _, nd := range list {
+		if pmb.Miners.HasNode(nd.ID) {
 			return true
 		}
 	}
@@ -530,7 +534,7 @@ func (gn *GlobalNode) epochDecline() {
 	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
 
 	// log about the epoch declining
-	Logger.Info("miner sc: epoch decline",
+	logging.Logger.Info("miner sc: epoch decline",
 		zap.Int64("round", gn.LastRound),
 		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
 		zap.Float64("prev_reward_rate", rr),
@@ -576,169 +580,6 @@ func (gn *GlobalNode) GetHash() string {
 
 func (gn *GlobalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
-}
-
-//
-// miner / sharder
-//
-
-// MinerNode struct that holds information about the registering miner.
-type MinerNode struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
-	Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
-	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
-}
-
-func NewMinerNode() *MinerNode {
-	mn := &MinerNode{SimpleNode: &SimpleNode{}}
-	mn.Pending = make(map[string]*sci.DelegatePool)
-	mn.Active = make(map[string]*sci.DelegatePool)
-	mn.Deleting = make(map[string]*sci.DelegatePool)
-	return mn
-}
-
-func getMinerKey(mid string) datastore.Key {
-	return datastore.Key(ADDRESS + mid)
-}
-
-func GetSharderKey(sid string) datastore.Key {
-	return datastore.Key(ADDRESS + sid)
-}
-
-func (mn *MinerNode) GetKey() datastore.Key {
-	return datastore.Key(ADDRESS + mn.ID)
-}
-
-// calculate service charge from fees
-func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
-	charge, rest state.Balance) {
-
-	charge = state.Balance(float64(fees) * mn.ServiceCharge)
-	rest = fees - charge
-	return
-}
-
-func (mn *MinerNode) numDelegates() int {
-	return len(mn.Pending) + len(mn.Active)
-}
-
-func (mn *MinerNode) numActiveDelegates() int {
-	return len(mn.Active)
-}
-
-func (mn *MinerNode) save(balances cstate.StateContextI) error {
-	//var key datastore.Key
-	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
-	if err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
-		return fmt.Errorf("saving miner node: %v", err)
-	}
-	//Logger.Debug("saving miner node", zap.String("id", mn.ID),
-	//	zap.Int("pending", len(mn.Pending)), zap.Int("active", len(mn.Active)), zap.Int("size", len(mn.Encode())))
-	//Logger.Debug("MinerNode save successfully",
-	//	zap.String("path", encryption.Hash(mn.GetKey())),
-	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
-	return nil
-}
-
-func (mn *MinerNode) Encode() []byte {
-	buff, _ := json.Marshal(mn)
-	return buff
-}
-
-func (mn *MinerNode) decodeFromValues(params url.Values) error {
-	mn.N2NHost = params.Get("n2n_host")
-	mn.ID = params.Get("id")
-
-	if mn.N2NHost == "" || mn.ID == "" {
-		return errors.New("URL or ID is not specified")
-	}
-	return nil
-}
-
-// nodeWithVCPoolLock represents a MinerNode that use ViewChangeLock as tokenLockInterface
-// it is for decoding MinerNode bytes
-type nodeWithVCPoolLock struct {
-	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*DelegatePoolWithVCPoolLock `json:"pending,omitempty"`
-	Active      map[string]*DelegatePoolWithVCPoolLock `json:"active,omitempty"`
-	Deleting    map[string]*DelegatePoolWithVCPoolLock `json:"deleting,omitempty"`
-}
-
-func newNodeWithVCPoolLock() *nodeWithVCPoolLock {
-	mn := &nodeWithVCPoolLock{SimpleNode: &SimpleNode{}}
-	mn.Pending = make(map[string]*DelegatePoolWithVCPoolLock)
-	mn.Active = make(map[string]*DelegatePoolWithVCPoolLock)
-	mn.Deleting = make(map[string]*DelegatePoolWithVCPoolLock)
-	return mn
-}
-
-// DelegatePoolWithVCPoolLock is for decoding delegate pool with ViewChangeLock as the TokenLockInterface
-type DelegatePoolWithVCPoolLock struct {
-	*sci.PoolStats              `json:"stats"`
-	*ZcnTokenPoolWithVCPoolLock `json:"pool"`
-}
-
-// ToDelegatePool converts the pool struct to *DelegatePool
-func (dpl *DelegatePoolWithVCPoolLock) ToDelegatePool() *sci.DelegatePool {
-	dp := sci.NewDelegatePool()
-	dp.PoolStats = dpl.PoolStats
-	dp.ZcnPool = dpl.ZcnPool
-	dp.TokenLockInterface = dpl.ViewChangeLock
-	return dp
-}
-
-// ZcnTokenPoolWithVCPoolLock represents the struct for decoding pool in DelegatePool
-type ZcnTokenPoolWithVCPoolLock struct {
-	tokenpool.ZcnPool `json:"pool"`
-	*ViewChangeLock   `json:"lock"`
-}
-
-// Decode decodes the miner node from bytes
-func (mn *MinerNode) Decode(input []byte) error {
-	n := newNodeWithVCPoolLock()
-	if err := json.Unmarshal(input, n); err != nil {
-		return err
-	}
-
-	mn.SimpleNode = n.SimpleNode
-	mn.Pending = make(map[string]*sci.DelegatePool, len(n.Pending))
-	for k, pl := range n.Pending {
-		mn.Pending[k] = pl.ToDelegatePool()
-	}
-
-	mn.Active = make(map[string]*sci.DelegatePool, len(n.Active))
-	for k, pl := range n.Active {
-		mn.Active[k] = pl.ToDelegatePool()
-	}
-
-	mn.Deleting = make(map[string]*sci.DelegatePool, len(n.Deleting))
-	for k, pl := range n.Deleting {
-		mn.Deleting[k] = pl.ToDelegatePool()
-	}
-
-	return nil
-}
-
-func (mn *MinerNode) GetHash() string {
-	return util.ToHex(mn.GetHashBytes())
-}
-
-func (mn *MinerNode) GetHashBytes() []byte {
-	return encryption.RawHash(mn.Encode())
-}
-
-func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
-	var keys []string
-	for k := range mn.Active {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	ops = make([]*sci.DelegatePool, 0, len(keys))
-	for _, key := range keys {
-		ops = append(ops, mn.Active[key])
-	}
-	return
 }
 
 // NodeType used in pools statistic.
@@ -799,17 +640,23 @@ type Stat struct {
 	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
 }
 
+type SimpleNodeGeolocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type SimpleNode struct {
-	ID          string `json:"id" validate:"hexadecimal,len=64"`
-	N2NHost     string `json:"n2n_host"`
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	Path        string `json:"path"`
-	PublicKey   string `json:"public_key"`
-	ShortName   string `json:"short_name"`
-	BuildTag    string `json:"build_tag"`
-	TotalStaked int64  `json:"total_stake"`
-	Delete      bool   `json:"delete"`
+	ID          string                `json:"id" validate:"hexadecimal,len=64"`
+	N2NHost     string                `json:"n2n_host"`
+	Host        string                `json:"host"`
+	Port        int                   `json:"port"`
+	Geolocation SimpleNodeGeolocation `json:"geolocation"`
+	Path        string                `json:"path"`
+	PublicKey   string                `json:"public_key"`
+	ShortName   string                `json:"short_name"`
+	BuildTag    string                `json:"build_tag"`
+	TotalStaked int64                 `json:"total_stake"`
+	Delete      bool                  `json:"delete"`
 
 	// settings and statistic
 
@@ -836,7 +683,7 @@ type SimpleNode struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
-	Status int `json:"-"`
+	Status int `json:"-" msg:"-"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
@@ -852,44 +699,10 @@ func (smn *SimpleNode) Validate() error {
 	return validate.Struct(smn)
 }
 
-type MinerNodes struct {
-	Nodes []*MinerNode
-}
-
-func (mn *MinerNodes) Encode() []byte {
-	buff, _ := json.Marshal(mn)
-	return buff
-}
-
-func (mn *MinerNodes) Decode(input []byte) error {
-	err := json.Unmarshal(input, mn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (mn *MinerNodes) GetHash() string {
-	return util.ToHex(mn.GetHashBytes())
-}
-
-func (mn *MinerNodes) GetHashBytes() []byte {
-	return encryption.RawHash(mn.Encode())
-}
-
-func (mn *MinerNodes) FindNodeById(id string) *MinerNode {
-	for _, minerNode := range mn.Nodes {
-		if minerNode.ID == id {
-			return minerNode
-		}
-	}
-	return nil
-}
-
 type ViewChangeLock struct {
-	DeleteViewChangeSet bool          `json:"delete_view_change_set"`
-	DeleteVC            int64         `json:"delete_after_view_change"`
-	Owner               datastore.Key `json:"owner"`
+	DeleteViewChangeSet bool   `json:"delete_view_change_set"`
+	DeleteVC            int64  `json:"delete_after_view_change"`
+	Owner               string `json:"owner"`
 }
 
 func (vcl *ViewChangeLock) IsLocked(entity interface{}) bool {
@@ -935,7 +748,7 @@ func (ps *poolStat) decode(input []byte) error {
 }
 
 type delegatePoolStat struct {
-	ID           datastore.Key `json:"id"`            // pool ID
+	ID           string        `json:"id"`            // pool ID
 	Balance      state.Balance `json:"balance"`       //
 	InterestPaid state.Balance `json:"interest_paid"` //
 	RewardPaid   state.Balance `json:"reward_paid"`   //
@@ -969,8 +782,8 @@ func newUserPools() (ups *userPools) {
 
 // UserNode keeps references to all user's pools.
 type UserNode struct {
-	ID    string                            `json:"id"`       // client ID
-	Pools map[datastore.Key][]datastore.Key `json:"pool_map"` // node_id -> [pool_id]
+	ID    string              `json:"id"`       // client ID
+	Pools map[string][]string `json:"pool_map"` // node_id -> [pool_id]
 }
 
 func NewUserNode() *UserNode {
@@ -1018,7 +831,7 @@ func (un *UserNode) Decode(input []byte) error {
 }
 
 func (un *UserNode) GetKey() datastore.Key {
-	return datastore.Key(ADDRESS + un.ID)
+	return ADDRESS + un.ID
 }
 
 func (un *UserNode) GetHash() string {
@@ -1262,7 +1075,7 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 			return nil, err
 		}
 
-		return dkgMiners, nil
+		return NewDKGMinerNodes(), nil
 	}
 	var ok bool
 	if dkgMiners, ok = raw.(*DKGMinerNodes); !ok {
@@ -1289,6 +1102,7 @@ func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
 	if mpks, ok = raw.(*block.Mpks); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return mpks, nil
 }
 
@@ -1308,6 +1122,7 @@ func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
 	if magicBlock, ok = raw.(*block.MagicBlock); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return magicBlock, nil
 }
 
@@ -1327,6 +1142,7 @@ func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns
 	if gsos, ok = raw.(*block.GroupSharesOrSigns); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return gsos, nil
 }
 
@@ -1381,6 +1197,7 @@ func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes
 	if nodesList, ok = raw.(*MinerNodes); !ok {
 		return nil, fmt.Errorf("unexpected node type")
 	}
+
 	return nodesList, nil
 }
 

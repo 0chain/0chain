@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	"log"
 	"strconv"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -13,13 +14,24 @@ import (
 const mockVpBalance = 100e10
 const mockDestinationBalance = 1e10
 
-func AddVestingPools(
+func AddMockClientPools(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	var vestingPools []string
 	for i := 0; i < len(clients); i++ {
 		var clientPools = clientPools{}
+		clientPools.Pools = append(clientPools.Pools, geMockVestingPoolId(i))
+		if _, err := balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func AddMockVestingPools(
+	clients []string,
+	balances cstate.StateContextI,
+) {
+	for i := 0; i < len(clients); i++ {
 		var vestingPool = vestingPool{
 			Description: "mock description",
 			StartTime:   0,
@@ -35,17 +47,9 @@ func AddVestingPools(
 		}
 		vestingPool.ID = geMockVestingPoolId(i)
 		vestingPool.Balance = mockVpBalance
-		clientPools.Pools = append(clientPools.Pools, vestingPool.ID)
-		err := balances.InsertTrieNode(vestingPool.ID, &vestingPool)
-		if err != nil {
-			panic(err)
+		if err := balances.InsertTrieNode(vestingPool.ID, &vestingPool); err != nil {
+			log.Fatal(err)
 		}
-		err = balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools)
-		if err != nil {
-			panic(err)
-		}
-
-		vestingPools = append(vestingPools, vestingPool.ID)
 	}
 }
 

@@ -16,8 +16,10 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
+	return scKey + ":configurations"
 }
 
 type freeAllocationSettings struct {
@@ -72,8 +74,8 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 
 }
 
-// scConfig represents SC configurations ('storagesc:' from sc.yaml).
-type scConfig struct {
+// Config represents SC configurations ('storagesc:' from sc.yaml).
+type Config struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
 	// measured in tok / GB / time unit. Where the time unit is this
 	// configuration.
@@ -156,13 +158,14 @@ type scConfig struct {
 	BlockReward *blockReward `json:"block_reward"`
 
 	// Allow direct access to MPT
-	ExposeMpt bool          `json:"expose_mpt"`
-	OwnerId   datastore.Key `json:"owner_id"`
+	ExposeMpt bool           `json:"expose_mpt"`
+	OwnerId   string         `json:"owner_id"`
+	Cost      map[string]int `json:"cost"`
 }
 
-func (sc *scConfig) validate() (err error) {
+func (sc *Config) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less than 1s: %s", sc.TimeUnit)
+		return fmt.Errorf("time_unit less than 1s: %v", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
@@ -314,11 +317,11 @@ func (sc *scConfig) validate() (err error) {
 	return
 }
 
-func (conf *scConfig) canMint() bool {
+func (conf *Config) canMint() bool {
 	return conf.Minted < conf.MaxMint
 }
 
-func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
+func (conf *Config) validateStakeRange(min, max state.Balance) (err error) {
 	if min < conf.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
@@ -333,7 +336,7 @@ func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 	return
 }
 
-func (conf *scConfig) Encode() (b []byte) {
+func (conf *Config) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(conf); err != nil {
 		panic(err) // must not happens
@@ -341,7 +344,7 @@ func (conf *scConfig) Encode() (b []byte) {
 	return
 }
 
-func (conf *scConfig) Decode(b []byte) error {
+func (conf *Config) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
 
@@ -350,10 +353,10 @@ func (conf *scConfig) Decode(b []byte) error {
 //
 
 // configs from sc.yaml
-func getConfiguredConfig() (conf *scConfig, err error) {
+func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
 
-	conf = new(scConfig)
+	conf = new(Config)
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
@@ -441,13 +444,13 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	)
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
-
+	conf.Cost = scc.GetStringMapInt(pfx + "cost")
 	err = conf.validate()
 	return
 }
 
 func (ssc *StorageSmartContract) setupConfig(
-	balances chainState.StateContextI) (conf *scConfig, err error) {
+	balances chainState.StateContextI) (conf *Config, err error) {
 
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
@@ -462,25 +465,26 @@ func (ssc *StorageSmartContract) setupConfig(
 // getConfig
 func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
-	conf *scConfig, err error) {
+	conf *Config, err error) {
 
-	conf = new(scConfig)
-	var raw util.Serializable
-	if raw, err = balances.GetTrieNode(scConfigKey(ssc.ID), conf); err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-
-	if err == util.ErrValueNotPresent {
+	conf = new(Config)
+	raw, err := balances.GetTrieNode(scConfigKey(ssc.ID), conf)
+	switch err {
+	case util.ErrValueNotPresent:
 		if !setup {
 			return // value not present
 		}
 		return ssc.setupConfig(balances)
+	case nil:
+		var ok bool
+		if conf, ok = raw.(*Config); !ok {
+			return nil, fmt.Errorf("unexpected node type")
+		}
+
+		return conf, nil
+	default:
+		return nil, err
 	}
-	var ok bool
-	if conf, ok = raw.(*scConfig); !ok {
-		return nil, fmt.Errorf("unexpected node type")
-	}
-	return
 }
 
 const cantGetConfigErrMsg = "can't get config"
@@ -490,7 +494,7 @@ func (ssc *StorageSmartContract) getConfigHandler(
 	params url.Values,
 	balances chainState.StateContextI,
 ) (resp interface{}, err error) {
-	var conf *scConfig
+	var conf *Config
 	conf, err = ssc.getConfig(balances, false)
 
 	if err != nil && err != util.ErrValueNotPresent {
@@ -513,7 +517,7 @@ func (ssc *StorageSmartContract) getWritePoolConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *writePoolConfig, err error) {
 
-	var scconf *scConfig
+	var scconf *Config
 	if scconf, err = ssc.getConfig(balances, setup); err != nil {
 		return
 	}
@@ -525,7 +529,7 @@ func (ssc *StorageSmartContract) getReadPoolConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *readPoolConfig, err error) {
 
-	var scconf *scConfig
+	var scconf *Config
 	if scconf, err = ssc.getConfig(balances, setup); err != nil {
 		return
 	}

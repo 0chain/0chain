@@ -5,13 +5,15 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/dbs/event"
+	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 const blobberHealthTime = 60 * 60 // 1 Hour
@@ -19,30 +21,30 @@ const blobberHealthTime = 60 * 60 // 1 Hour
 func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
 	raw, err := balances.GetTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
-	if err == util.ErrEncoding {
+	switch err {
+	case nil:
+		var ok bool
+		if allBlobbersList, ok = raw.(*StorageNodes); !ok {
+			return nil, fmt.Errorf("unexpected node type")
+		}
+		return allBlobbersList, nil
+	case util.ErrValueNotPresent:
+		return &StorageNodes{}, nil
+	default:
 		return nil, err
 	}
-	if err != nil {
-		return allBlobbersList, nil
-	}
-	var ok bool
-	if allBlobbersList, ok = raw.(*StorageNodes); !ok {
-		return nil, fmt.Errorf("unexpected node type")
-	}
-	return allBlobbersList, nil
 }
 
 func (sc *StorageSmartContract) getBlobber(blobberID string,
 	balances cstate.StateContextI) (blobber *StorageNode, err error) {
 
-	blobber = &StorageNode{ID: blobberID}
-	var raw util.Serializable
-	raw, err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
+	blobber = new(StorageNode)
+	blobber.ID = blobberID
+	raw, err := balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	blobber = new(StorageNode)
 	var ok bool
 	if blobber, ok = raw.(*StorageNode); !ok {
 		return nil, fmt.Errorf("unexpected node type")
@@ -62,7 +64,7 @@ func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
@@ -91,10 +93,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// update the list
 	blobbers.Nodes.add(blobber)
 
-	if err := emitAddOrOverwriteBlobber(blobber, balances); err != nil {
-		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
-	}
-
 	// update statistics
 	sc.statIncr(statUpdateBlobber)
 
@@ -108,14 +106,18 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
-	if err = blobber.StakePoolSettings.validate(conf); err != nil {
+	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
-	sp.Settings.NumDelegates = blobber.StakePoolSettings.NumDelegates
+	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
+
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
+	}
 
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
@@ -342,28 +344,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"malformed request: missing read_marker")
 	}
 
-	var (
-		raw             util.Serializable
-		lastCommittedRM = &ReadConnection{}
-		lastKnownCtr    int64
-	)
-
-	raw, err = balances.GetTrieNode(commitRead.GetKey(sc.ID), lastCommittedRM)
-	if err != nil && err != util.ErrValueNotPresent {
+	err = commitRead.ReadMarker.Verify(balances)
+	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
-			"can't get latest blobber client read: %v", err)
-	}
-
-	if err != util.ErrValueNotPresent {
-		var ok bool
-		if commitRead, ok = raw.(*ReadConnection); !ok {
-			return "", fmt.Errorf("unexpected node type")
-		}
-		err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
-		if err != nil {
-			return "", common.NewErrorf("commit_blobber_read",
-				"can't verify read marker: %v", err)
-		}
+			"can't verify read marker: %v", err)
 	}
 	// move tokens to blobber's stake pool from client's read pool
 	var alloc *StorageAllocation
@@ -394,17 +378,13 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"blobber doesn't belong to allocation")
 	}
 
-	const CHUNK_SIZE = 64 * KB
-
-	// one read is one 64 KB block
 	var (
-		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
-		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
+		sizeRead = sizeInGB(commitRead.ReadMarker.ReadSize)
 		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
-	commitRead.ReadMarker.ReadSize = sizeRead
+	commitRead.ReadMarker.ReadSizeInGB = sizeRead
 
 	// if 3rd party pays
 	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
@@ -465,9 +445,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker in db:", err.Error())
 	}
 
-	sc.newRead(balances, numReads)
+	// update stats
+	if err := sc.newRead(balances, commitRead.ReadMarker.ReadSize); err != nil {
+		return "", common.NewError("new read err: ", err.Error())
+	}
 
-	return // ok, the response and nil
+	return
 }
 
 func sizePrice(size int64, price state.Balance) float64 {
@@ -617,6 +600,28 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
 
+	// Update saved_data on storage node
+	var storageNode *StorageNode
+	for _, b := range alloc.Blobbers {
+		if b.ID == commitConnection.WriteMarker.BlobberID {
+			storageNode = b
+			break
+		}
+	}
+
+	storageNode.SavedData += alloc.Stats.UsedSize
+	// emit blobber update event
+
+	var sp *stakePool
+	if sp, err = sc.getStakePool(storageNode.ID, balances); err != nil {
+		return "", common.NewError("commit_connection_failed",
+			"can't get stake pool")
+	}
+	if err = emitAddOrOverwriteBlobber(storageNode, sp, balances); err != nil {
+		logging.Logger.Error("error emitting blobber",
+			zap.Any("blobber", storageNode.ID), zap.Error(err))
+	}
+
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_connection_failed",
@@ -650,6 +655,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
-	sc.newWrite(balances, commitConnection.WriteMarker.Size)
+	if err := sc.newWrite(balances, commitConnection.WriteMarker.Size); err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "new write err: %v", err)
+	}
 	return string(detailsBytes), err
 }

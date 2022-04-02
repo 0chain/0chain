@@ -2,8 +2,13 @@ package storagesc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/smartcontract"
 
@@ -43,6 +48,22 @@ func (ipsc *StorageSmartContract) GetHandlerStats(ctx context.Context, params ur
 
 func (ipsc *StorageSmartContract) GetExecutionStats() map[string]interface{} {
 	return ipsc.SmartContractExecutionStats
+}
+
+func (ipsc *StorageSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) (int, error) {
+	conf, err := ipsc.getConfig(balances, true)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if conf.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := conf.Cost[funcName]
+	if !ok {
+		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
 }
 
 func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
@@ -114,6 +135,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["stake_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_pay_interests"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_pay_interests"), nil)
+	ssc.SmartContractExecutionStats["pay_reward"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "pay_reward (add/update/remove SC function)"), nil)
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 	// events db
@@ -121,7 +143,10 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/transactions"] = ssc.GetTransactionByFilterHandler
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
+	ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
+	// blobber aggregated saved data
+	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }
 
 func (ssc *StorageSmartContract) GetName() string {
@@ -279,6 +304,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolLock(t, input, balances)
 	case "stake_pool_unlock":
 		resp, err = sc.stakePoolUnlock(t, input, balances)
+	case "collect_reward":
+		resp, err = sc.collectReward(t, input, balances)
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(

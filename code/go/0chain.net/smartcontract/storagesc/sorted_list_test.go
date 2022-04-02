@@ -15,7 +15,7 @@ func Test_sortedList(t *testing.T) {
 	// add(id string) (ok bool)
 
 	var (
-		sl    sortedList
+		sl    SortedList
 		order = []string{"b1", "b2", "b3"}
 		not   = []string{"b0", "b4"}
 		i     int
@@ -48,7 +48,7 @@ func Test_sortedList(t *testing.T) {
 		require.False(t, ok)
 	}
 
-	var cp = make(sortedList, len(sl))
+	var cp = make(SortedList, len(sl))
 	copy(cp, sl)
 
 	for range order {

@@ -10,6 +10,9 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore State
+
+//go:generate msgp -io=false -tests=false -v
 //Balance - any quantity that is represented as an integer in the lowest denomination
 type Balance int64
 
@@ -63,6 +66,15 @@ func (s *State) Decode(data []byte) error {
 	s.Round = origin
 	s.Balance = Balance(balance)
 	return nil
+}
+
+func (s *State) MarshalMsg([]byte) ([]byte, error) {
+	return s.Encode(), nil
+}
+
+func (s *State) UnmarshalMsg(data []byte) ([]byte, error) {
+	err := s.Decode(data)
+	return nil, err
 }
 
 //ComputeProperties - logic to compute derived properties

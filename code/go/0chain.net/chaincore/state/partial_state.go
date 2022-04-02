@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -22,7 +23,7 @@ type PartialState struct {
 	Hash      util.Key    `json:"root"`
 	Version   string      `json:"version"`
 	StartRoot util.Key    `json:"start"`
-	Nodes     []util.Node `json:"_"`
+	Nodes     []util.Node `json:"-" msgpack:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
 }
@@ -130,6 +131,17 @@ func (ps *PartialState) GetRoot() util.Node {
 	return ps.root
 }
 
+//MarshalJSON - implement Marshaler interface
+func (ps *PartialState) MarshalJSON() ([]byte, error) {
+	var data = make(map[string]interface{})
+	return ps.MarshalPartialStateJSON(data)
+}
+
+func (ps *PartialState) MarshalMsgpack() ([]byte, error) {
+	data := make(map[string]interface{})
+	return ps.MarshalPartialStateMsgpack(data)
+}
+
 //UnmarshalJSON - implement Unmarshaler interface
 func (ps *PartialState) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
@@ -138,11 +150,22 @@ func (ps *PartialState) UnmarshalJSON(data []byte) error {
 		logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 		return err
 	}
-	return ps.UnmarshalPartialState(obj)
+	return ps.UnmarshalPartialStateJSON(obj)
 }
 
-//UnmarshalPartialState - unmarshal the partial state
-func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error {
+// UnmarshalMsgpack implements Unmarshaler interface
+func (ps *PartialState) UnmarshalMsgpack(data []byte) error {
+	obj := make(map[string]interface{})
+	err := msgpack.Unmarshal(data, &obj)
+	if err != nil {
+		logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+		return err
+	}
+	return ps.UnmarshalPartialStateMsgpack(obj)
+}
+
+//UnmarshalPartialStateJSON - unmarshal the partial state
+func (ps *PartialState) UnmarshalPartialStateJSON(obj map[string]interface{}) error {
 	if root, ok := obj["root"]; ok {
 		switch rootImpl := root.(type) {
 		case string:
@@ -188,21 +211,50 @@ func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error 
 	return nil
 }
 
-//MarshalJSON - implement Marshaler interface
-func (ps *PartialState) MarshalJSON() ([]byte, error) {
-	var data = make(map[string]interface{})
-	return ps.MartialPartialState(data)
+//UnmarshalPartialStateMsgpack - unmarshal the partial state
+func (ps *PartialState) UnmarshalPartialStateMsgpack(obj map[string]interface{}) error {
+	if root, ok := obj["root"]; ok {
+		switch rootImpl := root.(type) {
+		case string:
+			ps.SetKey(rootImpl)
+		default:
+			logging.Logger.Error("unmarshal json - unknown type", zap.Any("obj", obj))
+		}
+	} else {
+		logging.Logger.Error("unmarshal json - no hash", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	if str, ok := obj["version"].(string); ok {
+		ps.Version = str
+	} else {
+		logging.Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	if nodes, ok := obj["nodes"].([]interface{}); ok {
+		ps.Nodes = make([]util.Node, len(nodes))
+		for idx, nd := range nodes {
+			if nd, ok := nd.([]byte); ok {
+				var err error
+				ps.Nodes[idx], err = util.CreateNode(bytes.NewBuffer(nd))
+				if err != nil {
+					logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+					return err
+				}
+			} else {
+				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
+				return common.ErrInvalidData
+			}
+		}
+	} else {
+		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	return nil
 }
 
-//MartialPartialState - martal the partial state
-func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte, error) {
-	data["root"] = util.ToHex(ps.Hash)
-	data["version"] = ps.Version
-	nodes := make([][]byte, len(ps.Nodes))
-	for idx, nd := range ps.Nodes {
-		nodes[idx] = nd.Encode()
-	}
-	data["nodes"] = nodes
+//MarshalPartialStateJSON - martal the partial state
+func (ps *PartialState) MarshalPartialStateJSON(data map[string]interface{}) ([]byte, error) {
+	data = ps.setMarshalFields(data)
 	b, err := json.Marshal(data)
 	if err != nil {
 		logging.Logger.Error("marshal JSON - state change", zap.Any("block", ps.Hash), zap.Error(err))
@@ -210,6 +262,28 @@ func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte
 		logging.Logger.Info("marshal JSON - state change", zap.Any("block", ps.Hash))
 	}
 	return b, err
+}
+
+func (ps *PartialState) MarshalPartialStateMsgpack(data map[string]interface{}) ([]byte, error) {
+	data = ps.setMarshalFields(data)
+	b, err := msgpack.Marshal(data)
+	if err != nil {
+		logging.Logger.Error("marshal Msgpack - partial state", zap.Any("block", ps.Hash), zap.Error(err))
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (ps *PartialState) setMarshalFields(data map[string]interface{}) map[string]interface{} {
+	data["root"] = util.ToHex(ps.Hash)
+	data["version"] = ps.Version
+	nodes := make([][]byte, len(ps.Nodes))
+	for idx, nd := range ps.Nodes {
+		nodes[idx] = nd.Encode()
+	}
+	data["nodes"] = nodes
+	return data
 }
 
 //AddNode - add node to the partial state
