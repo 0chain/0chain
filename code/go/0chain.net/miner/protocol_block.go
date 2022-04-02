@@ -102,7 +102,7 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
+	brTxn.TransactionData = `{"name":"blobber_block_rewards","input":{}}`
 	brTxn.Fee = 0
 	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
 		panic(err)
@@ -849,7 +849,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if config.DevConfiguration.IsBlockRewards {
+	if config.DevConfiguration.IsBlockRewards &&
+		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
