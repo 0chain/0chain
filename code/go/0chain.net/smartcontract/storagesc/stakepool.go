@@ -425,6 +425,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
+		data, _ := json.Marshal(event.DbUpdates{
+			Id: spr.BlobberID,
+			Updates: map[string]interface{}{
+				"total_stake": int64(sp.stake()),
+			},
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 

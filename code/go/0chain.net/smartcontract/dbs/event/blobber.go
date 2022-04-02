@@ -62,18 +62,6 @@ type blobberAggregateStats struct {
 	TotalServiceCharge int64 `json:"total_service_charge"`
 }
 
-type UpdateTotalStake struct {
-	BlobberID  string
-	TotalStake int64
-}
-
-func (edb *EventDb) updateBlobberTotalStake(uts UpdateTotalStake) error {
-	return edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: uts.BlobberID}).
-		Updates(map[string]interface{}{
-			"total_stake": uts.TotalStake,
-		}).Error
-}
-
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	result := edb.Store.Get().
