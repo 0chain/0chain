@@ -27,16 +27,16 @@ type mockStateContext struct {
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                       {}
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                      { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction                { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer             { return nil }
-func (sc *mockStateContext) Validate() error                                         { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme          { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)               {}
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)   { return "", nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) { return 0, nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock            { return nil }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
+func (sc *mockStateContext) Validate() error                                           { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
@@ -46,9 +46,9 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 		Data:        data,
 	})
 }
-func (sc *mockStateContext) EmitError(error)            {}
-func (sc *mockStateContext) GetEvents() []event.Event   { return nil }
-func (tb *mockStateContext) GetEventDB() *event.EventDb { return nil }
+func (sc *mockStateContext) EmitError(error)                                           {}
+func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }

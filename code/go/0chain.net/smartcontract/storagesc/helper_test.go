@@ -332,6 +332,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
+	conf.ValidatorsPerChallenge = 10
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
@@ -364,6 +365,14 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf.StakePool = &stakePoolConfig{
 		MinLock: 10,
+	}
+
+	conf.BlockReward = &blockReward{
+		BlockReward:             1000,
+		BlockRewardChangePeriod: 1000,
+		BlockRewardChangeRatio:  0.1,
+		TriggerPeriod:           30,
+		BlobberWeight:           0.5,
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
