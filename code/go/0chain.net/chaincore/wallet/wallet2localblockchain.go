@@ -14,7 +14,9 @@ import (
 /*Register - register a wallet using the server side api */
 func (w *Wallet) Register(ctx context.Context) error {
 	c := clientMetadataProvider.Instance().(*client.Client)
-	c.SetPublicKey(w.SignatureScheme.GetPublicKey())
+	if err := c.SetPublicKey(w.SignatureScheme.GetPublicKey()); err != nil {
+		return err
+	}
 	_, err := client.PutClient(ctx, c)
 	return err
 }
