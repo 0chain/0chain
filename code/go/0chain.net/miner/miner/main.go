@@ -95,8 +95,8 @@ func main() {
 
 	node.Self.SetSignatureScheme(signatureScheme)
 
-	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
+	miner.SetupMinerChain(mc, serverChain)
 	mc.SetDiscoverClients(viper.GetBool("server_chain.client.discover"))
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
 	mc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)

@@ -1325,6 +1325,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 //RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
+	RoundInfoHandlerEx(w, r, GetServerChain())
+}
+
+func RoundInfoHandlerEx(w http.ResponseWriter, r *http.Request, sc Chainer) {
 	defer func() {
 		if recover() != nil {
 			http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
@@ -1333,7 +1337,6 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	roundParamQuery := ""
 
-	sc := GetServerChain()
 	rn := sc.GetCurrentRound()
 	roundParam := r.URL.Query().Get("round")
 	if roundParam != "" {

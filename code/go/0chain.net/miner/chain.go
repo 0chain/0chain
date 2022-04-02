@@ -54,43 +54,41 @@ var (
 )
 
 /*SetupMinerChain - setup the miner's chain */
-func SetupMinerChain(c *chain.Chain) {
+func SetupMinerChain(mc *Chain, c *chain.Chain) {
 	mcGuard.Lock()
 	defer mcGuard.Unlock()
 
-	minerChain.Chain = c
-	minerChain.Config = c.Config
-	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
-	minerChain.muDKG = &sync.RWMutex{}
-	minerChain.roundDkg = round.NewRoundStartingStorage()
-	c.SetFetchedNotarizedBlockHandler(minerChain)
-	c.SetViewChanger(minerChain)
+	mc.Chain = c
+	mc.Config = c.Config
+	mc.blockMessageChannel = make(chan *BlockMessage, 128)
+	mc.muDKG = &sync.RWMutex{}
+	mc.roundDkg = round.NewRoundStartingStorage()
+	c.SetFetchedNotarizedBlockHandler(mc)
+	c.SetViewChanger(mc)
 	c.RoundF = MinerRoundFactory{}
 	// view change / DKG
-	minerChain.viewChangeProcess.init(minerChain)
+	mc.viewChangeProcess.init(mc)
 	// restart round event
-	minerChain.subRestartRoundEventChannel = make(chan chan struct{})
-	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
-	minerChain.restartRoundEventChannel = make(chan struct{})
-	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
-	minerChain.nbpMutex = &sync.Mutex{}
-	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
-	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
-	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
-	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
-	minerChain.notarizingBlocksTasks = make(map[string]chan struct{})
-	minerChain.notarizingBlocksResults = cache.NewLRUCache(1000)
-	minerChain.nbmMutex = &sync.Mutex{}
-	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
-	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
-	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
-	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
+	mc.subRestartRoundEventChannel = make(chan chan struct{})
+	mc.unsubRestartRoundEventChannel = make(chan chan struct{})
+	mc.restartRoundEventChannel = make(chan struct{})
+	mc.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
+	mc.nbpMutex = &sync.Mutex{}
+	mc.notarizationBlockProcessMap = make(map[string]struct{})
+	mc.notarizationBlockProcessC = make(chan *Notarization, 10)
+	mc.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
+	mc.validateTxnsWithContext = common.NewWithContextFunc(1)
+	mc.notarizingBlocksTasks = make(map[string]chan struct{})
+	mc.notarizingBlocksResults = cache.NewLRUCache(1000)
+	mc.nbmMutex = &sync.Mutex{}
+	mc.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
+	mc.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
+	mc.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
+	mc.generateBlockWorker = common.NewWithContextFunc(1)
 }
 
 /*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
-	mcGuard.RLock()
-	defer mcGuard.RUnlock()
 	return minerChain
 }
 

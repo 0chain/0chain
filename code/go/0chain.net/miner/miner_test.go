@@ -59,7 +59,7 @@ func getContext() (context.Context, func()) {
 func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block, r round.RoundI) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
 	if prevBlock == nil {
-		gb := SetupGenesisBlock()
+		gb := SetupGenesisBlock(mc)
 		prevBlock = gb
 		mc.AddGenesisBlock(gb)
 	}
@@ -114,8 +114,7 @@ func (mr *MockRound) GetHeaviestNotarizedBlock() *block.Block {
 	return mr.HeaviestNotarizedBlock
 }
 
-func CreateRound(number int64) *Round {
-	mc := GetMinerChain()
+func CreateRound(mc *Chain, number int64) *Round {
 	r := round.NewRound(number)
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
@@ -149,13 +148,11 @@ func makeTestMinioClient() (blockstore.MinioClient, error) {
 	return blockstore.CreateMinioClientFromConfig(mConf)
 }
 
-func setupMinerChain() (*Chain, func()) {
-	mc := GetMinerChain()
-	if mc.Chain == nil {
-		mc.Chain = chain.Provider().(*chain.Chain)
-	}
+func setupMinerChain(mc *Chain, c *chain.Chain) (*Chain, func()) {
+	mc.Chain = c
 
 	mc.Config = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
+	SetupMinerChain(mc, c)
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -169,20 +166,21 @@ func setupMinerChain() (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	clean := SetUpSingleSelf()
+	c, clean := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer clean()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
 
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
 	defer stopAndClean()
 
-	gb := SetupGenesisBlock()
+	gb := SetupGenesisBlock(mc)
 	mc.AddGenesisBlock(gb)
 
-	b := block.Provider().(*block.Block)
-	b.ChainID = datastore.ToKey(config.GetServerChainID())
+	// b := block.Provider().(*block.Block)
+	// b.ChainID = datastore.ToKey(config.GetServerChainID())
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -195,10 +193,10 @@ func TestBlockGeneration(t *testing.T) {
 	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
 		usr.HomeDir, string(os.PathSeparator)), mClient))
 
-	r := CreateRound(1)
+	r := CreateRound(mc, 1)
 	r.RandomSeed = time.Now().UnixNano()
 
-	b, err = mc.GenerateRoundBlock(ctx, r)
+	b, err := mc.GenerateRoundBlock(ctx, r)
 	if err != nil {
 		t.Errorf("Error generating block: %v\n", err)
 		return
@@ -214,15 +212,16 @@ func TestBlockGeneration(t *testing.T) {
 }
 
 func TestBlockVerification(t *testing.T) {
-	clean := SetUpSingleSelf()
+	c, clean := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer clean()
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
 
 	defer stopAndClean()
 	ctx, clean := getContext()
 	defer clean()
 	mb := mc.GetMagicBlock(0)
-	mr := CreateRound(1)
+	mr := CreateRound(mc, 1)
 	nano := int64(16408760407010)
 	mr.SetRandomSeed(nano, len(mb.Miners.Nodes))
 
@@ -241,13 +240,14 @@ func TestBlockVerification(t *testing.T) {
 }
 
 func TestTwoCorrectBlocks(t *testing.T) {
-	cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx := context.Background()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
+	defer stopAndClean()
 	mr := CreateMockRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	mc, stopAndClean := setupMinerChain()
-	defer stopAndClean()
 	b0, err := generateSingleBlock(ctx, mc, nil, mr)
 	require.NoError(t, err)
 
@@ -269,19 +269,19 @@ func TestTwoCorrectBlocks(t *testing.T) {
 }
 
 func TestTwoBlocksWrongRound(t *testing.T) {
-	cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
-	mr := CreateRound(1)
-	mr.RandomSeed = time.Now().UnixNano()
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
 	defer stopAndClean()
+	mr := CreateRound(mc, 1)
+	mr.RandomSeed = time.Now().UnixNano()
 	b0, err := generateSingleBlock(ctx, mc, nil, mr)
-	//mc := GetMinerChain()
 	if b0 != nil {
 		//var b1 *block.Block
-		mr3 := CreateRound(3)
+		mr3 := CreateRound(mc, 3)
 		_, err = generateSingleBlock(ctx, mc, b0, mr3)
 		//_, err = mc.VerifyRoundBlock(ctx, b1)
 	}
@@ -292,14 +292,15 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 }
 
 func TestBlockVerificationBadHash(t *testing.T) {
-	cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
-	mr := CreateRound(1)
-	mr.RandomSeed = time.Now().UnixNano()
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
 	defer stopAndClean()
+	mr := CreateRound(mc, 1)
+	mr.RandomSeed = time.Now().UnixNano()
 
 	b, err := generateSingleBlock(ctx, mc, nil, mr)
 	if b != nil {
@@ -313,16 +314,17 @@ func TestBlockVerificationBadHash(t *testing.T) {
 }
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {
-	cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer cleanSS()
 
 	ctx, clean := getContext()
 	defer clean()
 
-	mr := CreateRound(1)
-	mr.RandomSeed = time.Now().UnixNano()
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
 	defer stopAndClean()
+	mr := CreateRound(mc, 1)
+	mr.RandomSeed = time.Now().UnixNano()
 	block, _ := generateSingleBlock(ctx, mc, nil, mr)
 	if block != nil {
 		b.Logf("Created block with %v transactions", len(block.Txns))
@@ -332,13 +334,14 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 }
 
 func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
-	cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf()
+	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
-	mr := CreateRound(1)
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
 	defer stopAndClean()
+	mr := CreateRound(mc, 1)
 	block, err := generateSingleBlock(ctx, mc, nil, mr)
 	if block != nil && err == nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, block)
@@ -376,8 +379,7 @@ func setupSelfNodeKeys() { //nolint
 	node.Self.SetSignatureScheme(sigScheme)
 }
 
-func SetupGenesisBlock() *block.Block {
-	mc := GetMinerChain()
+func SetupGenesisBlock(mc *Chain) *block.Block {
 	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
 	if mc.Config != nil {
 		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
@@ -402,7 +404,7 @@ func SetupGenesisBlock() *block.Block {
 	return gb
 }
 
-func SetUpSingleSelf() func() {
+func SetUpSingleSelf() (c *chain.Chain, cleanup func()) {
 	// create rocksdb state dir
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
@@ -477,7 +479,7 @@ func SetUpSingleSelf() func() {
 	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 	round.SetupEntity(memorystore.GetStorageProvider())
 
-	c := chain.Provider().(*chain.Chain)
+	c = chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
 	data := &chain.ConfigData{BlockSize: 1024}
@@ -490,12 +492,9 @@ func SetUpSingleSelf() func() {
 	data.MaxByteSize = 1638400
 
 	c.SetGenerationTimeout(15)
-	chain.SetServerChain(c)
-	SetupMinerChain(c)
-	mc := GetMinerChain()
-	mc.SetMagicBlock(mb)
+	c.SetMagicBlock(mb)
 	SetupM2MSenders()
-	return func() {
+	return c, func() {
 		chain.CloseStateDB()
 		clean()
 		s.Close()
@@ -559,8 +558,8 @@ func setupSelf() func() { //nolint
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
 	chain.SetServerChain(c)
-	SetupMinerChain(c)
 	mc := GetMinerChain()
+	SetupMinerChain(mc, c)
 	mc.SetMagicBlock(mb)
 	SetupM2MSenders()
 
@@ -573,7 +572,10 @@ func setupSelf() func() { //nolint
 
 func generateProposedBlockToRound(t *testing.T, r *Round, n *node.Node) {
 	for {
-		b := block.NewBlock("", r.Number)
+		// b := block.NewBlock(datastore.ToKey(config.GetServerChainID()), r.Number)
+		b := block.Provider().(*block.Block)
+		b.ChainID = datastore.ToKey(config.GetServerChainID())
+		b.Round = r.Number
 		b.MinerID = n.Client.ID
 		randomData := make([]byte, 10)
 		read, err := rand.Reader.Read(randomData)
@@ -592,33 +594,18 @@ func generateProposedBlockToRound(t *testing.T, r *Round, n *node.Node) {
 }
 
 func TestRoundInfoHandler(t *testing.T) {
-	clean := SetUpSingleSelf()
+	c, clean := SetUpSingleSelf()
 	defer clean()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
 
-	mc, stopAndClean := setupMinerChain()
+	mc, stopAndClean := setupMinerChain(&Chain{}, c)
 	defer stopAndClean()
 
-	gb := SetupGenesisBlock()
-	mc.AddGenesisBlock(gb)
+	SetupGenesisBlock(mc)
 
-	b := block.Provider().(*block.Block)
-	b.ChainID = datastore.ToKey(config.GetServerChainID())
-	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-
-	mClient, err := makeTestMinioClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
-		usr.HomeDir, string(os.PathSeparator)), mClient))
-
-	r := CreateRound(1)
+	r := CreateRound(mc, 1)
 	// need at least 2 blocks from miners to trigger sorting
 	mb := mc.GetMagicBlock(r.Number)
 	miners := mb.Miners.Nodes
@@ -639,7 +626,7 @@ func TestRoundInfoHandler(t *testing.T) {
 			}),
 		)
 		logging.Logger = zap.New(core, zap.Development())
-		chain.RoundInfoHandler(w, req)
+		chain.RoundInfoHandlerEx(w, req, c)
 		bodybytes, err := ioutil.ReadAll(w.Result().Body)
 		require.NoError(t, err)
 		require.Equal(t, 200, w.Result().StatusCode)
@@ -664,4 +651,5 @@ func TestRoundInfoHandler(t *testing.T) {
 	body = runRequest()
 	require.Contains(t, string(body), blocksSubstring)
 	require.Contains(t, string(body), vrfSubstring)
+	common.Done()
 }
