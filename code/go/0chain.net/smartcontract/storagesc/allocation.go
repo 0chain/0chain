@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 
@@ -325,7 +324,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	var gbSize = sizeInGB(bSize) // size in gigabytes
-	allocatedBlobbers := make([]*StorageNode, 0)
 	for _, b := range blobberNodes {
 		var balloc BlobberAllocation
 		balloc.Stats = &StorageAllocationStats{}
@@ -335,7 +333,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		balloc.BlobberID = b.ID
 
 		sa.BlobberDetails = append(sa.BlobberDetails, &balloc)
-		allocatedBlobbers = append(allocatedBlobbers, b)
 
 		// the Expiration and TimeUnit are already set for the 'sa' and we c
 		// an use the restDurationInTimeUnits method here
@@ -360,10 +357,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
-
-	sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
-		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
-	})
 
 	sa.ID = t.Hash
 	sa.StartTime = t.CreationDate
