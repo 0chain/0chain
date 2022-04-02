@@ -370,12 +370,11 @@ func TestCommitSettingChanges(t *testing.T) {
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
-					"block_reward.block_reward":           "1000",
-					"block_reward.qualifying_stake":       "1",
-					"block_reward.sharder_ratio":          "80.0",
-					"block_reward.miner_ratio":            "20.0",
-					"block_reward.blobber_capacity_ratio": "20.0",
-					"block_reward.blobber_usage_ratio":    "80.0",
+					"block_reward.block_reward":     "1000",
+					"block_reward.qualifying_stake": "1",
+					"block_reward.sharder_ratio":    "80.0",
+					"block_reward.miner_ratio":      "20.0",
+					"block_reward.blobber_ratio":    "100.0",
 
 					"expose_mpt": "false",
 				},
@@ -491,10 +490,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.SharderWeight
 	case BlockRewardMinerWeight:
 		return conf.BlockReward.MinerWeight
-	case BlockRewardBlobberCapacityWeight:
-		return conf.BlockReward.BlobberCapacityWeight
-	case BlockRewardBlobberUsageWeight:
-		return conf.BlockReward.BlobberUsageWeight
+	case BlockRewardBlobberWeight:
+		return conf.BlockReward.BlobberWeight
 
 	case ExposeMpt:
 		return conf.ExposeMpt
