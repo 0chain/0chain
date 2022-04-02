@@ -68,6 +68,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		confirmation.Round = bs.Round
 		confirmation.MinerID = bs.MinerID
 		confirmation.RoundRandomSeed = bs.RoundRandomSeed
+		confirmation.StateChangesCount = bs.StateChangesCount
 		confirmation.CreationDate = bs.CreationDate
 		confirmation.MerkleTreeRoot = bs.MerkleTreeRoot
 		confirmation.ReceiptMerkleTreeRoot = bs.ReceiptMerkleTreeRoot
@@ -80,6 +81,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		confirmation.Round = b.Round
 		confirmation.MinerID = b.MinerID
 		confirmation.RoundRandomSeed = b.GetRoundRandomSeed()
+		confirmation.StateChangesCount = b.StateChangesCount
 		confirmation.CreationDate = b.CreationDate
 	}
 	txn := b.GetTransaction(hash)

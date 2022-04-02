@@ -1408,7 +1408,9 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	// initialize magicblock nodepools
-	c.UpdateNodesFromMagicBlock(newMagicBlock)
+	if err := c.UpdateNodesFromMagicBlock(newMagicBlock); err != nil {
+		return common.NewErrorf("failed to update magic block", "%v", err)
+	}
 
 	if lfmb != nil {
 		logging.Logger.Info("update magic block",
@@ -1429,26 +1431,32 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	return nil
 }
 
-func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
-
-	c.SetupNodes(newMagicBlock)
+func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) error {
+	if err := c.SetupNodes(newMagicBlock); err != nil {
+		return err
+	}
 
 	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo(newMagicBlock)
 
 	// reset the monitor
 	ResetStatusMonitor(newMagicBlock.StartingRound)
+	return nil
 }
 
-func (c *Chain) SetupNodes(mb *block.MagicBlock) {
-	for _, miner := range mb.Miners.CopyNodesMap() {
-		miner.ComputeProperties()
-		node.Setup(miner)
+func (c *Chain) SetupNodes(mb *block.MagicBlock) error {
+	for _, mn := range mb.Miners.CopyNodesMap() {
+		if err := node.Setup(mn); err != nil {
+			return err
+		}
 	}
-	for _, sharder := range mb.Sharders.CopyNodesMap() {
-		sharder.ComputeProperties()
-		node.Setup(sharder)
+	for _, sh := range mb.Sharders.CopyNodesMap() {
+		if err := node.Setup(sh); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (c *Chain) SetLatestOwnFinalizedBlockRound(r int64) {
