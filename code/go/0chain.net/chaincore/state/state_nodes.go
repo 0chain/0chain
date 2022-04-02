@@ -23,9 +23,7 @@ type Nodes struct {
 
 //NewStateNodes - create a new partial state object with initialization
 func NewStateNodes() *Nodes {
-	ns := datastore.GetEntityMetadata("state_nodes").Instance().(*Nodes)
-	ns.ComputeProperties()
-	return ns
+	return datastore.GetEntityMetadata("state_nodes").Instance().(*Nodes)
 }
 
 var nodesEntityMetadata *datastore.EntityMetadataImpl

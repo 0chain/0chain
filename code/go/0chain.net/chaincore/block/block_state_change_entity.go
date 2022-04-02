@@ -22,7 +22,7 @@ type StateChange struct {
 
 // NewBlockStateChange - if the block state computation is successfully
 // completed, provide the changes.
-func NewBlockStateChange(b *Block) *StateChange {
+func NewBlockStateChange(b *Block) (*StateChange, error) {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
 	var changes []*util.NodeChange
@@ -31,8 +31,12 @@ func NewBlockStateChange(b *Block) *StateChange {
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
 	}
-	bsc.ComputeProperties()
-	return bsc
+
+	if err := bsc.ComputeProperties(); err != nil {
+		return nil, err
+	}
+
+	return bsc, nil
 }
 
 var stateChangeEntityMetadata *datastore.EntityMetadataImpl

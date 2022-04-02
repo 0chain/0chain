@@ -370,12 +370,16 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
-		n.SetPublicKey(v.PublicKey)
+		if err := n.SetPublicKey(v.PublicKey); err != nil {
+			return err
+		}
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
 		n.SetStatus(node.NodeStatusActive)
-		node.Setup(n)
+		if err := node.Setup(n); err != nil {
+			return err
+		}
 		node.RegisterNode(n)
 	}
 

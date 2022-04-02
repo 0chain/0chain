@@ -86,8 +86,9 @@ func (s *State) UnmarshalMsg(data []byte) ([]byte, error) {
 }
 
 //ComputeProperties - logic to compute derived properties
-func (s *State) ComputeProperties() {
+func (s *State) ComputeProperties() error {
 	s.TxnHash = hex.EncodeToString(s.TxnHashBytes)
+	return nil
 }
 
 /*SetRound - set the round for this state to make it unique if the same logical state is arrived again in a different round */
