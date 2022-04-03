@@ -32,7 +32,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	GenG2.Deserialize(bytes)
+	err = GenG2.Deserialize(bytes)
+	if err != nil {
+		panic(err)
+	}
 }
 
 //BLS0ChainScheme - a signature scheme for BLS0Chain Signature
@@ -59,13 +62,16 @@ func (b0 *BLS0ChainScheme) GenerateKeys() error {
 func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
-	if result == false {
+	if !result {
 		return ErrKeyRead
 	}
 	publicKey := scanner.Text()
-	b0.SetPublicKey(publicKey)
+	err := b0.SetPublicKey(publicKey)
+	if err != nil {
+		return err
+	}
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return ErrKeyRead
 	}
 	privateKey := scanner.Text()
@@ -97,7 +103,10 @@ func MiraclToHerumiPK(pk string) string {
 	n3 := pk[(66 + 64):(66 + 64 + 64)]
 	n4 := pk[(66 + 64 + 64):(66 + 64 + 64 + 64)]
 	var p bls.PublicKey
-	p.SetHexString("1 " + n2 + " " + n1 + " " + n4 + " " + n3)
+	err := p.SetHexString("1 " + n2 + " " + n1 + " " + n4 + " " + n3)
+	if err != nil {
+		panic(err)
+	}
 	return p.SerializeToHexStr()
 }
 
@@ -121,9 +130,12 @@ func MiraclToHerumiSig(sig string) string {
 		return "00"
 	}
 	n1 := withoutParens[0:comma]
-	n2 := withoutParens[(comma + 1):len(withoutParens)]
+	n2 := withoutParens[(comma + 1):]
 	var sign bls.Sign
-	sign.SetHexString("1 " + n1 + " " + n2)
+	err := sign.SetHexString("1 " + n1 + " " + n2)
+	if err != nil {
+		panic(err)
+	}
 	return sign.SerializeToHexStr()
 }
 
@@ -162,7 +174,9 @@ func (b0 *BLS0ChainScheme) GetPrivateKey() string {
 //Sign - implement interface
 func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
 	var sk bls.SecretKey
-	sk.SetLittleEndian(b0.privateKey)
+	if err := sk.SetLittleEndian(b0.privateKey); err != nil {
+		return "", err
+	}
 	rawHash, err := encryption.GetRawHash(hash)
 	if err != nil {
 		return "", err
@@ -222,7 +236,9 @@ func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
 	if err != nil {
 		return nil, err
 	}
-	g1.HashAndMapTo(rawHash)
+	if err := g1.HashAndMapTo(rawHash); err != nil {
+		return nil, err
+	}
 	var gt = &bls.GT{}
 	bls.Pairing(gt, g1, g2)
 	return gt, nil
@@ -231,7 +247,10 @@ func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
 //GenerateSplitKeys - implement interface
 func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]encryption.SignatureScheme, error) {
 	var primarySk bls.Fr
-	primarySk.SetLittleEndian(b0.privateKey)
+	err := primarySk.SetLittleEndian(b0.privateKey)
+	if err != nil {
+		return nil, err
+	}
 
 	splitKeys := make([]encryption.SignatureScheme, numSplits)
 	var sk bls.SecretKey
@@ -239,14 +258,23 @@ func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]encryption.Signat
 	//Generate all but one split keys and add the secret keys
 	for i := 0; i < numSplits-1; i++ {
 		key := NewBLS0ChainScheme()
-		key.GenerateKeys()
+		err := key.GenerateKeys()
+		if err != nil {
+			return nil, err
+		}
 		splitKeys[i] = key
 		var sk2 bls.SecretKey
-		sk2.SetLittleEndian(key.privateKey)
+		err = sk2.SetLittleEndian(key.privateKey)
+		if err != nil {
+			return nil, err
+		}
 		sk.Add(&sk2)
 	}
 	var aggregateSk bls.Fr
-	aggregateSk.SetLittleEndian(sk.GetLittleEndian())
+	err = aggregateSk.SetLittleEndian(sk.GetLittleEndian())
+	if err != nil {
+		return nil, err
+	}
 
 	//Subtract the aggregated private key from the primary private key to derive the last split private key
 	var lastSk bls.Fr
@@ -254,9 +282,15 @@ func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]encryption.Signat
 
 	lastKey := NewBLS0ChainScheme()
 	var lastSecretKey bls.SecretKey
-	lastSecretKey.SetLittleEndian(lastSk.Serialize())
+	err = lastSecretKey.SetLittleEndian(lastSk.Serialize())
+	if err != nil {
+		return nil, err
+	}
 	lastKey.privateKey = lastSecretKey.GetLittleEndian()
-	lastSecretKey.SetLittleEndian(lastKey.privateKey)
+	err = lastSecretKey.SetLittleEndian(lastKey.privateKey)
+	if err != nil {
+		return nil, err
+	}
 	lastKey.publicKey = lastSecretKey.GetPublicKey().Serialize()
 	splitKeys[numSplits-1] = lastKey
 	return splitKeys, nil
@@ -267,7 +301,9 @@ func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, err
 	var aggSign bls.Sign
 	for _, signature := range signatures {
 		var sign bls.Sign
-		sign.DeserializeHexStr(MiraclToHerumiSig(signature))
+		if err := sign.DeserializeHexStr(MiraclToHerumiSig(signature)); err != nil {
+			return "", err
+		}
 		aggSign.Add(&sign)
 	}
 	return aggSign.SerializeToHexStr(), nil

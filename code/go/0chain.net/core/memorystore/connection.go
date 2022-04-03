@@ -194,6 +194,9 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 		return nil
 	}
 	cMap, ok := c.(connections)
+	if !ok {
+		return nil
+	}
 
 	con, ok := cMap.get(dbpool.CtxKey)
 	if !ok {

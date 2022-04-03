@@ -118,7 +118,7 @@ func AddMockChallenges(
 	validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
-	challenges := make([]BlobberChallenge, len(blobbers), len(blobbers))
+	challenges := make([]BlobberChallenge, len(blobbers))
 
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		numAllocBlobbers := viper.GetInt(sc.NumBlobbersPerAllocation)
@@ -150,7 +150,7 @@ func AddMockClientAllocation(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	cas := make([]*ClientAllocation, len(clients), len(clients))
+	cas := make([]*ClientAllocation, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		if cas[cIndex] == nil {
@@ -172,7 +172,7 @@ func AddMockClientAllocation(
 }
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {
-	wps := make([]*writePool, len(clients), len(clients))
+	wps := make([]*writePool, len(clients))
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -211,7 +211,7 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 }
 
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
-	rps := make([]*readPool, len(clients), len(clients))
+	rps := make([]*readPool, len(clients))
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -249,7 +249,7 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 }
 
 func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
-	fps := make([]fundedPools, len(clients), len(clients))
+	fps := make([]fundedPools, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		startClients := i % len(clients)
 		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
@@ -314,6 +314,18 @@ func AddMockBlobbers(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*StorageNode {
+
+	numRewardPartitionBlobbers := viper.GetInt(sc.NumRewardPartitionBlobber)
+	numBlobbers := viper.GetInt(sc.NumBlobbers)
+	if numRewardPartitionBlobbers > numBlobbers {
+		log.Fatal("reward_partition_blobber cannot be greater than total blobbers")
+	}
+
+	partition, err := getActivePassedBlobbersList(balances, viper.GetInt64(sc.StorageBlockRewardTriggerPeriod))
+	if err != nil {
+		panic(err)
+	}
+
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
@@ -371,8 +383,27 @@ func AddMockBlobbers(
 				panic(result.Error)
 			}
 		}
+
+		if i < numRewardPartitionBlobbers {
+			_, err = partition.Add(&partitions.BlobberRewardNode{
+				ID:                blobber.ID,
+				SuccessChallenges: 10,
+				WritePrice:        blobber.Terms.WritePrice,
+				ReadPrice:         blobber.Terms.ReadPrice,
+				TotalData:         sizeInGB(int64(i * 1000)),
+				DataRead:          float64(i) * 0.1,
+			}, balances)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
-	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
+	if err != nil {
+		panic(err)
+	}
+
+	err = partition.Save(balances)
 	if err != nil {
 		panic(err)
 	}
@@ -422,7 +453,7 @@ func GetMockBlobberStakePools(
 	balances cstate.StateContextI,
 ) []*stakePool {
 	sps := make([]*stakePool, 0, viper.GetInt(sc.NumBlobbers))
-	usps := make([]*stakepool.UserStakePools, len(clients), len(clients))
+	usps := make([]*stakepool.UserStakePools, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
@@ -697,7 +728,19 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
-	conf.BlockReward = &blockReward{}
+	conf.BlockReward = new(blockReward)
+	conf.BlockReward.BlockReward = state.Balance(viper.GetFloat64(sc.StorageBlockReward) * 1e10)
+	conf.BlockReward.BlockRewardChangePeriod = viper.GetInt64(sc.StorageBlockRewardChangePeriod)
+	conf.BlockReward.BlockRewardChangeRatio = viper.GetFloat64(sc.StorageBlockRewardChangeRatio)
+	conf.BlockReward.QualifyingStake = state.Balance(viper.GetFloat64(sc.StorageBlockRewardQualifyingStake) * 1e10)
+
+	conf.BlockReward.TriggerPeriod = viper.GetInt64(sc.StorageBlockRewardTriggerPeriod)
+	conf.BlockReward.setWeightsFromRatio(
+		viper.GetFloat64(sc.StorageBlockRewardSharderRatio),
+		viper.GetFloat64(sc.StorageBlockRewardMinerRatio),
+		viper.GetFloat64(sc.StorageBlockRewardBlobberRatio),
+	)
+
 	conf.ExposeMpt = true
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)

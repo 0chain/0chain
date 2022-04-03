@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 32
+	// map header, size 33
 	// string "TimeUnit"
-	o = append(o, 0xde, 0x0, 0x20, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = append(o, 0xde, 0x0, 0x21, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
 	o = msgp.AppendDuration(o, z.TimeUnit)
 	// string "MaxMint"
 	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
@@ -144,6 +144,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxChallengesPerGeneration"
 	o = append(o, 0xba, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73, 0x50, 0x65, 0x72, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendInt(o, z.MaxChallengesPerGeneration)
+	// string "ValidatorsPerChallenge"
+	o = append(o, 0xb6, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x50, 0x65, 0x72, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
+	o = msgp.AppendInt(o, z.ValidatorsPerChallenge)
 	// string "ChallengeGenerationRate"
 	o = append(o, 0xb7, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x61, 0x74, 0x65)
 	o = msgp.AppendFloat64(o, z.ChallengeGenerationRate)
@@ -482,6 +485,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxChallengesPerGeneration")
 				return
 			}
+		case "ValidatorsPerChallenge":
+			z.ValidatorsPerChallenge, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ValidatorsPerChallenge")
+				return
+			}
 		case "ChallengeGenerationRate":
 			z.ChallengeGenerationRate, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
@@ -603,7 +612,7 @@ func (z *Config) Msgsize() (s int) {
 	} else {
 		s += 1 + 8 + msgp.Int64Size
 	}
-	s += 16 + msgp.Float64Size + 13 + msgp.Float64Size + 13 + z.MaxReadPrice.Msgsize() + 14 + z.MaxWritePrice.Msgsize() + 14 + z.MinWritePrice.Msgsize() + 25 + msgp.IntSize + 32 + msgp.IntSize + 23 + z.MaxTotalFreeAllocation.Msgsize() + 28 + z.MaxIndividualFreeAllocation.Msgsize() + 23 + z.FreeAllocationSettings.Msgsize() + 17 + msgp.BoolSize + 27 + msgp.IntSize + 24 + msgp.Float64Size + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 13 + msgp.IntSize + 10 + msgp.Float64Size + 12
+	s += 16 + msgp.Float64Size + 13 + msgp.Float64Size + 13 + z.MaxReadPrice.Msgsize() + 14 + z.MaxWritePrice.Msgsize() + 14 + z.MinWritePrice.Msgsize() + 25 + msgp.IntSize + 32 + msgp.IntSize + 23 + z.MaxTotalFreeAllocation.Msgsize() + 28 + z.MaxIndividualFreeAllocation.Msgsize() + 23 + z.FreeAllocationSettings.Msgsize() + 17 + msgp.BoolSize + 27 + msgp.IntSize + 23 + msgp.IntSize + 24 + msgp.Float64Size + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 13 + msgp.IntSize + 10 + msgp.Float64Size + 12
 	if z.BlockReward == nil {
 		s += msgp.NilSize
 	} else {
@@ -622,14 +631,20 @@ func (z *Config) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *blockReward) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 6
+	// map header, size 8
 	// string "BlockReward"
-	o = append(o, 0x86, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
+	o = append(o, 0x88, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
 	o, err = z.BlockReward.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "BlockReward")
 		return
 	}
+	// string "BlockRewardChangePeriod"
+	o = append(o, 0xb7, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
+	o = msgp.AppendInt64(o, z.BlockRewardChangePeriod)
+	// string "BlockRewardChangeRatio"
+	o = append(o, 0xb6, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x52, 0x61, 0x74, 0x69, 0x6f)
+	o = msgp.AppendFloat64(o, z.BlockRewardChangeRatio)
 	// string "QualifyingStake"
 	o = append(o, 0xaf, 0x51, 0x75, 0x61, 0x6c, 0x69, 0x66, 0x79, 0x69, 0x6e, 0x67, 0x53, 0x74, 0x61, 0x6b, 0x65)
 	o, err = z.QualifyingStake.MarshalMsg(o)
@@ -643,12 +658,12 @@ func (z *blockReward) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MinerWeight"
 	o = append(o, 0xab, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
 	o = msgp.AppendFloat64(o, z.MinerWeight)
-	// string "BlobberCapacityWeight"
-	o = append(o, 0xb5, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
-	o = msgp.AppendFloat64(o, z.BlobberCapacityWeight)
-	// string "BlobberUsageWeight"
-	o = append(o, 0xb2, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x55, 0x73, 0x61, 0x67, 0x65, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
-	o = msgp.AppendFloat64(o, z.BlobberUsageWeight)
+	// string "BlobberWeight"
+	o = append(o, 0xad, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
+	o = msgp.AppendFloat64(o, z.BlobberWeight)
+	// string "TriggerPeriod"
+	o = append(o, 0xad, 0x54, 0x72, 0x69, 0x67, 0x67, 0x65, 0x72, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
+	o = msgp.AppendInt64(o, z.TriggerPeriod)
 	return
 }
 
@@ -676,6 +691,18 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BlockReward")
 				return
 			}
+		case "BlockRewardChangePeriod":
+			z.BlockRewardChangePeriod, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BlockRewardChangePeriod")
+				return
+			}
+		case "BlockRewardChangeRatio":
+			z.BlockRewardChangeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BlockRewardChangeRatio")
+				return
+			}
 		case "QualifyingStake":
 			bts, err = z.QualifyingStake.UnmarshalMsg(bts)
 			if err != nil {
@@ -694,16 +721,16 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MinerWeight")
 				return
 			}
-		case "BlobberCapacityWeight":
-			z.BlobberCapacityWeight, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "BlobberWeight":
+			z.BlobberWeight, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "BlobberCapacityWeight")
+				err = msgp.WrapError(err, "BlobberWeight")
 				return
 			}
-		case "BlobberUsageWeight":
-			z.BlobberUsageWeight, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "TriggerPeriod":
+			z.TriggerPeriod, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "BlobberUsageWeight")
+				err = msgp.WrapError(err, "TriggerPeriod")
 				return
 			}
 		default:
@@ -720,7 +747,7 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *blockReward) Msgsize() (s int) {
-	s = 1 + 12 + z.BlockReward.Msgsize() + 16 + z.QualifyingStake.Msgsize() + 14 + msgp.Float64Size + 12 + msgp.Float64Size + 22 + msgp.Float64Size + 19 + msgp.Float64Size
+	s = 1 + 12 + z.BlockReward.Msgsize() + 24 + msgp.Int64Size + 23 + msgp.Float64Size + 16 + z.QualifyingStake.Msgsize() + 14 + msgp.Float64Size + 12 + msgp.Float64Size + 14 + msgp.Float64Size + 14 + msgp.Int64Size
 	return
 }
 

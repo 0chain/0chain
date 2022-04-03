@@ -32,8 +32,12 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	redisKey := GetEntityKey(entity)
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
-	c.Send("GET", redisKey)
-	c.Flush()
+	if err := c.Send("GET", redisKey); err != nil {
+		return err
+	}
+	if err := c.Flush(); err != nil {
+		return err
+	}
 	data, err := c.Receive()
 	if err != nil {
 		return err
@@ -46,8 +50,7 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 		logging.Logger.Error("ememorystore read from store failed", zap.Error(err))
 	}
 	//datastore.FromJSON(data, entity)
-	entity.ComputeProperties()
-	return nil
+	return entity.ComputeProperties()
 }
 
 /*Write an entity to the datastore */
@@ -61,11 +64,17 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
 	if overwrite {
-		c.Send("SET", redisKey, buffer)
+		if err := c.Send("SET", redisKey, buffer); err != nil {
+			return err
+		}
 	} else {
-		c.Send("SETNX", redisKey, buffer)
+		if err := c.Send("SETNX", redisKey, buffer); err != nil {
+			return err
+		}
 	}
-	c.Flush()
+	if err := c.Flush(); err != nil {
+		return err
+	}
 	data, err := c.Receive()
 	if err != nil {
 		return err
@@ -101,8 +110,12 @@ func (ms *Store) InsertIfNE(ctx context.Context, entity datastore.Entity) error 
 func (ms *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 	redisKey := GetEntityKey(entity)
 	c := GetEntityCon(ctx, entity.GetEntityMetadata())
-	c.Send("DEL", redisKey)
-	c.Flush()
+	if err := c.Send("DEL", redisKey); err != nil {
+		return err
+	}
+	if err := c.Flush(); err != nil {
+		return err
+	}
 	_, err := c.Receive()
 	if err != nil {
 		return err
@@ -143,8 +156,12 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 		rkeys[idx] = GetEntityKey(entity)
 	}
 	c := GetEntityCon(ctx, entityMetadata)
-	c.Send("MGET", rkeys...)
-	c.Flush()
+	if err := c.Send("MGET", rkeys...); err != nil {
+		return err
+	}
+	if err := c.Flush(); err != nil {
+		return err
+	}
 	data, err := c.Receive()
 	if err != nil {
 		return err
@@ -168,7 +185,9 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 			logging.Logger.Error("multiReadAux failed", zap.Error(err))
 			return err
 		}
-		entity.ComputeProperties()
+		if err := entity.ComputeProperties(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -211,8 +230,12 @@ func (ms *Store) multiWriteAux(ctx context.Context, entityMetadata datastore.Ent
 		//}
 	}
 	c := GetEntityCon(ctx, entityMetadata)
-	c.Send("MSET", kvpair...)
-	c.Flush()
+	if err := c.Send("MSET", kvpair...); err != nil {
+		return err
+	}
+	if err := c.Flush(); err != nil {
+		return err
+	}
 	_, err := c.Receive()
 	if err != nil {
 		return err
@@ -229,8 +252,13 @@ func (ms *Store) AddToCollection(ctx context.Context, ce datastore.CollectionEnt
 	collectionName := ce.GetCollectionName()
 
 	con := GetEntityCon(ctx, entityMetadata)
-	con.Send("ZADD", collectionName, ce.GetCollectionScore(), ce.GetKey())
-	con.Flush()
+	if err := con.Send("ZADD", collectionName, ce.GetCollectionScore(), ce.GetKey()); err != nil {
+		return err
+	}
+
+	if err := con.Flush(); err != nil {
+		return err
+	}
 	_, err := con.Receive()
 	if err != nil {
 		return err
@@ -284,8 +312,12 @@ func (ms *Store) multiAddToCollectionAux(ctx context.Context, entityMetadata dat
 		svpair[ind+1] = ce.GetKey()
 	}
 	con := GetEntityCon(ctx, entityMetadata)
-	con.Send("ZADD", svpair...)
-	con.Flush()
+	if err := con.Send("ZADD", svpair...); err != nil {
+		return err
+	}
+	if err := con.Flush(); err != nil {
+		return err
+	}
 	_, err := con.Receive()
 	return err
 }
@@ -319,14 +351,20 @@ func (ms *Store) multiDeleteAux(ctx context.Context, entityMetadata datastore.En
 		}
 	}
 	c := GetEntityCon(ctx, entityMetadata)
-	c.Send("DEL", rkeys...)
-	c.Flush()
+	if err := c.Send("DEL", rkeys...); err != nil {
+		return err
+	}
+	if err := c.Flush(); err != nil {
+		return err
+	}
 	_, err := c.Receive()
 	if err != nil {
 		return err
 	}
 	if hasCollectionEntity {
-		ms.MultiDeleteFromCollection(ctx, entityMetadata, entities)
+		if err := ms.MultiDeleteFromCollection(ctx, entityMetadata, entities); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -336,8 +374,12 @@ func (ms *Store) DeleteFromCollection(ctx context.Context, ce datastore.Collecti
 	collectionName := ce.GetCollectionName()
 
 	con := GetEntityCon(ctx, entityMetadata)
-	con.Send("ZREM", collectionName, ce.GetKey())
-	con.Flush()
+	if err := con.Send("ZREM", collectionName, ce.GetKey()); err != nil {
+		return err
+	}
+	if err := con.Flush(); err != nil {
+		return err
+	}
 	_, err := con.Receive()
 	if err != nil {
 		return err
@@ -378,26 +420,36 @@ func (ms *Store) multiDeleteFromCollectionAux(ctx context.Context, entityMetadat
 		keys[idx+1] = ce.GetKey()
 	}
 	con := GetEntityCon(ctx, entityMetadata)
-	con.Send("ZREM", keys...)
-	con.Flush()
+	if err := con.Send("ZREM", keys...); err != nil {
+		return err
+	}
+	if err := con.Flush(); err != nil {
+		return err
+	}
 	_, err := con.Receive()
 	return err
 }
 
 func (ms *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) int64 {
 	con := GetEntityCon(ctx, entityMetadata)
-	con.Send("ZCARD", collectionName)
-	con.Flush()
+	if err := con.Send("ZCARD", collectionName); err != nil {
+		return -1
+	}
+
+	if err := con.Flush(); err != nil {
+		return -1
+	}
+
 	data, err := con.Receive()
 	if err != nil {
 		return -1
-	} else {
-		val, ok := data.(int64)
-		if !ok {
-			return -1
-		}
-		return val
 	}
+
+	val, ok := data.(int64)
+	if !ok {
+		return -1
+	}
+	return val
 }
 
 func encode(entity datastore.Entity) *bytes.Buffer {

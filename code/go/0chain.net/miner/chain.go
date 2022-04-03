@@ -140,9 +140,6 @@ type Chain struct {
 	// view change process control
 	viewChangeProcess
 
-	// not. blocks pulling joining at VC
-	pullingPin int64
-
 	// restart round event (rre)
 	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
@@ -184,14 +181,6 @@ func (mc *Chain) unsubRestartRoundEvent(subq chan struct{}) {
 	case <-mc.restartRoundEventWorkerIsDoneChannel: // worker context is done
 	case mc.unsubRestartRoundEventChannel <- subq:
 	}
-}
-
-func (mc *Chain) startPulling() (ok bool) {
-	return atomic.CompareAndSwapInt64(&mc.pullingPin, 0, 1)
-}
-
-func (mc *Chain) stopPulling() (ok bool) {
-	return atomic.CompareAndSwapInt64(&mc.pullingPin, 1, 0)
 }
 
 // SetDiscoverClients set the discover clients parameter
@@ -244,7 +233,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
-	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.AddNotarizedBlock(mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
 	if b.IsStateComputed() {
 		if err := mc.SaveChanges(ctx, b); err != nil {

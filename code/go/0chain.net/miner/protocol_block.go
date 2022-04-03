@@ -76,7 +76,9 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
 	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
-	feeTxn.Sign(node.Self.GetSignatureScheme())
+	if _, err := feeTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
 	return feeTxn
 }
 
@@ -88,7 +90,9 @@ func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Tr
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
 	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
 	scTxn.Fee = 0
-	scTxn.Sign(node.Self.GetSignatureScheme())
+	if _, err := scTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
 	return scTxn
 }
 
@@ -98,9 +102,11 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
+	brTxn.TransactionData = `{"name":"blobber_block_rewards","input":{}}`
 	brTxn.Fee = 0
-	brTxn.Sign(node.Self.GetSignatureScheme())
+	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
 	return brTxn
 }
 
@@ -125,7 +131,10 @@ func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 	//
 	//     transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
 	//
-	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
+	if err := transactionMetadataProvider.GetStore().MultiAddToCollection(ctx,
+		transactionMetadataProvider, txns); err != nil {
+		logging.Logger.Error("update pending block failed", zap.Error(err))
+	}
 }
 
 func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error {
@@ -465,7 +474,23 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		btvTimer.UpdateSince(ts)
 		if mc.discoverClients {
-			go mc.SaveClients(b.GetClients())
+			go func() {
+				cs, err := b.GetClients()
+				if err != nil {
+					logging.Logger.Warn("validate transactions, get clients of block failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					return
+				}
+
+				if err := mc.SaveClients(cs); err != nil {
+					logging.Logger.Warn("validate transactions, save discovered clients failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+				}
+			}()
 		}
 		return nil
 	})
@@ -500,7 +525,13 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 			logging.Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
-	mc.FinalizeBlock(ctx, b)
+	if err := mc.FinalizeBlock(ctx, b); err != nil {
+		logging.Logger.Warn("finalize block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+	}
+
 	go mc.SendFinalizedBlock(context.Background(), b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
@@ -670,14 +701,14 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
-			if tii.idx >= mc.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
+			if tii.idx >= mc.Config.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
-					zap.Bool("idx >= block size", tii.idx >= mc.BlockSize()),
-					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.MaxByteSize()),
+					zap.Bool("idx >= block size", tii.idx >= mc.Config.BlockSize()),
+					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.Config.MaxByteSize()),
 					zap.Int32("idx", tii.idx),
-					zap.Int32("block size", mc.BlockSize()),
+					zap.Int32("block size", mc.Config.BlockSize()),
 					zap.Int64("byte size", tii.byteSize),
-					zap.Int64("max byte size", mc.MaxByteSize()),
+					zap.Int64("max byte size", mc.Config.MaxByteSize()),
 					zap.Int32("count", tii.count),
 					zap.Int("txns", len(b.Txns)))
 				return false
@@ -721,7 +752,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	//we use this context for transaction aggregation phase only
-	cctx, _ := context.WithTimeout(ctx, mc.Config.BlockProposalMaxWaitTime())
+	cctx, cancel := context.WithTimeout(ctx, mc.Config.BlockProposalMaxWaitTime())
+	defer cancel()
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
@@ -730,7 +762,11 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
 		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
-		go mc.deleteTxns(iterInfo.invalidTxns) // OK to do in background
+		go func() {
+			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
+				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+			}
+		}()
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
@@ -813,7 +849,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if config.DevConfiguration.IsBlockRewards {
+	if config.DevConfiguration.IsBlockRewards &&
+		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
@@ -859,6 +897,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	b.SetClientState(blockState)
+	b.SetStateChangesCount(blockState)
 	bgTimer.UpdateSince(start)
 	logging.Logger.Debug("generate block (assemble+update)",
 		zap.Int64("round", b.Round),

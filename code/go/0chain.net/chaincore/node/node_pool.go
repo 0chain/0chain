@@ -2,6 +2,8 @@ package node
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -11,7 +13,9 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"github.com/vmihailenco/msgpack/v5"
+	"go.uber.org/zap"
 )
 
 //msgp:ignore Pool
@@ -60,12 +64,15 @@ func (np *Pool) Size() int {
 }
 
 // AddNode - add a node to the pool
-func (np *Pool) AddNode(node *Node) {
+func (np *Pool) AddNode(node *Node) error {
 	if np.Type != node.Type {
-		return
+		return errors.New("incorrect node type")
 	}
 
-	node.SetPublicKey(node.PublicKey)
+	if err := node.SetPublicKey(node.PublicKey); err != nil {
+		return fmt.Errorf("invalid public key, %v", err)
+	}
+
 	RegisterNode(node)
 
 	np.mmx.Lock()
@@ -85,6 +92,8 @@ func (np *Pool) AddNode(node *Node) {
 	np.NodesMap[node.GetKey()] = node
 	np.computeNodePositions()
 	np.mmx.Unlock()
+
+	return nil
 }
 
 /*GetNode - given node id, get the node object or nil */
@@ -148,7 +157,7 @@ func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 	return shuffled
 }
 
-// Print - print this pool. This will be used for http response and Read method
+// Print - print this pool. This will be used for http response and read method
 // should be able to consume it
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes(false)
@@ -267,7 +276,9 @@ func (np *Pool) Clone() *Pool {
 	clone.medianNetworkTime = np.medianNetworkTime
 
 	for _, v := range np.NodesMap {
-		clone.AddNode(v.Clone())
+		if err := clone.AddNode(v.Clone()); err != nil {
+			logging.Logger.Warn("pool clone - add cloned node failed", zap.Error(err))
+		}
 	}
 
 	return clone
@@ -290,7 +301,9 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 	for k := range np.NodesMap {
 		n := np.NodesMap[k]
 		if n.SigScheme == nil {
-			n.SetPublicKey(n.PublicKey)
+			if err := n.SetPublicKey(n.PublicKey); err != nil {
+				return err
+			}
 		}
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -320,7 +333,9 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 	for k := range np.NodesMap {
 		n := np.NodesMap[k]
 		if n.SigScheme == nil {
-			n.SetPublicKey(n.PublicKey)
+			if err := n.SetPublicKey(n.PublicKey); err != nil {
+				return err
+			}
 		}
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -330,7 +345,7 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 }
 
 func (np *Pool) MarshalMsg(o []byte) ([]byte, error) {
-	d := poolDecode(*np)
+	d := poolDecode(*np) //nolint: govet
 	return d.MarshalMsg(o)
 }
 
@@ -345,7 +360,9 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 	for k := range d.NodesMap {
 		n := d.NodesMap[k]
 		if n.SigScheme == nil {
-			n.SetPublicKey(n.PublicKey)
+			if err := n.SetPublicKey(n.PublicKey); err != nil {
+				return nil, err
+			}
 		}
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -355,7 +372,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 }
 
 func (np *Pool) Msgsize() int {
-	d := poolDecode(*np)
+	d := poolDecode(*np) //nolint: govet
 	return d.Msgsize()
 }
 

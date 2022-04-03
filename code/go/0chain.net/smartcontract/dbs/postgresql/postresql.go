@@ -62,7 +62,6 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 
 func (store *PostgresStore) AutoMigrate() error {
 	panic("should not be called")
-	return nil
 }
 
 func (store *PostgresStore) Close() {

@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/0chain/gorocksdb"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"github.com/0chain/gorocksdb"
+	"go.uber.org/zap"
 )
 
 func panicf(format string, args ...interface{}) {
@@ -214,7 +215,9 @@ func Close(ctx context.Context) {
 		con.ReadOptions.Destroy()
 		con.WriteOptions.Destroy()
 		con.TransactionOptions.Destroy()
-		con.Conn.Rollback() // commit is expected to be done by the caller of the get connection
+		if err := con.Conn.Rollback(); err != nil {
+			logging.Logger.Warn("rollback failed", zap.Error(err))
+		} // commit is expected to be done by the caller of the get connection
 		con.Conn.Destroy()
 	}
 }

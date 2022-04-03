@@ -511,8 +511,6 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	return &stat, nil
 }
 
-const cantReadPoolMsg = "can't get read pool"
-
 // statistic for all locked tokens of the read pool
 func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (

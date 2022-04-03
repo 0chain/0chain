@@ -8,7 +8,9 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"github.com/gocql/gocql"
+	"go.uber.org/zap"
 )
 
 /*BATCH_SIZE size of the batch */
@@ -61,7 +63,10 @@ func (ps *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	if !valid {
 		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), key))
 	}
-	datastore.FromJSON(json, entity)
+
+	if err := datastore.FromJSON(json, entity); err != nil {
+		return err
+	}
 	if err := iter.Close(); err != nil {
 		return err
 	}
@@ -128,7 +133,9 @@ func (ps *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 			break
 			//return common.NewError("not_all_keys_found", "Did not find entities for all the keys")
 		}
-		datastore.FromJSON(json, entities[i])
+		if err := datastore.FromJSON(json, entities[i]); err != nil {
+			logging.Logger.Warn("decode entity failed", zap.Error(err))
+		}
 		keyIdx[entities[i].GetKey()] = entities[i]
 	}
 	if err := iter.Close(); err != nil {
@@ -211,7 +218,9 @@ func (ps *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore
 func (ps *Store) shouldReconnect(err error, enittyMetadata datastore.EntityMetadata) bool {
 	switch err {
 	case gocql.ErrNoConnections:
-		initSession(1*time.Second, 0)
+		if err := initSession(1*time.Second, 0); err != nil {
+			logging.Logger.Error("init session failed", zap.Error(err))
+		}
 		return true
 	}
 	return false

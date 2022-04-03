@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"0chain.net/chaincore/state"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -164,6 +166,9 @@ type Block struct {
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
 	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
+	// StateChangesCount represents the state changes number in client state of current block.
+	// this will be used to verify the state changes acquire from remote
+	StateChangesCount int `json:"state_changes_count"`
 }
 
 // NewBlock - create a new empty block
@@ -207,7 +212,7 @@ func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
 }
 
 /*ComputeProperties - Entity implementation */
-func (b *Block) ComputeProperties() {
+func (b *Block) ComputeProperties() error {
 	if datastore.IsEmpty(b.ChainID) {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
@@ -217,13 +222,16 @@ func (b *Block) ComputeProperties() {
 	if b.Txns != nil {
 		b.TxnsMap = make(map[string]bool, len(b.Txns))
 		for _, txn := range b.Txns {
-			txn.ComputeProperties()
+			if err := txn.ComputeProperties(); err != nil {
+				return err
+			}
 			b.TxnsMap[txn.Hash] = true
 		}
 	}
+	return nil
 }
 
-/*ComputeProperties - Entity implementation */
+// Decode decodes block from json bytes
 func (b *Block) Decode(input []byte) error {
 	return json.Unmarshal(input, b)
 }
@@ -380,6 +388,10 @@ func (b *Block) SetClientState(s util.MerklePatriciaTrieI) {
 	b.stateMutex.Unlock()
 }
 
+func (b *Block) SetStateChangesCount(s util.MerklePatriciaTrieI) {
+	b.StateChangesCount = s.GetChangeCount()
+}
+
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
 	t.OutputHash = t.ComputeOutputHash()
@@ -453,14 +465,34 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" + merkleRoot + ":" + rMerkleRoot
+
+	hashBuilder := strings.Builder{}
+	hashBuilder.WriteString(b.MinerID)
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(b.PrevHash)
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(common.TimeToString(b.CreationDate))
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(strconv.FormatInt(b.Round, 10))
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(strconv.FormatInt(b.GetRoundRandomSeed(), 10))
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(strconv.Itoa(b.StateChangesCount))
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(merkleRoot)
+	hashBuilder.WriteString(":")
+	hashBuilder.WriteString(rMerkleRoot)
+
 	if b.MagicBlock != nil {
 		if b.MagicBlock.Hash == "" {
 			b.MagicBlock.Hash = b.MagicBlock.GetHash()
 		}
-		hashData += ":" + b.MagicBlock.Hash
+
+		hashBuilder.WriteString(":")
+		hashBuilder.WriteString(b.MagicBlock.Hash)
 	}
-	return hashData
+
+	return hashBuilder.String()
 }
 
 /*ComputeHash - compute the hash of the block */
@@ -501,6 +533,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.MinerID = b.MinerID
 	bs.Round = b.Round
 	bs.RoundRandomSeed = b.GetRoundRandomSeed()
+	bs.StateChangesCount = b.StateChangesCount
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
@@ -535,7 +568,7 @@ func (b *Block) GetBlockState() int8 {
 }
 
 /*GetClients - get all the clients of this block */
-func (b *Block) GetClients() []*client.Client {
+func (b *Block) GetClients() ([]*client.Client, error) {
 	cmap := make(map[string]*client.Client)
 	for _, t := range b.Txns {
 		if t.PublicKey == "" {
@@ -547,7 +580,9 @@ func (b *Block) GetClients() []*client.Client {
 		c, err := client.GetClientFromCache(t.ClientID)
 		if err != nil {
 			c = client.NewClient()
-			c.SetPublicKey(t.PublicKey)
+			if err := c.SetPublicKey(t.PublicKey); err != nil {
+				return nil, err
+			}
 		}
 
 		cmap[t.PublicKey] = c
@@ -558,7 +593,7 @@ func (b *Block) GetClients() []*client.Client {
 		clients[idx] = c
 		idx++
 	}
-	return clients
+	return clients, nil
 }
 
 /*GetStateStatus - indicates if the client state of the block is computed */
@@ -859,7 +894,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	b.Events = []event.Event{}
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
-			txn.ComputeClientID()
+			if err := txn.ComputeClientID(); err != nil {
+				return err
+			}
 		}
 
 		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
@@ -919,7 +956,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 	}
 
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
 			zap.String("minerID", b.MinerID),
@@ -970,7 +1007,9 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	b.Events = []event.Event{}
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
-			txn.ComputeClientID()
+			if err := txn.ComputeClientID(); err != nil {
+				return err
+			}
 		}
 		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
 		if err != nil {
@@ -1035,7 +1074,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("emit block event error", zap.Error(err))
 	}
 
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
 			zap.Int64("round", b.Round),
@@ -1108,9 +1147,11 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	if b.Hash != bsc.Block {
 		return ErrBlockHashMismatch
 	}
-	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
+
+	if !bytes.Equal(b.ClientStateHash, bsc.Hash) {
 		return ErrBlockStateHashMismatch
 	}
+
 	root := bsc.GetRoot()
 	if root == nil {
 		if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
@@ -1127,6 +1168,15 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		clientState = CreateState(c.GetStateDB(), b.Round, root.GetHashBytes())
 	}
 
+	if len(bsc.Nodes) != b.StateChangesCount {
+		logging.Logger.Error("apply block state changes, malformed state changes",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int("require state changes count", b.StateChangesCount),
+			zap.Int("got state changes count", len(bsc.Nodes)))
+		return state.ErrMalformedPartialState
+	}
+
 	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
@@ -1134,7 +1184,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return err
 	}
 
-	if bytes.Compare(b.ClientStateHash, clientState.GetRoot()) != 0 {
+	if !bytes.Equal(b.ClientStateHash, clientState.GetRoot()) {
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
 
