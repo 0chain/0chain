@@ -145,7 +145,8 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 
 //GetStateFrom - get the state from a given node
 func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialState, error) {
-	var partialState = state.NewPartialState(key)
+	partialState := &state.PartialState{}
+	partialState.Hash = key
 	handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
 		if node == nil {
 			return ErrNodeNull
@@ -163,7 +164,9 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 		}
 	}
 	if len(partialState.Nodes) > 0 {
-		partialState.ComputeProperties()
+		if err := partialState.ComputeProperties(); err != nil {
+			return nil, err
+		}
 		return partialState, nil
 	}
 	return nil, util.ErrNodeNotFound
@@ -312,6 +315,14 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		var rsc, ok = entity.(*block.StateChange)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
+		}
+
+		if len(rsc.Nodes) != b.StateChangesCount {
+			logging.Logger.Error("get_block_state_change",
+				zap.Error(state.ErrPartialStateRootMismatch),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+			return nil, state.ErrMalformedPartialState
 		}
 
 		if rsc.Block != b.Hash {
