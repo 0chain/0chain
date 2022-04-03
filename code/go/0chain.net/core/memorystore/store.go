@@ -50,8 +50,7 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 		logging.Logger.Error("ememorystore read from store failed", zap.Error(err))
 	}
 	//datastore.FromJSON(data, entity)
-	entity.ComputeProperties()
-	return nil
+	return entity.ComputeProperties()
 }
 
 /*Write an entity to the datastore */
@@ -186,7 +185,9 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 			logging.Logger.Error("multiReadAux failed", zap.Error(err))
 			return err
 		}
-		entity.ComputeProperties()
+		if err := entity.ComputeProperties(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
