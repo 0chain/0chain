@@ -93,7 +93,9 @@ func main() {
 	}
 	reader.Close()
 
-	node.Self.SetSignatureScheme(signatureScheme)
+	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
+		logging.Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
+	}
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()

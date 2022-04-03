@@ -50,26 +50,26 @@ type writePoolConfig struct {
 }
 
 type blockReward struct {
-	BlockReward           state.Balance `json:"block_reward"`
-	QualifyingStake       state.Balance `json:"qualifying_stake"`
-	SharderWeight         float64       `json:"sharder_weight"`
-	MinerWeight           float64       `json:"miner_weight"`
-	BlobberCapacityWeight float64       `json:"blobber_capacity_weight"`
-	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
+	BlockReward             state.Balance `json:"block_reward"`
+	BlockRewardChangePeriod int64         `json:"block_reward_change_period"`
+	BlockRewardChangeRatio  float64       `json:"block_reward_change_ratio"`
+	QualifyingStake         state.Balance `json:"qualifying_stake"`
+	SharderWeight           float64       `json:"sharder_weight"`
+	MinerWeight             float64       `json:"miner_weight"`
+	BlobberWeight           float64       `json:"blobber_weight"`
+	TriggerPeriod           int64         `json:"trigger_period"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
-	total := sharderRatio + minerRatio + bCapcacityRatio + bUsageRatio
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
+	total := sharderRatio + minerRatio + bRatio
 	if total == 0 {
 		br.SharderWeight = 0
 		br.MinerWeight = 0
-		br.BlobberCapacityWeight = 0
-		br.BlobberUsageWeight = 0
+		br.BlobberWeight = 0
 	} else {
 		br.SharderWeight = sharderRatio / total
 		br.MinerWeight = minerRatio / total
-		br.BlobberCapacityWeight = bCapcacityRatio / total
-		br.BlobberUsageWeight = bUsageRatio / total
+		br.BlobberWeight = bRatio / total
 	}
 
 }
@@ -310,13 +310,9 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("negative block_reward.miner_weight: %v",
 			sc.BlockReward.MinerWeight)
 	}
-	if sc.BlockReward.BlobberCapacityWeight < 0 {
+	if sc.BlockReward.BlobberWeight < 0 {
 		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
-			sc.BlockReward.BlobberCapacityWeight)
-	}
-	if sc.BlockReward.BlobberUsageWeight < 0 {
-		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
-			sc.BlockReward.BlobberUsageWeight)
+			sc.BlockReward.BlobberWeight)
 	}
 	if len(sc.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
@@ -434,18 +430,15 @@ func getConfiguredConfig() (conf *Config, err error) {
 
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
+	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
 	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
 
-	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
-	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_weight")
-	conf.BlockReward.BlobberCapacityWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
-	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward.blobber_usage_weight" +
-		"blobber_usage_weight")
+	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
-		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
-		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
+		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")

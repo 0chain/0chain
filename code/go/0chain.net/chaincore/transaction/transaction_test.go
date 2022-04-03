@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/chaincore/node"
+	"github.com/stretchr/testify/require"
 )
 
 var keyPairs = make(map[string]string)
@@ -39,7 +40,7 @@ func BenchmarkTransactionVerify(b *testing.B) {
 	sigSchemes = append(sigSchemes, sigScheme)
 
 	c := &client.Client{}
-	c.SetPublicKey(sigScheme.GetPublicKey())
+	require.NoError(b, c.SetPublicKey(sigScheme.GetPublicKey()))
 
 	txnData := fmt.Sprintf("Txn: Pay %v from %s\n", 42, c.PublicKey)
 	t := datastore.GetEntityMetadata("txn").Instance().(*Transaction)
@@ -89,7 +90,7 @@ func B1enchmarkTransactionWrite(t *testing.B) {
 	SetupEntity(memorystore.GetStorageProvider())
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	numClients := 10
-	createClients(numClients)
+	createClients(t, numClients)
 	start := time.Now()
 	numTxns := 1000
 	done := make(chan bool, numTxns)
@@ -101,7 +102,7 @@ func B1enchmarkTransactionWrite(t *testing.B) {
 		publicKey := publicKeys[i%numClients]
 		pvtKey := keyPairs[publicKey]
 		txnData := fmt.Sprintf("Txn(%v) Pay %v from %s\n", i, i%100, publicKey)
-		postTransaction(pvtKey, publicKey, txnData, txnchannel, done)
+		postTransaction(t, pvtKey, publicKey, txnData, txnchannel, done)
 	}
 	for count := 0; true; {
 		<-done
@@ -115,7 +116,7 @@ func B1enchmarkTransactionWrite(t *testing.B) {
 	time.Sleep(10 * time.Second)
 }
 
-func createClients(numClients int) {
+func createClients(t *testing.B, numClients int) {
 	start := time.Now()
 	fmt.Printf("Testing at %v\n", start)
 	done := make(chan bool, numClients)
@@ -126,7 +127,7 @@ func createClients(numClients int) {
 			panic(err)
 		}
 		sigSchemes = append(sigSchemes, sigScheme)
-		go postClient(sigScheme, done)
+		go postClient(t, sigScheme, done)
 	}
 	for count := 0; true; {
 		<-done
@@ -139,13 +140,13 @@ func createClients(numClients int) {
 	time.Sleep(time.Second)
 }
 
-func postClient(sigScheme encryption.SignatureScheme, done chan<- bool) {
+func postClient(t *testing.B, sigScheme encryption.SignatureScheme, done chan<- bool) {
 	entity := client.Provider()
 	c, ok := entity.(*client.Client)
 	if !ok {
 		fmt.Printf("it's not ok!\n")
 	}
-	c.SetPublicKey(sigScheme.GetPublicKey())
+	require.NoError(t, c.SetPublicKey(sigScheme.GetPublicKey()))
 
 	ctx := datastore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
 	//ctx := memorystore.WithEntityConnection(context.Background(),entity.GetEntityMetadata())
@@ -157,26 +158,28 @@ func postClient(sigScheme encryption.SignatureScheme, done chan<- bool) {
 	done <- true
 }
 
-func postTransaction(privateKey string, publicKey string, txnData string, txnChannel chan<- *Transaction, done chan<- bool) {
+func postTransaction(t *testing.B, privateKey string, publicKey string, txnData string, txnChannel chan<- *Transaction, done chan<- bool) {
 	entity := Provider()
-	t, ok := entity.(*Transaction)
+	txn, ok := entity.(*Transaction)
 	if !ok {
 		fmt.Printf("it's not ok!\n")
 	}
-	t.ClientID = datastore.ToKey(encryption.Hash(publicKey))
-	t.TransactionData = txnData
-	t.CreationDate = common.Now()
+	txn.ClientID = datastore.ToKey(encryption.Hash(publicKey))
+	txn.TransactionData = txnData
+	txn.CreationDate = common.Now()
 	c := &client.Client{}
 	c.PublicKey = publicKey
 	c.ID = datastore.ToKey(encryption.Hash(publicKey))
-	signature, err := t.Sign(c.GetSignatureScheme())
-	encryption.Sign(privateKey, t.Hash)
+	ss, err := c.GetSignatureScheme()
+	require.NoError(t, err)
+	signature, err := txn.Sign(ss)
 	if err != nil {
 		fmt.Printf("error signing %v\n", err)
 		return
 	}
-	t.Signature = signature
-	txnChannel <- t
+	_, _ = encryption.Sign(privateKey, txn.Hash)
+	txn.Signature = signature
+	txnChannel <- txn
 }
 
 func processWorker(txnChannel <-chan *Transaction, done chan<- bool) {
