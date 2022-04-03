@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -362,14 +364,22 @@ func makeErrServer() string {
 	return errServer.URL
 }
 
-func makeValidServer() string {
-	validServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-			},
-		),
-	)
-	return validServer.URL
+func makeValidServer(v interface{}) func() string {
+	return func() string {
+		validServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					if v == nil {
+						return
+					}
+
+					b, _ := json.Marshal(v)
+					io.Copy(rw, bytes.NewReader(b))
+				},
+			),
+		)
+		return validServer.URL
+	}
 }
 
 func TestMakeGetRequest(t *testing.T) {
@@ -799,7 +809,7 @@ func TestMakeSCRestAPICall(t *testing.T) {
 				entity: &errEntity,
 			},
 			makeServers: []makeServer{
-				makeValidServer,
+				makeValidServer(nil),
 			},
 			wantErr: true,
 		},
@@ -810,7 +820,7 @@ func TestMakeSCRestAPICall(t *testing.T) {
 				entity: &entity,
 			},
 			makeServers: []makeServer{
-				makeValidServer,
+				makeValidServer(struct{}{}),
 			},
 			wantErr: false,
 		},
@@ -822,7 +832,7 @@ func TestMakeSCRestAPICall(t *testing.T) {
 				consensus: 200,
 			},
 			makeServers: []makeServer{
-				makeValidServer,
+				makeValidServer(nil),
 			},
 			wantErr: true,
 		},
@@ -892,7 +902,7 @@ func TestGetBlockSummaryCall(t *testing.T) {
 			},
 			want: &block.BlockSummary{},
 			makeServers: []makeServer{
-				makeValidServer,
+				makeValidServer(struct{}{}),
 			},
 			wantErr: false,
 		},
@@ -904,7 +914,7 @@ func TestGetBlockSummaryCall(t *testing.T) {
 				consensus:  200,
 			},
 			makeServers: []makeServer{
-				makeValidServer,
+				makeValidServer(nil),
 			},
 			wantErr: true,
 		},
@@ -920,13 +930,11 @@ func TestGetBlockSummaryCall(t *testing.T) {
 			}
 
 			got, err := GetBlockSummaryCall(tt.args.urls, tt.args.consensus, tt.args.magicBlock)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetBlockSummaryCall() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetBlockSummaryCall() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

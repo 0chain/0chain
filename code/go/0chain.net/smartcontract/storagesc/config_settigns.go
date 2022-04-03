@@ -69,14 +69,14 @@ const (
 	ChallengeEnabled
 	ChallengeGenerationRate
 	MaxChallengesPerGeneration
+	ValidatorsPerChallenge
 	MaxDelegates
 
 	BlockRewardBlockReward
 	BlockRewardQualifyingStake
 	BlockRewardSharderWeight
 	BlockRewardMinerWeight
-	BlockRewardBlobberCapacityWeight
-	BlockRewardBlobberUsageWeight
+	BlockRewardBlobberWeight
 
 	ExposeMpt
 
@@ -127,14 +127,14 @@ var (
 		"challenge_enabled",
 		"challenge_rate_per_mb_min",
 		"max_challenges_per_generation",
+		"validators_per_challenge",
 		"max_delegates",
 
 		"block_reward.block_reward",
 		"block_reward.qualifying_stake",
 		"block_reward.sharder_ratio",
 		"block_reward.miner_ratio",
-		"block_reward.blobber_capacity_ratio",
-		"block_reward.blobber_usage_ratio",
+		"block_reward.blobber_ratio",
 
 		"expose_mpt",
 	}
@@ -185,14 +185,14 @@ var (
 		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
 		"challenge_rate_per_mb_min":            {ChallengeGenerationRate, smartcontract.Float64},
 		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
+		"validators_per_challenge":             {ValidatorsPerChallenge, smartcontract.Int},
 		"max_delegates":                        {MaxDelegates, smartcontract.Int},
 
-		"block_reward.block_reward":           {BlockRewardBlockReward, smartcontract.StateBalance},
-		"block_reward.qualifying_stake":       {BlockRewardQualifyingStake, smartcontract.StateBalance},
-		"block_reward.sharder_ratio":          {BlockRewardSharderWeight, smartcontract.Float64},
-		"block_reward.miner_ratio":            {BlockRewardMinerWeight, smartcontract.Float64},
-		"block_reward.blobber_capacity_ratio": {BlockRewardBlobberCapacityWeight, smartcontract.Float64},
-		"block_reward.blobber_usage_ratio":    {BlockRewardBlobberUsageWeight, smartcontract.Float64},
+		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.StateBalance},
+		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.StateBalance},
+		"block_reward.sharder_ratio":    {BlockRewardSharderWeight, smartcontract.Float64},
+		"block_reward.miner_ratio":      {BlockRewardMinerWeight, smartcontract.Float64},
+		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
 
 		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
 	}
@@ -227,6 +227,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.FailedChallengesToRevokeMinLock = change
 	case MaxChallengesPerGeneration:
 		conf.MaxChallengesPerGeneration = change
+	case ValidatorsPerChallenge:
+		conf.ValidatorsPerChallenge = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
@@ -325,16 +327,11 @@ func (conf *Config) setFloat64(key string, change float64) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.MinerWeight = change
-	case BlockRewardBlobberCapacityWeight:
+	case BlockRewardBlobberWeight:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlobberCapacityWeight = change
-	case BlockRewardBlobberUsageWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
-		}
-		conf.BlockReward.BlobberUsageWeight = change
+		conf.BlockReward.BlobberWeight = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -528,6 +525,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ChallengeGenerationRate
 	case MaxChallengesPerGeneration:
 		return conf.MaxChallengesPerGeneration
+	case ValidatorsPerChallenge:
+		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:
@@ -538,10 +537,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.SharderWeight
 	case BlockRewardMinerWeight:
 		return conf.BlockReward.MinerWeight
-	case BlockRewardBlobberCapacityWeight:
-		return conf.BlockReward.BlobberCapacityWeight
-	case BlockRewardBlobberUsageWeight:
-		return conf.BlockReward.BlobberUsageWeight
+	case BlockRewardBlobberWeight:
+		return conf.BlockReward.BlobberWeight
 	case ExposeMpt:
 		return conf.ExposeMpt
 	default:

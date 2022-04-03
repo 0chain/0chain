@@ -23,11 +23,9 @@ func SetupRootContext(nodectx context.Context) {
 	// TODO: This go routine is not needed. Workaround for the "vet" error
 	done := make(chan bool)
 	go func() {
-		select {
-		case <-done:
-			Logger.Info("Shutting down all workers...")
-			rootCancel()
-		}
+		<-done
+		Logger.Info("Shutting down all workers...")
+		rootCancel()
 	}()
 }
 
@@ -58,7 +56,7 @@ func HandleShutdown(server *http.Server, closers []func()) chan struct{} {
 				Done()
 				ctx, cancelf := context.WithTimeout(context.Background(), 3*time.Second)
 				Logger.Info("Shutting down http server")
-				server.Shutdown(ctx)
+				_ = server.Shutdown(ctx)
 				Logger.Info("Http server shut down")
 
 				for _, c := range closers {

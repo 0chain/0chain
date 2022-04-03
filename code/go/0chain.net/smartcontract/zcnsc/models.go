@@ -271,8 +271,3 @@ func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
 }
-
-func (ps *poolStat) decode(input []byte) error {
-	err := json.Unmarshal(input, ps)
-	return err
-}

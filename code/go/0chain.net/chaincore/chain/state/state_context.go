@@ -89,7 +89,6 @@ type StateContext struct {
 	signedTransfers               []*state.SignedTransfer
 	mints                         []*state.Mint
 	events                        []event.Event
-	clientStateDeserializer       state.DeserializerI
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock

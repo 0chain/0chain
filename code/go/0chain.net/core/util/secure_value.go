@@ -74,7 +74,7 @@ func (spv *SecureSerializableValue) GetHashBytes() []byte {
 	return encryption.RawHash(spv.Buffer)
 }
 
-// MarshalMsg encodes node and implement mspg.Marshaler interface
+// MarshalMsg encodes node and implement msg.Marshaler interface
 func (spv *SecureSerializableValue) MarshalMsg([]byte) ([]byte, error) {
 	return spv.Buffer, nil
 }

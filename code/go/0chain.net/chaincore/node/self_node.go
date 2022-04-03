@@ -69,11 +69,11 @@ func (sn *SelfNode) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 /*SetSignatureScheme - setter */
-func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) {
+func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) error {
 	sn.mx.Lock()
 	defer sn.mx.Unlock()
 	sn.signatureScheme = signatureScheme
-	sn.Node.SetSignatureScheme(signatureScheme)
+	return sn.Node.SetSignatureScheme(signatureScheme)
 }
 
 /*Sign - sign the given hash */

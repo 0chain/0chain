@@ -99,7 +99,6 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
 	}
-	return
 }
 
 // UpdateStateFromNetwork get a bunch of state nodes from the network
@@ -142,12 +141,12 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
 	}
-	return
 }
 
 //GetStateFrom - get the state from a given node
 func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialState, error) {
-	var partialState = state.NewPartialState(key)
+	partialState := &state.PartialState{}
+	partialState.Hash = key
 	handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
 		if node == nil {
 			return ErrNodeNull
@@ -165,7 +164,9 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 		}
 	}
 	if len(partialState.Nodes) > 0 {
-		partialState.ComputeProperties()
+		if err := partialState.ComputeProperties(); err != nil {
+			return nil, err
+		}
 		return partialState, nil
 	}
 	return nil, util.ErrNodeNotFound
@@ -189,8 +190,7 @@ func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) er
 	if ps.GetRoot() == nil {
 		return ErrNodeNull
 	}
-	c.SavePartialState(ctx, ps)
-	return nil
+	return c.SavePartialState(ctx, ps)
 }
 
 //SavePartialState - save the partial state
@@ -317,6 +317,14 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 			return nil, datastore.ErrInvalidEntity
 		}
 
+		if len(rsc.Nodes) != b.StateChangesCount {
+			logging.Logger.Error("get_block_state_change",
+				zap.Error(state.ErrPartialStateRootMismatch),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+			return nil, state.ErrMalformedPartialState
+		}
+
 		if rsc.Block != b.Hash {
 			logging.Logger.Error("get_block_state_change",
 				zap.Error(errors.New("block hash mismatch")),
@@ -325,7 +333,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 			return nil, block.ErrBlockHashMismatch
 		}
 
-		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
+		if !bytes.Equal(b.ClientStateHash, rsc.Hash) {
 			logging.Logger.Error("get_block_state_change",
 				zap.Error(errors.New("state hash mismatch")),
 				zap.Int64("round", b.Round),

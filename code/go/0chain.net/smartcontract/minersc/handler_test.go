@@ -30,7 +30,7 @@ func TestConfigHandler(t *testing.T) {
 	}
 
 	type parameters struct {
-		condfigType string
+		configType  string
 		localConfig []byte
 	}
 
@@ -41,7 +41,7 @@ func TestConfigHandler(t *testing.T) {
 		}
 		balances.On("GetTrieNode", GlobalNodeKey, mock.AnythingOfType("*minersc.GlobalNode")).Return(util.ErrValueNotPresent).Once()
 
-		config.SmartContractConfig.SetConfigType(p.condfigType)
+		config.SmartContractConfig.SetConfigType(p.configType)
 		err := config.SmartContractConfig.ReadConfig(bytes.NewBuffer(p.localConfig))
 		require.NoError(t, err)
 
@@ -63,9 +63,9 @@ func TestConfigHandler(t *testing.T) {
 		want       want
 	}{
 		{
-			title: "all_settigns",
+			title: "all_settings",
 			parameters: parameters{
-				condfigType: "yaml",
+				configType: "yaml",
 				localConfig: []byte(`
 smart_contracts:
   minersc:
@@ -110,6 +110,8 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
+    # cooldown_period is round unit to prevent from DDOS attack
+    cooldown_period: 5
 `),
 			},
 			want: want{
@@ -133,6 +135,7 @@ smart_contracts:
 					"reward_decline_rate":    "0.1",
 					"max_mint":               "1.5e+06",
 					"owner_id":               "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+					"cooldown_period":        "5",
 				},
 			},
 		},
@@ -149,13 +152,13 @@ smart_contracts:
 				require.EqualValues(t, test.want.msg, err.Error())
 				return
 			}
-			ourputMap, ok := result.(smartcontract.StringMap)
+			outputMap, ok := result.(smartcontract.StringMap)
 			require.True(t, ok)
 			for key, value := range test.want.output {
-				if value != ourputMap.Fields[key] {
-					fmt.Println("key", key, "value", value, "output", ourputMap.Fields[key])
+				if value != outputMap.Fields[key] {
+					fmt.Println("key", key, "value", value, "output", outputMap.Fields[key])
 				}
-				//require.EqualValues(t, value, ourputMap.Fields[key], key)
+				//require.EqualValues(t, value, outputMap.Fields[key], key)
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})

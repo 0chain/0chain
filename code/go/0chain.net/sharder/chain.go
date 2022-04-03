@@ -86,10 +86,7 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
 func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
-	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
-	if gr == nil || gb == nil {
-		panic("Genesis round/block can not be null")
-	}
+	_, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
 	//sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
 	// Save the block
@@ -413,7 +410,6 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	bl.nlfmb, err = sc.loadHighestMagicBlock(ctx, bl.lfb)
 	if err != nil {
 		Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
-		err = nil // reset this error and exit
 	}
 
 	return bl // got them all (or excluding the nlfmb)

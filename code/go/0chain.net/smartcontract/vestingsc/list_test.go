@@ -103,7 +103,7 @@ func TestVestingSmartContract(t *testing.T) {
 	params.Set("client_id", clientID)
 	var got interface{}
 	got, err = vsc.getClientPoolsHandler(ctx, params, balances)
-	get, err = vsc.getOrCreateClientPools(clientID, balances)
+	_, err = vsc.getOrCreateClientPools(clientID, balances)
 	require.NoError(t, err)
 	assert.Equal(t, set, got)
 }

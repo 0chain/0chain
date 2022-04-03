@@ -287,6 +287,10 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
+	if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
+		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
+	}
+
 	if mn.Delete {
 		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
 	}
@@ -300,6 +304,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	mn.NumberOfDelegates = update.NumberOfDelegates
 	mn.MinStake = update.MinStake
 	mn.MaxStake = update.MaxStake
+	mn.LastSettingUpdateRound = balances.GetBlock().Round
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)

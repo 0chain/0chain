@@ -17,15 +17,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,7 +35,6 @@ type cmdMagicBlock struct {
 	dkgs map[string]*bls.DKG
 	// summaries collection
 	summaries       map[int]*bls.DKGSummary
-	states          *state.InitStates
 	originalIndices map[string]int
 }
 
@@ -51,7 +47,7 @@ var (
 	input  = fmt.Sprintf("%v/input", rootPath)
 )
 
-func new() *cmdMagicBlock {
+func newMagicBlock() *cmdMagicBlock {
 	return &cmdMagicBlock{dkgs: map[string]*bls.DKG{}, summaries: map[int]*bls.DKGSummary{}}
 }
 
@@ -80,19 +76,25 @@ func (cmd *cmdMagicBlock) setupBlock() {
 	cmd.block = mb
 }
 
-func (cmd *cmdMagicBlock) setupNodes() {
+func (cmd *cmdMagicBlock) setupNodes() error {
 	for _, v := range cmd.yml.Miners {
 		cmd.yml.MinersMap[v.ID] = v
 		v.CreationDate = common.Now()
 		v.Type = cmd.block.Miners.Type
-		cmd.block.Miners.AddNode(&v.Node)
+		if err := cmd.block.Miners.AddNode(&v.Node); err != nil {
+			return err
+		}
 	}
 	for _, v := range cmd.yml.Sharders {
 		cmd.yml.ShardersMap[v.ID] = v
 		v.CreationDate = common.Now()
 		v.Type = cmd.block.Sharders.Type
-		cmd.block.Sharders.AddNode(&v.Node)
+		if err := cmd.block.Sharders.AddNode(&v.Node); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // setupMPKS setups
@@ -116,16 +118,18 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 		sos := block.NewShareOrSigns()
 		sos.ID = mid
 		partyId := bls.ComputeIDdkg(mid)
-		for id, node := range cmd.block.Miners.NodesMap {
+		for id, nd := range cmd.block.Miners.NodesMap {
 			otherPartyId := bls.ComputeIDdkg(id)
 			share, err := cmd.dkgs[mid].ComputeDKGKeyShare(otherPartyId)
 			if err != nil {
-				panic(err)
+				log.Panic(err)
 			}
-			cmd.summaries[node.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
+			cmd.summaries[nd.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
 			if mid != id {
 				var privateKey bls.Key
-				privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey)
+				if err := privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey); err != nil {
+					log.Panic(err)
+				}
 				message := encryption.Hash(share.GetHexString())
 				sos.ShareOrSigns[id] = &bls.DKGKeyShare{
 					Message: message,
@@ -161,23 +165,6 @@ func verifyKeys(hexSecKey, hexPubKey, hexId string) error {
 	return nil
 }
 
-func verifySummaries(cmd *cmdMagicBlock, key datastore.Key, index int) error {
-
-	dkgs := cmd.summaries[index]
-	dkgs.ID = strconv.FormatInt(cmd.block.MagicBlockNumber, 10)
-
-	if err := dkgs.Verify(bls.ComputeIDdkg(key), cmd.block.Mpks.GetMpkMap()); err != nil {
-		if config.DevConfiguration.ViewChange {
-			logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
-		} else {
-			logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
-		}
-
-	}
-
-	return nil
-}
-
 // setupDKGSummaries initializes the dkg summaries
 func (cmd *cmdMagicBlock) setupDKGSummaries() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
@@ -197,7 +184,7 @@ func (cmd *cmdMagicBlock) setupBlockHash() {
 }
 
 // jsonMB method return indented json of block
-func (cmd *cmdMagicBlock) jsonMB() ([]byte, error) {
+func (cmd *cmdMagicBlock) jsonMB() ([]byte, error) { //nolint
 	return json.MarshalIndent(cmd.block, "", " ")
 }
 
@@ -411,7 +398,7 @@ func writeNames(names map[string]string) string {
 }
 
 func getNamesFileName() string {
-	return fmt.Sprintf("names.yaml")
+	return "names.yaml"
 }
 
 func getNamesEmailFileName(email string) string {
@@ -419,14 +406,17 @@ func getNamesEmailFileName(email string) string {
 }
 
 func generateArtifacts(magicBlockConfig *string, emails []string) (*cmdMagicBlock, error) {
-	cmd := new()
+	cmd := newMagicBlock()
 	if err := cmd.setupYaml(*magicBlockConfig); err != nil {
 		log.Printf("Failed to read configuration file (%v) for magicBlock. Error: %v\n", *magicBlockConfig, err)
 		return nil, err
 	}
 	client.SetClientSignatureScheme("bls0chain")
 	cmd.setupBlock()
-	cmd.setupNodes()
+	if err := cmd.setupNodes(); err != nil {
+		log.Printf("Failed to setup nodes, %v", err)
+		return nil, err
+	}
 	cmd.setupMPKS()
 	cmd.createShareOrSigns()
 

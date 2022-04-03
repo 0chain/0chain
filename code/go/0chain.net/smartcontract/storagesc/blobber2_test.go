@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -236,7 +238,7 @@ func testCommitBlobberRead(
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
-			nil,
+			&block.Block{},
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,
@@ -247,6 +249,8 @@ func testCommitBlobberRead(
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}
+
+	setConfig(t, ctx)
 
 	var client = &Client{
 		balance: 10000,
@@ -297,6 +301,17 @@ func testCommitBlobberRead(
 		Owner: payerId,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
+	require.NoError(t, err)
+
+	blobber := &StorageNode{
+		ID: blobberId,
+		Terms: Terms{
+			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
+			WritePrice: zcnToBalance(blobberYaml.writePrice),
+		},
+	}
+
+	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 
 	var rPool = readPool{
 		Pools: []*allocationPool{},

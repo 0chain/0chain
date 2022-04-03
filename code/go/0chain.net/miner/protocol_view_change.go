@@ -39,7 +39,6 @@ const (
 	scRestAPIGetDKGMiners  = "/getDkgList"
 	scRestAPIGetMinersMPKS = "/getMpksList"
 	scRestAPIGetMagicBlock = "/getMagicBlock"
-	scRestAPIGetMinerList  = "/getMinerList"
 )
 
 // PhaseFunc represents local VC function returns optional
@@ -371,12 +370,16 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
-		n.SetPublicKey(v.PublicKey)
+		if err := n.SetPublicKey(v.PublicKey); err != nil {
+			return err
+		}
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
 		n.SetStatus(node.NodeStatusActive)
-		node.Setup(n)
+		if err := node.Setup(n); err != nil {
+			return err
+		}
 		node.RegisterNode(n)
 	}
 
@@ -392,7 +395,9 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 			return err
 		}
 		if k == node.Self.Underlying().GetKey() {
-			mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false)
+			if err := mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false); err != nil {
+				return err
+			}
 			foundSelf = true
 		}
 	}
@@ -667,9 +672,15 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		var myShare, ok = share.ShareOrSigns[selfNodeKey]
 		if ok && myShare.Share != "" {
 			var share bls.Key
-			share.SetHexString(myShare.Share)
-			var validShare = vcdkg.ValidateShare(
-				bls.ConvertStringToMpk(mpks[key].Mpk), share)
+			if err := share.SetHexString(myShare.Share); err != nil {
+				return nil, err
+			}
+			mpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			if err != nil {
+				return nil, err
+			}
+
+			var validShare = vcdkg.ValidateShare(mpks, share)
 			if !validShare {
 				continue
 			}
@@ -689,8 +700,14 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		}
 	}
 	vcdkg.DeleteFromSet(miners)
+	mpkMap, err := magicBlock.Mpks.GetMpkMap()
+	if err != nil {
+		return nil, err
+	}
+	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
+		return nil, err
+	}
 
-	vcdkg.AggregatePublicKeyShares(magicBlock.Mpks.GetMpkMap())
 	vcdkg.AggregateSecretKeyShares()
 	vcdkg.StartingRound = magicBlock.StartingRound
 	vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
@@ -885,7 +902,9 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return
 	}
 
-	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+	if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
+		logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+	}
 
 	if lfmb.MagicBlockNumber <= 1 {
 		mc.updateMagicBlocks(lfmb)
@@ -899,7 +918,9 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+		if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
+			logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		}
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
@@ -908,14 +929,14 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	pfmb, err = mc.GetBlock(ctx, lfmb.LatestFinalizedMagicBlockHash)
 	if err == nil && pfmb.MagicBlock != nil &&
 		pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+		if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
+			logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		}
+
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
 
-	// load from sharders
-	// pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
-	// 	lfmb.MagicBlockNumber-1, 1)
 	pfmb, err = httpclientutil.FetchMagicBlockFromSharders(
 		ctx, lfmb.Sharders.N2NURLs(), lfmb.MagicBlockNumber-1, func(*block.Block) bool { return true })
 	if err != nil {
@@ -937,6 +958,8 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		return // error
 	}
 
-	mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+	if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
+		logging.Logger.Warn("set dkgs from store", zap.Error(err))
+	}
 	mc.updateMagicBlocks(pfmb, lfmb) // ok
 }

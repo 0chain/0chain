@@ -41,7 +41,7 @@ var (
 	storageScId = approvedMinters[2]
 )
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)           { return }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)           {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI          { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction    { return nil }
 func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer { return nil }
@@ -49,11 +49,12 @@ func (sc *mockStateContext) Validate() error                             { retur
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
+
 func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
 func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
@@ -77,7 +78,7 @@ func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
 }
 
 func (sc *mockStateContext) GetBlock() *block.Block {
-	return nil
+	return sc.ctx.GetBlock()
 }
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }

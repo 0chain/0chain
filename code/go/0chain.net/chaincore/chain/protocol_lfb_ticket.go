@@ -81,7 +81,7 @@ type LFBTicket struct {
 	IsOwn     bool     `json:"-"`          // is own
 }
 
-func (lfbt *LFBTicket) addSender(sharder string) {
+func (lfbt *LFBTicket) addSender(sharder string) { //nolint
 	for _, sh := range lfbt.Senders {
 		if sharder == sh {
 			return // already hae
@@ -135,7 +135,7 @@ func (*LFBTicket) GetEntityMetadata() datastore.EntityMetadata {
 
 func (*LFBTicket) SetKey(datastore.Key)                      {}
 func (*LFBTicket) GetScore() int64                           { return 0 }
-func (*LFBTicket) ComputeProperties()                        {}
+func (*LFBTicket) ComputeProperties() error                  { return nil }
 func (*LFBTicket) Validate(context.Context) error            { return nil }
 func (*LFBTicket) Read(context.Context, datastore.Key) error { return nil }
 func (*LFBTicket) Write(context.Context) error               { return nil }
@@ -190,7 +190,6 @@ func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 	case c.unsubLFBTicket <- sub:
 	case <-c.lfbTickerWorkerIsDone:
 	}
-	return
 }
 
 // GetLatestLFBTicket
