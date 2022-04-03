@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
@@ -164,18 +162,17 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 // ----- AuthorizerNode --------------------
 
 type AuthorizerNode struct {
-	ID                string                      `json:"id"`
-	PublicKey         string                      `json:"public_key"`
-	URL               string                      `json:"url"`
-	Config            *AuthorizerConfig           `json:"config"`
-	LockingPool       *tokenpool.ZcnLockingPool   `json:"lock_pool"`
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	ID          string                    `json:"id"`
+	PublicKey   string                    `json:"public_key"`
+	URL         string                    `json:"url"`
+	Config      *AuthorizerConfig         `json:"config"`
+	LockingPool *tokenpool.ZcnLockingPool `json:"lock_pool"`
 }
 
 // NewAuthorizer To review: tokenLock init values
 // PK = authorizer node public key
 // ID = authorizer node public id = Client ID
-func NewAuthorizer(ID string, PK string, URL string, sps *stakepool.StakePoolSettings) *AuthorizerNode {
+func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 	a := &AuthorizerNode{
 		ID:        ID,
 		PublicKey: PK,
@@ -198,16 +195,6 @@ func NewAuthorizer(ID string, PK string, URL string, sps *stakepool.StakePoolSet
 		},
 	}
 
-	if sps != nil {
-		a.StakePoolSettings = stakepool.StakePoolSettings{
-			DelegateWallet:  sps.DelegateWallet,
-			MinStake:        sps.MinStake,
-			MaxStake:        sps.MaxStake,
-			MaxNumDelegates: sps.MaxNumDelegates,
-			ServiceCharge:   sps.ServiceCharge,
-		}
-	}
-
 	return a
 }
 
@@ -219,41 +206,6 @@ func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 	an.Config = cfg
 
 	return nil
-}
-
-func (an *AuthorizerNode) UpdateStakePoolSettings(sps *stakepool.StakePoolSettings) bool {
-	if sps == nil {
-		return false
-	}
-
-	changed := false
-
-	if an.StakePoolSettings.MinStake != sps.MinStake {
-		an.StakePoolSettings.MinStake = sps.MinStake
-		changed = true
-	}
-
-	if an.StakePoolSettings.MaxStake != sps.MaxStake {
-		an.StakePoolSettings.MaxStake = sps.MaxStake
-		changed = true
-	}
-
-	if an.StakePoolSettings.DelegateWallet != sps.DelegateWallet {
-		an.StakePoolSettings.DelegateWallet = sps.DelegateWallet
-		changed = true
-	}
-
-	if an.StakePoolSettings.MaxNumDelegates != sps.MaxNumDelegates {
-		an.StakePoolSettings.MaxNumDelegates = sps.MaxNumDelegates
-		changed = true
-	}
-
-	if an.StakePoolSettings.ServiceCharge != sps.ServiceCharge {
-		an.StakePoolSettings.ServiceCharge = sps.ServiceCharge
-		changed = true
-	}
-
-	return changed
 }
 
 func (an *AuthorizerNode) GetKey() string {
@@ -328,17 +280,6 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		}
 
 		an.Config = cfg
-	}
-
-	stakepoolSettings, ok := objMap["stake_pool_settings"]
-	if ok {
-		var sp = &stakepool.StakePoolSettings{}
-		err = json.Unmarshal(*stakepoolSettings, sp)
-		if err != nil {
-			return err
-		}
-
-		an.StakePoolSettings = *sp
 	}
 
 	return nil

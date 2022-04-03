@@ -105,7 +105,7 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 // get existing stake pool or create new one not saving it
 func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
-	authorizerId datastore.Key,
+	authorizerID datastore.Key,
 	providerType spenum.Provider,
 	settings stakepool.StakePoolSettings,
 	balances cstate.StateContextI,
@@ -117,7 +117,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	changed := false
 
 	// the stake pool can be created by related validator
-	sp, err := zcn.getStakePool(authorizerId, balances)
+	sp, err := zcn.getStakePool(authorizerID, balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, fmt.Errorf("unexpected error: %v", err)
@@ -152,7 +152,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		return sp, nil
 	}
 
-	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerId)
+	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
 func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *GlobalNode) error {

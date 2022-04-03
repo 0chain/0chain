@@ -17,19 +17,19 @@ import (
 )
 
 const (
-	ADDRESS                       = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	NAME                          = "zcnsc"
-	AddAuthorizerFunc             = "AddAuthorizer"
-	DeleteAuthorizerFunc          = "DeleteAuthorizer"
-	UpdateGlobalConfigFunc        = "update-global-config"
-	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
-	MintFunc                      = "mint"
-	BurnFunc                      = "burn"
-	AddToDelegatePoolFunc         = "addToDelegatePool"
-	DeleteFromDelegatePoolFunc    = "deleteFromDelegatePool"
-	AddAuthorizerStakePoolFunc    = "addAuthorizerStakePool"
-	UpdateAuthorizerStakePoolFunc = "updateAuthorizerStakePool"
-	CollectRewardsFunc            = "collectRewardsFunc"
+	ADDRESS                    = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	NAME                       = "zcnsc"
+	AddAuthorizerFunc          = "AddAuthorizer"
+	DeleteAuthorizerFunc       = "DeleteAuthorizer"
+	UpdateGlobalConfigFunc     = "update-global-config"
+	UpdateAuthorizerConfigFunc = "update-authorizer-config"
+	MintFunc                   = "mint"
+	BurnFunc                   = "burn"
+	AddToDelegatePoolFunc      = "addToDelegatePool"
+	DeleteFromDelegatePoolFunc = "deleteFromDelegatePool"
+	AddAuthorizerStakePoolFunc = "addAuthorizerStakePool"
+	UpdateStakePoolFunc        = "updateStakePool"
+	CollectRewardsFunc         = "collectRewardsFunc"
 )
 
 // ZCNSmartContract ...
@@ -63,7 +63,7 @@ func (zcn *ZCNSmartContract) InitSC() {
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
 	// StakePool
 	zcn.smartContractFunctions[AddAuthorizerStakePoolFunc] = zcn.AddAuthorizerStakePool
-	zcn.smartContractFunctions[UpdateAuthorizerStakePoolFunc] = zcn.UpdateAuthorizerStakePool
+	zcn.smartContractFunctions[UpdateStakePoolFunc] = zcn.UpdateStakePool
 	// Rewards
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
 	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool

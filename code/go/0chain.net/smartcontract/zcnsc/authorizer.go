@@ -102,15 +102,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 			Logger.Info("create or update stake pool completed successfully")
 		}
 
-		if authorizer.UpdateStakePoolSettings(&authorizerStakingPoolSettings) {
-			errc := authorizer.Save(ctx)
-			if errc != nil {
-				err = errors.Wrapf(err, "failed to update stake pool settings: %v", errc)
-			} else {
-				Logger.Info("update pool settings completed successfully")
-			}
-		}
-
 		Logger.Error(code, zap.Error(err))
 		return "", err
 	} else {
@@ -125,7 +116,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 		// Create Authorizer instance
 
-		authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL, &authorizerStakingPoolSettings)
+		authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
 
 		// Dig pool for authorizer
 
@@ -187,10 +178,78 @@ func (zcn *ZCNSmartContract) AddAuthorizerStakePool(
 	inputData []byte,
 	ctx cstate.StateContextI,
 ) (response string, err error) {
-	return
+	const (
+		code = "add_authorizer_staking_pool_failed"
+	)
+
+	var (
+		authorizerID = tran.ClientID // sender address
+		authorizer   *AuthorizerNode
+	)
+
+	if authorizerID == "" {
+		msg := "tran.ClientID is empty"
+		err = common.NewError(code, msg)
+		Logger.Error(msg, zap.Error(err))
+		return "", err
+	}
+
+	if inputData == nil {
+		msg := "input data is nil"
+		err = common.NewError(code, msg)
+		Logger.Error(msg, zap.Error(err))
+		return "", err
+	}
+
+	// Decode input
+
+	params := AuthorizerParameter{}
+	err = params.Decode(inputData)
+	if err != nil {
+		err = common.NewError(code, "failed to decode AuthorizerParameter")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	poolSettings := params.StakePoolSettings
+
+	if poolSettings.DelegateWallet == "" {
+		return "", common.NewError(code, "authorizer's delegate_wallet not set")
+	}
+
+	if authorizerID != poolSettings.DelegateWallet {
+		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
+	}
+
+	globalNode, err := GetGlobalNode(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("get global node", zap.Error(err))
+		return "", err
+	}
+
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
+	if err == nil && authorizer != nil {
+		var sp *StakePool
+		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, poolSettings, ctx)
+		if err != nil {
+			return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
+		}
+		if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
+			return "", common.NewError(code, "failed to save stake pool: "+err.Error())
+		}
+
+		Logger.Info("create or update stake pool completed successfully")
+
+		Logger.Error(code, zap.Error(err))
+		return "", err
+	}
+
+	return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
 }
 
-func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
+func (zcn *ZCNSmartContract) UpdateStakePool(
 	tran *transaction.Transaction,
 	inputData []byte,
 	ctx cstate.StateContextI,

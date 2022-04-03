@@ -279,4 +279,3 @@ func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
 }
-

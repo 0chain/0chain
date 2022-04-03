@@ -335,9 +335,9 @@ func (z UserNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *authorizerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 6
+	// map header, size 5
 	// string "ID"
-	o = append(o, 0x86, 0xa2, 0x49, 0x44)
+	o = append(o, 0x85, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "PublicKey"
 	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
@@ -369,13 +369,6 @@ func (z *authorizerNodeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 			err = msgp.WrapError(err, "LockingPool")
 			return
 		}
-	}
-	// string "StakePoolSettings"
-	o = append(o, 0xb1, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
-	o, err = z.StakePoolSettings.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "StakePoolSettings")
-		return
 	}
 	return
 }
@@ -473,12 +466,6 @@ func (z *authorizerNodeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "StakePoolSettings":
-			bts, err = z.StakePoolSettings.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "StakePoolSettings")
-				return
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -505,6 +492,5 @@ func (z *authorizerNodeDecode) Msgsize() (s int) {
 	} else {
 		s += z.LockingPool.Msgsize()
 	}
-	s += 18 + z.StakePoolSettings.Msgsize()
 	return
 }
