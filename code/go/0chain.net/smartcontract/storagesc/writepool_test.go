@@ -207,4 +207,10 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	resp, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
+	// 8. 0 lock
+	tx.Value = 0
+	lr.Duration = 5 * time.Second
+	lr.AllocationID = allocID
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg4)
 }
