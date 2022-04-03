@@ -327,13 +327,17 @@ func (c *Chain) getInfraHealth() InfraHealth {
 	case node.NodeTypeSharder:
 		var (
 			lfb      = c.GetLatestFinalizedBlock()
-			pn       minersc.PhaseNode
+			pn       *minersc.PhaseNode
 			phase    minersc.Phase = minersc.Unknown
 			restarts int64         = -1
 		)
-		err := c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
+		raw, err := c.GetBlockStateNode(lfb, minersc.PhaseKey, pn)
 		switch err {
 		case nil:
+			var ok bool
+			if pn, ok = raw.(*minersc.PhaseNode); !ok {
+				return InfraHealth{}
+			}
 			phase = pn.Phase
 			restarts = pn.Restarts
 		default:

@@ -244,11 +244,14 @@ func createWallets(num int) []*Wallet {
 
 func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	s := &state.State{}
-	s, err := mpt.GetNodeValue(util.Path(clientID), nil)
+	raw, err := mpt.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		return nil, err
 	}
-
+	var ok bool
+	if s, ok = raw.(*state.State); !ok {
+		return nil, fmt.Errorf("bad node type")
+	}
 	return s, nil
 }
 

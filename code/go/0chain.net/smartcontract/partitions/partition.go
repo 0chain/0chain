@@ -1,6 +1,7 @@
 package partitions
 
 import (
+	"0chain.net/core/datastore"
 	"math/rand"
 
 	"0chain.net/core/util"
@@ -23,6 +24,7 @@ type PartitionItemList interface {
 	length() int
 	itemRange(start, end int) []PartitionItem
 	save(balances state.StateContextI) error
+	get(key datastore.Key, balances state.StateContextI) error
 }
 
 type ChangePartitionCallback = func(PartitionItem, int, int, state.StateContextI) error

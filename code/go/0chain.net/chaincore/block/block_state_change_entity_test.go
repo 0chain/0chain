@@ -376,7 +376,7 @@ func TestStateChange_UnmarshalJSON(t *testing.T) {
 func TestStateChange_UnmarshalMsgpack(t *testing.T) {
 	b := NewBlock("", 1)
 	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
+	err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)
 	}

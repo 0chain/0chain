@@ -148,7 +148,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	balances.(*testBalances).setTransaction(t, tx)
 	blobber := new(StorageNode)
 	blobber.ID = c.id
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 	require.NoError(t, err)
 	var input = c.addValidatorRequest(t)
 	return ssc.addValidator(tx, input, balances)

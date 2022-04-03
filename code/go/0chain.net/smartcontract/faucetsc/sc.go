@@ -196,6 +196,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
 	un := &UserNode{ID: id}
 	us, err := balances.GetTrieNode(un.GetKey(globalKey), un)
+	if err != nil {
+		return un, err
+	}
 	if val, ok := us.(*UserNode); ok {
 		un = val
 	} else {
@@ -223,7 +226,9 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	gn := &GlobalNode{ID: fc.ID}
 	gv, err := balances.GetTrieNode(gn.GetKey(), gn)
 	switch err {
-	case nil, util.ErrValueNotPresent:
+	case util.ErrValueNotPresent:
+		return gn, err
+	case nil:
 		if gn.FaucetConfig == nil {
 			gn.FaucetConfig = getConfig()
 		}

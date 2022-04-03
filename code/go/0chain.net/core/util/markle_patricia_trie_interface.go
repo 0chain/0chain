@@ -31,9 +31,9 @@ type MerklePatriciaTrieI interface {
 
 	GetRoot() Key
 
-	GetNodeValue(path Path, template Serializable) (Serializable, error)
+	GetNodeValue(path Path, template MPTSerializable) (MPTSerializable, error)
 	GetNodeValueRaw(path Path) ([]byte, error)
-	Insert(path Path, value Serializable) error
+	Insert(path Path, value MPTSerializable) error
 	Delete(path Path) error
 
 	Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error

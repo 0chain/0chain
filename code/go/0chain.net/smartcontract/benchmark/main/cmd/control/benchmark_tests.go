@@ -1,6 +1,7 @@
 package control
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -77,12 +78,16 @@ func controlIndividual(balances cstate.StateContextI) error {
 
 	var itArray []item
 	for i := 0; i < n; i++ {
-		var it item
-		it, err := balances.GetTrieNode(getControlNKey(i), &it)
+		var it *item
+		raw, err := balances.GetTrieNode(getControlNKey(i), it)
+		var ok bool
+		if it, ok = raw.(*item); !ok {
+			return fmt.Errorf("unexpected node type")
+		}
 		if err != nil {
 			return err
 		}
-		itArray = append(itArray, it)
+		itArray = append(itArray, *it)
 	}
 	return nil
 }
@@ -95,14 +100,17 @@ func controlUpdateIndividual(balances cstate.StateContextI) error {
 	}
 
 	for i := 0; i < n; i++ {
-		var it item
-		it, err := balances.GetTrieNode(getControlNKey(i), &it)
+		var it *item
+		raw, err := balances.GetTrieNode(getControlNKey(i), it)
 		if err != nil {
 			return err
 		}
-
+		var ok bool
+		if it, ok = raw.(*item); !ok {
+			return fmt.Errorf("unexpected node type")
+		}
 		it.Field = 1
-		err = balances.InsertTrieNode(getControlNKey(i), &it)
+		err = balances.InsertTrieNode(getControlNKey(i), it)
 		if err != nil {
 			return err
 		}
@@ -117,12 +125,15 @@ func controlArray(balances cstate.StateContextI) error {
 		return nil
 	}
 
-	var ia itemArray
-	ia, err := balances.GetTrieNode(controlMKey, &ia)
+	var ia *itemArray
+	raw, err := balances.GetTrieNode(controlMKey, ia)
 	if err != nil {
 		return err
 	}
-
+	var ok bool
+	if ia, ok = raw.(*itemArray); !ok {
+		return fmt.Errorf("unexpected node type")
+	}
 	return nil
 }
 
@@ -133,14 +144,17 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 		return nil
 	}
 
-	var ia itemArray
-	ia, err := balances.GetTrieNode(controlMKey, &ia)
+	var ia *itemArray
+	raw, err := balances.GetTrieNode(controlMKey, ia)
 	if err != nil {
 		return err
 	}
-
+	var ok bool
+	if ia, ok = raw.(*itemArray); !ok {
+		return fmt.Errorf("unexpected node type")
+	}
 	ia.Fields = append(ia.Fields, 1)
-	err = balances.InsertTrieNode(controlMKey, &ia)
+	err = balances.InsertTrieNode(controlMKey, ia)
 	if err != nil {
 		return err
 	}
@@ -150,6 +164,10 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 
 func allMiners(balances cstate.StateContextI) error {
 	nodesList := &minersc.MinerNodes{}
-	err := balances.GetTrieNode(minersc.AllMinersKey, nodesList)
+	raw, err := balances.GetTrieNode(minersc.AllMinersKey, nodesList)
+	var ok bool
+	if nodesList, ok = raw.(*minersc.MinerNodes); !ok {
+		return fmt.Errorf("unexpected node type")
+	}
 	return err
 }

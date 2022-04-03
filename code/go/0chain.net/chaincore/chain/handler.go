@@ -508,13 +508,17 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	} else if snt == node.NodeTypeSharder {
 		var (
-			lfb = c.GetLatestFinalizedBlock()
-			pn  minersc.PhaseNode
-			err = c.GetBlockStateNode(lfb, minersc.PhaseKey, &pn)
-
+			lfb      = c.GetLatestFinalizedBlock()
+			pn       *minersc.PhaseNode
 			phase    minersc.Phase = minersc.Unknown
 			restarts int64         = -1
 		)
+
+		raw, err := c.GetBlockStateNode(lfb, minersc.PhaseKey, pn)
+		var ok bool
+		if pn, ok = raw.(*minersc.PhaseNode); !ok {
+			return
+		}
 
 		if err == nil {
 			phase = pn.Phase
@@ -924,7 +928,7 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		{"gsos", minersc.GroupShareOrSignsKey, dkgi.GSoS},
 		{"MB", minersc.MagicBlockKey, dkgi.MB},
 	} {
-		err = c.GetBlockStateNode(lfb, ks.key, ks.inst)
+		_, err := c.GetBlockStateNode(lfb, ks.key, ks.inst)
 		if err != nil {
 			if err != util.ErrValueNotPresent {
 				return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)

@@ -21,7 +21,7 @@ func AddMockClientPools(
 	for i := 0; i < len(clients); i++ {
 		var clientPools = clientPools{}
 		clientPools.Pools = append(clientPools.Pools, geMockVestingPoolId(i))
-		if _, err := balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools); err != nil {
+		if err := balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools); err != nil {
 			log.Fatal(err)
 		}
 	}

@@ -267,11 +267,14 @@ func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.
 	if active {
 
 		mpks = block.NewMpks()
-		err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
+		raw, err := mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
 		if err != nil {
-			return
+			return mpks, err
 		}
-
+		var ok bool
+		if mpks, ok = raw.(*block.Mpks); !ok {
+			return mpks, fmt.Errorf("unexpected node type")
+		}
 		return mpks, nil
 	}
 
@@ -302,10 +305,15 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 	if active {
 
 		dmn = minersc.NewDKGMinerNodes()
-		err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
+		raw, err := mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
 		if err != nil {
-			return
+			return dmn, err
 		}
+		var ok bool
+		if dmn, ok = raw.(*minersc.DKGMinerNodes); !ok {
+			return dmn, fmt.Errorf("unexpected node type")
+		}
+
 		return dmn, nil
 	}
 
@@ -522,12 +530,15 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 
 	if active {
 		magicBlock = block.NewMagicBlock()
-		err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey, magicBlock)
+		raw, err := mc.GetBlockStateNode(lfb, minersc.MagicBlockKey, magicBlock)
 		if err != nil {
 			return nil, err
 		}
-
-		return
+		var ok bool
+		if magicBlock, ok = raw.(*block.MagicBlock); !ok {
+			return magicBlock, fmt.Errorf("unexpected node type")
+		}
+		return magicBlock, err
 	}
 
 	var (
@@ -588,8 +599,12 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 		return 0, nil
 	}
 
-	var gn minersc.GlobalNode
-	err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
+	var gn *minersc.GlobalNode
+	raw, err := mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, gn)
+	var ok bool
+	if gn, ok = raw.(*minersc.GlobalNode); !ok {
+		return 0, fmt.Errorf("unexpected node type")
+	}
 	if err != nil {
 		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),

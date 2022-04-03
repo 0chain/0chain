@@ -142,13 +142,18 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	if mc.IsActiveInChain() && remote == false {
 
 		var (
-			sp  = getStatePath(selfNode)
-			err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp, allNodesList)
+			sp       = getStatePath(selfNode)
+			raw, err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp, allNodesList)
 		)
 
 		if err != nil {
 			logging.Logger.Error("failed to get block state node",
 				zap.Any("error", err), zap.String("path", sp))
+			return false
+		}
+
+		var ok bool
+		if allNodesList, ok = raw.(*minersc.MinerNodes); !ok {
 			return false
 		}
 
@@ -592,12 +597,19 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 	err error) {
 
-	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
+	var n *minersc.PhaseNode
+
+	raw, err := c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
 		return
 	}
+	var ok bool
+	if n, ok = raw.(*minersc.PhaseNode); !ok {
+		return minersc.PhaseNode{}, fmt.Errorf("bad node type")
+	}
+	pn = *n
 
 	if err == util.ErrValueNotPresent {
 		err = nil // not a real error, Miner SC just is not started (yet)

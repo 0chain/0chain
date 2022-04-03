@@ -62,9 +62,9 @@ type StateContextI interface {
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
-	SetStateContext(st *state.State) error                                             // cannot use in smart contracts or REST endpoints
-	GetTrieNode(key datastore.Key, templ util.Serializable) (util.Serializable, error) // Can use in REST endpoints
-	InsertTrieNode(key datastore.Key, node util.Serializable) error
+	SetStateContext(st *state.State) error                                                   // cannot use in smart contracts or REST endpoints
+	GetTrieNode(key datastore.Key, templ util.MPTSerializable) (util.MPTSerializable, error) // Can use in REST endpoints
+	InsertTrieNode(key datastore.Key, node util.MPTSerializable) error
 	DeleteTrieNode(key datastore.Key) error
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
@@ -306,12 +306,12 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return sc.getSignature()
 }
 
-func (sc *StateContext) GetTrieNode(key datastore.Key, templ util.Serializable) (util.Serializable, error) {
+func (sc *StateContext) GetTrieNode(key datastore.Key, templ util.MPTSerializable) (util.MPTSerializable, error) {
 	key_hash := encryption.Hash(key)
 	return sc.state.GetNodeValue(util.Path(key_hash), templ)
 }
 
-func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) error {
+func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) error {
 	key_hash := encryption.Hash(key)
 	err := sc.state.Insert(util.Path(key_hash), node)
 	return err

@@ -54,13 +54,13 @@ func mockMint(
 	balances cstate.StateContextI,
 ) {
 	toState := state.State{}
-	err := clientState.GetNodeValue(util.Path(to), &toState)
+	_, err := clientState.GetNodeValue(util.Path(to), &toState)
 	if err != nil {
 		return
 	}
 	_ = balances.SetStateContext(&toState)
 	toState.Balance += amount
-	_, _ = clientState.Insert(util.Path(to), &toState)
+	_ = clientState.Insert(util.Path(to), &toState)
 }
 
 func mockTransferAmount(
@@ -70,22 +70,22 @@ func mockTransferAmount(
 	balances cstate.StateContextI,
 ) {
 	fromState := state.State{}
-	err := clientState.GetNodeValue(util.Path(from), &fromState)
+	_, err := clientState.GetNodeValue(util.Path(from), &fromState)
 	if err != nil && err != util.ErrValueNotPresent {
 		return
 	}
 	if err != util.ErrValueNotPresent {
 		_ = balances.SetStateContext(&fromState)
 		fromState.Balance -= amount
-		_, _ = clientState.Insert(util.Path(from), &fromState)
+		_ = clientState.Insert(util.Path(from), &fromState)
 	}
 
 	toState := state.State{}
-	err = clientState.GetNodeValue(util.Path(to), &toState)
+	_, err = clientState.GetNodeValue(util.Path(to), &toState)
 	if err != nil {
 		return
 	}
 	_ = balances.SetStateContext(&toState)
 	toState.Balance += amount
-	_, _ = clientState.Insert(util.Path(to), &toState)
+	_ = clientState.Insert(util.Path(to), &toState)
 }

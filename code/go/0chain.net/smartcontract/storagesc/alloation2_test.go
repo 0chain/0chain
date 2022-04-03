@@ -343,31 +343,12 @@ func testCancelAllocation(
 	wpBalance state.Balance,
 	thisExpires, now common.Timestamp,
 ) error {
-	var bs sortedBlobbers
-	for _, b := range blobbers {
-		s := &StorageNode{}
-		s.Decode(b.Encode())
-		bs.add(s)
-	}
-
-	var stakes [][]mockStakePool
-	for _, k := range bStakes {
-		var s []mockStakePool
-		for _, ss := range k {
-			s = append(s, mockStakePool{
-				zcnAmount: ss.zcnAmount,
-				MintAt:    ss.MintAt,
-			})
-		}
-		stakes = append(stakes, s)
-	}
-
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
 		scYaml:               scYaml,
-		allocation:           *sAllocation.deepCopy(t),
-		blobbers:             bs,
-		bStakes:              stakes,
+		allocation:           sAllocation,
+		blobbers:             blobbers,
+		bStakes:              bStakes,
 		challengePoolBalance: challengePoolBalance,
 		now:                  now,
 		challengeCreation:    challenges,
@@ -395,14 +376,7 @@ func testCancelAllocation(
 		require.NoError(t, err)
 	}
 
-	raw, err := ssc.getAllAllocationsList(ctx)
-	if err != nil {
-		return err
-	}
-	allAllocationsBefore := &Allocations{}
-	for _, a := range raw.List {
-		allAllocationsBefore.List.add(a)
-	}
+	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
 
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {
@@ -467,10 +441,6 @@ func testFinalizeAllocation(
 	)
 
 	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-	if err != nil {
-		return err
-	}
-	i := len(allAllocationsBefore.List)
 
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
@@ -480,7 +450,7 @@ func testFinalizeAllocation(
 
 	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
 	require.NoError(t, err)
-	require.EqualValues(t, i-1, len(allAllocationsAfter.List))
+	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
 	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
@@ -830,19 +800,11 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	scYaml Config, blobberYaml mockBlobberYaml, stakes blobberStakes,
 ) (err error) {
 	require.EqualValues(t, len(blobbers), len(stakes))
-
-	var bs sortedBlobbers
-	for _, b := range blobbers {
-		s := &StorageNode{}
-		s.Decode(b.Encode())
-		bs.add(s)
-	}
-
 	var f = formulaeCommitNewAllocation{
 		scYaml:      scYaml,
 		blobberYaml: blobberYaml,
 		request:     request,
-		blobbers:    bs,
+		blobbers:    blobbers,
 		stakes:      stakes,
 	}
 

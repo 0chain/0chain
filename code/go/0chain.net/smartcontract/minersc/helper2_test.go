@@ -63,15 +63,15 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) (node util.MPTSerializable, err error) {
 	vv := sc.store[key]
 	d, err := vv.MarshalMsg(nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = v.UnmarshalMsg(d)
-	return err
+	return nil, err
 }
 
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) error {

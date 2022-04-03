@@ -62,11 +62,11 @@ type mockStateContext struct {
 	globalNode  *GlobalNode
 }
 
-func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) (node util.MPTSerializable, err error) {
 	if strings.Contains(key, UserNodeType) {
 		n, ok := m.userNodes[key]
 		if !ok {
-			return util.ErrValueNotPresent
+			return nil, util.ErrValueNotPresent
 		}
 
 		b, err := n.MarshalMsg(nil)
@@ -79,13 +79,13 @@ func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable
 			panic(err)
 		}
 
-		return nil
+		return v, nil
 	}
 
 	if strings.Contains(key, AuthorizerNodeType) {
 		authorizer, ok := m.authorizers[key]
 		if !ok {
-			return util.ErrValueNotPresent
+			return nil, util.ErrValueNotPresent
 		}
 
 		b, err := authorizer.Node.MarshalMsg(nil)
@@ -98,7 +98,7 @@ func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable
 			panic(err)
 		}
 
-		return nil
+		return v, nil
 	}
 
 	if strings.Contains(key, AuthorizerNewNodeType) {
@@ -111,7 +111,7 @@ func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable
 			panic(err)
 		}
 
-		return nil
+		return v, nil
 	}
 
 	if strings.Contains(key, GlobalNodeType) {
@@ -124,10 +124,10 @@ func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable
 		if err != nil {
 			panic(err)
 		}
-		return nil
+		return v, nil
 	}
 
-	return util.ErrValueNotPresent
+	return nil, util.ErrValueNotPresent
 }
 
 func MakeMockStateContext() *mockStateContext {
@@ -200,7 +200,7 @@ func MakeMockStateContext() *mockStateContext {
 		Run(func(args mock.Arguments) {
 			key := args[0].(datastore.Key)
 			if strings.Contains(key, AuthorizerNodeType) {
-				delete(authorizers, key)
+				delete(ctx.authorizers, key)
 			}
 		}).
 		Return(

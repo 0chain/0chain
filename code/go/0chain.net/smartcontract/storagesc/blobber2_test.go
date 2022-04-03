@@ -364,9 +364,11 @@ func testCommitBlobberRead(
 
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := ctx.GetTrieNode(stats.GetKey(ssc.ID), stats)
+	_, err = ctx.GetTrieNode(stats.GetKey(ssc.ID), stats)
 	require.NoError(t, err)
-	_, err = stats.UnmarshalMsg(statsBytes.Encode())
+	sv, err := stats.MarshalMsg(nil)
+	require.NoError(t, err)
+	_, err = stats.UnmarshalMsg(sv)
 	require.NoError(t, err)
 
 	confirmCommitBlobberRead(t, f, resp, stats, newRp, newSp, ctx)

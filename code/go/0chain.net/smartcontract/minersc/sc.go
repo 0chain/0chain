@@ -209,7 +209,7 @@ func getGlobalNode(
 	balances cstate.StateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
-	var raw util.Serializable
+	var raw util.MPTSerializable
 	raw, err = balances.GetTrieNode(GlobalNodeKey, gn)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

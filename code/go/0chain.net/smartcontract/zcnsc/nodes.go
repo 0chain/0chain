@@ -142,7 +142,7 @@ func (gn *GlobalNode) Decode(input []byte) error {
 }
 
 func (gn *GlobalNode) Save(balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
+	err = balances.InsertTrieNode(gn.GetKey(), gn)
 	return
 }
 
@@ -299,7 +299,7 @@ func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
 }
 
 func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
-	_, err = ctx.InsertTrieNode(an.GetKey(), an)
+	err = ctx.InsertTrieNode(an.GetKey(), an)
 	if err != nil {
 		return common.NewError("save_auth_node_failed", "saving authorizer node: "+err.Error())
 	}
@@ -375,6 +375,6 @@ func (un *UserNode) Decode(input []byte) error {
 }
 
 func (un *UserNode) Save(balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(un.GetKey(), un)
+	err = balances.InsertTrieNode(un.GetKey(), un)
 	return
 }

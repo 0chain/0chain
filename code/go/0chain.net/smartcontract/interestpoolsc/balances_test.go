@@ -88,11 +88,13 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) (
-	node util.Serializable, err error) {
+func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) (node util.MPTSerializable, err error) {
 	if encryption.IsHash(key) {
 		return nil, common.NewError("failed to get trie node",
 			"key is too short")
+	}
+	if v == nil {
+		return v, util.ErrValueNotPresent
 	}
 	nd, ok := tb.tree[key]
 	if !ok {

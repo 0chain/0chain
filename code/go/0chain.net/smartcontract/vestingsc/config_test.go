@@ -160,7 +160,7 @@ func TestUpdateConfig(t *testing.T) {
 			"InsertTrieNode",
 			scConfigKey(vsc.ID),
 			mock.Anything,
-		).Return("", nil).Once()
+		).Return(nil).Once()
 
 		return args{
 			vsc:      vsc,

@@ -381,7 +381,7 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, er
 }
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) (util.Serializable, error) {
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) (util.MPTSerializable, error) {
 	n, ok := sc.store[key]
 	if !ok {
 		return nil, util.ErrValueNotPresent

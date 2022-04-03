@@ -127,7 +127,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) (
 	}
 
 	_, err = v.UnmarshalMsg(d)
-	return err
+	return nd, err
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,

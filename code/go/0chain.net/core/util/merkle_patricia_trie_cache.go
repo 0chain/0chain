@@ -18,9 +18,9 @@ const (
 //User of this proxy should be aware, that GetRoot, MergeDB, Iterate and other methods should be called only after Flush, to get recent updates.
 type MPTCachingProxy struct {
 	mpt        MerklePatriciaTrieI
-	cache      map[string]Serializable
+	cache      map[string]MPTSerializable
 	flusher    *common.WithContextFunc
-	flush      func(path Path, value Serializable)
+	flush      func(path Path, value MPTSerializable)
 	cacheGuard sync.Mutex
 }
 
@@ -28,8 +28,8 @@ func NewMPTCachingProxy(ctx context.Context, mpt MerklePatriciaTrieI) *MPTCachin
 	p := &MPTCachingProxy{mpt: mpt}
 	p.flusher = common.NewWithContextFunc(Concurrency)
 
-	p.cache = make(map[string]Serializable, CacheSize)
-	p.flush = func(path Path, value Serializable) {
+	p.cache = make(map[string]MPTSerializable, CacheSize)
+	p.flush = func(path Path, value MPTSerializable) {
 		err := p.flusher.Run(ctx, func() error {
 			err := p.mpt.Insert(path, value)
 			return err
@@ -48,7 +48,7 @@ func (p *MPTCachingProxy) Flush() {
 	for key, val := range p.cache {
 		p.flush(Path(key), val)
 	}
-	p.cache = make(map[string]Serializable, CacheSize)
+	p.cache = make(map[string]MPTSerializable, CacheSize)
 }
 
 func (p *MPTCachingProxy) SetNodeDB(ndb NodeDB) {
@@ -72,7 +72,7 @@ func (p *MPTCachingProxy) GetRoot() Key {
 	return p.mpt.GetRoot()
 }
 
-func (p *MPTCachingProxy) GetNodeValue(path Path, template Serializable) (Serializable, error) {
+func (p *MPTCachingProxy) GetNodeValue(path Path, template MPTSerializable) (MPTSerializable, error) {
 	p.cacheGuard.Lock()
 	defer p.cacheGuard.Unlock()
 
@@ -92,8 +92,12 @@ func (p *MPTCachingProxy) GetNodeValue(path Path, template Serializable) (Serial
 	return get, nil
 }
 
+func (p *MPTCachingProxy) GetNodeValueRaw(path Path) ([]byte, error) {
+	return p.mpt.GetNodeValueRaw(path)
+}
+
 //TODO remove key return here
-func (p *MPTCachingProxy) Insert(path Path, value Serializable) error {
+func (p *MPTCachingProxy) Insert(path Path, value MPTSerializable) error {
 	p.cacheGuard.Lock()
 	defer p.cacheGuard.Unlock()
 

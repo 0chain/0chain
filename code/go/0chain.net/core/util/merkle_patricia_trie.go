@@ -95,15 +95,7 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path, v MPTSerializable) (MPTSe
 	}
 
 	_, err = v.UnmarshalMsg(d)
-	return nil, err
-}
-
-func (mpt *MerklePatriciaTrie) GetNodeValue(path Path, template Serializable) (Serializable, error) {
-	panic("implement me")
-}
-
-func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) error {
-	panic("implement me")
+	return v, err
 }
 
 // GetNodeValueRaw gets the raw data slice for a given path without decodding

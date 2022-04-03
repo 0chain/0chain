@@ -79,7 +79,7 @@ func GetStakePool(
 	p spenum.Provider, id string, balances cstate.StateContextI,
 ) (*StakePool, error) {
 	var sp = NewStakePool()
-	err := balances.GetTrieNode(stakePoolKey(p, id), sp)
+	_, err := balances.GetTrieNode(stakePoolKey(p, id), sp)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (sp *StakePool) Save(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	_, err := balances.InsertTrieNode(stakePoolKey(p, id), sp)
+	err := balances.InsertTrieNode(stakePoolKey(p, id), sp)
 	return err
 }
 

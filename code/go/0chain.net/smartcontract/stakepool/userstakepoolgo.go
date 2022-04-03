@@ -2,6 +2,7 @@ package stakepool
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -79,7 +80,7 @@ func (usp *UserStakePools) Save(
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (err error) {
-	_, err = balances.InsertTrieNode(UserStakePoolsKey(p, clientID), usp)
+	err = balances.InsertTrieNode(UserStakePoolsKey(p, clientID), usp)
 	return
 }
 
@@ -89,7 +90,7 @@ func (usp *UserStakePools) remove(
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (err error) {
-	_, err = balances.DeleteTrieNode(UserStakePoolsKey(p, clientID))
+	err = balances.DeleteTrieNode(UserStakePoolsKey(p, clientID))
 	return
 }
 
@@ -101,11 +102,14 @@ func GetUserStakePool(
 ) (usp *UserStakePools, err error) {
 
 	usp = NewUserStakePools()
-	err = balances.GetTrieNode(UserStakePoolsKey(p, clientID), usp)
+	raw, err := balances.GetTrieNode(UserStakePoolsKey(p, clientID), usp)
 	if err != nil {
 		return nil, err
 	}
-
+	var ok bool
+	if usp, ok = raw.(*UserStakePools); !ok {
+		return nil, fmt.Errorf("bad node type")
+	}
 	return usp, nil
 }
 

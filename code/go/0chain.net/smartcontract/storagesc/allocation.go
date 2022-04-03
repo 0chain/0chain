@@ -42,7 +42,7 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	balances chainstate.StateContextI) (*Allocations, error) {
 
 	allocationList := &Allocations{}
-	var clientAlloc *ClientAllocation
+	clientAlloc := &ClientAllocation{}
 	clientAlloc.ClientID = clientID
 	raw, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), clientAlloc)
 	if err != nil {

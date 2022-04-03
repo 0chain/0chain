@@ -259,13 +259,13 @@ func getNodePath(path string) util.Path {
 	return util.Path(encryption.Hash(path))
 }
 
-func (mc *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSerializable) error {
+func (mc *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSerializable) (util.MPTSerializable, error) {
 
 	mc.stateMutex.Lock()
 	defer mc.stateMutex.Unlock()
 
 	if block.ClientState == nil {
-		return common.NewErrorf("get_block_state_node",
+		return nil, common.NewErrorf("get_block_state_node",
 			"client state is nil, round %d", block.Round)
 	}
 

@@ -219,15 +219,16 @@ func TestCommitSettingChanges(t *testing.T) {
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
 
-		123123123123
+		c := &Config{
+			OwnerId: owner,
+		}
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
-			mockSetValue(&Config{
-				OwnerId: owner,
-			})).Return(nil).Once()
+			mockSetValue(c)).Return(c, nil).Once()
+		v := &smartcontract.StringMap{
+			Fields: p.inputMap,
+		}
 		balances.On("GetTrieNode", settingChangesKey,
-			mockSetValue(&smartcontract.StringMap{
-				Fields: p.inputMap,
-			})).Return(nil).Once()
+			mockSetValue(v)).Return(&v, nil).Once()
 
 		balances.On(
 			"InsertTrieNode",

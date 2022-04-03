@@ -280,17 +280,13 @@ func (rs *randomSelector) getPartition(
 	}
 	var part PartitionItemList
 	if rs.ItemType == ItemString {
-		var err error
-		part, err = getItemList(rs.partitionKey(i), balances)
-		if err != nil {
-			return nil, err
-		}
+		part = &itemList{}
 	} else {
-		var err error
-		part, err = getValidatorItemList(rs.partitionKey(i), balances)
-		if err != nil {
-			return nil, err
-		}
+		part = &validatorItemList{}
+	}
+	err := part.get(rs.partitionKey(i), balances)
+	if err != nil {
+		return nil, err
 	}
 	rs.Partitions[i] = part
 	return part, nil

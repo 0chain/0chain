@@ -125,13 +125,16 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 		benchmark.BenchData{},
 	)
 
-	var benchData benchmark.BenchData
-	err = balances.GetTrieNode(BenchDataKey, &benchData)
+	var benchData *benchmark.BenchData
+	raw, err := balances.GetTrieNode(BenchDataKey, benchData)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return pMpt, util.Key(root), benchData
+	var ok bool
+	if benchData, ok = raw.(*benchmark.BenchData); !ok {
+		log.Fatal(err)
+	}
+	return pMpt, util.Key(root), *benchData
 }
 
 func setUpMpt(
@@ -466,7 +469,7 @@ func setUpMpt(
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
 		benchData.Sharders = sharders
-		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
+		if err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
 		}
 		root := balances.GetState().GetRoot()

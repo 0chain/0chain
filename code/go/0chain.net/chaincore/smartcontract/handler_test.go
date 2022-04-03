@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
@@ -60,16 +61,22 @@ func init() {
 func TestExecuteRestAPI(t *testing.T) {
 	t.Parallel()
 
-	gn := &faucetsc.GlobalNode{}
+	gn := &faucetsc.GlobalNode{
+		FaucetConfig: &faucetsc.FaucetConfig{},
+		ID:           "",
+		Used:         0,
+		StartTime:    time.Time{},
+	}
 	blob, err := gn.MarshalMsg(nil)
 	require.NoError(t, err)
 
 	sc := mocks.StateContextI{}
-	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(nil, nil).Run(
+	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(gn, nil).Run(
 		func(args mock.Arguments) {
 			v := args.Get(1).(*faucetsc.GlobalNode)
 			_, err := v.UnmarshalMsg(blob)
 			require.NoError(t, err)
+			//gn = v
 		})
 
 	type args struct {
@@ -303,7 +310,12 @@ func TestExecuteWithStats(t *testing.T) {
 	smcoi.SmartContract.SmartContractExecutionStats["token refills"] = metrics.NewHistogram(metrics.NilSample{})
 	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
 
-	gn := &faucetsc.GlobalNode{}
+	gn := &faucetsc.GlobalNode{
+		FaucetConfig: &faucetsc.FaucetConfig{},
+		ID:           "",
+		Used:         0,
+		StartTime:    time.Time{},
+	}
 	blob, err := gn.MarshalMsg(nil)
 	require.NoError(t, err)
 
@@ -373,23 +385,24 @@ func TestExecuteWithStats(t *testing.T) {
 func TestExecuteSmartContract(t *testing.T) {
 	t.Parallel()
 	gn := &minersc.GlobalNode{}
+	sn := &minersc.SimpleNode{}
+	mns := &minersc.MinerNodes{}
+	mn := &minersc.MinerNode{SimpleNode: &minersc.SimpleNode{}}
 
 	stateContextIMock := makeTestStateContextIMock()
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
-			minerNodes := &minersc.MinerNodes{}
-			blob, err := minerNodes.MarshalMsg(nil)
+			blob, err := mns.MarshalMsg(nil)
 			require.NoError(t, err)
 
 			_, err = v.UnmarshalMsg(blob)
 			require.NoError(t, err)
 			return true
-		})).Return(gn, nil)
+		})).Return(mns, nil)
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.GlobalNode) bool {
-			gn := &minersc.GlobalNode{}
 			blob, err := gn.MarshalMsg(nil)
 			require.NoError(t, err)
 
@@ -400,29 +413,26 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.SimpleNode) bool {
-			sn := &minersc.SimpleNode{}
 			blob, err := sn.MarshalMsg(nil)
 			require.NoError(t, err)
 
 			_, err = v.UnmarshalMsg(blob)
 			require.NoError(t, err)
 			return true
-		})).Return(gn, nil)
+		})).Return(sn, nil)
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNode) bool {
-			mn := &minersc.MinerNode{SimpleNode: &minersc.SimpleNode{}}
 			blob, err := mn.MarshalMsg(nil)
 			require.NoError(t, err)
 
 			_, err = v.UnmarshalMsg(blob)
 			require.NoError(t, err)
 			return true
-		})).Return(gn, nil)
+		})).Return(mn, nil)
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *faucetsc.GlobalNode) bool {
-			gn := &faucetsc.GlobalNode{}
 			blob, err := gn.MarshalMsg(nil)
 			require.NoError(t, err)
 

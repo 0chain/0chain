@@ -174,6 +174,9 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	balances cstate.StateContextI) (cp *challengePool, err error) {
 	cp = newChallengePool()
 	raw, err := balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID), cp)
+	if err != nil {
+		return cp, err
+	}
 	var ok bool
 	if cp, ok = raw.(*challengePool); !ok {
 		return nil, fmt.Errorf("unexpected node type")

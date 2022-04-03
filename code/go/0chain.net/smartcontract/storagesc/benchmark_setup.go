@@ -108,7 +108,7 @@ func addMockAllocation(
 		})
 	}
 
-	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
+	if err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -139,7 +139,7 @@ func AddMockChallenges(
 		if len(ch.Challenges) > 0 {
 			ch.LatestCompletedChallenge = ch.Challenges[0]
 		}
-		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
 		if err != nil {
 			panic(err)
 		}
@@ -163,7 +163,7 @@ func AddMockClientAllocation(
 	}
 	for _, ca := range cas {
 		if ca != nil {
-			_, err := balances.InsertTrieNode(ca.GetKey(ADDRESS), ca)
+			err := balances.InsertTrieNode(ca.GetKey(ADDRESS), ca)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -204,7 +204,7 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 		}
 	}
 	for i := 0; i < len(wps); i++ {
-		if _, err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i]); err != nil {
+		if err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i]); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -242,7 +242,7 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 		}
 	}
 	for i := 0; i < len(rps); i++ {
-		if _, err := balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i]); err != nil {
+		if err := balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i]); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -261,7 +261,7 @@ func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
 		}
 	}
 	for i, fp := range fps {
-		if _, err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp); err != nil {
+		if err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -273,7 +273,7 @@ func AddMockAllAllocations(balances cstate.StateContextI) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocations.List.add(getMockAllocationId(i))
 	}
-	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
+	err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -285,7 +285,7 @@ func AddMockChallengePools(balances cstate.StateContextI) {
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
 		cp.Balance = mockMinLockDemand * 100
-		if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
+		if err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
 			log.Fatal(err)
 		}
 	}

@@ -83,7 +83,7 @@ func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
 func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 	for _, clientId := range clients {
 		un := NewUserNode(clientId, 0)
-		_, _ = balances.InsertTrieNode(un.GetKey(), un)
+		_ = balances.InsertTrieNode(un.GetKey(), un)
 	}
 }
 

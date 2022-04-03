@@ -74,7 +74,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 		return "", common.NewError(Code, "cannot validate changes: "+err.Error())
 	}
 
-	_, err = ctx.InsertTrieNode(gn.GetKey(), gn)
+	err = ctx.InsertTrieNode(gn.GetKey(), gn)
 	if err != nil {
 		return "", common.NewError(Code, "saving global node: "+err.Error())
 	}

@@ -67,7 +67,7 @@ func (mn *MinerNode) numActiveDelegates() int {
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
-	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
+	if err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
 	return nil
