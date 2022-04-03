@@ -373,7 +373,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
 			return "", fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
-		sp.addOffer(balloc.Offer())
+		if err := sp.addOffer(balloc.Offer()); err != nil {
+			return "", fmt.Errorf("ading offer: %v", err)
+		}
 		if err = sp.save(sc.ID, b.ID, balances); err != nil {
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
@@ -472,14 +474,14 @@ func (sc *StorageSmartContract) selectBlobbers(
 }
 
 type updateAllocationRequest struct {
-	ID               string           `json:"id"`              // allocation id
-	OwnerID          string           `json:"owner_id"`        // Owner of the allocation
-	Size             int64            `json:"size"`            // difference
-	Expiration       common.Timestamp `json:"expiration_date"` // difference
-	SetImmutable     bool             `json:"set_immutable"`
-	UpdateTerms      bool             `json:"update_terms"`
-	AddedBlobberId   string           `json:"added_blobber_id"`
-	RemovedBlobberId string           `json:"removed_blobber_id"`
+	ID              string           `json:"id"`              // allocation id
+	OwnerID         string           `json:"owner_id"`        // Owner of the allocation
+	Size            int64            `json:"size"`            // difference
+	Expiration      common.Timestamp `json:"expiration_date"` // difference
+	SetImmutable    bool             `json:"set_immutable"`
+	UpdateTerms     bool             `json:"update_terms"`
+	AddBlobberId    string           `json:"add_blobber_id"`
+	RemoveBlobberId string           `json:"remove_blobber_id"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -494,7 +496,7 @@ func (uar *updateAllocationRequest) validate(
 	if uar.SetImmutable && alloc.IsImmutable {
 		return errors.New("allocation is already immutable")
 	}
-	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddedBlobberId) == 0 {
+	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 {
 		if !uar.SetImmutable {
 			return errors.New("update allocation changes nothing")
 		}
@@ -509,19 +511,19 @@ func (uar *updateAllocationRequest) validate(
 		return errors.New("invalid allocation for updating: no blobbers")
 	}
 
-	if len(uar.AddedBlobberId) > 0 {
-		if _, found := alloc.BlobberMap[uar.AddedBlobberId]; found {
-			return fmt.Errorf("cannot add blobber %s, already in allocation", uar.AddedBlobberId)
+	if len(uar.AddBlobberId) > 0 {
+		if _, found := alloc.BlobberMap[uar.AddBlobberId]; found {
+			return fmt.Errorf("cannot add blobber %s, already in allocation", uar.AddBlobberId)
 		}
 	} else {
-		if len(uar.RemovedBlobberId) > 0 {
+		if len(uar.RemoveBlobberId) > 0 {
 			return errors.New("cannot remove a blobber without adding one")
 		}
 	}
 
-	if len(uar.RemovedBlobberId) > 0 {
-		if _, found := alloc.BlobberMap[uar.RemovedBlobberId]; !found {
-			return fmt.Errorf("cannot remove blobber %s, not in allocation", uar.RemovedBlobberId)
+	if len(uar.RemoveBlobberId) > 0 {
+		if _, found := alloc.BlobberMap[uar.RemoveBlobberId]; !found {
+			return fmt.Errorf("cannot remove blobber %s, not in allocation", uar.RemoveBlobberId)
 		}
 	}
 
@@ -590,7 +592,10 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			return "", fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
 				err)
 		}
-		sp.removeOffer(ba.Offer())
+		if err := sp.removeOffer(ba.Offer()); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"error removing offer: "+err.Error())
+		}
 		if err = sp.save(sc.ID, ba.BlobberID, balances); err != nil {
 			return "", fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
 				err)
@@ -824,16 +829,17 @@ func (sc *StorageSmartContract) extendAllocation(
 		if newOffer != oldOffer {
 			var sp *stakePool
 			if sp, err = sc.getStakePool(details.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID,
-					err)
+				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
 			}
-			sp.addOffer(newOffer - oldOffer)
+			if err := sp.addOffer(newOffer - oldOffer); err != nil {
+				return fmt.Errorf("adding offer: %v", err)
+			}
 			if err = sp.save(sc.ID, details.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
 					err)
 			}
 			if err := emitUpdateBlobber(b, balances); err != nil {
-				return fmt.Errorf("error emitting blobber %s, error:%v", b.ID, err)
+				return fmt.Errorf("emitting blobber %s, error:%v", b.ID, err)
 			}
 
 		}
@@ -918,13 +924,23 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 				return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			sp.addOffer(newOffer - oldOffer)
+			if newOffer < oldOffer {
+				if err := sp.removeOffer(oldOffer - newOffer); err != nil {
+					return fmt.Errorf("removing offer: %v", err)
+				}
+			} else {
+				// if we are adding a blobber then we will want to add a new offer for that blobber
+				if err := sp.addOffer(newOffer - oldOffer); err != nil {
+					return fmt.Errorf("adding offer: %v", err)
+				}
+			}
+
 			if err = sp.save(sc.ID, ba.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
 			if err := emitUpdateBlobber(b, balances); err != nil {
-				return fmt.Errorf("error emitting blobber %s, error:%v", b.ID, err)
+				return fmt.Errorf("emitting blobber %s, error:%v", b.ID, err)
 			}
 		}
 	}
@@ -1052,9 +1068,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			err.Error())
 	}
 
-	if len(request.AddedBlobberId) > 0 {
+	if len(request.AddBlobberId) > 0 {
 		blobbers, err = alloc.changeBlobbers(
-			blobbers, request.AddedBlobberId, request.RemovedBlobberId, sc, t.CreationDate, balances,
+			blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
 		)
 		if err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1114,7 +1130,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				"cannot reduce when minting tokens")
 		}
 		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
-	} else if len(request.AddedBlobberId) > 0 {
+	} else if len(request.AddBlobberId) > 0 {
 		err = sc.extendAllocation(t, alloc, blobbers, &request, mintTokens, balances)
 	}
 	if err != nil {
@@ -1320,7 +1336,10 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			return "", common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		sp.removeOffer(d.Offer())
+		if err := sp.removeOffer(d.Offer()); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"error removing offer: "+err.Error())
+		}
 		sps = append(sps, sp)
 	}
 
