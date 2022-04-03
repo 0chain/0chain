@@ -13,7 +13,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/stakepool"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -69,13 +68,6 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 
 	params := &AuthorizerParameter{
 		PublicKey: tr.PublicKey,
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
-		},
 	}
 	data, _ := params.Encode()
 
@@ -202,13 +194,6 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	authParam := AuthorizerParameter{
 		PublicKey: ctx.authorizers[au.GetKey()].Node.PublicKey,
 		URL:       "hhh",
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
-		},
 	}
 	data, _ := authParam.Encode()
 
@@ -249,13 +234,6 @@ func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	pk := &AuthorizerParameter{
 		PublicKey: "public Key",
 		URL:       "https://localhost:9876",
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
-		},
 	}
 	data, _ := json.Marshal(pk)
 	tr := CreateAddAuthorizerTransaction("client0", ctx)
@@ -334,31 +312,6 @@ func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, newNode.LockingPool.TokenLockInterface)
 }
-
-// With this test, the ability to Save nodes to context is tested
-//func Test_GetAuthorizerNodes_ShouldBeAbleToReturnNodes(t *testing.T) {
-//	ctx := MakeMockStateContext()
-//
-//	tr := CreateAddAuthorizerTransaction("client0", 10)
-//	an := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
-//	err = ans.AddAuthorizer(an)
-//	require.NoError(t, err)
-//	require.NotNil(t, an.LockingPool.TokenLockInterface)
-//
-//	node := ans.NodeMap[tr.ClientID]
-//	require.NotNil(t, node)
-//	require.NotNil(t, node.LockingPool.TokenLockInterface)
-//
-//	// without saving, it won't be possible to get nodes
-//	err = ans.Save(ctx)
-//	require.NoError(t, err)
-//
-//	ans2, err := GetAuthorizerNodes(ctx)
-//	require.NoError(t, err)
-//	node = ans2.NodeMap[tr.ClientID]
-//	require.NotNil(t, node)
-//	require.NotNil(t, node.LockingPool.TokenLockInterface)
-//}
 
 func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	ctx := MakeMockStateContext()

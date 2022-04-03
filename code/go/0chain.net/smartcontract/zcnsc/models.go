@@ -218,10 +218,25 @@ func (bp *BurnPayload) Decode(input []byte) error {
 
 // ------- AuthorizerParameter ------------
 
-type AuthorizerParameter struct {
-	PublicKey         string                      `json:"public_key"`
-	URL               string                      `json:"url"`
+type AuthorizerStakePoolParameter struct {
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+}
+
+func (pk *AuthorizerStakePoolParameter) Encode() (data []byte, err error) {
+	data, err = json.Marshal(pk)
+	return
+}
+
+func (pk *AuthorizerStakePoolParameter) Decode(input []byte) error {
+	err := json.Unmarshal(input, pk)
+	return err
+}
+
+// ------- AuthorizerParameter ------------
+
+type AuthorizerParameter struct {
+	PublicKey string `json:"public_key"`
+	URL       string `json:"url"`
 }
 
 func (pk *AuthorizerParameter) Encode() (data []byte, err error) {

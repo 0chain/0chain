@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/chain"
@@ -128,15 +126,7 @@ func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 }
 
 func Test_PublicKey(t *testing.T) {
-	pk := AuthorizerParameter{
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
-		},
-	}
+	pk := AuthorizerParameter{}
 
 	err := pk.Decode(nil)
 	require.Error(t, err)
@@ -154,15 +144,7 @@ func Test_PublicKey(t *testing.T) {
 	bytes, err := json.Marshal(pk)
 	require.NoError(t, err)
 
-	expected := AuthorizerParameter{
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "100",
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
-		},
-	}
+	expected := AuthorizerParameter{}
 	err = expected.Decode(bytes)
 	require.NoError(t, err)
 	require.Equal(t, expected.PublicKey, pk.PublicKey)

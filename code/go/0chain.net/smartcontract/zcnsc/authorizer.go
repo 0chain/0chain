@@ -82,6 +82,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		Logger.Error(code, zap.Error(err))
 		return "", err
 	}
+
 	// compare the global min of authorizerNode Authorizer to that of the transaction amount
 	if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
 		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'",
@@ -172,7 +173,7 @@ func (zcn *ZCNSmartContract) AddAuthorizerStakePool(
 
 	// Decode input
 
-	params := AuthorizerParameter{}
+	params := AuthorizerStakePoolParameter{}
 	err = params.Decode(inputData)
 	if err != nil {
 		err = common.NewError(code, "failed to decode AuthorizerParameter")
@@ -211,8 +212,7 @@ func (zcn *ZCNSmartContract) AddAuthorizerStakePool(
 
 		Logger.Info("create or update stake pool completed successfully")
 
-		Logger.Error(code, zap.Error(err))
-		return "", err
+		return string(sp.Encode()), nil
 	}
 
 	return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
