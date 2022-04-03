@@ -25,12 +25,12 @@ func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	// Add AddAuthorizerStakePool
+	// Add AddOrUpdateAuthorizerStakePool
 	payloadFn := func() []byte {
 		return CreateAuthorizerStakingPoolParamPayload(authorizerID)
 	}
 	tr = CreateTransaction(authorizerID, AddAuthorizerStakePool, payloadFn, ctx)
-	resp, err = contract.AddAuthorizerStakePool(tr, payloadFn(), ctx)
+	resp, err = contract.AddOrUpdateAuthorizerStakePool(tr, payloadFn(), ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
 }
@@ -42,12 +42,12 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_IsNotUpdatedOrCreated(t *testing
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
 
-	// Add AddAuthorizerStakePool
+	// Add AddOrUpdateAuthorizerStakePool
 	payloadFn := func() []byte {
 		return CreateAuthorizerStakingPoolParamPayload(authorizerID)
 	}
 	tr := CreateTransaction(authorizerID, AddAuthorizerStakePool, payloadFn, ctx)
-	resp, err := contract.AddAuthorizerStakePool(tr, payloadFn(), ctx)
+	resp, err := contract.AddOrUpdateAuthorizerStakePool(tr, payloadFn(), ctx)
 	require.Error(t, err)
 	require.EqualError(t, err, "authorizer(authorizerID: "+authorizerID+") not found")
 	require.Empty(t, resp)

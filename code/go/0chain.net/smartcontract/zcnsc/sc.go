@@ -27,8 +27,7 @@ const (
 	BurnFunc                   = "burn"
 	AddToDelegatePoolFunc      = "addToDelegatePool"
 	DeleteFromDelegatePoolFunc = "deleteFromDelegatePool"
-	AddAuthorizerStakePoolFunc = "addAuthorizerStakePool"
-	UpdateStakePoolFunc        = "updateStakePool"
+	AddOrUpdateStakePoolFunc   = "addUpdateStakePool"
 	CollectRewardsFunc         = "collectRewardsFunc"
 )
 
@@ -62,8 +61,7 @@ func (zcn *ZCNSmartContract) InitSC() {
 	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
 	// StakePool
-	zcn.smartContractFunctions[AddAuthorizerStakePoolFunc] = zcn.AddAuthorizerStakePool
-	zcn.smartContractFunctions[UpdateStakePoolFunc] = zcn.UpdateStakePool
+	zcn.smartContractFunctions[AddOrUpdateStakePoolFunc] = zcn.AddOrUpdateAuthorizerStakePool
 	// Rewards
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
 	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool

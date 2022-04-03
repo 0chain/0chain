@@ -143,7 +143,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	return
 }
 
-func (zcn *ZCNSmartContract) AddAuthorizerStakePool(
+func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
 	tran *transaction.Transaction,
 	inputData []byte,
 	ctx cstate.StateContextI,
@@ -216,14 +216,6 @@ func (zcn *ZCNSmartContract) AddAuthorizerStakePool(
 	}
 
 	return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
-}
-
-func (zcn *ZCNSmartContract) UpdateStakePool(
-	tran *transaction.Transaction,
-	inputData []byte,
-	ctx cstate.StateContextI,
-) (response string, err error) {
-	return
 }
 
 func (zcn *ZCNSmartContract) CollectRewards(
