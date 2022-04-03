@@ -20,6 +20,7 @@ simulation:
   num_write_redeem_allocation: 1
   num_challenges_blobber: 1
   num_authorisers: 05
+  num_reward_partition_blobber: 100
 
 options:
   verbose: true
@@ -122,6 +123,15 @@ smart_contracts:
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
+    block_reward:
+      block_reward: 1
+      block_reward_change_period: 10000
+      block_reward_change_ratio: 0.1
+      qualifying_stake: 1
+      sharder_ratio: 10
+      miner_ratio: 40
+      blobber_ratio: 50
+      trigger_period: 30
   interestpoolsc:
     min_lock: 10
     apr: 0.1

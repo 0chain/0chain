@@ -102,7 +102,7 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
+	brTxn.TransactionData = `{"name":"blobber_block_rewards","input":{}}`
 	brTxn.Fee = 0
 	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
 		panic(err)
@@ -475,7 +475,16 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		btvTimer.UpdateSince(ts)
 		if mc.discoverClients {
 			go func() {
-				if err := mc.SaveClients(b.GetClients()); err != nil {
+				cs, err := b.GetClients()
+				if err != nil {
+					logging.Logger.Warn("validate transactions, get clients of block failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					return
+				}
+
+				if err := mc.SaveClients(cs); err != nil {
 					logging.Logger.Warn("validate transactions, save discovered clients failed",
 						zap.Int64("round", b.Round),
 						zap.String("block", b.Hash),
@@ -840,7 +849,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if config.DevConfiguration.IsBlockRewards {
+	if config.DevConfiguration.IsBlockRewards &&
+		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
@@ -886,6 +897,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	b.SetClientState(blockState)
+	b.SetStateChangesCount(blockState)
 	bgTimer.UpdateSince(start)
 	logging.Logger.Debug("generate block (assemble+update)",
 		zap.Int64("round", b.Round),

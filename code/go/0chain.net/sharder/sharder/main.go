@@ -134,7 +134,10 @@ func main() {
 	if err != nil {
 		Logger.Panic("Error reading keys file")
 	}
-	node.Self.SetSignatureScheme(signatureScheme)
+	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
+		Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
+	}
+
 	reader.Close()
 
 	if err := serverChain.SetupEventDatabase(); err != nil {

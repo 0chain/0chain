@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 
 	"0chain.net/core/cache"
@@ -77,7 +78,9 @@ func (c *Client) Copy(src *Client) {
 		CollectionScore: src.CollectionMemberField.CollectionScore,
 	}
 
-	c.SetPublicKey(src.PublicKey)
+	if err := c.SetPublicKey(src.PublicKey); err != nil {
+		logging.Logger.Error("client copy failed on setting public key", zap.Error(err))
+	}
 
 	if src.EntityCollection != nil {
 		c.EntityCollection = src.EntityCollection.Clone()
@@ -119,17 +122,24 @@ func (c *Client) Delete(ctx context.Context) error {
 
 // Verify - given a signature and hash verify it with client's public key
 func (c *Client) Verify(signature string, hash string) (bool, error) {
-	return c.GetSignatureScheme().Verify(signature, hash)
+	ss, err := c.GetSignatureScheme()
+	if err != nil {
+		return false, err
+	}
+
+	return ss.Verify(signature, hash)
 }
 
 // GetSignatureScheme - return the signature scheme used for this client
-func (c *Client) GetSignatureScheme() encryption.SignatureScheme {
+func (c *Client) GetSignatureScheme() (encryption.SignatureScheme, error) {
 	if c.SigScheme != nil {
-		return c.SigScheme
+		return c.SigScheme, nil
 	}
 
-	c.SetPublicKey(c.PublicKey)
-	return c.SigScheme
+	if err := c.SetPublicKey(c.PublicKey); err != nil {
+		return nil, fmt.Errorf("client got invalid public key, err: %v", err)
+	}
+	return c.SigScheme, nil
 }
 
 // Provider - entity provider for client object
@@ -143,21 +153,30 @@ func Provider() datastore.Entity {
 }
 
 // ComputeProperties - implement interface
-func (c *Client) ComputeProperties() {
+func (c *Client) ComputeProperties() error {
 	c.EntityCollection = cliEntityCollection
-	c.computePublicKeyBytes()
+	return c.computePublicKeyBytes()
 }
 
-func (c *Client) computePublicKeyBytes() {
-	b, _ := hex.DecodeString(c.PublicKey)
+func (c *Client) computePublicKeyBytes() error {
+	b, err := hex.DecodeString(c.PublicKey)
+	if err != nil {
+		return err
+	}
 	c.PublicKeyBytes = b
 	c.ID = encryption.Hash(b)
+	return nil
 }
 
 // SetPublicKey - set the public key
-func (c *Client) SetPublicKey(key string) {
+func (c *Client) SetPublicKey(key string) error {
+	oldPK := c.PublicKey
 	c.PublicKey = key
-	c.computePublicKeyBytes()
+	if err := c.computePublicKeyBytes(); err != nil {
+		c.PublicKey = oldPK
+		return err
+	}
+
 	sigSchemeType := c.sigSchemeType
 	if sigSchemeType == "" {
 		sigSchemeType = defaultClientSignatureScheme
@@ -165,22 +184,29 @@ func (c *Client) SetPublicKey(key string) {
 
 	var ss = encryption.GetSignatureScheme(sigSchemeType)
 	if err := ss.SetPublicKey(c.PublicKey); err != nil {
-		panic(err)
+		return err
 	}
 	c.SigScheme = ss
+	return nil
 }
 
 // SetSignatureScheme sets the signature scheme
-func (c *Client) SetSignatureScheme(sig encryption.SignatureScheme) {
+func (c *Client) SetSignatureScheme(sig encryption.SignatureScheme) error {
 	c.PublicKey = sig.GetPublicKey()
-	c.computePublicKeyBytes()
+	if err := c.computePublicKeyBytes(); err != nil {
+		return err
+	}
 	c.SigScheme = sig
 	switch sig.(type) {
 	case *encryption.ED25519Scheme:
 		c.sigSchemeType = encryption.SignatureSchemeEd25519
 	case *encryption.BLS0ChainScheme:
 		c.sigSchemeType = encryption.SignatureSchemeBls0chain
+	default:
+		return encryption.ErrInvalidSignatureScheme
 	}
+
+	return nil
 }
 
 // SetSignatureSchemeType sets the signature scheme type
@@ -196,7 +222,9 @@ func (c *Client) GetBLSPublicKey() (*bls.PublicKey, error) {
 		}
 
 		// lazy decoding public key
-		c.SetPublicKey(c.PublicKey)
+		if err := c.SetPublicKey(c.PublicKey); err != nil {
+			return nil, err
+		}
 	}
 
 	sig, ok := c.SigScheme.(*encryption.BLS0ChainScheme)

@@ -228,20 +228,6 @@ func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
 	}
 }
 
-func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
-	var (
-		ndb  = mpt.GetNodeDB()
-		mndb = NewMemoryNodeDB()
-		back = context.Background()
-	)
-	require.NoError(t, MergeState(back, ndb, mndb))
-	var root = mndb.ComputeRoot()
-	if root == nil {
-		return // nil
-	}
-	return root.GetHashBytes() // root key
-}
-
 func TestMPT_blockGenerationFlow(t *testing.T) {
 
 	// persistent node DB represents chain state DB
@@ -253,7 +239,7 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 	// prior block DB and hash
 	var (
 		priorDB   NodeDB = stateDB
-		priorHash        = computeMPTRoot(t, mpt)
+		priorHash        = mpt.GetRoot()
 	)
 
 	// in loop:
