@@ -209,7 +209,7 @@ func BenchmarkTests(
 					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
 					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
-					AddedBlobberId:  getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
+					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes
