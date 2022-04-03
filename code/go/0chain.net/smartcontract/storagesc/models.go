@@ -780,7 +780,7 @@ func (sa *StorageAllocation) removeBlobber(
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
-		return nil, fmt.Errorf("saving blobber %v, error: ", removedBlobber.ID, err)
+		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
 	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
 		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
