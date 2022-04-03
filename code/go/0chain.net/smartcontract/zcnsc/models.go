@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AuthorizerParameter poolStat
+//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AuthorizerParameter AuthorizerStakePoolParameter poolStat
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 const (
@@ -216,7 +216,7 @@ func (bp *BurnPayload) Decode(input []byte) error {
 	return err
 }
 
-// ------- AuthorizerParameter ------------
+// ------- AuthorizerStakePoolParameter ------------
 
 type AuthorizerStakePoolParameter struct {
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
