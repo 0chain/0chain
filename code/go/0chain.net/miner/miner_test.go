@@ -166,7 +166,7 @@ func setupMinerChain(mc *Chain, c *chain.Chain) (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	c, clean := SetUpSingleSelf()
+	c, clean := SetUpSingleSelf("1")
 	chain.SetServerChain(c)
 	defer clean()
 	ctx := common.GetRootContext()
@@ -212,7 +212,7 @@ func TestBlockGeneration(t *testing.T) {
 }
 
 func TestBlockVerification(t *testing.T) {
-	c, clean := SetUpSingleSelf()
+	c, clean := SetUpSingleSelf("2")
 	chain.SetServerChain(c)
 	defer clean()
 	mc, stopAndClean := setupMinerChain(GetMinerChain(), c)
@@ -240,7 +240,7 @@ func TestBlockVerification(t *testing.T) {
 }
 
 func TestTwoCorrectBlocks(t *testing.T) {
-	c, cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf("3")
 	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx := context.Background()
@@ -269,7 +269,7 @@ func TestTwoCorrectBlocks(t *testing.T) {
 }
 
 func TestTwoBlocksWrongRound(t *testing.T) {
-	c, cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf("4")
 	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx, clean := getContext()
@@ -292,7 +292,7 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 }
 
 func TestBlockVerificationBadHash(t *testing.T) {
-	c, cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf("5")
 	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx, clean := getContext()
@@ -314,7 +314,7 @@ func TestBlockVerificationBadHash(t *testing.T) {
 }
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {
-	c, cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf("6")
 	chain.SetServerChain(c)
 	defer cleanSS()
 
@@ -334,7 +334,7 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 }
 
 func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
-	c, cleanSS := SetUpSingleSelf()
+	c, cleanSS := SetUpSingleSelf("7")
 	chain.SetServerChain(c)
 	defer cleanSS()
 	ctx, clean := getContext()
@@ -404,7 +404,7 @@ func SetupGenesisBlock(mc *Chain) *block.Block {
 	return gb
 }
 
-func SetUpSingleSelf() (c *chain.Chain, cleanup func()) {
+func SetUpSingleSelf(chainID string) (c *chain.Chain, cleanup func()) {
 	// create rocksdb state dir
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
@@ -480,7 +480,7 @@ func SetUpSingleSelf() (c *chain.Chain, cleanup func()) {
 	round.SetupEntity(memorystore.GetStorageProvider())
 
 	c = chain.Provider().(*chain.Chain)
-	c.ID = datastore.ToKey(config.GetServerChainID())
+	c.ID = datastore.ToKey(chainID)
 	c.SetMagicBlock(mb)
 	data := &chain.ConfigData{BlockSize: 1024}
 	c.Config = chain.NewConfigImpl(data)
@@ -594,7 +594,7 @@ func generateProposedBlockToRound(t *testing.T, r *Round, n *node.Node) {
 }
 
 func TestRoundInfoHandler(t *testing.T) {
-	c, clean := SetUpSingleSelf()
+	c, clean := SetUpSingleSelf("TestRoundInfoHandler_chainID")
 	defer clean()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
