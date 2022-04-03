@@ -3,6 +3,8 @@ package zcnsc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -20,7 +22,7 @@ import (
 // ToClient is an SC address
 func (zcn *ZCNSmartContract) AddAuthorizer(
 	tran *transaction.Transaction,
-	inputData []byte,
+	input []byte,
 	ctx cstate.StateContextI,
 ) (response string, err error) {
 	const (
@@ -40,7 +42,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	if inputData == nil {
+	if input == nil {
 		msg := "input data is nil"
 		err = common.NewError(code, msg)
 		Logger.Error(msg, zap.Error(err))
@@ -50,7 +52,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Decode input
 
 	params := AuthorizerParameter{}
-	err = params.Decode(inputData)
+	err = params.Decode(input)
 	if err != nil {
 		err = common.NewError(code, "failed to decode AuthorizerParameter")
 		Logger.Error("public key error", zap.Error(err))
@@ -145,7 +147,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
 	tran *transaction.Transaction,
-	inputData []byte,
+	input []byte,
 	ctx cstate.StateContextI,
 ) (response string, err error) {
 	const (
@@ -164,7 +166,7 @@ func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
 		return "", err
 	}
 
-	if inputData == nil {
+	if input == nil {
 		msg := "input data is nil"
 		err = common.NewError(code, msg)
 		Logger.Error(msg, zap.Error(err))
@@ -174,7 +176,7 @@ func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
 	// Decode input
 
 	params := AuthorizerStakePoolParameter{}
-	err = params.Decode(inputData)
+	err = params.Decode(input)
 	if err != nil {
 		err = common.NewError(code, "failed to decode AuthorizerParameter")
 		Logger.Error("public key error", zap.Error(err))
@@ -220,10 +222,47 @@ func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
 
 func (zcn *ZCNSmartContract) CollectRewards(
 	tran *transaction.Transaction,
-	inputData []byte,
+	input []byte,
 	ctx cstate.StateContextI,
 ) (response string, err error) {
-	return
+	const code = "pay_reward_failed"
+
+	var prr stakepool.CollectRewardRequest
+	if err := prr.Decode(input); err != nil {
+		return "", common.NewErrorf(code, "can't decode request: %v", err)
+	}
+
+	usp, err := stakepool.GetUserStakePool(prr.ProviderType, tran.ClientID, ctx)
+	if err != nil {
+		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
+	}
+
+	providerId := usp.Find(prr.PoolId)
+	if len(providerId) == 0 {
+		return "", common.NewErrorf(code, "user %v does not own stake pool %v", tran.ClientID, prr.PoolId)
+	}
+
+	sp, err := zcn.getStakePool(providerId, ctx)
+	if err != nil {
+		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
+	}
+
+	_, err = sp.MintRewards(tran.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, ctx)
+	if err != nil {
+		return "", common.NewErrorf(code, "error emptying account, %v", err)
+	}
+
+	if err := usp.Save(spenum.Blobber, tran.ClientID, ctx); err != nil {
+		return "", common.NewErrorf("pay_reward_failed",
+			"error saving user stake pool, %v", err)
+	}
+
+	if err := sp.save(zcn.ID, providerId, ctx); err != nil {
+		return "", common.NewErrorf("pay_reward_failed",
+			"error saving stake pool, %v", err)
+	}
+
+	return "", nil
 }
 
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {

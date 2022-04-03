@@ -108,7 +108,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	authorizerID datastore.Key,
 	providerType spenum.Provider,
 	settings stakepool.StakePoolSettings,
-	balances cstate.StateContextI,
+	ctx cstate.StateContextI,
 ) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
@@ -117,7 +117,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	changed := false
 
 	// the stake pool can be created by related validator
-	sp, err := zcn.getStakePool(authorizerID, balances)
+	sp, err := zcn.getStakePool(authorizerID, ctx)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, fmt.Errorf("unexpected error: %v", err)
@@ -179,14 +179,6 @@ func (gn *GlobalNode) validateStakeRange(min, max state.Balance) (err error) {
 	}
 
 	return
-}
-
-func (zcn *ZCNSmartContract) DistributeRewards(
-	t *transaction.Transaction,
-	input []byte,
-	ctx cstate.StateContextI,
-) (resp string, err error) {
-	return "", nil
 }
 
 func (zcn *ZCNSmartContract) AddToDelegatePool(
