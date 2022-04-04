@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/core/common"
@@ -103,10 +104,36 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			gn.OwnerId = value
 
 		default:
-			return fmt.Errorf("key %s not recognised as setting", key)
+			return gn.setCostValue(key, value)
 		}
 	}
 	return nil
+}
+
+func (gn *GlobalNode) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, Settings[Cost]) {
+		return fmt.Errorf("key %s not recognised as setting", key)
+	}
+	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
+	for _, costFunction := range costFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		gn.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
 }
 
 func (gn *GlobalNode) validate() error {
@@ -124,6 +151,7 @@ func (gn *GlobalNode) validate() error {
 	case gn.GlobalReset < gn.IndividualReset:
 		return common.NewError("failed to validate global node", fmt.Sprintf("global reset(%v) is less than individual reset(%v)", gn.GlobalReset, gn.IndividualReset))
 	}
+
 	return nil
 }
 
