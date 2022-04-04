@@ -204,7 +204,7 @@ func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
 	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err == nil && authorizer != nil {
 		var sp *StakePool
-		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, spenum.Authorizer, poolSettings, ctx)
+		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
 		if err != nil {
 			return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 		}

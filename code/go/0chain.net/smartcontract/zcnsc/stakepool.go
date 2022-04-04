@@ -106,7 +106,6 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
 	authorizerID datastore.Key,
-	providerType spenum.Provider,
 	settings stakepool.StakePoolSettings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
