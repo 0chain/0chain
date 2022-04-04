@@ -17,7 +17,7 @@ func (ssc *StorageSmartContract) collectReward(
 ) (string, error) {
 	var prr stakepool.CollectRewardRequest
 	if err := prr.Decode(input); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"can't decode request: %v", err)
 	}
 
@@ -37,30 +37,30 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	if len(providerID) == 0 {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
 	}
 
 	sp, err := ssc.getStakePool(providerID, balances)
 	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"can't get related stake pool: %v", err)
 	}
 
 	minted, err := sp.MintRewards(
 		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"error emptying account, %v", err)
 	}
 
 	if err := usp.Save(spenum.Blobber, txn.ClientID, balances); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"error saving user stake pool, %v", err)
 	}
 
 	if err := sp.save(ssc.ID, providerID, balances); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"error saving stake pool, %v", err)
 	}
 	if minted == 0 {
@@ -69,17 +69,17 @@ func (ssc *StorageSmartContract) collectReward(
 
 	conf, err := ssc.getConfig(balances, true)
 	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"can't get config: %v", err)
 	}
 	conf.Minted += minted
 	if conf.Minted > conf.MaxMint {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
 	}
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"cannot save config: %v", err)
 	}
 
