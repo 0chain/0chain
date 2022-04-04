@@ -1,8 +1,8 @@
 package zcnsc
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"0chain.net/core/common"
 
@@ -30,6 +30,13 @@ const (
 	OwnerID            = "owner_id"
 	Cost               = "cost"
 )
+
+var CostFunctions = []string{
+	"mint",
+	"burn",
+	"DeleteAuthorizer",
+	"AddAuthorizer",
+}
 
 // ZCNSConfig config both for GlobalNode and AuthorizerNode
 //type ZCNSConfig struct {
@@ -82,27 +89,25 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	return string(gn.Encode()), nil
 }
 
-func (gn *GlobalNode) ToStringMap() (res *smartcontract.StringMap, err error) {
-	bytes, err := json.Marshal(gn)
-	if err != nil {
-		return res, errors.Wrap(err, "failed to convert config to StringMap")
+func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
+	fields := map[string]string{
+		MinMintAmount:      fmt.Sprintf("%v", gn.MinMintAmount),
+		PercentAuthorizers: fmt.Sprintf("%v", gn.PercentAuthorizers),
+		MinAuthorizers:     fmt.Sprintf("%v", gn.MinAuthorizers),
+		MinBurnAmount:      fmt.Sprintf("%v", gn.MinBurnAmount),
+		MinStakeAmount:     fmt.Sprintf("%v", gn.MinStakeAmount),
+		MaxFee:             fmt.Sprintf("%v", gn.MaxFee),
+		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
+		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
 	}
 
-	var stringMap map[string]interface{}
-
-	err = json.Unmarshal(bytes, &stringMap)
-	if err != nil {
-		return res, errors.Wrap(err, "failed to convert config to StringMap")
+	for _, key := range CostFunctions {
+		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", gn.Cost[strings.ToLower(key)])
 	}
 
-	res = new(smartcontract.StringMap)
-	res.Fields = make(map[string]string)
-
-	for k, v := range stringMap {
-		res.Fields[k] = fmt.Sprintf("%v", v)
+	return smartcontract.StringMap{
+		Fields: fields,
 	}
-
-	return
 }
 
 func section(section string) string {
