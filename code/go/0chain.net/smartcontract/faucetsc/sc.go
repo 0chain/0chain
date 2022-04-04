@@ -126,7 +126,7 @@ func (fc *FaucetSmartContract) updateSettings(
 	var input sc.StringMap
 	err := input.Decode(inputData)
 	if err != nil {
-		return "", common.NewError("update_settings", "limit request not formated correctly")
+		return "", common.NewError("update_settings", "limit request not formatted correctly")
 	}
 
 	if err := gn.updateConfig(input.Fields); err != nil {
