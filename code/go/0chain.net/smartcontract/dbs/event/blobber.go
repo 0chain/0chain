@@ -1,12 +1,12 @@
 package event
 
 import (
-	"0chain.net/chaincore/state"
-	"0chain.net/smartcontract/dbs"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
+
+	"0chain.net/smartcontract/dbs"
+	"github.com/guregu/null"
 
 	"gorm.io/gorm"
 )
@@ -21,11 +21,11 @@ type Blobber struct {
 	Longitude float64 `json:"longitude"`
 
 	// terms
-	ReadPrice               int64   `json:"read_price"`
-	WritePrice              int64   `json:"write_price"`
-	MinLockDemand           float64 `json:"min_lock_demand"`
-	MaxOfferDuration        string  `json:"max_offer_duration"`
-	ChallengeCompletionTime string  `json:"challenge_completion_time"`
+	ReadPrice               int64         `json:"read_price"`
+	WritePrice              int64         `json:"write_price"`
+	MinLockDemand           float64       `json:"min_lock_demand"`
+	MaxOfferDuration        time.Duration `json:"max_offer_duration"`
+	ChallengeCompletionTime string        `json:"challenge_completion_time"`
 
 	Capacity        int64 `json:"capacity"`          // total blobber capacity
 	Used            int64 `json:"used"`              // allocated capacity
@@ -57,8 +57,8 @@ type BlobberLatLong struct {
 
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
 type BlobberPriceRange struct {
-	Min state.Balance `json:"min"`
-	Max state.Balance `json:"max"`
+	Min null.Int `json:"min"`
+	Max null.Int `json:"max"`
 }
 
 type blobberAggregateStats struct {
@@ -145,36 +145,33 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 	return count, res.Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(params map[string]interface{}, dur time.Duration) ([]string, error) {
+type AllocationQuery struct {
+	MaxChallengeCompletionTime int
+	MaxOfferDuration           time.Duration
+	ReadPriceRange             struct {
+		Min int64
+		Max int64
+	}
+	WritePriceRange struct {
+		Min int64
+		Max int64
+	}
+	Size              int
+	AllocationSize    int64
+	PreferredBlobbers []string
+}
+
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
+	fmt.Println(allocation, "GetBlobbersFromParams")
 	dbStore := edb.Store.Get().Model(&Blobber{})
-
-	if maxChallengeTime, _ := params["max_challenge_time"].(int); maxChallengeTime != 0 {
-		dbStore = dbStore.Where("challenge_completion_time > ?", maxChallengeTime)
-	}
-
-	readRange := &BlobberPriceRange{}
-	writeRange := &BlobberPriceRange{}
-
-	if err := json.Unmarshal([]byte(params["read_price_range"].(string)), readRange); err != nil {
-		dbStore = dbStore.Where("read_price BETWEEN ? AND ?", readRange.Min, readRange.Max)
-	}
-
-	if err := json.Unmarshal([]byte(params["write_price_range"].(string)), writeRange); err != nil {
-		dbStore = dbStore.Where("write_price BETWEEN ? AND ?", writeRange.Min, writeRange.Max)
-	}
-	if capacityUsed, _ := params["capacity_used"].(int); capacityUsed != 0 {
-		dbStore = dbStore.Where("used < ?", capacityUsed)
-	}
-
-	dbStore = dbStore.Where("max_offer_duration < ?", dur.String())
-
+	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime)
+	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
+	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
+	dbStore = dbStore.Where("max_offer_duration < ?", allocation.MaxOfferDuration.Nanoseconds())
+	dbStore = dbStore.Where("capacity - used < ?", allocation.AllocationSize)
+	dbStore = dbStore.Where("base_url in ?", allocation.PreferredBlobbers)
 	var blobberIDs []string
-	result := edb.Store.Get().Model(&Blobber{}).Select("base_url").Find(&blobberIDs)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving blobbers, error %v", result.Error)
-	}
-
-	return blobberIDs, nil
+	return blobberIDs, dbStore.Select("base_url").Find(&blobberIDs).Error
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {

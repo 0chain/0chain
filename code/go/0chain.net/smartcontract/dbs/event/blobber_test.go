@@ -60,6 +60,7 @@ func TestBlobbers(t *testing.T) {
 		StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
 	}
 	convertSn := func(sn StorageNode) Blobber {
+		dur, _ := time.ParseDuration(sn.Terms.MaxOfferDuration.String())
 		return Blobber{
 			BlobberID:               sn.ID,
 			BaseURL:                 sn.BaseURL,
@@ -68,7 +69,7 @@ func TestBlobbers(t *testing.T) {
 			ReadPrice:               int64(sn.Terms.ReadPrice),
 			WritePrice:              int64(sn.Terms.WritePrice),
 			MinLockDemand:           sn.Terms.MinLockDemand,
-			MaxOfferDuration:        sn.Terms.MaxOfferDuration.String(),
+			MaxOfferDuration:        dur,
 			ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
 			Capacity:                sn.Capacity,
 			Used:                    sn.Used,

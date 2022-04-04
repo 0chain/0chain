@@ -83,20 +83,17 @@ func TestSelectBlobbers(t *testing.T) {
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
-			PreferredBlobbers: []string{},
-			DataShards:        args.dataShards,
-			ParityShards:      args.parityShards,
-			Owner:             mockOwner,
-			OwnerPublicKey:    mockPublicKey,
-			Expiration:        args.expiration,
-			Size:              args.allocSize,
-			ReadPriceRange:    PriceRange{mockMinPrice, mockMaxPrice},
-			WritePriceRange:   PriceRange{mockMinPrice, mockMaxPrice},
-			DiverseBlobbers:   args.diverseBlobbers,
+			DataShards:      args.dataShards,
+			ParityShards:    args.parityShards,
+			Owner:           mockOwner,
+			OwnerPublicKey:  mockPublicKey,
+			Expiration:      args.expiration,
+			Size:            args.allocSize,
+			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
+			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
+			DiverseBlobbers: args.diverseBlobbers,
 		}
-		for i := 0; i < args.numPreferredBlobbers; i++ {
-			sa.PreferredBlobbers = append(sa.PreferredBlobbers, mockURL+strconv.Itoa(i))
-		}
+
 		var sNodes = StorageNodes{}
 		for i := 0; i < args.numBlobbers; i++ {
 			sNodes.Nodes.add(makeMockBlobber(i))
