@@ -446,7 +446,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		sData := buffer.Bytes()
 		if _, err := w.Write(sData); err != nil {
 			logging.N2n.Error("message received - http write failed",
-				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("to", Self.Underlying().GetPseudoName()),
 				zap.String("handler", r.RequestURI),
 				zap.Error(err))
 		}
@@ -512,7 +512,7 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		sData := buffer.Bytes()
 		if _, err := w.Write(sData); err != nil {
 			logging.N2n.Error("message received - http write failed",
-				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("to", Self.Underlying().GetPseudoName()),
 				zap.String("handler", r.RequestURI),
 				zap.Error(err))
 		}

@@ -70,11 +70,11 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		_, err := handler(pctx, entity)
 		duration := time.Since(start)
 		if err != nil {
-			logging.N2n.Error("message pull", zap.Int("from", nd.SetIndex),
-				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+			logging.N2n.Error("message pull", zap.String("from", nd.GetPseudoName()),
+				zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 			return nil, err
 		}
-		//N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+		//N2n.Debug("message pull", zap.String("from", nd.GetPseudoName()), zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		return entity, nil
 	}
 	params := &url.Values{}
