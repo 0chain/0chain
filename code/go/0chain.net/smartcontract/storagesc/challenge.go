@@ -813,16 +813,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("empty allocation")
 	}
 
-	blobber := &StorageNode{}
-
-	for _, b := range alloc.Blobbers {
-		if b.ID == blobberID {
-			blobber = b
-			break
-		}
-	}
-
-	blobberAllocation, ok := alloc.BlobberMap[blobber.ID]
+	blobberAllocation, ok := alloc.BlobberMap[blobberID]
 	if !ok {
 		return nil, common.NewError("add_challenges",
 			"blobber allocation doesn't exists in allocation")
@@ -842,7 +833,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	perm := challRand.Perm(len(randValidators))
 	for i := 0; i < minInt(len(randValidators), alloc.DataShards+1); i++ {
 		randValidator := randValidators[perm[i]]
-		if randValidator.Name() != blobber.ID {
+		if randValidator.Name() != blobberID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
 					ID:      randValidator.Name(),
