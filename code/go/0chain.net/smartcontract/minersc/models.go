@@ -301,23 +301,27 @@ func (gn *GlobalNode) validate() error {
 }
 
 func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
-	var im smartcontract.StringMap
-	im.Fields = make(map[string]string)
-	for key, info := range Settings {
+	var out smartcontract.StringMap
+	out.Fields = make(map[string]string)
+	for _, key := range SettingName {
+		info, ok := Settings[strings.ToLower(key)]
+		if !ok {
+			return out, fmt.Errorf("SettingName %s not found in Settings", key)
+		}
 		iSetting, err := gn.Get(info.Setting)
 		if err != nil {
-			return im, err
+			return out, err
 		}
 		if info.ConfigType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
-				return im, fmt.Errorf("%s key not implemented as state.balance", key)
+				return out, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
 			iSetting = float64(sbSetting) / x10
 		}
-		im.Fields[key] = fmt.Sprintf("%v", iSetting)
+		out.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
-	return im, nil
+	return out, nil
 }
 
 func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
@@ -363,7 +367,44 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 	case CooldownPeriod:
 		return gn.CooldownPeriod, nil
 	case Cost:
-		return gn.Cost, nil
+		return "", nil
+	case CostAddMiner:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostAddSharder:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddSharder], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostDeleteMiner:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostDeleteMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostMinerHealthCheck:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMinerHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostSharderHealthCheck:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostContributeMpk:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostContributeMpk], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostShareSignsOrShares:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShareSignsOrShares], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostWait:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWait], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateGlobals:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateGlobals], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateSettings:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateMinerSettings:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateMinerSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateSharderSettings:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSharderSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostPayFees:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostPayFees], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostFeesPaid:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFeesPaid], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostMintedTokens:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMintedTokens], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostAddToDelegatePool:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddToDelegatePool], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostDeleteFromDelegatePool:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostDeleteFromDelegatePool], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostSharderKeep:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderKeep], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+
 	default:
 		return nil, errors.New("Setting not implemented")
 	}

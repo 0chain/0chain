@@ -139,7 +139,7 @@ func Provider() *Node {
 	return node
 }
 
-func Setup(node *Node) {
+func Setup(node *Node) error {
 	// queue up at most these many messages to a node
 	// because of this, we don't want the status monitoring to use this communication layer
 	node.mutex.Lock()
@@ -147,8 +147,11 @@ func Setup(node *Node) {
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	node.mutex.Unlock()
-	node.ComputeProperties()
+	if err := node.ComputeProperties(); err != nil {
+		return err
+	}
 	Self.SetNodeIfPublicKeyIsEqual(node)
+	return nil
 }
 
 func (n *Node) setupCommChannel() {
@@ -268,27 +271,38 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 		node.Description = node.GetNodeType() + node.GetKey()[:6]
 	}
 
-	node.Client.SetPublicKey(nc["public_key"].(string))
+	if err := node.Client.SetPublicKey(nc["public_key"].(string)); err != nil {
+		return nil, err
+	}
+
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewErrorf("invalid_client_id",
 			"public key: %v, client_id: %v, hash: %v\n", node.PublicKey,
 			node.ID, hash)
 	}
-	node.ComputeProperties()
+
+	if err := node.ComputeProperties(); err != nil {
+		return nil, err
+	}
+
 	Self.SetNodeIfPublicKeyIsEqual(node)
 	return node, nil
 }
 
 /*ComputeProperties - implement entity interface */
-func (n *Node) ComputeProperties() {
-	n.Client.ComputeProperties()
+func (n *Node) ComputeProperties() error {
+	if err := n.Client.ComputeProperties(); err != nil {
+		return err
+	}
+
 	if n.Host == "" {
 		n.Host = "localhost"
 	}
 	if n.N2NHost == "" {
 		n.N2NHost = n.Host
 	}
+	return nil
 }
 
 /*GetURLBase - get the end point base */

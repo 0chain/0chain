@@ -135,7 +135,7 @@ func (*LFBTicket) GetEntityMetadata() datastore.EntityMetadata {
 
 func (*LFBTicket) SetKey(datastore.Key)                      {}
 func (*LFBTicket) GetScore() int64                           { return 0 }
-func (*LFBTicket) ComputeProperties()                        {}
+func (*LFBTicket) ComputeProperties() error                  { return nil }
 func (*LFBTicket) Validate(context.Context) error            { return nil }
 func (*LFBTicket) Read(context.Context, datastore.Key) error { return nil }
 func (*LFBTicket) Write(context.Context) error               { return nil }
