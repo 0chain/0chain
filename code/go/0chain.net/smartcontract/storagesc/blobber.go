@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/partitions"
 	"go.uber.org/zap"
 
@@ -108,6 +109,14 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
+
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: blobber.ID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, string(data))
 
 	return
 }

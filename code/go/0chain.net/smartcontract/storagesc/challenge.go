@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/partitions"
@@ -238,6 +240,14 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
+		data, _ := json.Marshal(dbs.DbUpdates{
+			Id: validators[i],
+			Updates: map[string]interface{}{
+				"total_stake": int64(sp.stake()),
+			},
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], string(data))
+
 	}
 	return
 }

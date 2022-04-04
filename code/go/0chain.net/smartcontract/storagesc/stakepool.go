@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -383,7 +384,13 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	// TO-DO: Update stake in eventDB
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: spr.BlobberID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 
 	return
 }
@@ -419,6 +426,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
+		data, _ := json.Marshal(dbs.DbUpdates{
+			Id: spr.BlobberID,
+			Updates: map[string]interface{}{
+				"total_stake": int64(sp.stake()),
+			},
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
@@ -432,6 +446,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: spr.BlobberID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

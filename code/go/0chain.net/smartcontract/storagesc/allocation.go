@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
@@ -1503,6 +1505,14 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
+
+		data, _ := json.Marshal(dbs.DbUpdates{
+			Id: d.BlobberID,
+			Updates: map[string]interface{}{
+				"total_stake": int64(sps[1].stake()),
+			},
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, string(data))
 
 		// update the blobber
 		b.Used -= d.Size

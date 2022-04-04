@@ -6,8 +6,11 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -44,6 +47,14 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
+
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: t.ClientID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
 
 	// update the list
 	blobbers.Nodes.add(blobber)
