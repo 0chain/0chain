@@ -49,13 +49,15 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		default:
 		}
 		err := con.Send(selectCommand, collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
-		con.Flush()
 		if err != nil {
 			return err
 		}
-		data, err1 := con.Receive()
-		if err1 != nil {
-			return err1
+		if err := con.Flush(); err != nil {
+			return err
+		}
+		data, err := con.Receive()
+		if err != nil {
+			return err
 		}
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
@@ -147,13 +149,19 @@ func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection strin
 	con := GetEntityCon(ctx, entityMetadata)
 	defer Close(ctx)
 	ticker := time.NewTicker(trimBeyond)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
 		case t := <-ticker.C:
-			con.Send("ZCARD", collection)
-			con.Flush()
+			if err := con.Send("ZCARD", collection); err != nil {
+				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
+				continue
+			}
+			if err := con.Flush(); err != nil {
+				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
+				continue
+			}
 			data, err := con.Receive()
 			if err != nil {
 				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
@@ -167,7 +175,10 @@ func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection strin
 				continue
 			}
 			score := datastore.GetCollectionScore(time.Now().Add(-trimBeyond))
-			con.Send("ZREMRANGEBYSCORE", collection, 0, score)
+			if err := con.Send("ZREMRANGEBYSCORE", collection, 0, score); err != nil {
+				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
+				continue
+			}
 		}
 	}
 }

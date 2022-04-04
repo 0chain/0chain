@@ -41,8 +41,7 @@ func FromJSON(data interface{}, entity Entity) error {
 	if err != nil {
 		return err
 	}
-	entity.ComputeProperties()
-	return nil
+	return entity.ComputeProperties()
 }
 
 /*ReadJSON - read entity json from a stream */
@@ -60,6 +59,5 @@ func FromMsgpack(data interface{}, entity Entity) error {
 	if err != nil {
 		return err
 	}
-	entity.ComputeProperties()
-	return nil
+	return entity.ComputeProperties()
 }

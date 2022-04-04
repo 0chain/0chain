@@ -47,8 +47,12 @@ func (s *State) Encode() []byte {
 		panic(errors.New("State isn't properly initialized"))
 	}
 	buf.Write(s.TxnHashBytes)
-	binary.Write(buf, binary.LittleEndian, s.Round)
-	binary.Write(buf, binary.LittleEndian, s.Balance)
+	if err := binary.Write(buf, binary.LittleEndian, s.Round); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, s.Balance); err != nil {
+		panic(err)
+	}
 	return buf.Bytes()
 }
 
@@ -61,8 +65,12 @@ func (s *State) Decode(data []byte) error {
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {
 		return errors.New("invalid state")
 	}
-	binary.Read(buf, binary.LittleEndian, &origin)
-	binary.Read(buf, binary.LittleEndian, &balance)
+	if err := binary.Read(buf, binary.LittleEndian, &origin); err != nil {
+		return err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &balance); err != nil {
+		return err
+	}
 	s.Round = origin
 	s.Balance = Balance(balance)
 	return nil
@@ -78,8 +86,9 @@ func (s *State) UnmarshalMsg(data []byte) ([]byte, error) {
 }
 
 //ComputeProperties - logic to compute derived properties
-func (s *State) ComputeProperties() {
+func (s *State) ComputeProperties() error {
 	s.TxnHash = hex.EncodeToString(s.TxnHashBytes)
+	return nil
 }
 
 /*SetRound - set the round for this state to make it unique if the same logical state is arrived again in a different round */

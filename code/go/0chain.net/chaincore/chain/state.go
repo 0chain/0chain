@@ -447,7 +447,14 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	sctx.SetStateContext(fs)
+
+	if err := sctx.SetStateContext(fs); err != nil {
+		logging.Logger.Error("transfer amount - set state context failed",
+			zap.Int64("round", b.Round),
+			zap.String("state txn hash", fs.TxnHash),
+			zap.Error(err))
+		return err
+	}
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
@@ -466,7 +473,13 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	sctx.SetStateContext(ts)
+	if err := sctx.SetStateContext(ts); err != nil {
+		logging.Logger.Error("transfer amount - set state context failed",
+			zap.Int64("round", b.Round),
+			zap.String("state txn hash", fs.TxnHash),
+			zap.Error(err))
+		return err
+	}
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -498,9 +511,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+				_, _ = fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+			_, _ = fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 			block.PrintStates(clientState, b.ClientState)
 			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
@@ -509,7 +522,13 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return common.NewError("mint_amount - get state", err.Error())
 	}
-	sctx.SetStateContext(ts)
+	if err := sctx.SetStateContext(ts); err != nil {
+		logging.Logger.Error("transfer amount - set state context failed",
+			zap.String("txn hash", ts.TxnHash),
+			zap.Error(err))
+		return err
+	}
+
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -520,9 +539,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 					if txn == nil {
 						break
 					}
-					fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+					_, _ = fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 				}
-				fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+				_, _ = fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 				block.PrintStates(clientState, b.ClientState)
 				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}

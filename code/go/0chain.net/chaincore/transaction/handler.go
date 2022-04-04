@@ -28,7 +28,12 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
-	txn.ComputeProperties()
+
+	if err := txn.ComputeProperties(); err != nil {
+		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
+		return nil, err
+	}
+
 	debugTxn := txn.DebugTxn()
 	err := txn.Validate(ctx)
 	if err != nil {
@@ -62,7 +67,12 @@ func PutTransactionWithoutVerifySig(ctx context.Context, entity datastore.Entity
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
-	txn.ComputeProperties()
+
+	if err := txn.ComputeProperties(); err != nil {
+		logging.Logger.Error("put transaction error", zap.Error(err))
+		return nil, err
+	}
+
 	debugTxn := txn.DebugTxn()
 	if debugTxn {
 		logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))

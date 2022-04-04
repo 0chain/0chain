@@ -72,7 +72,7 @@ func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ct
 		zcnConfig = gn
 	}
 
-	return zcnConfig.ToStringMap()
+	return zcnConfig.ToStringMap(), nil
 }
 
 // GetAuthorizerNodes returns all authorizers from eventDB

@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -715,6 +717,9 @@ func (sc *StorageSmartContract) adjustChallengePool(
 					return fmt.Errorf("adjust_challenge_pool: %v", err)
 				}
 				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
+				if err != nil {
+					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
+				}
 				changed = true
 			}
 		default:
@@ -1064,6 +1069,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// adjust expiration
 	var newExpiration = alloc.Expiration + request.Expiration
+	var newSize = request.Size + alloc.Size
 
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
@@ -1075,14 +1081,14 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// an allocation can't be shorter than configured in SC
 	// (prevent allocation shortening for entire period)
-	if request.Expiration < 0 &&
+	if newExpiration < 0 ||
 		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
 
 		return "", common.NewError("allocation_updating_failed",
 			"allocation duration becomes too short")
 	}
 
-	if request.Size < 0 && alloc.Size+request.Size < conf.MinAllocSize {
+	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
 		return "", common.NewError("allocation_updating_failed",
 			"allocation size becomes too small")
 	}

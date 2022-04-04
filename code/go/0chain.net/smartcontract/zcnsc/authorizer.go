@@ -28,12 +28,10 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	)
 
 	var (
-		authorizerPublicKey = tran.PublicKey // authorizer public key
-		authorizerURL       = ""
-		authorizerID        = tran.ClientID   // sender address
-		recipientID         = tran.ToClientID // smart contract address
-		authorizer          *AuthorizerNode
-		err                 error
+		authorizerID = tran.ClientID   // sender address
+		recipientID  = tran.ToClientID // smart contract address
+		authorizer   *AuthorizerNode
+		err          error
 	)
 
 	if authorizerID == "" {
@@ -66,8 +64,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	authorizerPublicKey = params.PublicKey
-	authorizerURL = params.URL
+	authorizerPublicKey := params.PublicKey
+	authorizerURL := params.URL
 
 	// Check existing Authorizer
 

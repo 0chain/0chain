@@ -74,17 +74,6 @@ func (r *RoundInfo) getNodeID(generator bool, typeRank int) string {
 	return ""
 }
 
-// getBlockWithRank returns BlockInfo for the block with provided rank.
-// If node with provided parameters is not found, returns nil.
-func (r *RoundInfo) getBlockWithRank(rank int) *BlockInfo {
-	for _, bi := range r.blocks() {
-		if bi.Rank == rank {
-			return bi
-		}
-	}
-	return nil
-}
-
 // Encode encodes RoundInfo to bytes.
 func (r *RoundInfo) Encode() ([]byte, error) {
 	return json.Marshal(r)

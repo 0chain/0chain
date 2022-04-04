@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"math/rand"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -54,7 +54,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	if total < minNum {
 		reqNum = total
 	} else {
-		reqNum = (1 / 10) * total
+		reqNum = int(math.Ceil(float64(total) / 10.0))
 		if reqNum < minNum {
 			reqNum = minNum
 		}
@@ -309,7 +309,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			provider.SetErrorCount(provider.GetSendErrors())
 
 			if resp.StatusCode != http.StatusOK {
-				data := string(buf.Bytes())
+				data := buf.String()
 				logging.N2n.Error("requesting",
 					zap.String("from", selfNode.GetPseudoName()),
 					zap.String("to", provider.GetPseudoName()),
@@ -335,7 +335,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					zap.String("entity", eName))
 				entityMeta = datastore.GetEntityMetadata(eName)
 				if entityMeta == nil {
-					data := string(buf.Bytes())
+					data := buf.String()
 					logging.N2n.Error("requesting - unknown entity",
 						zap.String("from", selfNode.GetPseudoName()),
 						zap.String("to", provider.GetPseudoName()),
@@ -423,7 +423,11 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				options.CODEC = CODEC_MSGPACK
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
-			buffer = getResponseData(options, entity)
+			buffer, err = getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
+				return
+			}
 		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
@@ -439,13 +443,19 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		sdata := buffer.Bytes()
-		w.Write(sdata)
+		sData := buffer.Bytes()
+		if _, err := w.Write(sData); err != nil {
+			logging.N2n.Error("message received - http write failed",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
+
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}
-			updatePullStats(sender, uri, len(sdata), ts)
+			updatePullStats(sender, uri, len(sData), ts)
 		}
 		logging.N2n.Info("message received", zap.String("from", sender.GetPseudoName()),
 			zap.String("to", Self.Underlying().GetPseudoName()),
@@ -480,7 +490,11 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				options.CODEC = CODEC_MSGPACK
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
-			buffer = getResponseData(options, entity)
+			buffer, err = getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
+				return
+			}
 		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
@@ -495,8 +509,14 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		sdata := buffer.Bytes()
-		w.Write(sdata)
+		sData := buffer.Bytes()
+		if _, err := w.Write(sData); err != nil {
+			logging.N2n.Error("message received - http write failed",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
+
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
@@ -509,5 +529,3 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			zap.Int("codec", options.CODEC))
 	}
 }
-
-var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))

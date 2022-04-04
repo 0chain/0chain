@@ -30,12 +30,12 @@ func ReadKeys(reader io.Reader) (success bool, publicKey string, privateKey stri
 	privateKey = ""
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
-	if result == false {
+	if !result {
 		return false, publicKey, privateKey
 	}
 	publicKey = scanner.Text()
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return false, publicKey, privateKey
 	}
 	privateKey = scanner.Text()

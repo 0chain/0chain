@@ -11,7 +11,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
@@ -82,7 +81,11 @@ func SetupX2XResponders(c *Chain) {
 
 //StateNodesHandler - return a list of state nodes
 func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	r.ParseForm() // this is needed as we get multiple values for the same key
+	// this is needed as we get multiple values for the same key
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+
 	nodes := r.Form["nodes"]
 	c := GetServerChain()
 	keys := make([]util.Key, len(nodes))
@@ -123,21 +126,13 @@ func (c *Chain) blockStateChangeHandler(ctx context.Context, r *http.Request) (*
 			"state is not computed and validated locally")
 	}
 
-	var bsc = block.NewBlockStateChange(b)
-	if state.Debug() {
-		logging.Logger.Info("block state change handler", zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int("state_changes", b.ClientState.GetChangeCount()),
-			zap.Int("sc_nodes", len(bsc.Nodes)))
-	}
-
-	//if len(bsc.Nodes) == 0 {
-	//	logging.Logger.Debug("get state changes - no changes", zap.Int64("round", b.Round))
-	if bsc.GetRoot() == nil {
-		cr := c.GetCurrentRound()
-		logging.Logger.Debug("get state changes - state nil root",
+	bsc, err := block.NewBlockStateChange(b)
+	if err != nil {
+		logging.Logger.Error("block state change handler",
 			zap.Int64("round", b.Round),
-			zap.Int64("current_round", cr))
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return nil, err
 	}
 
 	return bsc, nil

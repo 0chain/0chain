@@ -19,24 +19,11 @@ import (
 //
 // test extension
 //
-func (wp *writePool) total(now int64) state.Balance {
-	return wp.Pools.total(now)
-}
 
 func (wp *writePool) allocTotal(allocID string,
 	now int64) state.Balance {
 
 	return wp.Pools.allocTotal(allocID, now)
-}
-
-func (wp *writePool) allocBlobberTotal(allocID, blobberID string,
-	now int64) state.Balance {
-
-	return wp.Pools.allocBlobberTotal(allocID, blobberID, now)
-}
-
-func (wp *writePool) allocationCut(allocID string) []*allocationPool {
-	return wp.Pools.allocationCut(allocID)
 }
 
 func Test_writePool_Encode_Decode(t *testing.T) {
@@ -74,11 +61,11 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		wp, err = ssc.getWritePool(clientID, balances)
+		_, err = ssc.getWritePool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
-	wp = new(writePool)
+	wp := new(writePool)
 	require.NoError(t, wp.save(ssc.ID, clientID, balances))
 	wwp, err := ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
@@ -163,6 +150,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	var fp fundedPools = []string{client.id}
 	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
+	require.NoError(t, err)
 
 	var alloc = StorageAllocation{
 		ID: allocID,
@@ -219,4 +207,10 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	resp, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
+	// 8. 0 lock
+	tx.Value = 0
+	lr.Duration = 5 * time.Second
+	lr.AllocationID = allocID
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg4)
 }
