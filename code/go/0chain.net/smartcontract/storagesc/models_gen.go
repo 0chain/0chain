@@ -733,9 +733,9 @@ func (z *BlobberAllocation) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *BlobberChallengeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 3
 	// string "BlobberID"
-	o = append(o, 0x84, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
+	o = append(o, 0x83, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
 	// string "LatestCompletedChallenge"
 	o = append(o, 0xb8, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
@@ -753,19 +753,6 @@ func (z *BlobberChallengeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendArrayHeader(o, uint32(len(z.ChallengeIDs)))
 	for za0001 := range z.ChallengeIDs {
 		o = msgp.AppendString(o, z.ChallengeIDs[za0001])
-	}
-	// string "ChallengeIDMap"
-	o = append(o, 0xae, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x49, 0x44, 0x4d, 0x61, 0x70)
-	o = msgp.AppendMapHeader(o, uint32(len(z.ChallengeIDMap)))
-	keys_za0002 := make([]string, 0, len(z.ChallengeIDMap))
-	for k := range z.ChallengeIDMap {
-		keys_za0002 = append(keys_za0002, k)
-	}
-	msgp.Sort(keys_za0002)
-	for _, k := range keys_za0002 {
-		za0003 := z.ChallengeIDMap[k]
-		o = msgp.AppendString(o, k)
-		o = msgp.AppendBool(o, za0003)
 	}
 	return
 }
@@ -830,36 +817,6 @@ func (z *BlobberChallengeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) 
 					return
 				}
 			}
-		case "ChallengeIDMap":
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ChallengeIDMap")
-				return
-			}
-			if z.ChallengeIDMap == nil {
-				z.ChallengeIDMap = make(map[string]bool, zb0003)
-			} else if len(z.ChallengeIDMap) > 0 {
-				for key := range z.ChallengeIDMap {
-					delete(z.ChallengeIDMap, key)
-				}
-			}
-			for zb0003 > 0 {
-				var za0002 string
-				var za0003 bool
-				zb0003--
-				za0002, bts, err = msgp.ReadStringBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "ChallengeIDMap")
-					return
-				}
-				za0003, bts, err = msgp.ReadBoolBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "ChallengeIDMap", za0002)
-					return
-				}
-				z.ChallengeIDMap[za0002] = za0003
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -883,13 +840,6 @@ func (z *BlobberChallengeDecode) Msgsize() (s int) {
 	s += 13 + msgp.ArrayHeaderSize
 	for za0001 := range z.ChallengeIDs {
 		s += msgp.StringPrefixSize + len(z.ChallengeIDs[za0001])
-	}
-	s += 15 + msgp.MapHeaderSize
-	if z.ChallengeIDMap != nil {
-		for za0002, za0003 := range z.ChallengeIDMap {
-			_ = za0003
-			s += msgp.StringPrefixSize + len(za0002) + msgp.BoolSize
-		}
 	}
 	return
 }

@@ -239,8 +239,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	move -= validatorsReward
 
 	// for a case of a partial verification
-	blobberReward := float64(move) * partial // blobber (partial) reward
-	back := move - blobberReward             // return back to write pool
+	blobberReward := move * partial // blobber (partial) reward
+	back := move - blobberReward    // return back to write pool
 
 	if back > 0 {
 		// move back to write pool
@@ -735,10 +735,12 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	}
 
 	if alloc.Expiration < t.CreationDate {
-		return nil, nil
+		return nil, common.NewError("adding_challenge_error",
+			"allocation is already expired")
 	}
 	if alloc.Stats == nil {
-		return nil, nil
+		return nil, common.NewError("adding_challenge_error",
+			"found empty allocation stats")
 	}
 	if alloc.Stats.NumWrites > 0 {
 		return alloc, nil // found
@@ -779,6 +781,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	bcItem := bcPartition[randomIndex]
 
 	blobberID := bcItem.Name()
+	if blobberID == "" {
+		return nil, common.NewError("add_challenges",
+			"empty blobber id")
+	}
 
 	bcAllocList, err := getBlobbersChallengeAllocationList(blobberID, balances)
 	if err != nil {
@@ -807,12 +813,17 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("empty allocation")
 	}
 
-	if blobberID == "" {
-		return nil, common.NewError("add_challenges",
-			"empty blobber id")
+
+	blobber := &StorageNode{}
+
+	for _, b := range alloc.Blobbers {
+		if b.ID == blobberID {
+			blobber = b
+			break
+		}
 	}
 
-	blobberAllocation, ok := alloc.BlobberMap[blobberID]
+	blobberAllocation, ok := alloc.BlobberMap[blobber.ID]
 	if !ok {
 		return nil, common.NewError("add_challenges",
 			"blobber allocation doesn't exists in allocation")
@@ -823,19 +834,21 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	selectedValidators := make([]*ValidationNode, 0)
-	randSlice, err := validators.GetRandomSlice(challRand, balances)
+	randValidators, err := validators.GetRandomSlice(challRand, balances)
 	if err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
 	}
 
-	perm := challRand.Perm(len(randSlice))
-	for i := 0; i < minInt(len(randSlice), alloc.DataShards+1); i++ {
-		if randSlice[perm[i]].Name() != blobberID {
+
+	perm := challRand.Perm(len(randValidators))
+	for i := 0; i < minInt(len(randValidators), alloc.DataShards+1); i++ {
+		randValidator := randValidators[perm[i]]
+		if randValidator.Name() != blobber.ID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					ID:      randSlice[perm[i]].Name(),
-					BaseURL: randSlice[perm[i]].Data(),
+					ID:      randValidator.Name(),
+					BaseURL: randValidator.Data(),
 				})
 		}
 		if len(selectedValidators) >= alloc.DataShards {
@@ -930,7 +943,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		return nil
 	}
 
-	challengeID := encryption.Hash(hashString + strconv.FormatInt(int64(1), 10))
+	challengeID := encryption.Hash(hashString + strconv.FormatInt(1, 10))
 	var challengeSeed uint64
 	challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
 	if err != nil {

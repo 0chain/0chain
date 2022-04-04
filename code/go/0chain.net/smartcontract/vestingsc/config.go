@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -46,6 +47,15 @@ var (
 		"max_description_length",
 		"owner_id",
 		"cost",
+	}
+
+	costFunctions = []string{
+		"add",
+		"delete",
+		"stop",
+		"trigger",
+		"unlock",
+		"vestingsc-update-settings",
 	}
 )
 
@@ -139,28 +149,58 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 			} else {
 				c.OwnerId = value
 			}
-		case Settings[Cost]:
 
 		default:
-			return fmt.Errorf("config setting %s not found", key)
+			return c.setCostValue(key, value)
 		}
 	}
 	return nil
 }
 
-func (c *config) getConfigMap() smartcontract.StringMap {
-	sMap := smartcontract.StringMap{
-		Fields: make(map[string]string),
+func (c *config) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, Settings[Cost]) {
+		return fmt.Errorf("config setting %s not found", key)
 	}
 
-	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(c.MinLock)/1e10)
-	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", c.MinDuration)
-	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", c.MaxDuration)
-	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", c.MaxDestinations)
-	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", c.MaxDescriptionLength)
-	sMap.Fields[Settings[OwnerId]] = fmt.Sprintf("%v", c.OwnerId)
-	sMap.Fields[Settings[Cost]] = fmt.Sprintf("%v", c.Cost)
-	return sMap
+	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
+	for _, costFunction := range costFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		c.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
+}
+
+func (c *config) getConfigMap() smartcontract.StringMap {
+	fields := map[string]string{
+		Settings[MinLock]:              fmt.Sprintf("%v", float64(c.MinLock)/1e10),
+		Settings[MinDuration]:          fmt.Sprintf("%v", c.MinDuration),
+		Settings[MaxDuration]:          fmt.Sprintf("%v", c.MaxDuration),
+		Settings[MaxDestinations]:      fmt.Sprintf("%v", c.MaxDestinations),
+		Settings[MaxDescriptionLength]: fmt.Sprintf("%v", c.MaxDescriptionLength),
+		Settings[OwnerId]:              fmt.Sprintf("%v", c.OwnerId),
+	}
+
+	for _, key := range costFunctions {
+		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", c.Cost[strings.ToLower(key)])
+	}
+
+	return smartcontract.StringMap{
+		Fields: fields,
+	}
 }
 
 func (vsc *VestingSmartContract) updateConfig(

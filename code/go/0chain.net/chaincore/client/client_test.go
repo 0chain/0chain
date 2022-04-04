@@ -66,7 +66,7 @@ func TestSaveClients(t *testing.T) {
 
 	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
 	client := NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
-	client.SetPublicKey(publicKey)
+	require.NoError(t, client.SetPublicKey(publicKey))
 
 	v, err := msgpack.Marshal(client)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestClientChunkSave(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		go postClient(sigScheme, done)
+		go postClient(t, sigScheme, done)
 	}
 	for count := 0; true; {
 		<-done
@@ -108,10 +108,10 @@ func TestClientID(t *testing.T) {
 	setupEntity()
 	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
 	client := NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
-	client.SetPublicKey(publicKey)
+	require.NoError(t, client.SetPublicKey(publicKey))
 }
 
-func postClient(sigScheme encryption.SignatureScheme, done chan<- bool) {
+func postClient(t *testing.T, sigScheme encryption.SignatureScheme, done chan<- bool) {
 	var client *Client
 	switch sigScheme.(type) {
 	case *encryption.ED25519Scheme:
@@ -121,7 +121,7 @@ func postClient(sigScheme encryption.SignatureScheme, done chan<- bool) {
 	}
 
 	pk := sigScheme.GetPublicKey()
-	client.SetPublicKey(pk)
+	require.NoError(t, client.SetPublicKey(pk))
 	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
 	ctx = memorystore.WithConnection(ctx)
 	_, err := PutClient(ctx, client)

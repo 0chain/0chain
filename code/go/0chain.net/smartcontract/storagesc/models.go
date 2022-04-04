@@ -29,7 +29,7 @@ var (
 	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
 	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
 	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
-	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("active_passed_blobbers")
+	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("blobber_rewards")
 )
 
 func getBlobberChallengeAllocationKey(blobberID string) string {
@@ -102,10 +102,10 @@ type ChallengeResponse struct {
 }
 
 type BlobberChallenge struct {
-	BlobberID                string            `json:"blobber_id"`
-	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"`
-	ChallengeIDs             []string          `json:"challenge_ids"`
-	ChallengeIDMap           map[string]bool   `json:"-"`
+	BlobberID                string              `json:"blobber_id"`
+	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
+	ChallengeIDs             []string            `json:"challenge_ids"`
+	ChallengeIDMap           map[string]struct{} `json:"-" msg:"-"`
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
@@ -130,9 +130,9 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
-	sn.ChallengeIDMap = make(map[string]bool)
+	sn.ChallengeIDMap = make(map[string]struct{})
 	for _, challengeID := range sn.ChallengeIDs {
-		sn.ChallengeIDMap[challengeID] = true
+		sn.ChallengeIDMap[challengeID] = struct{}{}
 	}
 	return nil
 }
@@ -153,9 +153,9 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	*sn = BlobberChallenge(*d)
 
-	sn.ChallengeIDMap = make(map[string]bool)
+	sn.ChallengeIDMap = make(map[string]struct{})
 	for _, challenge := range sn.ChallengeIDs {
-		sn.ChallengeIDMap[challenge] = true
+		sn.ChallengeIDMap[challenge] = struct{}{}
 	}
 	return o, nil
 }
@@ -163,11 +163,11 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 
 	if sn.ChallengeIDs == nil {
-		sn.ChallengeIDMap = make(map[string]bool)
+		sn.ChallengeIDMap = make(map[string]struct{})
 	}
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
 		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
-		sn.ChallengeIDMap[challenge.ID] = true
+		sn.ChallengeIDMap[challenge.ID] = struct{}{}
 		return true
 	}
 	return false
@@ -181,7 +181,7 @@ type AllocationChallenge struct {
 }
 
 func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + ":allocationchallenge:" + sn.AllocationID)
+	return globalKey + ":allocationchallenge:" + sn.AllocationID
 }
 
 func (sn *AllocationChallenge) Encode() []byte {
