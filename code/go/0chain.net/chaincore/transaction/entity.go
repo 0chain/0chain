@@ -34,6 +34,8 @@ var redis_txns string
 var (
 	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
 	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
+	// ErrTxnMinFeeNotMet is returned if the transaction.Fee is less than the minimum required fee to process the txn
+	ErrTxnMinFeeNotMet = errors.New("transaction fee is less than the minimum required fee")
 )
 
 func init() {
@@ -70,6 +72,35 @@ type Transaction struct {
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
 	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
 	Status            int    `json:"transaction_status" msgpack:"sot"`
+
+	// SCTxnData represents smart contract data, it will be set when
+	// the transaction is a smart contract, otherwise it will be nil
+	SCTxn *SmartContractTransaction `json:"-" msgpack:"-"`
+}
+
+// SmartContractTransaction represents the smart contract data struct for
+// transaction.TransactionData
+//
+// InputData may contain Public Key in some cases
+// FunctionName is user to invoke SC API function
+type SmartContractTransaction struct {
+	Name  string          `json:"name"`
+	Input json.RawMessage `json:"input"`
+}
+
+// NewSmartContractTransaction returns a new SmartContractTransaction instance
+func NewSmartContractTransaction(name string, input interface{}) (*SmartContractTransaction, error) {
+	v, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+
+	scTxn := &SmartContractTransaction{
+		Name:  name,
+		Input: v,
+	}
+
+	return scTxn, nil
 }
 
 type TransactionFeeStats struct {
@@ -85,39 +116,56 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionEntityMetadata
 }
 
-/*ComputeProperties - Entity implementation */
+// ComputeProperties - Entity implementation */
 func (t *Transaction) ComputeProperties() error {
 	t.EntityCollection = txnEntityCollection
 	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
-	return t.ComputeClientID()
+	if err := t.ComputeClientID(); err != nil {
+		return err
+	}
+
+	if t.TransactionType == TxnTypeSmartContract {
+		var scTxn SmartContractTransaction
+		if err := json.Unmarshal([]byte(t.TransactionData), &scTxn); err != nil {
+			return err
+		}
+
+		t.SCTxn = &scTxn
+	}
+
+	return nil
 }
 
-type smartContractTransactionData struct {
-	FunctionName string          `json:"name"`
-	InputData    json.RawMessage `json:"input"`
+// UpdateSCTxnData update the TransactionData field base on the SCTxn if
+// it is not nil
+func (t *Transaction) UpdateSCTxnData() error {
+	if t.SCTxn == nil {
+		return nil
+	}
+
+	v, err := json.Marshal(t.SCTxn)
+	if err != nil {
+		return err
+	}
+
+	t.TransactionData = string(v)
+	return nil
 }
 
 // ValidateFee - Validate fee
-func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) error {
-	if t.TransactionData != "" {
-		var smartContractData smartContractTransactionData
-		dataBytes := []byte(t.TransactionData)
-		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
-			return errors.New("invalid transaction data")
-		}
-
-		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
-			return nil
+func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) (exempted bool, err error) {
+	if t.SCTxn != nil {
+		if _, ok := txnExempted[t.SCTxn.Name]; ok {
+			return true, nil
 		}
 	}
 	if t.Fee < minTxnFee {
-		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
+		return false, ErrTxnMinFeeNotMet
 	}
-	return nil
+
+	return false, nil
 }
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */

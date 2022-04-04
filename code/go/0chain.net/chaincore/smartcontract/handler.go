@@ -73,10 +73,10 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 }
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(t *transaction.Transaction, scTxn *transaction.SmartContractTransaction, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj != nil {
-		transactionOutput, err := ExecuteWithStats(contractObj, t, scData.FunctionName, scData.InputData, balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, t, scTxn.Name, scTxn.Input, balances)
 		if err != nil {
 			return "", err
 		}

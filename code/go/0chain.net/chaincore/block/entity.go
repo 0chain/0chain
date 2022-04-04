@@ -211,7 +211,7 @@ func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
 	return blockEntityMetadata
 }
 
-/*ComputeProperties - Entity implementation */
+// ComputeProperties - Entity implementation
 func (b *Block) ComputeProperties() error {
 	if datastore.IsEmpty(b.ChainID) {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())

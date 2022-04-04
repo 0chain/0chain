@@ -40,6 +40,13 @@ var (
 	bsHistogram metrics.Histogram
 )
 
+//TODO: unify the SC apis format
+const (
+	scNamePayFees                = "payFees"
+	scNameCommitSettingsChanges  = "commit_settings_changes"
+	scNamePayBlobberBlockRewards = "pay_blobber_block_rewards"
+)
+
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
 	bpTimer = metrics.GetOrRegisterTimer("bv_time", nil)
@@ -68,46 +75,55 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 	return nil
 }
 
-func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
-	feeTxn := transaction.Provider().(*transaction.Transaction)
-	feeTxn.ClientID = b.MinerID
-	feeTxn.ToClientID = minersc.ADDRESS
-	feeTxn.CreationDate = b.CreationDate
-	feeTxn.TransactionType = transaction.TxnTypeSmartContract
-	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
-	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
-	if _, err := feeTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
-	}
-	return feeTxn
+func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) {
+	return mc.createAndSignSCTxn(b, minersc.ADDRESS, scNamePayFees, payFeesInput(b.Round))
 }
 
-func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
-	scTxn := transaction.Provider().(*transaction.Transaction)
-	scTxn.ClientID = b.MinerID
-	scTxn.ToClientID = storagesc.ADDRESS
-	scTxn.CreationDate = b.CreationDate
-	scTxn.TransactionType = transaction.TxnTypeSmartContract
-	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
-	scTxn.Fee = 0
-	if _, err := scTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
-	}
-	return scTxn
+func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) (*transaction.Transaction, error) {
+	return mc.createAndSignSCTxn(b, storagesc.ADDRESS, scNameCommitSettingsChanges,
+		commitSettingsChangesInput(b.Round))
 }
 
-func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
-	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
-	brTxn.ToClientID = storagesc.ADDRESS
-	brTxn.CreationDate = b.CreationDate
-	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"blobber_block_rewards","input":{}}`
-	brTxn.Fee = 0
-	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
+func (mc *Chain) createBlockRewardTxn(b *block.Block) (*transaction.Transaction, error) {
+	return mc.createAndSignSCTxn(b, storagesc.ADDRESS, scNamePayBlobberBlockRewards, struct{}{})
+}
+
+func payFeesInput(r int64) interface{} {
+	return struct {
+		Round int64 `json:"round"`
+	}{r}
+}
+
+func commitSettingsChangesInput(r int64) interface{} {
+	return struct {
+		Round int64 `json:"round"`
+	}{r}
+}
+
+func (mc *Chain) createAndSignSCTxn(b *block.Block, scAddress, scName string, input interface{}) (*transaction.Transaction, error) {
+	txn := transaction.Provider().(*transaction.Transaction)
+	txn.ClientID = b.MinerID
+	txn.ToClientID = scAddress
+	txn.CreationDate = b.CreationDate
+	txn.TransactionType = transaction.TxnTypeSmartContract
+	// set transaction fee
+	txn.Fee = chain.CalculateMinTxnFee(txn, mc.Config.MinTxnFee())
+
+	var err error
+	txn.SCTxn, err = transaction.NewSmartContractTransaction(scName, input)
+	if err != nil {
+		return nil, err
 	}
-	return brTxn
+
+	if err := txn.UpdateSCTxnData(); err != nil {
+		return nil, err
+	}
+
+	if _, err := txn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		return nil, err
+	}
+
+	return txn, nil
 }
 
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
@@ -843,26 +859,51 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, blockState, iterInfo.clients)
+		feeTxn, err := mc.createFeeTxn(b)
+		if err != nil {
+			logging.Logger.Error("generate block (could not create payFees txn)",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+			return err
+		}
+
+		err = mc.processTxn(ctx, feeTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
+			return err
 		}
 	}
 
 	if config.DevConfiguration.IsBlockRewards &&
 		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
-		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
+		bbrTxn, err := mc.createBlockRewardTxn(b)
+		if err != nil {
+			logging.Logger.Error("generate block (could not ceate blockRewards txn)",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+			return err
+		}
+
+		err = mc.processTxn(ctx, bbrTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
+			return err
 		}
 	}
 
 	if mc.SmartContractSettingUpdatePeriod() != 0 &&
 		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
-		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, blockState, iterInfo.clients)
+		csTxn, err := mc.storageScCommitSettingChangesTx(b)
+		if err != nil {
+			logging.Logger.Error("generate block (could not create commit settings txn)",
+				zap.Int64("round", b.Round), zap.Error(err))
+			return err
+		}
+		err = mc.processTxn(ctx, csTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (commit settings)", zap.Int64("round", b.Round), zap.Error(err))
+			return err
 		}
 	}
 

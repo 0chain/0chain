@@ -40,6 +40,10 @@ const (
 	getBlockV1Pattern = "/v1/block/get"
 )
 
+// ErrNotSufficientBalance is returned when client does not have enough balance is less than
+// the min required transaction fee to execute it.
+var ErrNotSufficientBalance = errors.New("insufficient balance to process the transaction")
+
 func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
@@ -1297,6 +1301,11 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 /*PutTransaction - for validation of transactions using chain level parameters */
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	// save validated transactions to cache for miners only
+	if node.Self.Underlying().Type != node.NodeTypeMiner {
+		return nil, nil
+	}
+
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
@@ -1310,14 +1319,25 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		}
 	}
 
-	// Calculate and update fee
-	if err := txn.ValidateFee(sc.Config.TxnExempt(), sc.Config.MinTxnFee()); err != nil {
-		return nil, err
+	lfb := sc.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, common.NewErrInternal("chain is not ready, latest finalized block is nil")
 	}
 
-	// save validated transactions to cache for miners only
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		return transaction.PutTransaction(ctx, txn)
+	if lfb.ClientState == nil {
+		return nil, common.NewErrInternal("chain is not ready, latest finalized block state is nil")
+	}
+
+	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
+	sctx := sc.NewStateContext(lfb, clientState, txn, nil)
+
+	err := sc.ValidateTxnFee(txn, sctx)
+	switch err {
+	case nil:
+	case util.ErrNodeNotFound:
+		return nil, common.NewErrInternal("chain is not ready", err.Error())
+	default:
+		return nil, common.InvalidRequest(err.Error())
 	}
 
 	return transaction.PutTransaction(ctx, txn)

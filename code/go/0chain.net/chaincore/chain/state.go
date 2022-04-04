@@ -109,7 +109,6 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 func (c *Chain) ExecuteSmartContract(
 	ctx context.Context,
 	t *transaction.Transaction,
-	scData *sci.SmartContractTransactionData,
 	balances bcstate.StateContextI) (string, error) {
 
 	var output string
@@ -119,7 +118,7 @@ func (c *Chain) ExecuteSmartContract(
 
 	sct := time.NewTimer(c.SmartContractTimeout())
 	go func() {
-		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
+		output, err = smartcontract.ExecuteSmartContract(t, t.SCTxn, balances)
 		done <- true
 	}()
 	select {
@@ -192,6 +191,13 @@ func (c *Chain) NewStateContext(
 	)
 }
 
+// CalculateMinTxnFee returns the minimum transaction fee base on
+// the transaction type/cost
+func CalculateMinTxnFee(txn *transaction.Transaction, minFee int64) int64 {
+	// TODO: calcuate fee base on txn costs
+	return minFee
+}
+
 func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
@@ -213,22 +219,21 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		return
 	}
 
+	if config.DevConfiguration.IsFeeEnabled {
+		// check min fee and client balance,
+		// return early if fee can not meet the requirements
+		if err := c.ValidateTxnFee(txn, sctx); err != nil {
+			logging.Logger.Error("invalid transaction fee", zap.Error(err))
+			return nil, err
+		}
+	}
+
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
 		var output string
-
-		var scData sci.SmartContractTransactionData
-		dataBytes := []byte(txn.TransactionData)
-		err = json.Unmarshal(dataBytes, &scData)
-		if err != nil {
-			logging.Logger.Error("Error while decoding the JSON from transaction",
-				zap.Any("input", txn.TransactionData), zap.Any("error", err))
-			return nil, err
-		}
-
 		t := time.Now()
-		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
+		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
 		switch err {
 		//internal errors
 		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
@@ -279,7 +284,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.Int64("round", b.Round),
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.Any("txn_hash", txn.Hash),
-			zap.String("txn_func", scData.FunctionName),
+			zap.String("txn_func", txn.SCTxn.Name),
 			zap.Int("txn_status", txn.Status),
 			zap.Any("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
@@ -492,6 +497,30 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			}
 		}
 		return err
+	}
+	return nil
+}
+
+func (c *Chain) ValidateTxnFee(txn *transaction.Transaction, balances bcstate.StateContextI) error {
+	minFee := CalculateMinTxnFee(txn, c.Config.MinTxnFee())
+
+	exempted, err := txn.ValidateFee(c.Config.TxnExempt(), minFee)
+	if err != nil {
+		return err
+	}
+
+	if exempted {
+		return nil
+	}
+
+	// check if the client has sufficient balance
+	b, err := balances.GetClientBalance(txn.ClientID)
+	if err != nil {
+		return err
+	}
+
+	if int64(b) < minFee {
+		return ErrNotSufficientBalance
 	}
 	return nil
 }
