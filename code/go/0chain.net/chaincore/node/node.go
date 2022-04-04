@@ -2,7 +2,6 @@ package node
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -95,7 +94,7 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 
 func GetNodeTypeName(n *Node) (typename string, err error) {
 	if n.Type < 0 || int(n.Type) >= len(NodeTypeNames) {
-		err = errors.New(fmt.Sprintf("unknown_node_type %v", n.Type))
+		err = fmt.Errorf("unknown_node_type %v", n.Type)
 	} else {
 		typename = NodeTypeNames[n.Type].Value
 	}
