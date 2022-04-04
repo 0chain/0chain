@@ -3,6 +3,7 @@ package faucetsc
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"0chain.net/core/common"
@@ -84,15 +85,21 @@ func (fc *FaucetSmartContract) getConfigHandler(
 		faucetConfig = gn.FaucetConfig
 	}
 
+	fields := map[string]string{
+		Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
+		Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
+		Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
+		Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
+		Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
+		Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
+		Settings[OwnerId]:         fmt.Sprintf("%v", faucetConfig.OwnerId),
+	}
+
+	for _, key := range costFunctions {
+		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", faucetConfig.Cost[strings.ToLower(key)])
+	}
+
 	return smartcontract.StringMap{
-		Fields: map[string]string{
-			Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
-			Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
-			Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
-			Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
-			Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
-			Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
-			Settings[OwnerId]:         fmt.Sprintf("%v", faucetConfig.OwnerId),
-		},
+		Fields: fields,
 	}, nil
 }

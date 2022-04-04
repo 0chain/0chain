@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"0chain.net/smartcontract"
@@ -19,15 +20,20 @@ func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, 
 		return nil, err
 	}
 
+	fields := map[string]string{
+		Settings[MinLock]:       fmt.Sprintf("%0v", gn.MinLock),
+		Settings[MaxMint]:       fmt.Sprintf("%0v", gn.MaxMint),
+		Settings[MinLockPeriod]: fmt.Sprintf("%0v", gn.MinLockPeriod),
+		Settings[Apr]:           fmt.Sprintf("%0v", gn.APR),
+		Settings[OwnerId]:       fmt.Sprintf("%v", gn.OwnerId),
+	}
+
+	for _, key := range costFunctions {
+		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", gn.Cost[strings.ToLower(key)])
+	}
+
 	return &smartcontract.StringMap{
-		Fields: map[string]string{
-			Settings[MinLock]:       fmt.Sprintf("%0v", gn.MinLock),
-			Settings[MaxMint]:       fmt.Sprintf("%0v", gn.MaxMint),
-			Settings[MinLockPeriod]: fmt.Sprintf("%0v", gn.MinLockPeriod),
-			Settings[Apr]:           fmt.Sprintf("%0v", gn.APR),
-			Settings[OwnerId]:       fmt.Sprintf("%v", gn.OwnerId),
-			Settings[Cost]:          fmt.Sprintf("%v", gn.Cost),
-		},
+		Fields: fields,
 	}, nil
 }
 

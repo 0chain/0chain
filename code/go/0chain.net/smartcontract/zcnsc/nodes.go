@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/dbs/event"
@@ -88,11 +89,38 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
 		case OwnerID:
 			gn.OwnerId = value
 		default:
-			return fmt.Errorf("key %s not recognised as setting", key)
+			return gn.setCostValue(key, value)
 		}
 	}
 
 	return nil
+}
+
+func (gn *GlobalNode) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, fmt.Sprintf("%s.", Cost)) {
+		return fmt.Errorf("key %s not recognised as setting", key)
+	}
+
+	costKey := strings.ToLower(strings.TrimPrefix(key, fmt.Sprintf("%s.", Cost)))
+	for _, costFunction := range CostFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		gn.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
 }
 
 func (gn *GlobalNode) Validate() error {
