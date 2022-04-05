@@ -118,7 +118,14 @@ func AddMockChallenges(
 	validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
+	numAllocations := viper.GetInt(sc.NumAllocations)
 	challenges := make([]BlobberChallenge, len(blobbers))
+	allocationChall := make([]AllocationChallenge, numAllocations)
+
+	partition, err := getBlobbersChallengeList(balances)
+	if err != nil {
+		panic(err)
+	}
 
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		numAllocBlobbers := viper.GetInt(sc.NumBlobbersPerAllocation)
@@ -131,15 +138,60 @@ func AddMockChallenges(
 				blobbers[bIndex],
 				&challenges[bIndex],
 				validators,
+				&allocationChall[i],
 			)
 		}
 	}
+	blobAlloc := make(map[string]map[string]bool)
 
+	// adding blobber challenges and blobber challenge partition
 	for _, ch := range challenges {
-		if len(ch.Challenges) > 0 {
-			ch.LatestCompletedChallenge = ch.Challenges[0]
-		}
 		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = partition.Add(&partitions.BlobberChallengeNode{
+			BlobberID: ch.BlobberID,
+		}, balances)
+		if err != nil {
+			panic(err)
+		}
+	}
+	err = partition.Save(balances)
+	if err != nil {
+		panic(err)
+	}
+
+	// adding allocation challenges
+	for _, ch := range allocationChall {
+		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		if err != nil {
+			panic(err)
+		}
+		for _, b := range ch.Challenges {
+			if _, ok := blobAlloc[b.BlobberID]; !ok {
+				blobAlloc[b.BlobberID] = make(map[string]bool)
+			}
+			blobAlloc[b.BlobberID][ch.AllocationID] = true
+		}
+	}
+
+	// adding blobber challenge allocation partition
+	for blobberID, val := range blobAlloc {
+		aPart, err := getBlobbersChallengeAllocationList(blobberID, balances)
+		if err != nil {
+			panic(err)
+		}
+		for allocID := range val {
+			_, err = aPart.Add(&partitions.BlobberChallengeAllocationNode{
+				ID: allocID,
+			}, balances)
+			if err != nil {
+				panic(err)
+			}
+		}
+		err = aPart.Save(balances)
 		if err != nil {
 			panic(err)
 		}
@@ -267,18 +319,6 @@ func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
 	}
 }
 
-// only used for challenge generated which is being rewritten
-func AddMockAllAllocations(balances cstate.StateContextI) {
-	var allocations Allocations
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		allocations.List.add(getMockAllocationId(i))
-	}
-	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func AddMockChallengePools(balances cstate.StateContextI) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationId := getMockAllocationId(i)
@@ -297,16 +337,22 @@ func setupMockChallenges(
 	blobber *StorageNode,
 	bc *BlobberChallenge,
 	validators []*ValidationNode,
+	ac *AllocationChallenge,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
+	ac.AllocationID = allocationId
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
-		bc.addChallenge(&StorageChallenge{
-			ID:           getMockChallengeId(bIndex, i),
-			Validators:   selValidators,
-			Blobber:      blobber,
-			AllocationID: allocationId,
-		})
+		storageChall := &StorageChallenge{
+			ID:              getMockChallengeId(bIndex, i),
+			AllocationID:    allocationId,
+			TotalValidators: len(selValidators),
+			BlobberID:       blobber.ID,
+		}
+		bcAdded := bc.addChallenge(storageChall)
+		if bcAdded {
+			ac.addChallenge(storageChall)
+		}
 	}
 }
 
@@ -561,25 +607,6 @@ func AddMockFreeStorageAssigners(
 			panic(err)
 		}
 	}
-}
-
-func AddMockStats(
-	balances cstate.StateContextI,
-) {
-	_, _ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
-		Stats: &StorageAllocationStats{
-			UsedSize:                  1000,
-			NumWrites:                 1000,
-			ReadsSize:                 1000 * 64 * KB,
-			TotalChallenges:           1000,
-			OpenChallenges:            1000,
-			SuccessChallenges:         1000,
-			FailedChallenges:          1000,
-			LastestClosedChallengeTxn: "latest closed challenge transaction",
-		},
-		LastChallengedSize: 100,
-		LastChallengedTime: 1,
-	})
 }
 
 func AddMockWriteRedeems(
