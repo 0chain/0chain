@@ -30,21 +30,17 @@ type GlobalNode struct {
 	MinMintAmount      state.Balance  `json:"min_mint_amount"`
 	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
 	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
-	MinLockAmount      int64          `json:"min_lock_amount"`
-	MaxFee             state.Balance  `json:"max_fee"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
+	MinLockAmount      int64          `json:"min_lock_amount"`
+	MaxFee             state.Balance  `json:"max_fee"`
 	BurnAddress        string         `json:"burn_address"`
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
 	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
 }
 
-func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
-	var (
-		err error
-	)
-
+func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 	for key, value := range cfg.Fields {
 		switch key {
 		case MinMintAmount:
@@ -88,8 +84,23 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
 			gn.MaxFee = state.Balance(amount * 1e10)
 		case OwnerID:
 			gn.OwnerId = value
+		case Cost:
+			err = gn.setCostValue(Cost, value)
+			if err != nil {
+				return err
+			}
+		case MinLockAmount:
+			gn.MinLockAmount, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+			}
+		case MaxDelegates:
+			gn.MaxDelegates, err = strconv.Atoi(value)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+			}
 		default:
-			return gn.setCostValue(key, value)
+			return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
 		}
 	}
 
@@ -145,6 +156,10 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
 	case gn.OwnerId == "":
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
+	case gn.MaxDelegates <= 0:
+		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
+	case gn.MinLockAmount <= 0:
+		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is less than 0", gn.MinLockAmount))
 	}
 	return nil
 }

@@ -203,6 +203,7 @@ const (
 	PercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
 	MinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
 	BurnAddress        = SmartContract + ZcnSc + "burn_address"
+	OwnerID            = SmartContract + ZcnSc + "owner_id"
 	Cost               = SmartContract + ZcnSc + "cost"
 	MaxDelegates       = SmartContract + ZcnSc + "max_delegates"
 
