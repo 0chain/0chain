@@ -1509,7 +1509,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		data, _ := json.Marshal(dbs.DbUpdates{
 			Id: d.BlobberID,
 			Updates: map[string]interface{}{
-				"total_stake": int64(sps[1].stake()),
+				"total_stake": int64(sps[i].stake()),
 			},
 		})
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, string(data))
