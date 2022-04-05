@@ -643,6 +643,24 @@ type BlobberAllocation struct {
 	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
 }
 
+func newBlobberAllocation(
+	size int64,
+	allocation *StorageAllocation,
+	blobber *StorageNode,
+	date common.Timestamp,
+) *BlobberAllocation {
+	ba := &BlobberAllocation{}
+	ba.Stats = &StorageAllocationStats{}
+	ba.Size = size
+	ba.Terms = blobber.Terms
+	ba.AllocationID = allocation.ID
+	ba.BlobberID = blobber.ID
+	ba.MinLockDemand = blobber.Terms.minLockDemand(
+		sizeInGB(size), allocation.restDurationInTimeUnits(date),
+	)
+	return ba
+}
+
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
@@ -755,6 +773,176 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
+}
+
+func (sa *StorageAllocation) validateAllocationBlobber(
+	blobber *StorageNode,
+	sp *stakePool,
+	now common.Timestamp,
+) error {
+	bSize := sa.bSize()
+	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+
+	// filter by max offer duration
+	if blobber.Terms.MaxOfferDuration < duration {
+		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
+			duration, blobber.ID, blobber.Terms.MaxOfferDuration)
+	}
+	// filter by read price
+	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by write price
+	if !sa.WritePriceRange.isMatch(blobber.Terms.WritePrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by blobber's capacity left
+	if blobber.Capacity-blobber.Used < bSize {
+		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
+			blobber.ID, blobber.Capacity-blobber.Used, bSize)
+	}
+	// filter by max challenge completion time
+	if blobber.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+		return fmt.Errorf("blobber %s challenge compledtion time %v exceeds maximum challenge completeion time %v",
+			blobber.ID, blobber.Terms.ChallengeCompletionTime, sa.MaxChallengeCompletionTime)
+	}
+
+	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
+		return fmt.Errorf("blobber %s failed health check", blobber.ID)
+	}
+
+	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
+			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
+	}
+
+	return nil
+}
+
+func (sa *StorageAllocation) bSize() int64 {
+	var size = sa.DataShards + sa.ParityShards
+	return (sa.Size + int64(size-1)) / int64(size)
+}
+
+func (sa *StorageAllocation) removeBlobber(
+	blobbers []*StorageNode,
+	removeId string,
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI,
+) ([]*StorageNode, error) {
+	remove, found := sa.BlobberMap[removeId]
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+	delete(sa.BlobberMap, removeId)
+
+	found = false
+	for i, d := range sa.Blobbers {
+		if d.ID == removeId {
+			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
+			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+	var removedBlobber *StorageNode
+	found = false
+	for i, d := range blobbers {
+		if d.ID == removeId {
+			removedBlobber = blobbers[i]
+			blobbers[i] = blobbers[len(sa.Blobbers)-1]
+			blobbers = blobbers[:len(blobbers)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+
+	found = false
+	for i, d := range sa.BlobberDetails {
+		if d.BlobberID == removeId {
+			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.Blobbers)-1]
+			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
+			removedBlobber.Used -= d.Size
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+
+	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
+		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
+	}
+	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
+		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
+	}
+
+	blobber, err := ssc.getBlobber(removeId, balances)
+	if err != nil {
+		return nil, err
+	}
+	blobber.Used -= sa.bSize()
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	if err != nil {
+		return nil, err
+	}
+
+	return blobbers, nil
+}
+
+func (sa *StorageAllocation) changeBlobbers(
+	blobbers []*StorageNode,
+	addId, removeId string,
+	ssc *StorageSmartContract,
+	now common.Timestamp,
+	balances chainstate.StateContextI,
+) ([]*StorageNode, error) {
+	var err error
+	if len(removeId) > 0 {
+		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+			return nil, err
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+
+	_, found := sa.BlobberMap[addId]
+	if found {
+		return nil, fmt.Errorf("allocatino already has blobber %s", addId)
+	}
+
+	addedBlobber, err := ssc.getBlobber(addId, balances)
+	if err != nil {
+		return nil, err
+	}
+	addedBlobber.Used += sa.bSize()
+	afterSize := sa.bSize()
+
+	sa.Blobbers = append(sa.Blobbers, addedBlobber)
+	blobbers = append(blobbers, addedBlobber)
+	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	sa.BlobberMap[addId] = ba
+	sa.BlobberDetails = append(sa.BlobberDetails, ba)
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
+		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	if sa.validateAllocationBlobber(addedBlobber, sp, now) != nil {
+		return nil, err
+	}
+
+	return blobbers, nil
 }
 
 type StorageAllocationDecode StorageAllocation

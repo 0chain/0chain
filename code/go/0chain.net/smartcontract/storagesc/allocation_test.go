@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/mocks"
@@ -321,6 +323,8 @@ func TestExtendAllocation(t *testing.T) {
 				},
 			).Return(nil).Once()
 		}
+
+		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything).Return()
 
 		var sa = StorageAllocation{
 			ID:                      mockAllocationId,
