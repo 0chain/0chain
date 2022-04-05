@@ -196,12 +196,15 @@ const (
 	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
 
 	MinMintAmount      = SmartContract + ZcnSc + "min_mint_amount"
-	PercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
-	MinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
 	MinBurnAmount      = SmartContract + ZcnSc + "min_burn_amount"
 	MinStakeAmount     = SmartContract + ZcnSc + "min_stake_amount"
-	BurnAddress        = SmartContract + ZcnSc + "burn_address"
+	MinLockAmount      = SmartContract + ZcnSc + "min_lock_amount"
 	MaxFee             = SmartContract + ZcnSc + "max_fee"
+	PercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
+	MinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
+	BurnAddress        = SmartContract + ZcnSc + "burn_address"
+	Cost               = SmartContract + ZcnSc + "cost"
+	MaxDelegates       = SmartContract + ZcnSc + "max_delegates"
 
 	EventDbEnabled         = DbsEvents + "enabled"
 	EventDbName            = DbsEvents + "name"
