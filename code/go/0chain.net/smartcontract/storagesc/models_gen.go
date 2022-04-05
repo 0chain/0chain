@@ -1709,9 +1709,9 @@ func (z *RewardPartitionLocation) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 26
+	// map header, size 27
 	// string "ID"
-	o = append(o, 0xde, 0x0, 0x1a, 0xa2, 0x49, 0x44)
+	o = append(o, 0xde, 0x0, 0x1b, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Tx"
 	o = append(o, 0xa2, 0x54, 0x78)
@@ -1758,16 +1758,30 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	for za0001 := range z.PreferredBlobbers {
 		o = msgp.AppendString(o, z.PreferredBlobbers[za0001])
 	}
+	// string "Blobbers"
+	o = append(o, 0xa8, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Blobbers)))
+	for za0002 := range z.Blobbers {
+		if z.Blobbers[za0002] == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = z.Blobbers[za0002].MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Blobbers", za0002)
+				return
+			}
+		}
+	}
 	// string "BlobberDetails"
 	o = append(o, 0xae, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.BlobberDetails)))
-	for za0002 := range z.BlobberDetails {
-		if z.BlobberDetails[za0002] == nil {
+	for za0003 := range z.BlobberDetails {
+		if z.BlobberDetails[za0003] == nil {
 			o = msgp.AppendNil(o)
 		} else {
-			o, err = z.BlobberDetails[za0002].MarshalMsg(o)
+			o, err = z.BlobberDetails[za0003].MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "BlobberDetails", za0002)
+				err = msgp.WrapError(err, "BlobberDetails", za0003)
 				return
 			}
 		}
@@ -1815,8 +1829,8 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "WritePoolOwners"
 	o = append(o, 0xaf, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.WritePoolOwners)))
-	for za0003 := range z.WritePoolOwners {
-		o = msgp.AppendString(o, z.WritePoolOwners[za0003])
+	for za0004 := range z.WritePoolOwners {
+		o = msgp.AppendString(o, z.WritePoolOwners[za0004])
 	}
 	// string "ChallengeCompletionTime"
 	o = append(o, 0xb7, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x69, 0x6d, 0x65)
@@ -1861,8 +1875,8 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Curators"
 	o = append(o, 0xa8, 0x43, 0x75, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Curators)))
-	for za0004 := range z.Curators {
-		o = msgp.AppendString(o, z.Curators[za0004])
+	for za0005 := range z.Curators {
+		o = msgp.AppendString(o, z.Curators[za0005])
 	}
 	return
 }
@@ -1975,32 +1989,62 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 					return
 				}
 			}
-		case "BlobberDetails":
+		case "Blobbers":
 			var zb0003 uint32
 			zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "BlobberDetails")
+				err = msgp.WrapError(err, "Blobbers")
 				return
 			}
-			if cap(z.BlobberDetails) >= int(zb0003) {
-				z.BlobberDetails = (z.BlobberDetails)[:zb0003]
+			if cap(z.Blobbers) >= int(zb0003) {
+				z.Blobbers = (z.Blobbers)[:zb0003]
 			} else {
-				z.BlobberDetails = make([]*BlobberAllocation, zb0003)
+				z.Blobbers = make([]*StorageNode, zb0003)
 			}
-			for za0002 := range z.BlobberDetails {
+			for za0002 := range z.Blobbers {
 				if msgp.IsNil(bts) {
 					bts, err = msgp.ReadNilBytes(bts)
 					if err != nil {
 						return
 					}
-					z.BlobberDetails[za0002] = nil
+					z.Blobbers[za0002] = nil
 				} else {
-					if z.BlobberDetails[za0002] == nil {
-						z.BlobberDetails[za0002] = new(BlobberAllocation)
+					if z.Blobbers[za0002] == nil {
+						z.Blobbers[za0002] = new(StorageNode)
 					}
-					bts, err = z.BlobberDetails[za0002].UnmarshalMsg(bts)
+					bts, err = z.Blobbers[za0002].UnmarshalMsg(bts)
 					if err != nil {
-						err = msgp.WrapError(err, "BlobberDetails", za0002)
+						err = msgp.WrapError(err, "Blobbers", za0002)
+						return
+					}
+				}
+			}
+		case "BlobberDetails":
+			var zb0004 uint32
+			zb0004, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BlobberDetails")
+				return
+			}
+			if cap(z.BlobberDetails) >= int(zb0004) {
+				z.BlobberDetails = (z.BlobberDetails)[:zb0004]
+			} else {
+				z.BlobberDetails = make([]*BlobberAllocation, zb0004)
+			}
+			for za0003 := range z.BlobberDetails {
+				if msgp.IsNil(bts) {
+					bts, err = msgp.ReadNilBytes(bts)
+					if err != nil {
+						return
+					}
+					z.BlobberDetails[za0003] = nil
+				} else {
+					if z.BlobberDetails[za0003] == nil {
+						z.BlobberDetails[za0003] = new(BlobberAllocation)
+					}
+					bts, err = z.BlobberDetails[za0003].UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "BlobberDetails", za0003)
 						return
 					}
 				}
@@ -2012,14 +2056,14 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				return
 			}
 		case "ReadPriceRange":
-			var zb0004 uint32
-			zb0004, bts, err = msgp.ReadMapHeaderBytes(bts)
+			var zb0005 uint32
+			zb0005, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ReadPriceRange")
 				return
 			}
-			for zb0004 > 0 {
-				zb0004--
+			for zb0005 > 0 {
+				zb0005--
 				field, bts, err = msgp.ReadMapKeyZC(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "ReadPriceRange")
@@ -2047,14 +2091,14 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				}
 			}
 		case "WritePriceRange":
-			var zb0005 uint32
-			zb0005, bts, err = msgp.ReadMapHeaderBytes(bts)
+			var zb0006 uint32
+			zb0006, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "WritePriceRange")
 				return
 			}
-			for zb0005 > 0 {
-				zb0005--
+			for zb0006 > 0 {
+				zb0006--
 				field, bts, err = msgp.ReadMapKeyZC(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "WritePriceRange")
@@ -2088,21 +2132,21 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				return
 			}
 		case "WritePoolOwners":
-			var zb0006 uint32
-			zb0006, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			var zb0007 uint32
+			zb0007, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "WritePoolOwners")
 				return
 			}
-			if cap(z.WritePoolOwners) >= int(zb0006) {
-				z.WritePoolOwners = (z.WritePoolOwners)[:zb0006]
+			if cap(z.WritePoolOwners) >= int(zb0007) {
+				z.WritePoolOwners = (z.WritePoolOwners)[:zb0007]
 			} else {
-				z.WritePoolOwners = make([]string, zb0006)
+				z.WritePoolOwners = make([]string, zb0007)
 			}
-			for za0003 := range z.WritePoolOwners {
-				z.WritePoolOwners[za0003], bts, err = msgp.ReadStringBytes(bts)
+			for za0004 := range z.WritePoolOwners {
+				z.WritePoolOwners[za0004], bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "WritePoolOwners", za0003)
+					err = msgp.WrapError(err, "WritePoolOwners", za0004)
 					return
 				}
 			}
@@ -2155,21 +2199,21 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				return
 			}
 		case "Curators":
-			var zb0007 uint32
-			zb0007, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			var zb0008 uint32
+			zb0008, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Curators")
 				return
 			}
-			if cap(z.Curators) >= int(zb0007) {
-				z.Curators = (z.Curators)[:zb0007]
+			if cap(z.Curators) >= int(zb0008) {
+				z.Curators = (z.Curators)[:zb0008]
 			} else {
-				z.Curators = make([]string, zb0007)
+				z.Curators = make([]string, zb0008)
 			}
-			for za0004 := range z.Curators {
-				z.Curators[za0004], bts, err = msgp.ReadStringBytes(bts)
+			for za0005 := range z.Curators {
+				z.Curators[za0005], bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "Curators", za0004)
+					err = msgp.WrapError(err, "Curators", za0005)
 					return
 				}
 			}
@@ -2197,21 +2241,29 @@ func (z *StorageAllocationDecode) Msgsize() (s int) {
 	for za0001 := range z.PreferredBlobbers {
 		s += msgp.StringPrefixSize + len(z.PreferredBlobbers[za0001])
 	}
-	s += 15 + msgp.ArrayHeaderSize
-	for za0002 := range z.BlobberDetails {
-		if z.BlobberDetails[za0002] == nil {
+	s += 9 + msgp.ArrayHeaderSize
+	for za0002 := range z.Blobbers {
+		if z.Blobbers[za0002] == nil {
 			s += msgp.NilSize
 		} else {
-			s += z.BlobberDetails[za0002].Msgsize()
+			s += z.Blobbers[za0002].Msgsize()
+		}
+	}
+	s += 15 + msgp.ArrayHeaderSize
+	for za0003 := range z.BlobberDetails {
+		if z.BlobberDetails[za0003] == nil {
+			s += msgp.NilSize
+		} else {
+			s += z.BlobberDetails[za0003].Msgsize()
 		}
 	}
 	s += 12 + msgp.BoolSize + 15 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 16 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 27 + msgp.DurationSize + 16 + msgp.ArrayHeaderSize
-	for za0003 := range z.WritePoolOwners {
-		s += msgp.StringPrefixSize + len(z.WritePoolOwners[za0003])
+	for za0004 := range z.WritePoolOwners {
+		s += msgp.StringPrefixSize + len(z.WritePoolOwners[za0004])
 	}
 	s += 24 + msgp.DurationSize + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize + 9 + msgp.ArrayHeaderSize
-	for za0004 := range z.Curators {
-		s += msgp.StringPrefixSize + len(z.Curators[za0004])
+	for za0005 := range z.Curators {
+		s += msgp.StringPrefixSize + len(z.Curators[za0005])
 	}
 	return
 }
