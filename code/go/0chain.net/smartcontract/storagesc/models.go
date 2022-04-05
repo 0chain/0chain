@@ -838,24 +838,12 @@ func (sa *StorageAllocation) removeBlobber(
 	}
 	delete(sa.BlobberMap, removeId)
 
-	found = false
-	for i, d := range sa.Blobbers {
-		if d.ID == removeId {
-			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
-			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
-	}
 	var removedBlobber *StorageNode
 	found = false
 	for i, d := range blobbers {
 		if d.ID == removeId {
 			removedBlobber = blobbers[i]
-			blobbers[i] = blobbers[len(sa.Blobbers)-1]
+			blobbers[i] = blobbers[len(sa.BlobberDetails)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
 			break
@@ -868,7 +856,7 @@ func (sa *StorageAllocation) removeBlobber(
 	found = false
 	for i, d := range sa.BlobberDetails {
 		if d.BlobberID == removeId {
-			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.Blobbers)-1]
+			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
 			removedBlobber.Used -= d.Size
 			found = true
@@ -928,7 +916,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	addedBlobber.Used += sa.bSize()
 	afterSize := sa.bSize()
 
-	sa.Blobbers = append(sa.Blobbers, addedBlobber)
 	blobbers = append(blobbers, addedBlobber)
 	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
 	sa.BlobberMap[addId] = ba
