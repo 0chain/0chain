@@ -779,6 +779,9 @@ func txnIterHandlerFunc(mc *Chain,
 	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
 	return func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		tii.count++
+		if ctx.Err() != nil {
+			return false
+		}
 		if mc.GetCurrentRound() > b.Round {
 			tii.roundMismatch = true
 			return false
@@ -931,38 +934,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 		blockSize += int32(rcount)
 		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
-	}
-	//reuse current transactions here
-	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() && err != context.DeadlineExceeded {
-		blocks := mc.GetUnrelatedBlocks(10, b)
-		rcount := 0
-		for _, ub := range blocks {
-			for _, txn := range ub.Txns {
-				rcount++
-				rtxn := mc.txnToReuse(txn)
-				needsVerification := (ub.MinerID != node.Self.Underlying().GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
-				if needsVerification {
-					//TODO remove context, since it is not used here
-					if err := rtxn.ValidateWrtTime(cctx, ub.CreationDate); err != nil {
-						continue
-					}
-				}
-				if txnProcessor(cctx, blockState, rtxn, iterInfo) {
-					if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
-						break
-					}
-				}
-			}
-			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
-				break
-			}
-		}
-		reusedTxns = iterInfo.idx - blockSize
-		blockSize = iterInfo.idx
-		logging.Logger.Error("generate block (reused txns)",
-			zap.Int64("round", b.Round), zap.Int("ub", len(blocks)),
-			zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount),
-			zap.Int32("blockSize", iterInfo.idx))
 	}
 	if blockSize != mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() {
 		if !waitOver && blockSize < mc.MinBlockSize() {
