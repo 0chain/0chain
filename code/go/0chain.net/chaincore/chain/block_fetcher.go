@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 
@@ -320,6 +321,11 @@ type Chainer interface {
 		fb *block.Block, err error)
 	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
+	GetCurrentRound() int64
+	GetMagicBlock(round int64) *block.MagicBlock
+	GetLatestFinalizedMagicBlockRound(rn int64) *block.Block
+	GetRound(roundNumber int64) round.RoundI
+	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
 }
 
 //

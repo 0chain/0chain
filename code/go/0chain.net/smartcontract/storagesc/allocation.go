@@ -53,23 +53,6 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	return clientAlloc.Allocations, nil
 }
 
-func (sc *StorageSmartContract) getAllAllocationsList(
-	balances chainstate.StateContextI) (*Allocations, error) {
-
-	allocationList := &Allocations{}
-
-	err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY, allocationList)
-	switch err {
-	case util.ErrValueNotPresent:
-		return &Allocations{}, nil
-	case nil:
-		return allocationList, nil
-	default:
-		return nil, common.NewError("getAllAllocationsList_failed",
-			"Failed to retrieve existing allocations list")
-	}
-}
-
 func (sc *StorageSmartContract) removeUserAllocation(
 	oldUser string,
 	alloc *StorageAllocation,
@@ -131,11 +114,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewErrorf("add_allocation_failed",
 			"Failed to get allocation list: %v", err)
 	}
-	all, err := sc.getAllAllocationsList(balances)
-	if err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"Failed to get allocation list: %v", err)
-	}
 
 	ta := &StorageAllocation{}
 	if err = balances.GetTrieNode(alloc.GetKey(sc.ID), ta); err == nil {
@@ -149,13 +127,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 
 	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
 		return "", common.NewError("add_allocation_failed", err.Error())
-	}
-
-	all.List.add(alloc.ID)
-
-	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"saving all allocations list: %v", err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
@@ -1243,27 +1214,24 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		alloc.Stats = &StorageAllocationStats{}
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberDetails))
-	var failed, succesful int64 = 0, 0
-	// range over all related blobbers
-	for _, d := range alloc.BlobberDetails {
-		// check out blobber challenges
-		var bc *BlobberChallenge
-		bc, err = sc.getBlobberChallenge(d.BlobberID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, fmt.Errorf("getting blobber challenge: %v", err)
-		}
-		// no blobber challenges, no failures
-		if err == util.ErrValueNotPresent || len(bc.Challenges) == 0 {
-			passRates, err = append(passRates, 1.0), nil
-			continue // no challenges for the blobber
-		}
-		if d.Stats == nil {
-			d.Stats = new(StorageAllocationStats) // make sure
-		}
-		// all expired open challenges are failed, all other
-		// challenges we are treating as successful
-		for _, c := range bc.Challenges {
-			if c.Response != nil || c.AllocationID != alloc.ID {
+	var failed, successful int64 = 0, 0
+
+	allocChallenge, err := sc.getAllocationChallenge(alloc.ID, balances)
+	switch err {
+	case util.ErrValueNotPresent:
+	case nil:
+		for _, c := range allocChallenge.Challenges {
+			blobberID := c.BlobberID
+			d, ok := alloc.BlobberMap[blobberID]
+			if !ok {
+				continue
+			}
+
+			if d.Stats == nil {
+				d.Stats = new(StorageAllocationStats) // make sure
+			}
+
+			if c.Responded || c.AllocationID != alloc.ID {
 				continue // already accepted, already rewarded/penalized
 			}
 			var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
@@ -1273,6 +1241,13 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 				d.Stats.SuccessChallenges++
 			}
 		}
+
+	default:
+		return nil, fmt.Errorf("getting allocation challenge: %v", err)
+	}
+
+	for _, d := range alloc.BlobberDetails {
+
 		d.Stats.OpenChallenges = 0
 		d.Stats.TotalChallenges = d.Stats.SuccessChallenges + d.Stats.FailedChallenges
 		if d.Stats.TotalChallenges == 0 {
@@ -1282,12 +1257,13 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// success rate for the blobber allocation
 		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(d.Stats.SuccessChallenges)/float64(d.Stats.TotalChallenges))
-		succesful += d.Stats.SuccessChallenges
+		successful += d.Stats.SuccessChallenges
 		failed += d.Stats.FailedChallenges
 	}
-	alloc.Stats.SuccessChallenges = succesful
+
+	alloc.Stats.SuccessChallenges = successful
 	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
+	alloc.Stats.TotalChallenges = alloc.Stats.SuccessChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
@@ -1584,22 +1560,6 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	alloc.Finalized = true
 
-	var all *Allocations
-	if all, err = sc.getAllAllocationsList(balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"getting all allocations list: "+err.Error())
-	}
-
-	if !all.List.remove(alloc.ID) {
-		return common.NewError("fini_alloc_failed",
-			"invalid state: allocation not found in all allocations list")
-	}
-
-	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
-	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving all allocations list: "+err.Error())
-	}
 	return nil
 }
 

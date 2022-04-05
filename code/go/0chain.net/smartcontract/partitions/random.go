@@ -24,6 +24,8 @@ type ItemType int
 const (
 	ItemString ItemType = iota
 	ItemValidator
+	ItemBlobberChallenge
+	ItemBlobberChallengeAllocation
 	ItemBlobber
 	ItemBlobberReward
 )
@@ -80,6 +82,7 @@ func (rs *randomSelector) Add(
 	if len(rs.Partitions) == 0 || part.length() >= rs.PartitionSize {
 		part = rs.addPartition()
 	}
+
 	if err := part.add(item); err != nil {
 		return 0, err
 	}
@@ -119,6 +122,7 @@ func (rs *randomSelector) Remove(
 	if replacment == nil {
 		return fmt.Errorf("empty last partitions, currpt data")
 	}
+
 	if err := part.add(replacment); err != nil {
 		return err
 	}
@@ -159,6 +163,7 @@ func (rs *randomSelector) AddRand(
 	if moving == nil {
 		return -1, fmt.Errorf("empty partitions, corrupt data")
 	}
+
 	if err := partition.add(item); err != nil {
 		return 0, err
 	}
@@ -212,6 +217,14 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 	var newPartition PartitionItemList
 	if rs.ItemType == ItemString {
 		newPartition = &itemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberChallenge {
+		newPartition = &blobberChallengeItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberChallengeAllocation {
+		newPartition = &blobberChallengeAllocationItemList{
 			Key: rs.partitionKey(rs.NumPartitions),
 		}
 	} else if rs.ItemType == ItemBlobber {
@@ -297,6 +310,10 @@ func (rs *randomSelector) getPartition(
 	var part PartitionItemList
 	if rs.ItemType == ItemString {
 		part = &itemList{}
+	} else if rs.ItemType == ItemBlobberChallenge {
+		part = &blobberChallengeItemList{}
+	} else if rs.ItemType == ItemBlobberChallengeAllocation {
+		part = &blobberChallengeAllocationItemList{}
 	} else if rs.ItemType == ItemBlobber {
 		part = &blobberItemList{}
 	} else if rs.ItemType == ItemBlobberReward {

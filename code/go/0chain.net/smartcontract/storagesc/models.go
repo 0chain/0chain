@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -24,14 +26,15 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 var (
-	ALL_BLOBBERS_KEY           = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_BLOBBERS_PARTITION_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_partition"))
-	ALL_VALIDATORS_KEY         = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY        = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY          = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
-	ACTIVE_PASSED_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("active_passed_blobbers")) // for previous period
-	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("active_passed_blobbers")
+	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
+	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
+	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
+	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("blobber_rewards")
 )
+
+func getBlobberChallengeAllocationKey(blobberID string) string {
+	return ADDRESS + encryption.Hash("blobber_challenge_allocation"+blobberID)
+}
 
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`
@@ -99,10 +102,10 @@ type ChallengeResponse struct {
 }
 
 type BlobberChallenge struct {
-	BlobberID                string                       `json:"blobber_id"`
-	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+	BlobberID                string              `json:"blobber_id"`
+	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
+	ChallengeIDs             []string            `json:"challenge_ids"`
+	ChallengeIDMap           map[string]struct{} `json:"-" msg:"-"`
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
@@ -127,9 +130,9 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
-	sn.ChallengeMap = make(map[string]*StorageChallenge)
-	for _, challenge := range sn.Challenges {
-		sn.ChallengeMap[challenge.ID] = challenge
+	sn.ChallengeIDMap = make(map[string]struct{})
+	for _, challengeID := range sn.ChallengeIDs {
+		sn.ChallengeIDMap[challengeID] = struct{}{}
 	}
 	return nil
 }
@@ -150,42 +153,109 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	*sn = BlobberChallenge(*d)
 
-	sn.ChallengeMap = make(map[string]*StorageChallenge)
-	for _, challenge := range sn.Challenges {
-		sn.ChallengeMap[challenge.ID] = challenge
+	sn.ChallengeIDMap = make(map[string]struct{})
+	for _, challenge := range sn.ChallengeIDs {
+		sn.ChallengeIDMap[challenge] = struct{}{}
 	}
 	return o, nil
 }
 
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
-	if sn.Challenges == nil {
-		sn.Challenges = make([]*StorageChallenge, 0)
-		sn.ChallengeMap = make(map[string]*StorageChallenge)
+
+	if sn.ChallengeIDs == nil {
+		sn.ChallengeIDMap = make(map[string]struct{})
 	}
-	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
-		if len(sn.Challenges) > 0 {
-			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
-			challenge.PrevID = lastChallenge.ID
-		} else if sn.LatestCompletedChallenge != nil {
-			challenge.PrevID = sn.LatestCompletedChallenge.ID
-		}
-		sn.Challenges = append(sn.Challenges, challenge)
-		sn.ChallengeMap[challenge.ID] = challenge
+	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
+		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
+		sn.ChallengeIDMap[challenge.ID] = struct{}{}
 		return true
 	}
 	return false
 }
 
+type AllocationChallenge struct {
+	AllocationID             string                       `json:"allocation_id"`
+	Challenges               []*StorageChallenge          `json:"challenges"`
+	ChallengeMap             map[string]*StorageChallenge `json:"-"`
+	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+}
+
+func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
+	return globalKey + ":allocationchallenge:" + sn.AllocationID
+}
+
+func (sn *AllocationChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *AllocationChallenge) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *AllocationChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
+}
+
+func (sn *AllocationChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeMap[challenge.ID] = challenge
+	}
+	return nil
+}
+
+func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
+
+	if sn.Challenges == nil {
+		sn.Challenges = make([]*StorageChallenge, 0)
+		sn.ChallengeMap = make(map[string]*StorageChallenge)
+	}
+	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
+		sn.Challenges = append(sn.Challenges, challenge)
+		sn.ChallengeMap[challenge.ID] = challenge
+		return true
+	}
+
+	return false
+}
+
 type StorageChallenge struct {
-	Created        common.Timestamp   `json:"created"`
-	ID             string             `json:"id"`
-	PrevID         string             `json:"prev_id"`
-	Validators     []*ValidationNode  `json:"validators"`
-	RandomNumber   int64              `json:"seed"`
-	AllocationID   string             `json:"allocation_id"`
-	Blobber        *StorageNode       `json:"blobber"`
-	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
+	Created         common.Timestamp `json:"created"`
+	ID              string           `json:"id"`
+	TotalValidators int              `json:"total_validators"`
+	AllocationID    string           `json:"allocation_id"`
+	BlobberID       string           `json:"blobber_id"`
+	Responded       bool             `json:"responded"`
+}
+
+func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
+	return globalKey + "storagechallenge:" + sc.ID
+}
+
+func (sc *StorageChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sc *StorageChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sc)
+	return buff
+}
+
+func (sc *StorageChallenge) GetHash() string {
+	return util.ToHex(sc.GetHashBytes())
+}
+
+func (sc *StorageChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sc.Encode())
 }
 
 type ValidationNode struct {
@@ -363,8 +433,10 @@ type StorageNode struct {
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	RewardPartition   RewardPartitionLocation     `json:"reward_partition"`
-	Information       Info                        `json:"info"`
+	// ChallengeLocation to be replaced for BlobberChallengePartitionLocation once StorageNode is normalised
+	//ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
+	RewardPartition RewardPartitionLocation `json:"reward_partition"`
+	Information     Info                    `json:"info"`
 }
 
 // validate the blobber configurations
@@ -399,6 +471,29 @@ func (sn *StorageNode) Encode() []byte {
 
 func (sn *StorageNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// BlobberChallengePartitionLocation is a temporary object. should be removed once StorageNode is normalised
+type BlobberChallengePartitionLocation struct {
+	ID                string                        `json:"id"`
+	PartitionLocation *partitions.PartitionLocation `json:"challenge_location"`
+}
+
+func (bcpl *BlobberChallengePartitionLocation) GetKey(globalKey string) datastore.Key {
+	return globalKey + bcpl.ID + "blobber_challenge_partition"
+}
+
+func (bcpl *BlobberChallengePartitionLocation) Encode() []byte {
+	buff, _ := json.Marshal(bcpl)
+	return buff
+}
+
+func (bcpl *BlobberChallengePartitionLocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, bcpl)
 	if err != nil {
 		return err
 	}
@@ -442,8 +537,9 @@ type StorageAllocationStats struct {
 }
 
 type BlobberAllocation struct {
-	BlobberID       string                  `json:"blobber_id"`
-	AllocationID    string                  `json:"allocation_id"`
+	BlobberID    string `json:"blobber_id"`
+	AllocationID string `json:"allocation_id"`
+	// Size is blobber allocation maximum size
 	Size            int64                   `json:"size"`
 	AllocationRoot  string                  `json:"allocation_root"`
 	LastWriteMarker *WriteMarker            `json:"write_marker"`
@@ -543,6 +639,8 @@ type BlobberAllocation struct {
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
+	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
+	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
 }
 
 func newBlobberAllocation(
@@ -1520,27 +1618,4 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 	}
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
-}
-
-type StorageStats struct {
-	Stats              *StorageAllocationStats `json:"stats"`
-	LastChallengedSize int64                   `json:"last_challenged_size"`
-	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
-}
-
-func (sn *StorageStats) GetKey(_ string) datastore.Key {
-	return STORAGE_STATS_KEY
-}
-
-func (sn *StorageStats) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sn *StorageStats) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
 }
