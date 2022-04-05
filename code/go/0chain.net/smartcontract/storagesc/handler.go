@@ -129,6 +129,21 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 }
 
 // GetBlobberCountHandler returns Blobber count from its individual stored value.
+func GetBlobberCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	blobberCount, err := balances.GetEventDB().GetBlobberCount()
+	if err != nil {
+		return nil, fmt.Errorf("Error while geting the blobber count")
+	}
+	return map[string]int64{
+		"count": blobberCount,
+	}, nil
+}
+
+// GetBlobberCountHandler returns Blobber count from its individual stored value.
 func (ssc *StorageSmartContract) GetBlobberCountHandler(
 	ctx context.Context,
 	params url.Values,
