@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"time"
 
@@ -323,7 +324,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 
-
 	sa.ID = t.Hash
 	allocatedBlobbers := make([]*StorageNode, 0)
 	for _, b := range blobberNodes {
@@ -351,7 +351,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
-
 
 	sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
 		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
