@@ -333,6 +333,12 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 		switch err {
 		case nil:
+			if balances.GetEventDB() != nil {
+				err = allocationObj.getBlobbers(balances)
+				if err != nil {
+					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+				}
+			}
 			result = append(result, allocationObj)
 		case util.ErrValueNotPresent:
 			continue
@@ -388,7 +394,10 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	return response, nil
 }
 
-const cantGetAllocation = "can't get allocation"
+const (
+	cantGetAllocation = "can't get allocation"
+	cantGetBlobber    = "can't get blobber"
+)
 
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
@@ -398,6 +407,13 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+	}
+
+	if balances.GetEventDB() != nil {
+		err = allocationObj.getBlobbers(balances)
+		if err != nil {
+			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+		}
 	}
 
 	return allocationObj, nil
