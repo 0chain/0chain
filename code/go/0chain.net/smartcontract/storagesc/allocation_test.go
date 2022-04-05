@@ -159,7 +159,7 @@ func TestSelectBlobbers(t *testing.T) {
 			t.Parallel()
 			ssc, sa, blobbers, balances := setup(t, tt.args)
 
-			outBlobbers, outSize, err := ssc.selectBlobbers(
+			outBlobbers, outSize, err := ssc.validateBlobbers(
 				now, &sa, balances, blobbers.Nodes.copy(),
 			)
 

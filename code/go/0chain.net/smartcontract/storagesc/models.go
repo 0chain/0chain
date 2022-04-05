@@ -600,6 +600,57 @@ type StorageAllocation struct {
 	Curators []string `json:"curators"`
 }
 
+func (sa *StorageAllocation) validateAllocationBlobber(
+	blobber *StorageNode,
+	sp *stakePool,
+	now common.Timestamp,
+) error {
+	bSize := sa.bSize()
+	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+
+	// filter by max offer duration
+	if blobber.Terms.MaxOfferDuration < duration {
+		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
+			duration, blobber.ID, blobber.Terms.MaxOfferDuration)
+	}
+	// filter by read price
+	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by write price
+	if !sa.WritePriceRange.isMatch(blobber.Terms.WritePrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by blobber's capacity left
+	if blobber.Capacity-blobber.Used < bSize {
+		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
+			blobber.ID, blobber.Capacity-blobber.Used, bSize)
+	}
+	// filter by max challenge completion time
+	if blobber.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+		return fmt.Errorf("blobber %s challenge compledtion time %v exceeds maximum challenge completeion time %v",
+			blobber.ID, blobber.Terms.ChallengeCompletionTime, sa.MaxChallengeCompletionTime)
+	}
+
+	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
+		return fmt.Errorf("blobber %s failed health check", blobber.ID)
+	}
+
+	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
+			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
+	}
+
+	return nil
+}
+
+func (sa *StorageAllocation) bSize() int64 {
+	var size = sa.DataShards + sa.ParityShards
+	return (sa.Size + int64(size-1)) / int64(size)
+}
+
 // The restMinLockDemand returns number of tokens required as min_lock_demand;
 // if a blobber receive write marker, then some token moves to related
 // challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'

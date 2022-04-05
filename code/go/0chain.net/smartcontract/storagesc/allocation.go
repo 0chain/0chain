@@ -1,14 +1,15 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"sort"
 	"strings"
 	"time"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -415,7 +416,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.Error(err))
 	}
 
-	blobberNodes, bSize, err := sc.selectBlobbers(
+	blobberNodes, bSize, err := sc.validateBlobbers(
 		t.CreationDate, sa, balances, inputBlobbers.Nodes)
 
 	if err != nil {
@@ -482,7 +483,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	return resp, err
 }
 
-func (sc *StorageSmartContract) selectBlobbers(
+func (sc *StorageSmartContract) validateBlobbers(
 	creationDate common.Timestamp,
 	sa *StorageAllocation,
 	balances chainstate.StateContextI,

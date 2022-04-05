@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"net/url"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
@@ -266,7 +267,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 		return "", common.NewErrInternal("fetching blobbers", err.Error())
 	}
 
-	blobberNodes, bSize, err := ssc.selectBlobbers(
+	blobberNodes, bSize, err := ssc.validateBlobbers(
 		creationDate, sa, balances, inputBlobbers.Nodes)
 
 	if err != nil {
