@@ -713,6 +713,7 @@ type StorageAllocation struct {
 	DiverseBlobbers   bool                    `json:"diverse_blobbers"`
 	PreferredBlobbers []string                `json:"preferred_blobbers"`
 	// Blobbers not to be used anywhere except /allocation and /allocations table
+	// if Blobbers are getting used in any smart-contract, we should avoid.
 	Blobbers       []*StorageNode                `json:"blobbers"`
 	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap     map[string]*BlobberAllocation `json:"-" msg:"-"`
