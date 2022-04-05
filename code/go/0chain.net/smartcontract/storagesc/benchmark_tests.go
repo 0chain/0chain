@@ -779,6 +779,29 @@ func BenchmarkTests(
 			},
 			input: nil,
 		},
+		{
+			name: "storage.generate_challenge",
+			endpoint: func(
+				txn *transaction.Transaction,
+				_ []byte,
+				balances cstate.StateContextI,
+			) (string, error) {
+				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
+				if challengesEnabled {
+					err := ssc.generateChallenge(txn, balances.GetBlock(), nil, balances)
+					if err != nil {
+						return "", nil
+					}
+				} else {
+					return "Challenges disabled in the config", nil
+				}
+				return "Challenges generated", nil
+			},
+			txn: &transaction.Transaction{
+				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+			},
+			input: nil,
+		},
 		// todo "update_config" waiting for PR489
 	}
 	var testsI []bk.BenchTestI

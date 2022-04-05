@@ -1,6 +1,7 @@
 package partitions
 
 import (
+	"0chain.net/core/common"
 	"math/rand"
 
 	"0chain.net/core/datastore"
@@ -47,4 +48,19 @@ type RandPartition interface {
 	Partition
 	AddRand(PartitionItem, *rand.Rand, state.StateContextI) (int, error)
 	GetRandomSlice(*rand.Rand, state.StateContextI) ([]PartitionItem, error)
+}
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
+type PartitionLocation struct {
+	Location  int
+	Timestamp common.Timestamp
+}
+
+func NewPartitionLocation(location int, timestamp common.Timestamp) *PartitionLocation {
+	pl := new(PartitionLocation)
+	pl.Location = location
+	pl.Timestamp = timestamp
+
+	return pl
 }
