@@ -28,6 +28,11 @@ var (
 		"owner_id",
 		"cost",
 	}
+	costFunctions = []string{
+		"lock",
+		"unlock",
+		"updateVariables",
+	}
 )
 
 func (ip *InterestPoolSmartContract) updateVariables(
