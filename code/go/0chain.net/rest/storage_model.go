@@ -3,6 +3,8 @@ package rest
 import (
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/state"
@@ -14,10 +16,12 @@ import (
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-// swagger:model storageNode
-type storageNode storagesc.StorageNode
+// swagger:model readMarkersCount
+type readMarkersCount struct {
+	ReadMarkersCount int64 `json:"read_markers_count"`
+}
 
-// swagger:model storageNode
+// swagger:model storageStakePool
 type storageStakePool struct {
 	stakepool.StakePool
 	// TotalOffers represents tokens required by currently
@@ -38,16 +42,16 @@ func (sp storageStakePool) get(
 	return srh.GetTrieNode(storageStakePoolKey(blobberID), &sp)
 }
 
-func blobberTableToStorageNode(blobber event.Blobber) (storageNode, error) {
+func blobberTableToStorageNode(blobber event.Blobber) (storagesc.StorageNode, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
-		return storageNode{}, err
+		return storagesc.StorageNode{}, err
 	}
 	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
 	if err != nil {
-		return storageNode{}, err
+		return storagesc.StorageNode{}, err
 	}
-	return storageNode{
+	return storagesc.StorageNode{
 		ID:      blobber.BlobberID,
 		BaseURL: blobber.BaseURL,
 		Geolocation: storagesc.StorageNodeGeolocation{
@@ -78,4 +82,62 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNode, error) {
 			Description: blobber.Description,
 		},
 	}, nil
+}
+
+// swagger:model stakePoolStat
+type stakePoolStat struct {
+	ID      string        `json:"pool_id"` // pool ID
+	Balance state.Balance `json:"balance"` // total balance
+	Unstake state.Balance `json:"unstake"` // total unstake amount
+
+	Free       int64         `json:"free"`        // free staked space
+	Capacity   int64         `json:"capacity"`    // blobber bid
+	WritePrice state.Balance `json:"write_price"` // its write price
+
+	OffersTotal  state.Balance `json:"offers_total"` //
+	UnstakeTotal state.Balance `json:"unstake_total"`
+	// delegate pools
+	Delegate []storagesc.DelegatePoolStat `json:"delegate"`
+	Penalty  state.Balance                `json:"penalty"` // total for all
+	// rewards
+	Rewards state.Balance `json:"rewards"`
+
+	// Settings of the stake pool
+	Settings stakepool.StakePoolSettings `json:"settings"`
+}
+
+func spStats(
+	blobber event.Blobber,
+	delegatePools []event.DelegatePool,
+) *stakePoolStat {
+	stat := new(stakePoolStat)
+	stat.ID = blobber.BlobberID
+	stat.UnstakeTotal = state.Balance(blobber.UnstakeTotal)
+	stat.Capacity = blobber.Capacity
+	stat.WritePrice = state.Balance(blobber.WritePrice)
+	stat.OffersTotal = state.Balance(blobber.OffersTotal)
+	stat.Delegate = make([]storagesc.DelegatePoolStat, 0, len(delegatePools))
+	stat.Settings = stakepool.StakePoolSettings{
+		DelegateWallet:  blobber.DelegateWallet,
+		MinStake:        state.Balance(blobber.MinStake),
+		MaxStake:        state.Balance(blobber.MaxStake),
+		MaxNumDelegates: blobber.NumDelegates,
+		ServiceCharge:   blobber.ServiceCharge,
+	}
+	stat.Rewards = state.Balance(blobber.Reward)
+	for _, dp := range delegatePools {
+		dpStats := storagesc.DelegatePoolStat{
+			ID:           dp.PoolID,
+			Balance:      state.Balance(dp.Balance),
+			DelegateID:   dp.DelegateID,
+			Rewards:      state.Balance(dp.Reward),
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			TotalReward:  state.Balance(dp.TotalReward),
+			TotalPenalty: state.Balance(dp.TotalPenalty),
+			RoundCreated: dp.RoundCreated,
+		}
+		stat.Balance += dpStats.Balance
+		stat.Delegate = append(stat.Delegate, dpStats)
+	}
+	return stat
 }

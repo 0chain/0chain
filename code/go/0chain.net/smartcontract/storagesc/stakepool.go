@@ -19,7 +19,7 @@ import (
 	"0chain.net/core/util"
 )
 
-//msgp:ignore unlockResponse stakePoolStat stakePoolRequest delegatePoolStat rewardsStat
+//msgp:ignore unlockResponse stakePoolStat stakePoolRequest DelegatePoolStat rewardsStat
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 func validateStakePoolSettings(
@@ -242,7 +242,8 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	return
 }
 
-type delegatePoolStat struct {
+// swagger:model DelegatePoolStat
+type DelegatePoolStat struct {
 	ID         string        `json:"id"`          // blobber ID
 	Balance    state.Balance `json:"balance"`     // current balance
 	DelegateID string        `json:"delegate_id"` // wallet
@@ -253,27 +254,6 @@ type delegatePoolStat struct {
 	TotalPenalty state.Balance `json:"total_penalty"`
 	Status       string        `json:"status"`
 	RoundCreated int64         `json:"round_created"`
-}
-
-type stakePoolStat struct {
-	ID      string        `json:"pool_id"` // pool ID
-	Balance state.Balance `json:"balance"` // total balance
-	Unstake state.Balance `json:"unstake"` // total unstake amount
-
-	Free       int64         `json:"free"`        // free staked space
-	Capacity   int64         `json:"capacity"`    // blobber bid
-	WritePrice state.Balance `json:"write_price"` // its write price
-
-	OffersTotal  state.Balance `json:"offers_total"` //
-	UnstakeTotal state.Balance `json:"unstake_total"`
-	// delegate pools
-	Delegate []delegatePoolStat `json:"delegate"`
-	Penalty  state.Balance      `json:"penalty"` // total for all
-	// rewards
-	Rewards state.Balance `json:"rewards"`
-
-	// Settings of the stake pool
-	Settings stakepool.StakePoolSettings `json:"settings"`
 }
 
 //

@@ -44,7 +44,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
 		}
 		if ups.Pools[mn.NodeType.String()] == nil {
-			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
+			ups.Pools[mn.NodeType.String()] = make(map[string][]*DelegatePoolStat)
 		}
 		for _, id := range poolIDs {
 			var dp, ok = mn.Pending[id]

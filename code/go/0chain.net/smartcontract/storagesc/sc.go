@@ -75,8 +75,8 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	// reading / writing
 	//ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	//ssc.SmartContract.RestHandlers["/readmarkers"] = ssc.GetReadMarkersHandler
-	ssc.SmartContract.RestHandlers["/count_readmarkers"] = ssc.GetReadMarkersCount
-	ssc.SmartContract.RestHandlers["/getWriteMarkers"] = ssc.GetWriteMarkersHandler
+	//ssc.SmartContract.RestHandlers["/count_readmarkers"] = ssc.GetReadMarkersCount
+	//ssc.SmartContract.RestHandlers["/getWriteMarkers"] = ssc.GetWriteMarkersHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
 	ssc.SmartContractExecutionStats["commit_connection"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "commit_connection"), nil)
 	// allocation
@@ -92,15 +92,15 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["add_curator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_curator"), nil)
 	ssc.SmartContractExecutionStats["curator_transfer_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "curator_transfer_allocation"), nil)
 	// challenge
-	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
-	ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
+	//ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
+	//ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
 	ssc.SmartContractExecutionStats["challenge_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_request"), nil)
 	ssc.SmartContractExecutionStats["challenge_response"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_response"), nil)
 	ssc.SmartContractExecutionStats["generate_challenges"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "generate_challenges"), nil)
 	ssc.SmartContractExecutionStats["generate_challenge"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "generate_challenge"), nil)
 	// validator
 	ssc.SmartContractExecutionStats["add_validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator (add/update SC function)"), nil)
-	ssc.SmartContract.RestHandlers["/get_validator"] = ssc.GetValidatorHandler
+	//ssc.SmartContract.RestHandlers["/get_validator"] = ssc.GetValidatorHandler
 	// validators stat (not function calls)
 	ssc.SmartContractExecutionStats[statAddValidator] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator"), nil)
 	ssc.SmartContractExecutionStats[statUpdateValidator] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_validator"), nil)
@@ -131,7 +131,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["write_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["write_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_unlock"), nil)
 	// stake pool
-	ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler
+	//ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler
 	ssc.SmartContract.RestHandlers["/getUserStakePoolStat"] = ssc.getUserStakePoolStatHandler
 	ssc.SmartContractExecutionStats["stake_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)

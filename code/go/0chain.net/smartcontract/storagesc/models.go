@@ -101,6 +101,7 @@ type ChallengeResponse struct {
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
+// swagger:model BlobberChallenge
 type BlobberChallenge struct {
 	BlobberID                string              `json:"blobber_id"`
 	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
@@ -224,6 +225,7 @@ func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
+// swagger:model StorageChallenge
 type StorageChallenge struct {
 	Created         common.Timestamp `json:"created"`
 	ID              string           `json:"id"`
@@ -417,6 +419,7 @@ type Info struct {
 }
 
 // StorageNode represents Blobber configurations.
+// swagger:model StorageNode
 type StorageNode struct {
 	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`

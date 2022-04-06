@@ -759,7 +759,7 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
-type delegatePoolStat struct {
+type DelegatePoolStat struct {
 	ID           string        `json:"id"`            // pool ID
 	Balance      state.Balance `json:"balance"`       //
 	InterestPaid state.Balance `json:"interest_paid"` //
@@ -769,8 +769,8 @@ type delegatePoolStat struct {
 	Low          state.Balance `json:"low"`           // }
 }
 
-func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {
-	dps = new(delegatePoolStat)
+func newDelegatePoolStat(dp *sci.DelegatePool) (dps *DelegatePoolStat) {
+	dps = new(DelegatePoolStat)
 	dps.ID = dp.ID
 	dps.Balance = dp.Balance
 	dps.InterestPaid = dp.InterestPaid
@@ -783,12 +783,12 @@ func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {
 
 // A userPools represents response for user pools requests.
 type userPools struct {
-	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
+	Pools map[string]map[string][]*DelegatePoolStat `json:"pools"`
 }
 
 func newUserPools() (ups *userPools) {
 	ups = new(userPools)
-	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
+	ups.Pools = make(map[string]map[string][]*DelegatePoolStat)
 	return
 }
 
