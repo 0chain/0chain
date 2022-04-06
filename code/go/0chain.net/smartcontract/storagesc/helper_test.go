@@ -392,26 +392,35 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 		blobberChall = new(BlobberChallenge)
 		blobberChall.BlobberID = blobberID
 	}
+
+	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		t.Fatal("unexpected error:", err)
+	}
+	if err == util.ErrValueNotPresent {
+		allocChall = new(AllocationChallenge)
+		allocChall.AllocationID = allocID
+	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	storChall.PrevID = prevID
 	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
-	require.NoError(t, err)
-	for _, val := range valSlice {
-		storChall.Validators = append(storChall.Validators, &ValidationNode{
-			ID:      val.Name(),
-			BaseURL: val.Data(),
-		})
-	}
-	storChall.RandomNumber = seed
+	storChall.TotalValidators = len(valSlice)
+
 	storChall.AllocationID = allocID
-	storChall.Blobber = blobber
-	storChall.AllocationRoot = allocRoot
+	storChall.BlobberID = blobber.ID
 
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
+
+	require.True(t, allocChall.addChallenge(storChall))
+	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
+	require.NoError(t, err)
+
+	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)
+	require.NoError(t, err)
+	return
 }
 
 func newTestStorageSC() (ssc *StorageSmartContract) {

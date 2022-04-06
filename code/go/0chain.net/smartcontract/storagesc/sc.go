@@ -97,6 +97,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["challenge_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_request"), nil)
 	ssc.SmartContractExecutionStats["challenge_response"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_response"), nil)
 	ssc.SmartContractExecutionStats["generate_challenges"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "generate_challenges"), nil)
+	ssc.SmartContractExecutionStats["generate_challenge"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "generate_challenge"), nil)
 	// validator
 	ssc.SmartContractExecutionStats["add_validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator (add/update SC function)"), nil)
 	ssc.SmartContract.RestHandlers["/get_validator"] = ssc.GetValidatorHandler
@@ -217,28 +218,11 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		if resp, err = sc.commitBlobberRead(t, input, balances); err != nil {
 			return
 		}
-		challengesEnabled := config.SmartContractConfig.GetBool(
-			"smart_contracts.storagesc.challenge_enabled")
-		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-			if err != nil {
-				return "", err
-			}
-		}
 
 	case "commit_connection":
 		resp, err = sc.commitBlobberConnection(t, input, balances)
 		if err != nil {
 			return
-		}
-
-		challengesEnabled := config.SmartContractConfig.GetBool(
-			"smart_contracts.storagesc.challenge_enabled")
-		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-			if err != nil {
-				return "", err
-			}
 		}
 
 	// allocations
@@ -312,6 +296,19 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			if err != nil {
+				return
+			}
+		} else {
+			return "Challenges disabled in the config", nil
+		}
+		return "Challenges generated", nil
+
+	case "generate_challenge":
+		challengesEnabled := config.SmartContractConfig.GetBool(
+			"smart_contracts.storagesc.challenge_enabled")
+		if challengesEnabled {
+			err = sc.generateChallenge(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return
 			}

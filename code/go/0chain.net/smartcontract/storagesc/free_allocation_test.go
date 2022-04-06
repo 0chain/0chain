@@ -346,9 +346,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On(
 			"GetTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
-		balances.On(
-			"GetTrieNode", ALL_ALLOCATIONS_KEY,
-			mockSetValue(&Allocations{})).Return(nil).Once()
 
 		allocation := StorageAllocation{ID: txn.Hash}
 		balances.On(
@@ -361,9 +358,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			}),
 			mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
-		balances.On(
-			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
-		).Return("", nil).Once()
+
 		balances.On(
 			"InsertTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()

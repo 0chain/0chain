@@ -48,27 +48,16 @@ func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
 }
 
 func (il *itemList) add(it PartitionItem) error {
+
 	for _, bi := range il.Items {
 		if bi.Name() == it.Name() {
 			return errors.New("item already exists")
-
 		}
 	}
 
 	il.Items = append(il.Items, StringItem{it.Name()})
 	il.Changed = true
 	return nil
-}
-
-func (il *itemList) update(it PartitionItem) error {
-	for i := 0; i < il.length(); i++ {
-		if il.Items[i].Name() == it.Name() {
-			il.Items[i] = StringItem{it.Name()}
-			il.Changed = true
-			return nil
-		}
-	}
-	return errors.New("item not found")
 }
 
 func (il *itemList) remove(item PartitionItem) error {
@@ -123,6 +112,17 @@ func (il *itemList) find(searchItem PartitionItem) int {
 		}
 	}
 	return notFound
+}
+
+func (il *itemList) update(it PartitionItem) error {
+	for i := 0; i < il.length(); i++ {
+		if il.Items[i].Name() == it.Name() {
+			il.Items[i] = StringItem{it.Name()}
+			il.Changed = true
+			return nil
+		}
+	}
+	return errors.New("item not found")
 }
 
 type StringItem struct {

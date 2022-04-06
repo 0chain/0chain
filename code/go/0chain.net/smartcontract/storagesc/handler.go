@@ -392,26 +392,25 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 }
 
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	/*
-		blobberID := params.Get("blobber")
+	blobberID := params.Get("blobber")
 
-		// return "404", if blobber not registered
-		blobber := StorageNode{ID: blobberID}
-		if err := balances.GetTrieNode(blobber.GetKey(ssc.ID), &blobber); err != nil {
-			return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
-		}
+	// return "404", if blobber not registered
+	blobber := StorageNode{ID: blobberID}
+	if err := balances.GetTrieNode(blobber.GetKey(ssc.ID), &blobber); err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
+	}
 
-		// return "200" with empty list, if no challenges are found
-		blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
-		blobberChallengeObj.ChallengeIDs = make([]string, 0)
-		err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
-		switch err {
-		case nil, util.ErrValueNotPresent:
-			return blobberChallengeObj, nil
-		default:
-			return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
-		}
-	*/
+	// return "200" with empty list, if no challenges are found
+	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
+	blobberChallengeObj.ChallengeIDs = make([]string, 0)
+	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		return blobberChallengeObj, nil
+	default:
+		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
+	}
+
 	// for k, v := range blobberChallengeObj.ChallengeMap {
 	// 	if v.Response != nil {
 	// 		delete(blobberChallengeObj.ChallengeMap, k)
@@ -420,39 +419,36 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 
 	// return populate or empty list of challenges
 	// don't return error, if no challenges (expected by blobbers)
-	return nil, nil
+	//return &blobberChallengeObj, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
-	/*
-		defer func() {
-			if retErr != nil {
-				logging.Logger.Error("/getchallenge failed with error - " + retErr.Error())
-			}
-		}()
-		blobberID := params.Get("blobber")
-		blobberChallengeObj := &BlobberChallenge{}
-		blobberChallengeObj.BlobberID = blobberID
-		blobberChallengeObj.ChallengeIDs = make([]string, 0)
-
-		err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
-		if err != nil {
-			return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
+	defer func() {
+		if retErr != nil {
+			logging.Logger.Error("/getchallenge failed with error - " + retErr.Error())
 		}
+	}()
+	blobberID := params.Get("blobber")
+	blobberChallengeObj := &BlobberChallenge{}
+	blobberChallengeObj.BlobberID = blobberID
+	blobberChallengeObj.ChallengeIDs = make([]string, 0)
 
-		challengeID := params.Get("challenge")
-		if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
-			return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
-		}
+	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	if err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
+	}
 
-		challenge, err := ssc.getStorageChallenge(challengeID, balances)
-		if err != nil {
-			return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge")
-		}
+	challengeID := params.Get("challenge")
+	if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
+		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
+	}
 
-		return challenge, nil
-	*/
-	return nil, nil
+	challenge, err := ssc.getStorageChallenge(challengeID, balances)
+	if err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge")
+	}
+
+	return challenge, nil
 }
 
 // statistic for all locked tokens of a stake pool
