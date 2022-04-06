@@ -53,10 +53,9 @@ jobs:
         run: |
          SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
          echo "NAME=$TAG-$SHORT_SHA" >> $GITHUB_ENV 
-         helm upgrade --install --wait 0chain -n testing --set sharder.image.tag=${{ env.NAME }} --set miner.image.tag=${{ env.NAME }} 0chain-helm/zchain --kubeconfig "./kube/config" 
-          
+         
       - name: update image on network  
-        if: 
         run: |
           echo "Sharder/Miner:${{ env.NAME }} updated to the network."
+          helm upgrade --install --wait 0chain -n testing --set sharder.image.tag=${{ env.NAME }} --set miner.image.tag=${{ env.NAME }} 0chain-helm/zchain --kubeconfig "./kube/config" 
           curl -X POST -H 'Content-type: application/json' --data '{"text":"Sharder/Miner:${{ env.NAME }} image updated on network ${{ secrets.NETWORK_URL }}."}' ${{ secrets.TEST_WEBHOOK_URL }}
