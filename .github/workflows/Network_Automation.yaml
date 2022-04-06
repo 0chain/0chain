@@ -9,6 +9,11 @@ jobs:
   test:
     runs-on: docker-builds  
     steps:
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ./kube
+          echo "${{ secrets.NETWORK_CONFIG }}" | base64 -d > ./kube/config
+          
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
@@ -30,11 +35,6 @@ jobs:
       - name: Get changed files 
         id: changed-files
         uses: tj-actions/changed-files@v18.4   
-       
-      - name: Setup kubeconfig
-        run: |
-          mkdir -p ./kube
-          echo "${{ secrets.NETWORK_CONFIG }}" | base64 -d > ./kube/config
      
       - name: get docker image name
         id: get_info
