@@ -40,12 +40,12 @@ func SetupSwagger() {
 	http.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	// documentation for developers
-	opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.yaml"}
+	opts := middleware.SwaggerUIOpts{SpecURL: "swagger.yaml"}
 	sh := middleware.SwaggerUI(opts, nil)
 	http.Handle("/docs", sh)
 
 	// documentation for share
-	opts1 := middleware.RedocOpts{SpecURL: "/swagger.yaml", Path: "docs1"}
+	opts1 := middleware.RedocOpts{SpecURL: "swagger.yaml", Path: "docs1"}
 	sh1 := middleware.Redoc(opts1, nil)
 	http.Handle("/docs1", sh1)
 }

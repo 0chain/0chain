@@ -73,14 +73,14 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
 	ssc.SmartContractExecutionStats["update_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_settings"), nil)
 	// reading / writing
-	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
-	ssc.SmartContract.RestHandlers["/readmarkers"] = ssc.GetReadMarkersHandler
+	//ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
+	//ssc.SmartContract.RestHandlers["/readmarkers"] = ssc.GetReadMarkersHandler
 	ssc.SmartContract.RestHandlers["/count_readmarkers"] = ssc.GetReadMarkersCount
 	ssc.SmartContract.RestHandlers["/getWriteMarkers"] = ssc.GetWriteMarkersHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
 	ssc.SmartContractExecutionStats["commit_connection"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "commit_connection"), nil)
 	// allocation
-	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
+	//ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 	ssc.SmartContract.RestHandlers["/allocations"] = ssc.GetAllocationsHandler
 	ssc.SmartContract.RestHandlers["/allocation_min_lock"] = ssc.GetAllocationMinLockHandler
 	ssc.SmartContractExecutionStats["new_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_allocation_request"), nil)
@@ -140,12 +140,12 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 	// events db
-	ssc.SmartContract.RestHandlers["/transaction"] = ssc.GetTransactionByHashHandler
-	ssc.SmartContract.RestHandlers["/transactions"] = ssc.GetTransactionByFilterHandler
+	//ssc.SmartContract.RestHandlers["/transaction"] = ssc.GetTransactionByHashHandler
+	//ssc.SmartContract.RestHandlers["/transactions"] = ssc.GetTransactionByFilterHandler
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
-	ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
-	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
+	//ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
+	//ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 	// blobber aggregated saved data
 	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }

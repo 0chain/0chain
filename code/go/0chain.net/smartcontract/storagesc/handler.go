@@ -17,118 +17,13 @@ import (
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 
+	"0chain.net/core/logging"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 )
-
-func (msc *StorageSmartContract) GetTransactionByHashHandler(
-	ctx context.Context,
-	params url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	var transactionHash = params.Get("transaction_hash")
-	if len(transactionHash) == 0 {
-		return nil, errors.New("cannot find valid transaction: transaction_hash is empty")
-	}
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
-	}
-	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
-	return transaction, err
-}
-
-func (msc *StorageSmartContract) GetTransactionByFilterHandler(
-	ctx context.Context,
-	params url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	var (
-		clientID     = params.Get("client_id")
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		blockHash    = params.Get("block_hash")
-	)
-	if offsetString == "" {
-		offsetString = "0"
-	}
-	if limitString == "" {
-		limitString = "10"
-	}
-	offset, err := strconv.Atoi(offsetString)
-	if err != nil {
-		return nil, errors.New("offset value was not valid")
-	}
-
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		return nil, errors.New("limitString value was not valid")
-	}
-
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
-	}
-
-	if clientID != "" {
-		return balances.GetEventDB().GetTransactionByClientId(clientID, offset, limit)
-	}
-	if blockHash != "" {
-		return balances.GetEventDB().GetTransactionByBlockHash(blockHash, offset, limit)
-	}
-	return nil, errors.New("No filter selected")
-}
-
-func (msc *StorageSmartContract) GetWriteMarkerHandler(
-	ctx context.Context,
-	params url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	var (
-		offsetString       = params.Get("offset")
-		limitString        = params.Get("limit")
-		isDescendingString = params.Get("is_descending")
-	)
-	if offsetString == "" {
-		offsetString = "0"
-	}
-	if limitString == "" {
-		limitString = "10"
-	}
-	offset, err := strconv.Atoi(offsetString)
-	if err != nil {
-		return nil, errors.New("offset value was not valid")
-	}
-
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		return nil, errors.New("limitString value was not valid")
-	}
-	isDescending, err := strconv.ParseBool(isDescendingString)
-	if err != nil {
-		return nil, errors.New("is_descending value was not valid")
-	}
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
-	}
-	return balances.GetEventDB().GetWriteMarkers(offset, limit, isDescending)
-}
-
-func (msc *StorageSmartContract) GetErrors(
-	ctx context.Context,
-	params url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	transactionHash := params.Get("transaction_hash")
-	if len(transactionHash) == 0 {
-		return nil, fmt.Errorf("cannot find valid transaction_hash: %v", transactionHash)
-	}
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
-	}
-	transaction, err := balances.GetEventDB().GetErrorByTransactionHash(transactionHash)
-	return &transaction, err
-}
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -199,48 +94,6 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	}
 
 	return response, nil
-}
-
-const cantGetAllocation = "can't get allocation"
-
-func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allocationID := params.Get("allocation")
-	allocationObj := &StorageAllocation{}
-	allocationObj.ID = allocationID
-
-	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
-	}
-
-	return allocationObj, nil
-}
-
-func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID  = params.Get("client")
-		blobberID = params.Get("blobber")
-
-		commitRead = &ReadConnection{}
-	)
-
-	commitRead.ReadMarker = &ReadMarker{
-		BlobberID: blobberID,
-		ClientID:  clientID,
-	}
-
-	err = balances.GetTrieNode(commitRead.GetKey(ssc.ID), commitRead)
-	switch err {
-	case nil:
-		return commitRead.ReadMarker, nil // ok
-	case util.ErrValueNotPresent:
-		return make(map[string]string), nil
-	default:
-		return nil, common.NewErrInternal("can't get read marker", err.Error())
-	}
 }
 
 func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,

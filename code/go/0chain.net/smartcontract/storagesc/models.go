@@ -1430,6 +1430,7 @@ func (wm *WriteMarker) Verify() bool {
 	return true
 }
 
+// swagger:model ReadConnection
 type ReadConnection struct {
 	ReadMarker *ReadMarker `json:"read_marker"`
 }
@@ -1534,6 +1535,7 @@ func (at *AuthTicket) verify(
 	return
 }
 
+// swagger:model ReadMarker
 type ReadMarker struct {
 	ClientID        string           `json:"client_id"`
 	ClientPublicKey string           `json:"client_public_key"`
