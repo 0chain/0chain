@@ -101,6 +101,10 @@ func (sb *SortedBlobbers) remove(id string) (ok bool) {
 	return true // removed
 }
 
+func (sb *SortedBlobbers) Add(b *StorageNode) (ok bool) {
+	return sb.add(b)
+}
+
 func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 	if len(*sb) == 0 {
 		(*sb) = append((*sb), b)

@@ -8,14 +8,13 @@ import (
 )
 
 type RestHandler struct {
-	state.StateContextI
-	Address string
+	SCtx state.StateContextI
 }
 
-func (rh *RestHandler) GetEventDb() *event.EventDb {
-	return rh.GetEventDb()
+func (rh *RestHandler) GetEventDB() *event.EventDb {
+	return rh.SCtx.GetEventDB()
 }
 
 func (rh *RestHandler) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	return rh.GetTrieNode(key, v)
+	return rh.SCtx.GetTrieNode(key, v)
 }

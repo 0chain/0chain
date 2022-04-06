@@ -194,7 +194,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	valueLeft := value - serviceCharge
-	var stake = float64(sp.stake())
+	var stake = float64(sp.Stake())
 	if stake == 0 {
 		return fmt.Errorf("no stake")
 	}
@@ -211,7 +211,7 @@ func (sp *StakePool) DistributeRewards(
 	return nil
 }
 
-func (sp *StakePool) stake() (stake state.Balance) {
+func (sp *StakePool) Stake() (stake state.Balance) {
 	for _, pool := range sp.Pools {
 		stake += pool.Balance
 	}

@@ -405,6 +405,7 @@ func (sn *StorageNode) Decode(input []byte) error {
 	return nil
 }
 
+// swagger:model StorageNodes
 type StorageNodes struct {
 	Nodes SortedBlobbers
 }

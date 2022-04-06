@@ -3,6 +3,8 @@ package rest
 import (
 	"time"
 
+	"0chain.net/core/datastore"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
@@ -10,22 +12,42 @@ import (
 	"0chain.net/smartcontract/storagesc"
 )
 
-// swagger:model intMap
-type intMap map[string]int64
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
-// swagger:model StorageNode
-type StorageNode storagesc.StorageNode
+// swagger:model storageNode
+type storageNode storagesc.StorageNode
 
-func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
+// swagger:model storageNode
+type storageStakePool struct {
+	stakepool.StakePool
+	// TotalOffers represents tokens required by currently
+	// open offers of the blobber. It's allocation_id -> {lock, expire}
+	TotalOffers state.Balance `json:"total_offers"`
+	// Total amount to be un staked
+	TotalUnStake state.Balance `json:"total_un_stake"`
+}
+
+// stake pool key for the storage SC and  blobber
+func storageStakePoolKey(blobberID string) datastore.Key {
+	return datastore.Key(storagesc.ADDRESS + ":stakepool:" + blobberID)
+}
+
+func (sp storageStakePool) get(
+	blobberID datastore.Key, srh StorageRestHandler,
+) error {
+	return srh.GetTrieNode(storageStakePoolKey(blobberID), &sp)
+}
+
+func blobberTableToStorageNode(blobber event.Blobber) (storageNode, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
-		return StorageNode{}, err
+		return storageNode{}, err
 	}
 	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
 	if err != nil {
-		return StorageNode{}, err
+		return storageNode{}, err
 	}
-	return StorageNode{
+	return storageNode{
 		ID:      blobber.BlobberID,
 		BaseURL: blobber.BaseURL,
 		Geolocation: storagesc.StorageNodeGeolocation{

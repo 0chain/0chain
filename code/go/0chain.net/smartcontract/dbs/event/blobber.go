@@ -52,6 +52,7 @@ type Blobber struct {
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
+// swagger:model BlobberLatLong
 type BlobberLatLong struct {
 	// geolocation
 	Latitude  float64 `json:"latitude"`
