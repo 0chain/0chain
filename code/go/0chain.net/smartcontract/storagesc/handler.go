@@ -27,45 +27,58 @@ import (
 	"0chain.net/core/util"
 )
 
-func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
+type storageNodesResponse struct {
+	Nodes []storageNodeResponse
+}
+
+// StorageNode represents Blobber configurations.
+type storageNodeResponse struct {
+	StorageNode
+	TotalStake int64 `json:"total_stake"`
+}
+
+func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
-		return StorageNode{}, err
+		return storageNodeResponse{}, err
 	}
 	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
 	if err != nil {
-		return StorageNode{}, err
+		return storageNodeResponse{}, err
 	}
-	return StorageNode{
-		ID:      blobber.BlobberID,
-		BaseURL: blobber.BaseURL,
-		Geolocation: StorageNodeGeolocation{
-			Latitude:  blobber.Latitude,
-			Longitude: blobber.Longitude,
+	return storageNodeResponse{
+		StorageNode: StorageNode{
+			ID:      blobber.BlobberID,
+			BaseURL: blobber.BaseURL,
+			Geolocation: StorageNodeGeolocation{
+				Latitude:  blobber.Latitude,
+				Longitude: blobber.Longitude,
+			},
+			Terms: Terms{
+				ReadPrice:               state.Balance(blobber.ReadPrice),
+				WritePrice:              state.Balance(blobber.WritePrice),
+				MinLockDemand:           blobber.MinLockDemand,
+				MaxOfferDuration:        maxOfferDuration,
+				ChallengeCompletionTime: challengeCompletionTime,
+			},
+			Capacity:        blobber.Capacity,
+			Used:            blobber.Used,
+			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			StakePoolSettings: stakepool.StakePoolSettings{
+				DelegateWallet:  blobber.DelegateWallet,
+				MinStake:        state.Balance(blobber.MinStake),
+				MaxStake:        state.Balance(blobber.MaxStake),
+				MaxNumDelegates: blobber.NumDelegates,
+				ServiceCharge:   blobber.ServiceCharge,
+			},
+			Information: Info{
+				Name:        blobber.Name,
+				WebsiteUrl:  blobber.WebsiteUrl,
+				LogoUrl:     blobber.LogoUrl,
+				Description: blobber.Description,
+			},
 		},
-		Terms: Terms{
-			ReadPrice:               state.Balance(blobber.ReadPrice),
-			WritePrice:              state.Balance(blobber.WritePrice),
-			MinLockDemand:           blobber.MinLockDemand,
-			MaxOfferDuration:        maxOfferDuration,
-			ChallengeCompletionTime: challengeCompletionTime,
-		},
-		Capacity:        blobber.Capacity,
-		Used:            blobber.Used,
-		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  blobber.DelegateWallet,
-			MinStake:        state.Balance(blobber.MinStake),
-			MaxStake:        state.Balance(blobber.MaxStake),
-			MaxNumDelegates: blobber.NumDelegates,
-			ServiceCharge:   blobber.ServiceCharge,
-		},
-		Information: Info{
-			Name:        blobber.Name,
-			WebsiteUrl:  blobber.WebsiteUrl,
-			LogoUrl:     blobber.LogoUrl,
-			Description: blobber.Description,
-		},
+		TotalStake: blobber.TotalStake,
 	}, nil
 }
 
@@ -201,13 +214,13 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 
-	var sns StorageNodes
+	var sns storageNodesResponse
 	for _, blobber := range blobbers {
 		sn, err := blobberTableToStorageNode(blobber)
 		if err != nil {
 			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 		}
-		sns.Nodes.add(&sn)
+		sns.Nodes = append(sns.Nodes, sn)
 	}
 	return sns, nil
 }

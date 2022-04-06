@@ -45,6 +45,14 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: t.ClientID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
+
 	blobbers.Nodes.add(blobber) // add to all
 
 	// statistic
