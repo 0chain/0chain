@@ -1,0 +1,62 @@
+name: Network Automation
+
+on:
+  push:
+   branches: 
+     - staging
+ 
+jobs:
+  test:
+    runs-on: docker-builds  
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+      
+#       - name: Get config map changed files
+#         id: changed-files-specific
+#         uses: tj-actions/changed-files@v18.6
+#         with:
+#           files: |
+#             docker.local/config/0chain.yaml
+#             docker.local/config/sc.yaml
+
+#       - name: update config map command 
+#         if: steps.changed-files-specific.outputs.any_changed == 'true'
+#         run: |
+#           echo "0chain config maps updated ."
+#           curl -X POST -H 'Content-type: application/json' --data '{"text":"0chain config map updated."}' ${{ secrets.TEST_WEBHOOK_URL }}
+      
+      - name: Get changed files 
+        id: changed-files
+        uses: tj-actions/changed-files@v18.4   
+       
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ./kube
+          echo "${{ secrets.NETWORK_CONFIG }}" | base64 -d > ./kube/config
+     
+      - name: get docker image name
+        id: get_info
+        run: |
+         if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+         else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+         fi
+         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+      
+      - name: image name 
+        id: image_name
+        run: |
+         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+         echo "NAME=$TAG-$SHORT_SHA" >> $GITHUB_ENV 
+         helm upgrade --install --wait 0chain -n testing --set sharder.image.tag=${{ env.NAME }} --set miner.image.tag=${{ env.NAME }} 0chain-helm/zchain --kubeconfig "./kube/config" 
+          
+      - name: update image on network  
+        if: 
+        run: |
+          echo "Sharder/Miner:${{ env.NAME }} updated to the network."
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Sharder/Miner:${{ env.NAME }} image updated on network ${{ secrets.NETWORK_URL }}."}' ${{ secrets.TEST_WEBHOOK_URL }}
