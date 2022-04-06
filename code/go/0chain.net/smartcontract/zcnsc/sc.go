@@ -61,7 +61,7 @@ func (zcn *ZCNSmartContract) InitSC() {
 	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
 	// StakePool
-	zcn.smartContractFunctions[AddOrUpdateStakePoolFunc] = zcn.AddOrUpdateAuthorizerStakePool
+	zcn.smartContractFunctions[AddOrUpdateStakePoolFunc] = zcn.UpdateAuthorizerStakePool
 	// Rewards
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
 	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool

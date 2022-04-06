@@ -145,7 +145,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	return
 }
 
-func (zcn *ZCNSmartContract) AddOrUpdateAuthorizerStakePool(
+func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	tran *transaction.Transaction,
 	input []byte,
 	ctx cstate.StateContextI,
