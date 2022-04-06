@@ -1,9 +1,13 @@
 package storagesc
 
 import (
+	"encoding/json"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -56,5 +60,13 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("pay_reward_failed",
 			"error saving stake pool, %v", err)
 	}
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: providerId,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerId, string(data))
+
 	return "", nil
 }
