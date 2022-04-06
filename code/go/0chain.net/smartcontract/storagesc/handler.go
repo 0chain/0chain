@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -94,70 +93,6 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	}
 
 	return response, nil
-}
-
-func (ssc *StorageSmartContract) GetReadMarkersHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		allocationID = params.Get("allocation_id")
-		authTicket   = params.Get("auth_ticket")
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		sortString   = params.Get("sort")
-		limit        = 0
-		offset       = 0
-		isDescending = false
-	)
-
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrNoResource("db not initialized")
-	}
-
-	query := event.ReadMarker{}
-	if allocationID != "" {
-		query.AllocationID = allocationID
-	}
-
-	if authTicket != "" {
-		query.AuthTicket = authTicket
-	}
-
-	if offsetString != "" {
-		o, err := strconv.Atoi(offsetString)
-		if err != nil {
-			return nil, errors.New("offset is invalid")
-		}
-		offset = o
-	}
-
-	if limitString != "" {
-		l, err := strconv.Atoi(limitString)
-		if err != nil {
-			return nil, errors.New("limit is invalid")
-		}
-		limit = l
-	}
-
-	if sortString != "" {
-		switch sortString {
-		case "desc":
-			isDescending = true
-		case "asc":
-			isDescending = false
-		default:
-			return nil, errors.New("sort value is invalid")
-		}
-	}
-
-	readMarkers, err := balances.GetEventDB().GetReadMarkersFromQueryPaginated(query, offset, limit, isDescending)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get read markers", err.Error())
-	}
-
-	return readMarkers, nil
-
 }
 
 func (ssc *StorageSmartContract) GetReadMarkersCount(ctx context.Context,
