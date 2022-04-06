@@ -11,6 +11,16 @@ import (
 	"sort"
 	"strings"
 
+	"0chain.net/smartcontract/storagesc"
+
+	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+
+	"0chain.net/rest"
+	"github.com/go-openapi/runtime/middleware"
+	"github.com/gorilla/mux"
+
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -19,14 +29,69 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
+func NewRestHandler(ch *Chain) *rest.RestHandler {
+	lfb := ch.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		logging.Logger.Error("empty latest finalized block or state")
+		return nil
+	}
+	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
+	sctx := ch.NewStateContext(lfb, clientState, &transaction.Transaction{}, ch.GetEventDb())
+	return &rest.RestHandler{
+		StateContextI: sctx,
+	}
+}
+
+func SetupSwagger(router *mux.Router) {
+	router.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+
+	// documentation for developers
+	opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.SwaggerUI(opts, nil)
+	router.Handle("/docs", sh)
+
+	// documentation for share
+	opts1 := middleware.RedocOpts{SpecURL: "/swagger.yaml", Path: "docs1"}
+	sh1 := middleware.Redoc(opts1, nil)
+	router.Handle("/docs1", sh1)
+}
+
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
+	srh := rest.NewStorageRestHandler(NewRestHandler(c))
+
+	//r := mux.NewRouter()
+	//SetupSwagger(r)
+
+	http.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+
+	// documentation for developers
+	opts := middleware.SwaggerUIOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.SwaggerUI(opts, nil)
+	http.Handle("/docs", sh)
+
+	// documentation for share
+	opts1 := middleware.RedocOpts{SpecURL: "/swagger.yaml", Path: "docs1"}
+	sh1 := middleware.Redoc(opts1, nil)
+	http.Handle("/docs1", sh1)
+
+	storage := "/v1/screst/" + storagesc.ADDRESS
+	http.HandleFunc(storage+"/get_blobber_count", srh.GetBlobberCount)
+	logging.Logger.Info("piers HandleFunc", zap.String("added", storage+"/get_blobber_count"))
+	http.HandleFunc(storage+"/getBlobber", srh.GetBlobber)
+	logging.Logger.Info("piers HandleFunc", zap.String("added", storage+"/getBlobber"))
+	//storagesc := r.PathPrefix("/v1/screst/" + srh.Address).Subrouter()
+	//storagesc.HandleFunc("/get_blobber_count", srh.GetBlobberCount).Methods("GET")
+	//storagesc.HandleFunc("/getBlobber", srh.GetBlobber).Methods("GET")
+	//http.Handle("/", r)
+
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
 	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
+
 }
 
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {

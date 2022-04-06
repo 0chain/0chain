@@ -1,9 +1,6 @@
 package rest
 
 import (
-	"context"
-	"net/url"
-
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -12,8 +9,7 @@ import (
 
 type RestHandler struct {
 	state.StateContextI
-	params url.Values
-	ctx    context.Context
+	Address string
 }
 
 func (rh *RestHandler) GetEventDb() *event.EventDb {

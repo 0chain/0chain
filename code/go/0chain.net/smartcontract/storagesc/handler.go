@@ -206,6 +206,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	ctx context.Context,
 	params url.Values, balances cstate.StateContextI,
 ) (interface{}, error) {
+	logging.Logger.Info("piers GetBlobbersHandler in storagesc")
 	if balances.GetEventDB() == nil {
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
