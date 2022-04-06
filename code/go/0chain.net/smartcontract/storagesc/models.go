@@ -961,7 +961,7 @@ func (sa *StorageAllocation) getBlobbers(balances chainstate.StateContextI) erro
 		if err != nil {
 			return err
 		}
-		sa.Blobbers = append(sa.Blobbers, &sn)
+		sa.Blobbers = append(sa.Blobbers, &sn.StorageNode)
 	}
 	return nil
 }
