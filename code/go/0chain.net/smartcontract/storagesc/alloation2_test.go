@@ -363,21 +363,25 @@ func testCancelAllocation(
 	require.True(t, len(challenges) <= len(blobbers))
 	for i, blobberChallenges := range challenges {
 		var bc = BlobberChallenge{
-			BlobberID:  strconv.Itoa(i),
-			Challenges: []*StorageChallenge{},
+			BlobberID: strconv.Itoa(i),
+		}
+
+		var ac = AllocationChallenge{
+			AllocationID: sAllocation.ID,
+			Challenges:   []*StorageChallenge{},
 		}
 		for _, created := range blobberChallenges {
-			bc.Challenges = append(bc.Challenges, &StorageChallenge{
+			ac.Challenges = append(ac.Challenges, &StorageChallenge{
 				AllocationID: sAllocation.ID,
+				BlobberID:    bc.BlobberID,
 				Created:      created,
 			})
 		}
 		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
 		require.NoError(t, err)
+		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
+		require.NoError(t, err)
 	}
-
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
 
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {
@@ -385,11 +389,9 @@ func testCancelAllocation(
 	}
 	require.EqualValues(t, "canceled", resp)
 
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
+	var newScYaml = &Config{}
+	newScYaml, err = ssc.getConfig(ctx, false)
 
-	newScYaml, err := ssc.getConfig(ctx, false)
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
@@ -440,20 +442,15 @@ func testFinalizeAllocation(
 		state.Balance(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
 	)
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 	require.EqualValues(t, "finalized", resp)
 
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
+	var newScYaml = &Config{}
+	newScYaml, err = ssc.getConfig(ctx, false)
 
-	newScYaml, err := ssc.getConfig(ctx, false)
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
@@ -564,11 +561,6 @@ func setupMocksFinishAllocation(
 
 	sAllocation.WritePoolOwners = []string{sAllocation.Owner}
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
-	require.NoError(t, err)
-
-	var allications = Allocations{}
-	allications.List.add(sAllocation.ID)
-	_, err = ctx.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allications)
 	require.NoError(t, err)
 
 	var cPool = challengePool{
