@@ -65,7 +65,19 @@ func SetupStorageRestHandler(rh *RestHandler) {
 	http.HandleFunc(storage+"/getChallengePoolStat", srh.getChallengePoolStat)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat getChallengePoolStat
 // statistic for all locked tokens of a challenge pool
+//
+// parameters:
+//    + name: allocation_id
+//      description: allocation for which to get challenge pools statistics
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: []untilStat
+//  400:
 func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
 
 	var (
