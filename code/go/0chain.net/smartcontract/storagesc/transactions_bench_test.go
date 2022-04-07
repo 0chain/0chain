@@ -424,7 +424,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 
 				// 6.3 keep for the benchmark
-				blobberID = alloc.Blobbers[rand.Intn(len(alloc.Blobbers))].ID
+				blobberID = alloc.BlobberDetails[rand.Intn(len(alloc.BlobberDetails))].BlobberID
 
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))

@@ -724,19 +724,21 @@ type StorageAllocation struct {
 	// Tx keeps hash with which the allocation has created or updated.
 	Tx string `json:"tx"`
 
-	DataShards        int                           `json:"data_shards"`
-	ParityShards      int                           `json:"parity_shards"`
-	Size              int64                         `json:"size"`
-	Expiration        common.Timestamp              `json:"expiration_date"`
-	Blobbers          []*StorageNode                `json:"blobbers"`
-	Owner             string                        `json:"owner_id"`
-	OwnerPublicKey    string                        `json:"owner_public_key"`
-	Stats             *StorageAllocationStats       `json:"stats"`
-	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
-	PreferredBlobbers []string                      `json:"preferred_blobbers"`
-	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
-	BlobberMap        map[string]*BlobberAllocation `json:"-" msg:"-"`
-	IsImmutable       bool                          `json:"is_immutable"`
+	DataShards        int                     `json:"data_shards"`
+	ParityShards      int                     `json:"parity_shards"`
+	Size              int64                   `json:"size"`
+	Expiration        common.Timestamp        `json:"expiration_date"`
+	Owner             string                  `json:"owner_id"`
+	OwnerPublicKey    string                  `json:"owner_public_key"`
+	Stats             *StorageAllocationStats `json:"stats"`
+	DiverseBlobbers   bool                    `json:"diverse_blobbers"`
+	PreferredBlobbers []string                `json:"preferred_blobbers"`
+	// Blobbers not to be used anywhere except /allocation and /allocations table
+	// if Blobbers are getting used in any smart-contract, we should avoid.
+	Blobbers       []*StorageNode                `json:"blobbers"`
+	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
+	BlobberMap     map[string]*BlobberAllocation `json:"-" msg:"-"`
+	IsImmutable    bool                          `json:"is_immutable"`
 
 	// Requested ranges.
 	ReadPriceRange             PriceRange    `json:"read_price_range"`
@@ -839,24 +841,12 @@ func (sa *StorageAllocation) removeBlobber(
 	}
 	delete(sa.BlobberMap, removeId)
 
-	found = false
-	for i, d := range sa.Blobbers {
-		if d.ID == removeId {
-			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
-			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
-	}
 	var removedBlobber *StorageNode
 	found = false
 	for i, d := range blobbers {
 		if d.ID == removeId {
 			removedBlobber = blobbers[i]
-			blobbers[i] = blobbers[len(sa.Blobbers)-1]
+			blobbers[i] = blobbers[len(sa.BlobberDetails)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
 			break
@@ -869,7 +859,7 @@ func (sa *StorageAllocation) removeBlobber(
 	found = false
 	for i, d := range sa.BlobberDetails {
 		if d.BlobberID == removeId {
-			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.Blobbers)-1]
+			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
 			removedBlobber.Used -= d.Size
 			found = true
@@ -929,7 +919,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	addedBlobber.Used += sa.bSize()
 	afterSize := sa.bSize()
 
-	sa.Blobbers = append(sa.Blobbers, addedBlobber)
 	blobbers = append(blobbers, addedBlobber)
 	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
 	sa.BlobberMap[addId] = ba
@@ -962,6 +951,22 @@ func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 		}
 	}
 	return
+}
+
+func (sa *StorageAllocation) getBlobbers(balances chainstate.StateContextI) error {
+
+	for _, ba := range sa.BlobberDetails {
+		blobber, err := balances.GetEventDB().GetBlobber(ba.BlobberID)
+		if err != nil {
+			return err
+		}
+		sn, err := blobberTableToStorageNode(*blobber)
+		if err != nil {
+			return err
+		}
+		sa.Blobbers = append(sa.Blobbers, &sn.StorageNode)
+	}
+	return nil
 }
 
 func (sa *StorageAllocation) addWritePoolOwner(userId string) {

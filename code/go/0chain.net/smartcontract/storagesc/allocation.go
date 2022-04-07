@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 
@@ -327,11 +326,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	sa.ID = t.Hash
-	allocatedBlobbers := make([]*StorageNode, 0)
 	for _, b := range blobberNodes {
 		balloc := newBlobberAllocation(bSize, sa, b, t.CreationDate)
 		sa.BlobberDetails = append(sa.BlobberDetails, balloc)
-		allocatedBlobbers = append(allocatedBlobbers, b)
 
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
 			sa.ChallengeCompletionTime = b.Terms.ChallengeCompletionTime
@@ -354,11 +351,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		}
 	}
 
-	sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
-		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
-	})
-
-	sa.Blobbers = allocatedBlobbers
 	sa.StartTime = t.CreationDate
 	sa.Tx = t.Hash
 
