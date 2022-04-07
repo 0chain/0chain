@@ -42,6 +42,7 @@ type Blobber struct {
 	UnstakeTotal       int64 `json:"unstake_total"`
 	Reward             int64 `json:"reward"`
 	TotalServiceCharge int64 `json:"total_service_charge"`
+	TotalStake         int64 `json:"total_stake"`
 
 	Name        string `json:"name" gorm:"name"`
 	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
