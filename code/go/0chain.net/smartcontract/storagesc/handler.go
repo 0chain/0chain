@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/smartcontract"
 
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -34,7 +33,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 			if balances.GetEventDB() != nil {
 				err = allocationObj.getBlobbers(balances)
 				if err != nil {
-					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "cannot get blobber")
 				}
 			}
 			result = append(result, allocationObj)
