@@ -8,7 +8,9 @@ clean_sharder () {
     [ -d "./data/sharder$i/data/rocksdb" ] && rm -rf "./data/sharder$i/data/rocksdb" && mkdir -p "./data/sharder$i/data/rocksdb" && echo " > clean rocksdb"
     [ -d "./data/sharder$i/log" ] && rm -rf "./data/sharder$i/log" && mkdir -p "./data/sharder$i/log" && echo " > clean logs"
     [ -d "./data/sharder$i/tmp" ] && rm -rf "./data/sharder$i/tmp" && mkdir -p "./data/sharder$i/tmp" && echo " > clean tmp"
-    [ -d "./data/sharder$i/postgres" ] && rm -rf "./data/sharder$i/postgres" && ./cli.sharder.postgres.sh $i  && echo " > clean postgres"
+    [ -d "./data/sharder$i/postgres" ] && rm -rf "./data/sharder$i/postgres"  && mkdir -p "./data/sharder$i/postgres" && \
+    [ -d "./data/sharder$i/cassandra" ] && rm -rf "./data/sharder$i/cassandra" && mkdir -p "./data/sharder$i/cassandra" && \
+    ./cli.sharder.db.sh $i  && echo " > clean [postgres, cassandra]"
 }
 
 # mkdir,copy and update config for current sharder
