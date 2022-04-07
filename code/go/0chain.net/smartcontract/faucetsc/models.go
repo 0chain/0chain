@@ -18,13 +18,6 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
-type periodicResponse struct {
-	Used    state.Balance `json:"tokens_poured"`
-	Start   time.Time     `json:"start_time"`
-	Restart string        `json:"time_left"`
-	Allowed state.Balance `json:"tokens_allowed"`
-}
-
 type GlobalNode struct {
 	*FaucetConfig `json:"faucet_config"`
 	ID            string        `json:"id"`
@@ -115,7 +108,7 @@ func (gn *GlobalNode) setCostValue(key, value string) error {
 		return fmt.Errorf("key %s not recognised as setting", key)
 	}
 	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
-	for _, costFunction := range costFunctions {
+	for _, costFunction := range CostFunctions {
 		if costKey != strings.ToLower(costFunction) {
 			continue
 		}

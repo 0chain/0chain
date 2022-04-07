@@ -34,7 +34,7 @@ var (
 		"cost",
 	}
 
-	costFunctions = []string{
+	CostFunctions = []string{
 		"update-settings",
 		"pour",
 		"refill",
@@ -53,7 +53,7 @@ type FaucetConfig struct {
 }
 
 // configurations from sc.yaml
-func getConfig() (conf *FaucetConfig) {
+func GetConfig() (conf *FaucetConfig) {
 	conf = new(FaucetConfig)
 	conf.PourAmount = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.pour_amount") * 1e10)
 	conf.MaxPourAmount = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.max_pour_amount") * 1e10)
