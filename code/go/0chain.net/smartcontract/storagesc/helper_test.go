@@ -247,7 +247,7 @@ func (c *Client) validTicket(t testing.TB, challID, blobID string, ok bool,
 	return
 }
 
-func (nar *newAllocationRequest) callNewAllocReq(t testing.TB, clientID string,
+func (nar *NewAllocationRequest) callNewAllocReq(t testing.TB, clientID string,
 	value int64, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (resp string, err error) {
 
@@ -290,7 +290,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 
 	setConfig(t, balances)
 
-	var nar = new(newAllocationRequest)
+	var nar = new(NewAllocationRequest)
 	nar.DataShards = 10
 	nar.ParityShards = 10
 	nar.Expiration = common.Timestamp(exp)

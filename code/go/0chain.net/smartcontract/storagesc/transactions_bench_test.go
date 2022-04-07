@@ -139,7 +139,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				{
 					tp += 1
 
-					var nar = new(newAllocationRequest)
+					var nar = new(NewAllocationRequest)
 					nar.DataShards = 10
 					nar.ParityShards = 10
 					nar.Expiration = common.Timestamp(exp)
@@ -216,7 +216,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	var allocs []string
 	for i := 0; i < 1000; i++ {
 
-		var nar = new(newAllocationRequest)
+		var nar = new(NewAllocationRequest)
 		nar.DataShards = 10
 		nar.ParityShards = 10
 		nar.Expiration = common.Timestamp(exp)
@@ -351,7 +351,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	var allocs []string
 	for i := 0; i < 1000; i++ {
 
-		var nar = new(newAllocationRequest)
+		var nar = new(NewAllocationRequest)
 		nar.DataShards = 10
 		nar.ParityShards = 10
 		nar.Expiration = common.Timestamp(exp)

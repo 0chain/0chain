@@ -718,6 +718,7 @@ func (pr *PriceRange) isMatch(price state.Balance) bool {
 }
 
 // StorageAllocation request and entity.
+// swagger:model StorageAllocation
 type StorageAllocation struct {
 	// ID is unique allocation ID that is equal to hash of transaction with
 	// which the allocation has created.

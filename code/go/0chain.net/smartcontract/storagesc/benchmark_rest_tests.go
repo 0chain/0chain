@@ -109,7 +109,7 @@ func BenchmarkRestTests(
 				params: func() url.Values {
 					var values url.Values = make(map[string][]string)
 					now := common.Timestamp(time.Now().Unix())
-					nar, _ := (&newAllocationRequest{
+					nar, _ := (&NewAllocationRequest{
 						DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 						ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 						Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),

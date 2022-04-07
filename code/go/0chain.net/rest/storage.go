@@ -4,10 +4,13 @@ import (
 	"net/http"
 	"strconv"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
 
+	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
 	"0chain.net/smartcontract"
@@ -48,18 +51,128 @@ func SetupStorageRestHandler(rh *RestHandler) {
 	http.HandleFunc(storage+"/openchallenges", srh.getOpenChallenges)
 	http.HandleFunc(storage+"/getchallenge", srh.getChallenge)
 	http.HandleFunc(storage+"/getStakePoolStat", srh.getStakePoolStat)
+	http.HandleFunc(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat)
+	http.HandleFunc(storage+"/get_block_by_hash", srh.getBlockByHash)
+	http.HandleFunc(storage+"/get_blocks", srh.getBlocks)
+	http.HandleFunc(storage+"/total_saved_data", srh.getTotalData)
 }
 
-// getStakePoolStat swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
+// Gets the total data stored across all blobbers. Todo: We need to rewrite this to use event database not MPT
+//
+// responses:
+//  200: int64Map
+//  400:
+func (_ *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
+	common.Respond(w, r, nil, common.NewErrInternal("not implemented yet"))
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
+// Gets block information for all blocks. Todo: We need to add a filter to this.
+//
+// parameters:
+//    + name: block_hash
+//      description: block hash
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: userPoolStat
+//  400:
+//  500:
+func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
+	block, err := srh.GetEventDB().GetBlocks()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, &block, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat getUserStakePoolStat
+// Gets block information from block hash
+//
+// parameters:
+//    + name: block_hash
+//      description: block hash
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: userPoolStat
+//  400:
+//  500:
+func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Request) {
+	hash := r.URL.Query().Get("block_hash")
+	if len(hash) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("annot find valid block hash: "+hash))
+		return
+	}
+
+	block, err := srh.GetEventDB().GetBlocksByHash(hash)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, &block, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat getUserStakePoolStat
+// Gets statistic for a user's stake pools
+//
+// parameters:
+//    + name: client_id
+//      description: client for which to get stake pool information
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: userPoolStat
+//  400:
+func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("client_id")
+
+	pools, err := srh.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Blobber))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
+		return
+	}
+
+	var ups = new(userPoolStat)
+	ups.Pools = make(map[datastore.Key][]*storagesc.DelegatePoolStat)
+	for _, pool := range pools {
+		var dps = storagesc.DelegatePoolStat{
+			ID:           pool.PoolID,
+			Balance:      state.Balance(pool.Balance),
+			DelegateID:   pool.DelegateID,
+			Rewards:      state.Balance(pool.Reward),
+			TotalPenalty: state.Balance(pool.TotalPenalty),
+			TotalReward:  state.Balance(pool.TotalReward),
+			Status:       spenum.PoolStatus(pool.Status).String(),
+			RoundCreated: pool.RoundCreated,
+		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dps)
+	}
+
+	common.Respond(w, r, ups, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
 // Gets statistic for all locked tokens of a stake pool
 //
 // parameters:
 //    + name: blobber_id
 //      description: id of blobber
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:stakePoolStat
+//  200: stakePoolStat
 //  400:
 //  500:
 func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
@@ -79,19 +192,23 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, spStats(*blobber, delegatePools), nil)
 }
 
-// getChallenge swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
 //    + name: blobber
 //      description: id of blobber
 //      required: true
+//      in: query
+//      type: string
 //    + name: challenge
 //      description: id of challenge
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:storagesc.StorageChallenge
+//  200: StorageChallenge
 //  400:
 //  404:
 //  500:
@@ -124,16 +241,18 @@ func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Reque
 	common.Respond(w, r, challenge, nil)
 }
 
-// getOpenChallenges swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges openchallenges
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges openchallenges
 // Gets open challenges for a blobber
 //
 // parameters:
 //    + name: blobber
 //      description: id of blobber for which to get open challenges
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:storagesc.blobberChallengeObj
+//  200: BlobberChallenge
 //  400:
 //  404:
 //  500:
@@ -163,16 +282,18 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	}
 }
 
-// getWriteMarkersHandler swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator get_validator
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator get_validator
 // Gets validator information
 //
 // parameters:
 //    + name: validator_id
 //      description: validator on which to get information
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.Validator
+//  200: []Validator
 //  400:
 //  500:
 func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Request) {
@@ -195,16 +316,18 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 	common.Respond(w, r, validator, nil)
 }
 
-// getWriteMarkersHandler swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
 // Gets read markers according to a filter
 //
 // parameters:
 //    + name: allocation_id
 //      description: count write markers for this allocation
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.WriteMarker
+//  200: []WriteMarker
 //  400:
 //  500:
 func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Request) {
@@ -226,16 +349,18 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, writeMarkers, nil)
 }
 
-// getReadMarkers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers count_readmarkers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers count_readmarkers
 // Gets read markers according to a filter
 //
 // parameters:
 //    + name: allocation_id
 //      description: count read markers for this allocation
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:readMarkersCount
+//  200: readMarkersCount
 //  400
 //  500:
 func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *http.Request) {
@@ -262,23 +387,33 @@ func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *htt
 	common.Respond(w, r, readMarkersCount{ReadMarkersCount: count}, nil)
 }
 
-// getReadMarkers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers readmarkers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers readmarkers
 // Gets read markers according to a filter
 //
 // parameters:
 //    + name: allocation_id
 //      description: filter read markers by this allocation
+//      in: query
+//      type: string
 //    + name: auth_ticket
 //      description: filter in only read markers using auth thicket
+//      in: query
+//      type: string
 //    + name: offset
 //      description: offset
+//      in: query
+//      type: string
 //    + name: limit
 //      description: limit
+//      in: query
+//      type: string
 //    + name: sort
 //      description: desc or asc
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.ReadMarker
+//  200: []ReadMarker
 //  500:
 func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -340,17 +475,21 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, readMarkers, nil)
 }
 
-// getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation
 // Gets latest read marker for a client and blobber
 //
 // parameters:
 //    + name: client
 //      description: client
+//      in: query
+//      type: string
 //    + name: blobber
 //      description: blobber
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.Error
+//  200: []Error
 //  500:
 func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -376,6 +515,24 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 	}
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
+// Calculates the cost of a new allocation request. Todo redo with changes to new allocation request smart contract
+//
+// parameters:
+//
+// responses:
+//  200: int64Map
+//  400:
+//  500:
+func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
+	//var ssc = storagesc.StorageSmartContract{
+	//	SmartContract: sci.NewSC(storagesc.ADDRESS),
+	//}
+	//result, err := ssc.GetAllocationMinLockHandler(r.Context(), r.URL.Query(), )
+
+	common.Respond(w, r, nil, common.NewErrInternal("allocation_min_lock temporary unimplemented"))
+}
+
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation
 // Gets allocation object
 //
@@ -383,9 +540,11 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 //    + name: transaction_hash
 //      description: offset
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.Error
+//  200: StorageAllocation
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAllocationStats(w http.ResponseWriter, r *http.Request) {
@@ -401,16 +560,18 @@ func (srh *StorageRestHandler) getAllocationStats(w http.ResponseWriter, r *http
 	common.Respond(w, r, allocationObj, nil)
 }
 
-// getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors errors
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors errors
 // Gets errors returned by indicated transaction
 //
 // parameters:
 //    + name: transaction_hash
 //      description: offset
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.Error
+//  200: []Error
 //  400:
 //  500:
 func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request) {
@@ -427,19 +588,25 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
-// GetWriteMarker swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers writemarkers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers writemarkers
 // Gets list of write markers satisfying filter
 //
 // parameters:
 //    + name: offset
 //      description: offset
+//      in: query
+//      type: string
 //    + name: limit
 //      description: limit
+//      in: query
+//      type: string
 //    + name: is_descending
 //      description: is descending
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.WriteMarker
+//  200: []WriteMarker
 //  400:
 //  500:
 func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Request) {
@@ -479,21 +646,29 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, rtv, nil)
 }
 
-// GetTransactionByFilter swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions transactions
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions transactions
 // Gets filtered list of transaction information
 //
 // parameters:
 //    + name: client_id
 //      description: restrict to transactions sent by the specified client
+//      in: query
+//      type: string
 //    + name: offset
 //      description: offset
+//      in: query
+//      type: string
 //    + name: limit
 //      description: limit
+//      in: query
+//      type: string
 //    + name: block_hash
 //      description: restrict to transactions in indicated block
+//      in: query
+//      type: string
 //
 // responses:
-//  200: body:[]event.Transaction
+//  200: []Transaction
 //  400:
 //  500:
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
@@ -545,11 +720,11 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 
 }
 
-// getTransactionByHash swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
 // Gets transaction information from transaction hash
 //
 // responses:
-//  200: body:event.Transaction
+//  200: Transaction
 //  500:
 func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *http.Request) {
 	var transactionHash = r.URL.Query().Get("transaction_hash")
@@ -572,7 +747,7 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 // Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity).
 //
 // responses:
-//  200: body:storagesc.StorageNodes
+//  200: StorageNodes
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
 	blobbers, err := srh.GetEventDB().GetBlobbers()
@@ -595,11 +770,11 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, sns, nil)
 }
 
-// getBlobberGeoLocation swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_lat_long get_blobber_lat_long
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_lat_long get_blobber_lat_long
 // Gets list of latitude and longitude for all blobbers
 //
 // responses:
-//  200: body:event.BlobberLatLong
+//  200: BlobberLatLong
 //  500:
 func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *http.Request) {
 	blobbers, err := srh.GetEventDB().GetAllBlobberLatLong()
@@ -612,11 +787,11 @@ func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobbers, nil)
 }
 
-// GetBlobberTotalStakes swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes get_blobber_total_stakes
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes get_blobber_total_stakes
 // Gets total stake of all blobbers combined
 //
 // responses:
-//  200: intMap
+//  200: int64Map
 //  500:
 func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *http.Request) {
 	blobbers, err := srh.GetEventDB().GetAllBlobberId()
@@ -640,11 +815,11 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 	}, nil)
 }
 
-// GetBlobberCount swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_count get_blobber_count
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_count get_blobber_count
 // Get count of blobber
 //
 // responses:
-//  200: intMap
+//  200: int64Map
 //  400:
 func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Request) {
 	blobberCount, err := srh.GetEventDB().GetBlobberCount()
@@ -666,6 +841,8 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 //    + name: blobber_id
 //      description: blobber for which to return information
 //      required: true
+//      in: query
+//      type: string
 //
 // responses:
 //  200: StorageNode

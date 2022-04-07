@@ -239,7 +239,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marker verification failed: %v", err)
 	}
 
-	var request = newAllocationRequest{
+	var request = NewAllocationRequest{
 		DataShards:                 conf.FreeAllocationSettings.DataShards,
 		ParityShards:               conf.FreeAllocationSettings.ParityShards,
 		Size:                       conf.FreeAllocationSettings.Size,
@@ -251,7 +251,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
 	}
 
-	arBytes, err := request.encode()
+	arBytes, err := request.Encode()
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marshal request: %v", err)

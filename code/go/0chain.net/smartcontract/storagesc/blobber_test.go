@@ -1351,7 +1351,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 	var addAlloc = func(t *testing.T, ssc *StorageSmartContract, client *Client,
 		now, exp int64, balances chainState.StateContextI) (allocID string) {
 
-		var nar = new(newAllocationRequest)
+		var nar = new(NewAllocationRequest)
 		nar.DataShards = 10
 		nar.ParityShards = 10
 		nar.Expiration = common.Timestamp(exp)

@@ -68,7 +68,6 @@ func BenchmarkTests(
 ) bk.TestSuite {
 	var now = common.Now()
 	var ssc = StorageSmartContract{
-
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
@@ -142,7 +141,7 @@ func BenchmarkTests(
 				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
 			},
 			input: func() []byte {
-				bytes, _ := (&newAllocationRequest{
+				bytes, _ := (&NewAllocationRequest{
 					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
@@ -154,7 +153,7 @@ func BenchmarkTests(
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
-				}).encode()
+				}).Encode()
 				return bytes
 			}(),
 		},
@@ -174,7 +173,7 @@ func BenchmarkTests(
 				for i := 0; i < viper.GetInt(bk.AvailableKeys); i++ {
 					blobberUrls = append(blobberUrls, getMockBlobberId(0)+".com")
 				}
-				bytes, _ := (&newAllocationRequest{
+				bytes, _ := (&NewAllocationRequest{
 					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
@@ -186,7 +185,7 @@ func BenchmarkTests(
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
-				}).encode()
+				}).Encode()
 				return bytes
 			}(),
 		},

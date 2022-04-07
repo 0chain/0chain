@@ -201,7 +201,7 @@ func TestSelectBlobbers(t *testing.T) {
 			t.Parallel()
 			ssc, sa, blobbers, balances := setup(t, tt.args)
 
-			outBlobbers, outSize, err := ssc.selectBlobbers(
+			outBlobbers, outSize, err := ssc.SelectBlobbers(
 				now, blobbers, &sa, randomSeed, balances,
 			)
 
@@ -796,7 +796,7 @@ func isEqualStrings(a, b []string) (eq bool) {
 
 func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	const clientID, clientPk = "client_hex", "pk"
-	var nar newAllocationRequest
+	var nar NewAllocationRequest
 	nar.DataShards = 2
 	nar.ParityShards = 3
 	nar.Size = 1024
@@ -806,7 +806,7 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.PreferredBlobbers = []string{"one", "two"}
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
-	var alloc = nar.storageAllocation()
+	var alloc = nar.StorageAllocation()
 	require.Equal(t, alloc.DataShards, nar.DataShards)
 	require.Equal(t, alloc.ParityShards, nar.ParityShards)
 	require.Equal(t, alloc.Size, nar.Size)
@@ -821,7 +821,7 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 
 func Test_newAllocationRequest_decode(t *testing.T) {
 	const clientID, clientPk = "client_id_hex", "client_pk_hex"
-	var ne, nd newAllocationRequest
+	var ne, nd NewAllocationRequest
 	ne.DataShards = 1
 	ne.ParityShards = 1
 	ne.Size = 2 * GB
@@ -831,7 +831,7 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	ne.PreferredBlobbers = []string{"b1", "b2"}
 	ne.ReadPriceRange = PriceRange{1, 2}
 	ne.WritePriceRange = PriceRange{2, 3}
-	require.NoError(t, nd.decode(mustEncode(t, &ne)))
+	require.NoError(t, nd.Decode(mustEncode(t, &ne)))
 	assert.EqualValues(t, &ne, &nd)
 }
 
@@ -998,7 +998,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 5. invalid request
 
-	var nar newAllocationRequest
+	var nar NewAllocationRequest
 	nar.ReadPriceRange = PriceRange{20, 10}
 
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
@@ -1241,7 +1241,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	var (
 		tx          transaction.Transaction
-		nar         newAllocationRequest
+		nar         NewAllocationRequest
 		allBlobbers *StorageNodes
 		conf        Config
 		err         error
@@ -1715,8 +1715,8 @@ func Test_preferred_blobbers(t *testing.T) {
 	require.True(t, len(blobs) > 4)
 
 	// allocation request to modify and create
-	var getAllocRequest = func() (nar *newAllocationRequest) {
-		nar = new(newAllocationRequest)
+	var getAllocRequest = func() (nar *NewAllocationRequest) {
+		nar = new(NewAllocationRequest)
 		nar.DataShards = 10
 		nar.ParityShards = 10
 		nar.Expiration = common.Timestamp(exp)
@@ -1729,7 +1729,7 @@ func Test_preferred_blobbers(t *testing.T) {
 		return
 	}
 
-	var newAlloc = func(t *testing.T, nar *newAllocationRequest) string {
+	var newAlloc = func(t *testing.T, nar *NewAllocationRequest) string {
 		t.Helper()
 		// call SC function
 		tp += 100

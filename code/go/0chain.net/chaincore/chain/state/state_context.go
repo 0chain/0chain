@@ -80,6 +80,11 @@ type StateContextI interface {
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 }
 
+type ReadOnlyStateContextI interface {
+	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
+	GetEventDB() *event.EventDb
+}
+
 //StateContext - a context object used to manipulate global state
 type StateContext struct {
 	block                         *block.Block

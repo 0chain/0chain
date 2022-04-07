@@ -132,7 +132,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["write_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_unlock"), nil)
 	// stake pool
 	//ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler
-	ssc.SmartContract.RestHandlers["/getUserStakePoolStat"] = ssc.getUserStakePoolStatHandler
+	//ssc.SmartContract.RestHandlers["/getUserStakePoolStat"] = ssc.getUserStakePoolStatHandler
 	ssc.SmartContractExecutionStats["stake_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_pay_interests"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_pay_interests"), nil)
@@ -142,12 +142,12 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	// events db
 	//ssc.SmartContract.RestHandlers["/transaction"] = ssc.GetTransactionByHashHandler
 	//ssc.SmartContract.RestHandlers["/transactions"] = ssc.GetTransactionByFilterHandler
-	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
-	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
+	//ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
+	//ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
 	//ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
 	//ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 	// blobber aggregated saved data
-	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
+	//ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }
 
 func (ssc *StorageSmartContract) GetName() string {

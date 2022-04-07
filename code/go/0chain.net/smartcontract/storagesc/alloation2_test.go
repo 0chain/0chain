@@ -49,7 +49,7 @@ func TestNewAllocation(t *testing.T) {
 		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
 	}
 
-	var request = newAllocationRequest{
+	var request = NewAllocationRequest{
 		Owner:                      clientId,
 		OwnerPublicKey:             "my public key",
 		Size:                       scYaml.MinAllocSize,
@@ -776,7 +776,7 @@ func (f *formulaeFinalizeAllocation) setFinilizationPassRates() {
 	}
 }
 
-func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers SortedBlobbers,
+func testNewAllocation(t *testing.T, request NewAllocationRequest, blobbers SortedBlobbers,
 	scYaml Config, blobberYaml mockBlobberYaml, stakes blobberStakes,
 ) (err error) {
 	require.EqualValues(t, len(blobbers), len(stakes))
@@ -874,7 +874,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 type formulaeCommitNewAllocation struct {
 	scYaml      Config
 	blobberYaml mockBlobberYaml
-	request     newAllocationRequest
+	request     NewAllocationRequest
 	blobbers    SortedBlobbers
 	stakes      blobberStakes
 }

@@ -141,7 +141,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	return string(buff), nil
 }
 
-type newAllocationRequest struct {
+type NewAllocationRequest struct {
 	DataShards                 int              `json:"data_shards"`
 	ParityShards               int              `json:"parity_shards"`
 	Size                       int64            `json:"size"`
@@ -156,7 +156,7 @@ type newAllocationRequest struct {
 }
 
 // storageAllocation from the request
-func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
+func (nar *NewAllocationRequest) StorageAllocation() (sa *StorageAllocation) {
 	sa = new(StorageAllocation)
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
@@ -173,11 +173,11 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	return
 }
 
-func (nar *newAllocationRequest) decode(b []byte) error {
+func (nar *NewAllocationRequest) Decode(b []byte) error {
 	return json.Unmarshal(b, nar)
 }
 
-func (nar *newAllocationRequest) encode() ([]byte, error) {
+func (nar *NewAllocationRequest) Encode() ([]byte, error) {
 	return json.Marshal(nar)
 }
 
@@ -261,7 +261,7 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	})
 }
 
-// newAllocationRequest creates new allocation
+// NewAllocationRequest creates new allocation
 func (sc *StorageSmartContract) newAllocationRequest(
 	t *transaction.Transaction,
 	input []byte,
@@ -306,13 +306,13 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"Invalid client in the transaction. No client id in transaction")
 	}
 
-	var request newAllocationRequest
-	if err = request.decode(input); err != nil {
+	var request NewAllocationRequest
+	if err = request.Decode(input); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
 
-	var sa = request.storageAllocation() // (set fields, including expiration)
+	var sa = request.StorageAllocation() // (set fields, including expiration)
 
 	var seed int64
 	if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
@@ -320,7 +320,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"Failed to create seed for randomizeNodes")
 	}
 
-	blobberNodes, bSize, err := sc.selectBlobbers(
+	blobberNodes, bSize, err := sc.SelectBlobbers(
 		t.CreationDate, *allBlobbersList, sa, seed, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
@@ -383,7 +383,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	return resp, err
 }
 
-func (sc *StorageSmartContract) selectBlobbers(
+func (sc *StorageSmartContract) SelectBlobbers(
 	creationDate common.Timestamp,
 	allBlobbersList StorageNodes,
 	sa *StorageAllocation,

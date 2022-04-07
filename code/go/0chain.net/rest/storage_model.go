@@ -99,6 +99,11 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 	}, nil
 }
 
+// swagger:model userPoolStat
+type userPoolStat struct {
+	Pools map[datastore.Key][]*storagesc.DelegatePoolStat `json:"pools"`
+}
+
 // swagger:model stakePoolStat
 type stakePoolStat struct {
 	ID      string        `json:"pool_id"` // pool ID
