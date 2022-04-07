@@ -90,6 +90,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	blobber.LastHealthCheck = t.CreationDate
 	blobber.Used = savedBlobber.Used
+	blobber.SavedData = savedBlobber.SavedData
 
 	// update the list
 	blobbers.Nodes.add(blobber)
@@ -843,6 +844,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving blobber object: %v", err)
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"emitting allocation event: %v", err)
 	}
 
 	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
