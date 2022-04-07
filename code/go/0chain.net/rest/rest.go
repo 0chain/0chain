@@ -37,4 +37,5 @@ func (rh *RestHandler) SetupRestHandlers() {
 	SetupStorageRestHandler(rh)
 	SetupMinerRestHandler(rh)
 	SetupFaucetscRestHandler(rh)
+	SetupInterestPoolRestHandler(rh)
 }

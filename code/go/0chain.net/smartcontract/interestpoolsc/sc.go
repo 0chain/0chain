@@ -141,7 +141,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		if err := un.addPool(pool); err != nil {
 			return "", err
 		}
-		if _, err := balances.InsertTrieNode(un.getKey(gn.ID), un); err != nil {
+		if _, err := balances.InsertTrieNode(un.GetKey(gn.ID), un); err != nil {
 			return "", common.NewError("failed locking tokens", err.Error())
 		}
 		return resp, nil
@@ -169,7 +169,7 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", common.NewErrorf("failed to unlock token", "add transfer err: %v", err)
 		}
-		if _, err := balances.InsertTrieNode(un.getKey(gn.ID), un); err != nil {
+		if _, err := balances.InsertTrieNode(un.GetKey(gn.ID), un); err != nil {
 			return "", common.NewError("failed to unlock tokens", err.Error())
 		}
 		return response, nil
@@ -179,7 +179,7 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 
 func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_state.StateContextI) (*UserNode, error) {
 	un := newUserNode(id)
-	err := balances.GetTrieNode(un.getKey(ip.ID), un)
+	err := balances.GetTrieNode(un.GetKey(ip.ID), un)
 	switch err {
 	case nil, util.ErrValueNotPresent:
 		return un, nil
@@ -188,7 +188,7 @@ func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_st
 	}
 }
 
-func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) (*GlobalNode, error) {
+func (_ *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) (*GlobalNode, error) {
 	gn := newGlobalNode()
 	err := balances.GetTrieNode(gn.getKey(), gn)
 	switch err {
@@ -208,6 +208,27 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 				return nil, err
 			}
 		}
+		return gn, nil
+	default:
+		return nil, err
+	}
+}
+
+func GetGlobalNode(balances c_state.ReadOnlyStateContextI) (*GlobalNode, error) {
+	gn := newGlobalNode()
+	err := balances.GetTrieNode(gn.getKey(), gn)
+	switch err {
+	case nil:
+		return gn, nil
+	case util.ErrValueNotPresent:
+		const pfx = "smart_contracts.interestpoolsc."
+		var conf = config.SmartContractConfig
+		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
+		gn.APR = conf.GetFloat64(pfx + "apr")
+		gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
+		gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+		gn.OwnerId = conf.GetString(pfx + "owner_id")
+		gn.Cost = conf.GetStringMapInt(pfx + "cost")
 		return gn, nil
 	default:
 		return nil, err

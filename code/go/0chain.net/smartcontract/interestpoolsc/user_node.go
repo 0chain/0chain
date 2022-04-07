@@ -11,15 +11,16 @@ import (
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
+// swagger:model UserNode
 type UserNode struct {
 	ClientID string                   `json:"client_id"`
-	Pools    map[string]*interestPool `json:"pools"`
+	Pools    map[string]*InterestPool `json:"pools"`
 }
 
 func newUserNode(clientID datastore.Key) *UserNode {
 	return &UserNode{
 		ClientID: clientID,
-		Pools:    make(map[string]*interestPool),
+		Pools:    make(map[string]*InterestPool),
 	}
 }
 
@@ -60,7 +61,7 @@ func (un *UserNode) Decode(input []byte) error {
 		if err != nil {
 			return err
 		}
-		un.Pools = make(map[string]*interestPool, len(rawMessagesPools))
+		un.Pools = make(map[string]*InterestPool, len(rawMessagesPools))
 		for _, raw := range rawMessagesPools {
 			tempPool := newInterestPool()
 			err = tempPool.decode(*raw)
@@ -83,7 +84,7 @@ func (un *UserNode) GetHashBytes() []byte {
 	return encryption.RawHash(un.Encode())
 }
 
-func (un *UserNode) getKey(globalKey string) datastore.Key {
+func (un *UserNode) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey + un.ClientID)
 }
 
@@ -92,11 +93,11 @@ func (un *UserNode) hasPool(poolID datastore.Key) bool {
 	return pool != nil
 }
 
-func (un *UserNode) getPool(poolID datastore.Key) *interestPool {
+func (un *UserNode) getPool(poolID datastore.Key) *InterestPool {
 	return un.Pools[poolID]
 }
 
-func (un *UserNode) addPool(ip *interestPool) error {
+func (un *UserNode) addPool(ip *InterestPool) error {
 	if un.hasPool(ip.ID) {
 		return common.NewError("can't add pool", "user node already has pool")
 	}

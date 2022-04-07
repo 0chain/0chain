@@ -22,7 +22,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 
 		_ = un.addPool(pool)
 
-		_, err := balances.InsertTrieNode(un.getKey(ADDRESS), un)
+		_, err := balances.InsertTrieNode(un.GetKey(ADDRESS), un)
 		if err != nil {
 			panic(err)
 		}

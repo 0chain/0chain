@@ -311,7 +311,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 				require.Equal(t, savedGNode, *tt.args.gn)
 
 				var savedUNode UserNode
-				err = tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID), &savedUNode)
+				err = tt.args.balances.GetTrieNode(tt.args.un.GetKey(tt.args.gn.ID), &savedUNode)
 				if err != nil {
 					t.Errorf("can not fetch already saved user node")
 				}
@@ -654,7 +654,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 		// inserting user node
 		_, err := tb.InsertTrieNode(clientID1, &UserNode{
 			ClientID: clientID1,
-			Pools:    map[datastore.Key]*interestPool{},
+			Pools:    map[datastore.Key]*InterestPool{},
 		})
 		require.NoError(t, err)
 		// inserting global nodeinputData

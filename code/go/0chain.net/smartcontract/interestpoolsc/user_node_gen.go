@@ -69,7 +69,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 			if z.Pools == nil {
-				z.Pools = make(map[string]*interestPool, zb0002)
+				z.Pools = make(map[string]*InterestPool, zb0002)
 			} else if len(z.Pools) > 0 {
 				for key := range z.Pools {
 					delete(z.Pools, key)
@@ -77,7 +77,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			}
 			for zb0002 > 0 {
 				var za0001 string
-				var za0002 *interestPool
+				var za0002 *InterestPool
 				zb0002--
 				za0001, bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
@@ -92,7 +92,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					za0002 = nil
 				} else {
 					if za0002 == nil {
-						za0002 = new(interestPool)
+						za0002 = new(InterestPool)
 					}
 					bts, err = za0002.UnmarshalMsg(bts)
 					if err != nil {

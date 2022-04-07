@@ -17,6 +17,7 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
+// swagger:model InterestPoolGlobalNode
 type GlobalNode struct {
 	*SimpleGlobalNode `json:"simple_global_node"`
 	ID                string
@@ -117,7 +118,7 @@ func (gn *GlobalNode) setCostValue(key, value string) error {
 	}
 
 	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
-	for _, costFunction := range costFunctions {
+	for _, costFunction := range CostFunctions {
 		if costKey != strings.ToLower(costFunction) {
 			continue
 		}

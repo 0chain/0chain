@@ -17,11 +17,11 @@ const (
 func Test_newInterestPool(t *testing.T) {
 	tests := []struct {
 		name string
-		want *interestPool
+		want *InterestPool
 	}{
 		{
 			name: "new interest pool",
-			want: &interestPool{
+			want: &InterestPool{
 				ZcnLockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}},
 			},
 		},
@@ -58,7 +58,7 @@ func Test_interestPool_encode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip := &interestPool{
+			ip := &InterestPool{
 				ZcnLockingPool: tt.fields.ZcnLockingPool,
 				APR:            tt.fields.APR,
 				TokensEarned:   tt.fields.TokensEarned,
@@ -108,7 +108,7 @@ func Test_interestPool_decode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip := &interestPool{
+			ip := &InterestPool{
 				ZcnLockingPool: tt.fields.ZcnLockingPool,
 				APR:            tt.fields.APR,
 				TokensEarned:   tt.fields.TokensEarned,

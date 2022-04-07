@@ -42,7 +42,7 @@ func Test_newUserNode(t *testing.T) {
 			args: args{clientID: clientID1},
 			want: &UserNode{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 		},
 	}
@@ -58,7 +58,7 @@ func Test_newUserNode(t *testing.T) {
 func TestUserNode_Encode(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	tests := []struct {
 		name   string
@@ -69,7 +69,7 @@ func TestUserNode_Encode(t *testing.T) {
 			name: "ok encoding",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			want: encodedUserNodeWithClient1,
 		},
@@ -90,7 +90,7 @@ func TestUserNode_Encode(t *testing.T) {
 func TestUserNode_Decode(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	type args struct {
 		input []byte
@@ -105,7 +105,7 @@ func TestUserNode_Decode(t *testing.T) {
 			name: "decode ok",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			args:    args{input: encodedUserNodeWithClient1},
 			wantErr: false,
@@ -114,7 +114,7 @@ func TestUserNode_Decode(t *testing.T) {
 			name: "decoding without pool",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			args:    args{input: []byte(encodedUserNodeWithClient1StringWthPool)},
 			wantErr: false,
@@ -123,7 +123,7 @@ func TestUserNode_Decode(t *testing.T) {
 			name: "decoding without clientid",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			args:    args{input: []byte(encodedUserNodeWithClient1StringWthCId)},
 			wantErr: false,
@@ -132,7 +132,7 @@ func TestUserNode_Decode(t *testing.T) {
 			name: "decoding Error : invalid character",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			args:    args{input: []byte(wrongUserNodeData)},
 			wantErr: true,
@@ -141,7 +141,7 @@ func TestUserNode_Decode(t *testing.T) {
 			name: "decoding Error : invalid character",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			args:    args{input: []byte(emptyUserNodeData)},
 			wantErr: false,
@@ -150,7 +150,7 @@ func TestUserNode_Decode(t *testing.T) {
 			name: "decoding Error :  cannot unmarshal",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    make(map[datastore.Key]*interestPool),
+				Pools:    make(map[datastore.Key]*InterestPool),
 			},
 			args:    args{input: []byte(encodedUserNodeWithClient1StringWthWrongPool)},
 			wantErr: true,
@@ -172,7 +172,7 @@ func TestUserNode_Decode(t *testing.T) {
 func TestUserNode_getKey(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	type args struct {
 		globalKey string
@@ -199,7 +199,7 @@ func TestUserNode_getKey(t *testing.T) {
 				ClientID: tt.fields.ClientID,
 				Pools:    tt.fields.Pools,
 			}
-			if got := un.getKey(tt.args.globalKey); got != tt.want {
+			if got := un.GetKey(tt.args.globalKey); got != tt.want {
 				t.Errorf("getKey() = %v, want %v", got, tt.want)
 			}
 		})
@@ -209,7 +209,7 @@ func TestUserNode_getKey(t *testing.T) {
 func TestUserNode_GetHashBytes(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	tests := []struct {
 		name   string
@@ -220,7 +220,7 @@ func TestUserNode_GetHashBytes(t *testing.T) {
 			name: "getHashBytes with pools",
 			fields: fields{
 				ClientID: "client_1",
-				Pools:    map[datastore.Key]*interestPool{},
+				Pools:    map[datastore.Key]*InterestPool{},
 			},
 			want: encryptedHash,
 		},
@@ -250,7 +250,7 @@ func TestUserNode_GetHashBytes(t *testing.T) {
 func TestUserNode_GetHash(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	tests := []struct {
 		name   string
@@ -261,7 +261,7 @@ func TestUserNode_GetHash(t *testing.T) {
 			name: "GetHash with pools",
 			fields: fields{
 				ClientID: "client_1",
-				Pools:    map[datastore.Key]*interestPool{},
+				Pools:    map[datastore.Key]*InterestPool{},
 			},
 			want: "0621c9418fac935ed94a6da6ff9f8c2e2de7d943bf100bae89600172077d4beb",
 		},
@@ -289,7 +289,7 @@ func TestUserNode_GetHash(t *testing.T) {
 func TestUserNode_hasPool(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	type args struct {
 		poolID datastore.Key
@@ -304,8 +304,8 @@ func TestUserNode_hasPool(t *testing.T) {
 			name: "if has pool",
 			fields: fields{
 				ClientID: "client_1",
-				Pools: map[datastore.Key]*interestPool{
-					"client_1": &interestPool{},
+				Pools: map[datastore.Key]*InterestPool{
+					"client_1": &InterestPool{},
 				},
 			},
 			args: args{
@@ -317,7 +317,7 @@ func TestUserNode_hasPool(t *testing.T) {
 			name: "if hasn't pool",
 			fields: fields{
 				ClientID: "client_1",
-				Pools:    map[datastore.Key]*interestPool{},
+				Pools:    map[datastore.Key]*InterestPool{},
 			},
 			args: args{
 				poolID: "client_1",
@@ -341,7 +341,7 @@ func TestUserNode_hasPool(t *testing.T) {
 func TestUserNode_getPool(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	type args struct {
 		poolID datastore.Key
@@ -350,13 +350,13 @@ func TestUserNode_getPool(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *interestPool
+		want   *InterestPool
 	}{
 		{
 			name: "get pool when nil",
 			fields: fields{
 				ClientID: clientID1,
-				Pools: map[datastore.Key]*interestPool{
+				Pools: map[datastore.Key]*InterestPool{
 					"client_id": nil,
 				},
 			},
@@ -367,7 +367,7 @@ func TestUserNode_getPool(t *testing.T) {
 			name: "get pool when has not pool",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    map[datastore.Key]*interestPool{},
+				Pools:    map[datastore.Key]*InterestPool{},
 			},
 			args: args{poolID: clientID1},
 			want: nil,
@@ -376,8 +376,8 @@ func TestUserNode_getPool(t *testing.T) {
 			name: "get pool when has pool",
 			fields: fields{
 				ClientID: clientID1,
-				Pools: map[datastore.Key]*interestPool{
-					clientID1: &interestPool{
+				Pools: map[datastore.Key]*InterestPool{
+					clientID1: &InterestPool{
 						ZcnLockingPool: nil,
 						APR:            10,
 						TokensEarned:   0,
@@ -385,7 +385,7 @@ func TestUserNode_getPool(t *testing.T) {
 				},
 			},
 			args: args{poolID: clientID1},
-			want: &interestPool{
+			want: &InterestPool{
 				ZcnLockingPool: nil,
 				APR:            10,
 				TokensEarned:   0,
@@ -408,10 +408,10 @@ func TestUserNode_getPool(t *testing.T) {
 func TestUserNode_addPool(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	type args struct {
-		ip *interestPool
+		ip *InterestPool
 	}
 	tests := []struct {
 		name    string
@@ -423,8 +423,8 @@ func TestUserNode_addPool(t *testing.T) {
 			name: "error : pool already exists",
 			fields: fields{
 				ClientID: clientID1,
-				Pools: map[datastore.Key]*interestPool{
-					name: &interestPool{
+				Pools: map[datastore.Key]*InterestPool{
+					name: &InterestPool{
 						ZcnLockingPool: &tokenpool.ZcnLockingPool{
 							ZcnPool: tokenpool.ZcnPool{
 								TokenPool: tokenpool.TokenPool{ID: name},
@@ -437,7 +437,7 @@ func TestUserNode_addPool(t *testing.T) {
 				},
 			},
 			args: args{
-				ip: &interestPool{
+				ip: &InterestPool{
 					ZcnLockingPool: &tokenpool.ZcnLockingPool{
 						ZcnPool: tokenpool.ZcnPool{
 							TokenPool: tokenpool.TokenPool{ID: name},
@@ -454,9 +454,9 @@ func TestUserNode_addPool(t *testing.T) {
 			name: "add pool ok",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    map[datastore.Key]*interestPool{},
+				Pools:    map[datastore.Key]*InterestPool{},
 			},
-			args: args{ip: &interestPool{
+			args: args{ip: &InterestPool{
 				ZcnLockingPool: &tokenpool.ZcnLockingPool{
 					ZcnPool: tokenpool.ZcnPool{
 						TokenPool: tokenpool.TokenPool{ID: name},
@@ -485,7 +485,7 @@ func TestUserNode_addPool(t *testing.T) {
 func TestUserNode_deletePool(t *testing.T) {
 	type fields struct {
 		ClientID datastore.Key
-		Pools    map[datastore.Key]*interestPool
+		Pools    map[datastore.Key]*InterestPool
 	}
 	type args struct {
 		poolID datastore.Key
@@ -500,7 +500,7 @@ func TestUserNode_deletePool(t *testing.T) {
 			name: "can't delete pool, pool doesnt exist",
 			fields: fields{
 				ClientID: clientID1,
-				Pools:    map[datastore.Key]*interestPool{},
+				Pools:    map[datastore.Key]*InterestPool{},
 			},
 			args:    args{poolID: name},
 			wantErr: true,
@@ -509,7 +509,7 @@ func TestUserNode_deletePool(t *testing.T) {
 			name: "deleting pool",
 			fields: fields{
 				ClientID: clientID1,
-				Pools: map[datastore.Key]*interestPool{
+				Pools: map[datastore.Key]*InterestPool{
 					name: newInterestPool(),
 				},
 			},

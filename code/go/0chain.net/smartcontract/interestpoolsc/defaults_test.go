@@ -154,24 +154,9 @@ func testBalanceUnlock(client string, value int64) *testBalances {
 }
 
 // TEST FUNCTION
-// testPoolState creates a new instance of poolState
-func testPoolState() *poolStat {
-	return &poolStat{
-		ID:           "new_test_pool_state",
-		StartTime:    timeNow,
-		Duartion:     time.Duration(20 * time.Second),
-		TimeLeft:     0,
-		Locked:       true,
-		APR:          10,
-		TokensEarned: 10,
-		Balance:      10000,
-	}
-}
-
-// TEST FUNCTION
-// testInterestPool creates a new instance of interestPool using incoming parameters
-func testInterestPool(sec time.Duration, balance int) *interestPool {
-	return &interestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{
+// testInterestPool creates a new instance of InterestPool using incoming parameters
+func testInterestPool(sec time.Duration, balance int) *InterestPool {
+	return &InterestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{
 		ZcnPool: tokenpool.ZcnPool{
 			TokenPool: tokenpool.TokenPool{
 				ID:      "new_test_pool_state",
@@ -188,10 +173,10 @@ func testInterestPool(sec time.Duration, balance int) *interestPool {
 
 // TEST FUNCTION
 // testUserNode creates a new instance of UserNode using incoming parameters
-func testUserNode(client string, ip *interestPool) *UserNode {
+func testUserNode(client string, ip *InterestPool) *UserNode {
 	un := &UserNode{
 		ClientID: client,
-		Pools:    make(map[datastore.Key]*interestPool),
+		Pools:    make(map[datastore.Key]*InterestPool),
 	}
 	if ip != nil {
 		if err := un.addPool(ip); err != nil {

@@ -28,7 +28,7 @@ var (
 		"owner_id",
 		"cost",
 	}
-	costFunctions = []string{
+	CostFunctions = []string{
 		"lock",
 		"unlock",
 		"updateVariables",

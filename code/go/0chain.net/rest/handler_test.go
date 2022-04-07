@@ -1,4 +1,4 @@
-package interestpoolsc
+package rest
 
 import (
 	"context"
@@ -71,7 +71,7 @@ func TestInterestPoolSmartContract_getPoolStats(t *testing.T) {
 		SmartContract *smartcontractinterface.SmartContract
 	}
 	type args struct {
-		pool *interestPool
+		pool *InterestPool
 		t    time.Time
 	}
 	tests := []struct {

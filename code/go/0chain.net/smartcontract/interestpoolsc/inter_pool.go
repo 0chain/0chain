@@ -7,25 +7,25 @@ import (
 	"0chain.net/chaincore/tokenpool"
 )
 
-//msgp:ignore interestPool
+//msgp:ignore InterestPool
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-type interestPool struct {
+type InterestPool struct {
 	*tokenpool.ZcnLockingPool `json:"pool"`
 	APR                       float64       `json:"apr"`
 	TokensEarned              state.Balance `json:"tokens_earned"`
 }
 
-func newInterestPool() *interestPool {
-	return &interestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
+func newInterestPool() *InterestPool {
+	return &InterestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
 }
 
-func (ip *interestPool) encode() []byte {
+func (ip *InterestPool) encode() []byte {
 	buff, _ := json.Marshal(ip)
 	return buff
 }
 
-func (ip *interestPool) decode(input []byte) error {
+func (ip *InterestPool) decode(input []byte) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -59,21 +59,21 @@ func (ip *interestPool) decode(input []byte) error {
 	return nil
 }
 
-func (ie *interestPool) MarshalMsg(o []byte) ([]byte, error) {
+func (ie *InterestPool) MarshalMsg(o []byte) ([]byte, error) {
 	d := interestPoolDecode(*ie)
 
 	return d.MarshalMsg(o)
 }
 
-func (ie *interestPool) UnmarshalMsg(b []byte) ([]byte, error) {
+func (ie *InterestPool) UnmarshalMsg(b []byte) ([]byte, error) {
 	d := interestPoolDecode{ZcnLockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
 	o, err := d.UnmarshalMsg(b)
 	if err != nil {
 		return nil, err
 	}
 
-	*ie = interestPool(d)
+	*ie = InterestPool(d)
 	return o, nil
 }
 
-type interestPoolDecode interestPool
+type interestPoolDecode InterestPool
