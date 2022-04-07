@@ -27,6 +27,20 @@ var (
 )
 
 // TEST FUNCTION
+// testPoolState creates a new instance of poolState
+func testPoolState() *poolStat {
+	return &poolStat{
+		ID:           "new_test_pool_state",
+		StartTime:    timeNow,
+		Duartion:     time.Duration(20 * time.Second),
+		TimeLeft:     0,
+		Locked:       true,
+		APR:          10,
+		TokensEarned: 10,
+		Balance:      10000,
+	}
+}
+
 // testPoolRequest creates a json of encoded new pool request instance
 func testPoolRequest(d time.Duration) []byte {
 	dur := time.Duration(d)

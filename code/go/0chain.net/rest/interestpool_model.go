@@ -66,3 +66,17 @@ func getPoolStats(pool *interestpoolsc.InterestPool, t time.Time) (*poolStat, er
 	stat.TokensEarned = pool.TokensEarned
 	return stat, nil
 }
+
+// testPoolState creates a new instance of poolState
+func testPoolState() *poolStat {
+	return &poolStat{
+		ID:           "new_test_pool_state",
+		StartTime:    common.Now(),
+		Duartion:     time.Duration(20 * time.Second),
+		TimeLeft:     0,
+		Locked:       true,
+		APR:          10,
+		TokensEarned: 10,
+		Balance:      10000,
+	}
+}

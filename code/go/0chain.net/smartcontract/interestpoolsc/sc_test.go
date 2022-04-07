@@ -1,15 +1,12 @@
 package interestpoolsc
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
 	"0chain.net/smartcontract"
 	"github.com/stretchr/testify/require"
-
-	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -72,6 +69,7 @@ func TestInterestPoolSmartContract_GetAddress(t *testing.T) {
 	}
 }
 
+/*
 func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 	type fields struct {
 		SmartContract *smartcontractinterface.SmartContract
@@ -132,7 +130,7 @@ func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 		})
 	}
 }
-
+*/
 func TestInterestPoolSmartContract_lock(t *testing.T) {
 	type fields struct {
 		SmartContract *smartcontractinterface.SmartContract
