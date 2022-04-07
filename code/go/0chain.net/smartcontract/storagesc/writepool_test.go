@@ -20,14 +20,14 @@ import (
 // test extension
 //
 
-func (wp *writePool) allocTotal(allocID string,
+func (wp *WritePool) allocTotal(allocID string,
 	now int64) state.Balance {
 
 	return wp.Pools.allocTotal(allocID, now)
 }
 
 func Test_writePool_Encode_Decode(t *testing.T) {
-	var rpe, rpd writePool
+	var rpe, rpd WritePool
 	rpe.Pools.add(&allocationPool{
 		ZcnPool: tokenpool.ZcnPool{
 			TokenPool: tokenpool.TokenPool{
@@ -48,7 +48,7 @@ func Test_writePool_Encode_Decode(t *testing.T) {
 }
 
 func Test_writePoolKey(t *testing.T) {
-	assert.NotZero(t, writePoolKey("scKey", "clientID"))
+	assert.NotZero(t, WritePoolKey("scKey", "clientID"))
 }
 
 func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
@@ -65,7 +65,7 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 	)
 
 	requireErrMsg(t, err, errMsg1)
-	wp := new(writePool)
+	wp := new(WritePool)
 	require.NoError(t, wp.save(ssc.ID, clientID, balances))
 	wwp, err := ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
-		nrps     = new(writePool)
+		nrps     = new(WritePool)
 		_, err   = ssc.getWritePool(clientID, balances)
 	)
 
@@ -100,7 +100,7 @@ func testSetWritePoolConfig(t *testing.T, wpc *writePoolConfig,
 		err  error
 	)
 	conf.WritePool = wpc
-	_, err = balances.InsertTrieNode(scConfigKey(sscID), &conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(sscID), &conf)
 	require.NoError(t, err)
 }
 

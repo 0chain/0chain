@@ -3,6 +3,8 @@ package rest
 import (
 	"time"
 
+	chainstate "0chain.net/chaincore/chain/state"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/core/datastore"
@@ -97,6 +99,21 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 	}, nil
 }
 
+func getBlobbers(sa *storagesc.StorageAllocation, balances chainstate.ReadOnlyStateContextI) error {
+	for _, ba := range sa.BlobberDetails {
+		blobber, err := balances.GetEventDB().GetBlobber(ba.BlobberID)
+		if err != nil {
+			return err
+		}
+		sn, err := blobberTableToStorageNode(*blobber)
+		if err != nil {
+			return err
+		}
+		sa.Blobbers = append(sa.Blobbers, &sn.StorageNode)
+	}
+	return nil
+}
+
 // swagger:model userPoolStat
 type userPoolStat struct {
 	Pools map[datastore.Key][]*storagesc.DelegatePoolStat `json:"pools"`
@@ -158,4 +175,32 @@ func spStats(
 		stat.Delegate = append(stat.Delegate, dpStats)
 	}
 	return stat
+}
+
+func cpStat(cp *storagesc.ChallengePool, alloc *storagesc.StorageAllocation) challengePoolStat {
+	stat := new(challengePoolStat)
+
+	stat.ID = cp.ID
+	stat.Balance = cp.Balance
+	stat.StartTime = alloc.StartTime
+	stat.Expiration = alloc.Until()
+	stat.Finalized = alloc.Finalized
+
+	return *stat
+}
+
+// swagger:model challengePoolStat
+type challengePoolStat struct {
+	ID         string           `json:"id"`
+	Balance    state.Balance    `json:"balance"`
+	StartTime  common.Timestamp `json:"start_time"`
+	Expiration common.Timestamp `json:"expiration"`
+	Finalized  bool             `json:"finalized"`
+}
+
+// swagger:model untilStat
+type untilStat struct {
+	PoolID   string           `json:"pool_id"`
+	Balance  state.Balance    `json:"balance"`
+	ExpireAt common.Timestamp `json:"expire_at"`
 }

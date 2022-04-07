@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *writePool) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *WritePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "Pools"
@@ -21,7 +21,7 @@ func (z *writePool) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *writePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *WritePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -57,7 +57,7 @@ func (z *writePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *writePool) Msgsize() (s int) {
+func (z *WritePool) Msgsize() (s int) {
 	s = 1 + 6 + z.Pools.Msgsize()
 	return
 }

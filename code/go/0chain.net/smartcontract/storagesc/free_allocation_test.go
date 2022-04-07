@@ -93,7 +93,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 		input, err := json.Marshal(p.info)
 		require.NoError(t, err)
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", ScConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
 
 		//var newRedeemed []freeStorageRedeemed
@@ -310,7 +310,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 			mockSetValue(p.assigner)).Return(nil).Once()
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", ScConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil)
 
 		balances.On("GetTrieNode", ALL_BLOBBERS_KEY,
@@ -332,14 +332,14 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
 		).Return("", nil).Once()
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
+			"GetTrieNode", WritePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 
 		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
+			"GetTrieNode", ChallengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 		balances.On(
-			"InsertTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
+			"InsertTrieNode", ChallengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return("", nil).Once()
 
 		var clientAlloc = ClientAllocation{ClientID: p.marker.Recipient}
@@ -395,8 +395,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}).Return(nil).Once()
 
 		balances.On("InsertTrieNode",
-			writePoolKey(ssc.ID, p.marker.Recipient),
-			mock.MatchedBy(func(wp *writePool) bool {
+			WritePoolKey(ssc.ID, p.marker.Recipient),
+			mock.MatchedBy(func(wp *WritePool) bool {
 				pool, found := wp.Pools.get(mockTransactionHash)
 				require.True(t, found)
 				return pool.Balance == state.Balance(writePoolLocked) &&
@@ -444,11 +444,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return().Maybe()
 
 		balances.On(
-			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
+			"GetTrieNode", ReadPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 		balances.On("InsertTrieNode",
-			readPoolKey(ssc.ID, p.marker.Recipient),
-			mock.MatchedBy(func(rp *readPool) bool {
+			ReadPoolKey(ssc.ID, p.marker.Recipient),
+			mock.MatchedBy(func(rp *ReadPool) bool {
 				pool, found := rp.Pools.get(mockTransactionHash)
 				require.True(t, found)
 				return pool.Balance == state.Balance(readPoolLocked) &&
@@ -693,7 +693,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			).Return(nil).Once()
 		}
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", ScConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
 
 		balances.On("GetTrieNode", ALL_BLOBBERS_KEY,
@@ -737,12 +737,12 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
 		).Return("", nil).Once()
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
-			mockSetValue(&writePool{})).Return(nil).Once()
+			"GetTrieNode", WritePoolKey(ssc.ID, p.marker.Recipient),
+			mockSetValue(&WritePool{})).Return(nil).Once()
 
 		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
-			mockSetValue(&challengePool{})).Return(nil).Once()
+			"GetTrieNode", ChallengePoolKey(ssc.ID, p.allocationId),
+			mockSetValue(&ChallengePool{})).Return(nil).Once()
 
 		balances.On(
 			"GetSignatureScheme",
@@ -769,9 +769,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On(
 			"InsertTrieNode",
-			writePoolKey(ssc.ID, p.marker.Recipient),
+			WritePoolKey(ssc.ID, p.marker.Recipient),
 			//mock.Anything,
-			mock.MatchedBy(func(wp *writePool) bool {
+			mock.MatchedBy(func(wp *WritePool) bool {
 				pool, found := wp.Pools.get(p.allocationId)
 				if found {
 					return pool.Balance == zcnToBalance(p.marker.FreeTokens) &&

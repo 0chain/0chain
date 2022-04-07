@@ -92,7 +92,7 @@ func TestUpdateSettings(t *testing.T) {
 		var conf = &Config{
 			OwnerId: owner,
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", ScConfigKey(ssc.ID),
 			mock.MatchedBy(func(c *Config) bool {
 				*c = *conf
 				return true
@@ -221,7 +221,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", ScConfigKey(ssc.ID),
 			mockSetValue(&Config{
 				OwnerId: owner,
 			})).Return(nil).Once()
@@ -232,7 +232,7 @@ func TestCommitSettingChanges(t *testing.T) {
 
 		balances.On(
 			"InsertTrieNode",
-			scConfigKey(ssc.ID),
+			ScConfigKey(ssc.ID),
 			mock.MatchedBy(func(conf *Config) bool {
 				for key, value := range p.inputMap {
 					setting := getConfField(*conf, key)

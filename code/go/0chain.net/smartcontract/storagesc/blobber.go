@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/partitions"
 	"go.uber.org/zap"
@@ -415,7 +415,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// move tokens from read pool to blobber
-	var rp *readPool
+	var rp *ReadPool
 	if rp, err = sc.getReadPool(userID, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)

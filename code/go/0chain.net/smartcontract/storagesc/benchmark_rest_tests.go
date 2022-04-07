@@ -53,7 +53,7 @@ func BenchmarkRestTests(
 				endpoint: ssc.GetMptKey,
 				params: func() url.Values {
 					var values url.Values = make(map[string][]string)
-					values.Set("key", scConfigKey(ADDRESS))
+					values.Set("key", ScConfigKey(ADDRESS))
 					return values
 				}(),
 			},

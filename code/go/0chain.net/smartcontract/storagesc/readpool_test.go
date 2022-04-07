@@ -20,13 +20,13 @@ import (
 // test extension
 //
 
-func (rp *readPool) allocTotal(allocID string,
+func (rp *ReadPool) allocTotal(allocID string,
 	now int64) state.Balance {
 
 	return rp.Pools.allocTotal(allocID, now)
 }
 
-func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
+func (rp *ReadPool) allocBlobberTotal(allocID, blobberID string,
 	now int64) state.Balance {
 
 	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
@@ -66,7 +66,7 @@ func Test_unlockRequest_decode(t *testing.T) {
 }
 
 func Test_readPool_Encode_Decode(t *testing.T) {
-	var rpe, rpd readPool
+	var rpe, rpd ReadPool
 	rpe.Pools.add(&allocationPool{
 		ZcnPool: tokenpool.ZcnPool{
 			TokenPool: tokenpool.TokenPool{
@@ -87,7 +87,7 @@ func Test_readPool_Encode_Decode(t *testing.T) {
 }
 
 func Test_readPoolKey(t *testing.T) {
-	assert.NotZero(t, readPoolKey("scKey", "clientID"))
+	assert.NotZero(t, ReadPoolKey("scKey", "clientID"))
 }
 
 func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
@@ -100,13 +100,13 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		rp *readPool
+		rp *ReadPool
 
 		_, err = ssc.getReadPool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
-	rp = new(readPool)
+	rp = new(ReadPool)
 	require.NoError(t, rp.save(ssc.ID, clientID, balances))
 	b, err := ssc.getReadPool(clientID, balances)
 	require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestStorageSmartContract_getReadPool(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 		_, err   = ssc.getReadPool(clientID, balances)
-		nrps     = new(readPool)
+		nrps     = new(ReadPool)
 	)
 
 	requireErrMsg(t, err, errMsg1)
@@ -156,7 +156,7 @@ func TestStorageSmartContract_newReadPool(t *testing.T) {
 
 	resp, err = ssc.newReadPool(&tx, nil, balances)
 	require.NoError(t, err)
-	var nrp = new(readPool)
+	var nrp = new(ReadPool)
 	assert.Equal(t, string(nrp.Encode()), resp)
 
 	_, err = ssc.newReadPool(&tx, nil, balances)
@@ -171,7 +171,7 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 		err  error
 	)
 	conf.ReadPool = rpc
-	_, err = balances.InsertTrieNode(scConfigKey(sscID), &conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(sscID), &conf)
 	require.NoError(t, err)
 }
 

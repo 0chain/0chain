@@ -120,7 +120,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 			addAllocation(b, ssc, client, tp, exp, n, balances)
 
 			conf.MinAllocSize = 1 * KB
-			mustSave(b, scConfigKey(ADDRESS), conf, balances)
+			mustSave(b, ScConfigKey(ADDRESS), conf, balances)
 
 			balances.skipMerge = false
 			balances.mpts.merge(b)
@@ -209,7 +209,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	}
 
 	conf.MinAllocSize = 1 * KB
-	mustSave(b, scConfigKey(ADDRESS), conf, balances)
+	mustSave(b, ScConfigKey(ADDRESS), conf, balances)
 
 	// 3. create 1000 allocations
 	b.Log("add 1k allocations")
@@ -267,7 +267,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	} {
 
 		conf.MaxChallengesPerGeneration = mcpg
-		mustSave(b, scConfigKey(ssc.ID), conf, balances)
+		mustSave(b, ScConfigKey(ssc.ID), conf, balances)
 
 		b.Run(fmt.Sprintf("max chall per gen %d", mcpg), func(b *testing.B) {
 
@@ -344,7 +344,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	}
 
 	conf.MinAllocSize = 1 * KB
-	mustSave(b, scConfigKey(ADDRESS), conf, balances)
+	mustSave(b, ScConfigKey(ADDRESS), conf, balances)
 
 	// 3. create 1000 allocations
 	b.Log("add 1k allocations")

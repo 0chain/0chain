@@ -248,7 +248,7 @@ func Test_flow_reward(t *testing.T) {
 		}), balances)
 		require.NoError(t, err)
 
-		var rp *readPool
+		var rp *ReadPool
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
 		require.EqualValues(t, 2e10, rp.allocBlobberTotal(allocID, b1.id, tp))
@@ -340,7 +340,7 @@ func Test_flow_reward(t *testing.T) {
 
 		assert.EqualValues(t, 6e9, sp.Reward)
 
-		var rp *readPool
+		var rp *ReadPool
 		rp, err = ssc.getReadPool(reader.id, balances)
 		require.NoError(t, err)
 
@@ -370,11 +370,11 @@ func Test_flow_reward(t *testing.T) {
 
 	t.Run("write", func(t *testing.T) {
 
-		var cp *challengePool
+		var cp *ChallengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var wp *writePool
+		var wp *WritePool
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
@@ -434,11 +434,11 @@ func Test_flow_reward(t *testing.T) {
 
 	t.Run("delete", func(t *testing.T) {
 
-		var cp *challengePool
+		var cp *ChallengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var wp *writePool
+		var wp *WritePool
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
@@ -508,11 +508,11 @@ func Test_flow_reward(t *testing.T) {
 
 	t.Run("challenge pass", func(t *testing.T) {
 
-		var cp *challengePool
+		var cp *ChallengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var wp *writePool
+		var wp *WritePool
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
@@ -720,11 +720,11 @@ func Test_flow_penalty(t *testing.T) {
 		inspectCPIV(t, ssc, allocID, balances)
 
 		// balances
-		//var cp *challengePool
+		//var cp *ChallengePool
 		_, err := ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		//var wp *writePool
+		//var wp *WritePool
 		_, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
@@ -857,7 +857,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	tp += 100
@@ -883,7 +883,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		balances.balances[b.id] = 0 // reset the balance
 	}
 
-	var wp *writePool
+	var wp *WritePool
 	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
 	var wps = wp.allocUntil(alloc.ID, alloc.Until())
@@ -926,11 +926,11 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// balances
-		var cp *challengePool
+		var cp *ChallengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var wp *writePool
+		var wp *WritePool
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
@@ -1080,7 +1080,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	conf.FailedChallengesToCancel = 10
 	conf.FailedChallengesToRevokeMinLock = 5
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	tp += 100
@@ -1106,7 +1106,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		balances.balances[b.id] = 0 // reset the balance
 	}
 
-	var wp *writePool
+	var wp *WritePool
 	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
 	var wps = wp.allocUntil(alloc.ID, alloc.Until())
@@ -1149,11 +1149,11 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// balances
-		var cp *challengePool
+		var cp *ChallengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var wp *writePool
+		var wp *WritePool
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
@@ -1316,7 +1316,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 
 	conf.StakePool.MinLock = 1
 	conf.MinAllocSize = 10 * MB
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	// terms, capacity ranges

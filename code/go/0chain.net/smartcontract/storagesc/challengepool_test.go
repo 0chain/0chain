@@ -11,7 +11,7 @@ func Test_challenge_pool_moveToWritePool(t *testing.T) {
 	const allocID, until, earlier = "alloc_hex", 20, 10
 
 	var (
-		wp = new(writePool)
+		wp = new(WritePool)
 		ap = wp.allocPool(allocID, until)
 	)
 

@@ -477,14 +477,14 @@ func confirmFinalizeAllocation(
 	f formulaeFinalizeAllocation,
 	scYaml Config,
 	_ StorageNodes,
-	challengePool challengePool,
-	allocationWritePool writePool,
+	ChallengePool ChallengePool,
+	allocationWritePool WritePool,
 	allocation StorageAllocation,
 	wpStartBalance state.Balance,
 	sps []*stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.EqualValues(t, 0, challengePool.Balance)
+	require.EqualValues(t, 0, ChallengePool.Balance)
 
 	var rewardDelegateTransfers = [][]bool{}
 	var minLockdelegateTransfers = [][]bool{}
@@ -563,7 +563,7 @@ func setupMocksFinishAllocation(
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
 
-	var cPool = challengePool{
+	var cPool = ChallengePool{
 		ZcnPool: &tokenpool.ZcnPool{
 			TokenPool: tokenpool.TokenPool{
 				ID:      sAllocation.ID,
@@ -573,7 +573,7 @@ func setupMocksFinishAllocation(
 	}
 	require.NoError(t, cPool.save(ssc.ID, sAllocation.ID, ctx))
 
-	var wPool = writePool{
+	var wPool = WritePool{
 		Pools: allocationPools{},
 	}
 	var newPool = &allocationPool{}
@@ -592,7 +592,7 @@ func setupMocksFinishAllocation(
 	awp := &allocationWritePools{
 		ownerId:    0,
 		ids:        []string{sAllocation.Owner},
-		writePools: []*writePool{&wPool},
+		writePools: []*WritePool{&wPool},
 	}
 	awp.allocationPools.add(newPool)
 
@@ -634,7 +634,7 @@ func setupMocksFinishAllocation(
 		require.NoError(t, err)
 	}
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	_, err = ctx.InsertTrieNode(ScConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
 	var request = lockRequest{
@@ -719,7 +719,7 @@ func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int) i
 }
 
 func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
-	var challengePool = float64(f._challengePool())
+	var ChallengePool = float64(f._challengePool())
 
 	var used = float64(f.allocation.BlobberDetails[blobberIndex].Stats.UsedSize)
 	var totalUsed = float64(f.allocation.UsedSize)
@@ -732,7 +732,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
 	var ratio = used / totalUsed
 	var passRate = f._passRates[blobberIndex]
 
-	return challengePool * ratio * passRate
+	return ChallengePool * ratio * passRate
 }
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
@@ -832,10 +832,10 @@ func testNewAllocation(t *testing.T, request NewAllocationRequest, blobbers Sort
 		require.NoError(t, stakePool.save(ssc.ID, blobber.ID, ctx))
 	}
 
-	var wPool = writePool{}
+	var wPool = WritePool{}
 	require.NoError(t, wPool.save(ssc.ID, clientId, ctx))
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	_, err = ctx.InsertTrieNode(ScConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
 	_, err = ssc.newAllocationRequest(txn, input, ctx)
@@ -862,7 +862,7 @@ func testNewAllocation(t *testing.T, request NewAllocationRequest, blobbers Sort
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
 	}
-	var wp *writePool
+	var wp *WritePool
 	wp, err = ssc.getWritePool(clientId, ctx)
 	require.NoError(t, err)
 
@@ -921,7 +921,7 @@ func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
-	blobbers1, blobbers2 SortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
+	blobbers1, blobbers2 SortedBlobbers, stakes []*stakePool, wp WritePool, ctx cstate.StateContextI,
 ) {
 	var transfers = ctx.GetTransfers()
 	require.Len(t, transfers, 1)

@@ -87,6 +87,11 @@ func (bps blobberPools) getIndex(blobberID string) (i int, ok bool) {
 	return // not found
 }
 
+// todo temporary until rest.getReadPoolAllocBlobberStat uses event database
+func (bps blobberPools) Get(blobberID string) (bp *blobberPool, ok bool) {
+	return bps.get(blobberID)
+}
+
 func (bps blobberPools) get(blobberID string) (
 	bp *blobberPool, ok bool) {
 
@@ -265,7 +270,7 @@ func (aps allocationPools) allocationCut(allocID string) (
 	return
 }
 
-func (aps allocationPools) blobberCut(allocID, blobberID string,
+func (aps allocationPools) BlobberCut(allocID, blobberID string,
 	now common.Timestamp) (cut []*allocationPool) {
 
 	cut = aps.allocationCut(allocID)
@@ -327,7 +332,7 @@ Outer:
 
 func (aps *allocationPools) moveToChallenge(
 	allocID, blobID string,
-	cp *challengePool,
+	cp *ChallengePool,
 	now common.Timestamp,
 	value state.Balance,
 ) (err error) {
@@ -335,7 +340,7 @@ func (aps *allocationPools) moveToChallenge(
 		return // nothing to move, ok
 	}
 
-	var cut = aps.blobberCut(allocID, blobID, now)
+	var cut = aps.BlobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
 		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
@@ -466,6 +471,7 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 	return
 }
 
+// swagger:model allocationPoolsStat
 type allocationPoolsStat struct {
 	Pools []allocationPoolStat `json:"pools"`
 }

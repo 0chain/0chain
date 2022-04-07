@@ -375,7 +375,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		BlobberWeight:           0.5,
 	}
 
-	mustSave(t, scConfigKey(ADDRESS), conf, balances)
+	mustSave(t, ScConfigKey(ADDRESS), conf, balances)
 	return
 }
 

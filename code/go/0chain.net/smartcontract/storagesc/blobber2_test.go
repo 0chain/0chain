@@ -313,7 +313,7 @@ func testCommitBlobberRead(
 
 	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 
-	var rPool = readPool{
+	var rPool = ReadPool{
 		Pools: []*allocationPool{},
 	}
 	for i := 0; i < len(readPools.thisAllocation)+readPools.otherAllocations; i++ {
@@ -380,7 +380,7 @@ func confirmCommitBlobberRead(
 	t *testing.T,
 	f formulaeCommitBlobberRead,
 	resp string,
-	newReadPool *readPool,
+	newReadPool *ReadPool,
 	newStakePool *stakePool,
 	ctx *mockStateContext,
 ) {

@@ -168,7 +168,7 @@ func (sp *stakePool) slash(
 	alloc *StorageAllocation,
 	blobID string,
 	until common.Timestamp,
-	wp *writePool,
+	wp *WritePool,
 	offer, slash state.Balance,
 	balances chainstate.StateContextI,
 ) (move state.Balance, err error) {

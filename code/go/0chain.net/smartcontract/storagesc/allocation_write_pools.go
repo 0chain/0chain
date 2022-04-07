@@ -14,7 +14,7 @@ type allocationWritePools struct {
 	// The indices for ids and writePools match
 	ownerId         int
 	ids             []string
-	writePools      []*writePool
+	writePools      []*WritePool
 	allocationPools allocationPools
 }
 
@@ -26,7 +26,7 @@ func (awp *allocationWritePools) activeAllocationPools(
 	return cut
 }
 
-func (awp *allocationWritePools) getOwnerWP() (*writePool, error) {
+func (awp *allocationWritePools) getOwnerWP() (*WritePool, error) {
 	if len(awp.writePools) == 0 {
 		return nil, errors.New("no write pools")
 	}
@@ -50,7 +50,7 @@ func (awp *allocationWritePools) saveWritePools(
 
 func (awp *allocationWritePools) moveToChallenge(
 	allocID, blobID string,
-	cp *challengePool,
+	cp *ChallengePool,
 	now common.Timestamp,
 	value state.Balance,
 ) (err error) {

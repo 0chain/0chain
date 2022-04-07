@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -40,7 +42,7 @@ func SetupStorageRestHandler(rh *RestHandler) {
 	http.HandleFunc(storage+"/transactions", srh.getTransactionByFilter)
 	http.HandleFunc(storage+"/writemarkers", srh.getWriteMarker)
 	http.HandleFunc(storage+"/errors", srh.getErrors)
-	//http.HandleFunc(storage+"/allocations", srh.getAllocations)
+	http.HandleFunc(storage+"/allocations", srh.getAllocations)
 	//http.HandleFunc(storage+"/allocation_min_lock", srh.getAllocationMinLock)
 	http.HandleFunc(storage+"/allocation", srh.getAllocationStats)
 	http.HandleFunc(storage+"/latestreadmarker", srh.getLatestReadMarker)
@@ -55,6 +57,232 @@ func SetupStorageRestHandler(rh *RestHandler) {
 	http.HandleFunc(storage+"/get_block_by_hash", srh.getBlockByHash)
 	http.HandleFunc(storage+"/get_blocks", srh.getBlocks)
 	http.HandleFunc(storage+"/total_saved_data", srh.getTotalData)
+	http.HandleFunc(storage+"/getConfig", srh.getConfig)
+	http.HandleFunc(storage+"/getReadPoolStat", srh.getReadPoolStat)
+	http.HandleFunc(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat)
+	http.HandleFunc(storage+"/getWritePoolStat", srh.getWritePoolStat)
+	http.HandleFunc(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat)
+	http.HandleFunc(storage+"/getChallengePoolStat", srh.getChallengePoolStat)
+}
+
+// statistic for all locked tokens of a challenge pool
+func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
+
+	var (
+		allocationID = r.URL.Query().Get("allocation_id")
+		alloc        *storagesc.StorageAllocation
+		cp           *storagesc.ChallengePool
+	)
+
+	if allocationID == "" {
+		err := errors.New("missing allocation_id URL query parameter")
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+		return
+	}
+
+	if err := srh.GetTrieNode(alloc.GetKey(storagesc.ADDRESS), alloc); err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+		return
+	}
+
+	if err := srh.GetTrieNode(storagesc.ChallengePoolKey(storagesc.ADDRESS, allocationID), cp); err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool"))
+		return
+	}
+
+	common.Respond(w, r, cpStat(cp, alloc), nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolAllocBlobberStat getWritePoolAllocBlobberStat
+// Gets statistic for all locked tokens of the indicated read pools
+//
+// parameters:
+//    + name: client_id
+//      description: client for which to get write pools statistics
+//      required: true
+//      in: query
+//      type: string
+//    + name: allocation_id
+//      description: allocation for which to get write pools statistics
+//      required: true
+//      in: query
+//      type: string
+//    + name: blobber_id
+//      description: blobber for which to get write pools statistics
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: []untilStat
+//  400:
+func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
+	var (
+		clientID  = r.URL.Query().Get("client_id")
+		allocID   = r.URL.Query().Get("allocation_id")
+		blobberID = r.URL.Query().Get("blobber_id")
+		wp        *storagesc.WritePool
+	)
+
+	if err := srh.GetTrieNode(storagesc.WritePoolKey(storagesc.ADDRESS, clientID), wp); err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
+		return
+	}
+
+	var (
+		cut  = wp.BlobberCut(allocID, blobberID, common.Now())
+		stat []untilStat
+	)
+
+	for _, ap := range cut {
+		var bp, ok = ap.Blobbers.Get(blobberID)
+		if !ok {
+			continue
+		}
+		stat = append(stat, untilStat{
+			PoolID:   ap.ID,
+			Balance:  bp.Balance,
+			ExpireAt: ap.ExpireAt,
+		})
+	}
+
+	common.Respond(w, r, &stat, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolStat getWritePoolStat
+// Gets  statistic for all locked tokens of the write pool
+//
+// parameters:
+//    + name: client_id
+//      description: client for which to get read pools statistics
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: allocationPoolsStat
+//  400:
+func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
+	var wp *storagesc.WritePool
+
+	clientID := r.URL.Query().Get("client_id")
+	if err := srh.GetTrieNode(storagesc.WritePoolKey(storagesc.ADDRESS, clientID), wp); err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
+		return
+	}
+
+	common.Respond(w, r, wp.Stat(common.Now()), nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolAllocBlobberStat getReadPoolAllocBlobberStat
+// Gets statistic for all locked tokens of the indicated read pools
+//
+// parameters:
+//    + name: client_id
+//      description: client for which to get read pools statistics
+//      required: true
+//      in: query
+//      type: string
+//    + name: allocation_id
+//      description: allocation for which to get read pools statistics
+//      required: true
+//      in: query
+//      type: string
+//    + name: blobber_id
+//      description: blobber for which to get read pools statistics
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: []untilStat
+//  400:
+func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
+	var (
+		clientID  = r.URL.Query().Get("client_id")
+		allocID   = r.URL.Query().Get("allocation_id")
+		blobberID = r.URL.Query().Get("blobber_id")
+		rp        *storagesc.ReadPool
+	)
+
+	if err := srh.GetTrieNode(storagesc.ReadPoolKey(storagesc.ADDRESS, clientID), rp); err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
+		return
+	}
+
+	var (
+		cut  = rp.BlobberCut(allocID, blobberID, common.Now())
+		stat []untilStat
+	)
+
+	for _, ap := range cut {
+		var bp, ok = ap.Blobbers.Get(blobberID)
+		if !ok {
+			continue
+		}
+		stat = append(stat, untilStat{
+			PoolID:   ap.ID,
+			Balance:  bp.Balance,
+			ExpireAt: ap.ExpireAt,
+		})
+	}
+
+	common.Respond(w, r, &stat, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
+// Gets  statistic for all locked tokens of the read pool
+//
+// parameters:
+//    + name: client_id
+//      description: client for which to get read pools statistics
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: allocationPoolsStat
+//  400:
+func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
+	var rp *storagesc.ReadPool
+
+	clientID := r.URL.Query().Get("client_id")
+	if err := srh.GetTrieNode(storagesc.ReadPoolKey(storagesc.ADDRESS, clientID), rp); err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
+		return
+	}
+
+	common.Respond(w, r, rp.Stat(common.Now()), nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getConfig getConfig
+// Gets the current storage smart contract settings
+//
+// responses:
+//  200: StringMap
+//  400:
+func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
+	var conf *storagesc.Config
+	const cantGetConfigErrMsg = "can't get config"
+	err := srh.GetTrieNode(storagesc.ScConfigKey(storagesc.ADDRESS), conf)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
+		return
+	}
+
+	// return configurations from sc.yaml not saving them
+	if err == util.ErrValueNotPresent {
+		conf, err = storagesc.GetConfiguredConfig()
+		if err != nil {
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
+			return
+		}
+	}
+	rtv, err := conf.GetConfigMap()
+	common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
+
+	common.Respond(w, r, rtv, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
@@ -531,6 +759,60 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	//result, err := ssc.GetAllocationMinLockHandler(r.Context(), r.URL.Query(), )
 
 	common.Respond(w, r, nil, common.NewErrInternal("allocation_min_lock temporary unimplemented"))
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations allocations
+// Gets a list of allocation information for allocations owned by the client
+//
+// parameters:
+//    + name: client
+//      description: owner of allocations we wish to list
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: []StorageAllocation
+//  400:
+//  500:
+func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
+	var err error
+	clientID := r.URL.Query().Get("client")
+
+	allocations := &storagesc.Allocations{}
+	var clientAlloc storagesc.ClientAllocation
+	clientAlloc.ClientID = clientID
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, common.NewErrInternal("can't get allocation list", err.Error()))
+			return
+		}
+		allocations = &storagesc.Allocations{}
+	}
+
+	result := make([]*storagesc.StorageAllocation, 0)
+	for _, allocationID := range allocations.List {
+		allocationObj := &storagesc.StorageAllocation{}
+		allocationObj.ID = allocationID
+
+		err := srh.GetTrieNode(allocationObj.GetKey(storagesc.ADDRESS), allocationObj)
+		switch err {
+		case nil:
+			err = getBlobbers(allocationObj, srh)
+			if err != nil {
+				common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "cannot get blobber"))
+				return
+			}
+			result = append(result, allocationObj)
+		case util.ErrValueNotPresent:
+			continue
+		default:
+			msg := fmt.Sprintf("can't decode allocation with id '%s'", allocationID)
+			common.Respond(w, r, nil, common.NewErrInternal(msg, err.Error()))
+			return
+		}
+	}
+	common.Respond(w, r, result, nil)
 }
 
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation

@@ -225,7 +225,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	// pool
-	var cp *challengePool
+	var cp *ChallengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
@@ -246,7 +246,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	if back > 0 {
 		// move back to write pool
-		var wp *writePool
+		var wp *WritePool
 		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
 			return fmt.Errorf("can't get allocation's write pool: %v", err)
 		}
@@ -364,12 +364,12 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	// pools
-	var cp *challengePool
+	var cp *ChallengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var wp *writePool
+	var wp *WritePool
 	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
 		return fmt.Errorf("can't get allocation's write pool: %v", err)
 	}

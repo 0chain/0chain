@@ -213,7 +213,7 @@ func AddMockClientAllocation(
 }
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {
-	wps := make([]*writePool, len(clients))
+	wps := make([]*WritePool, len(clients))
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -223,7 +223,7 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
 			cIndex := (startClients + j) % len(clients)
 			if wps[cIndex] == nil {
-				wps[cIndex] = new(writePool)
+				wps[cIndex] = new(WritePool)
 			}
 			for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 				wap := allocationPool{
@@ -245,14 +245,14 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 		}
 	}
 	for i := 0; i < len(wps); i++ {
-		if _, err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i]); err != nil {
+		if _, err := balances.InsertTrieNode(WritePoolKey(ADDRESS, clients[i]), wps[i]); err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
-	rps := make([]*readPool, len(clients))
+	rps := make([]*ReadPool, len(clients))
 	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -261,7 +261,7 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
 			cIndex := (startClients + j) % len(clients)
 			if rps[cIndex] == nil {
-				rps[cIndex] = new(readPool)
+				rps[cIndex] = new(ReadPool)
 			}
 			for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 				rap := allocationPool{
@@ -283,7 +283,7 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 		}
 	}
 	for i := 0; i < len(rps); i++ {
-		if _, err := balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i]); err != nil {
+		if _, err := balances.InsertTrieNode(ReadPoolKey(ADDRESS, clients[i]), rps[i]); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -312,9 +312,9 @@ func AddMockChallengePools(balances cstate.StateContextI) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationId := getMockAllocationId(i)
 		cp := newChallengePool()
-		cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
+		cp.TokenPool.ID = ChallengePoolKey(ADDRESS, allocationId)
 		cp.Balance = mockMinLockDemand * 100
-		if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
+		if _, err := balances.InsertTrieNode(ChallengePoolKey(ADDRESS, allocationId), cp); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -759,7 +759,7 @@ func SetMockConfig(
 
 	conf.ExposeMpt = true
 
-	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	var _, err = balances.InsertTrieNode(ScConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
 	}

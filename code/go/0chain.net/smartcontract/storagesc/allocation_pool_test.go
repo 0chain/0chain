@@ -124,7 +124,7 @@ func Test_blobberPools(t *testing.T) {
 
 func Test_allocationPools(t *testing.T) {
 	// allocationCut
-	// blobberCut
+	// BlobberCut
 	// removeEmpty
 	// stat
 
@@ -346,7 +346,7 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 152},
 			},
 		},
-	}, aps.blobberCut(a2, "b2", 0))
+	}, aps.BlobberCut(a2, "b2", 0))
 
 	require.EqualValues(t, []*allocationPool{
 		&allocationPool{
@@ -365,7 +365,7 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 152},
 			},
 		},
-	}, aps.blobberCut(a2, "b2", 0))
+	}, aps.BlobberCut(a2, "b2", 0))
 
 	require.EqualValues(t, []*allocationPool{
 		&allocationPool{
@@ -376,9 +376,9 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 152},
 			},
 		},
-	}, aps.blobberCut(a2, "b2", 15))
+	}, aps.BlobberCut(a2, "b2", 15))
 
-	require.EqualValues(t, []*allocationPool{}, aps.blobberCut(a2, "b2", 21))
+	require.EqualValues(t, []*allocationPool{}, aps.BlobberCut(a2, "b2", 21))
 
 }
 

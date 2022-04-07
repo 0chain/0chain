@@ -28,27 +28,28 @@ import (
 // client read pool (consist of allocation pools)
 //
 
-func readPoolKey(scKey, clientID string) datastore.Key {
+func ReadPoolKey(scKey, clientID string) datastore.Key {
 	return scKey + ":readpool:" + clientID
 }
 
-// readPool represents client's read pool consist of allocation read pools
-type readPool struct {
+// ReadPool represents client's read pool consist of allocation read pools
+// swagger:model ReadPool
+type ReadPool struct {
 	Pools allocationPools `json:"pools"`
 }
 
-func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
+func (rp *ReadPool) BlobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
-	return rp.Pools.blobberCut(allocID, blobberID, now)
+	return rp.Pools.BlobberCut(allocID, blobberID, now)
 }
 
-func (rp *readPool) removeEmpty(allocID string, ap []*allocationPool) {
+func (rp *ReadPool) removeEmpty(allocID string, ap []*allocationPool) {
 	rp.Pools.removeEmpty(allocID, ap)
 }
 
 // Encode implements util.Serializable interface.
-func (rp *readPool) Encode() []byte {
+func (rp *ReadPool) Encode() []byte {
 	var b, err = json.Marshal(rp)
 	if err != nil {
 		panic(err) // must never happens
@@ -57,15 +58,15 @@ func (rp *readPool) Encode() []byte {
 }
 
 // Decode implements util.Serializable interface.
-func (rp *readPool) Decode(p []byte) error {
+func (rp *ReadPool) Decode(p []byte) error {
 	return json.Unmarshal(p, rp)
 }
 
 // save the pool in tree
-func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI) (
+func (rp *ReadPool) save(sscKey, clientID string, balances cstate.StateContextI) (
 	err error) {
 
-	_, err = balances.InsertTrieNode(readPoolKey(sscKey, clientID), rp)
+	_, err = balances.InsertTrieNode(ReadPoolKey(sscKey, clientID), rp)
 	return
 }
 
@@ -84,11 +85,11 @@ func toJson(val interface{}) string {
 	return string(b)
 }
 
-func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
+func (rp *ReadPool) moveToBlobber(sscKey, allocID, blobID string,
 	sp *stakePool, now common.Timestamp, value state.Balance,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	var cut = rp.blobberCut(allocID, blobID, now)
+	var cut = rp.BlobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
 		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
@@ -151,7 +152,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 }
 
 // take read pool by ID to unlock (the take is get and remove)
-func (wp *readPool) take(poolID string, now common.Timestamp) (
+func (wp *ReadPool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
 
 	var i int
@@ -173,7 +174,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 	return
 }
 
-func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
+func (rp *ReadPool) Stat(now common.Timestamp) allocationPoolsStat {
 	return rp.Pools.stat(now)
 }
 
@@ -183,10 +184,10 @@ func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
 
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
-	balances cstate.StateContextI) (rp *readPool, err error) {
+	balances cstate.StateContextI) (rp *ReadPool, err error) {
 
-	rp = new(readPool)
-	err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID), rp)
+	rp = new(ReadPool)
+	err = balances.GetTrieNode(ReadPoolKey(ssc.ID, clientID), rp)
 	if err != nil {
 		return nil, err
 	}
@@ -197,8 +198,8 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 
-	rp := new(readPool)
-	err = balances.GetTrieNode(readPoolKey(ssc.ID, t.ClientID), rp)
+	rp := new(ReadPool)
+	err = balances.GetTrieNode(ReadPoolKey(ssc.ID, t.ClientID), rp)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
@@ -207,7 +208,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 		return "", common.NewError("new_read_pool_failed", "already exist")
 	}
 
-	rp = new(readPool)
+	rp = new(ReadPool)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
@@ -236,12 +237,12 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		lr.TargetId = t.ClientID
 	}
 
-	var rp *readPool
+	var rp *ReadPool
 	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
-		rp = new(readPool)
+		rp = new(ReadPool)
 	}
 
 	if lr.AllocationID == "" {
@@ -377,7 +378,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 			"%s did not fund pool %s", t.ClientID, req.PoolID)
 	}
 
-	var rp *readPool
+	var rp *ReadPool
 	if rp, err = ssc.getReadPool(req.PoolOwner, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
@@ -418,7 +419,7 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 		clientID  = params.Get("client_id")
 		allocID   = params.Get("allocation_id")
 		blobberID = params.Get("blobber_id")
-		rp        *readPool
+		rp        *ReadPool
 	)
 
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
@@ -426,7 +427,7 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	}
 
 	var (
-		cut  = rp.blobberCut(allocID, blobberID, common.Now())
+		cut  = rp.BlobberCut(allocID, blobberID, common.Now())
 		stat []untilStat
 	)
 
@@ -452,12 +453,12 @@ func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 
 	var (
 		clientID = datastore.Key(params.Get("client_id"))
-		rp       *readPool
+		rp       *ReadPool
 	)
 
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool")
 	}
 
-	return rp.stat(common.Now()), nil
+	return rp.Stat(common.Now()), nil
 }

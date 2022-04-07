@@ -25,21 +25,21 @@ import (
 
 // challenge pool is a locked tokens for a duration for an allocation
 
-type challengePool struct {
+type ChallengePool struct {
 	*tokenpool.ZcnPool `json:"pool"`
 }
 
-func newChallengePool() *challengePool {
-	return &challengePool{
+func newChallengePool() *ChallengePool {
+	return &ChallengePool{
 		ZcnPool: &tokenpool.ZcnPool{},
 	}
 }
 
-func challengePoolKey(scKey, allocationID string) datastore.Key {
+func ChallengePoolKey(scKey, allocationID string) datastore.Key {
 	return datastore.Key(scKey + ":challengepool:" + allocationID)
 }
 
-func (cp *challengePool) Encode() (b []byte) {
+func (cp *ChallengePool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(cp); err != nil {
 		panic(err) // must never happens
@@ -47,7 +47,7 @@ func (cp *challengePool) Encode() (b []byte) {
 	return
 }
 
-func (cp *challengePool) Decode(input []byte) (err error) {
+func (cp *ChallengePool) Decode(input []byte) (err error) {
 
 	type challengePoolJSON struct {
 		Pool json.RawMessage `json:"pool"`
@@ -67,19 +67,19 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 }
 
 // save the challenge pool
-func (cp *challengePool) save(sscKey, allocationID string,
+func (cp *ChallengePool) save(sscKey, allocationID string,
 	balances cstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
+	_, err = balances.InsertTrieNode(ChallengePoolKey(sscKey, allocationID), cp)
 	return
 }
 
 // moveToWritePool moves tokens back to write pool on data deleted
-func (cp *challengePool) moveToWritePool(
+func (cp *ChallengePool) moveToWritePool(
 	alloc *StorageAllocation,
 	blobID string,
 	until common.Timestamp,
-	wp *writePool,
+	wp *WritePool,
 	value state.Balance,
 ) (err error) {
 
@@ -117,7 +117,7 @@ func (cp *challengePool) moveToWritePool(
 	return
 }
 
-func (cp *challengePool) moveToValidators(sscKey string, reward float64,
+func (cp *ChallengePool) moveToValidators(sscKey string, reward float64,
 	validatos []datastore.Key,
 	vsps []*stakePool,
 	balances cstate.StateContextI,
@@ -143,7 +143,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward float64,
 	return nil
 }
 
-func (cp *challengePool) stat(alloc *StorageAllocation) (
+func (cp *ChallengePool) stat(alloc *StorageAllocation) (
 	stat *challengePoolStat) {
 
 	stat = new(challengePoolStat)
@@ -171,9 +171,9 @@ type challengePoolStat struct {
 
 // getChallengePool of current client
 func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
-	balances cstate.StateContextI) (cp *challengePool, err error) {
+	balances cstate.StateContextI) (cp *ChallengePool, err error) {
 	cp = newChallengePool()
-	err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID), cp)
+	err = balances.GetTrieNode(ChallengePoolKey(ssc.ID, allocationID), cp)
 	return
 }
 
@@ -181,13 +181,13 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 // challenge pool for a client don't saving it
 func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 	creationDate, expiresAt common.Timestamp, balances cstate.StateContextI) (
-	cp *challengePool, err error) {
+	cp *ChallengePool, err error) {
 
 	_, err = ssc.getChallengePool(allocationID, balances)
 	switch err {
 	case util.ErrValueNotPresent:
 		cp = newChallengePool()
-		cp.TokenPool.ID = challengePoolKey(ssc.ID, allocationID)
+		cp.TokenPool.ID = ChallengePoolKey(ssc.ID, allocationID)
 		return cp, nil
 	case nil:
 		return nil, common.NewError("new_challenge_pool_failed", "already exist")
@@ -202,7 +202,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 
 	// create related challenge_pool expires with the allocation + challenge
 	// completion time
-	var cp *challengePool
+	var cp *ChallengePool
 	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(),
 		balances)
 	if err != nil {
@@ -231,7 +231,7 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 	var (
 		allocationID = datastore.Key(params.Get("allocation_id"))
 		alloc        *StorageAllocation
-		cp           *challengePool
+		cp           *ChallengePool
 	)
 
 	if allocationID == "" {

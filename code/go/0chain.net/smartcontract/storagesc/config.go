@@ -1,13 +1,9 @@
 package storagesc
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"time"
-
-	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -18,7 +14,7 @@ import (
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-func scConfigKey(scKey string) datastore.Key {
+func ScConfigKey(scKey string) datastore.Key {
 	return scKey + ":configurations"
 }
 
@@ -75,6 +71,7 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio floa
 }
 
 // Config represents SC configurations ('storagesc:' from sc.yaml).
+// swagger:model Config
 type Config struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
 	// measured in tok / GB / time unit. Where the time unit is this
@@ -352,7 +349,7 @@ func (conf *Config) Decode(b []byte) error {
 //
 
 // configs from sc.yaml
-func getConfiguredConfig() (conf *Config, err error) {
+func GetConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
 
 	conf = new(Config)
@@ -450,10 +447,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 func (ssc *StorageSmartContract) setupConfig(
 	balances chainState.StateContextI) (conf *Config, err error) {
 
-	if conf, err = getConfiguredConfig(); err != nil {
+	if conf, err = GetConfiguredConfig(); err != nil {
 		return
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(ssc.ID), conf)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +463,7 @@ func (ssc *StorageSmartContract) getConfig(
 	conf *Config, err error) {
 
 	conf = new(Config)
-	err = balances.GetTrieNode(scConfigKey(ssc.ID), conf)
+	err = balances.GetTrieNode(ScConfigKey(ssc.ID), conf)
 	switch err {
 	case util.ErrValueNotPresent:
 		if !setup {
@@ -478,31 +475,6 @@ func (ssc *StorageSmartContract) getConfig(
 	default:
 		return nil, err
 	}
-}
-
-const cantGetConfigErrMsg = "can't get config"
-
-func (ssc *StorageSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
-	balances chainState.StateContextI,
-) (resp interface{}, err error) {
-	var conf *Config
-	conf, err = ssc.getConfig(balances, false)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-	}
-
-	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
-		conf, err = getConfiguredConfig()
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-		}
-	}
-
-	return conf.getConfigMap() // actual value
 }
 
 // getWritePoolConfig

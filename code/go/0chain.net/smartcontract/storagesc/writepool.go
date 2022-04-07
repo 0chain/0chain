@@ -25,23 +25,23 @@ import (
 // client write pool (consist of allocation pools)
 //
 
-func writePoolKey(scKey, clientID string) datastore.Key {
+func WritePoolKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":writepool:" + clientID)
 }
 
-// writePool represents client's write pool consist of allocation write pools
-type writePool struct {
+// WritePool represents client's write pool consist of allocation write pools
+type WritePool struct {
 	Pools allocationPools `json:"pools"` // tokens locked for a period
 }
 
-func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
+func (wp *WritePool) BlobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
-	return wp.Pools.blobberCut(allocID, blobberID, now)
+	return wp.Pools.BlobberCut(allocID, blobberID, now)
 }
 
 // Encode implements util.Serializable interface.
-func (wp *writePool) Encode() []byte {
+func (wp *WritePool) Encode() []byte {
 	var b, err = json.Marshal(wp)
 	if err != nil {
 		panic(err) // must never happens
@@ -50,20 +50,20 @@ func (wp *writePool) Encode() []byte {
 }
 
 // Decode implements util.Serializable interface.
-func (wp *writePool) Decode(p []byte) error {
+func (wp *WritePool) Decode(p []byte) error {
 	return json.Unmarshal(p, wp)
 }
 
 // save the pool in tree
-func (wp *writePool) save(sscKey, clientID string,
+func (wp *WritePool) save(sscKey, clientID string,
 	balances chainState.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(writePoolKey(sscKey, clientID), wp)
+	_, err = balances.InsertTrieNode(WritePoolKey(sscKey, clientID), wp)
 	return
 }
 
 // take write pool by ID to unlock (the take is get and remove)
-func (wp *writePool) take(poolID string, now common.Timestamp) (
+func (wp *WritePool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
 
 	var i int
@@ -85,7 +85,7 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	return
 }
 
-func (wp *writePool) getPool(poolID string) *allocationPool {
+func (wp *WritePool) getPool(poolID string) *allocationPool {
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
 			return ap
@@ -94,7 +94,7 @@ func (wp *writePool) getPool(poolID string) *allocationPool {
 	return nil
 }
 
-func (wp *writePool) allocPool(allocID string, until common.Timestamp) (
+func (wp *WritePool) allocPool(allocID string, until common.Timestamp) (
 	ap *allocationPool) {
 
 	var zero *allocationPool
@@ -109,7 +109,7 @@ func (wp *writePool) allocPool(allocID string, until common.Timestamp) (
 	return zero
 }
 
-func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
+func (wp *WritePool) Stat(now common.Timestamp) (aps allocationPoolsStat) {
 	aps = wp.Pools.stat(now)
 	return
 }
@@ -130,7 +130,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 	return bps
 }
 
-func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
+func (wp *WritePool) allocUntil(allocID string, until common.Timestamp) (
 	value state.Balance) {
 
 	return wp.Pools.allocUntil(allocID, until)
@@ -142,9 +142,9 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
-	balances chainState.StateContextI) (wp *writePool, err error) {
-	wp = new(writePool)
-	err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
+	balances chainState.StateContextI) (wp *WritePool, err error) {
+	wp = new(WritePool)
+	err = balances.GetTrieNode(WritePoolKey(ssc.ID, clientID), wp)
 	if err != nil {
 		return nil, err
 	}
@@ -157,13 +157,13 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	alloc *StorageAllocation,
 	balances chainState.StateContextI,
 ) (err error) {
-	var wp *writePool
+	var wp *WritePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return fmt.Errorf("getting client write pool: %v", err)
 	}
 	if err == util.ErrValueNotPresent {
-		wp = new(writePool)
+		wp = new(WritePool)
 	}
 
 	var ap = allocationPool{
@@ -188,7 +188,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	mintNewTokens bool,
 	balances chainState.StateContextI,
 ) (err error) {
-	var wp *writePool
+	var wp *WritePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
@@ -196,7 +196,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	if err == util.ErrValueNotPresent {
-		wp = new(writePool)
+		wp = new(WritePool)
 	}
 
 	var mld = alloc.restMinLockDemand()
@@ -242,12 +242,12 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		lr.TargetId = t.ClientID
 	}
 
-	var wp *writePool
+	var wp *WritePool
 	if wp, err = ssc.getWritePool(lr.TargetId, balances); err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("write_pool_lock_failed", err.Error())
 		}
-		wp = new(writePool)
+		wp = new(WritePool)
 	}
 
 	if lr.AllocationID == "" {
@@ -381,7 +381,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 			"%s did not fund pool %s", t.ClientID, req.PoolID)
 	}
 
-	var wp *writePool
+	var wp *WritePool
 	if wp, err = ssc.getWritePool(req.PoolOwner, balances); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
@@ -447,7 +447,7 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 		clientID  = params.Get("client_id")
 		allocID   = params.Get("allocation_id")
 		blobberID = params.Get("blobber_id")
-		wp        *writePool
+		wp        *WritePool
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
@@ -455,7 +455,7 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	}
 
 	var (
-		cut  = wp.blobberCut(allocID, blobberID, common.Now())
+		cut  = wp.BlobberCut(allocID, blobberID, common.Now())
 		stat []untilStat
 	)
 
@@ -483,12 +483,12 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 
 	var (
 		clientID = params.Get("client_id")
-		wp       *writePool
+		wp       *WritePool
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
 	}
 
-	return wp.stat(common.Now()), nil
+	return wp.Stat(common.Now()), nil
 }

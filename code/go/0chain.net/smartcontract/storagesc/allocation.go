@@ -663,7 +663,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	var (
 		changes = alloc.challengePoolChanges(odr, ndr, oterms)
-		cp      *challengePool
+		cp      *ChallengePool
 	)
 
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
@@ -1475,7 +1475,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get all blobbers list: "+err.Error())
 	}
 
-	var cp *challengePool
+	var cp *ChallengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"can't get related challenge pool: "+err.Error())
@@ -1530,7 +1530,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	alloc.MovedBack += cp.Balance
 
 	// write pool
-	var wp *writePool
+	var wp *WritePool
 	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"can't get user's write pools: "+err.Error())

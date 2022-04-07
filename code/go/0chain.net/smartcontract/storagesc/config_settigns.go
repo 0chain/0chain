@@ -295,7 +295,7 @@ var (
 	}
 )
 
-func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
+func (conf *Config) GetConfigMap() (smartcontract.StringMap, error) {
 	var out smartcontract.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
@@ -809,7 +809,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 		return "", common.NewError("update_settings", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(ScConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

@@ -585,7 +585,7 @@ func setupChallengeMocks(
 		},
 	}
 
-	var cPool = challengePool{
+	var cPool = ChallengePool{
 		ZcnPool: &tokenpool.ZcnPool{
 			TokenPool: tokenpool.TokenPool{
 				ID:      allocation.ID,
@@ -595,7 +595,7 @@ func setupChallengeMocks(
 	}
 	require.NoError(t, cPool.save(ssc.ID, allocation.ID, ctx))
 
-	var wPool = writePool{
+	var wPool = WritePool{
 		Pools: allocationPools{},
 	}
 	for _, balance := range wpBalances {
@@ -640,7 +640,7 @@ func setupChallengeMocks(
 	}
 	require.NoError(t, ssc.saveStakePools(validators, validatorsSPs, ctx))
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	_, err = ctx.InsertTrieNode(ScConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
 	return txn, ssc, allocation, challenge, details, ctx
@@ -663,13 +663,13 @@ type formulaeBlobberReward struct {
 }
 
 func (f formulaeBlobberReward) reward() int64 {
-	var challengePool = float64(f.challengePoolIntegralValue)
+	var ChallengePool = float64(f.challengePoolIntegralValue)
 	var passedPrevious = float64(f.previousChallange)
 	var passedCurrent = float64(f.thisChallange)
 	var currentExpires = float64(f.thisExpires)
 	var interpolationFraction = (passedCurrent - passedPrevious) / (currentExpires - passedPrevious)
 
-	return int64(challengePool * interpolationFraction)
+	return int64(ChallengePool * interpolationFraction)
 }
 
 func (f formulaeBlobberReward) validatorsReward() int64 {
@@ -754,12 +754,12 @@ func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
 func confirmBlobberPenalty(
 	t *testing.T,
 	f formulaeBlobberReward,
-	challengePool challengePool,
+	ChallengePool ChallengePool,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(ChallengePool.Balance), errDelta)
 
 	require.EqualValues(t, 0, int64(blobber.Reward))
 	require.EqualValues(t, 0, int64(blobber.Reward))
@@ -789,12 +789,12 @@ func confirmBlobberPenalty(
 func confirmBlobberReward(
 	t *testing.T,
 	f formulaeBlobberReward,
-	challengePool challengePool,
+	ChallengePool ChallengePool,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.rewardReturned()-f.validatorsReward(), int64(ChallengePool.Balance), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 
