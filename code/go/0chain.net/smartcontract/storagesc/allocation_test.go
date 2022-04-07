@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/mocks"
@@ -321,6 +323,8 @@ func TestExtendAllocation(t *testing.T) {
 				},
 			).Return(nil).Once()
 		}
+
+		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything).Return()
 
 		var sa = StorageAllocation{
 			ID:                      mockAllocationId,
@@ -1097,8 +1101,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	sb.Nodes[0].Used += 10 * GB
 	sb.Nodes[1].Used += 10 * GB
 
-	// blobbers of the allocation
-	assert.EqualValues(t, sb.Nodes, aresp.Blobbers)
 	// blobbers saved in all blobbers list
 	allBlobbers, err = ssc.getBlobbersList(balances)
 	require.NoError(t, err)

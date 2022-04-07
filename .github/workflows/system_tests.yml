@@ -69,4 +69,3 @@ jobs:
       DEV3KC: ${{ secrets.DEV3KC }}
       DEV4KC: ${{ secrets.DEV4KC }}
       DEV5KC: ${{ secrets.DEV5KC }}
-      SMART_CONTRACT_OWNER_WALLET_JSON: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}

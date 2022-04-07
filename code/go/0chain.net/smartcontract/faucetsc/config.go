@@ -33,6 +33,12 @@ var (
 		"owner_id",
 		"cost",
 	}
+
+	costFunctions = []string{
+		"update-settings",
+		"pour",
+		"refill",
+	}
 )
 
 type FaucetConfig struct {
