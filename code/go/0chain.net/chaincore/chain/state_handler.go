@@ -11,6 +11,10 @@ import (
 	"sort"
 	"strings"
 
+	"0chain.net/chaincore/chain/state"
+
+	"0chain.net/rest/restinterface"
+
 	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/smartcontract"
@@ -18,23 +22,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"0chain.net/rest"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/tinylib/msgp/msgp"
 )
-
-func NewRestHandler(ch *Chain) *rest.RestHandler {
-	lfb := ch.GetLatestFinalizedBlock()
-	if lfb == nil || lfb.ClientState == nil {
-		logging.Logger.Error("empty latest finalized block or state")
-		return nil
-	}
-	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
-	sctx := ch.NewStateContext(lfb, clientState, &transaction.Transaction{}, ch.GetEventDb())
-	return &rest.RestHandler{
-		SCtx: sctx,
-	}
-}
 
 func SetupSwagger() {
 	http.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
@@ -51,13 +41,14 @@ func SetupSwagger() {
 }
 
 /*SetupStateHandlers - setup handlers to manage state */
-func SetupStateHandlers() {
+func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
 
 	SetupSwagger()
-	restHandler := NewRestHandler(c)
+
 	if restHandler.GetEventDB() != nil {
-		rest.SetupStorageRestHandler(restHandler)
+		restHandler.SetStateContext(c.getStateContextI())
+		restHandler.SetupRestHandlers()
 	} else {
 		logging.Logger.Warn("cannot find event database, REST API will not be supported")
 	}
@@ -68,6 +59,16 @@ func SetupStateHandlers() {
 	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
 
+}
+
+func (c *Chain) getStateContextI() state.StateContextI {
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		logging.Logger.Error("empty latest finalized block or state")
+		return nil
+	}
+	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
+	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
 
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {

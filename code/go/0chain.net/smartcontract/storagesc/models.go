@@ -9,10 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/smartcontract/partitions"
-
-	"0chain.net/smartcontract/stakepool"
-
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -20,6 +16,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool"
 )
 
 //msgp:ignore StorageAllocation BlobberChallenge

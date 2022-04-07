@@ -14,8 +14,6 @@ import (
 	"0chain.net/smartcontract/storagesc"
 )
 
-//go:generate msgp -io=false -tests=false -unexported=true -v
-
 // swagger:model readMarkersCount
 type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
