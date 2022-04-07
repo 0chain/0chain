@@ -43,7 +43,7 @@ func SetupStorageRestHandler(rh *RestHandler) {
 	http.HandleFunc(storage+"/writemarkers", srh.getWriteMarker)
 	http.HandleFunc(storage+"/errors", srh.getErrors)
 	http.HandleFunc(storage+"/allocations", srh.getAllocations)
-	//http.HandleFunc(storage+"/allocation_min_lock", srh.getAllocationMinLock)
+	http.HandleFunc(storage+"/allocation_min_lock", srh.getAllocationMinLock)
 	http.HandleFunc(storage+"/allocation", srh.getAllocationStats)
 	http.HandleFunc(storage+"/latestreadmarker", srh.getLatestReadMarker)
 	http.HandleFunc(storage+"/readmarkers", srh.getReadMarkers)

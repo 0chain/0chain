@@ -1,15 +1,10 @@
 package storagesc
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/url"
 
 	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -143,28 +138,6 @@ func (cp *ChallengePool) moveToValidators(sscKey string, reward float64,
 	return nil
 }
 
-func (cp *ChallengePool) stat(alloc *StorageAllocation) (
-	stat *challengePoolStat) {
-
-	stat = new(challengePoolStat)
-
-	stat.ID = cp.ID
-	stat.Balance = cp.Balance
-	stat.StartTime = alloc.StartTime
-	stat.Expiration = alloc.Until()
-	stat.Finalized = alloc.Finalized
-
-	return
-}
-
-type challengePoolStat struct {
-	ID         string           `json:"id"`
-	Balance    state.Balance    `json:"balance"`
-	StartTime  common.Timestamp `json:"start_time"`
-	Expiration common.Timestamp `json:"expiration"`
-	Finalized  bool             `json:"finalized"`
-}
-
 //
 // smart contract methods
 //
@@ -217,35 +190,4 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	}
 
 	return
-}
-
-//
-// stat
-//
-
-// statistic for all locked tokens of a challenge pool
-func (ssc *StorageSmartContract) getChallengePoolStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		allocationID = datastore.Key(params.Get("allocation_id"))
-		alloc        *StorageAllocation
-		cp           *ChallengePool
-	)
-
-	if allocationID == "" {
-		err := errors.New("missing allocation_id URL query parameter")
-		return nil, common.NewErrBadRequest(err.Error())
-	}
-
-	if alloc, err = ssc.getAllocation(allocationID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation")
-	}
-
-	if cp, err = ssc.getChallengePool(allocationID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool")
-	}
-
-	return cp.stat(alloc), nil
 }

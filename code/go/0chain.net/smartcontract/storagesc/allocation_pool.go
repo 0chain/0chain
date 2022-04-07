@@ -485,13 +485,3 @@ func (aps allocationPools) stat(now common.Timestamp) (
 	}
 	return
 }
-
-//
-// until stat
-//
-
-type untilStat struct {
-	PoolID   string           `json:"pool_id"`
-	Balance  state.Balance    `json:"balance"`
-	ExpireAt common.Timestamp `json:"expire_at"`
-}
