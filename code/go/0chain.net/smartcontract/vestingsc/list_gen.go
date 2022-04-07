@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *clientPools) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *ClientPools) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "Pools"
@@ -20,7 +20,7 @@ func (z *clientPools) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *clientPools) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *ClientPools) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -69,7 +69,7 @@ func (z *clientPools) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *clientPools) Msgsize() (s int) {
+func (z *ClientPools) Msgsize() (s int) {
 	s = 1 + 6 + msgp.ArrayHeaderSize
 	for za0001 := range z.Pools {
 		s += msgp.StringPrefixSize + len(z.Pools[za0001])

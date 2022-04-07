@@ -14,7 +14,7 @@ import (
 
 func Test_clientPoolsKey(t *testing.T) {
 	const clientID = "client_hex"
-	var key = clientPoolsKey(ADDRESS, clientID)
+	var key = ClientPoolsKey(ADDRESS, clientID)
 	assert.NotZero(t, key)
 	assert.True(t, strings.Contains(key, ADDRESS))
 	assert.True(t, strings.Contains(key, clientID))

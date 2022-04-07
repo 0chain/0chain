@@ -1,12 +1,8 @@
 package vestingsc
 
 import (
-	"context"
 	"encoding/json"
-	"net/url"
 	"sort"
-
-	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -19,15 +15,16 @@ import (
 // index of vesting pools of a client
 //
 
-func clientPoolsKey(vscKey, clientID datastore.Key) datastore.Key {
+func ClientPoolsKey(vscKey, clientID datastore.Key) datastore.Key {
 	return vscKey + ":clientvestingpools:" + clientID
 }
 
-type clientPools struct {
+// swagger:model VestingClientPools
+type ClientPools struct {
 	Pools []string `json:"pools"`
 }
 
-func (cp *clientPools) Encode() (b []byte) {
+func (cp *ClientPools) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(cp); err != nil {
 		panic(err) // must not happen
@@ -35,11 +32,11 @@ func (cp *clientPools) Encode() (b []byte) {
 	return
 }
 
-func (cp *clientPools) Decode(b []byte) (err error) {
+func (cp *ClientPools) Decode(b []byte) (err error) {
 	return json.Unmarshal(b, cp)
 }
 
-func (cp *clientPools) getIndex(poolID datastore.Key) (i int, ok bool) {
+func (cp *ClientPools) getIndex(poolID datastore.Key) (i int, ok bool) {
 	i = sort.Search(len(cp.Pools), func(i int) bool {
 		return cp.Pools[i] >= poolID
 	})
@@ -52,11 +49,11 @@ func (cp *clientPools) getIndex(poolID datastore.Key) (i int, ok bool) {
 	return // not found
 }
 
-func (cp *clientPools) removeByIndex(i int) {
+func (cp *ClientPools) removeByIndex(i int) {
 	cp.Pools = append(cp.Pools[:i], cp.Pools[i+1:]...)
 }
 
-func (cp *clientPools) remove(poolID datastore.Key) (ok bool) {
+func (cp *ClientPools) remove(poolID datastore.Key) (ok bool) {
 	var i int
 	if i, ok = cp.getIndex(poolID); !ok {
 		return // false
@@ -65,7 +62,7 @@ func (cp *clientPools) remove(poolID datastore.Key) (ok bool) {
 	return true // removed
 }
 
-func (cp *clientPools) add(poolID datastore.Key) (ok bool) {
+func (cp *ClientPools) add(poolID datastore.Key) (ok bool) {
 	if len(cp.Pools) == 0 {
 		cp.Pools = append(cp.Pools, poolID)
 		return true // added
@@ -88,10 +85,10 @@ func (cp *clientPools) add(poolID datastore.Key) (ok bool) {
 	return true // added
 }
 
-func (cp *clientPools) save(vscKey, clientID datastore.Key,
+func (cp *ClientPools) save(vscKey, clientID datastore.Key,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(clientPoolsKey(vscKey, clientID), cp)
+	_, err = balances.InsertTrieNode(ClientPoolsKey(vscKey, clientID), cp)
 	return
 }
 
@@ -100,10 +97,10 @@ func (cp *clientPools) save(vscKey, clientID datastore.Key,
 //
 
 func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
+	balances chainstate.StateContextI) (cp *ClientPools, err error) {
 
-	cp = new(clientPools)
-	err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID), cp)
+	cp = new(ClientPools)
+	err = balances.GetTrieNode(ClientPoolsKey(vsc.ID, clientID), cp)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 }
 
 func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
+	balances chainstate.StateContextI) (cp *ClientPools, err error) {
 
 	cp, err = vsc.getClientPools(clientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -120,29 +117,8 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 	}
 
 	if err == util.ErrValueNotPresent {
-		return new(clientPools), nil // create new
+		return new(ClientPools), nil // create new
 	}
 
 	return // existing one, nil
-}
-
-//
-// REST-handlers
-//
-
-func (vsc *VestingSmartContract) getClientPoolsHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = params.Get("client_id")
-		cp       *clientPools
-	)
-
-	// just return empty list if not found
-	if cp, err = vsc.getOrCreateClientPools(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get or create client pools")
-	}
-
-	return cp, nil
 }

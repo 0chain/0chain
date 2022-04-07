@@ -21,7 +21,7 @@ func AddMockClientPools(
 	for i := 0; i < len(clients); i++ {
 		var clientPools = clientPools{}
 		clientPools.Pools = append(clientPools.Pools, geMockVestingPoolId(i))
-		if _, err := balances.InsertTrieNode(clientPoolsKey(ADDRESS, clients[i]), &clientPools); err != nil {
+		if _, err := balances.InsertTrieNode(ClientPoolsKey(ADDRESS, clients[i]), &clientPools); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -32,7 +32,7 @@ func AddMockVestingPools(
 	balances cstate.StateContextI,
 ) {
 	for i := 0; i < len(clients); i++ {
-		var vestingPool = vestingPool{
+		var VestingPool = VestingPool{
 			Description: "mock description",
 			StartTime:   0,
 			ExpireAt:    common.Timestamp(viper.GetDuration(benchmark.VestingMaxDuration).Seconds()),
@@ -43,11 +43,11 @@ func AddMockVestingPools(
 				ID:     getMockDestinationId(i, j),
 				Amount: mockDestinationBalance,
 			}
-			vestingPool.Destinations = append(vestingPool.Destinations, dest)
+			VestingPool.Destinations = append(VestingPool.Destinations, dest)
 		}
-		vestingPool.ID = geMockVestingPoolId(i)
-		vestingPool.Balance = mockVpBalance
-		if _, err := balances.InsertTrieNode(vestingPool.ID, &vestingPool); err != nil {
+		VestingPool.ID = geMockVestingPoolId(i)
+		VestingPool.Balance = mockVpBalance
+		if _, err := balances.InsertTrieNode(VestingPool.ID, &VestingPool); err != nil {
 			log.Fatal(err)
 		}
 	}

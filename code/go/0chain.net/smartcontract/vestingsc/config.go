@@ -1,12 +1,10 @@
 package vestingsc
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -59,12 +57,12 @@ var (
 	}
 )
 
-func scConfigKey(scKey string) datastore.Key {
+func ConfigKey(scKey string) datastore.Key {
 	return scKey + ":configurations"
 }
 
 // config represents SC configurations ('vestingsc:' from sc.yaml)
-type config struct {
+type Config struct {
 	MinLock              state.Balance  `json:"min_lock"`
 	MinDuration          time.Duration  `json:"min_duration"`
 	MaxDuration          time.Duration  `json:"max_duration"`
@@ -74,7 +72,7 @@ type config struct {
 	Cost                 map[string]int `json:"cost"`
 }
 
-func (c *config) validate() (err error) {
+func (c *Config) validate() (err error) {
 	switch {
 	case c.MinLock <= 0:
 		return errors.New("invalid min_lock (<= 0)")
@@ -92,7 +90,7 @@ func (c *config) validate() (err error) {
 	return
 }
 
-func (c *config) Encode() (b []byte) {
+func (c *Config) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(c); err != nil {
 		panic(err) // must not happens
@@ -100,11 +98,11 @@ func (c *config) Encode() (b []byte) {
 	return
 }
 
-func (c *config) Decode(b []byte) error {
+func (c *Config) Decode(b []byte) error {
 	return json.Unmarshal(b, c)
 }
 
-func (c *config) update(changes *smartcontract.StringMap) error {
+func (c *Config) update(changes *smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
 		switch key {
 		case Settings[MinLock]:
@@ -157,7 +155,7 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 	return nil
 }
 
-func (c *config) setCostValue(key, value string) error {
+func (c *Config) setCostValue(key, value string) error {
 	if !strings.HasPrefix(key, Settings[Cost]) {
 		return fmt.Errorf("config setting %s not found", key)
 	}
@@ -184,7 +182,7 @@ func (c *config) setCostValue(key, value string) error {
 	return fmt.Errorf("cost config setting %s not found", costKey)
 }
 
-func (c *config) getConfigMap() smartcontract.StringMap {
+func (c *Config) GetConfigMap() smartcontract.StringMap {
 	fields := map[string]string{
 		Settings[MinLock]:              fmt.Sprintf("%v", float64(c.MinLock)/1e10),
 		Settings[MinDuration]:          fmt.Sprintf("%v", c.MinDuration),
@@ -208,7 +206,7 @@ func (vsc *VestingSmartContract) updateConfig(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	var conf *config
+	var conf *Config
 	if conf, err = vsc.getConfig(balances); err != nil {
 		return "", common.NewError("update_config",
 			"can't get config: "+err.Error())
@@ -229,7 +227,7 @@ func (vsc *VestingSmartContract) updateConfig(
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	_, err = balances.InsertTrieNode(ConfigKey(vsc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -242,10 +240,10 @@ func (vsc *VestingSmartContract) updateConfig(
 //
 
 // configurations from sc.yaml
-func getConfiguredConfig() (conf *config, err error) {
+func getConfiguredConfig() (conf *Config, err error) {
 	const prefix = "smart_contracts.vestingsc."
 
-	conf = new(config)
+	conf = new(Config)
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
@@ -266,9 +264,9 @@ func getConfiguredConfig() (conf *config, err error) {
 
 func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
-) (conf *config, err error) {
-	conf = new(config)
-	err = balances.GetTrieNode(scConfigKey(vsc.ID), conf)
+) (conf *Config, err error) {
+	conf = new(Config)
+	err = balances.GetTrieNode(ConfigKey(vsc.ID), conf)
 	switch err {
 	case nil:
 		return conf, nil
@@ -281,31 +279,14 @@ func (vsc *VestingSmartContract) getConfig(
 
 func (vsc *VestingSmartContract) setupConfig(
 	balances chainstate.StateContextI,
-) (conf *config, err error) {
+) (conf *Config, err error) {
 
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	_, err = balances.InsertTrieNode(ConfigKey(vsc.ID), Config)
 	if err != nil {
 		return nil, err
 	}
 	return
-}
-
-//
-// REST-handler
-//
-
-func (vsc *VestingSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
-	balances chainstate.StateContextI,
-) (interface{}, error) {
-	conf, err := vsc.getConfig(balances)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get config", err.Error())
-	}
-
-	return conf.getConfigMap(), nil
 }

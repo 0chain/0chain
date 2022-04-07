@@ -7,6 +7,158 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
+func (z *VestingPool) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 6
+	// string "ZcnPool"
+	o = append(o, 0x86, 0xa7, 0x5a, 0x63, 0x6e, 0x50, 0x6f, 0x6f, 0x6c)
+	o, err = z.ZcnPool.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "ZcnPool")
+		return
+	}
+	// string "Description"
+	o = append(o, 0xab, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e)
+	o = msgp.AppendString(o, z.Description)
+	// string "StartTime"
+	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69, 0x6d, 0x65)
+	o, err = z.StartTime.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "StartTime")
+		return
+	}
+	// string "ExpireAt"
+	o = append(o, 0xa8, 0x45, 0x78, 0x70, 0x69, 0x72, 0x65, 0x41, 0x74)
+	o, err = z.ExpireAt.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "ExpireAt")
+		return
+	}
+	// string "Destinations"
+	o = append(o, 0xac, 0x44, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Destinations)))
+	for za0001 := range z.Destinations {
+		if z.Destinations[za0001] == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = z.Destinations[za0001].MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Destinations", za0001)
+				return
+			}
+		}
+	}
+	// string "ClientID"
+	o = append(o, 0xa8, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ClientID)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *VestingPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "ZcnPool":
+			bts, err = z.ZcnPool.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ZcnPool")
+				return
+			}
+		case "Description":
+			z.Description, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Description")
+				return
+			}
+		case "StartTime":
+			bts, err = z.StartTime.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "StartTime")
+				return
+			}
+		case "ExpireAt":
+			bts, err = z.ExpireAt.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ExpireAt")
+				return
+			}
+		case "Destinations":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Destinations")
+				return
+			}
+			if cap(z.Destinations) >= int(zb0002) {
+				z.Destinations = (z.Destinations)[:zb0002]
+			} else {
+				z.Destinations = make(destinations, zb0002)
+			}
+			for za0001 := range z.Destinations {
+				if msgp.IsNil(bts) {
+					bts, err = msgp.ReadNilBytes(bts)
+					if err != nil {
+						return
+					}
+					z.Destinations[za0001] = nil
+				} else {
+					if z.Destinations[za0001] == nil {
+						z.Destinations[za0001] = new(destination)
+					}
+					bts, err = z.Destinations[za0001].UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Destinations", za0001)
+						return
+					}
+				}
+			}
+		case "ClientID":
+			z.ClientID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ClientID")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *VestingPool) Msgsize() (s int) {
+	s = 1 + 8 + z.ZcnPool.Msgsize() + 12 + msgp.StringPrefixSize + len(z.Description) + 10 + z.StartTime.Msgsize() + 9 + z.ExpireAt.Msgsize() + 13 + msgp.ArrayHeaderSize
+	for za0001 := range z.Destinations {
+		if z.Destinations[za0001] == nil {
+			s += msgp.NilSize
+		} else {
+			s += z.Destinations[za0001].Msgsize()
+		}
+	}
+	s += 9 + msgp.StringPrefixSize + len(z.ClientID)
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *destination) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 5
@@ -286,157 +438,5 @@ func (z *stopRequest) UnmarshalMsg(bts []byte) (o []byte, err error) {
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z stopRequest) Msgsize() (s int) {
 	s = 1 + 7 + msgp.StringPrefixSize + len(z.PoolID) + 12 + msgp.StringPrefixSize + len(z.Destination)
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z *vestingPool) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 6
-	// string "ZcnPool"
-	o = append(o, 0x86, 0xa7, 0x5a, 0x63, 0x6e, 0x50, 0x6f, 0x6f, 0x6c)
-	o, err = z.ZcnPool.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "ZcnPool")
-		return
-	}
-	// string "Description"
-	o = append(o, 0xab, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e)
-	o = msgp.AppendString(o, z.Description)
-	// string "StartTime"
-	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69, 0x6d, 0x65)
-	o, err = z.StartTime.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "StartTime")
-		return
-	}
-	// string "ExpireAt"
-	o = append(o, 0xa8, 0x45, 0x78, 0x70, 0x69, 0x72, 0x65, 0x41, 0x74)
-	o, err = z.ExpireAt.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "ExpireAt")
-		return
-	}
-	// string "Destinations"
-	o = append(o, 0xac, 0x44, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.Destinations)))
-	for za0001 := range z.Destinations {
-		if z.Destinations[za0001] == nil {
-			o = msgp.AppendNil(o)
-		} else {
-			o, err = z.Destinations[za0001].MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, "Destinations", za0001)
-				return
-			}
-		}
-	}
-	// string "ClientID"
-	o = append(o, 0xa8, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ClientID)
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *vestingPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "ZcnPool":
-			bts, err = z.ZcnPool.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ZcnPool")
-				return
-			}
-		case "Description":
-			z.Description, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Description")
-				return
-			}
-		case "StartTime":
-			bts, err = z.StartTime.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "StartTime")
-				return
-			}
-		case "ExpireAt":
-			bts, err = z.ExpireAt.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ExpireAt")
-				return
-			}
-		case "Destinations":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Destinations")
-				return
-			}
-			if cap(z.Destinations) >= int(zb0002) {
-				z.Destinations = (z.Destinations)[:zb0002]
-			} else {
-				z.Destinations = make(destinations, zb0002)
-			}
-			for za0001 := range z.Destinations {
-				if msgp.IsNil(bts) {
-					bts, err = msgp.ReadNilBytes(bts)
-					if err != nil {
-						return
-					}
-					z.Destinations[za0001] = nil
-				} else {
-					if z.Destinations[za0001] == nil {
-						z.Destinations[za0001] = new(destination)
-					}
-					bts, err = z.Destinations[za0001].UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Destinations", za0001)
-						return
-					}
-				}
-			}
-		case "ClientID":
-			z.ClientID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ClientID")
-				return
-			}
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *vestingPool) Msgsize() (s int) {
-	s = 1 + 8 + z.ZcnPool.Msgsize() + 12 + msgp.StringPrefixSize + len(z.Description) + 10 + z.StartTime.Msgsize() + 9 + z.ExpireAt.Msgsize() + 13 + msgp.ArrayHeaderSize
-	for za0001 := range z.Destinations {
-		if z.Destinations[za0001] == nil {
-			s += msgp.NilSize
-		} else {
-			s += z.Destinations[za0001].Msgsize()
-		}
-	}
-	s += 9 + msgp.StringPrefixSize + len(z.ClientID)
 	return
 }

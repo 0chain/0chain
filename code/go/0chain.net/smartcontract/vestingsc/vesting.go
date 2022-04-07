@@ -1,15 +1,11 @@
 package vestingsc
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
-
-	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -162,7 +158,7 @@ func toSeconds(dur time.Duration) common.Timestamp {
 }
 
 // validate the addRequest
-func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
+func (ar *addRequest) validate(now common.Timestamp, conf *Config) (err error) {
 	if ar.StartTime == 0 {
 		ar.StartTime = now
 	}
@@ -197,7 +193,7 @@ func poolKey(vscKey, poolID datastore.Key) datastore.Key {
 	return vscKey + ":vestingpool:" + poolID
 }
 
-type vestingPool struct {
+type VestingPool struct {
 	tokenpool.ZcnPool `json:"pool"`
 
 	Description  string           `json:"description"`  //
@@ -208,15 +204,15 @@ type vestingPool struct {
 }
 
 // newVestingPool returns new empty uninitialized vesting pool.
-func newVestingPool() (vp *vestingPool) {
-	vp = new(vestingPool)
+func newVestingPool() (vp *VestingPool) {
+	vp = new(VestingPool)
 	return
 }
 
 // newVestingPoolFromRequest is the same as newVestingPool, but other fields
 // set by the request. The request must be validated before.
 func newVestingPoolFromReqeust(clientID datastore.Key, ar *addRequest) (
-	vp *vestingPool) {
+	vp *VestingPool) {
 
 	vp = newVestingPool()
 	vp.ClientID = clientID
@@ -231,7 +227,7 @@ func newVestingPoolFromReqeust(clientID datastore.Key, ar *addRequest) (
 
 // Encode the vesting pool from JSON value. Implements
 // required util.Serializale interface.
-func (vp *vestingPool) Encode() (b []byte) {
+func (vp *VestingPool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(vp); err != nil {
 		panic(err) // must never happen
@@ -241,7 +237,7 @@ func (vp *vestingPool) Encode() (b []byte) {
 
 // Decode the vesting pool to JSON. Implements
 // required util.Serializale interface.
-func (vp *vestingPool) Decode(b []byte) error {
+func (vp *VestingPool) Decode(b []byte) error {
 	return json.Unmarshal(b, vp)
 }
 
@@ -267,7 +263,7 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 }
 
 // required starting pool amount
-func (vp *vestingPool) want() (want state.Balance) {
+func (vp *VestingPool) want() (want state.Balance) {
 	for _, d := range vp.Destinations {
 		want += d.Amount
 	}
@@ -275,7 +271,7 @@ func (vp *vestingPool) want() (want state.Balance) {
 }
 
 // fill the pool by client
-func (vp *vestingPool) fill(t *transaction.Transaction,
+func (vp *VestingPool) fill(t *transaction.Transaction,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	if err = checkFill(t, balances); err != nil {
@@ -291,7 +287,7 @@ func (vp *vestingPool) fill(t *transaction.Transaction,
 }
 
 // the tokens transfer
-func (vp *vestingPool) moveToDest(vscKey, destID datastore.Key,
+func (vp *VestingPool) moveToDest(vscKey, destID datastore.Key,
 	value state.Balance, balances chainstate.StateContextI) (
 	resp string, err error) {
 
@@ -311,7 +307,7 @@ func (vp *vestingPool) moveToDest(vscKey, destID datastore.Key,
 
 // trigger sends all required for transaction's time (now) for all
 // destinations, updating them
-func (vp *vestingPool) trigger(t *transaction.Transaction,
+func (vp *VestingPool) trigger(t *transaction.Transaction,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	if vp.Balance == 0 {
@@ -356,7 +352,7 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 }
 
 // excess returns amount of tokens over the vesting pool requires
-func (vp *vestingPool) excess() (amount state.Balance) {
+func (vp *VestingPool) excess() (amount state.Balance) {
 	var need state.Balance
 	for _, d := range vp.Destinations {
 		need += d.left()
@@ -364,7 +360,7 @@ func (vp *vestingPool) excess() (amount state.Balance) {
 	return vp.Balance - need
 }
 
-func (vp *vestingPool) delete(destID string) (err error) {
+func (vp *VestingPool) delete(destID string) (err error) {
 	var (
 		i     int
 		found bool
@@ -383,7 +379,7 @@ func (vp *vestingPool) delete(destID string) (err error) {
 	return
 }
 
-func (vp *vestingPool) find(destID string) (d *destination, err error) {
+func (vp *VestingPool) find(destID string) (d *destination, err error) {
 	for _, x := range vp.Destinations {
 		if x.ID != destID {
 			continue
@@ -398,7 +394,7 @@ func (vp *vestingPool) find(destID string) (d *destination, err error) {
 }
 
 // vest is trigger for one destination
-func (vp *vestingPool) vest(vscID, destID datastore.Key, now common.Timestamp,
+func (vp *VestingPool) vest(vscID, destID datastore.Key, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	var end = vp.ExpireAt
@@ -426,7 +422,7 @@ func (vp *vestingPool) vest(vscID, destID datastore.Key, now common.Timestamp,
 	return
 }
 
-func (vp *vestingPool) drain(t *transaction.Transaction,
+func (vp *VestingPool) drain(t *transaction.Transaction,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	if t.ClientID != vp.ClientID {
@@ -451,7 +447,7 @@ func (vp *vestingPool) drain(t *transaction.Transaction,
 }
 
 // save the pool
-func (vp *vestingPool) save(balances chainstate.StateContextI) (err error) {
+func (vp *VestingPool) save(balances chainstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(vp.ID, vp)
 	return
 }
@@ -460,7 +456,7 @@ func (vp *vestingPool) save(balances chainstate.StateContextI) (err error) {
 // info (stat)
 //
 
-func (vp *vestingPool) info(now common.Timestamp) (i *info) {
+func (vp *VestingPool) Info(now common.Timestamp) (i *info) {
 	i = new(info)
 
 	i.ID = vp.ID
@@ -505,6 +501,7 @@ type destInfo struct {
 	Last   common.Timestamp `json:"last"`   // last time unlocked
 }
 
+// swagger:model vestingInfo
 type info struct {
 	ID           datastore.Key    `json:"pool_id"`      // pool ID
 	Balance      state.Balance    `json:"balance"`      // real pool balance
@@ -521,7 +518,7 @@ type info struct {
 //
 
 func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
-	balances chainstate.StateContextI) (vp *vestingPool, err error) {
+	balances chainstate.StateContextI) (vp *VestingPool, err error) {
 
 	vp = newVestingPool()
 	err = balances.GetTrieNode(poolID, vp)
@@ -612,7 +609,7 @@ func (vsc *VestingSmartContract) stop(t *transaction.Transaction,
 			"missing destination to stop vesting")
 	}
 
-	var vp *vestingPool
+	var vp *VestingPool
 	if vp, err = vsc.getPool(sr.PoolID, balances); err != nil {
 		return "", common.NewError("stop_vesting_failed",
 			"can't get vesting pool: "+err.Error())
@@ -664,7 +661,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 			"empty client id of transaction")
 	}
 
-	var vp *vestingPool
+	var vp *VestingPool
 	if vp, err = vsc.getPool(dr.PoolID, balances); err != nil {
 		return "", common.NewError("delete_vesting_pool_failed",
 			"can't get pool: "+err.Error())
@@ -703,7 +700,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 		cp.remove(vp.ID)
 
 		if len(cp.Pools) == 0 {
-			_, err = balances.DeleteTrieNode(clientPoolsKey(vsc.ID, t.ClientID))
+			_, err = balances.DeleteTrieNode(ClientPoolsKey(vsc.ID, t.ClientID))
 			if err != nil {
 				return "", common.NewError("delete_vesting_pool_failed",
 					"can't delete client's pools list: "+err.Error())
@@ -739,7 +736,7 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 			"invalid request: missing pool id")
 	}
 
-	var vp *vestingPool
+	var vp *VestingPool
 	if vp, err = vsc.getPool(ur.PoolID, balances); err != nil {
 		return "", common.NewError("unlock_vesting_pool_failed",
 			"can't get pool: "+err.Error())
@@ -787,7 +784,7 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"invalid request: missing pool id")
 	}
 
-	var vp *vestingPool
+	var vp *VestingPool
 	if vp, err = vsc.getPool(tr.PoolID, balances); err != nil {
 		return "", common.NewError("trigger_vesting_pool_failed",
 			"can't get pool: "+err.Error())
@@ -814,24 +811,4 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 	}
 
 	return //
-}
-
-//
-// REST handlers
-//
-
-func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		poolID = datastore.Key(params.Get("pool_id"))
-		vp     *vestingPool
-	)
-
-	if vp, err = vsc.getPool(poolID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pool")
-	}
-
-	return vp.info(common.Now()), nil
 }

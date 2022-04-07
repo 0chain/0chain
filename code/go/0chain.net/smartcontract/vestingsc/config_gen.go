@@ -7,35 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z Setting) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendInt(o, int(z))
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *Setting) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	{
-		var zb0001 int
-		zb0001, bts, err = msgp.ReadIntBytes(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		(*z) = Setting(zb0001)
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z Setting) Msgsize() (s int) {
-	s = msgp.IntSize
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z *config) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 7
 	// string "MinLock"
@@ -77,7 +49,7 @@ func (z *config) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *config) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -173,7 +145,7 @@ func (z *config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *config) Msgsize() (s int) {
+func (z *Config) Msgsize() (s int) {
 	s = 1 + 8 + z.MinLock.Msgsize() + 12 + msgp.DurationSize + 12 + msgp.DurationSize + 16 + msgp.IntSize + 21 + msgp.IntSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
@@ -181,5 +153,33 @@ func (z *config) Msgsize() (s int) {
 			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
 		}
 	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z Setting) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendInt(o, int(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Setting) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var zb0001 int
+		zb0001, bts, err = msgp.ReadIntBytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = Setting(zb0001)
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z Setting) Msgsize() (s int) {
+	s = msgp.IntSize
 	return
 }
