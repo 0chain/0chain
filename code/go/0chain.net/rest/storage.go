@@ -30,6 +30,7 @@ func SetupStorageRestHandler(rh *RestHandler) {
 	storage := "/v1/screst/" + storagesc.ADDRESS
 	http.HandleFunc(storage+"/get_blobber_count", srh.getBlobberCount)
 	http.HandleFunc(storage+"/getBlobber", srh.getBlobber)
+	http.HandleFunc(storage+"/getblobbers", srh.getBlobbers)
 	http.HandleFunc(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes)
 	http.HandleFunc(storage+"/get_blobber_lat_long", srh.getBlobberGeoLocation)
 	http.HandleFunc(storage+"/transaction", srh.getTransactionByHash)
@@ -544,7 +545,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 
 }
 
-// getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
+// getTransactionByHash swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
 // Gets transaction information from transaction hash
 //
 // responses:
@@ -581,7 +582,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var sns storagesc.StorageNodes
+	var sns storageNodesResponse
 	for _, blobber := range blobbers {
 		sn, err := blobberTableToStorageNode(blobber)
 		if err != nil {
@@ -589,8 +590,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			common.Respond(w, r, nil, err)
 			return
 		}
-		ssn := storagesc.StorageNode(sn)
-		sns.Nodes.Add(&ssn)
+		sns.Nodes = append(sns.Nodes, sn)
 	}
 	common.Respond(w, r, sns, nil)
 }

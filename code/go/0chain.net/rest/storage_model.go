@@ -42,45 +42,60 @@ func (sp storageStakePool) get(
 	return srh.GetTrieNode(storageStakePoolKey(blobberID), &sp)
 }
 
-func blobberTableToStorageNode(blobber event.Blobber) (storagesc.StorageNode, error) {
+// swagger:model storageNodeResponse
+type storageNodesResponse struct {
+	Nodes []storageNodeResponse
+}
+
+// StorageNode represents Blobber configurations.
+// swagger:model storageNodeResponse
+type storageNodeResponse struct {
+	storagesc.StorageNode
+	TotalStake int64 `json:"total_stake"`
+}
+
+func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
 	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
 	if err != nil {
-		return storagesc.StorageNode{}, err
+		return storageNodeResponse{}, err
 	}
 	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
 	if err != nil {
-		return storagesc.StorageNode{}, err
+		return storageNodeResponse{}, err
 	}
-	return storagesc.StorageNode{
-		ID:      blobber.BlobberID,
-		BaseURL: blobber.BaseURL,
-		Geolocation: storagesc.StorageNodeGeolocation{
-			Latitude:  blobber.Latitude,
-			Longitude: blobber.Longitude,
+	return storageNodeResponse{
+		StorageNode: storagesc.StorageNode{
+			ID:      blobber.BlobberID,
+			BaseURL: blobber.BaseURL,
+			Geolocation: storagesc.StorageNodeGeolocation{
+				Latitude:  blobber.Latitude,
+				Longitude: blobber.Longitude,
+			},
+			Terms: storagesc.Terms{
+				ReadPrice:               state.Balance(blobber.ReadPrice),
+				WritePrice:              state.Balance(blobber.WritePrice),
+				MinLockDemand:           blobber.MinLockDemand,
+				MaxOfferDuration:        maxOfferDuration,
+				ChallengeCompletionTime: challengeCompletionTime,
+			},
+			Capacity:        blobber.Capacity,
+			Used:            blobber.Used,
+			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			StakePoolSettings: stakepool.StakePoolSettings{
+				DelegateWallet:  blobber.DelegateWallet,
+				MinStake:        state.Balance(blobber.MinStake),
+				MaxStake:        state.Balance(blobber.MaxStake),
+				MaxNumDelegates: blobber.NumDelegates,
+				ServiceCharge:   blobber.ServiceCharge,
+			},
+			Information: storagesc.Info{
+				Name:        blobber.Name,
+				WebsiteUrl:  blobber.WebsiteUrl,
+				LogoUrl:     blobber.LogoUrl,
+				Description: blobber.Description,
+			},
 		},
-		Terms: storagesc.Terms{
-			ReadPrice:               state.Balance(blobber.ReadPrice),
-			WritePrice:              state.Balance(blobber.WritePrice),
-			MinLockDemand:           blobber.MinLockDemand,
-			MaxOfferDuration:        maxOfferDuration,
-			ChallengeCompletionTime: challengeCompletionTime,
-		},
-		Capacity:        blobber.Capacity,
-		Used:            blobber.Used,
-		LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  blobber.DelegateWallet,
-			MinStake:        state.Balance(blobber.MinStake),
-			MaxStake:        state.Balance(blobber.MaxStake),
-			MaxNumDelegates: blobber.NumDelegates,
-			ServiceCharge:   blobber.ServiceCharge,
-		},
-		Information: storagesc.Info{
-			Name:        blobber.Name,
-			WebsiteUrl:  blobber.WebsiteUrl,
-			LogoUrl:     blobber.LogoUrl,
-			Description: blobber.Description,
-		},
+		TotalStake: blobber.TotalStake,
 	}, nil
 }
 
