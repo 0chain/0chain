@@ -25,7 +25,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -413,9 +413,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 && move > 0 &&
-		state.Balance(conf.BlobberSlash*float64(move)) > 0 {
+		state.Balance(conf.BlobberSlash*move) > 0 {
 
-		var slash = state.Balance(conf.BlobberSlash * float64(move))
+		var slash = state.Balance(conf.BlobberSlash * move)
 
 		// load stake pool
 		var sp *stakePool
