@@ -11,7 +11,6 @@ root=$(pwd)
 
 num=$(docker ps -a --filter "name=^${redis}$" | wc -l)
 
-echo $num
 echo -n "[1/4] remove $redis: "
 [ $num -eq 2 ] && docker rm $redis --force || echo " SKIPPED"
 

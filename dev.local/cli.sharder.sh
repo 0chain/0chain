@@ -4,7 +4,11 @@ clean_sharder () {
 
     cd $root
 
-    rm -rf "./data/sharder$i"
+    [ -d "./data/sharder$i/data/blocks" ] && rm -rf "./data/sharder$i/data/blocks" && mkdir -p "./data/sharder$i/data/blocks" && echo " > clean blocks"
+    [ -d "./data/sharder$i/data/rocksdb" ] && rm -rf "./data/sharder$i/data/rocksdb" && mkdir -p "./data/sharder$i/data/rocksdb" && echo " > clean rocksdb"
+    [ -d "./data/sharder$i/log" ] && rm -rf "./data/sharder$i/log" && mkdir -p "./data/sharder$i/log" && echo " > clean logs"
+    [ -d "./data/sharder$i/tmp" ] && rm -rf "./data/sharder$i/tmp" && mkdir -p "./data/sharder$i/tmp" && echo " > clean tmp"
+    [ -d "./data/sharder$i/postgres" ] && rm -rf "./data/sharder$i/postgres" && ./cli.sharder.postgres.sh $i  && echo " > clean postgres"
 }
 
 # mkdir,copy and update config for current sharder
@@ -19,8 +23,6 @@ setup_sharder_runtime() {
 
     cd  ./data/sharder$i
 
-
-
     find ./config -name "0chain.yaml" -exec sed -i '' 's/level: "debug"/level: "error"/g' {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/console: false/console: true/g" {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/#   host: cassandra/    host: 127.0.0.1/g" {} \;
@@ -28,16 +30,13 @@ setup_sharder_runtime() {
     find ./config -name "0chain.yaml" -exec sed -i '' 's/threshold_by_count: 66/threshold_by_count: 40/g' {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/    host: postgres/    host: 127.0.0.1/g" {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/    port: 5432/    port: 553$i/g" {} \;
-
-
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' 's/198.18.0.71/127.0.0.1/g' {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.72/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.73/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.74/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.81/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.82/127.0.0.1/g" {} \;
     
-
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.71/${hostname}/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.72/${hostname}/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.73/${hostname}/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.74/${hostname}/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.81/${hostname}/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.82/${hostname}/g" {} \;
     
 
     [ -d ./data/blocks ] || mkdir -p ./data/blocks
@@ -61,9 +60,14 @@ start_sharder(){
 
     cd ./sharder/sharder
 
-    export LIBRARY_PATH="/usr/local/lib:/opt/homebrew/Cellar/snappy/1.1.9/lib:/opt/homebrew/Cellar/lz4/1.9.3/lib:/opt/homebrew/Cellar/gmp/6.2.1_1/lib"
-    export LD_LIBRARY_PATH="/usr/local/lib:/opt/homebrew/Cellar/snappy/1.1.9/lib:/opt/homebrew/Cellar/lz4/1.9.3/lib:/opt/homebrew/Cellar/gmp/6.2.1_1/lib"
-    export DYLD_LIBRARY_PATH="/usr/local/lib:/opt/homebrew/Cellar/snappy/1.1.9/lib:/opt/homebrew/Cellar/lz4/1.9.3/lib:/opt/homebrew/Cellar/gmp/6.2.1_1/lib"
+    snappy=$(brew --prefix snappy)
+    lz4=$(brew --prefix lz4)
+    gmp=$(brew --prefix gmp)
+    openssl=$(brew --prefix openssl@1.1)
+
+    export LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
+    export LD_LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
+    export DYLD_LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
     export CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
     export CGO_CFLAGS="-I/usr/local/include"
     export CGO_CPPFLAGS="-I/usr/local/include"
@@ -77,8 +81,6 @@ start_sharder(){
     cd $root/data/sharder$i/
     keys_file=$root/data/sharder$i/config/b0snode${i}_keys.txt
     minio_file=$root/data/sharder$i/config/minio_config.txt
-    echo $keys_file
-
 
     ./sharder --deployment_mode 0 --keys_file $keys_file --minio_file $minio_file --work_dir $root/data/sharder$i
 }
