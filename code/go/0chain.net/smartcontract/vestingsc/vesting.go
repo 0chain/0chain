@@ -542,7 +542,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 			"malformed request: "+err.Error())
 	}
 
-	var conf *config
+	var conf *Config
 	if conf, err = vsc.getConfig(balances); err != nil {
 		return "", common.NewError("create_vesting_pool_failed",
 			"can't get SC configurations: "+err.Error())
@@ -575,7 +575,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 			"can't fill pool: "+err.Error())
 	}
 
-	var cp *clientPools
+	var cp *ClientPools
 	if cp, err = vsc.getOrCreateClientPools(t.ClientID, balances); err != nil {
 		return "", common.NewError("create_vesting_pool_failed",
 			"unexpected error: "+err.Error())
@@ -690,7 +690,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 		}
 	}
 
-	var cp *clientPools
+	var cp *ClientPools
 	if cp, err = vsc.getOrCreateClientPools(t.ClientID, balances); err != nil {
 		return "", common.NewError("delete_vesting_pool_failed",
 			"unexpected error: "+err.Error())

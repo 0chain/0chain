@@ -284,7 +284,7 @@ func (vsc *VestingSmartContract) setupConfig(
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
 	}
-	_, err = balances.InsertTrieNode(ConfigKey(vsc.ID), Config)
+	_, err = balances.InsertTrieNode(ConfigKey(vsc.ID), conf)
 	if err != nil {
 		return nil, err
 	}
