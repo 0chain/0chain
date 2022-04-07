@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -13,6 +14,8 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/maths"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
@@ -174,6 +177,14 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
+		data, _ := json.Marshal(dbs.DbUpdates{
+			Id: qualifyingBlobberIds[i],
+			Updates: map[string]interface{}{
+				"total_stake": int64(qsp.stake()),
+			},
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], string(data))
+
 	}
 
 	return nil
