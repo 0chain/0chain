@@ -32,5 +32,5 @@ echo -n "[4/4] install $redis_txns: " && \
 docker run --name $redis_txns \
 --restart always -p 63${1}1:6379 \
 -v $root/data/$miner/config:/0chain/config \
--v  $root/data/$miner/data:/0chain/data \
+-v  $root/data/$miner/data:/0chain/data:z \
 -d redis:alpine redis-server /0chain/config/redis/transactions.redis.conf
