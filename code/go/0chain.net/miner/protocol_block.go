@@ -129,9 +129,10 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block, bState util.MerklePatricia
 	return brTxn
 }
 
-func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = b.MinerID
+	brTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -369,7 +370,10 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 			return nil, block.ErrCostTooBig
 		}
 	}
-	logging.Logger.Debug("ValidateBlockCost", zap.Int("calculated cost", cost))
+	logging.Logger.Debug("ValidateBlockCost",
+		zap.Int64("round", b.Round),
+		zap.String("hash", b.Hash),
+		zap.Int("calculated cost", cost))
 
 	cur = time.Now()
 	if err = mc.ComputeState(ctx, b); err != nil {
@@ -937,8 +941,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	rcount := 0
 	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && len(iterInfo.currentTxns) > 0 &&
-		err != context.DeadlineExceeded && iterInfo.cost < mc.Config.MaxBlockCost() {
-		for _, txn := range iterInfo.currentTxns {
+		err != context.DeadlineExceeded {
+		for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.Config.MaxBlockCost(); i++ {
+			txn := iterInfo.currentTxns[i]
+			cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+			if err != nil {
+				logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+				break
+			}
+			if iterInfo.cost+cost >= mc.Config.MaxBlockCost() {
+				logging.Logger.Debug("generate block (too big cost, skipping)")
+				break
+			}
+
 			if txnProcessor(ctx, blockState, txn, iterInfo) {
 				rcount++
 				if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
@@ -974,7 +989,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	challengesEnabled := config.SmartContractConfig.GetBool(
 		"smart_contracts.storagesc.challenge_enabled")
 	if challengesEnabled {
-		err = mc.processTxn(ctx, mc.createGenerateChallengeTxn(b), b, blockState, iterInfo.clients)
+		err = mc.processTxn(ctx, mc.createGenerateChallengeTxn(b, blockState), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (generate_challenge)",
 				zap.Int64("round", b.Round), zap.Error(err))
