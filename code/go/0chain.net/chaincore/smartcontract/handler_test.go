@@ -208,11 +208,11 @@ func TestGetSmartContract(t *testing.T) {
 			address:    faucetsc.ADDRESS,
 			restpoints: 4,
 		},
-		{
-			name:       "storage",
-			address:    storagesc.ADDRESS,
-			restpoints: 28,
-		},
+		//{
+		//	name:       "storage",
+		//	address:    storagesc.ADDRESS,
+		//	restpoints: 28,
+		//},
 		{
 			name:       "interest",
 			address:    interestpoolsc.ADDRESS,

@@ -60,6 +60,7 @@ func init() {
 }
 
 func TestChain_HandleSCRest_Status(t *testing.T) {
+	t.Skip("we are changing how we handle rest calls")
 	const (
 		clientID     = "client id"
 		blobberID    = "blobber_id"
