@@ -270,7 +270,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	var dmn *DKGMinerNodes
-	if dmn, err = getDKGMinersList(balances); err != nil {
+	if dmn, err = GetDKGMinersList(balances); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't get DKG miners: %v", err)
 	}

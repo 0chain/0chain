@@ -43,84 +43,86 @@ func BenchmarkRestTests(
 	}
 	msc.setSC(msc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
-		{
-			name:     "miner_rest.getNodepool",
-			endpoint: msc.GetNodepoolHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, NodeTypeMiner))
-				values.Set("n2n_host", "n2n_host")
-				return values
-			}(),
-		},
-		{
-			name:     "miner_rest.getUserPools",
-			endpoint: msc.GetUserPoolsHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client_id", data.Clients[0])
-				return values
-			}(),
-		},
-		{
-			name:     "miner_rest.globals",
-			endpoint: msc.getGlobalsHandler,
-		},
-		{
-			name:     "miner_rest.getSharderKeepList",
-			endpoint: msc.GetSharderKeepListHandler,
-		},
-		{
-			name:     "miner_rest.getMinerList",
-			endpoint: msc.GetMinerListHandler,
-		},
-		{
-			name:     "miner_rest.getSharderList",
-			endpoint: msc.GetSharderListHandler,
-		},
-		{
-			name:     "miner_rest.getPhase",
-			endpoint: msc.GetPhaseHandler,
-		},
-		{
-			name:     "miner_rest.getDkgList",
-			endpoint: msc.GetDKGMinerListHandler,
-		},
-		{
-			name:     "miner_rest.getMpksList",
-			endpoint: msc.GetMinersMpksListHandler,
-		},
-		{
-			name:     "miner_rest.getGroupShareOrSigns",
-			endpoint: msc.GetGroupShareOrSignsHandler,
-		},
-		{
-			name:     "miner_rest.getMagicBlock",
-			endpoint: msc.GetMagicBlockHandler,
-		},
-		{
-			name:     "miner_rest.nodeStat",
-			endpoint: msc.nodeStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, NodeTypeMiner))
-				return values
-			}(),
-		},
-		{
-			name:     "miner_rest.nodePoolStat",
-			endpoint: msc.nodePoolStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("id", GetMockNodeId(0, NodeTypeMiner))
-				values.Set("pool_id", getMinerDelegatePoolId(0, 0, NodeTypeMiner))
-				return values
-			}(),
-		},
-		{
-			name:     "miner_rest.configs",
-			endpoint: msc.configHandler,
-		},
+		/*
+			{
+				name:     "miner_rest.getNodepool",
+				endpoint: msc.GetNodepoolHandler,
+				params: func() url.Values {
+					var values url.Values = make(map[string][]string)
+					values.Set("id", GetMockNodeId(0, NodeTypeMiner))
+					values.Set("n2n_host", "n2n_host")
+					return values
+				}(),
+			},
+			{
+				name:     "miner_rest.getUserPools",
+				endpoint: msc.GetUserPoolsHandler,
+				params: func() url.Values {
+					var values url.Values = make(map[string][]string)
+					values.Set("client_id", data.Clients[0])
+					return values
+				}(),
+			},
+			{
+				name:     "miner_rest.globals",
+				endpoint: msc.getGlobalsHandler,
+			},
+			{
+				name:     "miner_rest.getSharderKeepList",
+				endpoint: msc.GetSharderKeepListHandler,
+			},
+			{
+				name:     "miner_rest.getMinerList",
+				endpoint: msc.GetMinerListHandler,
+			},
+			{
+				name:     "miner_rest.getSharderList",
+				endpoint: msc.GetSharderListHandler,
+			},
+			{
+				name:     "miner_rest.getPhase",
+				endpoint: msc.GetPhaseHandler,
+			},
+			{
+				name:     "miner_rest.getDkgList",
+				endpoint: msc.GetDKGMinerListHandler,
+			},
+			{
+				name:     "miner_rest.getMpksList",
+				endpoint: msc.GetMinersMpksListHandler,
+			},
+			{
+				name:     "miner_rest.GetGroupShareOrSigns",
+				endpoint: msc.GetGroupShareOrSignsHandler,
+			},
+			{
+				name:     "miner_rest.GetMagicBlock",
+				endpoint: msc.GetMagicBlockHandler,
+			},
+			{
+				name:     "miner_rest.nodeStat",
+				endpoint: msc.nodeStatHandler,
+				params: func() url.Values {
+					var values url.Values = make(map[string][]string)
+					values.Set("id", GetMockNodeId(0, NodeTypeMiner))
+					return values
+				}(),
+			},
+			{
+				name:     "miner_rest.nodePoolStat",
+				endpoint: msc.nodePoolStatHandler,
+				params: func() url.Values {
+					var values url.Values = make(map[string][]string)
+					values.Set("id", GetMockNodeId(0, NodeTypeMiner))
+					values.Set("pool_id", getMinerDelegatePoolId(0, 0, NodeTypeMiner))
+					return values
+				}(),
+			},
+			{
+				name:     "miner_rest.configs",
+				endpoint: msc.configHandler,
+			},
+		*/
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {

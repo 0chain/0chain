@@ -105,7 +105,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 	require.NoError(t, err)
 
 	var dmn *DKGMinerNodes
-	dmn, err = getDKGMinersList(balances)
+	dmn, err = GetDKGMinersList(balances)
 	require.NoError(t, err)
 
 	dmn.setConfigs(gn)

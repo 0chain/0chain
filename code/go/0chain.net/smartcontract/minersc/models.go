@@ -300,7 +300,7 @@ func (gn *GlobalNode) validate() error {
 	return nil
 }
 
-func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
+func (gn *GlobalNode) GetConfigMap() (smartcontract.StringMap, error) {
 	var out smartcontract.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
@@ -759,39 +759,6 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
-type DelegatePoolStat struct {
-	ID           string        `json:"id"`            // pool ID
-	Balance      state.Balance `json:"balance"`       //
-	InterestPaid state.Balance `json:"interest_paid"` //
-	RewardPaid   state.Balance `json:"reward_paid"`   //
-	Status       string        `json:"status"`        //
-	High         state.Balance `json:"high"`          // }
-	Low          state.Balance `json:"low"`           // }
-}
-
-func newDelegatePoolStat(dp *sci.DelegatePool) (dps *DelegatePoolStat) {
-	dps = new(DelegatePoolStat)
-	dps.ID = dp.ID
-	dps.Balance = dp.Balance
-	dps.InterestPaid = dp.InterestPaid
-	dps.RewardPaid = dp.RewardPaid
-	dps.Status = dp.Status
-	dps.High = dp.High
-	dps.Low = dp.Low
-	return
-}
-
-// A userPools represents response for user pools requests.
-type userPools struct {
-	Pools map[string]map[string][]*DelegatePoolStat `json:"pools"`
-}
-
-func newUserPools() (ups *userPools) {
-	ups = new(userPools)
-	ups.Pools = make(map[string]map[string][]*DelegatePoolStat)
-	return
-}
-
 // UserNode keeps references to all user's pools.
 type UserNode struct {
 	ID    string              `json:"id"`       // client ID
@@ -868,6 +835,7 @@ func (dp *deletePool) Decode(input []byte) error {
 	return json.Unmarshal(input, dp)
 }
 
+// swagger:model PhaseNode
 type PhaseNode struct {
 	Phase        Phase `json:"phase"`
 	StartRound   int64 `json:"start_round"`
@@ -1071,8 +1039,8 @@ func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 	return nil
 }
 
-// getDKGMinersList gets dkg miners list
-func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
+// GetDKGMinersList gets dkg miners list
+func GetDKGMinersList(state cstate.ReadOnlyStateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
 	err := state.GetTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
@@ -1093,7 +1061,7 @@ func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) e
 	return err
 }
 
-func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
+func GetMinersMPKs(state cstate.ReadOnlyStateContextI) (*block.Mpks, error) {
 	mpks := block.NewMpks()
 	err := state.GetTrieNode(MinersMPKKey, mpks)
 	if err != nil {
@@ -1108,7 +1076,7 @@ func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
 	return err
 }
 
-func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
+func GetMagicBlock(state cstate.ReadOnlyStateContextI) (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()
 	err := state.GetTrieNode(MagicBlockKey, magicBlock)
 	if err != nil {
@@ -1123,7 +1091,7 @@ func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) 
 	return err
 }
 
-func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+func GetGroupShareOrSigns(state cstate.ReadOnlyStateContextI) (*block.GroupSharesOrSigns, error) {
 	var gsos = block.NewGroupSharesOrSigns()
 	err := state.GetTrieNode(GroupShareOrSignsKey, gsos)
 	if err != nil {
@@ -1138,8 +1106,8 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 	return err
 }
 
-// getShardersKeepList returns the sharder list
-func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
+// GetShardersKeepList returns the sharder list
+func GetShardersKeepList(balances cstate.ReadOnlyStateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, ShardersKeepKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -1173,7 +1141,7 @@ func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) err
 	return err
 }
 
-func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
+func getNodesList(balances cstate.ReadOnlyStateContextI, key datastore.Key) (*MinerNodes, error) {
 	nodesList := &MinerNodes{}
 	err := balances.GetTrieNode(key, nodesList)
 	if err != nil {

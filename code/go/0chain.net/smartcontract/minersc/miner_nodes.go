@@ -10,6 +10,7 @@ import (
 //msgp:ignore MinerNodes
 //go:generate msgp -io=false -tests=false -v
 
+// swagger:model MinerNodes
 type MinerNodes struct {
 	Nodes []*MinerNode
 }

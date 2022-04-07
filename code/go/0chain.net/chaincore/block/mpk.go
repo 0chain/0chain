@@ -15,6 +15,7 @@ type MPK struct {
 	Mpk []string
 }
 
+// swagger:model Mpks
 type Mpks struct {
 	Mpks map[string]*MPK
 }

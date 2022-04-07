@@ -53,6 +53,7 @@ func (ps *PoolStats) Decode(input []byte) error {
 	return json.Unmarshal(input, ps)
 }
 
+// swagger:model DelegatePool
 type DelegatePool struct {
 	*PoolStats                `json:"stats"`
 	*tokenpool.ZcnLockingPool `json:"pool"`

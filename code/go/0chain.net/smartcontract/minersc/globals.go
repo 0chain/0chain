@@ -510,7 +510,7 @@ func (gl *GlobalSettings) GetStrings(field GlobalSetting) ([]string, error) {
 	return value, nil
 }
 
-func getStringMapFromViper() map[string]string {
+func GetStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
 	for key := range GlobalSettingInfo {
 		if _, ok := GlobalSettingsIgnored[key]; ok {
@@ -559,7 +559,7 @@ func (msc *MinerSmartContract) updateGlobals(
 			return "", common.NewError("update_globals", err.Error())
 		}
 		globals = &GlobalSettings{
-			Fields: getStringMapFromViper(),
+			Fields: GetStringMapFromViper(),
 		}
 	}
 

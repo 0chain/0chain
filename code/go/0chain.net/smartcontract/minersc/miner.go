@@ -242,7 +242,7 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 	}
 	if pn.Phase != Wait {
 		var dkgMiners *DKGMinerNodes
-		if dkgMiners, err = getDKGMinersList(balances); err != nil {
+		if dkgMiners, err = GetDKGMinersList(balances); err != nil {
 			return
 		}
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {

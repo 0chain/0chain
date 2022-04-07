@@ -209,7 +209,7 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 		return common.NewError("failed to delete from view change", "magic block has already been created for next view change")
 	}
 
-	sharders, err := getShardersKeepList(balances)
+	sharders, err := GetShardersKeepList(balances)
 	if err != nil {
 		logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
 			zap.Error(err))
@@ -251,7 +251,7 @@ func verifyAllShardersState(balances cstate.StateContextI, msg string) {
 }
 
 func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
-	shardersList, err := getShardersKeepList(balances)
+	shardersList, err := GetShardersKeepList(balances)
 	if err != nil {
 		logging.Logger.Error("verify_sharder_keep_state_failed", zap.Error(err))
 		return
@@ -305,7 +305,7 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		return "", common.NewErrorf("sharder_keep", "invalid input: %v", err)
 	}
 
-	sharderKeepList, err := getShardersKeepList(balances)
+	sharderKeepList, err := GetShardersKeepList(balances)
 	if err != nil {
 		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("sharder_keep",
