@@ -39,4 +39,5 @@ func (rh *RestHandler) SetupRestHandlers() {
 	SetupFaucetscRestHandler(rh)
 	SetupInterestPoolRestHandler(rh)
 	SetupVestingRestHandler(rh)
+	SetupZcnRestHandler(rh)
 }
