@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/core/datastore"
@@ -333,6 +335,9 @@ func (msc *StorageSmartContract) GetErrors(
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
+	logging.Logger.Info("GetAllocationsHandler",
+		zap.Bool("is event db present", balances.GetEventDB() != nil))
+
 	clientID := params.Get("client")
 	allocations, err := ssc.getAllocationsList(clientID, balances)
 	if err != nil {
@@ -346,6 +351,12 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 		switch err {
 		case nil:
+			if balances.GetEventDB() != nil {
+				err = allocationObj.getBlobbers(balances)
+				if err != nil {
+					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+				}
+			}
 			result = append(result, allocationObj)
 		case util.ErrValueNotPresent:
 			continue
@@ -401,9 +412,14 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	return response, nil
 }
 
-const cantGetAllocation = "can't get allocation"
+const (
+	cantGetAllocation = "can't get allocation"
+	cantGetBlobber    = "can't get blobber"
+)
 
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	logging.Logger.Info("AllocationStatsHandler",
+		zap.Bool("is event db present", balances.GetEventDB() != nil))
 	allocationID := params.Get("allocation")
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = allocationID
@@ -411,6 +427,13 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+	}
+
+	if balances.GetEventDB() != nil {
+		err = allocationObj.getBlobbers(balances)
+		if err != nil {
+			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+		}
 	}
 
 	return allocationObj, nil

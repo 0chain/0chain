@@ -150,7 +150,6 @@ func TestAddChallenge(t *testing.T) {
 
 		return args{
 			alloc: &StorageAllocation{
-				Blobbers:   blobbers,
 				BlobberMap: blobberMap,
 				Stats:      &StorageAllocationStats{},
 			},
@@ -174,6 +173,7 @@ func TestAddChallenge(t *testing.T) {
 			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
+
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
 
