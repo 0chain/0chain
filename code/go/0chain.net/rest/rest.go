@@ -7,6 +7,8 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/vestingsc"
 )
 
 type RestHandler struct {
@@ -36,8 +38,8 @@ func (rh *RestHandler) SetupRestHandlers() {
 	}
 	//SetupStorageRestHandler(rh)
 	//SetupMinerRestHandler(rh)
-	//SetupFaucetscRestHandler(rh)
+	faucetsc.SetupRestHandler(rh)
 	//SetupInterestPoolRestHandler(rh)
-	//vestingsc.SetupRestHandler(rh)
+	vestingsc.SetupRestHandler(rh)
 	//SetupZcnRestHandler(rh)
 }

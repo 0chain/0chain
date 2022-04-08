@@ -16,12 +16,6 @@ import (
 	c_state "0chain.net/chaincore/chain/state"
 )
 
-const (
-	noLimitsMsg     = "can't get limits"
-	noGlobalNodeMsg = "can't get global node"
-	noClient        = "can't get client"
-)
-
 func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
