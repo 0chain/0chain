@@ -47,9 +47,9 @@ func (zcn *ZCNSmartContract) InitSC() {}
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
 	// REST
-	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
-	zcn.SmartContract.RestHandlers["/getGlobalConfig"] = zcn.GetGlobalConfig
-	zcn.SmartContract.RestHandlers["/getAuthorizer"] = zcn.GetAuthorizer
+	//zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
+	//zcn.SmartContract.RestHandlers["/getGlobalConfig"] = zcn.GetGlobalConfig
+	//zcn.SmartContract.RestHandlers["/getAuthorizer"] = zcn.GetAuthorizer
 	// Smart contracts
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
 	zcn.SmartContractExecutionStats[UpdateGlobalConfigFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, UpdateGlobalConfigFunc), nil)
