@@ -534,18 +534,18 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	var wg sync.WaitGroup
 	for i, details := range alloc.BlobberDetails {
 		wg.Add(1)
-		go func(index int) {
+		go func(index int, blobberId string) {
 			defer wg.Done()
 			var blobber *StorageNode
-			blobber, err = sc.getBlobber(details.BlobberID, balances)
+			blobber, err = sc.getBlobber(blobberId, balances)
 			if err != nil {
-				errorCh <- fmt.Errorf("can't get blobber %q: %v", details.BlobberID, err)
+				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
 			}
 			blobberCh <- blobberResp{
 				index:   i,
 				blobber: blobber,
 			}
-		}(i)
+		}(i, details.BlobberID)
 	}
 	wg.Wait()
 	close(errorCh)
