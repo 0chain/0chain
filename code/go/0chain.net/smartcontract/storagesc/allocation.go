@@ -611,37 +611,6 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	return string(alloc.Encode()), nil // closing
 }
 
-/*
-func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
-	alloc *StorageAllocation, blobbers []*StorageNode,
-	balances chainstate.StateContextI) (err error) {
-
-	// save all
-	if err = updateBlobbersInAll(all, blobbers, balances); err != nil {
-		return
-	}
-
-	// save related blobbers
-	for _, b := range blobbers {
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
-			return
-		}
-	}
-
-	// save allocation
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return
-	}
-
-	err = emitAddOrOverwriteAllocation(alloc, balances)
-	if err != nil {
-		return
-	}
-
-	return
-}
-*/
 func (sc *StorageSmartContract) saveUpdatedAllocation(
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
