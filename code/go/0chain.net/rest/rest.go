@@ -49,7 +49,7 @@ func (rh *RestHandler) SetupRestHandlers() {
 		return
 	}
 	//storagesc.SetupRestHandler(rh)
-	minersc.SetupRestHandler(rh)
+	//minersc.SetupRestHandler(rh)
 	faucetsc.SetupRestHandler(rh)
 	interestpoolsc.SetupRestHandler(rh)
 	vestingsc.SetupRestHandler(rh)
