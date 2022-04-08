@@ -1039,17 +1039,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	//var all *StorageNodes // all blobbers list
-	//if all, err = sc.getBlobbersList(balances); err != nil {
-	//	return "", common.NewError("allocation_updating_failed",
-	//		"can't get all blobbers list: "+err.Error())
-	//}
-
-	//if len(all.Nodes) == 0 {
-	//	return "", common.NewError("allocation_updating_failed",
-	//		"empty blobbers list")
-	//}
-
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_updating_failed",
 			"missing client_id in transaction")
