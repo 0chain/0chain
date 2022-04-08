@@ -11,6 +11,9 @@ import (
 	"sort"
 	"strings"
 
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/rest/restinterface"
+
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
