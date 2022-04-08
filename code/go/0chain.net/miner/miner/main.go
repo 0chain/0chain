@@ -435,7 +435,7 @@ func initHandlers(c chain.Chainer) {
 	block.SetupHandlers()
 	miner.SetupHandlers()
 	diagnostics.SetupHandlers()
-	chain.SetupStateHandlers()
+	chain.SetupStateHandlers(&rest.RestHandler{})
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()

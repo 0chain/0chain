@@ -15,18 +15,51 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/tinylib/msgp/msgp"
 )
 
+func SetupSwagger() {
+	http.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+
+	// documentation for developers
+	opts := middleware.SwaggerUIOpts{SpecURL: "swagger.yaml"}
+	sh := middleware.SwaggerUI(opts, nil)
+	http.Handle("/docs", sh)
+
+	// documentation for share
+	opts1 := middleware.RedocOpts{SpecURL: "swagger.yaml", Path: "docs1"}
+	sh1 := middleware.Redoc(opts1, nil)
+	http.Handle("/docs1", sh1)
+}
+
 /*SetupStateHandlers - setup handlers to manage state */
-func SetupStateHandlers() {
+func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
+	SetupSwagger()
+	if restHandler.GetEventDB() != nil {
+		restHandler.SetStateContext(c.getStateContextI())
+		restHandler.SetupRestHandlers()
+	} else {
+		logging.Logger.Warn("cannot find event database, REST API will not be supported")
+	}
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
 	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
+}
+
+func (c *Chain) getStateContextI() state.StateContextI {
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		logging.Logger.Error("empty latest finalized block or state")
+		return nil
+	}
+	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
+	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
 
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
