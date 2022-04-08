@@ -542,7 +542,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
 			}
 			blobberCh <- blobberResp{
-				index:   i,
+				index:   index,
 				blobber: blobber,
 			}
 		}(i, details.BlobberID)
