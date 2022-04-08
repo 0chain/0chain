@@ -33,12 +33,12 @@ setup_sharder_runtime() {
     find ./config -name "0chain.yaml" -exec sed -i '' "s/    host: postgres/    host: 127.0.0.1/g" {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/    port: 5432/    port: 553$i/g" {} \;
     
-    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.71/${hostname}/g" {} \;
-    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.72/${hostname}/g" {} \;
-    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.73/${hostname}/g" {} \;
-    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.74/${hostname}/g" {} \;
-    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.81/${hostname}/g" {} \;
-    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.82/${hostname}/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.71/127.0.0.1/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.72/127.0.0.1/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.73/127.0.0.1/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.74/127.0.0.1/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.81/127.0.0.1/g" {} \;
+    find ./config -name "*.json" -exec sed -i '' "s/198.18.0.82/127.0.0.1/g" {} \;
     
 
     [ -d ./data/blocks ] || mkdir -p ./data/blocks
