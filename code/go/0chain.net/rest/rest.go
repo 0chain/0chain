@@ -38,6 +38,6 @@ func (rh *RestHandler) SetupRestHandlers() {
 	//SetupMinerRestHandler(rh)
 	//SetupFaucetscRestHandler(rh)
 	//SetupInterestPoolRestHandler(rh)
-	//SetupVestingRestHandler(rh)
+	//vestingsc.SetupRestHandler(rh)
 	//SetupZcnRestHandler(rh)
 }
