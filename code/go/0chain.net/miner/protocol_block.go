@@ -360,7 +360,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		return nil, ErrLFBClientStateNil
 	}
 
-	costs := make([]int, len(b.Txns))
+	var costs []int
 	for _, txn := range b.Txns {
 		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn)
 		if err != nil {
@@ -838,6 +838,7 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
+			tii.cost += cost
 			if tii.idx >= mc.Config.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
 					zap.Bool("idx >= block size", tii.idx >= mc.Config.BlockSize()),
@@ -958,9 +959,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				logging.Logger.Debug("generate block (too big cost, skipping)")
 				break
 			}
-
 			if txnProcessor(ctx, blockState, txn, iterInfo) {
 				rcount++
+				iterInfo.cost += cost
 				if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 					break
 				}
@@ -1060,7 +1061,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		return err
 	}
 
-	costs := make([]int, len(b.Txns))
+	var costs []int
 	cost := 0
 	for _, txn := range b.Txns {
 		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
