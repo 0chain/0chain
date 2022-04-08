@@ -52,7 +52,7 @@ func (rh *RestHandler) SetupRestHandlers() {
 	//minersc.SetupRestHandler(rh)
 	faucetsc.SetupRestHandler(rh)
 	interestpoolsc.SetupRestHandler(rh)
-	vestingsc.SetupRestHandler(rh)
+	//vestingsc.SetupRestHandler(rh)
 	zcnsc.SetupRestHandler(rh)
 }
 

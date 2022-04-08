@@ -75,9 +75,9 @@ func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	vsc.SmartContract = sc
 
 	// information (statistics) and configurations
-	//vsc.SmartContract.RestHandlers["/getConfig"] = vsc.getConfigHandler
-	//vsc.SmartContract.RestHandlers["/getPoolInfo"] = vsc.getPoolInfoHandler
-	//vsc.SmartContract.RestHandlers["/getClientPools"] = vsc.getClientPoolsHandler
+	vsc.SmartContract.RestHandlers["/getConfig"] = vsc.getConfigHandler
+	vsc.SmartContract.RestHandlers["/getPoolInfo"] = vsc.getPoolInfoHandler
+	vsc.SmartContract.RestHandlers["/getClientPools"] = vsc.getClientPoolsHandler
 
 	// add/delete {start,duration,lock_tokens,[destinations]}
 	vsc.SmartContractExecutionStats["add"] = metrics.GetOrRegisterTimer(
