@@ -101,6 +101,7 @@ type ChallengeResponse struct {
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
+// swagger:model BlobberChallenge
 type BlobberChallenge struct {
 	BlobberID                string              `json:"blobber_id"`
 	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
@@ -224,6 +225,7 @@ func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
+// swagger:model StorageChallenge
 type StorageChallenge struct {
 	Created         common.Timestamp `json:"created"`
 	ID              string           `json:"id"`
@@ -714,6 +716,7 @@ func (pr *PriceRange) isMatch(price state.Balance) bool {
 }
 
 // StorageAllocation request and entity.
+// swagger:model StorageAllocation
 type StorageAllocation struct {
 	// ID is unique allocation ID that is equal to hash of transaction with
 	// which the allocation has created.

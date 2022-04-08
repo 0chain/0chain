@@ -22,6 +22,7 @@ import (
 //
 
 // MinerNode struct that holds information about the registering miner.
+// swagger:model MinerNode
 type MinerNode struct {
 	*SimpleNode `json:"simple_miner"`
 	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`

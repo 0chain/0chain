@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
-	balances cstate.StateContextI) bool {
+func doesMinerExist(pkey datastore.Key,
+	balances cstate.ReadOnlyStateContextI) bool {
 
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
@@ -119,7 +119,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		update = true
 	}
 
-	if !msc.doesMinerExist(newMiner.GetKey(), balances) {
+	if !doesMinerExist(newMiner.GetKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}

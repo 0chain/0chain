@@ -5,6 +5,7 @@ import (
 )
 
 // Transaction model to save the transaction data
+// swagger:model Transaction
 type Transaction struct {
 	gorm.Model
 	Hash              string `gorm:"uniqueIndex"`

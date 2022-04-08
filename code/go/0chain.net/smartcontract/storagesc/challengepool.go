@@ -157,6 +157,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 	return
 }
 
+// swagger:model challengePoolStat
 type challengePoolStat struct {
 	ID         string           `json:"id"`
 	Balance    state.Balance    `json:"balance"`

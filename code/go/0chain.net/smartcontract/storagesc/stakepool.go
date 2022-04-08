@@ -256,6 +256,7 @@ type delegatePoolStat struct {
 	RoundCreated int64         `json:"round_created"`
 }
 
+// swagger:model stakePoolStat
 type stakePoolStat struct {
 	ID      string        `json:"pool_id"` // pool ID
 	Balance state.Balance `json:"balance"` // total balance
@@ -287,6 +288,18 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 
 	sp = newStakePool()
 	err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID), sp)
+	if err != nil {
+		return nil, err
+	}
+
+	return sp, nil
+}
+
+func getStakePool(
+	blobberID datastore.Key, balances chainstate.ReadOnlyStateContextI,
+) (sp *stakePool, err error) {
+	sp = newStakePool()
+	err = balances.GetTrieNode(stakePoolKey(ADDRESS, blobberID), sp)
 	if err != nil {
 		return nil, err
 	}

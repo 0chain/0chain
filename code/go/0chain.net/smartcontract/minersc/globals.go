@@ -291,6 +291,7 @@ var GlobalSettingInfo = map[string]struct {
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
 
+// swagger:model MinerGlobalSettings
 type GlobalSettings struct {
 	Version int64             `json:"version"`
 	Fields  map[string]string `json:"fields"`

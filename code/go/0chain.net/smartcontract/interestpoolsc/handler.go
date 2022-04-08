@@ -63,7 +63,7 @@ func (irh *InterestPoolRestHandler) getConfig(w http.ResponseWriter, r *http.Req
 // get lock configuration
 //
 // responses:
-//  200: InterestPoolGlddddddddddddddddddddddddddddddddddddddddobalNode
+//  200: InterestPoolGlobalNode
 //  500:
 func (irh *InterestPoolRestHandler) getLockConfig(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(irh)

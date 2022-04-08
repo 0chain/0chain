@@ -42,8 +42,8 @@ func SetupSwagger() {
 func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
 	SetupSwagger()
+	restHandler.SetStateContext(c.getStateContextI())
 	if restHandler.GetEventDB() != nil {
-		restHandler.SetStateContext(c.getStateContextI())
 		restHandler.SetupRestHandlers()
 	} else {
 		logging.Logger.Warn("cannot find event database, REST API will not be supported")

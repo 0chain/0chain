@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -9,23 +11,31 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 )
 
 type RestHandler struct {
-	SCtx state.StateContextI
+	SCtx state.ReadOnlyStateContextI
 }
 
-func (rh *RestHandler) SetStateContext(sCtx state.StateContextI) {
+func (rh *RestHandler) SetStateContext(sCtx state.ReadOnlyStateContextI) {
 	rh.SCtx = sCtx
 }
 
 func (rh *RestHandler) GetEventDB() *event.EventDb {
+	if rh.SCtx == nil {
+		return nil
+	}
 	return rh.SCtx.GetEventDB()
 }
 
 func (rh *RestHandler) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	if rh.SCtx == nil {
+		return errors.New("state context object nil")
+	}
 	return rh.SCtx.GetTrieNode(key, v)
 }
 
@@ -38,8 +48,8 @@ func (rh *RestHandler) SetupRestHandlers() {
 		logging.Logger.Warn("no event database, skipping REST handlers")
 		return
 	}
-	//SetupStorageRestHandler(rh)
-	//SetupMinerRestHandler(rh)
+	storagesc.SetupRestHandler(rh)
+	minersc.SetupRestHandler(rh)
 	faucetsc.SetupRestHandler(rh)
 	interestpoolsc.SetupRestHandler(rh)
 	vestingsc.SetupRestHandler(rh)

@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/common"
 )
 
+// swagger:model ReadMarker
 type ReadMarker struct {
 	gorm.Model
 	ClientID      string  `json:"client_id"`

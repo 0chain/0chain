@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// swagger:model WriteMarker
 type WriteMarker struct {
 	gorm.Model
 
