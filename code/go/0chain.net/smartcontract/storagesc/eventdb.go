@@ -26,10 +26,11 @@ func emitAddOrOverwriteBlobber(
 
 		Capacity:        sn.Capacity,
 		Used:            sn.Used,
+		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
 		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-		MinStake:       int64(sn.StakePoolSettings.MaxStake),
+		MinStake:       int64(sn.StakePoolSettings.MinStake),
 		MaxStake:       int64(sn.StakePoolSettings.MaxStake),
 		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
@@ -67,10 +68,11 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"used":                      sn.Used,
 			"last_health_check":         int64(sn.LastHealthCheck),
 			"delegate_wallet":           sn.StakePoolSettings.DelegateWallet,
-			"min_stake":                 int64(sn.StakePoolSettings.MaxStake),
+			"min_stake":                 int64(sn.StakePoolSettings.MinStake),
 			"max_stake":                 int64(sn.StakePoolSettings.MaxStake),
 			"num_delegates":             sn.StakePoolSettings.MaxNumDelegates,
 			"service_charge":            sn.StakePoolSettings.ServiceCharge,
+			"saved_data":                sn.SavedData,
 		},
 	})
 	if err != nil {
