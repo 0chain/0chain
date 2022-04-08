@@ -728,30 +728,30 @@ func BenchmarkTests(
 					"expose_mpt": "false",
 				},
 			}).Encode(),
-		},
-		{
-			name: "storage.generate_challenges",
-			endpoint: func(
-				txn *transaction.Transaction,
-				_ []byte,
-				balances cstate.StateContextI,
-			) (string, error) {
-				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
-				if challengesEnabled {
-					err := ssc.generateChallenges(txn, balances.GetBlock(), nil, balances)
-					if err != nil {
-						return "", nil
+		}, /*
+			{
+				name: "storage.generate_challenges",
+				endpoint: func(
+					txn *transaction.Transaction,
+					_ []byte,
+					balances cstate.StateContextI,
+				) (string, error) {
+					challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
+					if challengesEnabled {
+						err := ssc.generateChallenges(txn, balances.GetBlock(), nil, balances)
+						if err != nil {
+							return "", nil
+						}
+					} else {
+						return "Challenges disabled in the config", nil
 					}
-				} else {
-					return "Challenges disabled in the config", nil
-				}
-				return "Challenges generated", nil
-			},
-			txn: &transaction.Transaction{
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
-			},
-			input: nil,
-		},
+					return "Challenges generated", nil
+				},
+				txn: &transaction.Transaction{
+					CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+				},
+				input: nil,
+			},*/
 		{
 			name: "storage.generate_challenge",
 			endpoint: func(
