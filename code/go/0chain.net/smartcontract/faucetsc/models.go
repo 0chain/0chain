@@ -18,6 +18,7 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
+// swagger:model periodicResponse
 type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
 	Start   time.Time     `json:"start_time"`

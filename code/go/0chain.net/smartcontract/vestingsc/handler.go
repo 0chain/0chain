@@ -28,7 +28,7 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 // get client pools
 //
 // responses:
-//  200: VestingClientPools
+//  200: vestingClientPools
 //  500:
 func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Request) {
 

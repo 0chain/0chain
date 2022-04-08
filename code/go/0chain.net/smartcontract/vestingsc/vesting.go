@@ -505,6 +505,7 @@ type destInfo struct {
 	Last   common.Timestamp `json:"last"`   // last time unlocked
 }
 
+// swagger:model vestingInfo
 type info struct {
 	ID           datastore.Key    `json:"pool_id"`      // pool ID
 	Balance      state.Balance    `json:"balance"`      // real pool balance

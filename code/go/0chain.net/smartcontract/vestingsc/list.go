@@ -23,6 +23,7 @@ func clientPoolsKey(vscKey, clientID datastore.Key) datastore.Key {
 	return vscKey + ":clientvestingpools:" + clientID
 }
 
+// swagger:model vestingClientPools
 type clientPools struct {
 	Pools []string `json:"pools"`
 }

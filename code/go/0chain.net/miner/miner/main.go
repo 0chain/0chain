@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/rest"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
