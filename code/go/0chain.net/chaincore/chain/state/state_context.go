@@ -58,7 +58,6 @@ type ReadOnlyStateContextI interface {
 }
 
 //StateContextI - a state context interface. These interface are available for the smart contract
-// todo this needs to be split up into different interfaces
 type StateContextI interface {
 	ReadOnlyStateContextI
 	GetLastestFinalizedMagicBlock() *block.Block

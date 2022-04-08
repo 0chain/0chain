@@ -29,6 +29,14 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+"/getAuthorizer", zrh.getAuthorizer)
 }
 
+func GetRestNames() []string {
+	return []string{
+		"/getAuthorizerNodes",
+		"/getGlobalConfig",
+		"/getAuthorizer",
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizerNodes getAuthorizerNodes
 // get authorizer nodes
 //

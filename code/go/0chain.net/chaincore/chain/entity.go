@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/rest/restinterface"
+
 	"github.com/herumi/bls/ffi/go/bls"
 	"go.uber.org/zap"
 
@@ -95,6 +97,7 @@ type Chain struct {
 	//Chain config goes into this object
 	Config
 	BlocksToSharder int
+	restHandler     restinterface.RestHandlerI
 
 	MagicBlockStorage round.RoundStorage `json:"-"`
 

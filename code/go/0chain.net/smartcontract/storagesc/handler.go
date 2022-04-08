@@ -63,6 +63,42 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+"/getChallengePoolStat", srh.getChallengePoolStat)
 }
 
+func GetRestNames() []string {
+	return []string{
+		"/get_blobber_count",
+		"/getBlobber",
+		"/getblobbers",
+		"/get_blobber_total_stakes",
+		"/get_blobber_lat_long",
+		"/transaction",
+		"/transactions",
+		"/writemarkers",
+		"/errors",
+		"/allocations",
+		"/allocation_min_lock",
+		"/allocation",
+		"/latestreadmarker",
+		"/readmarkers",
+		"/count_readmarkers",
+		"/getWriteMarkers",
+		"/get_validator",
+		"/openchallenges",
+		"/getchallenge",
+		"/getStakePoolStat",
+		"/getUserStakePoolStat",
+		"/get_block_by_hash",
+		"/get_blocks",
+		"/total_saved_data",
+		"/getConfig",
+		"/getReadPoolStat",
+		"/getReadPoolAllocBlobberStat",
+		"/get_validator",
+		"/getWritePoolStat",
+		"/getWritePoolAllocBlobberStat",
+		"/getChallengePoolStat",
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat getChallengePoolStat
 // statistic for all locked tokens of a challenge pool
 //
@@ -766,11 +802,6 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
-	//var ssc = storagesc.StorageSmartContract{
-	//	SmartContract: sci.NewSC(storagesc.ADDRESS),
-	//}
-	//result, err := ssc.GetAllocationMinLockHandler(r.Context(), r.URL.Query(), )
-
 	common.Respond(w, r, nil, common.NewErrInternal("allocation_min_lock temporary unimplemented"))
 }
 

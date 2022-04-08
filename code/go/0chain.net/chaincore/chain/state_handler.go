@@ -41,6 +41,7 @@ func SetupSwagger() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
+	c.restHandler = restHandler
 	SetupSwagger()
 	restHandler.SetStateContext(c.getStateContextI())
 	if restHandler.GetEventDB() != nil {
@@ -194,25 +195,49 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
+func GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
+	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
+	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
+	if len(pathParams) < 2 {
+		return
+	}
+	PrintCSS(w)
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
+
+	key := pathParams[1]
+	scInt, ok := smartcontract.ContractMap[key]
+	if !ok {
+		return
+	}
+
+	restPoints := scInt.GetRestPoints()
+	names := make([]string, 0, len(restPoints))
+	for funcName := range restPoints {
+		names = append(names, funcName)
+	}
+	sort.Strings(names)
+	for _, funcName := range names {
+		friendlyName := strings.TrimLeft(funcName, "/")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, "/v1/screst/*"+funcName+"*")
+	}
+	fmt.Fprintf(w, "</table>")
+}
+
 func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 2 {
 		return
 	}
-	key := pathParams[1]
-	scInt, ok := smartcontract.ContractMap[key]
-	if !ok {
-		return
-	}
+
 	PrintCSS(w)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
-	restPoints := scInt.GetRestPoints()
-	names := make([]string, 0, len(restPoints))
-	for funcName := range restPoints {
-		names = append(names, funcName)
-	}
+
+	key := pathParams[1]
+	names := c.restHandler.GetFunctionNames(pathParams[1])
+
 	sort.Strings(names)
 	for _, funcName := range names {
 		friendlyName := strings.TrimLeft(funcName, "/")

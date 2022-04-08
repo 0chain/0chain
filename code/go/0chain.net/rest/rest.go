@@ -48,10 +48,29 @@ func (rh *RestHandler) SetupRestHandlers() {
 		logging.Logger.Warn("no event database, skipping REST handlers")
 		return
 	}
-	storagesc.SetupRestHandler(rh)
+	//storagesc.SetupRestHandler(rh)
 	minersc.SetupRestHandler(rh)
 	faucetsc.SetupRestHandler(rh)
 	interestpoolsc.SetupRestHandler(rh)
 	vestingsc.SetupRestHandler(rh)
 	zcnsc.SetupRestHandler(rh)
+}
+
+func (rh *RestHandler) GetFunctionNames(address string) []string {
+	switch address {
+	case storagesc.ADDRESS:
+		return storagesc.GetRestNames()
+	case minersc.ADDRESS:
+		return minersc.GetRestNames()
+	case faucetsc.ADDRESS:
+		return faucetsc.GetRestNames()
+	case interestpoolsc.ADDRESS:
+		return interestpoolsc.GetRestNames()
+	case vestingsc.ADDRESS:
+		return vestingsc.GetRestNames()
+	case zcnsc.ADDRESS:
+		return zcnsc.GetRestNames()
+	default:
+		return []string{}
+	}
 }

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/partitions"
 	"go.uber.org/zap"
@@ -25,6 +25,19 @@ const (
 )
 
 func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
+	allBlobbersList := &StorageNodes{}
+	err := balances.GetTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
+	switch err {
+	case nil:
+		return allBlobbersList, nil
+	case util.ErrValueNotPresent:
+		return &StorageNodes{}, nil
+	default:
+		return nil, err
+	}
+}
+
+func getBlobbersList(balances cstate.ReadOnlyStateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
 	err := balances.GetTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
 	switch err {

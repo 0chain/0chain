@@ -49,6 +49,30 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+"/configs", mrh.getConfigs)
 }
 
+func GetRestNames() []string {
+	return []string{
+		"/globalSettings",
+		"/getNodepool",
+		"/getUserPools",
+		"/getMinerList",
+		"/get_miners_stats",
+		"/get_miners_stake",
+		"/getSharderList",
+		"/get_sharders_stats",
+		"/get_sharders_stake",
+		"/getSharderKeepList",
+		"/getPhase",
+		"/getDkgList",
+		"/getMpksList",
+		"/getGroupShareOrSigns",
+		"/getMagicBlock",
+		"/getEvents",
+		"/nodeStatHandler",
+		"/nodePoolStat",
+		"/configs",
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs configs
 // list minersc config settings
 //

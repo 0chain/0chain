@@ -8,6 +8,7 @@ type RestHandlerI interface {
 	state.ReadOnlyStateContextI
 	SetupRestHandlers()
 	SetStateContext(i state.ReadOnlyStateContextI)
+	GetFunctionNames(address string) []string
 }
 
 // swagger:model Int64Map

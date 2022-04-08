@@ -29,6 +29,14 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+"/getConfig", frh.getConfig)
 }
 
+func GetRestNames() []string {
+	return []string{
+		"/getPoolsStats",
+		"/getLockConfig",
+		"/getConfig",
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getConfig getConfig
 // get interest pool configuration settings
 //
