@@ -17,12 +17,14 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
+// swagger:model InterestPoolGlobalNode
 type GlobalNode struct {
 	*SimpleGlobalNode `json:"simple_global_node"`
 	ID                string
 	MinLockPeriod     time.Duration `json:"min_lock_period"`
 }
 
+// swagger:model InterestPoolGlobalNode
 func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
 		ID:               ADDRESS,

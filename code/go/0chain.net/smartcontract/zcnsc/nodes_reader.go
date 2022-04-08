@@ -33,7 +33,7 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	return node, nil
 }
 
-func GetGlobalSavedNode(balances state.StateContextI) (*GlobalNode, error) {
+func GetGlobalSavedNode(balances state.ReadOnlyStateContextI) (*GlobalNode, error) {
 	node := &GlobalNode{ID: ADDRESS}
 	err := balances.GetTrieNode(node.GetKey(), node)
 	switch err {
@@ -44,7 +44,7 @@ func GetGlobalSavedNode(balances state.StateContextI) (*GlobalNode, error) {
 	}
 }
 
-func GetGlobalNode(ctx state.StateContextI) (*GlobalNode, error) {
+func GetGlobalNode(ctx state.ReadOnlyStateContextI) (*GlobalNode, error) {
 	gn, err := GetGlobalSavedNode(ctx)
 	if err == nil {
 		return gn, nil
