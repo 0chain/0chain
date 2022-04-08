@@ -360,15 +360,20 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		return nil, ErrLFBClientStateNil
 	}
 
+	costs := make([]int, len(b.Txns))
 	for _, txn := range b.Txns {
 		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn)
 		if err != nil {
 			return nil, err
 		}
 		cost += c
-		if cost > mc.Config.MaxBlockCost() {
-			return nil, block.ErrCostTooBig
-		}
+		costs = append(costs, c)
+	}
+	if cost > mc.Config.MaxBlockCost() {
+		logging.Logger.Error("cost limit exceeded", zap.Int("calculated_cost", cost),
+			zap.Int("cost_limit", mc.Config.MaxBlockCost()), zap.String("block_hash", b.Hash),
+			zap.Int("txn_amount", len(b.Txns)), zap.Ints("txn_costs", costs))
+		return nil, block.ErrCostTooBig
 	}
 	logging.Logger.Debug("ValidateBlockCost",
 		zap.Int64("round", b.Round),
@@ -1054,6 +1059,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
 		return err
 	}
+
+	costs := make([]int, len(b.Txns))
+	cost := 0
+	for _, txn := range b.Txns {
+		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+		if err != nil {
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			break
+		}
+		costs = append(costs, c)
+		cost += c
+	}
+	logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))
 
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)

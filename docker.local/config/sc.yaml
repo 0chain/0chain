@@ -84,7 +84,7 @@ smart_contracts:
       update_settings: 100
       update_miner_settings: 100
       update_sharder_settings: 100
-      payFees: 100
+      payFees: 0
       feesPaid: 100
       mintedTokens: 100
       addToDelegatePool: 100
@@ -218,7 +218,6 @@ smart_contracts:
       curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
-      generate_challenges: 9999 #exceeds limit, might be switched off
       add_validator: 100
       add_blobber: 100
       new_read_pool: 100
@@ -229,9 +228,9 @@ smart_contracts:
       stake_pool_lock: 100
       stake_pool_unlock: 100
       stake_pool_pay_interests: 100
-      commit_settings_changes: 100
-      generate_challenge: 100
-      blobber_block_rewards: 100
+      commit_settings_changes: 0
+      generate_challenge: 0
+      blobber_block_rewards: 0
   vestingsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 0.01
