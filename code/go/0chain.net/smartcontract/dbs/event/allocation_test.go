@@ -1,18 +1,19 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
+	"os"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"context"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"os"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -363,7 +364,7 @@ func TestAllocations(t *testing.T) {
 		Data:        string(data),
 	}
 	eventDb.AddEvents(context.TODO(), []Event{eventAddSa})
-
+	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.DataShards, sa.DataShards)

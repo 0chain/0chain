@@ -308,7 +308,7 @@ func TestGetSharderLocations(t *testing.T) {
 	t.Run("locations for sharders which are active", func(t *testing.T) {
 		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
 		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 5, len(locations), "locations of only active sharders should be returned")
+		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
 			id, err := strconv.ParseInt(location.SharderID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
@@ -319,7 +319,7 @@ func TestGetSharderLocations(t *testing.T) {
 	t.Run("locations for sharders which are inactive", func(t *testing.T) {
 		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
 		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 5, len(locations), "locations of only active sharders should be returned")
+		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
 			id, err := strconv.ParseInt(location.SharderID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")

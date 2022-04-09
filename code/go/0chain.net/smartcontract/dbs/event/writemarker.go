@@ -41,6 +41,11 @@ func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	return &wm, nil
 }
 
+func (edb *EventDb) GetDataWrittenToAllocationForLastNBlocks(blockNumber int64) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).Select("sum(size)").Where("block_number > ?", blockNumber).Find(&total).Error
+}
+
 func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]WriteMarker, error) {
 	var wm []WriteMarker
 	return wm, edb.Get().Model(&WriteMarker{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
