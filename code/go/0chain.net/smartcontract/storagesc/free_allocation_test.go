@@ -304,7 +304,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 
-		require.NoError(t, err)
 		balances.On(
 			"GetTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
@@ -346,9 +345,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On(
 			"GetTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
-		balances.On(
-			"GetTrieNode", ALL_ALLOCATIONS_KEY,
-			mockSetValue(&Allocations{})).Return(nil).Once()
 
 		allocation := StorageAllocation{ID: txn.Hash}
 		balances.On(
@@ -361,9 +357,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			}),
 			mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
-		balances.On(
-			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
-		).Return("", nil).Once()
+
 		balances.On(
 			"InsertTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
@@ -446,6 +440,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
@@ -788,6 +787,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				return false
 			}),
 		).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",

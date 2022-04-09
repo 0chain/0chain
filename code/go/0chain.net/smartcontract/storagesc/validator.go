@@ -1,10 +1,14 @@
 package storagesc
 
 import (
+	"encoding/json"
+
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -98,6 +102,13 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: t.ClientID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
 
 	err = emitAddOrOverwriteValidatorTable(newValidator, balances, t)
 	if err != nil {
