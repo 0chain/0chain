@@ -17,18 +17,18 @@ import (
 )
 
 const (
-	ADDRESS                    = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	NAME                       = "zcnsc"
-	AddAuthorizerFunc          = "AddAuthorizer"
-	DeleteAuthorizerFunc       = "DeleteAuthorizer"
-	UpdateGlobalConfigFunc     = "update-global-config"
-	UpdateAuthorizerConfigFunc = "update-authorizer-config"
-	MintFunc                   = "mint"
-	BurnFunc                   = "burn"
-	AddToDelegatePoolFunc      = "addToDelegatePool"
-	DeleteFromDelegatePoolFunc = "deleteFromDelegatePool"
-	AddOrUpdateStakePoolFunc   = "addUpdateStakePool"
-	CollectRewardsFunc         = "collectRewardsFunc"
+	ADDRESS                       = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	NAME                          = "zcnsc"
+	AddAuthorizerFunc             = "AddAuthorizer"
+	DeleteAuthorizerFunc          = "DeleteAuthorizer"
+	UpdateGlobalConfigFunc        = "update-global-config"
+	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
+	MintFunc                      = "mint"
+	BurnFunc                      = "burn"
+	AddToDelegatePoolFunc         = "addToDelegatePool"
+	DeleteFromDelegatePoolFunc    = "deleteFromDelegatePool"
+	UpdateAuthorizerStakePoolFunc = "addUpdateStakePool"
+	CollectRewardsFunc            = "collectRewardsFunc"
 )
 
 // ZCNSmartContract ...
@@ -61,11 +61,11 @@ func (zcn *ZCNSmartContract) InitSC() {
 	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
 	// StakePool
-	zcn.smartContractFunctions[AddOrUpdateStakePoolFunc] = zcn.UpdateAuthorizerStakePool
+	zcn.smartContractFunctions[UpdateAuthorizerStakePoolFunc] = zcn.UpdateAuthorizerStakePool
 	// Rewards
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
-	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool
-	zcn.smartContractFunctions[DeleteFromDelegatePoolFunc] = zcn.DeleteFromDelegatePool
+	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool           // stakepool lock
+	zcn.smartContractFunctions[DeleteFromDelegatePoolFunc] = zcn.DeleteFromDelegatePool // stakepool unlock
 }
 
 // SetSC ...

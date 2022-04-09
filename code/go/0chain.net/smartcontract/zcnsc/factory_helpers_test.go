@@ -111,6 +111,13 @@ func CreateAuthorizerParam() *AuthorizerParameter {
 	return &AuthorizerParameter{
 		PublicKey: "public key",
 		URL:       "http://localhost:2344",
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "",
+			MinStake:        12345678,
+			MaxStake:        12345678,
+			MaxNumDelegates: 12345678,
+			ServiceCharge:   12345678,
+		},
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
 
@@ -30,9 +29,9 @@ type GlobalNode struct {
 	MinMintAmount      state.Balance  `json:"min_mint_amount"`
 	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
 	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
-	PercentAuthorizers float64        `json:"percent_authorizers"`
-	MinAuthorizers     int64          `json:"min_authorizers"`
 	MinLockAmount      int64          `json:"min_lock_amount"`
+	MinAuthorizers     int64          `json:"min_authorizers"`
+	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MaxFee             state.Balance  `json:"max_fee"`
 	BurnAddress        string         `json:"burn_address"`
 	OwnerId            string         `json:"owner_id"`
@@ -205,11 +204,10 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 // ----- AuthorizerNode --------------------
 
 type AuthorizerNode struct {
-	ID          string                    `json:"id"`
-	PublicKey   string                    `json:"public_key"`
-	URL         string                    `json:"url"`
-	Config      *AuthorizerConfig         `json:"config"`
-	LockingPool *tokenpool.ZcnLockingPool `json:"lock_pool"`
+	ID        string            `json:"id"`
+	PublicKey string            `json:"public_key"`
+	URL       string            `json:"url"`
+	Config    *AuthorizerConfig `json:"config"`
 }
 
 // NewAuthorizer To review: tokenLock init values
@@ -220,19 +218,6 @@ func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 		ID:        ID,
 		PublicKey: PK,
 		URL:       URL,
-		LockingPool: &tokenpool.ZcnLockingPool{
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      "", // must be filled when DigPool is invoked. Usually this is a trx.Hash
-					Balance: 0,  // filled when we dig pool
-				},
-			},
-			TokenLockInterface: &TokenLock{
-				StartTime: 0,
-				Duration:  0,
-				Owner:     ID,
-			},
-		},
 		Config: &AuthorizerConfig{
 			Fee: 0,
 		},
@@ -297,23 +282,6 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		an.URL = *urlStr
 	}
 
-	if an.LockingPool == nil {
-		an.LockingPool = &tokenpool.ZcnLockingPool{
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{},
-			},
-		}
-	}
-
-	staking, ok := objMap["lock_pool"]
-	if ok && staking != nil {
-		tokenlock := &TokenLock{}
-		err = an.LockingPool.Decode(*staking, tokenlock)
-		if err != nil {
-			return err
-		}
-	}
-
 	rawCfg, ok := objMap["config"]
 	if ok {
 		var cfg = &AuthorizerConfig{}
@@ -336,7 +304,7 @@ func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
 }
 
 func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	d := authorizerNodeDecode{LockingPool: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
+	d := authorizerNodeDecode{}
 	o, err := d.UnmarshalMsg(data)
 	if err != nil {
 		return nil, err
@@ -379,10 +347,9 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 	}
 
 	return &AuthorizerNode{
-		ID:          ev.AuthorizerID,
-		URL:         ev.URL,
-		PublicKey:   "",  // fetch this from MPT
-		LockingPool: nil, // fetch this from MPT
+		ID:        ev.AuthorizerID,
+		URL:       ev.URL,
+		PublicKey: "", // fetch this from MPT
 	}, nil
 }
 

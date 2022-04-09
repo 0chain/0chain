@@ -30,8 +30,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerID = tran.ClientID   // sender address
-		recipientID  = tran.ToClientID // smart contract address
+		authorizerID = tran.ClientID // sender address
 		authorizer   *AuthorizerNode
 	)
 
@@ -98,32 +97,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
 
-	// Dig pool for authorizer
-
-	var transfer *state.Transfer
-	transfer, response, err = authorizer.LockingPool.DigPool(tran.Hash, tran)
-	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("error digging pool, err: (%v)", err))
-		return "", err
-	}
-
-	err = ctx.AddTransfer(transfer)
-	if err != nil {
-		msg := "Error: '%v', transaction.ClientId: '%s', transaction.ToClientId: '%s', transfer.ClientID: '%s', transfer.ToClientID: '%s'"
-		err = common.NewError(
-			code,
-			fmt.Sprintf(
-				msg,
-				err,
-				authorizerID,
-				recipientID,
-				transfer.ClientID,
-				transfer.ToClientID,
-			),
-		)
-		return "", err
-	}
-
 	err = authorizer.Save(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
@@ -140,9 +113,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
+	// Creating StakePool
+
+	var sp *StakePool
+	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
+	if err != nil {
+		return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
+	}
+	if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
+		return "", common.NewError(code, "failed to save stake pool: "+err.Error())
+	}
+
 	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
 
-	return
+	return string(input), nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
@@ -151,7 +135,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	ctx cstate.StateContextI,
 ) (response string, err error) {
 	const (
-		code = "add_authorizer_staking_pool_failed"
+		code = "update_authorizer_staking_pool_failed"
 	)
 
 	var (
@@ -252,14 +236,12 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "error emptying account, %v", err)
 	}
 
-	if err := usp.Save(spenum.Blobber, tran.ClientID, ctx); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"error saving user stake pool, %v", err)
+	if err := usp.Save(spenum.Authorizer, tran.ClientID, ctx); err != nil {
+		return "", common.NewErrorf(code, "error saving user stake pool, %v", err)
 	}
 
 	if err := sp.save(zcn.ID, providerId, ctx); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"error saving stake pool, %v", err)
+		return "", common.NewErrorf(code, "error saving stake pool, %v", err)
 	}
 
 	return "", nil
@@ -269,8 +251,6 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	var (
 		authorizerID = tran.ClientID
 		authorizer   *AuthorizerNode
-		transfer     *state.Transfer
-		response     string
 		err          error
 		errorCode    = "failed to delete authorizer"
 	)
@@ -290,38 +270,19 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		return "", err
 	}
 
-	globalNode, err := GetGlobalNode(ctx)
+	sp, err := zcn.getStakePool(authorizerID, ctx)
 	if err != nil {
-		msg := fmt.Sprintf("failed to get global node (authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("get global node", zap.Error(err))
-		return "", err
+		return "", common.NewError(errorCode, "failed to get stake pool: "+err.Error())
 	}
 
-	// empty the authorizer's pool
-	pool := authorizer.LockingPool
-	if pool == nil {
-		msg := "pool is not created"
-		err := common.NewError(errorCode, msg)
-		Logger.Error("node staking pool", zap.Error(err))
-		return "", err
+	// Leaving StakePools intact but marking it as Deleted
+
+	for _, v := range sp.Pools {
+		v.Status = spenum.Deleted
 	}
 
-	transfer, response, err = pool.EmptyPool(globalNode.ID, tran.ClientID, tran)
-	if err != nil {
-		msg := fmt.Sprintf("error emptying pool, err: (%v)", err)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("empty pool", zap.Error(err))
-		return response, err
-	}
-
-	// transfer tokens back to authorizer account
-	err = ctx.AddTransfer(transfer)
-	if err != nil {
-		msg := fmt.Sprintf("error adding transfer: (%v)", err)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("add transfer", zap.Error(err))
-		return response, err
+	if err = sp.save(zcn.ID, authorizerID, ctx); err != nil {
+		return "", common.NewError(errorCode, "failed to save stake pool: "+err.Error())
 	}
 
 	// delete authorizer node
@@ -346,7 +307,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		zap.String("authorizerID", authorizerID),
 	)
 
-	return response, err
+	return string(sp.Encode()), nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(_ *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (string, error) {
@@ -414,7 +375,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(_ *transaction.Transaction, 
 		return "", err
 	}
 
-	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, an.ID, string(ev))
+	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, an.ID, string(ev))
 
 	return string(an.Encode()), nil
 }

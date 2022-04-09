@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
@@ -68,6 +69,13 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 
 	params := &AuthorizerParameter{
 		PublicKey: tr.PublicKey,
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  "",
+			MinStake:        12,
+			MaxStake:        12,
+			MaxNumDelegates: 12,
+			ServiceCharge:   12,
+		},
 	}
 	data, _ := params.Encode()
 
@@ -77,48 +85,6 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	_, err = contract.AddAuthorizer(tr, data, ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already exists")
-}
-
-func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
-	sc := MakeMockStateContext()
-	an := NewAuthorizer("id", "public key", "https://localhost:9876")
-	tr := CreateDefaultTransactionToZcnsc()
-
-	var transfer *state.Transfer
-	transfer, resp, err := an.LockingPool.DigPool(tr.Hash, tr)
-
-	require.NoError(t, err, "must be able to dig pool")
-	require.NotNil(t, transfer)
-	require.NotNil(t, resp)
-
-	// LockingPool params
-	require.Equal(t, an.LockingPool.ID, tr.Hash)
-	require.Equal(t, an.LockingPool.Balance, state.Balance(tr.Value))
-
-	// Transfer params
-	transferDigPoolEqualityCheck(t, transfer, tr)
-	// Response params
-	responseDigPoolEqualityCheck(t, resp, tr, &an.LockingPool.ID, &stringEmpty)
-
-	err = sc.AddTransfer(transfer)
-	require.NoError(t, err, "must be able to add transfer")
-}
-
-func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
-	an := NewAuthorizer("id", "public key", "https://localhost:9876")
-	tr := CreateDefaultTransactionToZcnsc()
-
-	var transfer *state.Transfer
-	transfer, resp, err := an.LockingPool.DigPool(tr.Hash, tr)
-
-	require.NoError(t, err, "must be able to dig pool")
-	require.NotNil(t, transfer)
-	require.NotNil(t, resp)
-
-	// Transfer params
-	transferDigPoolEqualityCheck(t, transfer, tr)
-	// Response params
-	responseDigPoolEqualityCheck(t, resp, tr, &an.LockingPool.ID, &stringEmpty)
 }
 
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
@@ -231,11 +197,7 @@ func Test_Should_FailWithoutInputData(t *testing.T) {
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	pk := &AuthorizerParameter{
-		PublicKey: "public Key",
-		URL:       "https://localhost:9876",
-	}
-	data, _ := json.Marshal(pk)
+	data, _ := json.Marshal(CreateAuthorizerParam())
 	tr := CreateAddAuthorizerTransaction("client0", ctx)
 	tr.PublicKey = ""
 	sc := CreateZCNSmartContract()
@@ -280,74 +242,6 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 
 	locked := z.IsLocked(tr)
 	require.Equal(t, locked, true)
-}
-
-func Test_Can_DigPool(t *testing.T) {
-	tr := CreateDefaultTransactionToZcnsc()
-	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
-	_, _, err := an.LockingPool.DigPool(tr.Hash, tr)
-	require.NoError(t, err)
-}
-
-func Test_Can_EmptyPool(t *testing.T) {
-	balances := MakeMockStateContext()
-	tr := CreateDefaultTransactionToZcnsc()
-	gn, err := GetGlobalNode(balances)
-
-	an := NewAuthorizer(tr.ClientID, "key", "https://localhost:9876")
-
-	_, _, _ = an.LockingPool.DigPool(tr.Hash, tr)
-	_, _, err = an.LockingPool.EmptyPool(gn.ID, tr.ClientID, tr)
-
-	require.NoError(t, err)
-}
-
-func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
-	tr := CreateDefaultTransactionToZcnsc()
-	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
-	require.NotNil(t, node.LockingPool.TokenLockInterface)
-
-	newNode := &AuthorizerNode{}
-	err := newNode.Decode(node.Encode())
-	require.NoError(t, err)
-	require.NotNil(t, newNode.LockingPool.TokenLockInterface)
-}
-
-func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
-	ctx := MakeMockStateContext()
-
-	// Init
-	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx)
-	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
-	require.NotNil(t, node.LockingPool.TokenLockInterface)
-
-	// Add
-	err := node.Save(ctx)
-	require.NoError(t, err)
-
-	// FillFromContext
-	newNode := &AuthorizerNode{}
-	err = ctx.GetTrieNode(node.GetKey(), newNode)
-	require.NoError(t, err)
-
-	require.NotNil(t, newNode)
-	require.NotNil(t, newNode.LockingPool.TokenLockInterface)
-}
-
-func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
-	ctx := MakeMockStateContext()
-
-	// Init
-	var data []byte
-	tr := CreateDefaultTransactionToZcnsc()
-	sc := CreateZCNSmartContract()
-
-	// Add
-	_, _ = sc.AddAuthorizer(tr, data, ctx)
-
-	// FillFromContext
-	node := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
-	require.NotNil(t, node.LockingPool.TokenLockInterface)
 }
 
 func Test_UpdateAuthorizerSettings(t *testing.T) {
@@ -403,90 +297,4 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 	authorizerNode, err := GetAuthorizerNode(defaultAuthorizer, ctx)
 	require.Error(t, err)
 	require.Nil(t, authorizerNode)
-}
-
-func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
-	var (
-		ctx          = MakeMockStateContext()
-		data         []byte
-		authorizerID = authorizersID[0]
-	)
-
-	sc := CreateZCNSmartContract()
-	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx)
-
-	node := GetAuthorizerNodeFromCtx(t, ctx, authorizerID)
-	_, _, err := node.LockingPool.EmptyPool(ADDRESS, tr.ClientID, tr)
-	require.NoError(t, err)
-
-	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
-	require.NoError(t, err)
-	require.NotEmpty(t, resp)
-}
-
-func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
-	var (
-		ctx          = MakeMockStateContext()
-		authorizerID = authorizersID[0]
-	)
-
-	tr := CreateAddAuthorizerTransaction(defaultAuthorizer, ctx)
-
-	node := GetAuthorizerNodeFromCtx(t, ctx, authorizerID)
-
-	gn, err := GetGlobalNode(ctx)
-	transfer, resp, err := node.LockingPool.EmptyPool(gn.ID, tr.ClientID, tr)
-	require.NoError(t, err)
-
-	transferEmptyPoolEqualityCheck(t, transfer, tr)
-	responseEmptyPoolEqualityCheck(t, resp, tr, &stringEmpty, &tr.Hash)
-}
-
-func getResponse(t *testing.T, resp string) *tokenpool.TokenPoolTransferResponse {
-	response := &tokenpool.TokenPoolTransferResponse{}
-	err := response.Decode([]byte(resp))
-	require.NoError(t, err, "failed to decode response")
-	return response
-}
-
-func responseEmptyPoolEqualityCheck(t *testing.T, resp string, tr *transaction.Transaction, toPoolID, fromPoolID *string) {
-	require.NotEmpty(t, resp)
-	response := getResponse(t, resp)
-	require.Equal(t, tr.Value, int64(response.Value))
-	require.Equal(t, tr.ClientID, response.ToClient)
-	require.Equal(t, tr.ToClientID, response.FromClient)
-	if toPoolID != nil {
-		require.Equal(t, *toPoolID, response.ToPool)
-	}
-	if fromPoolID != nil {
-		require.Equal(t, *fromPoolID, response.FromPool)
-	}
-	require.Equal(t, stringEmpty, response.TxnHash)
-}
-
-func responseDigPoolEqualityCheck(t *testing.T, resp string, tr *transaction.Transaction, toPoolID, fromPoolID *string) {
-	require.NotEmpty(t, resp)
-	response := getResponse(t, resp)
-	require.Equal(t, tr.Value, int64(response.Value))
-	require.Equal(t, tr.ClientID, response.FromClient)
-	require.Equal(t, tr.ToClientID, response.ToClient)
-	if toPoolID != nil {
-		require.Equal(t, *toPoolID, response.ToPool)
-	}
-	if fromPoolID != nil {
-		require.Equal(t, *fromPoolID, response.FromPool)
-	}
-	require.Equal(t, tr.Hash, response.TxnHash)
-}
-
-func transferEmptyPoolEqualityCheck(t *testing.T, transfer *state.Transfer, tr *transaction.Transaction) {
-	require.Equal(t, tr.ClientID, transfer.ToClientID)
-	require.Equal(t, tr.ToClientID, transfer.ClientID)
-	require.Equal(t, state.Balance(tr.Value), transfer.Amount)
-}
-
-func transferDigPoolEqualityCheck(t *testing.T, transfer *state.Transfer, tr *transaction.Transaction) {
-	require.Equal(t, tr.ClientID, transfer.ClientID)
-	require.Equal(t, tr.ToClientID, transfer.ToClientID)
-	require.Equal(t, state.Balance(tr.Value), transfer.Amount)
 }

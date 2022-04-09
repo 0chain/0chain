@@ -235,8 +235,9 @@ func (pk *AuthorizerStakePoolParameter) Decode(input []byte) error {
 // ------- AuthorizerParameter ------------
 
 type AuthorizerParameter struct {
-	PublicKey string `json:"public_key"`
-	URL       string `json:"url"`
+	PublicKey         string                      `json:"public_key"`
+	URL               string                      `json:"url"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"` // Used to initially create stake pool
 }
 
 func (pk *AuthorizerParameter) Encode() (data []byte, err error) {
