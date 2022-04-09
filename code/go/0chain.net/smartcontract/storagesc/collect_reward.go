@@ -88,12 +88,12 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: providerId,
+		Id: providerID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
 	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerId, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, string(data))
 
 	return "", nil
 }
