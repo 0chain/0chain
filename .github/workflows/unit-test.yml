@@ -24,6 +24,13 @@ jobs:
       - name: unit tests
         run: ./docker.local/bin/unit_test_build.sh
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./code/coverage.txt
+          flags: Unit-Tests
+          verbose: true
+
   lint:
     runs-on: [ self-hosted, build ]
     steps:
