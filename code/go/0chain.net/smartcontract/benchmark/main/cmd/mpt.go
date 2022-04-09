@@ -337,13 +337,6 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockAllAllocations(balances)
-		log.Println("added all allocations list\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
@@ -383,13 +376,6 @@ func setUpMpt(
 		timer = time.Now()
 		storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
 		log.Println("added free storage assigners\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		storagesc.AddMockStats(balances)
-		log.Println("added storage stats\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
