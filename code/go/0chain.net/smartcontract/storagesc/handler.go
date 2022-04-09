@@ -709,6 +709,27 @@ func (ssc *StorageSmartContract) GetReadAmountHandler(
 	}, err
 }
 
+func (ssc *StorageSmartContract) GetWriteMarkerCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation_id is empty")
+	}
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	total, err := balances.GetEventDB().GetWriteMarkerCount(allocationID)
+	return map[string]int64{
+		"count": total,
+	}, err
+}
+
 func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
