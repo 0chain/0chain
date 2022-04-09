@@ -11,7 +11,6 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
@@ -137,6 +136,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 	require.NoError(t, err)
 
 	blobbers, err = ssc.getBlobbersList(balances)
+	require.NoError(t, err)
 	require.Equal(t, 1, len(blobbers.Nodes))
 }
 
@@ -162,30 +162,8 @@ func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 	require.NoError(t, err)
 
 	blobbers, err = ssc.getBlobbersList(balances)
-	require.Equal(t, 1, len(blobbers.Nodes))
-}
-
-func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
-	allocID, clientID string, toks int64, tp int64, dur time.Duration,
-	balances *testBalances) {
-
-	var tx = transaction.Transaction{
-		Value:        toks,
-		ClientID:     clientID,
-		CreationDate: common.Timestamp(tp),
-	}
-
-	var keep = balances.txn // back up
-
-	balances.txn = &tx
-	var _, err = ssc.writePoolLock(&tx, mustEncode(t, &lockRequest{
-		AllocationID: allocID,
-		Duration:     dur,
-	}), balances)
 	require.NoError(t, err)
-
-	balances.txn = keep // restore
-
+	require.Equal(t, 1, len(blobbers.Nodes))
 }
 
 // - create allocation
@@ -239,7 +217,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     (1 * GB) / (64 * KB),
+			ReadSize:        1 * GB,
 			PayerID:         client.id,
 		}
 		rm.ReadMarker.Signature, err = client.scheme.Sign(
@@ -316,7 +294,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     (1 * GB) / (64 * KB),
+			ReadSize:        1 * GB,
 			PayerID:         reader.id,
 			AuthTicket:      &at,
 		}
@@ -634,7 +612,11 @@ func Test_flow_reward(t *testing.T) {
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			// todo fix validator delegates so that this does not error
 			require.Error(t, err)
-			require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
+			if i == 0 {
+				require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
+			} else {
+				require.True(t, strings.Contains(err.Error(), "can't add to ongoing partition list"))
+			}
 			require.Zero(t, resp)
 		}
 
@@ -738,16 +720,16 @@ func Test_flow_penalty(t *testing.T) {
 		inspectCPIV(t, ssc, allocID, balances)
 
 		// balances
-		var cp *challengePool
-		cp, err = ssc.getChallengePool(allocID, balances)
+		//var cp *challengePool
+		_, err := ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var wp *writePool
-		wp, err = ssc.getWritePool(client.id, balances)
+		//var wp *writePool
+		_, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b4.id, balances)
+		//var sp *stakePool
+		_, err = ssc.getStakePool(b4.id, balances)
 		require.NoError(t, err)
 
 		// until the end
@@ -768,12 +750,12 @@ func Test_flow_penalty(t *testing.T) {
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
 
-			until = alloc.Until()
+			//until = alloc.Until()
 			// last loop balances (previous balance)
-			spl = sp.stake()
-			wpl = wp.allocUntil(allocID, until)
-			cpl = cp.Balance
-			b4l = balances.balances[b4.id]
+			//spl = sp.stake()
+			//wpl = wp.allocUntil(allocID, until)
+			//cpl = cp.Balance
+			//b4l = balances.balances[b4.id]
 		)
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
@@ -807,42 +789,44 @@ func Test_flow_penalty(t *testing.T) {
 			require.Zero(t, resp)
 			continue
 
-			inspectCPIV(t, ssc, allocID, balances)
-
-			// check out pools, blobbers, validators balances
-			wp, err = ssc.getWritePool(client.id, balances)
-			require.NoError(t, err)
-
-			// write pool balance should grow (stake -> write_pool)
-			require.True(t, wpl < wp.allocUntil(allocID, until))
-			wpl = wp.allocUntil(allocID, until)
-
-			// challenge pool should be reduced (validators reward)
-			cp, err = ssc.getChallengePool(allocID, balances)
-			require.NoError(t, err)
-
-			// challenge pool tokens should be moved to blobber and validators
-			assert.True(t, cp.Balance < cpl)
-			cpl = cp.Balance
-
-			// offer pool should be reduced (blobber slash)
-			sp, err = ssc.getStakePool(b4.id, balances)
-			require.NoError(t, err)
-			assert.True(t, sp.stake() < spl)
-			spl = sp.stake()
-
-			// no rewards for the blobber
-			assert.True(t, b4l == balances.balances[b4.id])
-			b4l = balances.balances[b4.id]
-
-			// validators reward
-			for _, val := range valids {
-				_, err = ssc.getStakePool(val.id, balances)
-				require.NoError(t, err)
-			}
-
-			// next stage
-			prevID = challID
+			//TODO: unreachable code below
+			//
+			//inspectCPIV(t, ssc, allocID, balances)
+			//
+			//// check out pools, blobbers, validators balances
+			//wp, err = ssc.getWritePool(client.id, balances)
+			//require.NoError(t, err)
+			//
+			//// write pool balance should grow (stake -> write_pool)
+			//require.True(t, wpl < wp.allocUntil(allocID, until))
+			//wpl = wp.allocUntil(allocID, until)
+			//
+			//// challenge pool should be reduced (validators reward)
+			//cp, err = ssc.getChallengePool(allocID, balances)
+			//require.NoError(t, err)
+			//
+			//// challenge pool tokens should be moved to blobber and validators
+			//assert.True(t, cp.Balance < cpl)
+			//cpl = cp.Balance
+			//
+			//// offer pool should be reduced (blobber slash)
+			//sp, err = ssc.getStakePool(b4.id, balances)
+			//require.NoError(t, err)
+			//assert.True(t, sp.stake() < spl)
+			//spl = sp.stake()
+			//
+			//// no rewards for the blobber
+			//assert.True(t, b4l == balances.balances[b4.id])
+			//b4l = balances.balances[b4.id]
+			//
+			//// validators reward
+			//for _, val := range valids {
+			//	_, err = ssc.getStakePool(val.id, balances)
+			//	require.NoError(t, err)
+			//}
+			//
+			//// next stage
+			//prevID = challID
 		}
 
 	})

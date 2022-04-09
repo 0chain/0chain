@@ -44,12 +44,17 @@ func (mpks *Mpks) GetHashBytes() []byte {
 	return encryption.RawHash(mpks.Encode())
 }
 
-func (mpks *Mpks) GetMpkMap() map[bls.PartyID][]bls.PublicKey {
+func (mpks *Mpks) GetMpkMap() (map[bls.PartyID][]bls.PublicKey, error) {
 	mpkMap := make(map[bls.PartyID][]bls.PublicKey)
 	for k, v := range mpks.Mpks {
-		mpkMap[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
+		mpk, err := bls.ConvertStringToMpk(v.Mpk)
+		if err != nil {
+			return nil, err
+		}
+
+		mpkMap[bls.ComputeIDdkg(k)] = mpk
 	}
-	return mpkMap
+	return mpkMap, nil
 }
 
 func (mpks *Mpks) GetMpks() map[string]*MPK {

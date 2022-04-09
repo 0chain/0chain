@@ -118,7 +118,9 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	pool.TokenLockInterface = &TokenLock{StartTime: t.CreationDate, Duration: npr.Duration, Owner: un.ClientID}
 	transfer, resp, err := pool.DigPool(t.Hash, t)
 	if err == nil {
-		balances.AddTransfer(transfer)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("failed locking tokens", "could not add transfer: %v", err)
+		}
 		pool.APR = gn.APR
 		pool.TokensEarned = state.Balance(
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
@@ -132,12 +134,16 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		}
 		// add to total minted
 		gn.TotalMinted += pool.TokensEarned
-		balances.InsertTrieNode(gn.getKey(), gn)
+		if _, err := balances.InsertTrieNode(gn.getKey(), gn); err != nil {
+			return "", common.NewError("failed locking tokens", err.Error())
+		}
 		// add to user pools
 		if err := un.addPool(pool); err != nil {
 			return "", err
 		}
-		balances.InsertTrieNode(un.getKey(gn.ID), un)
+		if _, err := balances.InsertTrieNode(un.getKey(gn.ID), un); err != nil {
+			return "", common.NewError("failed locking tokens", err.Error())
+		}
 		return resp, nil
 	}
 	return "", err
@@ -160,8 +166,12 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 		if err != nil {
 			return "", common.NewError("failed to unlock tokens", fmt.Sprintf("error deleting pool from user node: %v", err.Error()))
 		}
-		balances.AddTransfer(transfer)
-		balances.InsertTrieNode(un.getKey(gn.ID), un)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("failed to unlock token", "add transfer err: %v", err)
+		}
+		if _, err := balances.InsertTrieNode(un.getKey(gn.ID), un); err != nil {
+			return "", common.NewError("failed to unlock tokens", err.Error())
+		}
 		return response, nil
 	}
 	return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
@@ -194,7 +204,9 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 		gn.OwnerId = conf.GetString(pfx + "owner_id")
 		gn.Cost = conf.GetStringMapInt(pfx + "cost")
 		if funcName != "updateVariables" {
-			balances.InsertTrieNode(gn.getKey(), gn)
+			if _, err := balances.InsertTrieNode(gn.getKey(), gn); err != nil {
+				return nil, err
+			}
 		}
 		return gn, nil
 	default:

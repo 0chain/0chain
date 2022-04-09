@@ -248,6 +248,7 @@ type GlobalNode struct {
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
 	OwnerId              string         `json:"owner_id"`
+	CooldownPeriod       int64          `json:"cooldown_period"`
 	Cost                 map[string]int `json:"cost"`
 }
 
@@ -272,6 +273,7 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
+	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
 	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
 }
 
@@ -299,23 +301,27 @@ func (gn *GlobalNode) validate() error {
 }
 
 func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
-	var im smartcontract.StringMap
-	im.Fields = make(map[string]string)
-	for key, info := range Settings {
+	var out smartcontract.StringMap
+	out.Fields = make(map[string]string)
+	for _, key := range SettingName {
+		info, ok := Settings[strings.ToLower(key)]
+		if !ok {
+			return out, fmt.Errorf("SettingName %s not found in Settings", key)
+		}
 		iSetting, err := gn.Get(info.Setting)
 		if err != nil {
-			return im, err
+			return out, err
 		}
 		if info.ConfigType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
-				return im, fmt.Errorf("%s key not implemented as state.balance", key)
+				return out, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
 			iSetting = float64(sbSetting) / x10
 		}
-		im.Fields[key] = fmt.Sprintf("%v", iSetting)
+		out.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
-	return im, nil
+	return out, nil
 }
 
 func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
@@ -358,8 +364,47 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MaxMint, nil
 	case OwnerId:
 		return gn.OwnerId, nil
+	case CooldownPeriod:
+		return gn.CooldownPeriod, nil
 	case Cost:
-		return gn.Cost, nil
+		return "", nil
+	case CostAddMiner:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostAddSharder:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddSharder], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostDeleteMiner:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostDeleteMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostMinerHealthCheck:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMinerHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostSharderHealthCheck:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostContributeMpk:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostContributeMpk], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostShareSignsOrShares:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShareSignsOrShares], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostWait:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWait], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateGlobals:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateGlobals], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateSettings:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateMinerSettings:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateMinerSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostUpdateSharderSettings:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSharderSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostPayFees:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostPayFees], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostFeesPaid:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFeesPaid], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostMintedTokens:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMintedTokens], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostAddToDelegatePool:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddToDelegatePool], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostDeleteFromDelegatePool:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostDeleteFromDelegatePool], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostSharderKeep:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderKeep], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+
 	default:
 		return nil, errors.New("Setting not implemented")
 	}
@@ -445,38 +490,6 @@ func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
 	for id := range dkgmns {
 		if pmb.Miners.HasNode(id) {
 			return true
-		}
-	}
-
-	return // false, hasn't
-}
-
-// of DKG miners sorted list
-func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
-	balances cstate.StateContextI) (has bool) {
-
-	var pmb = gn.prevMagicBlock(balances)
-
-	for _, nd := range list {
-		if pmb.Miners.HasNode(nd.ID) {
-			return true
-		}
-	}
-
-	return // false, hasn't
-}
-
-// Receive list of ranked miners and extract miners of previous MB preserving
-// order. The given list not modified.
-func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
-	balances cstate.StateContextI) (prev []*SimpleNode) {
-
-	var pmb = gn.prevMagicBlock(balances)
-	prev = make([]*SimpleNode, 0, len(list))
-
-	for _, node := range list {
-		if pmb.Miners.HasNode(node.ID) {
-			prev = append(prev, node)
 		}
 	}
 
@@ -684,6 +697,9 @@ type SimpleNode struct {
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
 	Status int `json:"-" msg:"-"`
+
+	//LastSettingUpdateRound will be set to round number when settings were updated
+	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
@@ -741,10 +757,6 @@ type poolStat struct {
 func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
-}
-
-func (ps *poolStat) decode(input []byte) error {
-	return json.Unmarshal(input, ps)
 }
 
 type delegatePoolStat struct {
@@ -950,13 +962,6 @@ func min(a, b int) int {
 		return b
 	}
 	return a
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // The min_n is checked before the calculateTKN call, so, the n >= min_n.

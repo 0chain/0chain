@@ -363,20 +363,25 @@ func testCancelAllocation(
 	require.True(t, len(challenges) <= len(blobbers))
 	for i, blobberChallenges := range challenges {
 		var bc = BlobberChallenge{
-			BlobberID:  strconv.Itoa(i),
-			Challenges: []*StorageChallenge{},
+			BlobberID: strconv.Itoa(i),
+		}
+
+		var ac = AllocationChallenge{
+			AllocationID: sAllocation.ID,
+			Challenges:   []*StorageChallenge{},
 		}
 		for _, created := range blobberChallenges {
-			bc.Challenges = append(bc.Challenges, &StorageChallenge{
+			ac.Challenges = append(ac.Challenges, &StorageChallenge{
 				AllocationID: sAllocation.ID,
+				BlobberID:    bc.BlobberID,
 				Created:      created,
 			})
 		}
 		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
 		require.NoError(t, err)
+		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
+		require.NoError(t, err)
 	}
-
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
 
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {
@@ -384,12 +389,9 @@ func testCancelAllocation(
 	}
 	require.EqualValues(t, "canceled", resp)
 
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
-
 	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
+
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
@@ -440,20 +442,15 @@ func testFinalizeAllocation(
 		state.Balance(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
 	)
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 	require.EqualValues(t, "finalized", resp)
 
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
-
 	var newScYaml = &Config{}
 	newScYaml, err = ssc.getConfig(ctx, false)
+
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
@@ -502,14 +499,10 @@ func confirmFinalizeAllocation(
 		}
 	}
 
-	f1 := f.blobberServiceCharge(0)
-	f2 := f.minLockServiceCharge(0)
-	f3 := f.blobberDelegateReward(0, 0)
-	f4 := f.minLockDelegatePayment(0, 0)
-	f1 = f1
-	f2 = f2
-	f3 = f3
-	f4 = f4
+	f.blobberServiceCharge(0)
+	f.minLockServiceCharge(0)
+	f.blobberDelegateReward(0, 0)
+	f.minLockDelegatePayment(0, 0)
 
 	for i, sp := range sps {
 		serviceCharge := f.blobberServiceCharge(i) + f.minLockServiceCharge(i)
@@ -569,10 +562,6 @@ func setupMocksFinishAllocation(
 	sAllocation.WritePoolOwners = []string{sAllocation.Owner}
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
-
-	var allications = Allocations{}
-	allications.List.add(sAllocation.ID)
-	_, err = ctx.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allications)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{
@@ -671,15 +660,6 @@ type formulaeFinalizeAllocation struct {
 
 func (f *formulaeFinalizeAllocation) _challengePool() int64 {
 	return f.challengePoolBalance
-}
-
-func (f *formulaeFinalizeAllocation) _minLockTotal() int64 {
-	var total int64 = 0
-	for i := range f.allocation.BlobberDetails {
-		total += f._minLockPayment(i)
-	}
-
-	return total
 }
 
 func (f *formulaeFinalizeAllocation) _minLockPayment(blobber int) int64 {
@@ -884,6 +864,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	}
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientId, ctx)
+	require.NoError(t, err)
 
 	confirmTestNewAllocation(t, f, allBlobbersList.Nodes, individualBlobbers, newStakePools, *wp, ctx)
 
@@ -930,13 +911,6 @@ func (f formulaeCommitNewAllocation) sizePerUsedBlobber() int64 {
 	return (writeSize + numBlobbersUsed - 1) / numBlobbersUsed
 }
 
-func (f formulaeCommitNewAllocation) offerBlobber(index int) int64 {
-	var amount = sizeInGB(f.sizePerUsedBlobber())
-	var writePrice = float64(f.blobbers[index].Terms.WritePrice)
-
-	return int64(amount * writePrice)
-}
-
 func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string) int64 {
 	var thisBlobber, ok = f.blobbers.get(id)
 	require.True(t, ok)
@@ -944,13 +918,6 @@ func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string
 	var newAllocament = f.sizePerUsedBlobber()
 
 	return usedAlready + newAllocament
-}
-
-func (f formulaeCommitNewAllocation) offerExpiration() common.Timestamp {
-	var expiration = f.request.Expiration
-	var challangeTime = f.request.MaxChallengeCompletionTime
-
-	return expiration + toSeconds(challangeTime)
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,

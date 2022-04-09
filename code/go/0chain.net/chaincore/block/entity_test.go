@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -116,7 +117,7 @@ func makeTestNode(pbK string) (*node.Node, error) {
 		"public_ip":  "public ip",
 		"n2n_ip":     "n2n_ip",
 		"port":       8080,
-		"id":         "miners node id",
+		"id":         util.ToHex([]byte("miners node id")),
 		"public_key": pbK,
 	}
 	n, err := node.NewNode(nc)
@@ -385,9 +386,14 @@ func TestBlock_ComputeProperties(t *testing.T) {
 	t.Parallel()
 
 	b := NewBlock("", 1)
-	b.Txns = []*transaction.Transaction{
-		new(transaction.Transaction),
-	}
+	txn := new(transaction.Transaction)
+
+	scheme := encryption.NewBLS0ChainScheme()
+	err := scheme.GenerateKeys()
+	require.NoError(t, err)
+	txn.PublicKey = scheme.GetPublicKey()
+
+	b.Txns = []*transaction.Transaction{txn}
 
 	tests := []struct {
 		name   string
@@ -403,7 +409,8 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				want.ChainID = datastore.ToKey(config.GetServerChainID())
 				want.TxnsMap = make(map[string]bool, len(want.Txns))
 				for _, txn := range want.Txns {
-					txn.ComputeProperties()
+					err := txn.ComputeProperties()
+					require.NoError(t, err)
 					want.TxnsMap[txn.Hash] = true
 				}
 
@@ -420,7 +427,8 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				want.ChainID = datastore.ToKey(config.GetServerChainID())
 				want.TxnsMap = make(map[string]bool, len(want.Txns))
 				for _, txn := range want.Txns {
-					txn.ComputeProperties()
+					err := txn.ComputeProperties()
+					require.NoError(t, err)
 					want.TxnsMap[txn.Hash] = true
 				}
 
@@ -452,7 +460,8 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
-			b.ComputeProperties()
+			err := b.ComputeProperties()
+			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, b)
 		})
@@ -1924,97 +1933,6 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 	}
 }
 
-func TestBlock_ComputeHash(t *testing.T) {
-	b := NewBlock("", 1)
-	for i := 0; i < 3; i++ {
-		txn := transaction.Transaction{OutputHash: encryption.Hash("data" + strconv.Itoa(i))}
-		b.Txns = append(b.Txns, &txn)
-	}
-	b.MinerID = "miner id"
-	b.PrevHash = "prev hash"
-
-	mt := b.GetMerkleTree()
-	merkleRoot := mt.GetRoot()
-	rmt := b.GetReceiptsMerkleTree()
-	rMerkleRoot := rmt.GetRoot()
-	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" +
-		strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" +
-		merkleRoot + ":" + rMerkleRoot
-	hash := encryption.Hash(hashData)
-
-	type fields struct {
-		UnverifiedBlockBody   UnverifiedBlockBody
-		VerificationTickets   []*VerificationTicket
-		HashIDField           datastore.HashIDField
-		Signature             string
-		ChainID               datastore.Key
-		RoundRank             int
-		PrevBlock             *Block
-		TxnsMap               map[string]bool
-		ClientState           util.MerklePatriciaTrieI
-		stateStatus           int8
-		blockState            int8
-		isNotarized           bool
-		verificationStatus    int
-		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
-		MagicBlock            *MagicBlock
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		{
-			name: "OK",
-			fields: fields{
-				UnverifiedBlockBody:   b.UnverifiedBlockBody,
-				VerificationTickets:   b.VerificationTickets,
-				HashIDField:           b.HashIDField,
-				Signature:             b.Signature,
-				ChainID:               b.ChainID,
-				RoundRank:             b.RoundRank,
-				PrevBlock:             b.PrevBlock,
-				TxnsMap:               b.TxnsMap,
-				ClientState:           b.ClientState,
-				stateStatus:           b.stateStatus,
-				blockState:            b.blockState,
-				isNotarized:           b.isNotarized,
-				verificationStatus:    b.verificationStatus,
-				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
-				MagicBlock:            b.MagicBlock,
-			},
-			want: hash,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			b := &Block{
-				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
-				VerificationTickets:   tt.fields.VerificationTickets,
-				HashIDField:           tt.fields.HashIDField,
-				Signature:             tt.fields.Signature,
-				ChainID:               tt.fields.ChainID,
-				RoundRank:             tt.fields.RoundRank,
-				PrevBlock:             tt.fields.PrevBlock,
-				TxnsMap:               tt.fields.TxnsMap,
-				ClientState:           tt.fields.ClientState,
-				stateStatus:           tt.fields.stateStatus,
-				blockState:            tt.fields.blockState,
-				isNotarized:           tt.fields.isNotarized,
-				verificationStatus:    tt.fields.verificationStatus,
-				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
-				MagicBlock:            tt.fields.MagicBlock,
-			}
-			if got := b.ComputeHash(); got != tt.want {
-				t.Errorf("ComputeHash() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestBlock_HashBlock(t *testing.T) {
 	b := NewBlock("", 1)
 	for i := 0; i < 3; i++ {
@@ -2023,6 +1941,7 @@ func TestBlock_HashBlock(t *testing.T) {
 	}
 	b.MinerID = "miner id"
 	b.PrevHash = "prev hash"
+	b.StateChangesCount = 10
 
 	mt := b.GetMerkleTree()
 	merkleRoot := mt.GetRoot()
@@ -2030,7 +1949,7 @@ func TestBlock_HashBlock(t *testing.T) {
 	rMerkleRoot := rmt.GetRoot()
 	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" +
 		strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" +
-		merkleRoot + ":" + rMerkleRoot
+		strconv.Itoa(b.StateChangesCount) + ":" + merkleRoot + ":" + rMerkleRoot
 	hash := encryption.Hash(hashData)
 
 	type fields struct {
@@ -2049,6 +1968,7 @@ func TestBlock_HashBlock(t *testing.T) {
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
+		StateChangesCount     int
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2074,6 +1994,7 @@ func TestBlock_HashBlock(t *testing.T) {
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
 				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				StateChangesCount:     b.StateChangesCount,
 				MagicBlock:            b.MagicBlock,
 			},
 			want: hash,
@@ -2097,13 +2018,11 @@ func TestBlock_HashBlock(t *testing.T) {
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				StateChangesCount:     tt.fields.StateChangesCount,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-
 			b.HashBlock()
-			if b.Hash != tt.want {
-				t.Errorf("HashBlock() = %v, want %v", b.Hash, tt.want)
-			}
+			require.Equal(t, tt.want, b.Hash)
 		})
 	}
 }
@@ -2562,7 +2481,7 @@ func TestBlock_GetClients(t *testing.T) {
 			fields: fields{UnverifiedBlockBody: b.UnverifiedBlockBody},
 			want: func() []*client.Client {
 				cl := client.NewClient()
-				cl.SetPublicKey(b.Txns[1].PublicKey)
+				require.NoError(t, cl.SetPublicKey(b.Txns[1].PublicKey))
 
 				return []*client.Client{
 					cl,
@@ -2590,9 +2509,9 @@ func TestBlock_GetClients(t *testing.T) {
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-			if got := b.GetClients(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetClients() = %v, want %v", got, tt.want)
-			}
+			got, err := b.GetClients()
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

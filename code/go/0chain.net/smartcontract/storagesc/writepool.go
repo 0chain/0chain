@@ -40,10 +40,6 @@ func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
 	return wp.Pools.blobberCut(allocID, blobberID, now)
 }
 
-func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) {
-	wp.Pools.removeEmpty(allocID, ap)
-}
-
 // Encode implements util.Serializable interface.
 func (wp *writePool) Encode() []byte {
 	var b, err = json.Marshal(wp)
@@ -204,7 +200,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if t.Value < int64(mld) {
+	if t.Value < int64(mld) || t.Value <= 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
 	}
@@ -259,7 +255,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	if t.Value < conf.MinLock {
+	if t.Value < conf.MinLock || t.Value <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}

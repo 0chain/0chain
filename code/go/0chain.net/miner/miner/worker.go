@@ -169,7 +169,7 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transaction {
 	var wf, wt *wallet.Wallet
 	csize := len(wallets)
-	for true {
+	for {
 		wf = wallets[prng.Intn(csize)]
 		wt = wallets[prng.Intn(csize)]
 		if wf != wt {
@@ -241,7 +241,9 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
-		w.Initialize(c.ClientSignatureScheme())
+		if err := w.Initialize(c.ClientSignatureScheme()); err != nil {
+			panic(err)
+		}
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed

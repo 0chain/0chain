@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/mocks"
@@ -161,21 +163,6 @@ func TestSelectBlobbers(t *testing.T) {
 			},
 		},
 		{
-			name: "test_excess_preferred_blobbers",
-			args: args{
-				diverseBlobbers:      false,
-				numBlobbers:          6,
-				numPreferredBlobbers: 8,
-				dataShards:           5,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				err:    true,
-				errMsg: "allocation_creation_failed: invalid preferred blobber URL",
-			},
-		},
-		{
 			name: "test_all_preferred_blobbers",
 			args: args{
 				diverseBlobbers:      false,
@@ -186,20 +173,21 @@ func TestSelectBlobbers(t *testing.T) {
 				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
 			},
 			want: want{
-				blobberIds: []int{0, 1, 2, 3},
+				blobberIds: []int{0, 1, 3, 5},
 			},
 		},
 	}
 	for _, tt := range testCases {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//	t.Parallel()
 			ssc, sa, blobbers, balances := setup(t, tt.args)
 
 			outBlobbers, outSize, err := ssc.selectBlobbers(
 				now, blobbers, &sa, randomSeed, balances,
 			)
-
+			for _, b := range outBlobbers {
+				t.Log(b)
+			}
 			require.EqualValues(t, len(tt.want.blobberIds), len(outBlobbers))
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
@@ -211,6 +199,7 @@ func TestSelectBlobbers(t *testing.T) {
 			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
 
 			for _, blobber := range outBlobbers {
+				t.Log(blobber)
 				found := false
 				for _, index := range tt.want.blobberIds {
 					if mockBlobberId+strconv.Itoa(index) == blobber.ID {
@@ -267,9 +256,8 @@ func TestExtendAllocation(t *testing.T) {
 		poolCount  []int
 	}
 	type want struct {
-		blobberIds []int
-		err        bool
-		errMsg     string
+		err    bool
+		errMsg string
 	}
 
 	makeMockBlobber := func(index int) *StorageNode {
@@ -319,6 +307,8 @@ func TestExtendAllocation(t *testing.T) {
 				},
 			).Return(nil).Once()
 		}
+
+		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything).Return()
 
 		var sa = StorageAllocation{
 			ID:                      mockAllocationId,
@@ -598,9 +588,7 @@ func TestTransferAllocation(t *testing.T) {
 			Owner: mockOldOwner,
 			ID:    p.info.AllocationId,
 		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
+		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID),
 			mock.MatchedBy(func(s *StorageAllocation) bool {
 				*s = sa
@@ -691,6 +679,11 @@ func TestTransferAllocation(t *testing.T) {
 				return ca.ClientID == p.info.NewOwnerId &&
 					len(ca.Allocations.List) == 1 && ok
 			})).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -791,7 +784,7 @@ func isEqualStrings(a, b []string) (eq bool) {
 }
 
 func Test_newAllocationRequest_storageAllocation(t *testing.T) {
-	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
+	const clientID, clientPk = "client_hex", "pk"
 	var nar newAllocationRequest
 	nar.DataShards = 2
 	nar.ParityShards = 3
@@ -1097,8 +1090,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	sb.Nodes[0].Used += 10 * GB
 	sb.Nodes[1].Used += 10 * GB
 
-	// blobbers of the allocation
-	assert.EqualValues(t, sb.Nodes, aresp.Blobbers)
 	// blobbers saved in all blobbers list
 	allBlobbers, err = ssc.getBlobbersList(balances)
 	require.NoError(t, err)
@@ -1161,10 +1152,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
-	sp1, err = ssc.getStakePool("b1", balances)
+	_, err = ssc.getStakePool("b1", balances)
 	require.NoError(t, err)
 
-	sp2, err = ssc.getStakePool("b2", balances)
+	_, err = ssc.getStakePool("b2", balances)
 	require.NoError(t, err)
 
 	// 3. challenge pool existence
@@ -1297,7 +1288,6 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	tx.Value = 400
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	require.NoError(t, err)
-	return
 }
 
 func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {

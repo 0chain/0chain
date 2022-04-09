@@ -3,7 +3,6 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +25,6 @@ import (
 )
 
 // test helpers
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -65,7 +60,7 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	client = new(Client)
 	client.balance = balance
@@ -185,7 +180,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	blob = new(Client)
 	blob.terms = terms
@@ -215,7 +210,7 @@ func addValidator(t testing.TB, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (valid *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	valid = new(Client)
 	valid.scheme = scheme
@@ -337,6 +332,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
+	conf.ValidatorsPerChallenge = 10
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
@@ -371,6 +367,14 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 
+	conf.BlockReward = &blockReward{
+		BlockReward:             1000,
+		BlockRewardChangePeriod: 1000,
+		BlockRewardChangeRatio:  0.1,
+		TriggerPeriod:           30,
+		BlobberWeight:           0.5,
+	}
+
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return
 }
@@ -388,24 +392,33 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 		blobberChall = new(BlobberChallenge)
 		blobberChall.BlobberID = blobberID
 	}
+
+	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		t.Fatal("unexpected error:", err)
+	}
+	if err == util.ErrValueNotPresent {
+		allocChall = new(AllocationChallenge)
+		allocChall.AllocationID = allocID
+	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	storChall.PrevID = prevID
 	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
-	for _, val := range valSlice {
-		storChall.Validators = append(storChall.Validators, &ValidationNode{
-			ID:      val.Name(),
-			BaseURL: val.Data(),
-		})
-	}
-	storChall.RandomNumber = seed
+	storChall.TotalValidators = len(valSlice)
+
 	storChall.AllocationID = allocID
-	storChall.Blobber = blobber
-	storChall.AllocationRoot = allocRoot
+	storChall.BlobberID = blobber.ID
 
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
+	require.NoError(t, err)
+
+	require.True(t, allocChall.addChallenge(storChall))
+	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
+	require.NoError(t, err)
+
+	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)
 	require.NoError(t, err)
 	return
 }

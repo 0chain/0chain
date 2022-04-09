@@ -68,6 +68,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		confirmation.Round = bs.Round
 		confirmation.MinerID = bs.MinerID
 		confirmation.RoundRandomSeed = bs.RoundRandomSeed
+		confirmation.StateChangesCount = bs.StateChangesCount
 		confirmation.CreationDate = bs.CreationDate
 		confirmation.MerkleTreeRoot = bs.MerkleTreeRoot
 		confirmation.ReceiptMerkleTreeRoot = bs.ReceiptMerkleTreeRoot
@@ -80,6 +81,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		confirmation.Round = b.Round
 		confirmation.MinerID = b.MinerID
 		confirmation.RoundRandomSeed = b.GetRoundRandomSeed()
+		confirmation.StateChangesCount = b.StateChangesCount
 		confirmation.CreationDate = b.CreationDate
 	}
 	txn := b.GetTransaction(hash)
@@ -102,7 +104,11 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 		txnSummary := txn.GetSummary()
 		txnSummary.Round = b.Round
 		sTxns[idx] = txnSummary
-		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
+		if err := sc.BlockTxnCache.Add(txn.Hash, txnSummary); err != nil {
+			logging.Logger.Warn("save transaction to cache failed",
+				zap.String("txn", txn.Hash),
+				zap.Error(err))
+		}
 	}
 
 	delay := time.Millisecond
@@ -153,7 +159,7 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
 	defer persistencestore.Close(tctx)
 	c := persistencestore.GetCon(tctx)
-	if txnSummaryMV == false {
+	if !txnSummaryMV {
 		err := c.Query(txnSummaryCreateMV(roundToHashMVTable, txnSummaryEntityMetadata.GetName())).Exec()
 		if err == nil {
 			txnSummaryMV = true

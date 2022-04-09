@@ -8,8 +8,6 @@ type (
 	// NodesClientStats represents struct with maps containing
 	// needed nodes client stats.
 	NodesClientStats struct {
-		blockStateChangeMu sync.Mutex
-
 		// BlockStateChange represents map which stores block state change requests stats.
 		// minerID -> BlockRequests
 		BlockStateChange map[string]*BlockRequests

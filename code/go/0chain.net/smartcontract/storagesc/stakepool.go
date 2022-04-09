@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -16,7 +17,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -65,10 +65,6 @@ func newStakePool() *stakePool {
 // stake pool key for the storage SC and  blobber
 func stakePoolKey(scKey, blobberID string) datastore.Key {
 	return datastore.Key(scKey + ":stakepool:" + blobberID)
-}
-
-func stakePoolID(scKey, blobberID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, blobberID))
 }
 
 // Encode to []byte
@@ -126,8 +122,10 @@ func (sp *stakePool) empty(
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
 	if sp.stake()-sp.TotalOffers-dp.Balance < 0 {
-		sp.TotalUnStake += dp.Balance
-		dp.Status = spenum.Unstaking
+		if dp.Status != spenum.Unstaking {
+			sp.TotalUnStake += dp.Balance
+			dp.Status = spenum.Unstaking
+		}
 		return true, nil
 	}
 
@@ -147,14 +145,21 @@ func (sp *stakePool) empty(
 }
 
 // add offer of an allocation related to blobber owns this stake pool
-func (sp *stakePool) addOffer(amount state.Balance) {
+func (sp *stakePool) addOffer(amount state.Balance) error {
+	if amount < 0 {
+		return fmt.Errorf("adding negative offer amount %v", amount)
+	}
 	sp.TotalOffers += amount
+	return nil
 }
 
-// extendOffer changes offer lock and expiration on update allocations
-func (sp *stakePool) extendOffer(delta state.Balance) (err error) {
-	sp.TotalOffers += delta
-	return
+// remove offer of an allocation related to blobber owns this stake pool
+func (sp *stakePool) removeOffer(amount state.Balance) error {
+	if amount < 0 {
+		return fmt.Errorf("removing negative offer amount %v", amount)
+	}
+	sp.TotalOffers -= amount
+	return nil
 }
 
 // slash represents blobber penalty; it returns number of tokens moved in
@@ -228,7 +233,6 @@ func (sp *stakePool) slash(
 func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	writePrice state.Balance) (free int64) {
 
-	const dryRun = true // don't update the stake pool state, just calculate
 	var total, offers = sp.cleanStake(), sp.TotalOffers
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater
@@ -237,66 +241,6 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
 	return
-}
-
-// free staked capacity of related blobber
-func (sp *stakePool) capacity(now common.Timestamp,
-	writePrice state.Balance) (free int64) {
-
-	const dryRun = true // don't update the stake pool state, just calculate
-	var total, offers = sp.stake(), sp.TotalOffers
-	free = int64((float64(total-offers) / float64(writePrice)) * GB)
-	return
-}
-
-// update the pool to get the stat
-func (sp *stakePool) stat(_ *Config, _ string,
-	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
-
-	stat = new(stakePoolStat)
-	stat.ID = blobber.ID
-	// Balance is full balance including all.
-	stat.Balance = sp.stake()
-	// Unstake is total balance of delegate pools want to unsake. But
-	// can't for now. Total stake for new offers (new allocations) can
-	// be calculated as (Balance - Unstake).
-	stat.UnstakeTotal = sp.TotalUnStake
-	// Free is free space, excluding delegate pools want to unstake.
-	stat.Free = sp.cleanCapacity(now, blobber.Terms.WritePrice)
-	stat.Capacity = blobber.Capacity
-	stat.WritePrice = blobber.Terms.WritePrice
-
-	stat.OffersTotal = sp.TotalOffers
-
-	// delegate pools
-	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
-	for poolId, dp := range sp.Pools {
-		var dps = delegatePoolStat{
-			ID:         poolId,
-			Balance:    dp.Balance,
-			DelegateID: dp.DelegateID,
-			Rewards:    dp.Reward,
-			//Penalty:    dp.Penalty,
-			UnStake: dp.Status == spenum.Unstaking,
-		}
-		//stat.Penalty += dp.Penalty
-		stat.Delegate = append(stat.Delegate, dps)
-	}
-
-	// rewards
-	//	stat.Rewards.Charge = sp.Reward // total for all time
-	//stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
-	//stat.Rewards.Validator = sp.Rewards.Validator // total for all time
-
-	stat.Settings = sp.Settings
-	return
-}
-
-// stat
-type rewardsStat struct {
-	Charge    state.Balance `json:"charge"`    // total for all time
-	Blobber   state.Balance `json:"blobber"`   // total for all time
-	Validator state.Balance `json:"validator"` // total for all time
 }
 
 type delegatePoolStat struct {
@@ -331,18 +275,6 @@ type stakePoolStat struct {
 
 	// Settings of the stake pool
 	Settings stakepool.StakePoolSettings `json:"settings"`
-}
-
-func (stat *stakePoolStat) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(stat); err != nil {
-		panic(err) // must never happen
-	}
-	return
-}
-
-func (stat *stakePoolStat) decode(input []byte) error {
-	return json.Unmarshal(input, stat)
 }
 
 //
@@ -459,7 +391,13 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	// TO-DO: Update stake in eventDB
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: spr.BlobberID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 
 	return
 }
@@ -495,6 +433,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
+		data, _ := json.Marshal(dbs.DbUpdates{
+			Id: spr.BlobberID,
+			Updates: map[string]interface{}{
+				"total_stake": int64(sp.stake()),
+			},
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
@@ -508,6 +453,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: spr.BlobberID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

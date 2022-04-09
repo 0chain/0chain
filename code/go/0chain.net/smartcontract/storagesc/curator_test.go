@@ -51,9 +51,7 @@ func TestAddCurator(t *testing.T) {
 			ID:    p.info.AllocationId,
 			Owner: p.clientId,
 		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
+		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID), mockSetValue(&sa)).Return(nil).Once()
 
 		balances.On(
@@ -77,6 +75,11 @@ func TestAddCurator(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagAddOrOverwriteCurator, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
@@ -156,9 +159,7 @@ func TestRemoveCurator(t *testing.T) {
 			ID:    p.info.AllocationId,
 			Owner: p.clientId,
 		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
+		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID), mockSetValue(&sa)).Return(nil).Once()
 
 		balances.On(
@@ -179,6 +180,11 @@ func TestRemoveCurator(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagRemoveCurator, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}

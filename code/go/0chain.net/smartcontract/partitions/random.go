@@ -24,6 +24,10 @@ type ItemType int
 const (
 	ItemString ItemType = iota
 	ItemValidator
+	ItemBlobberChallenge
+	ItemBlobberChallengeAllocation
+	ItemBlobber
+	ItemBlobberReward
 )
 
 //------------------------------------------------------------------------------
@@ -78,7 +82,10 @@ func (rs *randomSelector) Add(
 	if len(rs.Partitions) == 0 || part.length() >= rs.PartitionSize {
 		part = rs.addPartition()
 	}
-	part.add(item)
+
+	if err := part.add(item); err != nil {
+		return 0, err
+	}
 	return len(rs.Partitions) - 1, nil
 }
 
@@ -113,9 +120,12 @@ func (rs *randomSelector) Remove(
 
 	replacment := lastPart.cutTail()
 	if replacment == nil {
-		fmt.Errorf("empty last partitions, currpt data")
+		return fmt.Errorf("empty last partitions, currpt data")
 	}
-	part.add(replacment)
+
+	if err := part.add(replacment); err != nil {
+		return err
+	}
 	if rs.Callback != nil {
 		err = rs.Callback(replacment, len(rs.Partitions)-1, index, balances)
 		if err != nil {
@@ -151,9 +161,12 @@ func (rs *randomSelector) AddRand(
 	}
 	moving := partition.cutTail()
 	if moving == nil {
-		fmt.Errorf("empty partitions, currpt data")
+		return -1, fmt.Errorf("empty partitions, corrupt data")
 	}
-	partition.add(item)
+
+	if err := partition.add(item); err != nil {
+		return 0, err
+	}
 
 	movedTo, err := rs.Add(moving, balances)
 	if err != nil {
@@ -204,6 +217,22 @@ func (rs *randomSelector) addPartition() PartitionItemList {
 	var newPartition PartitionItemList
 	if rs.ItemType == ItemString {
 		newPartition = &itemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberChallenge {
+		newPartition = &blobberChallengeItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberChallengeAllocation {
+		newPartition = &blobberChallengeAllocationItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobber {
+		newPartition = &blobberItemList{
+			Key: rs.partitionKey(rs.NumPartitions),
+		}
+	} else if rs.ItemType == ItemBlobberReward {
+		newPartition = &blobberRewardItemList{
 			Key: rs.partitionKey(rs.NumPartitions),
 		}
 	} else {
@@ -281,9 +310,18 @@ func (rs *randomSelector) getPartition(
 	var part PartitionItemList
 	if rs.ItemType == ItemString {
 		part = &itemList{}
+	} else if rs.ItemType == ItemBlobberChallenge {
+		part = &blobberChallengeItemList{}
+	} else if rs.ItemType == ItemBlobberChallengeAllocation {
+		part = &blobberChallengeAllocationItemList{}
+	} else if rs.ItemType == ItemBlobber {
+		part = &blobberItemList{}
+	} else if rs.ItemType == ItemBlobberReward {
+		part = &blobberRewardItemList{}
 	} else {
 		part = &validatorItemList{}
 	}
+
 	err := part.get(rs.partitionKey(i), balances)
 	if err != nil {
 		return nil, err
@@ -343,3 +381,41 @@ func (rs *randomSelector) Msgsize() int {
 }
 
 type randomSelectorDecode randomSelector
+
+func (rs *randomSelector) UpdateItem(
+	partIndex int,
+	it PartitionItem,
+	balances state.StateContextI,
+) error {
+
+	partition, err := rs.getPartition(partIndex, balances)
+	if err != nil {
+		return err
+	}
+
+	err = partition.update(it)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rs *randomSelector) GetItem(
+	partIndex int,
+	itemName string,
+	balances state.StateContextI,
+) (PartitionItem, error) {
+
+	partition, err := rs.getPartition(partIndex, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range partition.itemRange(0, partition.length()) {
+		if item.Name() == itemName {
+			return item, nil
+		}
+	}
+
+	return nil, errors.New("item not present")
+}

@@ -3,6 +3,7 @@ package miner
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -28,6 +29,9 @@ import (
 
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
+
+// ErrLFBClientStateNil is returned when client state of latest finalized block is nil
+var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
 
 var (
 	bgTimer     metrics.Timer // block generation timer
@@ -72,7 +76,9 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
 	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
-	feeTxn.Sign(node.Self.GetSignatureScheme())
+	if _, err := feeTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
 	return feeTxn
 }
 
@@ -84,7 +90,9 @@ func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Tr
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
 	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
 	scTxn.Fee = 0
-	scTxn.Sign(node.Self.GetSignatureScheme())
+	if _, err := scTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
 	return scTxn
 }
 
@@ -94,9 +102,25 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
+	brTxn.TransactionData = `{"name":"blobber_block_rewards","input":{}}`
 	brTxn.Fee = 0
-	brTxn.Sign(node.Self.GetSignatureScheme())
+	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
+	return brTxn
+}
+
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = b.MinerID
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = `{"name":"generate_challenge","input":{}}`
+	brTxn.Fee = 0
+	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		panic(err)
+	}
 	return brTxn
 }
 
@@ -121,7 +145,10 @@ func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 	//
 	//     transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
 	//
-	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
+	if err := transactionMetadataProvider.GetStore().MultiAddToCollection(ctx,
+		transactionMetadataProvider, txns); err != nil {
+		logging.Logger.Error("update pending block failed", zap.Error(err))
+	}
 }
 
 func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error {
@@ -252,14 +279,12 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var start = time.Now()
 	cur := time.Now()
-	logging.Logger.Debug("Validating", zap.String("block", b.Hash))
 	if err = b.Validate(ctx); err != nil {
 		return
 	}
 	logging.Logger.Debug("Validating finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
 	cur = time.Now()
-	logging.Logger.Debug("VerifyBlockMagicBlockReference", zap.String("block", b.Hash))
 	if err = mc.VerifyBlockMagicBlockReference(b); err != nil {
 		return
 	}
@@ -267,23 +292,30 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var pb *block.Block
 	cur = time.Now()
-	logging.Logger.Debug("GetPreviousBlock", zap.String("block", b.Hash))
 	if pb = mc.GetPreviousBlock(ctx, b); pb == nil {
 		return nil, block.ErrPreviousBlockUnavailable
 	}
 	logging.Logger.Debug("GetPreviousBlock finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Debug("ValidateTransactions", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.ValidateTransactions(ctx, b); err != nil {
 		return
 	}
 	logging.Logger.Debug("ValidateTransactions finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Debug("ValidateBlockCost", zap.String("block", b.Hash))
 	cost := 0
+
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfb.ClientState == nil {
+		logging.Logger.Warn("ValidateBlockCost, could not estimate txn cost",
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash),
+			zap.Error(ErrLFBClientStateNil))
+		return nil, ErrLFBClientStateNil
+	}
+
 	for _, txn := range b.Txns {
-		c, err := mc.EstimateTransactionCost(ctx, b, mc.GetLatestFinalizedBlock().ClientState, txn)
+		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn)
 		if err != nil {
 			return nil, err
 		}
@@ -294,7 +326,6 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 	logging.Logger.Debug("ValidateBlockCost", zap.Int("calculated cost", cost))
 
-	logging.Logger.Debug("ComputeState", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.ComputeState(ctx, b); err != nil {
 		if err == context.Canceled {
@@ -313,21 +344,18 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 	logging.Logger.Debug("ComputeState finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Debug("verifySmartContracts", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.verifySmartContracts(ctx, b); err != nil {
 		return
 	}
 	logging.Logger.Debug("verifySmartContracts finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Debug("VerifyBlockMagicBlock", zap.String("block", b.Hash))
 	cur = time.Now()
 	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
 		return
 	}
 	logging.Logger.Debug("VerifyBlockMagicBlock finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Debug("SignBlock", zap.String("block", b.Hash))
 	cur = time.Now()
 	if bvt, err = mc.SignBlock(ctx, b); err != nil {
 		return nil, err
@@ -460,7 +488,23 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		btvTimer.UpdateSince(ts)
 		if mc.discoverClients {
-			go mc.SaveClients(b.GetClients())
+			go func() {
+				cs, err := b.GetClients()
+				if err != nil {
+					logging.Logger.Warn("validate transactions, get clients of block failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					return
+				}
+
+				if err := mc.SaveClients(cs); err != nil {
+					logging.Logger.Warn("validate transactions, save discovered clients failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+				}
+			}()
 		}
 		return nil
 	})
@@ -495,7 +539,13 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 			logging.Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
-	mc.FinalizeBlock(ctx, b)
+	if err := mc.FinalizeBlock(ctx, b); err != nil {
+		logging.Logger.Warn("finalize block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+	}
+
 	go mc.SendFinalizedBlock(context.Background(), b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
@@ -626,6 +676,7 @@ func newTxnIterInfo(blockSize int32) *TxnIterInfo {
 
 func txnIterHandlerFunc(mc *Chain,
 	b *block.Block,
+	lfb *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txnProcessor txnProcessorHandler,
 	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
@@ -644,7 +695,16 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
-		cost, err := mc.EstimateTransactionCost(ctx, mc.GetLatestFinalizedBlock(), mc.GetLatestFinalizedBlock().ClientState, txn)
+
+		if lfb.ClientState == nil {
+			logging.Logger.Warn("generate block, chain is not ready yet",
+				zap.Int64("round", b.Round),
+				zap.String("hash", b.Hash),
+				zap.Error(ErrLFBClientStateNil))
+			return false
+		}
+
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return true
@@ -655,14 +715,14 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
-			if tii.idx >= mc.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
+			if tii.idx >= mc.Config.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
-					zap.Bool("idx >= block size", tii.idx >= mc.BlockSize()),
-					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.MaxByteSize()),
+					zap.Bool("idx >= block size", tii.idx >= mc.Config.BlockSize()),
+					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.Config.MaxByteSize()),
 					zap.Int32("idx", tii.idx),
-					zap.Int32("block size", mc.BlockSize()),
+					zap.Int32("block size", mc.Config.BlockSize()),
 					zap.Int64("byte size", tii.byteSize),
-					zap.Int64("max byte size", mc.MaxByteSize()),
+					zap.Int64("max byte size", mc.Config.MaxByteSize()),
 					zap.Int32("count", tii.count),
 					zap.Int("txns", len(b.Txns)))
 				return false
@@ -679,6 +739,14 @@ func txnIterHandlerFunc(mc *Chain,
 func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	bsh chain.BlockStateHandler, waitOver bool) error {
 
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfb.ClientState == nil {
+		logging.Logger.Error("generate block - chain is not ready yet",
+			zap.Error(ErrLFBClientStateNil),
+			zap.Int64("round", b.Round))
+		return ErrLFBClientStateNil
+	}
+
 	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize())
 
 	var (
@@ -686,7 +754,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		beginState     = blockState.GetRoot()
-		txnIterHandler = txnIterHandlerFunc(mc, b, blockState, txnProcessor, iterInfo)
+		txnIterHandler = txnIterHandlerFunc(mc, b, lfb, blockState, txnProcessor, iterInfo)
 	)
 
 	iterInfo.roundTimeoutCount = mc.GetRoundTimeoutCount()
@@ -698,7 +766,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	//we use this context for transaction aggregation phase only
-	cctx, _ := context.WithTimeout(ctx, mc.Config.BlockProposalMaxWaitTime())
+	cctx, cancel := context.WithTimeout(ctx, mc.Config.BlockProposalMaxWaitTime())
+	defer cancel()
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
@@ -707,7 +776,11 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
 		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
-		go mc.deleteTxns(iterInfo.invalidTxns) // OK to do in background
+		go func() {
+			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
+				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+			}
+		}()
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
@@ -790,7 +863,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if config.DevConfiguration.IsBlockRewards {
+	challengesEnabled := config.SmartContractConfig.GetBool(
+		"smart_contracts.storagesc.challenge_enabled")
+	if challengesEnabled {
+		err = mc.processTxn(ctx, mc.createGenerateChallengeTxn(b), b, blockState, iterInfo.clients)
+		if err != nil {
+			logging.Logger.Error("generate block (generate_challenge)",
+				zap.Int64("round", b.Round), zap.Error(err))
+		}
+	}
+
+	if config.DevConfiguration.IsBlockRewards &&
+		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
@@ -836,6 +921,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	b.SetClientState(blockState)
+	b.SetStateChangesCount(blockState)
 	bgTimer.UpdateSince(start)
 	logging.Logger.Debug("generate block (assemble+update)",
 		zap.Int64("round", b.Round),

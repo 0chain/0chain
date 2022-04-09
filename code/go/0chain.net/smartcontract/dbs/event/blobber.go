@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs"
+
 	"github.com/guregu/null"
 
 	"gorm.io/gorm"
@@ -44,6 +45,12 @@ type Blobber struct {
 	UnstakeTotal       int64 `json:"unstake_total"`
 	Reward             int64 `json:"reward"`
 	TotalServiceCharge int64 `json:"total_service_charge"`
+	TotalStake         int64 `json:"total_stake"`
+
+	Name        string `json:"name" gorm:"name"`
+	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
+	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
+	Description string `json:"description" gorm:"description"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
@@ -68,26 +75,18 @@ type blobberAggregateStats struct {
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: id}).
-		First(&blobber)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving blobber %v, error %v",
-			id, result.Error)
+	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
 	return &blobber, nil
 }
 
 func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
 	var blobber blobberAggregateStats
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: id}).
-		First(&blobber)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving blobber %v, error %v",
-			id, result.Error)
+	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
 
 	return &blobber, nil
@@ -95,53 +94,54 @@ func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, er
 
 func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 	var blobbers []Blobber
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Find(&blobbers)
+	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+
 	return blobbers, result.Error
 }
 
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
-	blobberIDs := []string{}
+	var blobberIDs []string
 	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
+
 	return blobberIDs, result.Error
 }
 
 func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
-	blobbers := []BlobberLatLong{}
+	var blobbers []BlobberLatLong
 	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+
+	return blobbers, result.Error
+}
+
+func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
+	var blobbers []Blobber
+	result := edb.Store.Get().Model(&Blobber{}).Order("id").Where("blobber_id IN ?", ids).Find(&blobbers)
+
 	return blobbers, result.Error
 }
 
 func (edb *EventDb) deleteBlobber(id string) error {
-	result := edb.Store.Get().
-		Where(&Blobber{BlobberID: id}).
-		Delete(&Blobber{})
-	return result.Error
+	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).Delete(&Blobber{}).Error
 }
 
 func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 	var blobber = Blobber{BlobberID: updates.Id}
 	exists, err := blobber.exists(edb)
-
 	if err != nil {
 		return err
 	}
+
 	if !exists {
-		return fmt.Errorf("blobber %v not in database cannot update",
-			blobber.BlobberID)
+		return fmt.Errorf("blobber %v not in database cannot update", blobber.BlobberID)
 	}
 
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: blobber.BlobberID}).
-		Updates(updates.Updates)
-	return result.Error
+	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", blobber.BlobberID).Updates(updates.Updates).Error
 }
 
 func (edb *EventDb) GetBlobberCount() (int64, error) {
 	var count int64
 	res := edb.Store.Get().Model(Blobber{}).Count(&count)
+
 	return count, res.Error
 }
 
@@ -175,9 +175,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string,
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: blobber.BlobberID}).
+	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", blobber.BlobberID).
 		Updates(map[string]interface{}{
 			"base_url":                  blobber.BaseURL,
 			"latitude":                  blobber.Latitude,
@@ -191,7 +189,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"used":                      blobber.Used,
 			"last_health_check":         blobber.LastHealthCheck,
 			"delegate_wallet":           blobber.DelegateWallet,
-			"min_stake":                 blobber.MaxStake,
+			"min_stake":                 blobber.MinStake,
 			"max_stake":                 blobber.MaxStake,
 			"num_delegates":             blobber.NumDelegates,
 			"service_charge":            blobber.ServiceCharge,
@@ -200,8 +198,11 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"reward":                    blobber.Reward,
 			"total_service_charge":      blobber.TotalServiceCharge,
 			"saved_data":                blobber.SavedData,
-		})
-	return result.Error
+			"name":                      blobber.Name,
+			"website_url":               blobber.WebsiteUrl,
+			"logo_url":                  blobber.LogoUrl,
+			"description":               blobber.Description,
+		}).Error
 }
 
 func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
@@ -213,19 +214,18 @@ func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 		return edb.overwriteBlobber(blobber)
 	}
 
-	result := edb.Store.Get().Create(&blobber)
-	return result.Error
+	return edb.Store.Get().Create(&blobber).Error
 }
 
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 	var blobber Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: bl.BlobberID}).Take(&blobber)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
+	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", bl.BlobberID).Take(&blobber).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check Blobber existence %v, error %v", bl, err)
 	}
-	if result.Error != nil {
-		return false, fmt.Errorf("failed to check Blobber existence %v, error %v",
-			bl, result.Error)
-	}
+
 	return true, nil
 }

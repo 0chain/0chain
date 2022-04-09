@@ -33,8 +33,8 @@ func (k *IDField) Validate(ctx context.Context) error {
 }
 
 /*ComputeProperties - default dummy implementation so only entities that need this can implement */
-func (k *IDField) ComputeProperties() {
-
+func (k *IDField) ComputeProperties() error {
+	return nil
 }
 
 /*Read - abstract method for memory store read */
@@ -92,7 +92,8 @@ func (nif *NOIDField) SetKey(key Key) {
 }
 
 /*ComputeProperties - implementing the interface */
-func (nif *NOIDField) ComputeProperties() {
+func (nif *NOIDField) ComputeProperties() error {
+	return nil
 }
 
 /*Validate - implementing the interface */
@@ -144,8 +145,8 @@ func (h *HashIDField) SetKey(key Key) {
 }
 
 /*ComputeProperties - Entity implementation */
-func (h *HashIDField) ComputeProperties() {
-
+func (h *HashIDField) ComputeProperties() error {
+	return nil
 }
 
 /*Validate - Entity implementation */

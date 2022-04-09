@@ -44,42 +44,6 @@ func setupPartialStateDBMocks() {
 	SetupPartialState(&store)
 }
 
-func TestNewPartialState(t *testing.T) {
-	t.Parallel()
-
-	var (
-		key util.Key = []byte("key")
-		ps           = datastore.GetEntityMetadata("partial_state").Instance().(*PartialState)
-	)
-	ps.Hash = key
-	ps.ComputeProperties()
-
-	type args struct {
-		key util.Key
-	}
-	tests := []struct {
-		name string
-		args args
-		want *PartialState
-	}{
-		{
-			name: "OK",
-			args: args{key: key},
-			want: ps,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := NewPartialState(tt.args.key); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewPartialState() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestPartialState_GetKey(t *testing.T) {
 	t.Parallel()
 
@@ -274,7 +238,9 @@ func TestPartialState_Delete(t *testing.T) {
 func TestPartialState_GetRoot(t *testing.T) {
 	t.Parallel()
 
-	ps := NewPartialState([]byte("key"))
+	ps := &PartialState{
+		Hash: []byte("key"),
+	}
 	root := util.NewValueNode()
 	ps.AddNode(root)
 
@@ -317,7 +283,8 @@ func TestPartialState_GetRoot(t *testing.T) {
 func TestPartialState_UnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	ps := NewPartialState([]byte("key"))
+	ps := &PartialState{}
+	ps.Hash = []byte("key")
 	ps.Nodes = []util.Node{}
 	blob, err := json.Marshal(ps)
 	if err != nil {
@@ -459,7 +426,7 @@ func TestPartialState_UnmarshalPartialState(t *testing.T) {
 			name: "OK",
 			args: args{
 				obj: map[string]interface{}{
-					"root":    ps.Hash,
+					"root":    []byte(ps.Hash),
 					"version": ps.Version,
 					"nodes": []interface{}{
 						base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(util.NodeTypeValueNode) + "node")),

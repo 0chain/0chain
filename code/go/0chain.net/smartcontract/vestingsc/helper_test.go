@@ -3,7 +3,6 @@ package vestingsc
 import (
 	"encoding/json"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -23,12 +22,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 )
-
-const x10 = 10 * 1000 * 1000 * 1000
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -61,7 +54,9 @@ func newClient(balance state.Balance, balances chainstate.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	if err := scheme.GenerateKeys(); err != nil {
+		panic(err)
+	}
 
 	client = new(Client)
 	client.balance = balance
@@ -78,11 +73,6 @@ func mustEncode(t *testing.T, val interface{}) (b []byte) {
 	var err error
 	b, err = json.Marshal(val)
 	require.NoError(t, err)
-	return
-}
-
-func mustDecode(t *testing.T, b []byte, val interface{}) {
-	require.NoError(t, json.Unmarshal(b, val))
 	return
 }
 
@@ -105,46 +95,6 @@ func newTestVestingSC() (vsc *VestingSmartContract) {
 	return
 }
 
-func (c *Client) trigger(t *testing.T, vsc *VestingSmartContract,
-	poolID datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		tr poolRequest
-	)
-	balances.(*testBalances).txn = tx
-	tr.PoolID = poolID
-	return vsc.trigger(tx, mustEncode(t, &tr), balances)
-}
-
-func (c *Client) stop(t *testing.T, vsc *VestingSmartContract,
-	poolID, dest datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		sr stopRequest
-	)
-	balances.(*testBalances).txn = tx
-	sr.PoolID = poolID
-	sr.Destination = dest
-	return vsc.stop(tx, mustEncode(t, &sr), balances)
-}
-
-func (c *Client) unlock(t *testing.T, vsc *VestingSmartContract,
-	poolID datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		ur poolRequest
-	)
-	balances.(*testBalances).txn = tx
-	ur.PoolID = poolID
-	return vsc.unlock(tx, mustEncode(t, &ur), balances)
-}
-
 func (c *Client) add(t *testing.T, vsc *VestingSmartContract,
 	ar *addRequest, value state.Balance, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
@@ -152,17 +102,4 @@ func (c *Client) add(t *testing.T, vsc *VestingSmartContract,
 	var tx = newTransaction(c.id, ADDRESS, value, now)
 	balances.(*testBalances).txn = tx
 	return vsc.add(tx, mustEncode(t, ar), balances)
-}
-
-func (c *Client) delete(t *testing.T, vsc *VestingSmartContract,
-	poolID datastore.Key, now common.Timestamp,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		tx = newTransaction(c.id, ADDRESS, 0, now)
-		dr poolRequest
-	)
-	balances.(*testBalances).txn = tx
-	dr.PoolID = poolID
-	return vsc.unlock(tx, mustEncode(t, &dr), balances)
 }

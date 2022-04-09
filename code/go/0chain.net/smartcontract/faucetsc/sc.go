@@ -126,7 +126,7 @@ func (fc *FaucetSmartContract) updateSettings(
 	var input sc.StringMap
 	err := input.Decode(inputData)
 	if err != nil {
-		return "", common.NewError("update_settings", "limit request not formated correctly")
+		return "", common.NewError("update_settings", "limit request not formatted correctly")
 	}
 
 	if err := gn.updateConfig(input.Fields); err != nil {
@@ -157,12 +157,14 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
-		balances.AddTransfer(transfer)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", err
+		}
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
-			return err.Error(), nil
+			return "", err
 		}
 		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
@@ -182,7 +184,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	if clientBalance >= state.Balance(t.Value) {
 		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
-		balances.AddTransfer(transfer)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", err
+		}
 		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			return "", err
