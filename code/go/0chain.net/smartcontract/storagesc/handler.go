@@ -684,6 +684,31 @@ func (ssc *StorageSmartContract) GetWritenAmountHandler(
 	}, err
 }
 
+func (ssc *StorageSmartContract) GetReadAmountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var (
+		blockNumberString = params.Get("block_number")
+	)
+	if blockNumberString == "" {
+		return nil, common.NewErrInternal("block_number is empty")
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
+	if err != nil {
+		return nil, common.NewErrInternal("block_number is not valid")
+	}
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	total, err := balances.GetEventDB().GetDataReadFromAllocationForLastNBlocks(int64(blockNumber))
+	return map[string]int64{
+		"total": total,
+	}, err
+}
+
 func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {

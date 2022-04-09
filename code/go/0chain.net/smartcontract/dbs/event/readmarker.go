@@ -26,6 +26,11 @@ type ReadMarker struct {
 	BlockNumber   int64   `json:"block_number"`
 }
 
+func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&ReadMarker{}).Select("sum(read_size)").Where("block_number > ?", blockNumber).Find(&total).Error
+}
+
 func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, offset, limit int, isDescending bool) ([]ReadMarker, error) {
 	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
