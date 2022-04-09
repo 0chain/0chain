@@ -12,7 +12,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -136,16 +135,6 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterCounter("feesPaid", nil)
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
-}
-
-func (msc *MinerSmartContract) addMint(gn *GlobalNode, mint state.Balance) {
-	gn.Minted += mint
-
-	var mintStatsRaw, found = msc.SmartContractExecutionStats["mintedTokens"]
-	if found {
-		var mintStats = mintStatsRaw.(metrics.Counter)
-		mintStats.Inc(int64(mint))
-	}
 }
 
 //Execute implementing the interface

@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
@@ -753,15 +751,6 @@ type delegatePoolStat struct {
 	Reward     state.Balance `json:"reward"`      // uncollected reread
 	RewardPaid state.Balance `json:"reward_paid"` // total reward all time
 	Status     string        `json:"status"`
-}
-
-func newDelegatePoolStat(dp *stakepool.DelegatePool) (dps *delegatePoolStat) {
-	dps = new(delegatePoolStat)
-	dps.ID = dp.DelegateID
-	dps.Reward = dp.Reward
-	dps.Balance = dp.Balance
-	dps.Status = dp.Status.String()
-	return
 }
 
 type deletePool struct {

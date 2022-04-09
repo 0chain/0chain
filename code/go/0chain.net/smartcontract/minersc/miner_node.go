@@ -1,15 +1,15 @@
 package minersc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 ////////////msgp:ignore MinerNode dp
@@ -36,15 +36,6 @@ func GetSharderKey(sid string) datastore.Key {
 
 func (mn *MinerNode) GetKey() datastore.Key {
 	return ADDRESS + mn.ID
-}
-
-// calculate service charge from fees
-func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
-	charge, rest state.Balance) {
-
-	charge = state.Balance(float64(fees) * mn.Settings.ServiceCharge)
-	rest = fees - charge
-	return
 }
 
 func (mn *MinerNode) numDelegates() int {
