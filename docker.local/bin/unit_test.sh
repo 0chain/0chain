@@ -44,5 +44,5 @@ if [[ -n "$PACKAGE" ]]; then
 else
     # Run all tests.
     echo "Running general unit tests:"
-    docker run "$INTERACTIVE" -v $(PWD)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..." 
+    docker run "$INTERACTIVE" -v $(pwd)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..." 
 fi
