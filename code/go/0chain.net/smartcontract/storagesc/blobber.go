@@ -37,6 +37,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 	}
 }
 
+/*
 func getBlobbersList(balances cstate.ReadOnlyStateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
 	err := balances.GetTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
@@ -49,7 +50,7 @@ func getBlobbersList(balances cstate.ReadOnlyStateContextI) (*StorageNodes, erro
 		return nil, err
 	}
 }
-
+*/
 func (sc *StorageSmartContract) getBlobber(blobberID string,
 	balances cstate.StateContextI) (blobber *StorageNode, err error) {
 
