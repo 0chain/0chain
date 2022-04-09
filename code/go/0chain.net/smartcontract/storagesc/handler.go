@@ -38,10 +38,6 @@ type storageNodeResponse struct {
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
-	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
-	if err != nil {
-		return storageNodeResponse{}, err
-	}
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
@@ -55,7 +51,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 				WritePrice:              state.Balance(blobber.WritePrice),
 				MinLockDemand:           blobber.MinLockDemand,
 				MaxOfferDuration:        blobber.MaxOfferDuration,
-				ChallengeCompletionTime: challengeCompletionTime,
+				ChallengeCompletionTime: blobber.ChallengeCompletionTime,
 			},
 			Capacity:        blobber.Capacity,
 			Used:            blobber.Used,
@@ -230,7 +226,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	var creationDate = common.Timestamp(time.Now().Unix())
 
 	allocData := params.Get("allocation_data")
-	maxChallengeTime, err := strconv.Atoi(params.Get("max_challenge_time"))
+	maxChallengeTime, err := time.ParseDuration(params.Get("max_challenge_time"))
 	if err != nil {
 		return nil, common.NewErrBadRequest("max challenge time invalid")
 	}

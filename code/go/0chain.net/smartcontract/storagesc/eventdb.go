@@ -14,7 +14,6 @@ import (
 func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
-	fmt.Println("emit", sn.Terms.MaxOfferDuration.String())
 	dur, err := time.ParseDuration(sn.Terms.MaxOfferDuration.String())
 	if err != nil {
 		return err
@@ -28,7 +27,7 @@ func emitAddOrOverwriteBlobber(
 		WritePrice:              int64(sn.Terms.WritePrice),
 		MinLockDemand:           sn.Terms.MinLockDemand,
 		MaxOfferDuration:        dur,
-		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
+		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime,
 
 		Capacity:        sn.Capacity,
 		Used:            sn.Used,

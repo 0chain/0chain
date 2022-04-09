@@ -26,7 +26,7 @@ type Blobber struct {
 	WritePrice              int64         `json:"write_price"`
 	MinLockDemand           float64       `json:"min_lock_demand"`
 	MaxOfferDuration        time.Duration `json:"max_offer_duration"`
-	ChallengeCompletionTime string        `json:"challenge_completion_time"`
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 
 	Capacity        int64 `json:"capacity"`          // total blobber capacity
 	Used            int64 `json:"used"`              // allocated capacity
@@ -146,7 +146,7 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 }
 
 type AllocationQuery struct {
-	MaxChallengeCompletionTime int
+	MaxChallengeCompletionTime time.Duration
 	MaxOfferDuration           time.Duration
 	ReadPriceRange             struct {
 		Min int64
@@ -162,9 +162,8 @@ type AllocationQuery struct {
 }
 
 func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
-	fmt.Println(allocation, "GetBlobbersFromParams")
-	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime)
+	dbStore := edb.Store.Get().Debug().Model(&Blobber{})
+	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration < ?", allocation.MaxOfferDuration.Nanoseconds())
