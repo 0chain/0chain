@@ -12,12 +12,6 @@ jobs:
   test:
     runs-on: docker-builds
     steps:
-      - name: Install git
-        run: |
-          git --version
-          apt-get install git
-
-      - name: Clone code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
