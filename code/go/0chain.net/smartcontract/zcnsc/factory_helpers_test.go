@@ -17,6 +17,7 @@ import (
 
 const (
 	AddAuthorizer          = "AddAuthorizer"
+	DeleteAuthorizer       = "DeleteAuthorizer"
 	AddAuthorizerStakePool = "addAuthorizerStakePool"
 	clientPrefixID         = "fred"
 	authorizerPrefixID     = "authorizer"
@@ -59,6 +60,27 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
+func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
+	scheme := ctx.GetSignatureScheme()
+	_ = scheme.GenerateKeys()
+	txn := &transaction.Transaction{
+		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
+		ClientID:          fromClient,
+		ToClientID:        zcnAddressId,
+		Value:             int64(zcnToBalance(1)),
+		CreationDate:      startTime,
+		PublicKey:         scheme.GetPublicKey(),
+		TransactionData:   "",
+		Signature:         "",
+		Fee:               0,
+		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionOutput: "",
+		OutputHash:        "",
+	}
+	addTransactionData(txn, DeleteAuthorizer, nil)
+	return txn
+}
+
 func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
@@ -83,7 +105,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 	return txn
 }
 
-func CreateTransaction(fromClient, method string, payloadFactory func() []byte, ctx state.StateContextI) *transaction.Transaction {
+func CreateTransaction(fromClient, method string, payload []byte, ctx state.StateContextI) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 
@@ -102,7 +124,7 @@ func CreateTransaction(fromClient, method string, payloadFactory func() []byte, 
 		OutputHash:        "",
 	}
 
-	addTransactionData(txn, method, payloadFactory())
+	addTransactionData(txn, method, payload)
 
 	return txn
 }

@@ -74,10 +74,6 @@ func MakeMockStateContext() *mockStateContext {
 		createTestStakingPools(ctx, id)
 	}
 
-	// StakePools
-
-	ctx.stakingPools = make(map[string]*StakePool)
-
 	// Transfers
 
 	var transfers []*state.Transfer
