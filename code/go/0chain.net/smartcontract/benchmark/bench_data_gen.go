@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 9
 	// string "Clients"
-	o = append(o, 0x84, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
+	o = append(o, 0x89, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Clients)))
 	for za0001 := range z.Clients {
 		o = msgp.AppendString(o, z.Clients[za0001])
@@ -34,6 +34,21 @@ func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	for za0004 := range z.Sharders {
 		o = msgp.AppendString(o, z.Sharders[za0004])
 	}
+	// string "AuthorizerId"
+	o = append(o, 0xac, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x7a, 0x65, 0x72, 0x49, 0x64)
+	o = msgp.AppendString(o, z.AuthorizerId)
+	// string "AuthorizerPublicKey"
+	o = append(o, 0xb3, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x7a, 0x65, 0x72, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
+	o = msgp.AppendString(o, z.AuthorizerPublicKey)
+	// string "Owner"
+	o = append(o, 0xa5, 0x4f, 0x77, 0x6e, 0x65, 0x72)
+	o = msgp.AppendString(o, z.Owner)
+	// string "OwnerPublicKey"
+	o = append(o, 0xae, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
+	o = msgp.AppendString(o, z.OwnerPublicKey)
+	// string "OwnerPrivateKey"
+	o = append(o, 0xaf, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x50, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79)
+	o = msgp.AppendString(o, z.OwnerPrivateKey)
 	return
 }
 
@@ -131,6 +146,36 @@ func (z *BenchDataMpt) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "AuthorizerId":
+			z.AuthorizerId, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "AuthorizerId")
+				return
+			}
+		case "AuthorizerPublicKey":
+			z.AuthorizerPublicKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "AuthorizerPublicKey")
+				return
+			}
+		case "Owner":
+			z.Owner, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Owner")
+				return
+			}
+		case "OwnerPublicKey":
+			z.OwnerPublicKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "OwnerPublicKey")
+				return
+			}
+		case "OwnerPrivateKey":
+			z.OwnerPrivateKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "OwnerPrivateKey")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -161,5 +206,6 @@ func (z *BenchDataMpt) Msgsize() (s int) {
 	for za0004 := range z.Sharders {
 		s += msgp.StringPrefixSize + len(z.Sharders[za0004])
 	}
+	s += 13 + msgp.StringPrefixSize + len(z.AuthorizerId) + 20 + msgp.StringPrefixSize + len(z.AuthorizerPublicKey) + 6 + msgp.StringPrefixSize + len(z.Owner) + 15 + msgp.StringPrefixSize + len(z.OwnerPublicKey) + 16 + msgp.StringPrefixSize + len(z.OwnerPrivateKey)
 	return
 }
