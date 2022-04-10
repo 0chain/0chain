@@ -265,6 +265,14 @@ func (aps allocationPools) allocationCut(allocID string) (
 	return
 }
 
+func (aps allocationPools) expiredBlobberCut(blobberID string,
+	now common.Timestamp) (cut []*allocationPool) {
+
+	cut = removeBlobberExpired(cut, blobberID, now)
+	sortExpireAt(cut)
+	return
+}
+
 func (aps allocationPools) blobberCut(allocID, blobberID string,
 	now common.Timestamp) (cut []*allocationPool) {
 

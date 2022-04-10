@@ -37,6 +37,12 @@ type readPool struct {
 	Pools allocationPools `json:"pools"`
 }
 
+func (rp *readPool) expiredBlobberCut(blobberID string, now common.Timestamp,
+) []*allocationPool {
+
+	return rp.Pools.expiredBlobberCut(blobberID, now)
+}
+
 func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
@@ -426,9 +432,15 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	}
 
 	var (
-		cut  = rp.blobberCut(allocID, blobberID, common.Now())
+		cut  []*allocationPool
 		stat []untilStat
 	)
+
+	if len(allocID) > 0 {
+		cut = rp.blobberCut(allocID, blobberID, common.Now())
+	} else {
+		cut = rp.expiredBlobberCut(blobberID, common.Now()) // rx_pay case
+	}
 
 	for _, ap := range cut {
 		var bp, ok = ap.Blobbers.get(blobberID)
