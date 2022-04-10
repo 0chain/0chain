@@ -93,7 +93,7 @@ func (ems *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 }
 
 func (ems *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
-	//TODO: even though rocksdb has MultiGet api, gorocksdb doesn't seem to have one
+	// TODO: even though rocksdb has MultiGet api, gorocksdb doesn't seem to have one
 	for idx, key := range keys {
 		err := ems.Read(ctx, key, entities[idx])
 		if err != nil {
@@ -147,5 +147,29 @@ func (ems *Store) GetCollectionSize(ctx context.Context, entityMetadata datastor
 }
 
 func (ems *Store) IterateCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string, handler datastore.CollectionIteratorHandler) error {
+	return nil
+}
+
+func (ems *Store) GetRangeFromCollection(ctx context.Context, entity datastore.Entity, entities []datastore.Entity, byScore, withScores bool, min, max string, offset, count int64) error {
+	return nil
+}
+
+func (ems *Store) HDel(ctx context.Context, entity datastore.Entity, hashTableName string, key datastore.Key) error {
+	return nil
+}
+
+func (ems *Store) HGet(ctx context.Context, entity datastore.Entity, hashTableName string, key datastore.Key) (string, error) {
+	return "", nil
+}
+
+func (ems *Store) HSet(ctx context.Context, entity datastore.Entity, hashTableName string, key, val datastore.Key) error {
+	return nil
+}
+
+func (ems *Store) StartTx(ctx context.Context, entity datastore.Entity) context.Context {
+	return nil
+}
+
+func (ems *Store) SendTX(ctx context.Context, entity datastore.Entity) error {
 	return nil
 }

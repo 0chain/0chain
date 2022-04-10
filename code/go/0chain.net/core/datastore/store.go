@@ -22,4 +22,13 @@ type Store interface {
 
 	GetCollectionSize(ctx context.Context, entityMetadata EntityMetadata, collectionName string) int64
 	IterateCollection(ctx context.Context, entityMetadata EntityMetadata, collectionName string, handler CollectionIteratorHandler) error
+
+	GetRangeFromCollection(ctx context.Context, entity Entity, entities []Entity, byScore, withScores bool, min, max string, offset, count int64) error
+
+	HGet(ctx context.Context, entity Entity, hashTableName string, key Key) (string, error)
+	HSet(ctx context.Context, entity Entity, hashTableName string, key, val Key) error
+	HDel(ctx context.Context, entity Entity, hashTableName string, key Key) error
+
+	StartTx(context.Context, Entity) context.Context
+	SendTX(context.Context, Entity) error
 }

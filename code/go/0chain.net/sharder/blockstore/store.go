@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -100,59 +99,6 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		mode = "start"
 	}
 
-	var (
-		hostRedisDB, portRedisDB, passwordRedisDB = DefaultHostRedisDB, DefaultPortRedisDB, DefaultPasswordRedisDB
-		numberRedisDB                             = DefaultNumberRedisDB
-	)
-	redisConfigMap := sViper.GetStringMapString("redis")
-	if redisConfigMap == nil {
-		hostRedisDB = DefaultHostRedisDB
-		portRedisDB = DefaultPortRedisDB
-		passwordRedisDB = DefaultPasswordRedisDB
-		numberRedisDB = DefaultNumberRedisDB
-	} else {
-		if redisConfigMap["host"] == "" {
-			hostRedisDB = DefaultHostRedisDB
-		} else {
-			hostRedisDB = redisConfigMap["host"]
-		}
-
-		if redisConfigMap["port"] == "" {
-			portRedisDB = DefaultPortRedisDB
-		} else {
-			portRedisDB = redisConfigMap["portRedisDB"]
-		}
-
-		if redisConfigMap["password"] == "" {
-			passwordRedisDB = DefaultPasswordRedisDB
-		} else {
-			passwordRedisDB = redisConfigMap["password"]
-		}
-		if redisConfigMap["numDB"] == "" {
-			numberRedisDB = DefaultNumberRedisDB
-		} else {
-			numberRedisDB, _ = strconv.Atoi(redisConfigMap["numDB"])
-		}
-	}
-
-	switch mode {
-	case "start", "recover":
-		InitMetaRecordDB(hostRedisDB,
-			portRedisDB,
-			passwordRedisDB,
-			numberRedisDB,
-			true,
-		)
-
-	default:
-		InitMetaRecordDB(hostRedisDB,
-			portRedisDB,
-			passwordRedisDB,
-			numberRedisDB,
-			false,
-		)
-	}
-
 	switch Tiering(storageType) {
 	default:
 		panic(errors.New("Unknown Tiering"))
@@ -176,12 +122,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return "", err
 			}
 
-			bwr := &BlockWhereRecord{
-				Hash:      b.Hash,
-				Tiering:   HotTier,
-				BlockPath: blockPath,
-			}
-			if err := bwr.AddOrUpdate(); err != nil {
+			bwr := NewBlockWhereRecord(b.Hash, HotTier, blockPath, "")
+			if err := bwr.Write(ctx); err != nil {
 				return "", err
 			}
 
@@ -189,8 +131,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				Logger.Error(err.Error())
 				return
@@ -224,12 +166,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return "", err
 			}
 
-			bwr := BlockWhereRecord{
-				Hash:      b.Hash,
-				Tiering:   WarmTier,
-				BlockPath: blockPath,
-			}
-			if err := bwr.AddOrUpdate(); err != nil {
+			bwr := NewBlockWhereRecord(b.Hash, WarmTier, blockPath, "")
+			if err := bwr.Write(ctx); err != nil {
 				return "", err
 			}
 
@@ -237,8 +175,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				Logger.Error(err.Error())
 				return nil, err
@@ -293,15 +231,11 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   WarmTier,
-					BlockPath: blockPath,
-				}
-
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, WarmTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
+
 				accessTime := time.Now()
 				go addToCache(b.Hash, data, &accessTime)
 
@@ -319,12 +253,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   WarmTier,
-					BlockPath: blockPath,
-				}
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, WarmTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
 
@@ -341,8 +271,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return
 			}
 
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				Logger.Error(err.Error())
 				return
@@ -401,15 +331,11 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   ColdTier,
-					BlockPath: blockPath,
-				}
-
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, ColdTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
+
 				accessTime := time.Now()
 				go addToCache(b.Hash, data, &accessTime)
 
@@ -427,12 +353,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   ColdTier,
-					BlockPath: blockPath,
-				}
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, ColdTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
 
@@ -450,8 +372,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return
 			}
 
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				return
 			}
@@ -498,21 +420,13 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return "", err
 			}
 
-			bwr := &BlockWhereRecord{
-				Hash:      b.Hash,
-				Tiering:   HotTier,
-				BlockPath: blockPath,
-			}
-			if err := bwr.AddOrUpdate(); err != nil {
+			bwr := NewBlockWhereRecord(b.Hash, HotTier, blockPath, "")
+			if err := bwr.Write(ctx); err != nil {
 				return "", err
 			}
 
-			ub := UnmovedBlockRecord{
-				CreatedAt: b.ToTime(),
-				Hash:      b.Hash,
-			}
-
-			if err := ub.Add(); err != nil {
+			ub := NewUnmovedBlockRecord(b.Hash, b.ToTime())
+			if err := ub.Write(ctx); err != nil {
 				return "", err
 			}
 
@@ -520,8 +434,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				return
 			}
@@ -572,21 +486,13 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return "", err
 			}
 
-			bwr := BlockWhereRecord{
-				Hash:      b.Hash,
-				BlockPath: blockPath,
-				Tiering:   WarmTier,
-			}
-			if err := bwr.AddOrUpdate(); err != nil {
+			bwr := NewBlockWhereRecord(b.Hash, WarmTier, blockPath, "")
+			if err := bwr.Write(ctx); err != nil {
 				return "", err
 			}
 
-			ub := UnmovedBlockRecord{
-				CreatedAt: b.ToTime(),
-				Hash:      b.Hash,
-			}
-
-			if err := ub.Add(); err != nil {
+			ub := NewUnmovedBlockRecord(b.Hash, b.ToTime())
+			if err := ub.Write(ctx); err != nil {
 				return "", err
 			}
 
@@ -594,8 +500,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				return
 			}
@@ -665,21 +571,13 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   HotTier,
-					BlockPath: blockPath,
-				}
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, HotTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
 
-				ub := UnmovedBlockRecord{
-					CreatedAt: b.ToTime(),
-					Hash:      b.Hash,
-				}
-
-				if err := ub.Add(); err != nil {
+				ub := NewUnmovedBlockRecord(b.Hash, b.ToTime())
+				if err := ub.Write(ctx); err != nil {
 					return "", err
 				}
 				accessTime := time.Now()
@@ -699,21 +597,13 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   HotTier,
-					BlockPath: blockPath,
-				}
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, HotTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
 
-				ub := UnmovedBlockRecord{
-					CreatedAt: b.ToTime(),
-					Hash:      b.Hash,
-				}
-
-				if err := ub.Add(); err != nil {
+				ub := NewUnmovedBlockRecord(b.Hash, b.ToTime())
+				if err := ub.Write(ctx); err != nil {
 					return "", err
 				}
 
@@ -731,8 +621,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return
 			}
 
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				Logger.Error(err.Error())
 				return
@@ -812,21 +702,13 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 					return "", err
 				}
 
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   WarmTier,
-					BlockPath: blockPath,
-				}
-				if err := bwr.AddOrUpdate(); err != nil {
+				bwr := NewBlockWhereRecord(b.Hash, WarmTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
 
-				ub := UnmovedBlockRecord{
-					CreatedAt: b.ToTime(),
-					Hash:      b.Hash,
-				}
-
-				if err := ub.Add(); err != nil {
+				ub := NewUnmovedBlockRecord(b.Hash, b.ToTime())
+				if err := ub.Write(ctx); err != nil {
 					return "", err
 				}
 				accessTime := time.Now()
@@ -845,21 +727,14 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				if err != nil {
 					return "", err
 				}
-				bwr := &BlockWhereRecord{
-					Hash:      b.Hash,
-					Tiering:   WarmTier,
-					BlockPath: blockPath,
-				}
-				if err := bwr.AddOrUpdate(); err != nil {
+
+				bwr := NewBlockWhereRecord(b.Hash, WarmTier, blockPath, "")
+				if err := bwr.Write(ctx); err != nil {
 					return "", err
 				}
 
-				ub := UnmovedBlockRecord{
-					CreatedAt: b.ToTime(),
-					Hash:      b.Hash,
-				}
-
-				if err := ub.Add(); err != nil {
+				ub := NewUnmovedBlockRecord(b.Hash, b.ToTime())
+				if err := ub.Write(ctx); err != nil {
 					return "", err
 				}
 
@@ -877,8 +752,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 				return
 			}
 
-			var bwr *BlockWhereRecord
-			bwr, err = GetBlockWhereRecord(hash)
+			bwr := DefaultBlockWhereRecord()
+			err = bwr.Read(ctx, hash)
 			if err != nil {
 				return
 			}

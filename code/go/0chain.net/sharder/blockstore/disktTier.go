@@ -3,6 +3,7 @@ package blockstore
 import (
 	"bufio"
 	"compress/zlib"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -653,8 +654,8 @@ func restartVolumes(volumes []map[string]interface{}, dTier *diskTier) {
 }
 
 func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *diskTier) {
-	//Remove db
-	//Remove all the blocks
+	// Remove db
+	// Remove all the blocks
 
 	for _, volI := range mVolumes {
 		vPathI, ok := volI["path"]
@@ -773,7 +774,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 	}
 }
 
-//This function will recover metadata
+// This function will recover metadata
 func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 	for _, mVolume := range mVolumes {
 		volPathI, ok := mVolume["path"]
@@ -819,9 +820,9 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 					guideChannel <- struct{}{}
 					recoverWG.Add(1)
 
-					//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
-					//for multi disks? Need some benchmark
-					go func(gPath string) { //gPath Path for goroutine
+					// TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
+					// for multi disks? Need some benchmark
+					go func(gPath string) { // gPath Path for goroutine
 						defer recoverWG.Done()
 						defer func() {
 							<-guideChannel
@@ -842,8 +843,8 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 								break
 							}
 							for _, dirEntry := range dirEntries {
-								var bwr BlockWhereRecord
-								var ubr UnmovedBlockRecord
+								bwr := DefaultBlockWhereRecord()
+								ubr := DefaultUnmovedBlockRecord()
 								var errorOccurred bool
 								var blockSize uint64
 								fileName := dirEntry.Name()
@@ -858,18 +859,10 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 								}
 
 								blockSize = uint64(finfo.Size())
-								bwr = BlockWhereRecord{
-									Hash:      hash,
-									Tiering:   HotTier,
-									BlockPath: blockPath,
-								}
 
-								ubr = UnmovedBlockRecord{
-									Hash:      hash,
-									CreatedAt: finfo.ModTime(),
-								}
-
-								if err, uErr := bwr.AddOrUpdate(), ubr.Add(); !(err == nil && uErr == nil) {
+								bwr = NewBlockWhereRecord(hash, HotTier, blockPath, "")
+								ubr = NewUnmovedBlockRecord(hash, finfo.ModTime())
+								if err, uErr := bwr.Write(context.Background()), ubr.Write(context.Background()); !(err == nil && uErr == nil) {
 									Logger.Error(fmt.Sprintf("BwrError: %v, UbrError: %v, while adding metadata for file: %v", err, uErr, blockPath))
 									errorOccurred = true
 									goto CountUpdate
@@ -895,7 +888,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 
 				}
 			}
-			recoverWG.Wait() //wait for all goroutine to complete
+			recoverWG.Wait() // wait for all goroutine to complete
 			Logger.Info("Completed meta data recovery")
 
 		} else {

@@ -11,6 +11,8 @@ var ErrInvalidEntity = common.NewError("invalid_entity", "invalid entity")
 var (
 	/*EntityNotFound code should be used to check whether an entity is found or not */
 	EntityNotFound = "entity_not_found"
+	/*EntitiesNotFound code should be used to check whether an entities are found or not */
+	EntitiesNotFound = "entities_not_found"
 	/*EntityDuplicate code should be used to check if an entity is already present */
 	EntityDuplicate = "duplicate_entity"
 )
@@ -28,7 +30,7 @@ type Entity interface {
 	Delete(ctx context.Context) error
 }
 
-//AllocateEntities - allocate entities for the given entity type
+// AllocateEntities - allocate entities for the given entity type
 func AllocateEntities(size int, entityMetadata EntityMetadata) []Entity {
 	entities := make([]Entity, size)
 	for i := 0; i < size; i++ {

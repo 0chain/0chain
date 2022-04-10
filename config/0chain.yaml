@@ -149,11 +149,6 @@ storage:
   #If storage type is Cache and Warm then 1 + 2 = 3
   
   storage_type: 3
-  redis:
-    host: "redis"
-    port: "6379"
-    password: ""
-    numberDB: "0"
   cache:
     storage_strategy: "random" # random, round robin, min_size_first, min_count_first etc.
     cache_strategy: ""

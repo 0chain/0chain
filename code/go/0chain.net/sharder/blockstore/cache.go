@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
 )
@@ -47,10 +48,7 @@ func (c *diskCache) UpadateMetaData(hash string, t *time.Time) {
 	lockHash(lockCh)
 	defer unlockHash(lockCh)
 
-	ca := cacheAccess{
-		Hash:       hash,
-		AccessTime: t,
-	}
+	ca := NewCacheAccess(hash, t)
 	ca.addOrUpdate()
 }
 
@@ -73,7 +71,7 @@ func (c *diskCache) Write(hash string, data []byte, t *time.Time) error {
 		return err
 	}
 
-	//Try writing twice first with possible cache replacement and if error occurs replace cache and write data.
+	// Try writing twice first with possible cache replacement and if error occurs replace cache and write data.
 	_, err = f.Write(data)
 	if err != nil {
 		f.Close()
@@ -90,10 +88,7 @@ func (c *diskCache) Write(hash string, data []byte, t *time.Time) error {
 		}
 	}
 
-	ca := cacheAccess{
-		Hash:       hash,
-		AccessTime: t,
-	}
+	ca := NewCacheAccess(hash, t)
 	ca.addOrUpdate()
 
 	return nil
@@ -115,7 +110,7 @@ func (c *diskCache) Read(hash string) (io.ReadCloser, error) {
 
 var replaceLock chan struct{}
 
-func (c *diskCache) Replace() { //only lru implemented
+func (c *diskCache) Replace() { // only lru implemented
 	select {
 	case replaceLock <- struct{}{}:
 	default:
@@ -146,7 +141,7 @@ func (c *diskCache) Replace() { //only lru implemented
 			}
 
 			os.Remove(filepath.Join(c.CachePath, ca.Hash))
-			ca.delete()
+			ca.Delete(common.GetRootContext())
 
 		}(ca)
 	}
@@ -241,7 +236,7 @@ func cacheInit(cViper *viper.Viper) cacher {
 		replaceDuration = time.Minute * time.Duration(cacheReplacementInterval)
 	}
 
-	switch cacheReplacementPolicy { //When other policies are supported then it should be registered here and respectively called.
+	switch cacheReplacementPolicy { // When other policies are supported then it should be registered here and respectively called.
 	case LRU:
 	default:
 		panic(fmt.Errorf("cache replacement policy %v is not supported", cacheReplacementPolicy))

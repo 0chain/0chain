@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -329,6 +330,7 @@ func (ms *Store) DeleteFromCollection(ctx context.Context, ce datastore.Collecti
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -385,4 +387,128 @@ func (ms *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore
 		}
 		return val
 	}
+}
+
+func (ms *Store) GetRangeFromCollection(ctx context.Context, entity datastore.Entity, entities []datastore.Entity, byScore, withScores bool, min, max string, offset, count int64) error {
+	emd := entity.GetEntityMetadata()
+	ce, ok := entity.(datastore.CollectionEntity)
+	if !ok {
+		return nil
+	}
+	ce.GetCollectionName()
+	c := GetEntityCon(ctx, emd)
+	args := []interface{}{"ZRANGE", ce.GetCollectionName(), min, max}
+	if byScore {
+		args = append(args, "BYSCORE")
+	}
+	if offset != 0 || count != 0 {
+		args = append(
+			args,
+			"limit",
+			offset,
+			count,
+		)
+	}
+	if withScores {
+		args = append(args, "WITHSCORES")
+	}
+
+	c.Send("ZRANGE", args[1:])
+	c.Flush()
+
+	data, err := c.Receive()
+	if err != nil {
+		return err
+	}
+
+	if data == nil {
+		return common.NewError(datastore.EntitiesNotFound,
+			fmt.Sprintf("in %v not found with range min =%v, max=%v, offset=%v, count %v", ce.GetCollectionName(), min, max, offset, count))
+	}
+
+	switch {
+	case byScore && withScores:
+		array, _ := data.([]interface{})
+		for idx := 0; idx < len(array); idx += 2 {
+			en := entities[idx]
+			err = common.FromJSON(array[idx], en)
+			if err != nil {
+				return nil
+			}
+			entities = append(entities, en)
+
+			ce, _ := en.(datastore.CollectionEntity)
+			score, _ := strconv.Atoi(array[idx+1].(string))
+
+			ce.SetCollectionScore(int64(score))
+		}
+
+	case byScore && !withScores:
+	case !byScore && withScores:
+	case !byScore && !withScores:
+		array, _ := data.([]interface{})
+		for idx, ae := range array {
+			en := entities[idx]
+			en.SetKey(ae.(string))
+			entities = append(entities, en)
+		}
+	}
+
+	return nil
+}
+
+func (ms *Store) HGet(ctx context.Context, entity datastore.Entity, hashTableName string, key datastore.Key) (string, error) {
+	emd := entity.GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
+	c.Send("HGET", hashTableName, key)
+	c.Flush()
+	data, err := c.Receive()
+	if err != nil {
+		return "", err
+	}
+	if data == nil {
+		return "", common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), key))
+	}
+
+	return data.(string), nil
+}
+
+func (ms *Store) HDel(ctx context.Context, entity datastore.Entity, hashTableName string, key datastore.Key) error {
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
+	c.Send("HDEL", hashTableName, key)
+	c.Flush()
+	_, err := c.Receive()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ms *Store) HSet(ctx context.Context, entity datastore.Entity, hashTableName string, key, val datastore.Key) error {
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
+	c.Send("HSET", hashTableName, key, val)
+	c.Flush()
+	_, err := c.Receive()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ms *Store) StartTx(ctx context.Context, entity datastore.Entity) context.Context {
+	emd := entity.GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
+	c.Send("MULTI")
+	return WithEntityConnection(ctx, emd)
+}
+
+func (ms *Store) SendTX(ctx context.Context, entity datastore.Entity) error {
+	defer Close(ctx)
+	emd := entity.GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
+	_, err := c.Do("EXEC")
+
+	return err
 }

@@ -12,9 +12,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/sys/unix"
+
+	"0chain.net/core/datastore"
 )
+
+type WhichTier uint8
 
 const (
 	fileExt            = ".dat"
@@ -34,6 +39,30 @@ const (
 	//BlockLimit Limit the number of blocks to store in any tier
 	BlockLimitNumber = 1000000000 // 10 powered 9
 	GB               = 1024 * 1024 * 1024
+
+	/*
+		Cache = 1
+		Warm  = 2
+		Hot   = 4
+		Cold  = 8
+	*/
+	WarmTier        WhichTier = 2 // Warm tier only
+	HotTier         WhichTier = 4 // Hot tier only
+	ColdTier        WhichTier = 8 // Cold tier only
+	HotAndColdTier  WhichTier = 12
+	WarmAndColdTier WhichTier = 10
+)
+
+// redis constant values
+const (
+	// cacheAccess table names
+	hashCacheHashAccessTime      = "hashCacheHashAccessTime"
+	sortedSetCacheAccessTimeHash = "sortedSetCacheAccessTimeHash"
+
+	// unmovedBlockRecord table name
+	sortedSetUnmovedBlock = "sortedSetUnmovedBlock"
+
+	cacheAccessTimeSeparator = "|"
 )
 
 //Common errors
@@ -82,6 +111,15 @@ var (
 	ErrUnableToSelectVolume        = errors.New("Unable to select any available volume")
 	ErrUnableToSelectColdStorage   = errors.New("Unable to select any available cold storage")
 )
+
+var startTime = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// InitMetaRecordDB setup entities for store.
+func InitMetaRecordDB(store datastore.Store) {
+	setupEntityBlockWhereRecord(store)
+	setupEntityUnmovedBlockRecord(store)
+	setupEntityCacheAccess(store)
+}
 
 func countFiles(dirPath string) (count int, err error) {
 	var f *os.File

@@ -7,12 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"github.com/gomodule/redigo/redis"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
 )
 
 var connID atomic.Int64

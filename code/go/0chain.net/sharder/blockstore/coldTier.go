@@ -15,17 +15,19 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/block"
-	. "0chain.net/core/logging"
-	"0chain.net/core/viper"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/sys/unix"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/core/common"
+	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 const (
 	Timeout             = 5
-	DefaultPollInterval = 720 //Hours
+	DefaultPollInterval = 720 // Hours
 )
 
 // var cTier coldTier
@@ -37,9 +39,9 @@ type selectedColdStorage struct {
 	err         error
 }
 
-type coldTier struct { //Cold tier
+type coldTier struct { // Cold tier
 	Strategy            string
-	StorageType         string //disk, minio and blobber
+	StorageType         string // disk, minio and blobber
 	ColdStorages        []coldStorageProvider
 	SelectedStorageChan <-chan selectedColdStorage
 	SelectNextStorage   func(coldStorageProviders []coldStorageProvider, prevInd int)
@@ -47,7 +49,7 @@ type coldTier struct { //Cold tier
 	DeleteLocal         bool
 
 	Mu           sync.Mutex
-	PollInterval int //in hour
+	PollInterval int // in hour
 }
 
 func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err error) {
@@ -149,7 +151,7 @@ type coldFilterOptions struct {
 	endDate   time.Time
 }
 
-//S3 compatible storage
+// S3 compatible storage
 type minioClient struct {
 	*minio.Client
 	storageServiceURL string
@@ -270,7 +272,7 @@ func (mc *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
 // 	return nil
 // }
 
-//******************************Disk*******************************************
+// ******************************Disk*******************************************
 const (
 	CDCL        = 10000
 	CK          = "CK"
@@ -508,7 +510,7 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 	return true
 }
 
-//*****************************Strategy*************************************
+// *****************************Strategy*************************************
 
 func coldInit(cViper *viper.Viper, mode string) *coldTier {
 	storageType := cViper.GetString("storage.type")
@@ -568,9 +570,9 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 			restartColdVolumes(volumesMap, cTier)
 		case "recover":
 			recoverColdVolumeMetaData(volumesMap, cTier)
-		case "repair": //Metadata is present but some disk failed
+		case "repair": // Metadata is present but some disk failed
 			panic("Repair mode not implemented")
-		case "repair_and_recover": //Metadata is lost and some disk failed
+		case "repair_and_recover": // Metadata is lost and some disk failed
 			panic("Repair and recover mode not implemented")
 
 		}
@@ -935,9 +937,9 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 					guideChannel <- struct{}{}
 					recoverWG.Add(1)
 
-					//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
-					//for multi disks? Need some benchmark
-					go func(gPath string) { //gPath Path for goroutine
+					// TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
+					// for multi disks? Need some benchmark
+					go func(gPath string) { // gPath Path for goroutine
 						defer recoverWG.Done()
 						defer func() {
 							<-guideChannel
@@ -958,7 +960,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 								break
 							}
 							for _, dirEntry := range dirEntries {
-								var bwr BlockWhereRecord
+								bwr := DefaultBlockWhereRecord()
 								var errorOccurred bool
 								var blockSize uint64
 								fileName := dirEntry.Name()
@@ -973,13 +975,9 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 								}
 
 								blockSize = uint64(finfo.Size())
-								bwr = BlockWhereRecord{
-									Hash:      hash,
-									Tiering:   HotTier,
-									BlockPath: blockPath,
-								}
 
-								if err := bwr.AddOrUpdate(); err != nil {
+								bwr = NewBlockWhereRecord(hash, HotTier, blockPath, "")
+								if err := bwr.Write(common.GetRootContext()); err != nil {
 									Logger.Error(fmt.Sprintf("Error: %v, while reading file: %v", err, blockPath))
 									errorOccurred = true
 									goto CountUpdate
@@ -1005,7 +1003,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 
 				}
 			}
-			recoverWG.Wait() //wait for all goroutine to complete
+			recoverWG.Wait() // wait for all goroutine to complete
 			Logger.Info("Completed meta data recovery")
 		} else {
 			if err := os.RemoveAll(volPath); err != nil {
@@ -1035,7 +1033,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 			Logger.Error(err.Error())
 			continue
 		}
-		//Check available size and inodes and add volume to volume pool
+		// Check available size and inodes and add volume to volume pool
 		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
 			Logger.Error(err.Error())
@@ -1217,7 +1215,7 @@ func restartCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTie
 	startcloudstorages(cloudStorages, cTier, false)
 }
 
-func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTier) { //Can run upto 100 goroutines
+func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTier) { // Can run upto 100 goroutines
 	guideChannel := make(chan struct{}, 10)
 	wg := sync.WaitGroup{}
 	for _, cloudStorageI := range cloudStorages {
@@ -1329,21 +1327,17 @@ func recoverMetaDataFromCloudStorage(mc *minioClient, cTier *coldTier) {
 
 		hash := hashInfo.Key
 
-		bwr := &BlockWhereRecord{
-			Hash:      hash,
-			Tiering:   ColdTier,
-			BlockPath: fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName),
-		}
+		bwr := NewBlockWhereRecord(hash, ColdTier, fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName), "")
 
 		guideChannel <- struct{}{}
 		wg.Add(1)
 
-		go func(b *BlockWhereRecord) {
+		go func(b *blockWhereRecord) {
 			defer func() {
 				<-guideChannel
 				wg.Done()
 			}()
-			if err := bwr.AddOrUpdate(); err != nil {
+			if err := bwr.Write(common.GetRootContext()); err != nil {
 				Logger.Error(fmt.Sprintf("Error: %v, while adding hash %v", err, hash))
 			} else {
 				recoveredCount.mu.Lock()

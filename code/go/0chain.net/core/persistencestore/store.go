@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gocql/gocql"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"github.com/gocql/gocql"
 )
 
 /*BATCH_SIZE size of the batch */
@@ -126,7 +127,7 @@ func (ps *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 		valid := iter.Scan(&json)
 		if !valid {
 			break
-			//return common.NewError("not_all_keys_found", "Did not find entities for all the keys")
+			// return common.NewError("not_all_keys_found", "Did not find entities for all the keys")
 		}
 		datastore.FromJSON(json, entities[i])
 		keyIdx[entities[i].GetKey()] = entities[i]
@@ -215,4 +216,28 @@ func (ps *Store) shouldReconnect(err error, enittyMetadata datastore.EntityMetad
 		return true
 	}
 	return false
+}
+
+func (ps *Store) GetRangeFromCollection(ctx context.Context, entity datastore.Entity, entities []datastore.Entity, byScore, withScores bool, min, max string, offset, count int64) error {
+	return nil
+}
+
+func (ps *Store) HDel(ctx context.Context, entity datastore.Entity, hashTableName string, key datastore.Key) error {
+	return nil
+}
+
+func (ps *Store) HGet(ctx context.Context, entity datastore.Entity, hashTableName string, key datastore.Key) (string, error) {
+	return "", nil
+}
+
+func (ps *Store) HSet(ctx context.Context, entity datastore.Entity, hashTableName string, key, val datastore.Key) error {
+	return nil
+}
+
+func (ps *Store) StartTx(ctx context.Context, entity datastore.Entity) context.Context {
+	return nil
+}
+
+func (ps *Store) SendTX(ctx context.Context, entity datastore.Entity) error {
+	return nil
 }

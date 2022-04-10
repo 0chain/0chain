@@ -20,26 +20,6 @@ services:
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     command: redis-server /0chain/config/redis/state.redis.conf
 
-  redis_txns:
-    image: "redis:alpine"
-    container_name: ${AGENT_CONTAINER}-redis_txns
-    volumes:
-      #CONFIG_VOLUME
-      - /0chain/${AGENT_DIR}/config/redis:/0chain/config/redis
-
-      #REDIS_VOLUME
-      - /0chain/${AGENT_DIR}/data/redis:/0chain/data/redis
-      - /0chain/${AGENT_DIR}/data/redis/transactions:/0chain/data/redis/transactions
-
-    networks:
-      default:
-    sysctls:
-      net.core.somaxconn: '511'
-
-    #Start under user 0chain
-    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
-    command: redis-server /0chain/config/redis/transactions.redis.conf
-
   cassandra:
     image: cassandra:3.11.4
     container_name: ${AGENT_CONTAINER}-cassandra
@@ -84,16 +64,15 @@ services:
     environment:
     - DOCKER=true
     - CASSANDRA_CLUSTER=cassandra
+    - REDIS_HOST=redis
     depends_on:
     - cassandra-init
     - redis
-    - redis_txns
 
     links:
     - cassandra-init:cassandra-init
     - cassandra:cassandra
     - redis:redis
-    - redis_txns:redis_txns
 
     build:
       context: ${DOCKER_CODEBASE}
