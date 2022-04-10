@@ -48,6 +48,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 }
 
 func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start int) (string, string) {
+	var id, publicKey string
 	for i := start; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
@@ -59,10 +60,12 @@ func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, 
 		if err != nil {
 			panic(err)
 		}
-
-		authorizers = append(authorizers, authorizer)
+		if i == 0 {
+			id = authorizer.ID
+			publicKey = authorizer.PublicKey
+		}
 	}
-	return authorizers[0].ID, authorizers[0].PublicKey
+	return id, publicKey
 }
 
 func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
