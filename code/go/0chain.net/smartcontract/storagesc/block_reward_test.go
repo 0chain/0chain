@@ -1,46 +1,52 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
+	"math/rand"
+	"os"
+	"strconv"
+	"testing"
+	"time"
+
+	"0chain.net/chaincore/chain/state"
+	bstate "0chain.net/chaincore/state"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"testing"
 )
 
 func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	balances := newTestBalances(t, true)
 	type params struct {
 		numBlobbers       int
-		wp                []state.Balance
-		rp                []state.Balance
+		wp                []bstate.Balance
+		rp                []bstate.Balance
 		totalData         []float64
 		dataRead          []float64
 		successChallenges []int
-		delegatesBal      [][]state.Balance
+		delegatesBal      [][]bstate.Balance
 		serviceCharge     []float64
 	}
 
 	type result struct {
-		blobberRewards          []state.Balance
-		blobberDelegatesRewards [][]state.Balance
+		blobberRewards          []bstate.Balance
+		blobberDelegatesRewards [][]bstate.Balance
 	}
 
 	setupRewards := func(t *testing.T, p params, sc *StorageSmartContract) {
 		conf := setConfig(t, balances)
-		allBR, err := getActivePassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
+		allBR, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
-			_, err = allBR.Add(&partitions.BlobberRewardNode{
+			_, err = allBR.AddItem(balances, &BlobberRewardNode{
 				ID:                bID,
 				SuccessChallenges: p.successChallenges[i],
 				WritePrice:        p.wp[i],
 				ReadPrice:         p.rp[i],
 				TotalData:         p.totalData[i],
 				DataRead:          p.dataRead[i],
-			}, balances)
+			})
 			require.NoError(t, err)
 
 			sp := newStakePool()
@@ -90,34 +96,34 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			name: "1_blobber",
 			params: params{
 				numBlobbers:       1,
-				wp:                []state.Balance{2},
-				rp:                []state.Balance{1},
+				wp:                []bstate.Balance{2},
+				rp:                []bstate.Balance{1},
 				totalData:         []float64{10},
 				dataRead:          []float64{2},
 				successChallenges: []int{10},
-				delegatesBal:      [][]state.Balance{{1, 0, 3}},
+				delegatesBal:      [][]bstate.Balance{{1, 0, 3}},
 				serviceCharge:     []float64{.1},
 			},
 			result: result{
-				blobberRewards:          []state.Balance{50},
-				blobberDelegatesRewards: [][]state.Balance{{112, 0, 337}},
+				blobberRewards:          []bstate.Balance{50},
+				blobberDelegatesRewards: [][]bstate.Balance{{112, 0, 337}},
 			},
 		},
 		{
 			name: "2_blobber",
 			params: params{
 				numBlobbers:       2,
-				wp:                []state.Balance{3, 1},
-				rp:                []state.Balance{1, 0},
+				wp:                []bstate.Balance{3, 1},
+				rp:                []bstate.Balance{1, 0},
 				totalData:         []float64{10, 50},
 				dataRead:          []float64{2, 15},
 				successChallenges: []int{5, 2},
-				delegatesBal:      [][]state.Balance{{1, 0, 3}, {1, 6, 3}},
+				delegatesBal:      [][]bstate.Balance{{1, 0, 3}, {1, 6, 3}},
 				serviceCharge:     []float64{.1, .1},
 			},
 			result: result{
-				blobberRewards:          []state.Balance{15, 34},
-				blobberDelegatesRewards: [][]state.Balance{{35, 0, 107}, {30, 183, 91}},
+				blobberRewards:          []bstate.Balance{15, 34},
+				blobberDelegatesRewards: [][]bstate.Balance{{35, 0, 107}, {30, 183, 91}},
 			},
 		},
 	}
@@ -131,5 +137,95 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			compareResult(t, tt.params, tt.result, ssc)
 
 		})
+	}
+}
+
+func prepareState(n int) (state.StateContextI, func()) {
+	dir, err := os.MkdirTemp("", "part_state")
+	if err != nil {
+		panic(err)
+	}
+
+	pdb, _ := util.NewPNodeDB(dir, dir+"/log")
+
+	clean := func() {
+		pdb.Close()
+		_ = os.RemoveAll(dir)
+	}
+
+	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
+	sctx := state.NewStateContext(nil,
+		mpt, nil, nil, nil,
+		nil, nil, nil)
+
+	part, err := partitions.CreateIfNotExists(sctx, "brn_test", n)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < n; i++ {
+		br := BlobberRewardNode{
+			ID:                strconv.Itoa(i),
+			SuccessChallenges: i,
+			WritePrice:        bstate.Balance(i),
+			ReadPrice:         bstate.Balance(i),
+			TotalData:         float64(i * 100),
+			DataRead:          float64(i),
+		}
+		//bs[i] = b
+		if _, err := part.AddItem(sctx, &br); err != nil {
+			panic(err)
+		}
+	}
+
+	if err := part.Save(sctx); err != nil {
+		panic(err)
+	}
+
+	return sctx, clean
+}
+
+func BenchmarkGetRandomItem(b *testing.B) {
+	ps, clean := prepareState(100)
+	defer clean()
+
+	part, err := partitions.GetPartitions(ps, "brn_test")
+	require.NoError(b, err)
+
+	id := strconv.Itoa(10)
+	for i := 0; i < b.N; i++ {
+		var br BlobberRewardNode
+		_ = part.GetItem(ps, 0, id, &br)
+	}
+}
+
+func BenchmarkGetRandomItems(b *testing.B) {
+	seed := rand.NewSource(time.Now().Unix())
+	r := rand.New(seed)
+	ps, clean := prepareState(100)
+	defer clean()
+
+	part, err := partitions.GetPartitions(ps, "brn_test")
+	require.NoError(b, err)
+	ids := make([]string, 100)
+	for i := 0; i < 100; i++ {
+		ids[i] = strconv.Itoa(i)
+	}
+
+	for i := 0; i < b.N; i++ {
+		var bs []BlobberRewardNode
+		_ = part.GetRandomItems(ps, r, &bs)
+	}
+}
+
+func BenchmarkGetUpdateItem(b *testing.B) {
+	ps, clean := prepareState(100)
+	defer clean()
+
+	part, err := partitions.GetPartitions(ps, "brn_test")
+	require.NoError(b, err)
+
+	for i := 0; i < b.N; i++ {
+		_ = part.UpdateItem(ps, 0, &BlobberRewardNode{ID: "100"})
 	}
 }

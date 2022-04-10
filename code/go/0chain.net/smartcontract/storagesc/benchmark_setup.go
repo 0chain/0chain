@@ -200,9 +200,9 @@ func AddMockChallenges(
 			panic(err)
 		}
 
-		loc, err := partition.Add(&partitions.BlobberChallengeNode{
+		loc, err := partition.AddItem(balances, &BlobberChallengeNode{
 			BlobberID: ch.BlobberID,
-		}, balances)
+		})
 		if err != nil {
 			panic(err)
 		}
@@ -241,9 +241,9 @@ func AddMockChallenges(
 			panic(err)
 		}
 		for allocID := range val {
-			_, err = aPart.Add(&partitions.BlobberChallengeAllocationNode{
+			_, err = aPart.AddItem(balances, &BlobberChallengeAllocationNode{
 				ID: allocID,
-			}, balances)
+			})
 			if err != nil {
 				panic(err)
 			}
@@ -430,7 +430,7 @@ func AddMockBlobbers(
 		log.Fatal("reward_partition_blobber cannot be greater than total blobbers")
 	}
 
-	partition, err := getActivePassedBlobbersList(balances, viper.GetInt64(sc.StorageBlockRewardTriggerPeriod))
+	partition, err := getActivePassedBlobberRewardsPartitions(balances, viper.GetInt64(sc.StorageBlockRewardTriggerPeriod))
 	if err != nil {
 		panic(err)
 	}
@@ -491,14 +491,15 @@ func AddMockBlobbers(
 		}
 
 		if i < numRewardPartitionBlobbers {
-			_, err = partition.Add(&partitions.BlobberRewardNode{
-				ID:                blobber.ID,
-				SuccessChallenges: 10,
-				WritePrice:        blobber.Terms.WritePrice,
-				ReadPrice:         blobber.Terms.ReadPrice,
-				TotalData:         sizeInGB(int64(i * 1000)),
-				DataRead:          float64(i) * 0.1,
-			}, balances)
+			_, err = partition.AddItem(balances,
+				&BlobberRewardNode{
+					ID:                blobber.ID,
+					SuccessChallenges: 10,
+					WritePrice:        blobber.Terms.WritePrice,
+					ReadPrice:         blobber.Terms.ReadPrice,
+					TotalData:         sizeInGB(int64(i * 1000)),
+					DataRead:          float64(i) * 0.1,
+				})
 			if err != nil {
 				panic(err)
 			}
@@ -524,8 +525,15 @@ func AddMockValidators(
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
-	var validatornodes []*ValidationNode
-	var validators []partitions.ValidationNode
+
+	//valParts, err := CreateValidationNodePartitionsIfNotExists(balances)
+	valParts, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+	if err != nil {
+		panic(err)
+	}
+
+	var validatorNodes []*ValidationNode
+	var validatorPartitionNodes []ValidationPartitionNode
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		id := getMockValidatorId(i)
 		validator := &ValidationNode{
@@ -538,11 +546,11 @@ func AddMockValidators(
 		if err != nil {
 			panic(err)
 		}
-		validatornodes = append(validatornodes, validator)
-		validators = append(validators, partitions.ValidationNode{
+		validatorNodes = append(validatorNodes, validator)
+		vpn := ValidationPartitionNode{
 			Id:  id,
 			Url: id + ".com",
-		})
+		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			validators := event.Validator{
 				ValidatorID:    validator.ID,
@@ -555,16 +563,18 @@ func AddMockValidators(
 			}
 			_ = eventDb.Store.Get().Create(&validators)
 		}
-	}
-	all := partitions.NewPopulatedValidatorSelector(
-		ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validators,
-	)
 
-	err := all.Save(balances)
+		validatorPartitionNodes = append(validatorPartitionNodes, vpn)
+		if _, err := valParts.AddItem(balances, &vpn); err != nil {
+			panic(err)
+		}
+	}
+
+	err = valParts.Save(balances)
 	if err != nil {
 		panic(err)
 	}
-	return validatornodes
+	return validatorNodes
 }
 
 func GetMockBlobberStakePools(
