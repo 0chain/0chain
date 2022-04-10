@@ -75,19 +75,19 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.ZcnSc + MintFunc + ".1Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
 			},
 			{
 				name:     benchmark.ZcnSc + MintFunc + ".10Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
 			},
 			{
 				name:     benchmark.ZcnSc + MintFunc + "100Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),
 			},
 		},
@@ -161,10 +161,8 @@ func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
 	return an.Encode()
 }
 
-func createRandomTransaction() *transaction.Transaction {
-	index := randomIndex(len(authorizers))
-	auth := authorizers[index]
-	return createTransaction(auth.ID, auth.PublicKey)
+func createRandomTransaction(id, publicKey string) *transaction.Transaction {
+	return createTransaction(id, publicKey)
 }
 
 func createRandomBurnTransaction(clients, publicKey []string) *transaction.Transaction {

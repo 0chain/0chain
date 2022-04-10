@@ -86,6 +86,7 @@ func getTestSuites(
 		return suites
 	}
 	for _, name := range bkNames {
+		log.Println("name", name)
 		if code, ok := bk.SourceCode[name]; ok {
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
