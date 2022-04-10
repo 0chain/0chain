@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/zcnsc"
+
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
@@ -425,8 +427,14 @@ func setUpMpt(
 		vestingsc.AddMockVestingPools(clients, balances)
 		log.Println("added vesting pools\t", time.Since(timer))
 	}()
-
-	// todo add zcnsc.Setup back once fixed
+	var authorizer zcnsc.AuthorizerNode
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		authorizer = zcnsc.Setup(clients, publicKeys, balances)
+		log.Println("added vesting pools\t", time.Since(timer))
+	}()
 
 	var benchData benchmark.BenchData
 
@@ -447,6 +455,11 @@ func setUpMpt(
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
 		benchData.Sharders = sharders
+		benchData.Authorizer = authorizer
+		benchData.Owner = viper.GetString(benchmark.Owner)
+		benchData.OwnerPublicKey = viper.GetString(benchmark.OwnerPublicKey)
+		benchData.OwnerPublicKey = viper.GetString(benchmark.OwnerPrivateKey)
+
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
 		}

@@ -26,11 +26,11 @@ var (
 	authorizers []*AuthorizerNode
 )
 
-func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
+func Setup(clients, publicKeys []string, balances cstate.StateContextI) AuthorizerNode {
 	fmt.Printf("Setting up benchmarks with %d clients\n", len(clients))
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
-	addMockAuthorizers(clients, publicKeys, balances, authRangeStart)
+	return addMockAuthorizers(clients, publicKeys, balances, authRangeStart)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -47,7 +47,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
 
-func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start int) {
+func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start int) AuthorizerNode {
 	for i := start; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
@@ -62,6 +62,7 @@ func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, 
 
 		authorizers = append(authorizers, authorizer)
 	}
+	return *authorizers[0]
 }
 
 func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
