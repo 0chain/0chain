@@ -92,18 +92,11 @@ var rootCmd = &cobra.Command{
 		}
 		testsTimer := time.Now()
 		suites := getTestSuites(data, tests, omittedTests)
-		//results := runSuites(suites, mpt, root, data)
-		//log.Println()
-		//log.Println("tests took", time.Since(testsTimer))
-		//log.Println("benchmark took", time.Since(totalTimer))
-		//printResults(results)
-		mpt = mpt
-		data = data
-		tests = tests
-		totalTimer = totalTimer
-		omittedTests = omittedTests
-		testsTimer = testsTimer
-		suites = suites
+		results := runSuites(suites, mpt, root, data)
+		log.Println()
+		log.Println("tests took", time.Since(testsTimer))
+		log.Println("benchmark took", time.Since(totalTimer))
+		printResults(results)
 	},
 }
 
