@@ -293,11 +293,6 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered in setUpMpt", r)
-			}
-		}()
 		timer = time.Now()
 		storagesc.AddMockWritePools(clients, balances)
 		log.Println("added allocation write pools\t", time.Since(timer))
@@ -433,10 +428,8 @@ func setUpMpt(
 		defer wg.Done()
 		timer = time.Now()
 		zcnsc.Setup(clients, publicKeys, balances)
-		log.Println("added vesting pools\t", time.Since(timer))
+		log.Println("added zcnsc\t", time.Since(timer))
 	}()
-
-	var benchData benchmark.BenchData
 
 	wg.Add(1)
 	go func() {
@@ -446,6 +439,7 @@ func setUpMpt(
 		log.Println("added control objects\t", time.Since(timer))
 	}()
 
+	var benchData benchmark.BenchData
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
