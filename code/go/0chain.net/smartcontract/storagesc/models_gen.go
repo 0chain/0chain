@@ -1732,20 +1732,6 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Expiration")
 		return
 	}
-	// string "Blobbers"
-	o = append(o, 0xa8, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.Blobbers)))
-	for za0001 := range z.Blobbers {
-		if z.Blobbers[za0001] == nil {
-			o = msgp.AppendNil(o)
-		} else {
-			o, err = z.Blobbers[za0001].MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, "Blobbers", za0001)
-				return
-			}
-		}
-	}
 	// string "Owner"
 	o = append(o, 0xa5, 0x4f, 0x77, 0x6e, 0x65, 0x72)
 	o = msgp.AppendString(o, z.Owner)
@@ -1769,8 +1755,22 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "PreferredBlobbers"
 	o = append(o, 0xb1, 0x50, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.PreferredBlobbers)))
-	for za0002 := range z.PreferredBlobbers {
-		o = msgp.AppendString(o, z.PreferredBlobbers[za0002])
+	for za0001 := range z.PreferredBlobbers {
+		o = msgp.AppendString(o, z.PreferredBlobbers[za0001])
+	}
+	// string "Blobbers"
+	o = append(o, 0xa8, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Blobbers)))
+	for za0002 := range z.Blobbers {
+		if z.Blobbers[za0002] == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = z.Blobbers[za0002].MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Blobbers", za0002)
+				return
+			}
+		}
 	}
 	// string "BlobberDetails"
 	o = append(o, 0xae, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x44, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x73)
@@ -1935,36 +1935,6 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				err = msgp.WrapError(err, "Expiration")
 				return
 			}
-		case "Blobbers":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Blobbers")
-				return
-			}
-			if cap(z.Blobbers) >= int(zb0002) {
-				z.Blobbers = (z.Blobbers)[:zb0002]
-			} else {
-				z.Blobbers = make([]*StorageNode, zb0002)
-			}
-			for za0001 := range z.Blobbers {
-				if msgp.IsNil(bts) {
-					bts, err = msgp.ReadNilBytes(bts)
-					if err != nil {
-						return
-					}
-					z.Blobbers[za0001] = nil
-				} else {
-					if z.Blobbers[za0001] == nil {
-						z.Blobbers[za0001] = new(StorageNode)
-					}
-					bts, err = z.Blobbers[za0001].UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Blobbers", za0001)
-						return
-					}
-				}
-			}
 		case "Owner":
 			z.Owner, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -2001,22 +1971,52 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				return
 			}
 		case "PreferredBlobbers":
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "PreferredBlobbers")
 				return
 			}
-			if cap(z.PreferredBlobbers) >= int(zb0003) {
-				z.PreferredBlobbers = (z.PreferredBlobbers)[:zb0003]
+			if cap(z.PreferredBlobbers) >= int(zb0002) {
+				z.PreferredBlobbers = (z.PreferredBlobbers)[:zb0002]
 			} else {
-				z.PreferredBlobbers = make([]string, zb0003)
+				z.PreferredBlobbers = make([]string, zb0002)
 			}
-			for za0002 := range z.PreferredBlobbers {
-				z.PreferredBlobbers[za0002], bts, err = msgp.ReadStringBytes(bts)
+			for za0001 := range z.PreferredBlobbers {
+				z.PreferredBlobbers[za0001], bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "PreferredBlobbers", za0002)
+					err = msgp.WrapError(err, "PreferredBlobbers", za0001)
 					return
+				}
+			}
+		case "Blobbers":
+			var zb0003 uint32
+			zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Blobbers")
+				return
+			}
+			if cap(z.Blobbers) >= int(zb0003) {
+				z.Blobbers = (z.Blobbers)[:zb0003]
+			} else {
+				z.Blobbers = make([]*StorageNode, zb0003)
+			}
+			for za0002 := range z.Blobbers {
+				if msgp.IsNil(bts) {
+					bts, err = msgp.ReadNilBytes(bts)
+					if err != nil {
+						return
+					}
+					z.Blobbers[za0002] = nil
+				} else {
+					if z.Blobbers[za0002] == nil {
+						z.Blobbers[za0002] = new(StorageNode)
+					}
+					bts, err = z.Blobbers[za0002].UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Blobbers", za0002)
+						return
+					}
 				}
 			}
 		case "BlobberDetails":
@@ -2231,23 +2231,23 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageAllocationDecode) Msgsize() (s int) {
-	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 3 + msgp.StringPrefixSize + len(z.Tx) + 11 + msgp.IntSize + 13 + msgp.IntSize + 5 + msgp.Int64Size + 11 + z.Expiration.Msgsize() + 9 + msgp.ArrayHeaderSize
-	for za0001 := range z.Blobbers {
-		if z.Blobbers[za0001] == nil {
-			s += msgp.NilSize
-		} else {
-			s += z.Blobbers[za0001].Msgsize()
-		}
-	}
-	s += 6 + msgp.StringPrefixSize + len(z.Owner) + 15 + msgp.StringPrefixSize + len(z.OwnerPublicKey) + 6
+	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 3 + msgp.StringPrefixSize + len(z.Tx) + 11 + msgp.IntSize + 13 + msgp.IntSize + 5 + msgp.Int64Size + 11 + z.Expiration.Msgsize() + 6 + msgp.StringPrefixSize + len(z.Owner) + 15 + msgp.StringPrefixSize + len(z.OwnerPublicKey) + 6
 	if z.Stats == nil {
 		s += msgp.NilSize
 	} else {
 		s += z.Stats.Msgsize()
 	}
 	s += 16 + msgp.BoolSize + 18 + msgp.ArrayHeaderSize
-	for za0002 := range z.PreferredBlobbers {
-		s += msgp.StringPrefixSize + len(z.PreferredBlobbers[za0002])
+	for za0001 := range z.PreferredBlobbers {
+		s += msgp.StringPrefixSize + len(z.PreferredBlobbers[za0001])
+	}
+	s += 9 + msgp.ArrayHeaderSize
+	for za0002 := range z.Blobbers {
+		if z.Blobbers[za0002] == nil {
+			s += msgp.NilSize
+		} else {
+			s += z.Blobbers[za0002].Msgsize()
+		}
 	}
 	s += 15 + msgp.ArrayHeaderSize
 	for za0003 := range z.BlobberDetails {

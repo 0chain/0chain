@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 
@@ -111,14 +110,9 @@ func (sc *StorageSmartContract) addUserAllocation(
 
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
-	var err error
-	if err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"Failed to get allocation list: %v", err)
-	}
-
 	ta := &StorageAllocation{}
-	if err = balances.GetTrieNode(alloc.GetKey(sc.ID), ta); err == nil {
+	err := balances.GetTrieNode(alloc.GetKey(sc.ID), ta)
+	if err == nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
@@ -135,6 +129,12 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("add_allocation_failed",
+			"saving new allocation in db: %v", err)
 	}
 
 	buff := alloc.Encode()
@@ -327,11 +327,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	sa.ID = t.Hash
-	allocatedBlobbers := make([]*StorageNode, 0)
 	for _, b := range blobberNodes {
 		balloc := newBlobberAllocation(bSize, sa, b, t.CreationDate)
 		sa.BlobberDetails = append(sa.BlobberDetails, balloc)
-		allocatedBlobbers = append(allocatedBlobbers, b)
 
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
 			sa.ChallengeCompletionTime = b.Terms.ChallengeCompletionTime
@@ -354,11 +352,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		}
 	}
 
-	sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
-		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
-	})
-
-	sa.Blobbers = allocatedBlobbers
 	sa.StartTime = t.CreationDate
 	sa.Tx = t.Hash
 
@@ -583,6 +576,12 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't save allocation: "+err.Error())
 	}
 
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_closing_failed",
+			"saving allocation in db: %v", err)
+	}
+
 	return string(alloc.Encode()), nil // closing
 }
 
@@ -604,6 +603,11 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 
 	// save allocation
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
 	if err != nil {
 		return
 	}
@@ -1272,7 +1276,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 // If blobbers doesn't provide their services, then user can use this
 // cancel_allocation transaction to close allocation and unlock all tokens
-// of write pool back to himself. The cacnel_allocation doesn't pays min_lock
+// of write pool back to himself. The cancel_allocation doesn't pay min_lock
 // demand to blobbers.
 func (sc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
@@ -1332,6 +1336,12 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"saving allocation to db: %v", err)
 	}
 
 	return "canceled", nil
@@ -1406,6 +1416,12 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"saving allocation to db: %v", err)
 	}
 
 	return "finalized", nil
@@ -1492,6 +1508,10 @@ func (sc *StorageSmartContract) finishAllocation(
 	var passPayments float64 = 0.0
 	for i, d := range alloc.BlobberDetails {
 		var b = blobbers[i]
+		if b.ID != d.BlobberID {
+			return common.NewErrorf("fini_alloc_failed",
+				"blobber %s and %s don't match", b.ID, d.BlobberID)
+		}
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			var (
 				ratio  = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
@@ -1626,6 +1646,12 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 	if err != nil {
 		return "", common.NewErrorf("curator_transfer_allocation_failed",
 			"saving new allocation: %v", err)
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("curator_transfer_allocation_failed",
+			"saving new allocation to db: %v", err)
 	}
 
 	// txn.Hash is the id of the new token pool
