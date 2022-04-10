@@ -43,21 +43,25 @@ type StakePool struct {
 	stakepool.StakePool
 }
 
-func newStakePool() *StakePool {
+func NewStakePool() *StakePool {
 	pool := stakepool.NewStakePool()
 	return &StakePool{
 		StakePool: *pool,
 	}
 }
 
-// stake pool key for the storage SC and service provider ID
-func stakePoolKey(scKey, providerID string) datastore.Key {
+// StakePoolKey stake pool key for the storage SC and service provider ID
+func StakePoolKey(scKey, providerID string) datastore.Key {
 	return scKey + ":stakepool:" + providerID
+}
+
+func (sp *StakePool) GetKey() datastore.Key {
+	return StakePoolKey(ADDRESS, sp.Settings.DelegateWallet)
 }
 
 // save the stake pool
 func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, providerID), sp)
+	_, err = balances.InsertTrieNode(StakePoolKey(sscKey, providerID), sp)
 	return
 }
 
@@ -89,8 +93,8 @@ func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.State
 
 // getStakePool of given authorizer
 func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances cstate.StateContextI) (sp *StakePool, err error) {
-	sp = newStakePool()
-	err = balances.GetTrieNode(stakePoolKey(zcn.ID, authorizerID), sp)
+	sp = NewStakePool()
+	err = balances.GetTrieNode(StakePoolKey(zcn.ID, authorizerID), sp)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +125,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		if err != util.ErrValueNotPresent {
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
-		sp = newStakePool()
+		sp = NewStakePool()
 		sp.Minter = cstate.MinterStorage
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		changed = true
