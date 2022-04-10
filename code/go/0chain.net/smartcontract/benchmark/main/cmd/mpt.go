@@ -427,12 +427,12 @@ func setUpMpt(
 		vestingsc.AddMockVestingPools(clients, balances)
 		log.Println("added vesting pools\t", time.Since(timer))
 	}()
-	var authorizerId, authorizerPublicKey string
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		authorizerId, authorizerPublicKey = zcnsc.Setup(clients, publicKeys, balances)
+		zcnsc.Setup(clients, publicKeys, balances)
 		log.Println("added vesting pools\t", time.Since(timer))
 	}()
 
@@ -455,8 +455,6 @@ func setUpMpt(
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
 		benchData.Sharders = sharders
-		benchData.AuthorizerId = authorizerId
-		benchData.AuthorizerPublicKey = authorizerPublicKey
 		benchData.Owner = viper.GetString(benchmark.Owner)
 		benchData.OwnerPublicKey = viper.GetString(benchmark.OwnerPublicKey)
 		benchData.OwnerPublicKey = viper.GetString(benchmark.OwnerPrivateKey)

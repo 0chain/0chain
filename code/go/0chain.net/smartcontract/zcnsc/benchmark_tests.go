@@ -63,7 +63,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
-				txn:      createTransaction(data.AuthorizerId, data.AuthorizerPublicKey),
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    nil,
 			},
 			{
