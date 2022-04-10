@@ -36,6 +36,8 @@ options:
     - "vesting"
     - "vesting_rest"
     - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
