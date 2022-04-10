@@ -50,8 +50,7 @@ func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
 
-	authToDelete := data.Authorizer
-	indexOfNewAuth := len(authorizers)
+	indexOfNewAuth := len(data.Clients)
 
 	return createTestSuite(
 		[]benchTest{
@@ -64,7 +63,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
-				txn:      createTransaction(authToDelete.ID, authToDelete.PublicKey),
+				txn:      createTransaction(data.AuthorizerId, data.AuthorizerPublicKey),
 				input:    nil,
 			},
 			{
