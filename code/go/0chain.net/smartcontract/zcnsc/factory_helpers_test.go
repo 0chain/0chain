@@ -100,7 +100,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		OutputHash:        "",
 	}
 
-	addTransactionData(txn, AddAuthorizer, CreateAuthorizerParamPayload())
+	addTransactionData(txn, AddAuthorizer, CreateAuthorizerParamPayload(fromClient))
 
 	return txn
 }
@@ -129,12 +129,12 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 	return txn
 }
 
-func CreateAuthorizerParam() *AuthorizerParameter {
+func CreateAuthorizerParam(delegateWalletID string) *AuthorizerParameter {
 	return &AuthorizerParameter{
 		PublicKey: "public key",
 		URL:       "http://localhost:2344",
 		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "",
+			DelegateWallet:  delegateWalletID,
 			MinStake:        12345678,
 			MaxStake:        12345678,
 			MaxNumDelegates: 12345678,
@@ -155,8 +155,8 @@ func CreateAuthorizerStakingPoolParam(delegateWalletID string) *AuthorizerStakeP
 	}
 }
 
-func CreateAuthorizerParamPayload() []byte {
-	p := CreateAuthorizerParam()
+func CreateAuthorizerParamPayload(delegateWalletID string) []byte {
+	p := CreateAuthorizerParam(delegateWalletID)
 	encode, _ := p.Encode()
 	return encode
 }

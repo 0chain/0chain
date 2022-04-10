@@ -64,6 +64,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
+	if params.StakePoolSettings.DelegateWallet == "" {
+		return "", common.NewError(code, "authorizer's delegate_wallet not set")
+	}
+
+	if authorizerID != params.StakePoolSettings.DelegateWallet {
+		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
+	}
+
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
@@ -81,6 +89,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		Logger.Error("min stake amount > transaction value", zap.Error(err))
 		return "", err
 	}
+
+	// Validating StakePoolSettings against GlobalNode settings
 
 	// Check existing Authorizer
 

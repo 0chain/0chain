@@ -1,12 +1,9 @@
 package zcnsc_test
 
 import (
-	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
-
-	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
@@ -63,26 +60,16 @@ func Test_Basic_GetUserNode_ReturnsUserNode(t *testing.T) {
 }
 
 func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
+	const authorizerID = "auth0"
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
-	tr := CreateAddAuthorizerTransaction("auth0", ctx)
+	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
+	input := CreateAuthorizerParamPayload(authorizerID)
 
-	params := &AuthorizerParameter{
-		PublicKey: tr.PublicKey,
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  "",
-			MinStake:        12,
-			MaxStake:        12,
-			MaxNumDelegates: 12,
-			ServiceCharge:   12,
-		},
-	}
-	data, _ := params.Encode()
-
-	_, err := contract.AddAuthorizer(tr, data, ctx)
+	_, err := contract.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err)
 
-	_, err = contract.AddAuthorizer(tr, data, ctx)
+	_, err = contract.AddAuthorizer(tr, input, ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already exists")
 }
@@ -90,13 +77,13 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	param := CreateAuthorizerParam()
-	data, _ := param.Encode()
-	sc := CreateZCNSmartContract()
 	authorizerID := authorizersID[0] + ":10"
+
+	input := CreateAuthorizerParamPayload(authorizerID)
+	sc := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
 
-	resp, err := sc.AddAuthorizer(tr, data, ctx)
+	resp, err := sc.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
 
@@ -109,13 +96,12 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	authorizerID := authorizersID[0] + time.Now().String()
-	param := CreateAuthorizerParam()
-	data, _ := param.Encode()
+	input := CreateAuthorizerParamPayload(authorizerID)
 	sc := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
 
-	address, err := sc.AddAuthorizer(tr, data, ctx)
+	address, err := sc.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err, "must be able to add authorizer")
 	require.NotEmpty(t, address)
 
@@ -125,7 +111,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	require.NotNil(t, node)
 
 	// Try adding one more authorizer
-	address, err = sc.AddAuthorizer(tr, data, ctx)
+	address, err = sc.AddAuthorizer(tr, input, ctx)
 	require.Error(t, err, "must be able to add only one authorizer")
 	require.Contains(t, err.Error(), "already exists")
 	require.Empty(t, address)
@@ -156,17 +142,12 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
 	ctx := MakeMockStateContext()
-	au := AuthorizerNode{ID: authorizersID[0]}
-	authParam := AuthorizerParameter{
-		PublicKey: ctx.authorizers[au.GetKey()].Node.PublicKey,
-		URL:       "hhh",
-	}
-	data, _ := authParam.Encode()
-
 	sc := CreateZCNSmartContract()
 
 	client := defaultAuthorizer + time.Now().String()
-	tr := CreateAddAuthorizerTransaction(client, MakeMockStateContext())
+	input := CreateAuthorizerParamPayload(client)
+
+	tr := CreateAddAuthorizerTransaction(client, ctx)
 	tr.Value = 99
 
 	node := CreateSmartContractGlobalNode()
@@ -174,7 +155,7 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	err := node.Save(ctx)
 	require.NoError(t, err)
 
-	resp, err := sc.AddAuthorizer(tr, data, ctx)
+	resp, err := sc.AddAuthorizer(tr, input, ctx)
 	require.Error(t, err)
 	require.Empty(t, resp)
 	require.Contains(t, err.Error(), "min stake amount")
@@ -197,7 +178,7 @@ func Test_Should_FailWithoutInputData(t *testing.T) {
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	data, _ := json.Marshal(CreateAuthorizerParam())
+	data := CreateAuthorizerParamPayload("client0")
 	tr := CreateAddAuthorizerTransaction("client0", ctx)
 	tr.PublicKey = ""
 	sc := CreateZCNSmartContract()
