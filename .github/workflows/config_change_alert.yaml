@@ -13,8 +13,6 @@ jobs:
     runs-on: docker-builds
     steps:
       - uses: actions/checkout@v1
-        with:
-          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
       - name: Get changed files using defaults
         id: changed-files
