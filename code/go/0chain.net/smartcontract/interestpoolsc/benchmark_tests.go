@@ -33,7 +33,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 		HashIDField: datastore.HashIDField{
 			Hash: bt.txn.Hash,
 		},
-		ClientID:     bt.txn.ClientID,
+		ClientID:     viper.GetString(bk.InterestPoolOwner),
 		ToClientID:   bt.txn.ToClientID,
 		Value:        bt.txn.Value,
 		CreationDate: bt.txn.CreationDate,

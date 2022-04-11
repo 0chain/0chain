@@ -138,11 +138,13 @@ const (
 	OptionLoadPath     = Options + "load_path"
 	OptionSavePath     = Options + "save_path"
 
+	MinerMOwner       = SmartContract + MinerSc + "owner_id"
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
 	MinerMinStake     = SmartContract + MinerSc + "min_stake"
 	MinerMaxStake     = SmartContract + MinerSc + "max_stake"
 
+	StorageOwner                         = SmartContract + StorageSc + "owner_id"
 	StorageMinAllocSize                  = SmartContract + StorageSc + "min_alloc_size"
 	StorageMinAllocDuration              = SmartContract + StorageSc + "min_alloc_duration"
 	StorageMaxReadPrice                  = SmartContract + StorageSc + "max_read_price"
@@ -189,15 +191,20 @@ const (
 	StorageBlockRewardSharderRatio    = SmartContract + StorageSc + BlockReward + "sharder_ratio"
 	StorageBlockRewardQualifyingStake = SmartContract + StorageSc + BlockReward + "qualifying_stake"
 
+	InterestPoolOwner         = SmartContract + InterestPoolSC + "owner_id"
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
 	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
 
+	VestingPoolOwner       = SmartContract + VestingSc + "owner_id"
 	VestingMinLock         = SmartContract + VestingSc + "min_lock"
 	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
 	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
 	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
 
+	FaucetOwner = SmartContract + FaucetSc + "owner_id"
+
+	ZcnOwner           = SmartContract + ZcnSc + "owner_id"
 	MinMintAmount      = SmartContract + ZcnSc + "min_mint_amount"
 	PercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
 	MinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"

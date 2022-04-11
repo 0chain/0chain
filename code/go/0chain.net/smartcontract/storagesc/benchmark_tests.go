@@ -256,7 +256,7 @@ func BenchmarkTests(
 			name:     "storage.add_free_storage_assigner",
 			endpoint: ssc.addFreeStorageAssigner,
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID: viper.GetString(bk.StorageOwner),
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&newFreeStorageAssignerInfo{
@@ -668,7 +668,7 @@ func BenchmarkTests(
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID: viper.GetString(bk.StorageOwner),
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{

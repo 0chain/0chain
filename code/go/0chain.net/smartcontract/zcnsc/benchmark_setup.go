@@ -35,7 +35,7 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
-
+	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)

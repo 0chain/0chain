@@ -27,6 +27,15 @@ func AddMockClientPools(
 	}
 }
 
+func AddMockConfig(balances cstate.StateContextI) {
+	var conf config
+	conf.OwnerId = benchmark.VestingPoolOwner
+	_, err := balances.InsertTrieNode(scConfigKey(ADDRESS), &conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func AddMockVestingPools(
 	clients []string,
 	balances cstate.StateContextI,

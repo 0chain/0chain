@@ -29,6 +29,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 	}
 
 	gn := newGlobalNode()
+	gn.OwnerId = viper.GetString(benchmark.FaucetOwner)
 	gn.MinLock = state.Balance(viper.GetFloat64(benchmark.InterestPoolMinLock))
 	gn.MinLockPeriod = viper.GetDuration(benchmark.InterestPoolMinLockPeriod)
 	gn.MaxMint = state.Balance(viper.GetFloat64(benchmark.InterestPoolMaxMint))

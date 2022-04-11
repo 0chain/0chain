@@ -420,6 +420,7 @@ func setUpMpt(
 		defer wg.Done()
 		timer = time.Now()
 		vestingsc.AddMockVestingPools(clients, balances)
+		vestingsc.AddMockConfig(balances)
 		log.Println("added vesting pools\t", time.Since(timer))
 	}()
 
