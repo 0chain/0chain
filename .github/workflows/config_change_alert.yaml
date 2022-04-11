@@ -3,10 +3,10 @@ name: config_change_alert
 on:
   push:
    branches: 
-     - config_alert
+     - staging
   pull_request:
    branches: 
-     - config_alert
+     - staging
    
 jobs:
   test:
