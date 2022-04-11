@@ -235,7 +235,6 @@ func BenchmarkTests(
 					"min_s":                  "1",
 					"max_delegates":          "200",
 					"reward_round_frequency": "64250",
-					"interest_rate":          "0.0",
 					"reward_rate":            "1.0",
 					"share_ratio":            "50",
 					"block_reward":           "021",
