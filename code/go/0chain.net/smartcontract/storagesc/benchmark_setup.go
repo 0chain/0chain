@@ -413,10 +413,7 @@ func AddMockBlobbers(
 				NumDelegates:            blobber.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
 			}
-			result := eventDb.Store.Get().Create(&blobberDb)
-			if result.Error != nil {
-				panic(result.Error)
-			}
+			_ = eventDb.Store.Get().Create(&blobberDb)
 		}
 
 		if i < numRewardPartitionBlobbers {
