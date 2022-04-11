@@ -128,9 +128,6 @@ const (
 	ControlM                = Internal + "control_m"
 	ControlN                = Internal + "control_n"
 	MptRoot                 = Internal + "mpt_root"
-	Owner                   = Internal + "owner"
-	OwnerPublicKey          = Internal + "owner_public_key"
-	OwnerPrivateKey         = Internal + "owner_private_key"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"

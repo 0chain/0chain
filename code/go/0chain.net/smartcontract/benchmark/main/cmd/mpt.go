@@ -450,9 +450,6 @@ func setUpMpt(
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
 		benchData.Sharders = sharders
-		benchData.Owner = viper.GetString(benchmark.Owner)
-		benchData.OwnerPublicKey = viper.GetString(benchmark.OwnerPublicKey)
-		benchData.OwnerPublicKey = viper.GetString(benchmark.OwnerPrivateKey)
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
