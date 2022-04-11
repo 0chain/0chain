@@ -69,7 +69,7 @@ func addMockAllocation(
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,
-			ReadsSize:                 64 * KB,
+			NumReads:                  1,
 			TotalChallenges:           1,
 			OpenChallenges:            1,
 			SuccessChallenges:         1,
@@ -611,7 +611,7 @@ func AddMockWriteRedeems(
 				BlobberID:       getMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
 				AllocationID:    getMockAllocationId(i),
 				OwnerID:         clients[client],
-				ReadSize:        viper.GetInt64(sc.NumWriteRedeemAllocation) * 64 * KB,
+				ReadCounter:     viper.GetInt64(sc.NumWriteRedeemAllocation),
 				PayerID:         clients[client],
 			}
 			commitRead := &ReadConnection{

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/core/logging"
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/partitions"
 	"go.uber.org/zap"
@@ -360,7 +360,23 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"malformed request: missing read_marker")
 	}
 
-	err = commitRead.ReadMarker.Verify(balances)
+	var (
+		lastCommittedRM = &ReadConnection{}
+		lastKnownCtr    int64
+	)
+
+	err = balances.GetTrieNode(commitRead.GetKey(sc.ID), lastCommittedRM)
+	switch err {
+	case nil:
+		lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
+	case util.ErrValueNotPresent:
+		err = nil
+	default:
+		return "", common.NewErrorf("commit_blobber_read",
+			"can't get latest blobber client read: %v", err)
+	}
+
+	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't verify read marker: %v", err)
@@ -401,13 +417,16 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"error fetching blobber object")
 	}
 
+	const CHUNK_SIZE = 64 * KB
+
 	var (
-		sizeRead = sizeInGB(commitRead.ReadMarker.ReadSize)
+		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
+		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
 		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
-	commitRead.ReadMarker.ReadSizeInGB = sizeRead
+	commitRead.ReadMarker.ReadSize = sizeRead
 
 	// if 3rd party pays
 	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
