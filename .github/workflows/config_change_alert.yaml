@@ -12,7 +12,7 @@ jobs:
   test:
     runs-on: docker-builds
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
