@@ -20,7 +20,7 @@ simulation:
   num_write_redeem_allocation: 1
   num_challenges_blobber: 1
   num_authorisers: 12
-  num_reward_partition_blobber: 100
+  num_reward_partition_blobber: 50
 
 options:
   verbose: true
