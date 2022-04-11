@@ -249,7 +249,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
+		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
 
@@ -257,7 +257,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
+		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
@@ -278,7 +278,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockAllocations(clients, publicKeys, balances)
+		storagesc.AddMockAllocations(clients, publicKeys, eventDb, balances)
 		log.Println("added allocations\t", time.Since(timer))
 	}()
 

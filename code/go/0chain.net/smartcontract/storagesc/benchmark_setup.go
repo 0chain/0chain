@@ -27,9 +27,9 @@ const mockMinLockDemand = 1
 
 func AddMockAllocations(
 	clients, publicKeys []string,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	now := common.Timestamp(time.Now().Unix())
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		addMockAllocation(
@@ -37,7 +37,7 @@ func AddMockAllocations(
 			clients,
 			cIndex,
 			publicKeys[cIndex],
-			now,
+			eventDb,
 			balances,
 		)
 	}
@@ -48,7 +48,7 @@ func addMockAllocation(
 	clients []string,
 	cIndex int,
 	publicKey string,
-	now common.Timestamp,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
 	expire := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
@@ -100,6 +100,29 @@ func addMockAllocation(
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
 		log.Fatal(err)
+	}
+
+	if viper.GetBool(sc.EventDbEnabled) {
+		allocationDb := event.Allocation{
+			AllocationID:               sa.ID,
+			DataShards:                 sa.DataShards,
+			ParityShards:               sa.ParityShards,
+			Size:                       sa.Size,
+			Expiration:                 int64(sa.Expiration),
+			Owner:                      sa.Owner,
+			OwnerPublicKey:             sa.OwnerPublicKey,
+			MaxChallengeCompletionTime: int64(sa.MaxChallengeCompletionTime),
+			ChallengeCompletionTime:    int64(sa.ChallengeCompletionTime),
+			UsedSize:                   sa.UsedSize,
+			NumWrites:                  sa.Stats.NumWrites,
+			ReadSize:                   sa.Stats.ReadsSize,
+			TotalChallenges:            sa.Stats.TotalChallenges,
+			OpenChallenges:             sa.Stats.OpenChallenges,
+			FailedChallenges:           sa.Stats.FailedChallenges,
+			LatestClosedChallengeTxn:   sa.Stats.LastestClosedChallengeTxn,
+		}
+		_ = eventDb.Store.Get().Create(&allocationDb)
+
 	}
 }
 
