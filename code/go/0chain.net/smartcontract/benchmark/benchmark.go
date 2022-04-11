@@ -193,11 +193,12 @@ const (
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
 	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
 
-	VestingPoolOwner       = SmartContract + VestingSc + "owner_id"
-	VestingMinLock         = SmartContract + VestingSc + "min_lock"
-	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
-	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
-	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
+	VestingPoolOwner            = SmartContract + VestingSc + "owner_id"
+	VestingMinLock              = SmartContract + VestingSc + "min_lock"
+	VestingMaxDestinations      = SmartContract + VestingSc + "max_destinations"
+	VestingMinDuration          = SmartContract + VestingSc + "min_duration"
+	VestingMaxDuration          = SmartContract + VestingSc + "max_duration"
+	VestingMaxDescriptionLength = SmartContract + VestingSc + "max_description_length"
 
 	FaucetOwner = SmartContract + FaucetSc + "owner_id"
 

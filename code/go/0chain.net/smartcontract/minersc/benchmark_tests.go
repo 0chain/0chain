@@ -242,7 +242,6 @@ func BenchmarkTests(
 					"max_charge":             "0.5",
 					"epoch":                  "6415000000",
 					"reward_decline_rate":    "0.1",
-					"interest_decline_rate":  "0.1",
 					"max_mint":               "1500000.0",
 				},
 			}).Encode(),
