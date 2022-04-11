@@ -185,7 +185,7 @@ func prepareState(n int) (state.StateContextI, func()) {
 	return sctx, clean
 }
 
-func BenchmarkGetRandomItem(b *testing.B) {
+func BenchmarkPartitionsGetItem(b *testing.B) {
 	ps, clean := prepareState(100)
 	defer clean()
 
@@ -228,4 +228,6 @@ func BenchmarkGetUpdateItem(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = part.UpdateItem(ps, 0, &BlobberRewardNode{ID: "100"})
 	}
+
+	_ = part.Save(ps)
 }

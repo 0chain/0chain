@@ -186,7 +186,6 @@ func (rs *randomSelector) GetRandomItems(state state.StateContextI, r *rand.Rand
 	}
 	index := r.Intn(rs.NumPartitions)
 
-	var rtv []item
 	part, err := rs.getPartition(state, index)
 	if err != nil {
 		return err
@@ -196,6 +195,8 @@ func (rs *randomSelector) GetRandomItems(state state.StateContextI, r *rand.Rand
 	if err != nil {
 		return err
 	}
+
+	rtv := make([]item, 0, rs.PartitionSize)
 	rtv = append(rtv, its...)
 
 	if index == rs.NumPartitions-1 && len(rtv) < rs.PartitionSize && rs.NumPartitions > 1 {
@@ -221,9 +222,15 @@ func (rs *randomSelector) GetRandomItems(state state.StateContextI, r *rand.Rand
 
 func setPartitionItems(rtv []item, vs interface{}) error {
 	// slice type
-	vts := reflect.TypeOf(vs).Elem()
+	vst := reflect.TypeOf(vs)
+	if vst.Kind() != reflect.Ptr {
+		return errors.New("invalid return value type, it must be a pointer of slice")
+	}
+
+	// element type - slice
+	vts := vst.Elem()
 	if vts.Kind() != reflect.Slice {
-		return errors.New("invalid value type, it must be an slice")
+		return errors.New("invalid return value type, it must be a pointer of slice")
 	}
 
 	// item type
