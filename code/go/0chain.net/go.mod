@@ -45,8 +45,8 @@ require (
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/driver/postgres v1.2.1
-	gorm.io/gorm v1.22.2
+	gorm.io/driver/postgres v1.3.4
+	gorm.io/gorm v1.23.1
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
