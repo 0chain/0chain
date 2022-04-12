@@ -12,7 +12,7 @@ require (
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/go-ini/ini v1.55.0 // indirect
-	github.com/go-playground/validator/v10 v10.6.1
+	github.com/go-playground/validator/v10 v10.10.1
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
@@ -21,8 +21,6 @@ require (
 	github.com/herumi/bls v0.0.0-20210511012341-3f3850a6eac7
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
-	github.com/kr/pretty v0.2.0 // indirect
-	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
@@ -41,8 +39,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	golang.org/x/net v0.0.0-20211020060615-d418f374d309
+	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.2.1
