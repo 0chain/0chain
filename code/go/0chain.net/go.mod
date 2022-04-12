@@ -39,7 +39,7 @@ require (
 	github.com/tinylib/msgp v1.1.6
 	github.com/valyala/gozstd v1.14.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
-	go.uber.org/atomic v1.7.0
+	go.uber.org/atomic v1.9.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309
