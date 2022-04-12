@@ -233,7 +233,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		validators = storagesc.AddMockValidators(publicKeys, balances)
+		validators = storagesc.AddMockValidators(publicKeys, eventDb, balances)
 		log.Println("added validators\t", time.Since(timer))
 	}()
 

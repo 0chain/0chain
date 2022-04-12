@@ -25,6 +25,8 @@ import (
 
 const mockMinLockDemand = 1
 
+var year = common.Timestamp(time.Second * 60 * 60 * 24 * 365)
+
 func AddMockAllocations(
 	clients, publicKeys []string,
 	eventDb *event.EventDb,
@@ -87,7 +89,7 @@ func addMockAllocation(
 	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
 		bIndex := startBlobbers + j
 		bId := getMockBlobberId(bIndex)
-		sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
+		ba := BlobberAllocation{
 			BlobberID:      bId,
 			AllocationID:   sa.ID,
 			Size:           viper.GetInt64(sc.StorageMinAllocSize),
@@ -95,7 +97,20 @@ func addMockAllocation(
 			Terms:          getMockBlobberTerms(),
 			MinLockDemand:  mockMinLockDemand,
 			AllocationRoot: encryption.Hash("allocation root"),
-		})
+		}
+		sa.BlobberDetails = append(sa.BlobberDetails, &ba)
+		if viper.GetBool(sc.EventDbEnabled) {
+			terms := event.AllocationTerm{
+				BlobberID:               bId,
+				AllocationID:            sa.ID,
+				ReadPrice:               ba.Terms.ReadPrice,
+				WritePrice:              ba.Terms.WritePrice,
+				MinLockDemand:           ba.Terms.MinLockDemand,
+				MaxOfferDuration:        ba.Terms.MaxOfferDuration,
+				ChallengeCompletionTime: ba.Terms.ChallengeCompletionTime,
+			}
+			_ = eventDb.Store.Get().Create(&terms)
+		}
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -122,7 +137,6 @@ func addMockAllocation(
 			LatestClosedChallengeTxn:   sa.Stats.LastestClosedChallengeTxn,
 		}
 		_ = eventDb.Store.Get().Create(&allocationDb)
-
 	}
 }
 
@@ -238,7 +252,7 @@ func AddMockClientAllocation(
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 	wps := make([]*writePool, len(clients))
-	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()*5*year
 	amountPerBlobber := state.Balance(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		//for i := viper.GetInt(sc.NumAllocations); i >= 0; i-- {
@@ -468,6 +482,7 @@ func AddMockBlobbers(
 
 func AddMockValidators(
 	publicKeys []string,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*ValidationNode {
 	var sscId = StorageSmartContract{
@@ -492,6 +507,18 @@ func AddMockValidators(
 			Id:  id,
 			Url: id + ".com",
 		})
+		if viper.GetBool(sc.EventDbEnabled) {
+			validators := event.Validator{
+				ValidatorID:    validator.ID,
+				BaseUrl:        validator.BaseURL,
+				DelegateWallet: validator.StakePoolSettings.DelegateWallet,
+				MinStake:       state.Balance(validator.StakePoolSettings.MaxStake),
+				MaxStake:       state.Balance(validator.StakePoolSettings.MaxStake),
+				NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
+				ServiceCharge:  validator.StakePoolSettings.ServiceCharge,
+			}
+			_ = eventDb.Store.Get().Create(&validators)
+		}
 	}
 	all := partitions.NewPopulatedValidatorSelector(
 		ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validators,
