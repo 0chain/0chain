@@ -9,7 +9,7 @@ on:
      - staging
    
 jobs:
-  test:
+  Config_Alert:
     runs-on: docker-builds
     steps:
       - uses: actions/checkout@v1
