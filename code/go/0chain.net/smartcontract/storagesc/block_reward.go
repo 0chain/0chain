@@ -82,7 +82,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
 	if err != nil {
-		logging.Logger.Error("blobber_block_rewards_failed",
+		logging.Logger.Info("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
 		return nil
 	}
