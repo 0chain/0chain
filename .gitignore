@@ -1,3 +1,4 @@
+dev.local/build
 code/coverage.txt
 \.*
 !.gitignore
