@@ -26,25 +26,25 @@ type partition struct {
 	Changed bool   `json:"-" msg:"-"`
 }
 
-func (il *partition) save(state state.StateContextI) error {
-	_, err := state.InsertTrieNode(il.Key, il)
+func (p *partition) save(state state.StateContextI) error {
+	_, err := state.InsertTrieNode(p.Key, p)
 	return err
 }
 
-func (il *partition) load(state state.StateContextI, key datastore.Key) error {
-	err := state.GetTrieNode(key, il)
+func (p *partition) load(state state.StateContextI, key datastore.Key) error {
+	err := state.GetTrieNode(key, p)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		il.Key = key
+		p.Key = key
 	}
 
 	return nil
 }
 
-func (il *partition) add(it PartitionItem) error {
-	for _, bi := range il.Items {
+func (p *partition) add(it PartitionItem) error {
+	for _, bi := range p.Items {
 		if bi.ID == it.GetID() {
 			return errors.New("item already exists")
 		}
@@ -54,83 +54,83 @@ func (il *partition) add(it PartitionItem) error {
 	if err != nil {
 		return err
 	}
-	il.Items = append(il.Items, item{ID: it.GetID(), Data: v})
-	il.Changed = true
+	p.Items = append(p.Items, item{ID: it.GetID(), Data: v})
+	p.Changed = true
 	return nil
 }
 
-func (il *partition) addRaw(it item) error {
-	for _, v := range il.Items {
+func (p *partition) addRaw(it item) error {
+	for _, v := range p.Items {
 		if v.ID == it.ID {
 			return errors.New("item already exists")
 		}
 	}
 
-	il.Items = append(il.Items, it)
-	il.Changed = true
+	p.Items = append(p.Items, it)
+	p.Changed = true
 	return nil
 }
 
-func (il *partition) update(it PartitionItem) error {
-	for i := 0; i < il.length(); i++ {
-		if il.Items[i].ID == it.GetID() {
+func (p *partition) update(it PartitionItem) error {
+	for i := 0; i < p.length(); i++ {
+		if p.Items[i].ID == it.GetID() {
 			v, err := it.MarshalMsg(nil)
 			if err != nil {
 				return err
 			}
 
-			il.Items[i] = item{ID: it.GetID(), Data: v}
-			il.Changed = true
+			p.Items[i] = item{ID: it.GetID(), Data: v}
+			p.Changed = true
 			return nil
 		}
 	}
 	return errors.New("item not found")
 }
 
-func (il *partition) remove(item PartitionItem) error {
-	if len(il.Items) == 0 {
+func (p *partition) remove(item PartitionItem) error {
+	if len(p.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
-	index := il.findIndex(item)
+	index := p.findIndex(item)
 	if index == notFound {
 		return fmt.Errorf("cannot findIndex item %v in partition", item)
 	}
-	il.Items[index] = il.Items[len(il.Items)-1]
-	il.Items = il.Items[:len(il.Items)-1]
-	il.Changed = true
+	p.Items[index] = p.Items[len(p.Items)-1]
+	p.Items = p.Items[:len(p.Items)-1]
+	p.Changed = true
 	return nil
 }
 
-func (il *partition) cutTail() *item {
-	if len(il.Items) == 0 {
+func (p *partition) cutTail() *item {
+	if len(p.Items) == 0 {
 		return nil
 	}
 
-	tail := il.Items[len(il.Items)-1]
-	il.Items = il.Items[:len(il.Items)-1]
-	il.Changed = true
+	tail := p.Items[len(p.Items)-1]
+	p.Items = p.Items[:len(p.Items)-1]
+	p.Changed = true
 	return &tail
 }
 
-func (il *partition) length() int {
-	return len(il.Items)
+func (p *partition) length() int {
+	return len(p.Items)
 }
 
-func (il *partition) changed() bool {
-	return il.Changed
+func (p *partition) changed() bool {
+	return p.Changed
 }
 
-func (il *partition) itemRange(start, end int) ([]item, error) {
-	if start > end || end > len(il.Items) {
+func (p *partition) itemRange(start, end int) ([]item, error) {
+	if start > end || end > len(p.Items) {
 		debug.PrintStack()
-		return nil, fmt.Errorf("invalid index, start:%v, end:%v, len:%v", start, end, len(il.Items))
+		return nil, fmt.Errorf("invalid index, start:%v, end:%v, len:%v", start, end, len(p.Items))
 	}
 
-	return il.Items[start:end], nil
+	return p.Items[start:end], nil
 }
 
-func (il *partition) find(id string) (item, bool) {
-	for _, v := range il.Items {
+func (p *partition) find(id string) (item, bool) {
+	for _, v := range p.Items {
 		if v.ID == id {
 			return v, true
 		}
@@ -139,8 +139,8 @@ func (il *partition) find(id string) (item, bool) {
 	return item{}, false
 }
 
-func (il *partition) findIndex(searchItem PartitionItem) int {
-	for i, item := range il.Items {
+func (p *partition) findIndex(searchItem PartitionItem) int {
+	for i, item := range p.Items {
 		if item.ID == searchItem.GetID() {
 			return i
 		}
