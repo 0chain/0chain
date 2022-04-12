@@ -46,7 +46,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.2.1
-	gorm.io/gorm v1.22.2
+	gorm.io/gorm v1.23.4
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
