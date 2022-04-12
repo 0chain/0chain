@@ -110,8 +110,8 @@ Flags:
 --ethereumaddress string     Client Ethereum address
 --ethereumnodeurl string     Ethereum Node URL (Infura/Alchemy)
 --gaslimit int               appr. Gas limit to execute Ethereum transaction (default 300000)
---password string            Password be used to unlock private key stored in local storage
---path string                Configuration dir (default "/Users/dima/.zcn")
+--password string            Password to be used to unlock private key stored in local storage
+--path string                Configuration directory (default "/Users/dima/.zcn")
 --value int                  Value sent along with Ethereum transaction
 --wzcnaddress string         WZCN token address
 
