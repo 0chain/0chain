@@ -140,6 +140,7 @@ server_chain:
       conn_max_lifetime: 20s
 
 network:
+  # magic_block_file: config/magicBlock.json # use for local system tests
   magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
   initial_states: config/initial_state.yaml
   genesis_dkg: 0

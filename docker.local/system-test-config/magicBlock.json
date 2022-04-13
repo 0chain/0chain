@@ -1,0 +1,326 @@
+{
+  "hash": "4b50bed510470d5d756cf3370d7ded97c03f27ac6572f475bbdf90e53ed3dd27",
+  "previous_hash": "",
+  "magic_block_number": 1,
+  "starting_round": 0,
+  "miners": {
+    "type": 0,
+    "nodes": {
+      "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+        "id": "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0",
+        "n2n_host": "198.18.0.71",
+        "host": "localhost",
+        "port": 7071,
+        "type": 0,
+        "description": "localhost.m0",
+        "set_index": 0,
+        "status": 1,
+        "info": {
+          "build_tag": "78e919afc849273f575fd98c6fc4ce572f085940",
+          "state_missing_nodes": -1,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      },
+      "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+        "id": "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "cb9babd82cf33b77568cb74b8c235b7de3b0807bd7e336c9a79c8872dd31a9a7",
+        "n2n_host": "198.18.0.72",
+        "host": "localhost",
+        "port": 7072,
+        "type": 0,
+        "description": "localhost.m1",
+        "set_index": 1,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      },
+      "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+        "id": "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "35a0e6c26faea737d89cadf3f2155a76bb595b2c2582f15b88dfe55b61d0df4b",
+        "n2n_host": "198.18.0.74",
+        "host": "localhost",
+        "port": 7074,
+        "type": 0,
+        "description": "localhost.m3",
+        "set_index": 2,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      },
+      "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+        "id": "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "ead2cc189369c8761340806055670002998679627f744cbd4129357fbc962296",
+        "n2n_host": "198.18.0.73",
+        "host": "localhost",
+        "port": 7073,
+        "type": 0,
+        "description": "localhost.m2",
+        "set_index": 3,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      }
+    }
+  },
+  "sharders": {
+    "type": 1,
+    "nodes": {
+      "275d9cf6e0947643954188d39a09d64aac004457a310900043fcd16a3976d3d8": {
+        "id": "275d9cf6e0947643954188d39a09d64aac004457a310900043fcd16a3976d3d8",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "303d8bfbf2421cf4a4cc3ce02b3e2d465a45c2164628bcb9b73703c69a80b6ca",
+        "n2n_host": "198.18.0.81",
+        "host": "localhost",
+        "port": 7171,
+        "type": 1,
+        "description": "localhost.s0",
+        "set_index": 0,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      },
+      "57fe3b4d898e60f3c8c9f7a356c2d0680caf17370101be119ed2cc028f42fd41": {
+        "id": "57fe3b4d898e60f3c8c9f7a356c2d0680caf17370101be119ed2cc028f42fd41",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "b3814c5118ff618d8c3af7d8096ca9557c026ddb915d867ef696b092fa742cb7",
+        "n2n_host": "198.18.0.82",
+        "host": "localhost",
+        "port": 7172,
+        "type": 1,
+        "description": "localhost.s1",
+        "set_index": 1,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      },
+      "853bb6eb72dbed82f0883fe42f93214a28b199f494818752c593b0ffd3baa046": {
+        "id": "853bb6eb72dbed82f0883fe42f93214a28b199f494818752c593b0ffd3baa046",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "c423b3543aa0eae177b6e0442eeaa73b527bf346065b1f999498b9c2d78138da",
+        "n2n_host": "198.18.0.83",
+        "host": "localhost",
+        "port": 7173,
+        "type": 1,
+        "description": "localhost.s2",
+        "set_index": 2,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      },
+      "f0ec857c322312017bdf979cf15e93fb6d24bcd1bc8a677b7dbd245d2f863387": {
+        "id": "f0ec857c322312017bdf979cf15e93fb6d24bcd1bc8a677b7dbd245d2f863387",
+        "version": "",
+        "creation_date": 0,
+        "public_key": "d2cdc2d47d92d8f2d4f3fd76bd3b4fa03d285d8077a8d991586deb51eae57562",
+        "n2n_host": "198.18.0.84",
+        "host": "localhost",
+        "port": 7174,
+        "type": 1,
+        "description": "localhost.s3",
+        "set_index": 3,
+        "status": 0,
+        "info": {
+          "build_tag": "",
+          "state_missing_nodes": 0,
+          "miners_median_network_time": 0,
+          "avg_block_txns": 0
+        }
+      }
+    }
+  },
+  "share_or_signs": {
+    "shares": {
+      "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+        "id": "",
+        "share_or_sign": {
+          "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "1bb1424f3f2d45587d929bfa4996b69399b7b5915ce2916a626d4e618bdf860b",
+            "sign": "8ec947ab108b308163ead269629a5fb191937363805aa4082847fbd9294df28a"
+          },
+          "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "976729a39531837bd44b73f1d4c37cc9291421391b1eb263848b1ff817a8b1e",
+            "sign": "76f637e662b05379690a8313aa098fdb27aa9b16dcc08366fae8a6028fbb4d80"
+          },
+          "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "33a2264dd29618783d77a075288aec90801bd9e0d6ef5bfd0d9cc579a3d42bb",
+            "sign": "cabf1a4cf51b8efdf5ca7c25b017f3e6404bc7b7fa9c60b0948f0cd6d2fc071c"
+          },
+          "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "1b7cf8a8d0a709600c5183799108f11c58a9dc30f83f01246df190d71420bb95",
+            "sign": "0c3f70f51e43234c629f99649d4596044541bb01a22981700098c2d339db8619"
+          }
+        }
+      },
+      "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+        "id": "",
+        "share_or_sign": {
+          "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "6f2c8b964455cc1b286d050a557ee33f972ad17cae86405c70ec4cbe261fe15",
+            "sign": "ba2d0550d4cdf10ad555891aaa6b1bf47c51242f706e62aea4df657cde8ee002"
+          },
+          "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "c4ad237dcaaa7d7a38a0e2ff99c0cd88181be173be90a542cba34d91911c153",
+            "sign": "02fbef8a5d56704f159b0159d05fe439bb31be551a754176be612b0a83900b17"
+          },
+          "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "1763168e2de7fafa29b1864058374fbe5cf3bf48e0cfe2050cf30b074ff83a33",
+            "sign": "f858479d2f6a0c2b1bf469476ac4edda70bbbb5486c7734558f4fbcafadb651b"
+          },
+          "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "2115c962abbc8adf6e3d01455ef5b008d3e553ff8248d65025bd8507b859719b",
+            "sign": "5110db3a4bb086c7b9e6c0c46d1b0691e39909f59d5a877cedd072d86f8b3781"
+          }
+        }
+      },
+      "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+        "id": "",
+        "share_or_sign": {
+          "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "1529b51aa314a094f8461964b224d71dd193706fca6f336b73667fa1ab4c47c5",
+            "sign": "e89a2a3b85ff82d66c7a20d2677803f0424df4816cf33c5fa6d091238f49fe1a"
+          },
+          "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "4aa19308fb17503e5f31b5d201096812945b4361413d9dbcf7267671974fe6d",
+            "sign": "bc84da573f3b84414de93f4d5901315b160aae55a2cba7c02e1234644ffc850d"
+          },
+          "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "251ab0b11026c284881735291f94b926eaeb5ceefb4bc3093c9d73f9f1a3542a",
+            "sign": "63348c985d9b88a61f97972433815cbd9b89042e9c08910f896cbb95f106579e"
+          },
+          "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "c4c85da77d1d5d9df6ed407fd5fe8f4bed583490747a7bd5eac8dc44a80da14",
+            "sign": "0b502bd63808aebd0067d2eb922c036e304e607a1b0220c318afbe2ced3ab691"
+          }
+        }
+      },
+      "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+        "id": "",
+        "share_or_sign": {
+          "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "16f04432151ce1cb10ce12851b0ea8bc58b83520594921b66072d3ffdd23c783",
+            "sign": "c6d17a627f3ac307c141d68b22ef703dc2be7042df443e2c9ecf7c44ec072b8c"
+          },
+          "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "9bc323810179a1d56e393c21055525f0310f02c565c81793f2623e3d5326e4",
+            "sign": "5e964c685f8dbc48866bc4846e17ea114667a1ab3569c6f75d62a175d9b89f0f"
+          },
+          "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "129de89b612cae076394d7a886ac903ac8d4ce60fd7088b521c9e1ec8aee2f3d",
+            "sign": "033c721c06d96c095793d1bcbea64b4e84213f8b7507a3536ba33b81edc59f0c"
+          },
+          "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+            "id": "",
+            "message": "0chain is AWESOME!!!",
+            "share": "14f75a1e3183914d4227cc4c4a3e17d68055c33b34a0f4959aeee60c826d69ca",
+            "sign": "73b0a9ae5984eb57ff933c8261b9b7ce8a1a993e21b1c8e49871a45eaaf7da03"
+          }
+        }
+      }
+    }
+  },
+  "mpks": {
+    "Mpks": {
+      "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d": {
+        "ID": "0045b7774b14fd3ed0cca861c927680b4a770900f35b293a4bf32e4fccff5a6d",
+        "Mpk": [
+          "a877fc5b009c66a2084ea170c935175506cfb7ab9d3f0bebb649ef824185e60756f72d2cfd1642e7f2d25bedfed6cf8406efd151d54bfdecea931a8efc59bb8c",
+          "752762e901efa35424a6535fea9520ebe1905b952ccf197a0c79f17cb60814191e32fded608d29e2625cee8afd1631a576bea3d221f90ea0eb29f631d99dc482",
+          "1f790364089c6f2f4a6158f90aeb9d353c53f66f3d05e4554b5a251c56fca80d0b123f0056dfd6b1ff54c5853d60dd3882ecf8ab6a2096743f20d5b2482f5484"
+        ]
+      },
+      "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d": {
+        "ID": "4155d4fd4d0172ec44cb87fa58712c4b220bf24de8953a4de26c067d65850c9d",
+        "Mpk": [
+          "3b3bbdf7b1baa02ea422c2a07caf4555a0ad538bc06448de0ffa2075bb1bcc01d0b0a696634dd300bc174815cacc87bee34a6067b7214a4c98f2c0c0eef5f905",
+          "d1abd41caaf033fc65ffd482b713f500ab8d9a9d4eb1823532621aaff19f2718c0e1cc2de57ddb5a8dd2ae31b0bb34398a095809b90eeeb39a64f760a3b24b80",
+          "ebceb394221da8a72586901880d4e5786ae861f61e232a3e4042f56c73c10e04ec0460cabe8b0cabfa4347108043b541ea34e76b3c68024496a946fddefb009c"
+        ]
+      },
+      "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb": {
+        "ID": "de6b11d94da372f7fca80292ac5274d639d74f91c1214af08a1b385ead58bdbb",
+        "Mpk": [
+          "5e1c8a1c4ad3334a14f4ebf9599d98ac45b3bf408e1c14a9cd1f5949d5a9d320b9a821ec4c9891c4968517111ce9206deb34b32dc12a16473b023cb2b89b3306",
+          "497203d27f3377367cc308f524ab79aa0c0973496c9fdef6ee8e466ba4c18e1c125bf9935f94db58f5f60cacc5e26bf9021343f6e16d5f5f517a5e67c01acb0f",
+          "ff1e2203e6e3be07dbf31616b779f6d793a7baf657c4b88b4f4870e93a85d815b2f250681cdebc46e8a189cacfc650000774ed3fcec5f6ac9bbf01825792699a"
+        ]
+      },
+      "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847": {
+        "ID": "cde43e6e46eda927cb6849395645e5611477819c7905dfef9140d100d629d847",
+        "Mpk": [
+          "3e6f57891265249f512266d12a38eaf95e1d4f581442f4542f8438446c6b1603afce63dfcc681f6cbef68a4ac3f2a5444c181055fb9753af09ab69d05676a621",
+          "be9b9b719275a64375feeb8137e995e1c4297d2da67ef4485102003792f1f52212d3ede97d38a391df3670b8cfbaa6ce18c2d94208a1478584117a8aff9beb90",
+          "8271385f06c2800351a7df1677ace7b5b12dd40cb5e13e2cf6a197d1b5bc4a0633b81440b6dea8d5f6edc6289d883776f9bc4110551d3873bfb763614c8004a0"
+        ]
+      }
+    }
+  },
+  "t": 3,
+  "n": 4
+}

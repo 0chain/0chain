@@ -1,0 +1,46 @@
+---
+miners:
+- id: 73ad5727612116c025bb4405bf3adb4a4a04867ae508c51cf885395bffc8a949
+  public_key: 257acfae61512fb1f4a886b0dbe949dc94497132448d1674f37f912c00e3ba1c6d4555ac58b44d4f8fe7228fb55c1f888ae3aa7901068eefd022613f05999415
+  private_key: 80cddf5b463584ed74d3208a3787592e06830ec7130de1df2362167d93563c1b
+  n2n_ip: dev-x.devnet-0chain.net
+  public_ip: dev-x.devnet-0chain.net
+  port: 31201
+  path: miner01
+  description: localhost.m01
+  set_index: 0
+- id: 3ec9a42db3355f33c35750ce589ed717c08787997b7f34a7f1f9fb0a03f2b17c
+  public_key: 026f5e3a4a4c08377af76ca72fe0804a03c5437417aea5a6ab2f3d0a0a0ad3150f01c2e68760f9d5a016f9b89fa182157b134d87d1edfa31b462fcfec0d8a81a
+  private_key: 068fb74af61a64b1579c45f1a92d47d54195bfa8dc707463d2106c11b18c7612
+  n2n_ip: dev-x.devnet-0chain.net
+  public_ip: dev-x.devnet-0chain.net
+  port: 31202
+  path: miner02
+  description: localhost.m02
+  set_index: 1
+- id: c6f4b8ce5da386b278ba8c4e6cf98b24b32d15bc675b4d12c95e082079c91937
+  public_key: b5b91306a507aa0605be7a42cfc8a3a80e7747a95a9c5fe152836f6ae61666150a2d3f72fbf5368bd088740ae579eece77b798d79c00edc4ad63cdf3095b3424
+  private_key: a61610b8f9286e334054835eda1d240256a48e93d64aee48cdf1a9a4b2f74d19
+  n2n_ip: dev-x.devnet-0chain.net
+  public_ip: dev-x.devnet-0chain.net
+  port: 31203
+  path: miner03
+  description: localhost.m03
+  set_index: 2
+sharders:
+- id: ea26431f8adb7061766f1d6bbcc3b292d70dd59960d857f04b8a75e6a5bbe04f
+  public_key: 824fb17dd958235a06f4c670b6254a9223ae18dcd2962d088c7054819e9d0f164ac1aa2ad4223a8a42529b7ce9ccb32017771aabdf7aaca2031590fc33882601
+  n2n_ip: dev-x.devnet-0chain.net
+  public_ip: dev-x.devnet-0chain.net
+  port: 31101
+  path: sharder01
+  description: localhost.s01
+- id: 30001a01a888584772b7fee13934021ab8557e0ed471c0a3a454e9164180aef1
+  public_key: d0937ef1e7fc2a13524a79bc57d17f94b06bc534b6c3bfa057bd27c2af4db70724ed790e97bc2834b101c96fbefbdc8d6c7effe4b374614813f638f9f8b7f784
+  n2n_ip: dev-x.devnet-0chain.net
+  public_ip: dev-x.devnet-0chain.net
+  port: 31102
+  path: sharder02
+  description: localhost.s02
+
+---
