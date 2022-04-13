@@ -29,7 +29,6 @@ import (
 )
 
 const blobberChallengeAllocationPartitionSize = 100
-const passedBlobbersPartitionSize = 5
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(
 	blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge,
