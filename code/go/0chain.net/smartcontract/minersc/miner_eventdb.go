@@ -129,7 +129,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"min_stake":           mn.Settings.MinStake,
 			"max_stake":           mn.Settings.MaxStake,
 			"last_health_check":   mn.LastHealthCheck,
-			"fees":                mn.SimpleNode.Stat.GeneratorFees,
 			"longitude":           mn.SimpleNode.Geolocation.Longitude,
 			"latitude":            mn.SimpleNode.Geolocation.Latitude,
 			"rewards":             mn.Reward,
