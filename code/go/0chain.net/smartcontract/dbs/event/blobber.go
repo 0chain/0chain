@@ -168,7 +168,6 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string,
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration < ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - used < ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("base_url in ?", allocation.PreferredBlobbers)
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("base_url").Find(&blobberIDs).Error
 }
