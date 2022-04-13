@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	cstate "0chain.net/chaincore/chain/state"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/encryption"
@@ -32,77 +34,10 @@ func zcnToBalance(token float64) state.Balance {
 
 type mockStateContext struct {
 	*mocks.StateContextI
-	userNodes   map[string]*UserNode
-	authorizers map[string]*Authorizer
-	globalNode  *GlobalNode
-}
-
-func (m *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	if strings.Contains(key, UserNodeType) {
-		n, ok := m.userNodes[key]
-		if !ok {
-			return util.ErrValueNotPresent
-		}
-
-		b, err := n.MarshalMsg(nil)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = v.UnmarshalMsg(b)
-		if err != nil {
-			panic(err)
-		}
-
-		return nil
-	}
-
-	if strings.Contains(key, AuthorizerNodeType) {
-		authorizer, ok := m.authorizers[key]
-		if !ok {
-			return util.ErrValueNotPresent
-		}
-
-		b, err := authorizer.Node.MarshalMsg(nil)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = v.UnmarshalMsg(b)
-		if err != nil {
-			panic(err)
-		}
-
-		return nil
-	}
-
-	if strings.Contains(key, AuthorizerNewNodeType) {
-		b, err := createTestAuthorizer(m, key).Node.MarshalMsg(nil)
-		if err != nil {
-			panic(err)
-		}
-
-		if _, err := v.UnmarshalMsg(b); err != nil {
-			panic(err)
-		}
-
-		return nil
-	}
-
-	if strings.Contains(key, GlobalNodeType) {
-		b, err := m.globalNode.MarshalMsg(nil)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = v.UnmarshalMsg(b)
-		if err != nil {
-			panic(err)
-		}
-		return nil
-	}
-
-	return util.ErrValueNotPresent
+	userNodes    map[string]*UserNode
+	authorizers  map[string]*Authorizer
+	globalNode   *GlobalNode
+	stakingPools map[string]*StakePool
 }
 
 func MakeMockStateContext() *mockStateContext {
@@ -130,11 +65,13 @@ func MakeMockStateContext() *mockStateContext {
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 
-	// AuthorizerNodes
+	// AuthorizerNodes & StakePools
 
 	ctx.authorizers = make(map[string]*Authorizer, len(authorizersID))
+	ctx.stakingPools = make(map[string]*StakePool, len(authorizersID))
 	for _, id := range authorizersID {
 		createTestAuthorizer(ctx, id)
+		createTestStakingPools(ctx, id)
 	}
 
 	// Transfers
@@ -146,13 +83,11 @@ func MakeMockStateContext() *mockStateContext {
 
 	/// GetClientBalance
 
-	ctx.
-		On("GetClientBalance", mock.AnythingOfType("string")).Return(5, nil)
+	ctx.On("GetClientBalance", mock.AnythingOfType("string")).Return(5, nil)
 
 	/// AddTransfer
 
-	ctx.
-		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
+	ctx.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {
 			transfers = append(transfers, transfer)
 			return nil
@@ -211,9 +146,8 @@ func MakeMockStateContext() *mockStateContext {
 			return nil
 		})
 
-	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"),
-			mock.AnythingOfType("*zcnsc.UserNode")).Return(
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"),
+		mock.AnythingOfType("*zcnsc.UserNode")).Return(
 		func(key datastore.Key, node util.MPTSerializable) datastore.Key {
 			n := node.(*UserNode)
 			ctx.userNodes[key] = n
@@ -275,8 +209,7 @@ func MakeMockStateContext() *mockStateContext {
 			events[id] = authorizerNode
 		})
 
-	ctx.On(
-		"EmitEvent",
+	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagUpdateAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
@@ -296,13 +229,21 @@ func MakeMockStateContext() *mockStateContext {
 	return ctx
 }
 
+func createTestStakingPools(ctx *mockStateContext, delegateID string) *StakePool {
+	sp := NewStakePool()
+	sp.Minter = cstate.MinterStorage
+	sp.Settings.DelegateWallet = delegateID
+
+	ctx.stakingPools[sp.GetKey()] = sp
+
+	return sp
+}
+
 func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 
 	node := NewAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
-	tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
-	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 
 	ctx.authorizers[node.GetKey()] = &Authorizer{
 		Scheme: scheme,
@@ -310,4 +251,130 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 	}
 
 	return ctx.authorizers[node.GetKey()]
+}
+
+func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSerializable) error {
+	if strings.Contains(key, UserNodeType) {
+		n, ok := ctx.userNodes[key]
+		if !ok {
+			return util.ErrValueNotPresent
+		}
+
+		b, err := n.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+
+		return nil
+	}
+
+	if strings.Contains(key, AuthorizerNodeType) {
+		authorizer, ok := ctx.authorizers[key]
+		if !ok {
+			return util.ErrValueNotPresent
+		}
+
+		b, err := authorizer.Node.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+
+		return nil
+	}
+
+	if strings.Contains(key, AuthorizerNewNodeType) {
+		b, err := createTestAuthorizer(ctx, key).Node.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		if _, err := node.UnmarshalMsg(b); err != nil {
+			panic(err)
+		}
+
+		return nil
+	}
+
+	if strings.Contains(key, GlobalNodeType) {
+		b, err := ctx.globalNode.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+		return nil
+	}
+
+	if strings.Contains(key, StakePoolNodeType) {
+		n, ok := ctx.stakingPools[key]
+		if !ok {
+			return util.ErrValueNotPresent
+		}
+
+		b, err := n.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+
+		return nil
+	}
+
+	return util.ErrValueNotPresent
+}
+
+func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
+	if strings.Contains(key, UserNodeType) {
+		if userNode, ok := node.(*UserNode); ok {
+			ctx.userNodes[key] = userNode
+			return key, nil
+		}
+
+		return key, fmt.Errorf("failed to convert key: %s to UserNode: %v", key, node)
+	}
+
+	if strings.Contains(key, AuthorizerNodeType) {
+		if authorizer, ok := node.(*AuthorizerNode); ok {
+			ctx.authorizers[key] = &Authorizer{
+				Scheme: nil,
+				Node:   authorizer,
+			}
+			return key, nil
+		}
+
+		return key, fmt.Errorf("failed to convert key: %s to AuthorizerNode: %v", key, node)
+	}
+
+	if strings.Contains(key, GlobalNodeType) {
+		ctx.globalNode = node.(*GlobalNode)
+		return key, nil
+	}
+
+	if strings.Contains(key, StakePoolNodeType) {
+		if stakePool, ok := node.(*StakePool); ok {
+			ctx.stakingPools[key] = stakePool
+			return key, nil
+		}
+
+		return key, fmt.Errorf("failed to convert key: %s to StakePool: %v", key, node)
+	}
+
+	return "", fmt.Errorf("node with key: %s is not supported", key)
 }

@@ -90,12 +90,11 @@ echo "
     echo " "
     echo "Please select what are you working on: "
 
-    select f in "install cassandra" "install postgres" "start sharder" "clean sharder"; do
+    select f in "install [postgres,cassandra]" "start sharder" "clean sharder"; do
         case $f in
-            "install cassandra"     )   cd $root && ./cli.sharder.cassandra.sh $i;    ;;
-            "install postgres"      )   cd $root && ./cli.sharder.postgres.sh $i;     ;;
-            "start sharder"         )   cd $root && start_sharder;                    ;;
-            "clean sharder"         )   cd $root && clean_sharder                     ;;
+            "install [postgres,cassandra]"     )   cd $root && ./cli.sharder.db.sh $i;           ;;
+            "start sharder"                    )   cd $root && start_sharder;                    ;;
+            "clean sharder"                    )   cd $root && clean_sharder                     ;;
         esac
     done
 }
@@ -134,11 +133,12 @@ echo "
     echo " "
     echo "Please select which miner are you working on: "
 
-     select i in "1" "2" "3";  do
+     select i in "1" "2" "3" "4";  do
         case $i in
             "1"     )   setup_miner_runtime; start_miner_cli;     break;;
             "2"     )   setup_miner_runtime; start_miner_cli;     break;;
             "3"     )   setup_miner_runtime; start_miner_cli;     break;;
+            "4"     )   setup_miner_runtime; start_miner_cli;     break;;
         esac
     done
 
