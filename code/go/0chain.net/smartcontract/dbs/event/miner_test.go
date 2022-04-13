@@ -1,23 +1,27 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
 func init() {
 	logging.Logger = zap.NewNop()
 }
-
 
 func TestMiners(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
