@@ -223,40 +223,14 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 	target := &AuthorizerNode{}
 	err := target.Decode(source.Encode())
 	require.NoError(t, err)
-	require.NotNil(t, target.Staking)
 	require.Equal(t, state.Balance(222), target.Config.Fee)
-}
-
-func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
-	// Create authorizer node
-	tr := CreateDefaultTransactionToZcnsc()
-	node := NewAuthorizer(tr.ClientID, tr.PublicKey, "https://localhost:9876")
-	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
-	node.Staking.ID = "11"
-
-	// Deserialize it into new instance
-	target := &AuthorizerNode{}
-
-	err := target.Decode(node.Encode())
-	require.NoError(t, err)
-	require.Equal(t, target.Staking.ID, "11")
-	require.Equal(t, int64(target.Staking.Balance), tr.Value)
 }
 
 func Test_AuthorizerNodeSerialization(t *testing.T) {
 	source := &AuthorizerNode{
 		ID:        "aaa",
 		PublicKey: "bbb",
-		Staking: &tokenpool.ZcnLockingPool{
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      "ccc",
-					Balance: 111,
-				},
-			},
-			TokenLockInterface: nil,
-		},
-		URL: "ddd",
+		URL:       "ddd",
 		Config: &AuthorizerConfig{
 			Fee: 222,
 		},
