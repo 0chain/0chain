@@ -532,9 +532,9 @@ func AddMockValidators(
 		panic(err)
 	}
 
-	var validatorNodes []*ValidationNode
-	var validatorPartitionNodes []ValidationPartitionNode
-	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
+	nv := viper.GetInt(sc.NumValidators)
+	validatorNodes := make([]*ValidationNode, 0, nv)
+	for i := 0; i < nv; i++ {
 		id := getMockValidatorId(i)
 		validator := &ValidationNode{
 			ID:                id,
@@ -564,7 +564,6 @@ func AddMockValidators(
 			_ = eventDb.Store.Get().Create(&validators)
 		}
 
-		validatorPartitionNodes = append(validatorPartitionNodes, vpn)
 		if _, err := valParts.AddItem(balances, &vpn); err != nil {
 			panic(err)
 		}
