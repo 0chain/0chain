@@ -76,7 +76,10 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContract.RestHandlers["/readmarkers"] = ssc.GetReadMarkersHandler
 	ssc.SmartContract.RestHandlers["/count_readmarkers"] = ssc.GetReadMarkersCount
+	ssc.SmartContract.RestHandlers["/get_read_size"] = ssc.GetReadDataSizeForAllocationHandler
 	ssc.SmartContract.RestHandlers["/getWriteMarkers"] = ssc.GetWriteMarkersHandler
+	ssc.SmartContract.RestHandlers["/count_writemarkers"] = ssc.GetWriteMarkersCount
+	ssc.SmartContract.RestHandlers["/get_written_size"] = ssc.GetWrittenDataSizeForAllocationHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
 	ssc.SmartContractExecutionStats["commit_connection"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "commit_connection"), nil)
 	// allocation

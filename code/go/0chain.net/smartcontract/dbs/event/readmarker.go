@@ -65,6 +65,11 @@ func (edb EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, er
 	return
 }
 
+func (edb *EventDb) GetReadDataSizeForAllocation(allocationID string, blockNumber int) (int64, error) {
+	var total int64
+	return total, edb.Get().Model(&ReadMarker{}).Select("sum(read_size) as total").Where("allocation_id = ? AND block_number > ?", allocationID, blockNumber).Scan(&total).Error
+}
+
 func (edb *EventDb) overwriteReadMarker(rm ReadMarker) error {
 	result := edb.Store.Get().
 		Model(&ReadMarker{}).

@@ -634,6 +634,29 @@ func (ssc *StorageSmartContract) GetReadMarkersCount(ctx context.Context,
 
 }
 
+func (ssc *StorageSmartContract) GetReadDataSizeForAllocationHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
+	var (
+		allocationID   = params.Get("allocation_id")
+		blockNumber, _ = strconv.Atoi(params.Get("block_number"))
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrBadRequest("allocation id is empty")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	sizeOfWrittenData, err := balances.GetEventDB().GetReadDataSizeForAllocation(allocationID, blockNumber)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get read_size from markers", err.Error())
+	}
+
+	return sizeOfWrittenData, nil
+}
+
 func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
@@ -657,6 +680,55 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 
 	return writeMarkers, nil
 
+}
+
+func (ssc *StorageSmartContract) GetWriteMarkersCount(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrBadRequest("Expecting params: allocation_id")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	count, err := balances.GetEventDB().CountWriteMarkers(allocationID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't count write markers", err.Error())
+	}
+
+	return struct {
+		ReadMarkersCount int64 `json:"write_markers_count"`
+	}{
+		ReadMarkersCount: count,
+	}, nil
+}
+
+func (ssc *StorageSmartContract) GetWrittenDataSizeForAllocationHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
+	var (
+		allocationID   = params.Get("allocation_id")
+		blockNumber, _ = strconv.Atoi(params.Get("block_number"))
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrBadRequest("allocation id is empty")
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+
+	sizeOfWrittenData, err := balances.GetEventDB().GetWrittenDataSizeForAllocation(allocationID, blockNumber)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get size form write markers", err.Error())
+	}
+
+	return sizeOfWrittenData, nil
 }
 
 func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,

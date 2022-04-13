@@ -49,6 +49,16 @@ func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]Wri
 	}).Scan(&wm).Error
 }
 
+func (edb EventDb) CountWriteMarkers(allocationID string) (int64, error) {
+	var count int64
+	return count, edb.Get().Model(&WriteMarker{}).Where(&WriteMarker{AllocationID: allocationID}).Count(&count).Error
+}
+
+func (edb *EventDb) GetWrittenDataSizeForAllocation(allocationID string, blockNumber int) (int64, error) {
+	var total int64
+	return total, edb.Get().Model(&WriteMarker{}).Select("sum(size) as total").Where("allocation_id = ? AND block_number > ?", allocationID, blockNumber).Scan(&total).Error
+}
+
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
