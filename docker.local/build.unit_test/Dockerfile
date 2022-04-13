@@ -9,7 +9,7 @@ COPY ./code/go/0chain.net/go.sum $SRC_DIR/go/0chain.net/
 
 RUN cd $SRC_DIR/go/0chain.net && go mod download -x
 
-RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.14.* && \
+RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd*.* && \
     chmod -R +w . && \
     make clean libzstd.a
 
