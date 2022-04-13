@@ -250,7 +250,7 @@ func TestAllocations(t *testing.T) {
 	}
 	defer eventDb.Close()
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
