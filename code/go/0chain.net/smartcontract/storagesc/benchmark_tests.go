@@ -209,7 +209,7 @@ func BenchmarkTests(
 					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
 					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
-					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
+					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes
@@ -222,7 +222,7 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				CreationDate: common.Timestamp((time.Hour * 1000).Seconds()) + now,
+				CreationDate: common.Timestamp((time.Hour * 1000).Seconds()) + now + 5*year,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -520,7 +520,7 @@ func BenchmarkTests(
 				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*10,
+				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*100,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
@@ -559,11 +559,11 @@ func BenchmarkTests(
 				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*10,
+				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*1000,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: getMockWritePoolId(0, 0, 0),
+					PoolID: getMockWritePoolId(viper.GetInt(bk.NumAllocations)-1, 0, 0),
 				})
 				return bytes
 			}(),
@@ -640,23 +640,26 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				var validationTickets []*ValidationTicket
-				vt := &ValidationTicket{
-					ChallengeID:  getMockChallengeId(0, 0),
-					BlobberID:    getMockBlobberId(0),
-					ValidatorID:  getMockValidatorId(0),
-					ValidatorKey: data.PublicKeys[0],
-					Result:       true,
-					Message:      "mock message",
-					MessageCode:  "mock message code",
-					Timestamp:    now,
-					Signature:    "",
+				const numberOfValidators = 4
+				for i := 0; i < numberOfValidators; i++ {
+					vt := &ValidationTicket{
+						ChallengeID:  getMockChallengeId(0, 0),
+						BlobberID:    getMockBlobberId(0),
+						ValidatorID:  getMockValidatorId(i),
+						ValidatorKey: data.PublicKeys[0],
+						Result:       true,
+						Message:      "mock message",
+						MessageCode:  "mock message code",
+						Timestamp:    now,
+						Signature:    "",
+					}
+					hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
+						vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
+					_ = sigScheme.SetPublicKey(data.PublicKeys[0])
+					sigScheme.SetPrivateKey(data.PrivateKeys[0])
+					vt.Signature, _ = sigScheme.Sign(hash)
+					validationTickets = append(validationTickets, vt)
 				}
-				validationTickets = append(validationTickets, vt)
-				hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
-					vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
-				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				vt.Signature, _ = sigScheme.Sign(hash)
 				bytes, _ := json.Marshal(&ChallengeResponse{
 					ID:                getMockChallengeId(0, 0),
 					ValidationTickets: validationTickets,

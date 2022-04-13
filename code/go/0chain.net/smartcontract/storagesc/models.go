@@ -782,7 +782,12 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 ) error {
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
-
+	a := common.ToTime(sa.Expiration)
+	a = a
+	b := common.ToTime(now)
+	b = b
+	c := time.Unix(int64(60), 0)
+	c = c
 	// filter by max offer duration
 	if blobber.Terms.MaxOfferDuration < duration {
 		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
@@ -925,7 +930,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
-	if sa.validateAllocationBlobber(addedBlobber, sp, now) != nil {
+	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
 		return nil, err
 	}
 
