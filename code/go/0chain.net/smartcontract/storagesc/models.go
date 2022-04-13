@@ -782,12 +782,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 ) error {
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
-	a := common.ToTime(sa.Expiration)
-	a = a
-	b := common.ToTime(now)
-	b = b
-	c := time.Unix(int64(60), 0)
-	c = c
+
 	// filter by max offer duration
 	if blobber.Terms.MaxOfferDuration < duration {
 		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
