@@ -1,0 +1,31 @@
+version: '3'
+services:
+  redis:
+    container_name: "redis_${MINER}"
+    image: "redis:alpine"
+    volumes:
+      - ./data/miner${MINER}/config:/0chain/config
+      - ./data/miner${MINER}/data:/0chain/data
+    network_mode: bridge
+    ports:
+      - "63${MINER}0:6379"
+    sysctls:
+      net.core.somaxconn: '511'
+    command: redis-server /0chain/config/redis/state.redis.conf
+
+  redis_txns:
+    container_name: "redis_txns_${MINER}"
+    image: "redis:alpine"
+    volumes:
+      - ./data/miner${MINER}/config:/0chain/config
+      - ./data/miner${MINER}/data:/0chain/data
+    network_mode: bridge
+    ports:
+      - "63${MINER}1:6379"
+    sysctls:
+      net.core.somaxconn: '511'
+    command: redis-server /0chain/config/redis/transactions.redis.conf
+
+volumes:
+  data:
+  config:
