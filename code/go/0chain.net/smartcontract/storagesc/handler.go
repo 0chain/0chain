@@ -226,10 +226,6 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	var creationDate = common.Timestamp(time.Now().Unix())
 
 	allocData := params.Get("allocation_data")
-	maxChallengeTime, err := time.ParseDuration(params.Get("max_challenge_time"))
-	if err != nil {
-		return nil, common.NewErrBadRequest("max challenge time invalid")
-	}
 	var request newAllocationRequest
 	if err := request.decode([]byte(allocData)); err != nil {
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
@@ -244,7 +240,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	var allocationSize = (sa.Size + int64(numberOfBlobbers-1)) / int64(numberOfBlobbers)
 	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
-		MaxChallengeCompletionTime: maxChallengeTime,
+		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
 		MaxOfferDuration:           dur,
 		ReadPriceRange: struct {
 			Min int64
