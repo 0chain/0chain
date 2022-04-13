@@ -84,27 +84,18 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 		offsetString = params.Get("offset")
 		limitString  = params.Get("limit")
 		activeString = params.Get("active")
-		offset       = 0
-		limit        = 0
-		err          error
 	)
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return nil, common.NewErrBadRequest("offset parameter is not valid")
-		}
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		return nil, err
 	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return nil, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
+
 	filter := event.MinerQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return nil, common.NewErrBadRequest("active paramter is not valid")
+			return nil, common.NewErrBadRequest("active parameter is not valid")
 		}
 		filter.Active = null.BoolFrom(active)
 	}
@@ -124,6 +115,40 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 	return map[string]interface{}{
 		"Nodes": minersArr,
 	}, nil
+}
+
+// GetMinerGeolocationsHandler returns a list of all miners latitude and longitude
+func (msc *MinerSmartContract) GetMinerGeolocationsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get miners. no db connection")
+	}
+
+	var (
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		activeString = params.Get("active")
+	)
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := event.MinerQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
+		if err != nil {
+			return nil, common.NewErrBadRequest("active parameter is not valid")
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+
+	geolocations, err := balances.GetEventDB().GetMinerGeolocations(filter, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return geolocations, nil
 }
 
 func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -173,22 +198,13 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 		offsetString = params.Get("offset")
 		limitString  = params.Get("limit")
 		activeString = params.Get("active")
-		offset       = 0
-		limit        = 0
-		err          error
 	)
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return nil, common.NewErrBadRequest("offset parameter is not valid")
-		}
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		return nil, err
 	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return nil, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
+
 	filter := event.SharderQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
@@ -213,6 +229,40 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 	return map[string]interface{}{
 		"Nodes": shardersArr,
 	}, nil
+}
+
+// GetSharderGeolocationsHandler returns a list of all sharders latitude and longitude
+func (msc *MinerSmartContract) GetSharderGeolocationsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("can't get sharders. no db connection")
+	}
+
+	var (
+		offsetString = params.Get("offset")
+		limitString  = params.Get("limit")
+		activeString = params.Get("active")
+	)
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := event.SharderQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
+		if err != nil {
+			return nil, common.NewErrBadRequest("active parameter is not valid")
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+
+	geolocations, err := balances.GetEventDB().GetSharderGeolocations(filter, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return geolocations, nil
 }
 
 func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -435,4 +485,21 @@ func (msc *MinerSmartContract) configHandler(
 		return nil, common.NewErrInternal(err.Error())
 	}
 	return gn.getConfigMap()
+}
+
+func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
+	if offsetString != "" {
+		offset, err = strconv.Atoi(offsetString)
+		if err != nil {
+			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err = strconv.Atoi(limitString)
+		if err != nil {
+			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
+		}
+	}
+
+	return
 }

@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -39,14 +40,15 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	type args struct {
-		alloc                  *StorageAllocation
-		validators             partitions.RandPartition
-		challengeID            string
-		creationDate           common.Timestamp
-		r                      *rand.Rand
-		challengeSeed          int64
-		validatorsPerChallenge int
-		balances               cstate.StateContextI
+		alloc               *StorageAllocation
+		storageChallenge    *StorageChallenge
+		blobberChallengeObj *BlobberChallenge
+		allocChallengeObj   *AllocationChallenge
+		blobberAllocation   *BlobberAllocation
+		validators          partitions.RandPartition
+		r                   *rand.Rand
+		blobberID           string
+		balances            cstate.StateContextI
 	}
 
 	type want struct {
@@ -55,8 +57,20 @@ func TestAddChallenge(t *testing.T) {
 		errorMsg   string
 	}
 
-	parametersToArgs := func(p parameters) args {
-		var blobbers = []*StorageNode{}
+	parametersToArgs := func(p parameters, ssc *StorageSmartContract) args {
+
+		blobberChallenge := partitions.NewRandomSelector(
+			ALL_BLOBBERS_CHALLENGE_KEY,
+			allBlobbersChallengePartitionSize,
+			nil,
+			partitions.ItemBlobberChallenge,
+		)
+
+		balances := &mockStateContext{
+			store: make(map[datastore.Key]util.MPTSerializable),
+		}
+
+		var blobbers []*StorageNode
 		var blobberMap = make(map[string]*BlobberAllocation)
 		for i := 0; i < p.numBlobbers; i++ {
 			var sn = StorageNode{
@@ -67,16 +81,21 @@ func TestAddChallenge(t *testing.T) {
 				AllocationRoot: "root " + sn.ID,
 				Stats:          &StorageAllocationStats{},
 			}
+
+			_, err := blobberChallenge.Add(
+				&partitions.BlobberChallengeNode{
+					BlobberID: sn.ID,
+				}, balances)
+			require.NoError(t, err)
 		}
+
 		validators := partitions.NewRandomSelector(
 			ALL_VALIDATORS_KEY,
 			allValidatorsPartitionSize,
 			nil,
 			partitions.ItemValidator,
 		)
-		balances := &mockStateContext{
-			store: make(map[datastore.Key]util.MPTSerializable),
-		}
+
 		for i := 0; i < p.numValidators; i++ {
 			_, err := validators.Add(
 				&partitions.ValidationNode{
@@ -86,15 +105,62 @@ func TestAddChallenge(t *testing.T) {
 			)
 			require.NoError(t, err)
 		}
+
+		var bID string
+		r := rand.New(rand.NewSource(int64(p.randomSeed)))
+		if p.numBlobbers > 0 {
+			bcList, err := blobberChallenge.GetRandomSlice(r, balances)
+			require.NoError(t, err)
+			i := rand.Intn(len(bcList))
+			bcItem := bcList[i]
+			bID = bcItem.Name()
+		}
+
+		selectedValidators := make([]*ValidationNode, 0)
+		randSlice, err := validators.GetRandomSlice(r, balances)
+		require.NoError(t, err)
+
+		perm := r.Perm(len(randSlice))
+		for i := 0; i < minInt(len(randSlice), p.validatorsPerChallenge+1); i++ {
+			if randSlice[perm[i]].Name() != bID {
+				selectedValidators = append(selectedValidators,
+					&ValidationNode{
+						ID:      randSlice[perm[i]].Name(),
+						BaseURL: randSlice[perm[i]].Data(),
+					})
+			}
+			if len(selectedValidators) >= p.validatorsPerChallenge {
+				break
+			}
+		}
+
+		allocChall, err := ssc.getAllocationChallenge("", balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			allocChall = new(AllocationChallenge)
+		}
+		var storageChallenge = new(StorageChallenge)
+		storageChallenge.TotalValidators = len(selectedValidators)
+		storageChallenge.BlobberID = bID
+		storageChallenge.Created = creationDate
+
+		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			blobberChall = new(BlobberChallenge)
+		}
+
 		return args{
 			alloc: &StorageAllocation{
-				Blobbers:   blobbers,
 				BlobberMap: blobberMap,
 				Stats:      &StorageAllocationStats{},
 			},
-			validators:             validators,
-			r:                      rand.New(rand.NewSource(int64(p.randomSeed))),
-			validatorsPerChallenge: p.validatorsPerChallenge,
+			allocChallengeObj:   allocChall,
+			storageChallenge:    storageChallenge,
+			blobberAllocation:   blobberMap[bID],
+			blobberChallengeObj: blobberChall,
+			validators:          validators,
+			r:                   r,
+			blobberID:           bID,
+
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.MPTSerializable),
 			},
@@ -107,20 +173,24 @@ func TestAddChallenge(t *testing.T) {
 			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
+
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
+
 		if p.numValidators > p.validatorsPerChallenge {
-			require.EqualValues(t, len(challenge.Validators), p.validatorsPerChallenge)
+			require.EqualValues(t, challenge.TotalValidators, p.validatorsPerChallenge)
+
 		} else {
-			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
+			require.EqualValues(t, challenge.TotalValidators, p.numValidators-1)
 		}
-		require.EqualValues(t, len(want.validators), len(challenge.Validators))
+		require.EqualValues(t, len(want.validators), challenge.TotalValidators)
 	}
 
 	tests := []struct {
-		name       string
-		parameters parameters
-		want       want
+		name string
+
+		parameters
+		want want
 	}{
 		{
 			name: "OK validators > validatorsPerChallenge",
@@ -156,21 +226,26 @@ func TestAddChallenge(t *testing.T) {
 			},
 			want: want{
 				error:    true,
-				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+				errorMsg: "add_challenge: no blobber to add challenge to",
 			},
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			args := parametersToArgs(tt.parameters)
 			var ssc = &StorageSmartContract{
 				SmartContract: sci.NewSC(ADDRESS),
 			}
 
-			resp, err := ssc.addChallenge(args.alloc, args.validators, args.challengeID,
-				args.creationDate, args.r, args.challengeSeed, args.validatorsPerChallenge, args.balances)
+			args := parametersToArgs(tt.parameters, ssc)
+
+			resp, err := ssc.addChallenge(args.alloc,
+				args.storageChallenge,
+				args.blobberChallengeObj,
+				args.allocChallengeObj,
+				args.blobberAllocation,
+				args.balances)
+
 			validate(t, resp, err, tt.parameters, tt.want)
 		})
 	}
