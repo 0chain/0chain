@@ -37,7 +37,7 @@ func TestAddTransaction(t *testing.T) {
 	var count int64
 	eventDb.Get().Table("transactions").Count(&count)
 	require.Equal(t, int64(1), count, "Transaction not getting inserted")
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 }
 
@@ -59,7 +59,7 @@ func TestFindTransactionByHash(t *testing.T) {
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer eventDb.Drop()
 	require.NoError(t, err)
 
 	tr := Transaction{

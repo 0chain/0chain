@@ -17,6 +17,9 @@ func FundMockFaucetSmartContract(pMpt *util.MerklePatriciaTrie) {
 
 func AddMockGlobalNode(balances cstate.StateContextI) {
 	gn := &GlobalNode{
+		FaucetConfig: &FaucetConfig{
+			OwnerId: viper.GetString(benchmark.FaucetOwner),
+		},
 		ID: ADDRESS,
 	}
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
