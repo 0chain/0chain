@@ -73,11 +73,72 @@ https://mumbai.polygonscan.com/address/0xd37F574927f88566Fe9AE8623Fbb5F85a96b2Dd
 | Authorizer | 0xA839639D94655C4a42CBb3070242f0947C80CeFB  |
 | Bridge | 0xd37F574927f88566Fe9AE8623Fbb5F85a96b2DdB  |
 
-Documentation
+API Documentation
 =============
 
-ZCNSC SC converts token from native ZCN network to Ethereum wrapped WZCN token
-and in reverse order converts from wrapped Ethereum WZCN token to native ZCN token
+ZCNSC SC converts token from `native ZCN token` network to `Ethereum wrapped WZCN token`
+and in reverse order converts from `wrapped Ethereum WZCN token` to `native ZCN token`
+
+### List of commands
+
+| Contract | Address                                                         |
+|----------|-----------------------------------------------------------------|
+| bridge-auth-config   | Show authorizer configurations                                  |
+| bridge-auth-config-update | Update ZCNSC authorizer settings by ID                          |
+| bridge-burn-eth | Burn eth tokens                                                 |
+| bridge-burn-zcn | Burn zcn tokens                                                 |
+| bridge-client-init | Init bridge client config (bridge.yaml) in HOME (~/.zcn) folder |
+| bridge-config | Show ZCNBridge configurations                                   |
+| bridge-config-update | Update ZCNSC bridge global settings                             |
+| bridge-get-wzcn-burn | Get confirmed burn ticket for ethereum burn transaction         |
+| bridge-get-zcn-burn | Get the confirmed burn ticket for zcn burn transaction          |
+| bridge-import-account | Import Ethereum account to local key storage (default $HOME/.zcn/wallets) |
+| bridge-list-accounts | List Ethereum account registered in local key chain             |
+| bridge-list-auth | List authorizers                                                |
+| bridge-mint-wzcn | Mint WZCN tokens using the hash of ZCN burn transaction         |
+| bridge-mint-zcn | Mint zcn tokens using the hash of Ethereum burn transaction     |
+| bridge-owner-init | Init bridge owner config (owner.yaml) in HOME (~/.zcn) folder   |
+| bridge-verify | Verify ethereum transaction                                     |
+
+##### bridge-client-init
+
+```text
+Flags:
+--bridge_config string       Bridge config file name (default "bridge.yaml")
+--bridgeaddress string       Bridge contract address
+--consensusthreshold float   Consensus threshold required to reach consensus for burn tickets (default 0.75)
+--ethereumaddress string     Client Ethereum address
+--ethereumnodeurl string     Ethereum Node URL (Infura/Alchemy)
+--gaslimit int               appr. Gas limit to execute Ethereum transaction (default 300000)
+--password string            Password to be used to unlock private key stored in local storage
+--path string                Configuration directory (default "/Users/dima/.zcn")
+--value int                  Value sent along with Ethereum transaction
+--wzcnaddress string         WZCN token address
+
+Global Flags:
+--config string      config file (default is config.yaml)
+--configDir string   configuration directory (default is $HOME/.zcn)
+--network string     network file to overwrite the network details (if required, default is network.yaml)
+--silent             Do not print sdk logs in stderr (prints by default)
+--wallet string      wallet file (default is wallet.json)
+```
+
+##### bridge-import-account
+
+```text
+Flags:
+  -h, --help              help for bridge-import-account
+      --mnemonic string   Ethereum mnemonic
+      --password string   Password to lock and unlock account to sign transaction
+      --path string       Home config directory (default "/Users/dima/.zcn")
+
+Global Flags:
+      --config string      config file (default is config.yaml)
+      --configDir string   configuration directory (default is $HOME/.zcn)
+      --network string     network file to overwrite the network details (if required, default is network.yaml)
+      --silent             Do not print sdk logs in stderr (prints by default)
+      --wallet string      wallet file (default is wallet.json)
+```
 
 # Demo
 
@@ -85,16 +146,33 @@ and in reverse order converts from wrapped Ethereum WZCN token to native ZCN tok
 
 1. Create ethereum wallet account
 ```shell
-./zwallet eth-register-account \
+./zwallet bridge-import-account \
             --mnemonic "coconut moral level thing soldier excess ranch swim balance magnet embrace beef" \
             --password "password"
 ```
 2. List ethereum accounts in key vault
+
 ```shell
-./zwallet eth-list-accounts
+./zwallet bridge-list-accounts
 ```
+
+```text
+Flags:
+  -h, --help          help for bridge-list-accounts
+      --path string   Configuration dir (default "/Users/dima/.zcn")
+
+Global Flags:
+      --config string      config file (default is config.yaml)
+      --configDir string   configuration directory (default is $HOME/.zcn)
+      --network string     network file to overwrite the network details (if required, default is network.yaml)
+      --silent             Do not print sdk logs in stderr (prints by default)
+      --wallet string      wallet file (default is wallet.json)
+```
+
+
 3. Fill ethereum wallet with tokens  
 Must be performed with metamask
+
 4. Create ZCN wallet and fill it with tokens
 ```shell
 for run in {1..10}
@@ -122,7 +200,7 @@ Using this command mint some tokens using hash from previous step
 
 1. Create ethereum wallet account
 ```shell
-./zwallet eth-register-account \
+./zwallet bridge-import-account \
             --mnemonic "coconut moral level thing soldier excess ranch swim balance magnet embrace beef" \
             --password "password"
 ```
