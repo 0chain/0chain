@@ -43,7 +43,7 @@ func (vn *Validator) exists(edb *EventDb) (bool, error) {
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
 	var vn Validator
 
-	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(vn)
+	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(&vn)
 
 	if result.Error != nil {
 		return vn, fmt.Errorf("error retriving Validation node with ID %v; error: %v", validatorID, result.Error)

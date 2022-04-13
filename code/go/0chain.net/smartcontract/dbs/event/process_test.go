@@ -27,7 +27,7 @@ func TestAddEvents(t *testing.T) {
 		return
 	}
 	eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer eventDb.Drop()
 
 	eventDb.AddEvents(context.Background(), []Event{
 		{
