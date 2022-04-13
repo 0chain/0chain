@@ -268,6 +268,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
+	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
 
 	if err = sc.updateBlobber(t, conf, blobber, blobbers, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
