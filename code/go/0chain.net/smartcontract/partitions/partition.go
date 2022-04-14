@@ -3,7 +3,6 @@ package partitions
 import (
 	"errors"
 	"fmt"
-	"runtime/debug"
 
 	"0chain.net/core/common"
 
@@ -122,7 +121,6 @@ func (p *partition) changed() bool {
 
 func (p *partition) itemRange(start, end int) ([]item, error) {
 	if start > end || end > len(p.Items) {
-		debug.PrintStack()
 		return nil, fmt.Errorf("invalid index, start:%v, end:%v, len:%v", start, end, len(p.Items))
 	}
 
