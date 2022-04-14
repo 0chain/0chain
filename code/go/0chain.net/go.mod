@@ -20,7 +20,6 @@ require (
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
-	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -28,11 +27,10 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/selvatico/go-mocket v1.0.7
-	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.4.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.10.1
+	github.com/spf13/viper v1.11.0
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.1
 	github.com/tinylib/msgp v1.1.6
@@ -43,9 +41,7 @@ require (
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
-	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.3.4
