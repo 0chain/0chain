@@ -37,12 +37,6 @@ type Sharder struct {
 	Latitude          float64
 }
 
-type SharderGeolocation struct {
-	SharderID string  `json:"sharder_id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 
 	var sharder Sharder
@@ -214,20 +208,6 @@ func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, offs
 		query = query.Limit(limit)
 	}
 	return sharders, query.Scan(&sharders).Error
-}
-
-func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, offset, limit int) ([]SharderGeolocation, error) {
-	var sharderLocations []SharderGeolocation
-	query := edb.Get().Model(&Sharder{}).Where(&filter)
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-	result := query.Scan(&sharderLocations)
-
-	return sharderLocations, result.Error
 }
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {

@@ -36,12 +36,6 @@ type Miner struct {
 	Latitude          float64
 }
 
-type MinerGeolocation struct {
-	MinerID   string  `json:"miner_id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 func (edb *EventDb) GetMiner(id string) (Miner, error) {
 
 	var miner Miner
@@ -86,20 +80,6 @@ func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, offset,
 		query = query.Limit(limit)
 	}
 	return miners, query.Scan(&miners).Error
-}
-
-func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, offset, limit int) ([]MinerGeolocation, error) {
-	var minerLocations []MinerGeolocation
-	query := edb.Get().Model(&Miner{}).Where(&filter)
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-	result := query.Scan(&minerLocations)
-
-	return minerLocations, result.Error
 }
 
 func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
