@@ -118,7 +118,7 @@ func TestMiners(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -248,7 +248,7 @@ func TestGetMiners(t *testing.T) {
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer eventDb.Drop()
 	assert.NoError(t, err, "error while migrating database")
 	createMiners(t, eventDb, 10)
 
@@ -289,7 +289,7 @@ func TestGetMinerLocations(t *testing.T) {
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	defer func() {
-		err = eventDb.drop()
+		err = eventDb.Drop()
 		assert.NoError(t, err, "error while dropping database")
 	}()
 	assert.NoError(t, err, "error while migrating database")

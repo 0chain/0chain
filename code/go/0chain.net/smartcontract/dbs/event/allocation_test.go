@@ -1,18 +1,19 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
+	"os"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"context"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"os"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -249,7 +250,7 @@ func TestAllocations(t *testing.T) {
 	}
 	defer eventDb.Close()
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)

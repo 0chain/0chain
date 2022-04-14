@@ -41,7 +41,9 @@ require (
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
+	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.3.4
