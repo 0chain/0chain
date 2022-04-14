@@ -6,6 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/smartcontract/zcnsc"
+
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
 	"0chain.net/chaincore/node"
@@ -38,9 +40,9 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 	bk.Vesting:          vestingsc.BenchmarkTests,
 	bk.VestingRest:      vestingsc.BenchmarkRestTests,
 	bk.MultiSig:         multisigsc.BenchmarkTests,
-	//bk.ZCNSCBridge:      zcnsc.BenchmarkTests, todo fix
-	//bk.ZCNSCBridgeRest: zcnsc.BenchmarkRestTests,
-	bk.Control: control.BenchmarkTests,
+	bk.ZCNSCBridge:      zcnsc.BenchmarkTests,
+	bk.ZCNSCBridgeRest:  zcnsc.BenchmarkRestTests,
+	bk.Control:          control.BenchmarkTests,
 }
 
 func init() {

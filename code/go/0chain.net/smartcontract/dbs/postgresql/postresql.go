@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"gorm.io/gorm/logger"
+
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/driver/postgres"
@@ -39,8 +41,7 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 		config.Name,
 		config.Password)),
 		&gorm.Config{
-			//		SkipDefaultTransaction: true,
-			//		PrepareStmt:            true,
+			Logger: logger.Default.LogMode(logger.Silent),
 		})
 	if err != nil {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)

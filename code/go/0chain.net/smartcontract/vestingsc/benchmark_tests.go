@@ -71,7 +71,7 @@ func BenchmarkTests(
 			name:     "vesting.updateConfig",
 			endpoint: vsc.updateConfig,
 			txn: &transaction.Transaction{
-				ClientID:     owner,
+				ClientID:     viper.GetString(bk.VestingPoolOwner),
 				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
 			},
 			input: (&sc.StringMap{
