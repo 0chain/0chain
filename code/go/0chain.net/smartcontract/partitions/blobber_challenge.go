@@ -83,8 +83,14 @@ func (il *blobberChallengeItemList) add(it PartitionItem) error {
 		}
 	}
 
+	bcn, ok := it.(*BlobberChallengeNode)
+	if !ok {
+		return errors.New("not a blobber challenge item")
+	}
+
 	il.Items = append(il.Items, BlobberChallengeNode{
-		BlobberID: it.Name(),
+		BlobberID:    bcn.BlobberID,
+		UsedCapacity: bcn.UsedCapacity,
 	})
 	il.Changed = true
 	return nil
