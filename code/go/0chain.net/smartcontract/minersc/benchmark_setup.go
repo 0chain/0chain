@@ -1,8 +1,9 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"strconv"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
