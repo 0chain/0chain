@@ -1,8 +1,9 @@
 package partitions
 
 import (
-	"0chain.net/core/common"
 	"math/rand"
+
+	"0chain.net/core/common"
 
 	"0chain.net/core/datastore"
 
@@ -42,6 +43,7 @@ type Partition interface {
 	Save(state.StateContextI) error
 	UpdateItem(partIndex int, it PartitionItem, balances state.StateContextI) error
 	GetItem(partIndex int, itemName string, balances state.StateContextI) (PartitionItem, error)
+	Length() int
 }
 
 type RandPartition interface {

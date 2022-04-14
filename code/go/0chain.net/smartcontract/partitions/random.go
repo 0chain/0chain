@@ -419,3 +419,7 @@ func (rs *randomSelector) GetItem(
 
 	return nil, errors.New("item not present")
 }
+
+func (rs *randomSelector) Length() int {
+	return rs.NumPartitions
+}

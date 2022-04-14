@@ -15,7 +15,8 @@ import (
 //------------------------------------------------------------------------------
 
 type BlobberChallengeNode struct {
-	BlobberID string `json:"blobber_id"`
+	BlobberID    string  `json:"blobber_id"`
+	UsedCapacity float64 `json:"used_capacity"`
 }
 
 func (bcn *BlobberChallengeNode) Encode() []byte {
@@ -31,7 +32,7 @@ func (bcn *BlobberChallengeNode) Decode(b []byte) error {
 }
 
 func (bcn *BlobberChallengeNode) Data() string {
-	return ""
+	return string(bcn.Encode())
 }
 
 func (bcn *BlobberChallengeNode) Name() string {

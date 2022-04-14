@@ -9,12 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract/partitions"
-
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -24,7 +18,10 @@ import (
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
-
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -793,14 +790,63 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances c_state.StateContextI,
 ) (*challengeOutput, error) {
 
-	bcPartition, err := blobberChallengeList.GetRandomSlice(challRand, balances)
-	if err != nil {
-		return nil, common.NewError("generate_challenges",
-			"error getting random slice from blobber challenge partition")
+	const maxPartitionSelect = 5
+
+	partitionSelect := minInt(blobberChallengeList.Length(), maxPartitionSelect)
+	if partitionSelect == 0 {
+		return nil, common.NewError("populate_challenge",
+			"blobber challenge is an empty partition")
+	}
+	type bChallResp struct {
+		item  []partitions.PartitionItem
+		index int
+		err   error
+	}
+	bChalls := make(chan bChallResp, partitionSelect)
+	defer close(bChalls)
+
+	for i := 0; i < partitionSelect; i++ {
+		go func(i int) {
+			bcPartition, err := blobberChallengeList.GetRandomSlice(challRand, balances)
+			if err != nil {
+				bChalls <- bChallResp{
+					err: common.NewError("generate_challenges",
+						"error getting random slice from blobber challenge partition"),
+				}
+				return
+			}
+			bChalls <- bChallResp{
+				item:  bcPartition,
+				index: i,
+			}
+		}(i)
 	}
 
-	randomIndex := challRand.Intn(len(bcPartition))
-	bcItem := bcPartition[randomIndex]
+	blobberParts := make([][]partitions.PartitionItem, partitionSelect)
+	for i := 0; i < partitionSelect; i++ {
+		resp := <-bChalls
+		if resp.err != nil {
+			return nil, resp.err
+		}
+		blobberParts[resp.index] = resp.item
+	}
+
+	var bcItem partitions.PartitionItem
+	var maxBlobberUsed float64
+	for i := 0; i < partitionSelect; i++ {
+		var bChallengeData partitions.BlobberChallengeNode
+		randomIndex := challRand.Intn(len(blobberParts[i]))
+		tempItem := blobberParts[i][randomIndex]
+		if err := bChallengeData.Decode([]byte(tempItem.Data())); err != nil {
+			return nil, common.NewError("populate generate challenge",
+				"error decoding blobber challenge node: "+err.Error())
+		} else {
+			if bChallengeData.UsedCapacity > maxBlobberUsed {
+				maxBlobberUsed = bChallengeData.UsedCapacity
+				bcItem = tempItem
+			}
+		}
+	}
 
 	blobberID := bcItem.Name()
 	if blobberID == "" {
@@ -821,7 +867,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition")
 	}
 
-	randomIndex = challRand.Intn(len(bcAllocPartition))
+	randomIndex := challRand.Intn(len(bcAllocPartition))
 	bcAllocItem := bcAllocPartition[randomIndex]
 
 	allocID := bcAllocItem.Name()
@@ -1141,7 +1187,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return "", common.NewError("add_challenge",
 			"error storing allocation: "+err.Error())
 	}
-
 
 	err = emitAddOrOverwriteAllocation(alloc, balances)
 	if err != nil {
