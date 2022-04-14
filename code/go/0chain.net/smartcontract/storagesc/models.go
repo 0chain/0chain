@@ -843,7 +843,7 @@ func (sa *StorageAllocation) removeBlobber(
 	for i, d := range blobbers {
 		if d.ID == removeId {
 			removedBlobber = blobbers[i]
-			blobbers[i] = blobbers[len(sa.BlobberDetails)-1]
+			blobbers[i] = blobbers[len(blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
 			break
