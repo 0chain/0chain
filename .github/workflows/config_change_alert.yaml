@@ -40,4 +40,7 @@ jobs:
           git diff docker.local/config/0chain.yaml >> diff.log
           git diff docker.local/config/sc.yaml >> diff.log
           echo '"}'>> diff.log
-          curl -X POST -H 'Content-type: application/json' -d @diff.log ${{ secrets.CHAT_WEBHOOK_URL }}
+
+          cat ./diff.log
+          
+          curl -X POST -H 'Content-type: application/json' -d @./diff.log ${{ secrets.CHAT_WEBHOOK_URL }}
