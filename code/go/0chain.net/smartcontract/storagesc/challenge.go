@@ -832,7 +832,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	var bcItem partitions.PartitionItem
-	var maxBlobberUsed float64
+	var maxBlobberUsed int64
 	for i := 0; i < partitionSelect; i++ {
 		var bChallengeData partitions.BlobberChallengeNode
 		randomIndex := challRand.Intn(len(blobberParts[i]))

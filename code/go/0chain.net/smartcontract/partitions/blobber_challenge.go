@@ -15,8 +15,8 @@ import (
 //------------------------------------------------------------------------------
 
 type BlobberChallengeNode struct {
-	BlobberID    string  `json:"blobber_id"`
-	UsedCapacity float64 `json:"used_capacity"`
+	BlobberID    string `json:"blobber_id"`
+	UsedCapacity int64  `json:"used_capacity"`
 }
 
 func (bcn *BlobberChallengeNode) Encode() []byte {
