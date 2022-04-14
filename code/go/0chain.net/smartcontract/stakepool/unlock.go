@@ -11,7 +11,7 @@ import (
 	"0chain.net/core/datastore"
 )
 
-func (sp *StakePool) UnlockPool(
+func (sp *StakePool) UnlockClientStakePool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
@@ -23,7 +23,7 @@ func (sp *StakePool) UnlockPool(
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}
-	return sp.UnlockPoolI(
+	return sp.UnlockPool(
 		clientID,
 		providerType,
 		providerId,
@@ -33,7 +33,7 @@ func (sp *StakePool) UnlockPool(
 	)
 }
 
-func (sp *StakePool) UnlockPoolI(
+func (sp *StakePool) UnlockPool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
@@ -41,7 +41,7 @@ func (sp *StakePool) UnlockPoolI(
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
-	foundProvider := usp.Find(poolId)
+	foundProvider := usp.FindProvider(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
 		return 0, fmt.Errorf("user %v does not own stake pool %v", clientID, poolId)
 	}

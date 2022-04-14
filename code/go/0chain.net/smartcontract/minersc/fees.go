@@ -37,12 +37,12 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(
 	balances cstate.StateContextI,
 ) error {
 
-	usp, err := stakepool.GetUserStakePool(providerType, delegateID, balances)
+	usp, err := stakepool.GetUserStakePools(providerType, delegateID, balances)
 	if err != nil {
 		return fmt.Errorf("getting user node: %v", err)
 	}
 	usp.Del(nodeID, poolID)
-	if err := usp.Save(spenum.Blobber, delegateID, balances); err != nil {
+	if err := usp.Save(providerType, delegateID, balances); err != nil {
 		return fmt.Errorf("saving user node: %v", err)
 	}
 

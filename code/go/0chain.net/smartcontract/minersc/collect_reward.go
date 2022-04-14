@@ -33,14 +33,14 @@ func (ssc *MinerSmartContract) collectReward(
 	var usp *stakepool.UserStakePools
 	var providerID = prr.ProviderId
 	if len(prr.PoolId) > 0 {
-		usp, err = stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
+		usp, err = stakepool.GetUserStakePools(prr.ProviderType, txn.ClientID, balances)
 		if err != nil {
 			return "", common.NewErrorf("collect_reward_failed",
 				"can't get related user stake pools: %v", err)
 		}
 
 		if len(prr.ProviderId) == 0 {
-			providerID = usp.Find(prr.PoolId)
+			providerID = usp.FindProvider(prr.PoolId)
 		}
 	}
 

@@ -183,13 +183,16 @@ func (msc *MinerSmartContract) deleteNode(
 	var err error
 	deleteNode.Delete = true
 	var nodeType spenum.Provider
-	if deleteNode.NodeType == NodeTypeMiner {
+	switch deleteNode.NodeType {
+	case NodeTypeMiner:
 		nodeType = spenum.Miner
-	} else {
+	case NodeTypeSharder:
 		nodeType = spenum.Sharder
+	default:
+		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
 
-	usp, err := stakepool.GetUserStakePool(nodeType, deleteNode.Settings.DelegateWallet, balances)
+	usp, err := stakepool.GetUserStakePools(nodeType, deleteNode.Settings.DelegateWallet, balances)
 	if err != nil {
 		return nil, fmt.Errorf("can't get user pools list: %v", err)
 	}
@@ -197,7 +200,7 @@ func (msc *MinerSmartContract) deleteNode(
 	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
 		case spenum.Pending:
-			_, err := deleteNode.UnlockPoolI(
+			_, err := deleteNode.UnlockPool(
 				pool.DelegateID, nodeType, deleteNode.ID, key, usp, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)

@@ -386,12 +386,6 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
-			minerNodes := &minersc.MinerNodes{}
-			blob, err := minerNodes.MarshalMsg(nil)
-			require.NoError(t, err)
-
-			_, err = v.UnmarshalMsg(blob)
-			require.NoError(t, err)
 			return true
 		})).Return(nil)
 	stateContextIMock.On("GetTrieNode",

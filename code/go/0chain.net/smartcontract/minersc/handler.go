@@ -469,11 +469,9 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 	}
 	if miner, err := balances.GetEventDB().GetMiner(id); err == nil {
 		return miner, err
-		//return minerTableToMinerNode(miner), nil
 	}
 	if sharder, err := balances.GetEventDB().GetSharder(id); err == nil {
 		return sharder, err
-		//return sharderTableToSharderNode(sharder), nil
 	}
 	return nil, common.NewErrBadRequest("miner/sharder not found")
 }

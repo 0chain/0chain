@@ -177,22 +177,3 @@ func getGlobalNode(
 
 	return gn, nil
 }
-
-/*
-func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
-	un := NewUserNode()
-	un.ID = id
-	err := balances.GetTrieNode(un.GetKey(), un)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		un = NewUserNode()
-		un.ID = id
-		return un, nil
-	}
-
-	un.ID = id
-	return un, nil
-}
-*/
