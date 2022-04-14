@@ -24,6 +24,10 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't decode request: %v", err)
 	}
+	if prr.ProviderType != spenum.Blobber && prr.ProviderType != spenum.Validator {
+		return "", common.NewErrorf("collect_reward_failed",
+			"invalid provider type: %s", prr.ProviderType.String())
+	}
 
 	var err error
 	var usp *stakepool.UserStakePools
