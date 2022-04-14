@@ -116,7 +116,7 @@ func TestSharders(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestSharderFilter(t *testing.T) {
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	defer func() {
-		err = eventDb.drop()
+		err = eventDb.Drop()
 		assert.NoError(t, err, "error while dropping database")
 	}()
 	assert.NoError(t, err, "error while migrating database")
@@ -289,7 +289,7 @@ func TestGetSharderLocations(t *testing.T) {
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	defer func() {
-		err = eventDb.drop()
+		err = eventDb.Drop()
 		assert.NoError(t, err, "error while dropping database")
 	}()
 	assert.NoError(t, err, "error while migrating database")

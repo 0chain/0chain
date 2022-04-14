@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"strconv"
 
 	"0chain.net/smartcontract/stakepool"
@@ -21,6 +22,7 @@ import (
 func AddMockNodes(
 	clients []string,
 	nodeType spenum.Provider,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []string {
 	var (
@@ -80,6 +82,32 @@ func AddMockNodes(
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
+
+		if viper.GetBool(benchmark.EventDbEnabled) {
+			if nodeType == spenum.Miner {
+				minerDb := event.Miner{
+					MinerID:           newNode.ID,
+					LastHealthCheck:   newNode.LastHealthCheck,
+					PublicKey:         newNode.PublicKey,
+					ServiceCharge:     newNode.Settings.ServiceCharge,
+					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
+					MinStake:          newNode.Settings.MinStake,
+					MaxStake:          newNode.Settings.MaxStake,
+				}
+				_ = eventDb.Store.Get().Create(&minerDb)
+			} else {
+				sharderDb := event.Sharder{
+					SharderID:         newNode.ID,
+					LastHealthCheck:   newNode.LastHealthCheck,
+					PublicKey:         newNode.PublicKey,
+					ServiceCharge:     newNode.Settings.ServiceCharge,
+					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
+					MinStake:          newNode.Settings.MinStake,
+					MaxStake:          newNode.Settings.MaxStake,
+				}
+				_ = eventDb.Store.Get().Create(&sharderDb)
+			}
+		}
 	}
 	if nodeType == spenum.Miner {
 		dkgMiners := NewDKGMinerNodes()

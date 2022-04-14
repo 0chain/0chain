@@ -925,7 +925,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
-	if sa.validateAllocationBlobber(addedBlobber, sp, now) != nil {
+	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
 		return nil, err
 	}
 
