@@ -728,8 +728,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	// maybe we should use another random seed
 	var bcAllocPartition []BlobberChallengeAllocationNode
 	if err := bcAllocList.GetRandomItems(balances, challRand, bcAllocPartition); err != nil {
-		return nil, common.NewError("generate_challenges",
-			"error getting random slice from blobber challenge allocation partition")
+		return nil, common.NewErrorf("generate_challenges",
+			"error getting random slice from blobber challenge allocation partition, %v", err)
 	}
 
 	randomIndex = challRand.Intn(len(bcAllocPartition))
