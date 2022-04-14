@@ -2,32 +2,42 @@ name: config_change_alert
 
 on:
   push:
-   branches: 
-     - staging
+    branches: 
+      - staging
+    paths:
+      - docker.local/config/0chain.yaml
+      - docker.local/config/sc.yaml
+
   pull_request:
-   branches: 
-     - staging
+    branches: 
+      - staging
+    paths:
+      - .github/workflows/config_change_alert.yaml
+      - docker.local/config/0chain.yaml
+      - docker.local/config/sc.yaml
    
 jobs:
   test:
     runs-on: docker-builds
     steps:
-      - uses: actions/checkout@v2
+      - name: Install git
+        run: |
+          git --version
+          sudo add-apt-repository ppa:git-core/ppa
+          sudo apt update
+          sudo apt install git -y
+          git --version
+
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
-
-      - name: Get changed files using defaults
-        id: changed-files
-        uses: tj-actions/changed-files@v18.4
              
-      - name: Run step when a 0chain.yaml file changes
-        if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml')
+      - name: Notify changes in slack channel
         run: |
-          echo "Your 0chain.yaml file has been modified."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
-      
-      - name: Run step when a sc.yaml file changes
-        if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml')
-        run: |
-          echo "Your sc.yaml file has been modified."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your sc.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
+          echo '{"text":"'> diff.log
+          git diff .github/workflows/config_change_alert.yaml >> diff.log
+          git diff docker.local/config/0chain.yaml >> diff.log
+          git diff docker.local/config/sc.yaml >> diff.log
+          echo '"}'>> diff.log
+          curl -X POST -H 'Content-type: application/json' -d @diff.log ${{ secrets.CHAT_WEBHOOK_URL }}
