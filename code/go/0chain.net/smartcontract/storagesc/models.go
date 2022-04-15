@@ -176,7 +176,7 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 type AllocationChallenge struct {
 	AllocationID             string                       `json:"allocation_id"`
 	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-"`
+	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
 	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
 }
 
