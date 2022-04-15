@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/core/logging"
@@ -522,16 +523,41 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (blobbers []*StorageNode, err error) {
 
-	blobbers = make([]*StorageNode, 0, len(alloc.BlobberDetails))
+	blobbers = make([]*StorageNode, len(alloc.BlobberDetails))
+	type blobberResp struct {
+		index   int
+		blobber *StorageNode
+	}
 
-	for _, details := range alloc.BlobberDetails {
-		var blobber *StorageNode
-		blobber, err = sc.getBlobber(details.BlobberID, balances)
+	blobberCh := make(chan blobberResp, len(alloc.BlobberDetails))
+	errorCh := make(chan error)
+	var wg sync.WaitGroup
+	for i, details := range alloc.BlobberDetails {
+		wg.Add(1)
+		go func(index int, blobberId string) {
+			defer wg.Done()
+			var blobber *StorageNode
+			blobber, err = sc.getBlobber(blobberId, balances)
+			if err != nil {
+				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
+			}
+			blobberCh <- blobberResp{
+				index:   index,
+				blobber: blobber,
+			}
+		}(i, details.BlobberID)
+	}
+	wg.Wait()
+	close(errorCh)
+	close(blobberCh)
+	for err := range errorCh {
 		if err != nil {
-			return nil, fmt.Errorf("can't get blobber %q: %v",
-				details.BlobberID, err)
+			return nil, err
 		}
-		blobbers = append(blobbers, blobber)
+	}
+
+	for resp := range blobberCh {
+		blobbers[resp.index] = resp.blobber
 	}
 
 	return
@@ -585,19 +611,17 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	return string(alloc.Encode()), nil // closing
 }
 
-func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
-	alloc *StorageAllocation, blobbers []*StorageNode,
-	balances chainstate.StateContextI) (err error) {
-
-	// save all
-	if err = updateBlobbersInAll(all, blobbers, balances); err != nil {
-		return
-	}
-
-	// save related blobbers
+func (sc *StorageSmartContract) saveUpdatedAllocation(
+	alloc *StorageAllocation,
+	blobbers []*StorageNode,
+	balances chainstate.StateContextI,
+) (err error) {
 	for _, b := range blobbers {
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return
+		}
+		if err := emitUpdateBlobber(b, balances); err != nil {
+			return fmt.Errorf("emmiting blobber %v: %v", b, err)
 		}
 	}
 
@@ -984,17 +1008,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	var all *StorageNodes // all blobbers list
-	if all, err = sc.getBlobbersList(balances); err != nil {
-		return "", common.NewError("allocation_updating_failed",
-			"can't get all blobbers list: "+err.Error())
-	}
-
-	if len(all.Nodes) == 0 {
-		return "", common.NewError("allocation_updating_failed",
-			"empty blobbers list")
-	}
-
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_updating_failed",
 			"missing client_id in transaction")
@@ -1118,7 +1131,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		alloc.IsImmutable = true
 	}
 
-	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
+	err = sc.saveUpdatedAllocation(alloc, blobbers, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
