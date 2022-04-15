@@ -211,10 +211,8 @@ func (sn *AllocationChallenge) Decode(input []byte) error {
 
 func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 
-	if sn.Challenges == nil {
+	if len(sn.Challenges) == 0 {
 		sn.Challenges = make([]*StorageChallenge, 0)
-	}
-	if sn.ChallengeMap == nil {
 		sn.ChallengeMap = make(map[string]*StorageChallenge)
 	}
 	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
