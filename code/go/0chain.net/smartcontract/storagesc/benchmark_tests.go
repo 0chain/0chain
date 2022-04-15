@@ -521,7 +521,6 @@ func BenchmarkTests(
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 				CreationDate: benchWritePoolExpire + 1,
-				//CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*100,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
@@ -561,7 +560,7 @@ func BenchmarkTests(
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
 					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*10000,
+				CreationDate: now + benchWritePoolExpire + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
