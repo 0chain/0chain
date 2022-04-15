@@ -288,6 +288,11 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"saving blobber: "+err.Error())
 	}
 
+	if err := emitUpdateBlobber(blobber, balances); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"emitting update blobber: "+err.Error())
+	}
+
 	return string(blobber.Encode()), nil
 }
 
