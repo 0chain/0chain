@@ -213,6 +213,8 @@ func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
 
 	if sn.Challenges == nil {
 		sn.Challenges = make([]*StorageChallenge, 0)
+	}
+	if sn.ChallengeMap == nil {
 		sn.ChallengeMap = make(map[string]*StorageChallenge)
 	}
 	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
