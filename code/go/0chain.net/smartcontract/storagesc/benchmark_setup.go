@@ -26,8 +26,6 @@ import (
 
 const mockMinLockDemand = 1
 
-var year = common.Timestamp(time.Second * 60 * 60 * 24 * 365)
-
 func AddMockAllocations(
 	clients, publicKeys []string,
 	eventDb *event.EventDb,
@@ -244,10 +242,9 @@ func AddMockChallenges(
 			panic(err)
 		}
 		for allocID := range val {
-			allocLoc, err := aPart.Add(&partitions.BlobberChallengeAllocationNode{
+			_, err := aPart.Add(&partitions.BlobberChallengeAllocationNode{
 				ID: allocID,
 			}, balances)
-			allocLoc = allocLoc
 			if err != nil {
 				panic(err)
 			}
