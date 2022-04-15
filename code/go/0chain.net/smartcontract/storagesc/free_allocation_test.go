@@ -700,9 +700,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY,
-			mockSetValue(mockAllBlobbers)).Return(nil).Once()
-
 		ca := ClientAllocation{
 			ClientID:    p.marker.Recipient,
 			Allocations: &Allocations{},
@@ -737,9 +734,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
 
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
 			mockSetValue(&writePool{})).Return(nil).Once()
