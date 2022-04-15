@@ -10,8 +10,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 )
@@ -35,7 +33,7 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
-
+	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)
@@ -53,30 +51,11 @@ func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, 
 		publicKey := publicKeys[i]
 
 		authorizer := NewAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
-		authorizer.Staking = createTokenPool(id)
 
 		err := authorizer.Save(ctx)
 		if err != nil {
 			panic(err)
 		}
-
-		authorizers = append(authorizers, authorizer)
-	}
-}
-
-func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
-	return &tokenpool.ZcnLockingPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      clientId,
-				Balance: 100 * 1e10,
-			},
-		},
-		TokenLockInterface: &TokenLock{
-			StartTime: common.Now(),
-			Duration:  0,
-			Owner:     clientId,
-		},
 	}
 }
 

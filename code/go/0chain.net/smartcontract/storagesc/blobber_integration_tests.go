@@ -4,69 +4,20 @@
 package storagesc
 
 import (
-	"fmt"
-
-	"0chain.net/smartcontract/stakepool"
-
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
 
 	crpc "0chain.net/conductor/conductrpc"
 )
 
-// insert new blobber, filling its stake pool
-func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
-	balances cstate.StateContextI) (err error) {
-	// check for duplicates
-	for _, b := range blobbers.Nodes {
-		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
-			return sc.updateBlobber(t, conf, blobber, blobbers, balances)
-		}
-	}
-
-	// check blobber values
-	if err = blobber.validate(conf); err != nil {
-		return fmt.Errorf("invalid blobber params: %v", err)
-	}
-
-	blobber.LastHealthCheck = t.CreationDate // set to now
-
-	// the stake pool can be created by related validator
-	var sp *stakePool
-	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, stakepool.Blobber,
-		blobber.StakePoolSettings, balances)
-	if err != nil {
-		return
-	}
-
-	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
-		return fmt.Errorf("saving stake pool: %v", err)
-	}
-
-	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: t.ClientID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
-		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
-
-	blobbers.Nodes.add(blobber) // add to all
-
-	// statistic
-	sc.statIncr(statAddBlobber)
-	sc.statIncr(statNumberOfBlobbers)
-
+func afterInsertBlobber(id string) {
 	var (
 		client = crpc.Client()
 		state  = client.State()
 		abe    crpc.AddBlobberEvent
 	)
 	abe.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
-	abe.Blobber = state.Name(crpc.NodeID(blobber.ID))
-	if err = client.AddBlobber(&abe); err != nil {
+	abe.Blobber = state.Name(crpc.NodeID(id))
+	if err := client.AddBlobber(&abe); err != nil {
 		panic(err)
 	}
 	return

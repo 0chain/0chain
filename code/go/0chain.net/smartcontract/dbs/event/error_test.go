@@ -27,7 +27,7 @@ func TestAddAndGetError(t *testing.T) {
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer eventDb.Drop()
 	require.NoError(t, err)
 	wantErr := Error{
 		TransactionID: "someTransaction",

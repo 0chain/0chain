@@ -25,7 +25,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -413,9 +413,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 && move > 0 &&
-		state.Balance(conf.BlobberSlash*float64(move)) > 0 {
+		state.Balance(conf.BlobberSlash*move) > 0 {
 
-		var slash = state.Balance(conf.BlobberSlash * float64(move))
+		var slash = state.Balance(conf.BlobberSlash * move)
 
 		// load stake pool
 		var sp *stakePool
@@ -670,6 +670,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
+		err = emitAddOrOverwriteAllocation(alloc, balances)
+		if err != nil {
+			return "", common.NewErrorf("verify_challenge",
+				"saving allocation in db: %v", err)
+		}
+
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
 		}
@@ -713,6 +719,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
+		}
+
+		err = emitAddOrOverwriteAllocation(alloc, balances)
+		if err != nil {
+			return "", common.NewErrorf("challenge_reward_error",
+				"saving allocation in db: %v", err)
 		}
 
 		if pass && !fresh {
@@ -1128,6 +1140,13 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	if err != nil {
 		return "", common.NewError("add_challenge",
 			"error storing allocation: "+err.Error())
+	}
+
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("add_challenge",
+			"saving allocation in db: %v", err)
 	}
 
 	challengeBytes, err := json.Marshal(storageChallenge)
