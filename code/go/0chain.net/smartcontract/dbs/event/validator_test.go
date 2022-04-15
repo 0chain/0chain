@@ -34,7 +34,7 @@ func TestValidatorNode(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestValidatorNode(t *testing.T) {
 	vn, err = eventDb.GetValidatorByValidatorID(vn.ValidatorID)
 	require.NoError(t, err, "Error while getting Validation Node from event Database")
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 
 }

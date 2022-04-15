@@ -37,7 +37,7 @@ func TestAddBlock(t *testing.T) {
 	var count int64
 	eventDb.Get().Table("blocks").Count(&count)
 	require.Equal(t, int64(1), count, "Block is not inserted")
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 }
 
@@ -59,13 +59,13 @@ func TestFindBlock(t *testing.T) {
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	defer func() {
-		_ = eventDb.drop()
+		_ = eventDb.Drop()
 	}()
 	require.NoError(t, err)
 
 	block := Block{
 		Model: gorm.Model{ID: 1},
-		Hash: "test",
+		Hash:  "test",
 	}
 	err = eventDb.addBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")
@@ -78,7 +78,7 @@ func TestFindBlock(t *testing.T) {
 
 	block2 := Block{
 		Model: gorm.Model{ID: 2},
-		Hash: "test2",
+		Hash:  "test2",
 	}
 	err = eventDb.addBlock(block2)
 	require.NoError(t, err, "Error while inserting Block to event Database")
