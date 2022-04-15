@@ -57,7 +57,7 @@ jobs:
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
       zblock_branch: ${{ github.event.inputs.zblock_branch }}
       authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
-      explorer_branch: latest
+      explorer_branch: master
       test_file_filter: ${{ github.event.inputs.test_file_filter }}
       zproxy_branch: staging
       zsearch_branch: staging
