@@ -27,7 +27,7 @@ func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
 
 	// Add UpdateAuthorizerStakePool
 	payload := CreateAuthorizerStakingPoolParamPayload(authorizerID)
-	tr = CreateTransaction(authorizerID, AddAuthorizerStakePool, payload, ctx)
+	tr = CreateTransaction(authorizerID, UpdateAuthorizerStakePoolFunc, payload, ctx)
 	resp, err = contract.UpdateAuthorizerStakePool(tr, payload, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
@@ -42,7 +42,7 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_IsNotUpdatedOrCreated(t *testing
 
 	// Add UpdateAuthorizerStakePool
 	payload := CreateAuthorizerStakingPoolParamPayload(authorizerID)
-	tr := CreateTransaction(authorizerID, AddAuthorizerStakePool, payload, ctx)
+	tr := CreateTransaction(authorizerID, UpdateAuthorizerStakePoolFunc, payload, ctx)
 	resp, err := contract.UpdateAuthorizerStakePool(tr, payload, ctx)
 	require.Error(t, err)
 	require.EqualError(t, err, "authorizer(authorizerID: "+authorizerID+") not found")

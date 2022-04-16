@@ -27,7 +27,7 @@ const (
 	BurnFunc                      = "burn"
 	AddToDelegatePoolFunc         = "addToDelegatePool"
 	DeleteFromDelegatePoolFunc    = "deleteFromDelegatePool"
-	UpdateAuthorizerStakePoolFunc = "addUpdateStakePool"
+	UpdateAuthorizerStakePoolFunc = "updateAuthorizerStakePool"
 	CollectRewardsFunc            = "collectRewardsFunc"
 )
 
