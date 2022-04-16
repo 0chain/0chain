@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/zcnsc"
 
