@@ -741,6 +741,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", common.NewError("commit_connection_failed",
 				"error fetching blobber challenge partition: "+err.Error())
 		}
+		// TODO: remove this after debugging
+		bs, err := bcPartition.Size(balances)
+		if err != nil {
+			logging.Logger.Error("bcp size error", zap.Error(err))
+		}
+
 		loc, err := bcPartition.AddItem(balances, pData)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
@@ -760,6 +766,20 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error saving blobber challenge partition")
+		}
+
+		// TODO:  remove this after debugging
+		bcp, err := getBlobbersChallengeList(balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed - add not success",
+				"error fetching blobber challenge partition: "+err.Error())
+		}
+		s, err := bcp.Size(balances)
+		if err != nil {
+			logging.Logger.Error("commit_connection_failed - get size", zap.Error(err))
+		} else {
+			logging.Logger.Error("commit_connection", zap.Int("size after adding", s),
+				zap.Int("size before adding", bs))
 		}
 	}
 

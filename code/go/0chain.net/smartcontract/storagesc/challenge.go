@@ -667,8 +667,9 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	}
 
 	if alloc.Expiration < t.CreationDate {
-		return nil, common.NewError("adding_challenge_error",
-			"allocation is already expired")
+		return nil, common.NewErrorf("adding_challenge_error",
+			"allocation is already expired, alloc.Expiration: %d, t.CreationDate: %d",
+			alloc.Expiration, t.CreationDate)
 	}
 	if alloc.Stats == nil {
 		return nil, common.NewError("adding_challenge_error",
@@ -712,6 +713,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	randomIndex := challRand.Intn(len(blobberChallenges))
 	bcItem := blobberChallenges[randomIndex]
+	Logger.Debug("generate_challenges", zap.Int("random index", randomIndex),
+		zap.String("blobber id", bcItem.BlobberID), zap.Int("blobber challenges", len(blobberChallenges)))
 
 	blobberID := bcItem.BlobberID
 	if blobberID == "" {
@@ -1014,6 +1017,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	addedChallenge := blobberChallengeObj.addChallenge(storageChallenge)
 	if !addedChallenge {
+		Logger.Warn("add_challenge", zap.Error(errors.New("no blobber challenge added, challenge might already exist")))
 		challengeBytes, err := json.Marshal(storageChallenge)
 		return string(challengeBytes), err
 	}
