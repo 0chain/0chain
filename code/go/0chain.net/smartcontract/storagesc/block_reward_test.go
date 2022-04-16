@@ -140,7 +140,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 }
 
-func prepareState(n int) (state.StateContextI, func()) {
+func prepareState(n, partSize int) (state.StateContextI, func()) {
 	dir, err := os.MkdirTemp("", "part_state")
 	if err != nil {
 		panic(err)
@@ -158,7 +158,7 @@ func prepareState(n int) (state.StateContextI, func()) {
 		mpt, nil, nil, nil,
 		nil, nil, nil)
 
-	part, err := partitions.CreateIfNotExists(sctx, "brn_test", n)
+	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
 		panic(err)
 	}
@@ -186,7 +186,7 @@ func prepareState(n int) (state.StateContextI, func()) {
 }
 
 func BenchmarkPartitionsGetItem(b *testing.B) {
-	ps, clean := prepareState(100)
+	ps, clean := prepareState(100, 100)
 	defer clean()
 
 	part, err := partitions.GetPartitions(ps, "brn_test")
@@ -202,15 +202,15 @@ func BenchmarkPartitionsGetItem(b *testing.B) {
 func BenchmarkGetRandomItems(b *testing.B) {
 	seed := rand.NewSource(time.Now().Unix())
 	r := rand.New(seed)
-	ps, clean := prepareState(100)
+	ps, clean := prepareState(100, 100)
 	defer clean()
 
 	part, err := partitions.GetPartitions(ps, "brn_test")
 	require.NoError(b, err)
-	ids := make([]string, 100)
-	for i := 0; i < 100; i++ {
-		ids[i] = strconv.Itoa(i)
-	}
+	//ids := make([]string, 100)
+	//for i := 0; i < 100; i++ {
+	//	ids[i] = strconv.Itoa(i)
+	//}
 
 	for i := 0; i < b.N; i++ {
 		var bs []BlobberRewardNode
@@ -218,8 +218,31 @@ func BenchmarkGetRandomItems(b *testing.B) {
 	}
 }
 
+func TestPartitionRandomItems(t *testing.T) {
+	seed := rand.NewSource(time.Now().Unix())
+	r := rand.New(seed)
+	ps, clean := prepareState(6, 10)
+	defer clean()
+
+	part, err := partitions.GetPartitions(ps, "brn_test")
+	require.NoError(t, err)
+	ids := make([]string, 100)
+	for i := 0; i < 100; i++ {
+		ids[i] = strconv.Itoa(i)
+	}
+
+	//for i := 0; i < b.N; i++ {
+	var bs []BlobberRewardNode
+	_ = part.GetRandomItems(ps, r, &bs)
+	//}
+
+	for i := 0; i < 6; i++ {
+		t.Logf("%v", bs[i])
+	}
+}
+
 func BenchmarkGetUpdateItem(b *testing.B) {
-	ps, clean := prepareState(100)
+	ps, clean := prepareState(100, 100)
 	defer clean()
 
 	part, err := partitions.GetPartitions(ps, "brn_test")
@@ -230,4 +253,59 @@ func BenchmarkGetUpdateItem(b *testing.B) {
 	}
 
 	_ = part.Save(ps)
+}
+
+func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
+	dir, err := os.MkdirTemp("", "part_state")
+	if err != nil {
+		panic(err)
+	}
+
+	pdb, _ := util.NewPNodeDB(dir, dir+"/log")
+
+	clean := func() {
+		pdb.Close()
+		_ = os.RemoveAll(dir)
+	}
+
+	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
+	return state.NewStateContext(nil,
+		mpt, nil, nil, nil,
+		nil, nil, nil), clean
+}
+
+func TestAddBlobberChallengeItems(t *testing.T) {
+	state, clean := prepareMPTState(t)
+	defer clean()
+
+	_, err := partitions.CreateIfNotExists(state, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
+	require.NoError(t, err)
+
+	p, err := getBlobbersChallengeList(state)
+	require.NoError(t, err)
+
+	_, err = p.AddItem(state, &BlobberChallengeNode{BlobberID: "blobber_id_1"})
+	require.NoError(t, err)
+	err = p.Save(state)
+	require.NoError(t, err)
+
+	p, err = getBlobbersChallengeList(state)
+	require.NoError(t, err)
+	s, err := p.Size(state)
+	require.NoError(t, err)
+	require.Equal(t, 1, s)
+
+	_, err = p.AddItem(state, &BlobberChallengeNode{BlobberID: "blobber_id_2"})
+	require.NoError(t, err)
+
+	err = p.Save(state)
+	require.NoError(t, err)
+
+	p, err = getBlobbersChallengeList(state)
+	require.NoError(t, err)
+
+	s, err = p.Size(state)
+	require.NoError(t, err)
+
+	require.Equal(t, 2, s)
 }

@@ -36,9 +36,9 @@ func (p *partition) load(state state.StateContextI, key datastore.Key) error {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
-		p.Key = key
 	}
 
+	p.Key = key
 	return nil
 }
 
