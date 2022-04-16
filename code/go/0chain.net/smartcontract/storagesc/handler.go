@@ -37,7 +37,7 @@ type storageNodeResponse struct {
 	TotalStake int64 `json:"total_stake"`
 }
 
-func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
+func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
@@ -71,7 +71,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 			},
 		},
 		TotalStake: blobber.TotalStake,
-	}, nil
+	}
 }
 
 // Deprecated
@@ -128,10 +128,7 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
 	}
 
-	sn, err := blobberTableToStorageNode(*blobber)
-	if err != nil {
-		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	}
+	sn := blobberTableToStorageNode(*blobber)
 	return sn, err
 }
 
@@ -208,10 +205,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 
 	var sns storageNodesResponse
 	for _, blobber := range blobbers {
-		sn, err := blobberTableToStorageNode(blobber)
-		if err != nil {
-			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
-		}
+		sn := blobberTableToStorageNode(blobber)
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 	return sns, nil
@@ -222,8 +216,8 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	var creationDate = common.Timestamp(time.Now().Unix())
+	var err error
+	var creationDate = balances.GetTransaction().CreationDate
 
 	allocData := params.Get("allocation_data")
 	var request newAllocationRequest
@@ -232,13 +226,24 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	}
 
 	var sa = request.storageAllocation()
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("events db is not initialised")
+	var conf *Config
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return nil, fmt.Errorf("can't get config: %v", err)
+	}
+	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
+	if err = sa.validate(creationDate, conf); err != nil {
+		return nil, fmt.Errorf("invalid request: %v", err)
 	}
 	// number of blobbers required
 	var numberOfBlobbers = sa.DataShards + sa.ParityShards
-	var allocationSize = (sa.Size + int64(numberOfBlobbers-1)) / int64(numberOfBlobbers)
-	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
+	// size of allocation for a blobber
+	var allocationSize = sa.bSize()
+	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("events db is not initialised")
+	}
+
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
 		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
 		MaxOfferDuration:           dur,
@@ -269,69 +274,6 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	}
 
 	return blobberIDs, nil
-}
-
-func (sc *StorageSmartContract) selectBlobbersNew(
-	creationDate common.Timestamp,
-	allBlobbersList StorageNodes,
-	sa *StorageAllocation,
-	randomSeed int64,
-	balances cstate.StateContextI,
-) ([]*StorageNode, int64, error) {
-	var err error
-	var conf *Config
-	if conf, err = sc.getConfig(balances, true); err != nil {
-		return nil, 0, fmt.Errorf("can't get config: %v", err)
-	}
-
-	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-
-	if err = sa.validate(creationDate, conf); err != nil {
-		return nil, 0, fmt.Errorf("invalid request: %v", err)
-	}
-
-	// number of blobbers required
-	var size = sa.DataShards + sa.ParityShards
-	// size of allocation for a blobber
-	var bSize = (sa.Size + int64(size-1)) / int64(size)
-	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
-		bSize, filterHealthyBlobbers(creationDate),
-		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
-
-	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
-	}
-
-	sa.BlobberDetails = make([]*BlobberAllocation, 0)
-	sa.Stats = &StorageAllocationStats{}
-
-	var blobberNodes []*StorageNode
-	if len(sa.PreferredBlobbers) > 0 {
-		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
-		if err != nil {
-			return nil, 0, common.NewError("allocation_creation_failed",
-				err.Error())
-		}
-	}
-
-	if len(blobberNodes) < size {
-		if sa.DiverseBlobbers {
-			// removed pre selected blobbers from list
-			for _, preferredBlobber := range blobberNodes {
-				for i, blobber := range list {
-					if blobber.BaseURL == preferredBlobber.BaseURL {
-						list = append(list[:i], list[i+1:]...)
-						break
-					}
-				}
-			}
-			blobberNodes = append(blobberNodes, sa.diversifyBlobbers(list, size-len(blobberNodes))...)
-		} else {
-			blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
-		}
-	}
-
-	return blobberNodes[:size], bSize, nil
 }
 
 func paramsToMap(params url.Values) map[string]interface{} {

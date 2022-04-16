@@ -99,6 +99,11 @@ func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 	return blobbers, result.Error
 }
 
+func (edb *EventDb) GetBlobberFromURLs(urls []string) ([]Blobber, error) {
+	var blobbers []Blobber
+	return blobbers, edb.Get().Model(Blobber{}).Where("base_url in ?", urls).Find(&blobbers).Error
+}
+
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
@@ -167,7 +172,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string,
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration < ?", allocation.MaxOfferDuration.Nanoseconds())
-	dbStore = dbStore.Where("capacity - used < ?", allocation.AllocationSize)
+	dbStore = dbStore.Where("capacity - used >= ?", allocation.AllocationSize)
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("base_url").Find(&blobberIDs).Error
 }

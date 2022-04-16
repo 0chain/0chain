@@ -5,6 +5,7 @@ package sharder
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"0chain.net/core/common"
@@ -28,10 +29,12 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 		content = "confirmation"
 	}
 	transactionConfirmationEntityMetadata := datastore.GetEntityMetadata("txn_confirmation")
+	fmt.Println("tr", transactionConfirmationEntityMetadata)
 	ctx = persistencestore.WithEntityConnection(ctx, transactionConfirmationEntityMetadata)
 	defer persistencestore.Close(ctx)
 	sc := GetSharderChain()
 	confirmation, err := sc.GetTransactionConfirmation(ctx, hash)
+	fmt.Println("confirmation", confirmation, hash)
 	if content == "confirmation" {
 		return confirmation, err
 	}

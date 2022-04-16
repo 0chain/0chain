@@ -297,6 +297,13 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 	})
 }
 
+// validateHealthyBlobbers copied from filterHealthyBlobbers
+func validateHealthyBlobbers(now common.Timestamp) blobberVerificationFunction {
+	return blobberVerificationFunction(func(b *StorageNode) (kick bool, err string) {
+		return b.LastHealthCheck <= (now - blobberHealthTime), "b.LastHealthCheck <= (now - blobberHealthTime)"
+	})
+}
+
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {

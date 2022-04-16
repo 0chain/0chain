@@ -110,6 +110,9 @@ type Config struct {
 	// tokens penalized on challenge not passed.
 	BlobberSlash float64 `json:"blobber_slash"`
 
+	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
+	MaxBlobbersPerAllocation int `json:" max_blobbers_per_allocation"`
+
 	// price limits for blobbers
 
 	// MaxReadPrice allowed for a blobber.
@@ -375,6 +378,8 @@ func getConfiguredConfig() (conf *Config, err error) {
 		scc.GetFloat64(pfx+"min_write_price") * 1e10)
 	conf.MaxWritePrice = state.Balance(
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
+	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
+	fmt.Println(conf.MaxBlobbersPerAllocation, pfx+"max_blobbers_per_allocation")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
