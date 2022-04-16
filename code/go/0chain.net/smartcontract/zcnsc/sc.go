@@ -19,16 +19,16 @@ import (
 const (
 	ADDRESS                       = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
 	NAME                          = "zcnsc"
-	AddAuthorizerFunc             = "AddAuthorizer"
-	DeleteAuthorizerFunc          = "DeleteAuthorizer"
+	AddAuthorizerFunc             = "add-authorizer"
+	DeleteAuthorizerFunc          = "delete-authorizer"
 	UpdateGlobalConfigFunc        = "update-global-config"
 	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
 	MintFunc                      = "mint"
 	BurnFunc                      = "burn"
-	AddToDelegatePoolFunc         = "addToDelegatePool"
-	DeleteFromDelegatePoolFunc    = "deleteFromDelegatePool"
-	UpdateAuthorizerStakePoolFunc = "updateAuthorizerStakePool"
-	CollectRewardsFunc            = "collectRewardsFunc"
+	AddToDelegatePoolFunc         = "add-to-delegate-pool"
+	DeleteFromDelegatePoolFunc    = "delete-from-delegate-pool"
+	UpdateAuthorizerStakePoolFunc = "update-authorizer-stake-pool"
+	CollectRewardsFunc            = "collect-rewards"
 )
 
 // ZCNSmartContract ...
