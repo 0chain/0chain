@@ -606,6 +606,12 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		fr.Finalize(b)
 	}
 	mc.DeleteRoundsBelow(b.Round)
+
+	var txns []datastore.Entity
+	for _, txn := range b.Txns {
+		txns = append(txns, txn)
+	}
+	transaction.RemoveFromPool(ctx, txns)
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

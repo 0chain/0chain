@@ -82,3 +82,18 @@ func CleanupWorker(ctx context.Context) {
 		}
 	}
 }
+
+func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	collectionName := txn.GetCollectionName()
+
+	logging.Logger.Info("cleaning transactions", zap.String("collection", collectionName), zap.Int("missing_count", len(txns)))
+	err := transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
+	if err != nil {
+		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
+	}
+}
