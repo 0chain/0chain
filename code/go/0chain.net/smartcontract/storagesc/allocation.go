@@ -338,7 +338,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	// }
 
 	inputBlobbers, err := sc.getBlobbers(request.PreferredBlobbers, balances)
-	fmt.Println("inputBlobbers", len([]*StorageNode(inputBlobbers.Nodes)))
 	if err != nil {
 		logging.Logger.Error("unable to fetch blobber in new_allocation",
 			zap.Error(err))
@@ -462,9 +461,6 @@ func (sc *StorageSmartContract) selectBlobbers(
 // getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
 func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
 	balances chainstate.StateContextI) (*StorageNodes, error) {
-	if balances.GetEventDB() == nil {
-		return nil, fmt.Errorf("no eventdb initialized")
-	}
 	blobbers, err := sc.getBlobbersByID(blobberIDs, balances)
 	if err != nil {
 		return nil, fmt.Errorf("error finding blobbers %v", err)
