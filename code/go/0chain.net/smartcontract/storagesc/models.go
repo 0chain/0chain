@@ -1096,68 +1096,30 @@ List:
 type blobberVerificationFunction func(blobber *StorageNode) (kick bool, err string)
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(list []*StorageNode,
-	creationDate common.Timestamp, bsize int64, filters ...blobberVerificationFunction) (
+func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, list []*StorageNode,
+	creationDate common.Timestamp, bsize int64, balances chainstate.StateContextI) (
 	filtered []*StorageNode, err []string) {
 
 	var (
-		dur    = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 		errors = make([]string, 0)
 	)
 	filtered = make([]*StorageNode, 0)
 	fmt.Println("came here for validations")
 
 	for _, b := range list {
-		fmt.Println("scanning", *b)
-		// exists in MPT
-
-		// filter by max offer duration
-		if b.Terms.MaxOfferDuration < dur {
-			errors = append(errors, b.BaseURL, " b.Terms.MaxOfferDuration < dur")
-			fmt.Println("continue 5")
+		var sp *stakePool
+		var err error
+		if sp, err = ssc.getStakePool(b.ID, balances); err != nil {
+			errors = append(errors, err.Error())
 			continue
 		}
-		// filter by read price
-		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
-			errors = append(errors, b.BaseURL, " !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice)")
-			fmt.Println("continue 6")
-			continue
-		}
-		// filter by write price
-		if !sa.WritePriceRange.isMatch(b.Terms.WritePrice) {
-			errors = append(errors, b.BaseURL, " !sa.WritePriceRange.isMatch(b.Terms.WritePrice)")
-			fmt.Println("continue 7")
-			continue
-		}
-		// filter by blobber's capacity left
-		if b.Capacity-b.Used < bsize {
-			errors = append(errors, b.BaseURL, " b.Capacity-b.Used < bsize")
-			fmt.Println("continue 8")
-			continue
-		}
-		// filter by max challenge completion time
-		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
-			errors = append(errors, b.BaseURL, " b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime")
-			fmt.Println("continue 9")
-			continue
-		}
-		isKick := false
-		for _, filter := range filters {
-			kick, errMessage := filter(b)
-			if kick {
-				errors = append(errors, b.BaseURL, errMessage)
-				isKick = true
-				break
-			}
-		}
-		if isKick {
-			fmt.Println("continue 10")
+		err = sa.validateAllocationBlobber(b, sp, creationDate)
+		if err != nil {
+			errors = append(errors, err.Error())
 			continue
 		}
 		filtered = append(filtered, b)
-		fmt.Println(*b, "added")
 	}
-	fmt.Println("--------------------", strings.Join(errors, " | "))
 	return filtered, errors
 }
 
