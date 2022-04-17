@@ -150,7 +150,7 @@ func addMockAllocation(
 			ChallengeCompletionTime:    int64(sa.ChallengeCompletionTime),
 			UsedSize:                   sa.UsedSize,
 			NumWrites:                  sa.Stats.NumWrites,
-			ReadSize:                   sa.Stats.ReadsSize,
+			NumReads:                   sa.Stats.NumReads,
 			TotalChallenges:            sa.Stats.TotalChallenges,
 			OpenChallenges:             sa.Stats.OpenChallenges,
 			FailedChallenges:           sa.Stats.FailedChallenges,
