@@ -51,6 +51,7 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+//go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 // todo this needs to be split up into different interfaces
 type StateContextI interface {
