@@ -7,8 +7,10 @@ import (
 
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/partitions"
+
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -267,6 +269,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
+	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
 
 	if err = sc.updateBlobber(t, conf, blobber, blobbers, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
@@ -467,34 +470,27 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	blobber.LastRewardDataReadRound = balances.GetBlock().Round
 
 	if blobber.RewardPartition.StartRound >= rewardRound && blobber.RewardPartition.Timestamp > 0 {
-		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
+		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
 				"cannot fetch ongoing partition: %v", err)
 		}
 
-		item, err := part.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
-		if err != nil {
+		var brn BlobberRewardNode
+		if err := parts.GetItem(balances, blobber.RewardPartition.Index, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		var brn partitions.BlobberRewardNode
-		err = brn.Decode(item.Encode())
-		if err != nil {
-			return "", common.NewError("commit_blobber_read",
-				"can't decode blobber reward item"+err.Error())
-		}
-
 		brn.DataRead = blobber.DataReadLastRewardRound
 
-		err = part.UpdateItem(blobber.RewardPartition.Index, &brn, balances)
+		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
 		if err != nil {
 			return "", common.NewError("commit_blobber_read",
 				"error updating blobber reward item")
 		}
 
-		err = part.Save(balances)
+		err = parts.Save(balances)
 		if err != nil {
 			return "", common.NewError("commit_blobber_read",
 				"error saving ongoing blobber reward partition")
@@ -697,7 +693,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
 
-	// Update saved_data on storage node
+	// UpdateItem saved_data on storage node
 	var storageNode *StorageNode
 	if _, ok := alloc.BlobberMap[commitConnection.WriteMarker.BlobberID]; ok {
 		storageNode, err = sc.getBlobber(commitConnection.WriteMarker.BlobberID, balances)
@@ -748,11 +744,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// partition blobber challenge
 	//todo: handle allocations are all deleted
-	pData := &partitions.BlobberChallengeNode{
+	pData := &BlobberChallengeNode{
 		BlobberID: t.ClientID,
 	}
 
-	pAllocData := &partitions.BlobberChallengeAllocationNode{
+	pAllocData := &BlobberChallengeAllocationNode{
 		ID: details.AllocationID,
 	}
 
@@ -764,7 +760,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", common.NewError("commit_connection_failed",
 				"error fetching blobber challenge partition: "+err.Error())
 		}
-		loc, err := bcPartition.Add(pData, balances)
+
+		loc, err := bcPartition.AddItem(balances, pData)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error adding to blobber challenge partition: "+err.Error())
@@ -793,7 +790,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				"error fetching blobber challenge allocation partition")
 		}
 
-		allocLoc, err := bcAllocPartition.Add(pAllocData, balances)
+		allocLoc, err := bcAllocPartition.AddItem(balances, pAllocData)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error adding to blobber challenge allocation partition")
@@ -810,34 +807,27 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
 	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
-		part, err := getOngoingPassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
+		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch ongoing partition: %v", err)
 		}
 
-		item, err := part.GetItem(blobber.RewardPartition.Index, blobber.ID, balances)
-		if err != nil {
+		var brn BlobberRewardNode
+		if err := parts.GetItem(balances, blobber.RewardPartition.Index, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		var brn partitions.BlobberRewardNode
-		err = brn.Decode(item.Encode())
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"can't decode blobber reward item"+err.Error())
-		}
-
 		brn.TotalData = sizeInGB(blobber.BytesWritten)
 
-		err = part.UpdateItem(blobber.RewardPartition.Index, &brn, balances)
+		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error updating blobber reward item")
 		}
 
-		err = part.Save(balances)
+		err = parts.Save(balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error saving ongoing blobber reward partition")
@@ -883,4 +873,57 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	return string(detailsBytes), nil
+}
+
+// insert new blobber, filling its stake pool
+func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
+	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
+	balances cstate.StateContextI,
+) (err error) {
+	// check for duplicates
+	for _, b := range blobbers.Nodes {
+		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
+			return sc.updateBlobber(t, conf, blobber, blobbers, balances)
+		}
+	}
+
+	// check params
+	if err = blobber.validate(conf); err != nil {
+		return fmt.Errorf("invalid blobber params: %v", err)
+	}
+
+	blobber.LastHealthCheck = t.CreationDate // set to now
+
+	// create stake pool
+	var sp *stakePool
+	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, spenum.Blobber,
+		blobber.StakePoolSettings, balances)
+	if err != nil {
+		return fmt.Errorf("creating stake pool: %v", err)
+	}
+
+	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+		return fmt.Errorf("saving stake pool: %v", err)
+	}
+
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: t.ClientID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
+
+	// update the list
+	blobbers.Nodes.add(blobber)
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
+	}
+
+	// update statistic
+	sc.statIncr(statAddBlobber)
+	sc.statIncr(statNumberOfBlobbers)
+
+	afterInsertBlobber(blobber.ID)
+	return
 }

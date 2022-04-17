@@ -12,7 +12,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/stretchr/testify/mock"
 

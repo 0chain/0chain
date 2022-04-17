@@ -41,7 +41,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 		t.Error("Error migrating database")
 		return
 	}
-	defer eventDb.drop()
+	defer eventDb.Drop()
 	insertMultipleReadMarker(t, eventDb)
 	t.Run("get all readmarker with allocationID", func(t *testing.T) {
 		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AllocationID: "1"}, -1, -1, false)

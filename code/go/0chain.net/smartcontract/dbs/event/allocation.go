@@ -1,11 +1,12 @@
 package event
 
 import (
-	"0chain.net/chaincore/state"
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"time"
+
+	"0chain.net/chaincore/state"
+	"gorm.io/gorm"
 )
 
 type Allocation struct {
