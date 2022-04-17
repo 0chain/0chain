@@ -121,5 +121,5 @@ func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Reques
 		return lfmb.GetSummary(), nil
 	}
 
-	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
+	return GetServerChain().GetLatestFinalizedMagicBlockClone(ctx), nil
 }
