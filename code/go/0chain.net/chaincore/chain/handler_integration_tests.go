@@ -116,7 +116,7 @@ func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Reques
 
 	var state = crpc.Client().State()
 	if state.MagicBlock != nil {
-		var lfmb = GetServerChain().GetLatestFinalizedMagicBlockClone()
+		var lfmb = GetServerChain().GetLatestFinalizedMagicBlockClone(ctx)
 		lfmb.Hash = revertString(lfmb.Hash)
 		return lfmb.GetSummary(), nil
 	}

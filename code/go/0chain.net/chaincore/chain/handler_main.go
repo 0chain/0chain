@@ -36,7 +36,7 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 // LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
 func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlockClone(); lfmb != nil {
+	if lfmb := c.GetLatestFinalizedMagicBlockClone(ctx); lfmb != nil {
 		return lfmb.GetSummary(), nil
 	}
 
