@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
+	"0chain.net/smartcontract/stakepool"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -18,12 +22,19 @@ import (
 	"0chain.net/core/util"
 )
 
+//msgp:ignore StorageAllocation BlobberChallenge
+//go:generate msgp -io=false -tests=false -v
+
 var (
-	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
+	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
+	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
+	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("blobber_rewards")
 )
+
+func getBlobberChallengeAllocationKey(blobberID string) string {
+	return ADDRESS + encryption.Hash("blobber_challenge_allocation"+blobberID)
+}
 
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`
@@ -56,7 +67,7 @@ func (sn *ClientAllocation) GetHashBytes() []byte {
 }
 
 type Allocations struct {
-	List sortedList
+	List SortedList
 }
 
 func (a *Allocations) has(id string) (ok bool) {
@@ -91,10 +102,10 @@ type ChallengeResponse struct {
 }
 
 type BlobberChallenge struct {
-	BlobberID                string                       `json:"blobber_id"`
-	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-"`
-	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+	BlobberID                string              `json:"blobber_id"`
+	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
+	ChallengeIDs             []string            `json:"challenge_ids"`
+	ChallengeIDMap           map[string]struct{} `json:"-" msg:"-"`
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
@@ -119,6 +130,78 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
+	sn.ChallengeIDMap = make(map[string]struct{})
+	for _, challengeID := range sn.ChallengeIDs {
+		sn.ChallengeIDMap[challengeID] = struct{}{}
+	}
+	return nil
+}
+
+type BlobberChallengeDecode BlobberChallenge
+
+func (sn *BlobberChallenge) MarshalMsg(o []byte) ([]byte, error) {
+	d := BlobberChallengeDecode(*sn)
+	return d.MarshalMsg(o)
+}
+
+func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &BlobberChallengeDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*sn = BlobberChallenge(*d)
+
+	sn.ChallengeIDMap = make(map[string]struct{})
+	for _, challenge := range sn.ChallengeIDs {
+		sn.ChallengeIDMap[challenge] = struct{}{}
+	}
+	return o, nil
+}
+
+func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
+
+	if sn.ChallengeIDs == nil {
+		sn.ChallengeIDMap = make(map[string]struct{})
+	}
+	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
+		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
+		sn.ChallengeIDMap[challenge.ID] = struct{}{}
+		return true
+	}
+	return false
+}
+
+type AllocationChallenge struct {
+	AllocationID             string                       `json:"allocation_id"`
+	Challenges               []*StorageChallenge          `json:"challenges"`
+	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
+	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+}
+
+func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
+	return globalKey + ":allocationchallenge:" + sn.AllocationID
+}
+
+func (sn *AllocationChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *AllocationChallenge) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *AllocationChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
+}
+
+func (sn *AllocationChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
 	sn.ChallengeMap = make(map[string]*StorageChallenge)
 	for _, challenge := range sn.Challenges {
 		sn.ChallengeMap[challenge.ID] = challenge
@@ -126,42 +209,63 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	return nil
 }
 
-func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
+func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
+
 	if sn.Challenges == nil {
 		sn.Challenges = make([]*StorageChallenge, 0)
+	}
+	if sn.ChallengeMap == nil {
 		sn.ChallengeMap = make(map[string]*StorageChallenge)
 	}
+
 	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
-		if len(sn.Challenges) > 0 {
-			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
-			challenge.PrevID = lastChallenge.ID
-		} else if sn.LatestCompletedChallenge != nil {
-			challenge.PrevID = sn.LatestCompletedChallenge.ID
-		}
 		sn.Challenges = append(sn.Challenges, challenge)
 		sn.ChallengeMap[challenge.ID] = challenge
 		return true
 	}
+
 	return false
 }
 
 type StorageChallenge struct {
-	Created        common.Timestamp   `json:"created"`
-	ID             string             `json:"id"`
-	PrevID         string             `json:"prev_id"`
-	Validators     []*ValidationNode  `json:"validators"`
-	RandomNumber   int64              `json:"seed"`
-	AllocationID   string             `json:"allocation_id"`
-	Blobber        *StorageNode       `json:"blobber"`
-	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
+	Created         common.Timestamp `json:"created"`
+	ID              string           `json:"id"`
+	TotalValidators int              `json:"total_validators"`
+	AllocationID    string           `json:"allocation_id"`
+	BlobberID       string           `json:"blobber_id"`
+	Responded       bool             `json:"responded"`
+}
+
+func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
+	return globalKey + "storagechallenge:" + sc.ID
+}
+
+func (sc *StorageChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sc *StorageChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sc)
+	return buff
+}
+
+func (sc *StorageChallenge) GetHash() string {
+	return util.ToHex(sc.GetHashBytes())
+}
+
+func (sc *StorageChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sc.Encode())
 }
 
 type ValidationNode struct {
-	ID                string            `json:"id"`
-	BaseURL           string            `json:"url"`
-	PublicKey         string            `json:"-"`
-	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
+	ID                string                      `json:"id"`
+	BaseURL           string                      `json:"url"`
+	PublicKey         string                      `json:"-" msg:"-"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
@@ -242,7 +346,7 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
 }
 
 // validate a received terms
-func (t *Terms) validate(conf *scConfig) (err error) {
+func (t *Terms) validate(conf *Config) (err error) {
 	if t.ReadPrice < 0 {
 		return errors.New("negative read_price")
 	}
@@ -301,22 +405,45 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
+type RewardPartitionLocation struct {
+	Index      int              `json:"index"`
+	StartRound int64            `json:"start_round"`
+	Timestamp  common.Timestamp `json:"timestamp"`
+}
+
+// Info represents general information about blobber node
+type Info struct {
+	Name        string `json:"name"`
+	WebsiteUrl  string `json:"website_url"`
+	LogoUrl     string `json:"logo_url"`
+	Description string `json:"description"`
+}
+
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID              string                 `json:"id"`
-	BaseURL         string                 `json:"url"`
-	Geolocation     StorageNodeGeolocation `json:"geolocation"`
-	Terms           Terms                  `json:"terms"`    // terms
-	Capacity        int64                  `json:"capacity"` // total blobber capacity
-	Used            int64                  `json:"used"`     // allocated capacity
-	LastHealthCheck common.Timestamp       `json:"last_health_check"`
-	PublicKey       string                 `json:"-"`
+	ID                      string                 `json:"id"`
+	BaseURL                 string                 `json:"url"`
+	Geolocation             StorageNodeGeolocation `json:"geolocation"`
+	Terms                   Terms                  `json:"terms"`         // terms
+	Capacity                int64                  `json:"capacity"`      // total blobber capacity
+	Used                    int64                  `json:"used"`          // allocated capacity
+	BytesWritten            int64                  `json:"bytes_written"` // in bytes
+	DataRead                float64                `json:"data_read"`     // in GB
+	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
+	PublicKey               string                 `json:"-"`
+	SavedData               int64                  `json:"saved_data"`
+	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	// ChallengeLocation to be replaced for BlobberChallengePartitionLocation once StorageNode is normalised
+	//ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
+	RewardPartition RewardPartitionLocation `json:"reward_partition"`
+	Information     Info                    `json:"info"`
 }
 
 // validate the blobber configurations
-func (sn *StorageNode) validate(conf *scConfig) (err error) {
+func (sn *StorageNode) validate(conf *Config) (err error) {
 	if err = sn.Terms.validate(conf); err != nil {
 		return
 	}
@@ -353,8 +480,31 @@ func (sn *StorageNode) Decode(input []byte) error {
 	return nil
 }
 
+// BlobberChallengePartitionLocation is a temporary object. should be removed once StorageNode is normalised
+type BlobberChallengePartitionLocation struct {
+	ID                string                        `json:"id"`
+	PartitionLocation *partitions.PartitionLocation `json:"challenge_location"`
+}
+
+func (bcpl *BlobberChallengePartitionLocation) GetKey(globalKey string) datastore.Key {
+	return globalKey + bcpl.ID + "blobber_challenge_partition"
+}
+
+func (bcpl *BlobberChallengePartitionLocation) Encode() []byte {
+	buff, _ := json.Marshal(bcpl)
+	return buff
+}
+
+func (bcpl *BlobberChallengePartitionLocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, bcpl)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type StorageNodes struct {
-	Nodes sortedBlobbers
+	Nodes SortedBlobbers
 }
 
 func (sn *StorageNodes) Decode(input []byte) error {
@@ -381,7 +531,7 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 type StorageAllocationStats struct {
 	UsedSize                  int64  `json:"used_size"`
 	NumWrites                 int64  `json:"num_of_writes"`
-	NumReads                  int64  `json:"num_of_reads"`
+	ReadsSize                 int64  `json:"reads_size"`
 	TotalChallenges           int64  `json:"total_challenges"`
 	OpenChallenges            int64  `json:"num_open_challenges"`
 	SuccessChallenges         int64  `json:"num_success_challenges"`
@@ -390,8 +540,9 @@ type StorageAllocationStats struct {
 }
 
 type BlobberAllocation struct {
-	BlobberID       string                  `json:"blobber_id"`
-	AllocationID    string                  `json:"allocation_id"`
+	BlobberID    string `json:"blobber_id"`
+	AllocationID string `json:"allocation_id"`
+	// Size is blobber allocation maximum size
 	Size            int64                   `json:"size"`
 	AllocationRoot  string                  `json:"allocation_root"`
 	LastWriteMarker *WriteMarker            `json:"write_marker"`
@@ -491,6 +642,26 @@ type BlobberAllocation struct {
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
+	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
+	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
+}
+
+func newBlobberAllocation(
+	size int64,
+	allocation *StorageAllocation,
+	blobber *StorageNode,
+	date common.Timestamp,
+) *BlobberAllocation {
+	ba := &BlobberAllocation{}
+	ba.Stats = &StorageAllocationStats{}
+	ba.Size = size
+	ba.Terms = blobber.Terms
+	ba.AllocationID = allocation.ID
+	ba.BlobberID = blobber.ID
+	ba.MinLockDemand = blobber.Terms.minLockDemand(
+		sizeInGB(size), allocation.restDurationInTimeUnits(date),
+	)
+	return ba
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
@@ -501,6 +672,10 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue += move
 	return
+}
+
+func (d *BlobberAllocation) Offer() state.Balance {
+	return state.Balance(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
 }
 
 // The upload used after commitBlobberConnection (size < 0) to calculate
@@ -549,19 +724,21 @@ type StorageAllocation struct {
 	// Tx keeps hash with which the allocation has created or updated.
 	Tx string `json:"tx"`
 
-	DataShards        int                           `json:"data_shards"`
-	ParityShards      int                           `json:"parity_shards"`
-	Size              int64                         `json:"size"`
-	Expiration        common.Timestamp              `json:"expiration_date"`
-	Blobbers          []*StorageNode                `json:"blobbers"`
-	Owner             string                        `json:"owner_id"`
-	OwnerPublicKey    string                        `json:"owner_public_key"`
-	Stats             *StorageAllocationStats       `json:"stats"`
-	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
-	PreferredBlobbers []string                      `json:"preferred_blobbers"`
-	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
-	BlobberMap        map[string]*BlobberAllocation `json:"-"`
-	IsImmutable       bool                          `json:"is_immutable"`
+	DataShards        int                     `json:"data_shards"`
+	ParityShards      int                     `json:"parity_shards"`
+	Size              int64                   `json:"size"`
+	Expiration        common.Timestamp        `json:"expiration_date"`
+	Owner             string                  `json:"owner_id"`
+	OwnerPublicKey    string                  `json:"owner_public_key"`
+	Stats             *StorageAllocationStats `json:"stats"`
+	DiverseBlobbers   bool                    `json:"diverse_blobbers"`
+	PreferredBlobbers []string                `json:"preferred_blobbers"`
+	// Blobbers not to be used anywhere except /allocation and /allocations table
+	// if Blobbers are getting used in any smart-contract, we should avoid.
+	Blobbers       []*StorageNode                `json:"blobbers"`
+	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
+	BlobberMap     map[string]*BlobberAllocation `json:"-" msg:"-"`
+	IsImmutable    bool                          `json:"is_immutable"`
 
 	// Requested ranges.
 	ReadPriceRange             PriceRange    `json:"read_price_range"`
@@ -583,7 +760,7 @@ type StorageAllocation struct {
 	// transaction.
 	Canceled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-"`
+	UsedSize int64 `json:"-" msg:"-"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
 	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
@@ -601,6 +778,165 @@ type StorageAllocation struct {
 	Curators []string `json:"curators"`
 }
 
+func (sa *StorageAllocation) validateAllocationBlobber(
+	blobber *StorageNode,
+	sp *stakePool,
+	now common.Timestamp,
+) error {
+	bSize := sa.bSize()
+	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+
+	// filter by max offer duration
+	if blobber.Terms.MaxOfferDuration < duration {
+		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
+			duration, blobber.ID, blobber.Terms.MaxOfferDuration)
+	}
+	// filter by read price
+	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by write price
+	if !sa.WritePriceRange.isMatch(blobber.Terms.WritePrice) {
+		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
+			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+	}
+	// filter by blobber's capacity left
+	if blobber.Capacity-blobber.Used < bSize {
+		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
+			blobber.ID, blobber.Capacity-blobber.Used, bSize)
+	}
+	// filter by max challenge completion time
+	if blobber.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+		return fmt.Errorf("blobber %s challenge compledtion time %v exceeds maximum challenge completeion time %v",
+			blobber.ID, blobber.Terms.ChallengeCompletionTime, sa.MaxChallengeCompletionTime)
+	}
+
+	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
+		return fmt.Errorf("blobber %s failed health check", blobber.ID)
+	}
+
+	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
+			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
+	}
+
+	return nil
+}
+
+func (sa *StorageAllocation) bSize() int64 {
+	var size = sa.DataShards + sa.ParityShards
+	return (sa.Size + int64(size-1)) / int64(size)
+}
+
+func (sa *StorageAllocation) removeBlobber(
+	blobbers []*StorageNode,
+	removeId string,
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI,
+) ([]*StorageNode, error) {
+	remove, found := sa.BlobberMap[removeId]
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+	delete(sa.BlobberMap, removeId)
+
+	var removedBlobber *StorageNode
+	found = false
+	for i, d := range blobbers {
+		if d.ID == removeId {
+			removedBlobber = blobbers[i]
+			blobbers[i] = blobbers[len(sa.BlobberDetails)-1]
+			blobbers = blobbers[:len(blobbers)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+
+	found = false
+	for i, d := range sa.BlobberDetails {
+		if d.BlobberID == removeId {
+			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
+			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
+			removedBlobber.Used -= d.Size
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+	}
+
+	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
+		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
+	}
+	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
+		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
+	}
+
+	blobber, err := ssc.getBlobber(removeId, balances)
+	if err != nil {
+		return nil, err
+	}
+	blobber.Used -= sa.bSize()
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	if err != nil {
+		return nil, err
+	}
+
+	return blobbers, nil
+}
+
+func (sa *StorageAllocation) changeBlobbers(
+	blobbers []*StorageNode,
+	addId, removeId string,
+	ssc *StorageSmartContract,
+	now common.Timestamp,
+	balances chainstate.StateContextI,
+) ([]*StorageNode, error) {
+	var err error
+	if len(removeId) > 0 {
+		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+			return nil, err
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+
+	_, found := sa.BlobberMap[addId]
+	if found {
+		return nil, fmt.Errorf("allocatino already has blobber %s", addId)
+	}
+
+	addedBlobber, err := ssc.getBlobber(addId, balances)
+	if err != nil {
+		return nil, err
+	}
+	addedBlobber.Used += sa.bSize()
+	afterSize := sa.bSize()
+
+	blobbers = append(blobbers, addedBlobber)
+	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	sa.BlobberMap[addId] = ba
+	sa.BlobberDetails = append(sa.BlobberDetails, ba)
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
+		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
+		return nil, err
+	}
+
+	return blobbers, nil
+}
+
+type StorageAllocationDecode StorageAllocation
+
 // The restMinLockDemand returns number of tokens required as min_lock_demand;
 // if a blobber receive write marker, then some token moves to related
 // challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'
@@ -615,6 +951,22 @@ func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 		}
 	}
 	return
+}
+
+func (sa *StorageAllocation) getBlobbers(balances chainstate.StateContextI) error {
+
+	for _, ba := range sa.BlobberDetails {
+		blobber, err := balances.GetEventDB().GetBlobber(ba.BlobberID)
+		if err != nil {
+			return err
+		}
+		sn, err := blobberTableToStorageNode(*blobber)
+		if err != nil {
+			return err
+		}
+		sa.Blobbers = append(sa.Blobbers, &sn.StorageNode)
+	}
+	return nil
 }
 
 func (sa *StorageAllocation) addWritePoolOwner(userId string) {
@@ -668,7 +1020,7 @@ func (sa *StorageAllocation) getAllocationPools(
 }
 
 func (sa *StorageAllocation) validate(now common.Timestamp,
-	conf *scConfig) (err error) {
+	conf *Config) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
 		return errors.New("invalid read_price range")
@@ -976,6 +1328,30 @@ func (sn *StorageAllocation) Encode() []byte {
 	return buff
 }
 
+func (sn *StorageAllocation) MarshalMsg(o []byte) ([]byte, error) {
+	d := StorageAllocationDecode(*sn)
+	return d.MarshalMsg(o)
+}
+
+func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
+	d := &StorageAllocationDecode{}
+	o, err := d.UnmarshalMsg(data)
+	if err != nil {
+		return nil, err
+	}
+
+	*sn = StorageAllocation(*d)
+
+	sn.BlobberMap = make(map[string]*BlobberAllocation)
+	for _, blobberAllocation := range sn.BlobberDetails {
+		if blobberAllocation.Stats != nil {
+			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+		}
+		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
+	}
+	return o, nil
+}
+
 type BlobberCloseConnection struct {
 	AllocationRoot     string       `json:"allocation_root"`
 	PrevAllocationRoot string       `json:"prev_allocation_root"`
@@ -1033,7 +1409,9 @@ func (wm *WriteMarker) VerifySignature(
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1129,7 +1507,7 @@ func (at *AuthTicket) verify(
 			"Invalid auth ticket. Client ID mismatch")
 	}
 
-	if at.Expiration < at.Timestamp || at.Expiration < now {
+	if at.Expiration > 0 && (at.Expiration < at.Timestamp || at.Expiration < now) {
 		return common.NewError("invalid_read_marker",
 			"Invalid auth ticket. Expired ticket")
 	}
@@ -1170,17 +1548,20 @@ type ReadMarker struct {
 	AllocationID    string           `json:"allocation_id"`
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
-	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
+	ReadSize        int64            `json:"read_size"`
+	ReadSizeInGB    float64          `json:"read_size_in_gb"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(clientPublicKey)
+	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
+		return false
+	}
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
 		return false
@@ -1191,11 +1572,7 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 	return true
 }
 
-func (rm *ReadMarker) verifyAuthTicket(
-	alloc *StorageAllocation,
-	now common.Timestamp,
-	balances chainstate.StateContextI,
-) (err error) {
+func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances chainstate.StateContextI) (err error) {
 	// owner downloads, pays itself, no ticket needed
 	if rm.PayerID == alloc.Owner {
 		return
@@ -1210,34 +1587,21 @@ func (rm *ReadMarker) verifyAuthTicket(
 func (rm *ReadMarker) GetHashData() string {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID,
 		rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID,
-		rm.ReadCounter, rm.Timestamp)
+		rm.ReadSize, rm.Timestamp)
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
-	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
-		rm.Timestamp == 0 {
+func (rm *ReadMarker) Verify(balances chainstate.StateContextI) error {
+	if rm.ReadSize <= 0 || rm.BlobberID == "" || rm.ClientID == "" || rm.Timestamp == 0 {
+		return common.NewError("invalid_read_marker", "length validations of fields failed")
+	}
 
+	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); !ok {
 		return common.NewError("invalid_read_marker",
-			"length validations of fields failed")
+			"Signature verification failed for the read marker")
 	}
 
-	if prevRM != nil {
-		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID ||
-			rm.Timestamp < prevRM.Timestamp ||
-			rm.ReadCounter < prevRM.ReadCounter {
-
-			return common.NewError("invalid_read_marker",
-				"validations with previous marker failed.")
-		}
-	}
-
-	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); ok {
-		return nil
-	}
-
-	return common.NewError("invalid_read_marker",
-		"Signature verification failed for the read marker")
+	return nil
 }
 
 type ValidationTicket struct {
@@ -1257,30 +1621,9 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
-	signatureScheme.SetPublicKey(vt.ValidatorKey)
+	if err := signatureScheme.SetPublicKey(vt.ValidatorKey); err != nil {
+		return false, err
+	}
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
-}
-
-type StorageStats struct {
-	Stats              *StorageAllocationStats `json:"stats"`
-	LastChallengedSize int64                   `json:"last_challenged_size"`
-	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
-}
-
-func (sn *StorageStats) GetKey(_ string) datastore.Key {
-	return STORAGE_STATS_KEY
-}
-
-func (sn *StorageStats) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sn *StorageStats) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
 }

@@ -50,7 +50,7 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
@@ -63,7 +63,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round, bool) {
 	r, err := sc.GetRoundFromStore(ctx, rNum)
-	if err == nil && sc.isValidRound(r) == true {
+	if err == nil && sc.isValidRound(r) {
 		return r, true
 	}
 	return nil, false
@@ -88,7 +88,7 @@ func (sc *Chain) hasBlock(bHash string, rNum int64) (*block.Block, bool) {
 	return nil, false
 }
 
-func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool {
+func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool { //nolint
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
 	defer persistencestore.Close(tctx)
@@ -193,40 +193,35 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 	if !viper.GetBool("minio.enabled") {
 		return
 	}
-	var iterInprogress = false
 	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
 	var numWorkers = viper.GetInt("minio.num_workers")
 	ticker := time.NewTicker(time.Duration(viper.GetInt64("minio.worker_frequency")) * time.Second)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if !iterInprogress {
-				iterInprogress = true
-				roundToProcess := sc.GetCurrentRound() - oldBlockRoundRange
-				fs := blockstore.GetStore()
-				swg := sizedwaitgroup.New(numWorkers)
-				for roundToProcess > 0 {
-					hash, err := sc.GetBlockHash(ctx, roundToProcess)
-					if err != nil {
-						logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
-						roundToProcess--
-						continue
-					}
-					if fs.CloudObjectExists(hash) {
-						logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
-						break
-					} else {
-						swg.Add()
-						go sc.moveBlockToCloud(ctx, roundToProcess, hash, fs, &swg)
-						roundToProcess--
-					}
+			roundToProcess := sc.GetCurrentRound() - oldBlockRoundRange
+			fs := blockstore.GetStore()
+			swg := sizedwaitgroup.New(numWorkers)
+			for roundToProcess > 0 {
+				hash, err := sc.GetBlockHash(ctx, roundToProcess)
+				if err != nil {
+					logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
+					roundToProcess--
+					continue
 				}
-				swg.Wait()
-				iterInprogress = false
-				logging.Logger.Info("Moved old blocks to cloud successfully")
+				if fs.CloudObjectExists(hash) {
+					logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
+					break
+				} else {
+					swg.Add()
+					go sc.moveBlockToCloud(ctx, roundToProcess, hash, fs, &swg)
+					roundToProcess--
+				}
 			}
+			swg.Wait()
+			logging.Logger.Info("Moved old blocks to cloud successfully")
 		}
 	}
 }

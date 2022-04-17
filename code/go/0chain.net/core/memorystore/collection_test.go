@@ -1,14 +1,17 @@
 package memorystore_test
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"context"
-	"testing"
-	"time"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -65,8 +68,18 @@ func TestStore_IterateCollection(t *testing.T) {
 
 	txn := transaction.Transaction{}
 	txn.SetKey("key")
+	scheme := encryption.NewBLS0ChainScheme()
+	err := scheme.GenerateKeys()
+	require.NoError(t, err)
+	txn.PublicKey = scheme.GetPublicKey()
+
 	txn2 := transaction.Transaction{}
 	txn2.SetKey("key2")
+	err = scheme.GenerateKeys()
+	require.NoError(t, err)
+
+	txn2.PublicKey = scheme.GetPublicKey()
+
 	writeTxnsToStorage(t, &txn, &txn2)
 	addTxnsToCollection(t, &txn, &txn2)
 
@@ -113,6 +126,7 @@ func TestStore_IterateCollection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := &memorystore.Store{}
 			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
 
 			if tt.cancel {
 				cancel()
@@ -165,6 +179,7 @@ func TestStore_IterateCollection_Closed_Conn_Err(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := &memorystore.Store{}
 			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
 
 			if tt.cancel {
 				cancel()
@@ -183,7 +198,12 @@ func TestStore_IterateCollectionAsc(t *testing.T) {
 	handler := makeTestCollectionIterationHandler()
 
 	txn := transaction.Transaction{}
+	sch := encryption.NewBLS0ChainScheme()
+	err := sch.GenerateKeys()
+	require.NoError(t, err)
+
 	txn.SetKey("key")
+	txn.PublicKey = sch.GetPublicKey()
 	writeTxnsToStorage(t, &txn)
 	addTxnsToCollection(t, &txn)
 

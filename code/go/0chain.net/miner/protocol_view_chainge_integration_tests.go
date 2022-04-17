@@ -1,10 +1,10 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 
 	"0chain.net/chaincore/block"
@@ -304,68 +304,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	return
 }
 
-func SignShareRequestHandler(ctx context.Context, r *http.Request) (
-	resp interface{}, err error) {
-
-	var (
-		nodeID   = r.Header.Get(node.HeaderNodeID)
-		secShare = r.FormValue("secret_share")
-		mc       = GetMinerChain()
-	)
-
-	mc.viewChangeProcess.Lock()
-	defer mc.viewChangeProcess.Unlock()
-
-	if !mc.viewChangeProcess.isDKGSet() {
-		return nil, common.NewError("sign_share", "DKG is not set")
-	}
-
-	var mpks = mc.viewChangeProcess.mpks.GetMpks()
-	if len(mpks) < mc.viewChangeProcess.viewChangeDKG.T {
-		return nil, common.NewError("sign_share", "don't have enough mpks yet")
-	}
-
-	var (
-		message = datastore.GetEntityMetadata("dkg_share").
-			Instance().(*bls.DKGKeyShare)
-
-		share bls.Key
-	)
-
-	if err = share.SetHexString(secShare); err != nil {
-		logging.Logger.Error("failed to set hex string", zap.Any("error", err))
-		return nil, common.NewErrorf("sign_share",
-			"setting hex string: %v", err)
-	}
-
-	var (
-		mpk       = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-		mpkString []string
-	)
-	for _, pk := range mpk {
-		mpkString = append(mpkString, pk.GetHexString())
-	}
-
-	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
-		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
-			zap.Any("node_id", nodeID))
-		return nil, common.NewError("sign_share", "failed to verify DKG share")
-	}
-
-	err = mc.viewChangeProcess.viewChangeDKG.AddSecretShare(
-		bls.ComputeIDdkg(nodeID), secShare, false)
-	if err != nil {
-		return nil, common.NewErrorf("sign_share",
-			"adding secret share: %v", err)
-	}
-
-	message.Message = node.Self.Underlying().GetKey()
-	message.Sign, err = node.Self.Sign(message.Message)
-	if err != nil {
-		logging.Logger.Error("failed to sign DKG share message", zap.Any("error", err))
-		return nil, common.NewErrorf("sign_share",
-			"signing DKG share message: %v", err)
-	}
+func afterSignShareRequestHandler(message *bls.DKGKeyShare, nodeID string) (messageResult *bls.DKGKeyShare, err error) {
 
 	var state = crpc.Client().State()
 

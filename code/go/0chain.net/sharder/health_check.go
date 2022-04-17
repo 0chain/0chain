@@ -191,7 +191,8 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	bss := sc.BlockSyncStats
 
 	// Get the configuration
-	config := &sc.HCCycleScan[scanMode]
+	h := sc.HCCycleScan()[scanMode]
+	config := &h
 
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
@@ -203,11 +204,11 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 
 	cc.inception = time.Now()
 
-	if config.Enabled == false {
+	if !config.Enabled {
 
 		// Scan is disabled. Print event periodically.
 		wakeToReport := config.ReportStatus
-		for true {
+		for {
 			Logger.Info("HC-CycleHistory",
 				zap.String("scan", scanMode.String()),
 				zap.Bool("enabled", config.Enabled))
@@ -239,7 +240,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	// Initialize the health check statistics
 	sc.initSyncStats(ctx, scanMode)
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -353,7 +354,8 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 		zap.Int64("SweepRate", bc.SweepRate))
 
 	// End of the cycle. Sleep between cycles.
-	config := &sc.HCCycleScan[scanMode]
+	scan := sc.HCCycleScan()[scanMode]
+	config := &scan
 
 	sleepTime := config.RepeatInterval
 	wakeToReport := config.ReportStatus
@@ -401,7 +403,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	defer sc.hcUpdateBlockStatus(scanMode, &hcStatus)
 
 	bss := sc.BlockSyncStats
-	config := &sc.HCCycleScan[scanMode]
+	scan := sc.HCCycleScan()
+	config := &scan[scanMode]
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
 
@@ -415,7 +418,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	self := node.GetSelfNode(ctx)
 
 	r, foundRoundSummary := sc.hasRoundSummary(ctx, rNum)
-	if foundRoundSummary == false || sc.isValidRound(r) == false {
+	if !foundRoundSummary || !sc.isValidRound(r) {
 		// Update missing round summary
 		current.roundSummary.Missing++
 
@@ -428,7 +431,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		}
 	}
 
-	if sc.isValidRound(r) == false {
+	if !sc.isValidRound(r) {
 		// Unable to get the round summary information.
 		hcStatus = HealthCheckFailure
 		return
@@ -436,7 +439,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// Obtained valid round. Retrieve blocks.
 	bs, foundBlockSummary := sc.hasBlockSummary(ctx, r.BlockHash)
-	if foundBlockSummary == false {
+	if !foundBlockSummary {
 		current.blockSummary.Missing++
 
 		// Missing block summary. Sync the blocks
@@ -472,7 +475,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// The sharder needs txn_summary. Get the block
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
-	if foundBlock == false {
+	if !foundBlock {
 		if needTxnSummary || canShard {
 			// The sharder doesn't have the block.
 			// It needs a block either to fix txnsummary or missing block
@@ -524,9 +527,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 		// The block has transactions and may need to be stored.
 		err := sc.storeBlockTransactions(ctx, b)
-		if err == nil {
-			current.txnSummary.RepairSuccess++
-		} else {
+		if err != nil {
 			Logger.Error("HC-DSWriteFailure",
 				zap.String("mode", cc.ScanMode.String()),
 				zap.Int64("cycle", cc.CycleCount),
@@ -539,6 +540,6 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			hcStatus = HealthCheckFailure
 			return
 		}
+		current.txnSummary.RepairSuccess++
 	}
-	return
 }

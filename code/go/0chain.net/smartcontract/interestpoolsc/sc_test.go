@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract"
+	"github.com/stretchr/testify/require"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -158,7 +159,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 0),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 100, 10, 20),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 100, 10, 20, owner),
 				inputData: []byte("{test}"),
 				balances:  testBalance("", 0),
 			},
@@ -170,7 +171,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 0),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20, owner),
 				inputData: testPoolRequest(time.Second),
 				balances:  testBalance("", 0),
 			},
@@ -182,7 +183,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20, owner),
 				inputData: testPoolRequest(time.Second),
 				balances:  testBalance("", 0),
 			},
@@ -194,7 +195,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20, owner),
 				inputData: testPoolRequest(time.Second),
 				balances:  testBalance(clientID1, 1),
 			},
@@ -206,7 +207,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 20, owner),
 				inputData: testPoolRequest(2 * YEAR),
 				balances:  testBalance(clientID1, 20),
 			},
@@ -218,7 +219,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 2*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 2*time.Second, owner),
 				inputData: testPoolRequest(time.Second),
 				balances:  testBalance(clientID1, 20),
 			},
@@ -230,7 +231,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 2*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 10, 10, 5, 10, 2*time.Second, owner),
 				inputData: testPoolRequest(3 * time.Second),
 				balances:  testBalance(clientID1, 20),
 			},
@@ -242,7 +243,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 100, 1, 5, 0, 2*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 100, 1, 5, 0, 2*time.Second, owner),
 				inputData: testPoolRequest(3 * time.Second),
 				balances:  testBalance(clientID1, 20),
 			},
@@ -254,7 +255,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			args: args{
 				t:                testTxn(clientID1, 10),
 				un:               testUserNode(clientID1, nil),
-				gn:               testGlobalNode(globalNode1Ok, 100, 1, 5, 0, 2*time.Second),
+				gn:               testGlobalNode(globalNode1Ok, 100, 1, 5, 0, 2*time.Second, owner),
 				inputData:        testPoolRequest(3 * time.Second),
 				balances:         testBalance(clientID1, 20),
 				wantTransferPool: true,
@@ -302,22 +303,20 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 					t.Errorf("wrong balance for %v: now %v : should %v", tt.args.t.ToClientID, stateBalance, balance)
 				}
 
-				savedGNode, err := tt.args.balances.GetTrieNode(tt.args.gn.getKey())
+				var savedGNode GlobalNode
+				err = tt.args.balances.GetTrieNode(tt.args.gn.getKey(), &savedGNode)
 				if err != nil {
 					t.Errorf("can not fetch already saved global node")
 				}
-				if !reflect.DeepEqual(savedGNode, tt.args.gn) {
-					t.Errorf("wrong saved node")
-				}
+				require.Equal(t, savedGNode, *tt.args.gn)
 
-				savedUNode, err := tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID))
+				var savedUNode UserNode
+				err = tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID), &savedUNode)
 				if err != nil {
 					t.Errorf("can not fetch already saved user node")
 				}
 
-				if !reflect.DeepEqual(savedUNode, tt.args.un) {
-					t.Errorf("wrong saved node")
-				}
+				require.Equal(t, savedUNode, *tt.args.un)
 			}
 		})
 	}
@@ -359,7 +358,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 			args: args{
 				t:         nil,
 				un:        testUserNode(clientID1, nil),
-				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second, owner),
 				inputData: testPoolState().encode(),
 				balances:  nil,
 			},
@@ -371,7 +370,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, testInterestPool(5, 0)),
-				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second, owner),
 				inputData: testPoolState().encode(),
 				balances:  testBalance(clientID1, 10),
 			},
@@ -383,7 +382,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, testInterestPool(0, 0)),
-				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second, owner),
 				inputData: testPoolState().encode(),
 				balances:  testBalance(clientID1, 10),
 			},
@@ -395,7 +394,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 			args: args{
 				t:         testTxn(clientID1, 10),
 				un:        testUserNode(clientID1, testInterestPool(0, 100)),
-				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second),
+				gn:        testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second, owner),
 				inputData: testPoolState().encode(),
 				balances:  testBalance(clientID1, 10),
 			},
@@ -414,21 +413,25 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 				SmartContractExecutionStats: map[string]interface{}{},
 			}
 			ip.setSC(sc, nil)
+			if tt.args.t != nil {
+				ip.ID = tt.args.t.ClientID
+			}
 			got, err := ip.unlock(tt.args.t, tt.args.un, tt.args.gn, tt.args.inputData, tt.args.balances)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("unlock() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
+
 			if tt.shouldBeOk {
 				tpr := &tokenpool.TokenPoolTransferResponse{
-					ToClient: clientID1,
-					Value:    100,
-					FromPool: "new_test_pool_state"}
+					FromClient: clientID1,
+					ToClient:   clientID1,
+					Value:      100,
+					FromPool:   "new_test_pool_state"}
 				tt.want = string(tpr.Encode())
 			}
-			if got != tt.want {
-				t.Errorf("unlock() got = %v, want %v", got, tt.want)
-			}
+
+			require.Equal(t, tt.want, got)
 
 		})
 	}
@@ -456,7 +459,7 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			name: "unauthorized access",
 			args: args{
 				t:         testTxn(clientID1, 100),
-				gn:        nil,
+				gn:        testGlobalNodeStringTime(globalNode1Ok, 10, 10, 0, 0.10, "5m", owner),
 				inputData: nil,
 				balances:  nil,
 			},
@@ -467,7 +470,7 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			name: "request not formatted correctly",
 			args: args{
 				t:         testTxn(owner, 100),
-				gn:        nil,
+				gn:        testGlobalNodeStringTime(globalNode1Ok, 10, 10, 0, 0.10, "5m", owner),
 				inputData: []byte("{test}"),
 				balances:  nil,
 			},
@@ -478,18 +481,19 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			name: "ok",
 			args: args{
 				t:  testTxn(owner, 100),
-				gn: testGlobalNodeStringTime(globalNode1Ok, 10, 10, 0, 0.10, "5m"),
+				gn: testGlobalNodeStringTime(globalNode1Ok, 10, 10, 0, 0.10, "5m", owner),
 				inputData: (&smartcontract.StringMap{
 					Fields: map[string]string{
 						Settings[MinLock]:       "30",
 						Settings[Apr]:           "0.40",
 						Settings[MinLockPeriod]: "10m",
 						Settings[MaxMint]:       "10",
+						Settings[OwnerId]:       owner,
 					},
 				}).Encode(),
 				balances: testBalance("", 0),
 			},
-			want:       string(testGlobalNodeStringTime(globalNode1Ok, 10, 10, 30, 0.40, "10m").Encode()),
+			want:       string(testGlobalNodeStringTime(globalNode1Ok, 10, 10, 30, 0.40, "10m", owner).Encode()),
 			wantErr:    false,
 			shouldBeOk: true,
 		},
@@ -500,13 +504,12 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 				SmartContract: tt.fields.SmartContract,
 			}
 			got, err := ip.updateVariables(tt.args.t, tt.args.gn, tt.args.inputData, tt.args.balances)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("updateVariables() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("updateVariables() got = %v, want %v", got, tt.want)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -548,7 +551,8 @@ func TestInterestPoolSmartContract_getUserNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.full {
 				blnc := testBalance("", 0)
-				blnc.InsertTrieNode(datastore.Key("new_test_pool_state"+clientID1), testUserNode(clientID1, nil))
+				_, err := blnc.InsertTrieNode(datastore.Key("new_test_pool_state"+clientID1), testUserNode(clientID1, nil))
+				require.NoError(t, err)
 				tt.args.balances = blnc
 			}
 			ip := &InterestPoolSmartContract{
@@ -558,7 +562,11 @@ func TestInterestPoolSmartContract_getUserNode(t *testing.T) {
 					SmartContractExecutionStats: map[string]interface{}{},
 				},
 			}
-			if got := ip.getUserNode(tt.args.id, tt.args.balances); !reflect.DeepEqual(got, tt.want) {
+
+			got, err := ip.getUserNode(tt.args.id, tt.args.balances)
+			require.NoError(t, err)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getUserNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -584,12 +592,15 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 	notEmptyBlnc := func() *testBalances {
 		b := testBalance("", 0)
 		gn := newGlobalNode()
-		b.InsertTrieNode(gn.getKey(), gn)
+		_, err := b.InsertTrieNode(gn.getKey(), gn)
+		require.NoError(t, err)
 		return b
 	}
 
 	config.SetupDefaultSmartContractConfig()
 
+	node := testConfiguredGlobalNode()
+	node.Cost = map[string]int{}
 	tests := []test{
 		{
 			name: "empty_globalNode",
@@ -597,7 +608,7 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 				balances: testBalance("", 0),
 				funcName: "funcName",
 			},
-			want: testConfiguredGlobalNode(),
+			want: node,
 		},
 		{
 			name: "existing_globalNode",
@@ -608,7 +619,7 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 			want: testGlobalNode(
 				ADDRESS,
 				0, 0, 0,
-				0, 0,
+				0, 0, "",
 			),
 		},
 	}
@@ -617,7 +628,10 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 			ip := &InterestPoolSmartContract{
 				SmartContract: tt.fields.SmartContract,
 			}
-			if got := ip.getGlobalNode(tt.args.balances, tt.args.funcName); !reflect.DeepEqual(got, tt.want) {
+			got, err := ip.getGlobalNode(tt.args.balances, tt.args.funcName)
+			require.NoError(t, err)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getGlobalNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -636,38 +650,44 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 	}
 
 	lockBalancesFunc := func() *testBalances {
-		t := testBalance(clientID1, 20)
+		tb := testBalance(clientID1, 20)
 		// inserting user node
-		t.InsertTrieNode(clientID1, &UserNode{
+		_, err := tb.InsertTrieNode(clientID1, &UserNode{
 			ClientID: clientID1,
 			Pools:    map[datastore.Key]*interestPool{},
 		})
+		require.NoError(t, err)
 		// inserting global nodeinputData
-		t.InsertTrieNode(
+		_, err = tb.InsertTrieNode(
 			datastore.Key(ADDRESS+ADDRESS),
-			testGlobalNode(globalNode1Ok, 100, 10, 5, 1, 2*time.Second))
-		return t
+			testGlobalNode(globalNode1Ok, 100, 10, 5, 1, 2*time.Second, owner))
+		require.NoError(t, err)
+		return tb
 	}
 	unlockBalanceFunc := func() *testBalances {
-		t := testBalance(clientID1, 10)
-		t.InsertTrieNode(ADDRESS+clientID1,
+		tb := testBalanceUnlock(clientID1, 10)
+		_, err := tb.InsertTrieNode(ADDRESS+clientID1,
 			testUserNode(clientID1, testInterestPool(0, 100)))
-		t.InsertTrieNode(
+		require.NoError(t, err)
+		_, err = tb.InsertTrieNode(
 			datastore.Key(ADDRESS+ADDRESS),
-			testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second))
-		return t
+			testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second, owner))
+		require.NoError(t, err)
+		return tb
 	}
 
 	updateVariables := func() *testBalances {
-		t := testBalance(clientID1, 10)
+		tb := testBalance(clientID1, 10)
 
-		t.InsertTrieNode(ADDRESS+clientID1,
+		_, err := tb.InsertTrieNode(ADDRESS+clientID1,
 			testUserNode(clientID1, testInterestPool(0, 100)))
-		t.InsertTrieNode(
+		require.NoError(t, err)
+		_, err = tb.InsertTrieNode(
 			datastore.Key(ADDRESS+ADDRESS),
-			testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5))
+			testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5, owner))
+		require.NoError(t, err)
 
-		return t
+		return tb
 	}
 
 	txn := testTxn(clientID1, 10)
@@ -714,12 +734,12 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				inputData: testPoolState().encode(),
 				balances:  unlockBalanceFunc(),
 			},
-			wantErr: false,
-			want: string((&tokenpool.TokenPoolTransferResponse{
-				ToClient:   clientID1,
-				Value:      100,
-				FromClient: ADDRESS,
-				FromPool:   "new_test_pool_state"}).Encode()),
+			wantErr: true,
+			//want: string((&tokenpool.TokenPoolTransferResponse{
+			//	ToClient:   clientID1,
+			//	Value:      100,
+			//	FromClient: ADDRESS,
+			//	FromPool:   "new_test_pool_state"}).Encode()),
 		},
 		{
 			name: "case: execute updateVariables function",
@@ -741,7 +761,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				}).Encode(),
 				balances: updateVariables(),
 			},
-			want:    string(testGlobalNodeStringTime(globalNode1Ok, 10, 10/1e10, 30, 0.40, "10m").Encode()),
+			want:    string(testGlobalNodeStringTime(globalNode1Ok, 10, 10/1e10, 30, 0.40, "10m", owner).Encode()),
 			wantErr: false,
 		},
 		{
@@ -767,13 +787,11 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				SmartContract: tt.fields.SmartContract,
 			}
 			got, err := ip.Execute(tt.args.t, tt.args.funcName, tt.args.inputData, tt.args.balances)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Execute() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

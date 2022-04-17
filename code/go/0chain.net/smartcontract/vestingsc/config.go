@@ -2,12 +2,16 @@ package vestingsc
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -20,6 +24,8 @@ import (
 	"0chain.net/chaincore/state"
 )
 
+//go:generate msgp -io=false -tests=false -unexported=true -v
+
 type Setting int
 
 const (
@@ -28,6 +34,8 @@ const (
 	MaxDuration
 	MaxDestinations
 	MaxDescriptionLength
+	OwnerId
+	Cost
 )
 
 var (
@@ -37,19 +45,33 @@ var (
 		"max_duration",
 		"max_destinations",
 		"max_description_length",
+		"owner_id",
+		"cost",
+	}
+
+	costFunctions = []string{
+		"add",
+		"delete",
+		"stop",
+		"trigger",
+		"unlock",
+		"vestingsc-update-settings",
 	}
 )
 
 func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
+	return scKey + ":configurations"
 }
 
+// config represents SC configurations ('vestingsc:' from sc.yaml)
 type config struct {
-	MinLock              state.Balance `json:"min_lock"`
-	MinDuration          time.Duration `json:"min_duration"`
-	MaxDuration          time.Duration `json:"max_duration"`
-	MaxDestinations      int           `json:"max_destinations"`
-	MaxDescriptionLength int           `json:"max_description_length"`
+	MinLock              state.Balance  `json:"min_lock"`
+	MinDuration          time.Duration  `json:"min_duration"`
+	MaxDuration          time.Duration  `json:"max_duration"`
+	MaxDestinations      int            `json:"max_destinations"`
+	MaxDescriptionLength int            `json:"max_description_length"`
+	OwnerId              string         `json:"owner_id"`
+	Cost                 map[string]int `json:"cost"`
 }
 
 func (c *config) validate() (err error) {
@@ -64,23 +86,25 @@ func (c *config) validate() (err error) {
 		return errors.New("invalid max_destinations (< 1)")
 	case c.MaxDescriptionLength < 1:
 		return errors.New("invalid max_description_length (< 1)")
+	case c.OwnerId == "":
+		return errors.New("owner_id is not set or empty")
 	}
 	return
 }
 
-func (conf *config) Encode() (b []byte) {
+func (c *config) Encode() (b []byte) {
 	var err error
-	if b, err = json.Marshal(conf); err != nil {
+	if b, err = json.Marshal(c); err != nil {
 		panic(err) // must not happens
 	}
 	return
 }
 
-func (conf *config) Decode(b []byte) error {
-	return json.Unmarshal(b, conf)
+func (c *config) Decode(b []byte) error {
+	return json.Unmarshal(b, c)
 }
 
-func (conf *config) update(changes *smartcontract.StringMap) error {
+func (c *config) update(changes *smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
 		switch key {
 		case Settings[MinLock]:
@@ -88,53 +112,95 @@ func (conf *config) update(changes *smartcontract.StringMap) error {
 				return fmt.Errorf("value %v cannot be converted to state.Balance, "+
 					"failing to set config key %s", value, key)
 			} else {
-				conf.MinLock = state.Balance(sbValue * 1e10)
+				c.MinLock = state.Balance(sbValue * 1e10)
 			}
 		case Settings[MinDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				conf.MinDuration = dValue
+				c.MinDuration = dValue
 			}
 		case Settings[MaxDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				conf.MaxDuration = dValue
+				c.MaxDuration = dValue
 			}
 		case Settings[MaxDestinations]:
 			if iValue, err := strconv.Atoi(value); err != nil {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				conf.MaxDestinations = iValue
+				c.MaxDestinations = iValue
 			}
 		case Settings[MaxDescriptionLength]:
 			if iValue, err := strconv.Atoi(value); err != nil {
 				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
-				conf.MaxDescriptionLength = iValue
+				c.MaxDescriptionLength = iValue
 			}
+		case Settings[OwnerId]:
+			if _, err := hex.DecodeString(value); err != nil {
+				return fmt.Errorf("value %v cannot be converted to int with 16 base, "+
+					"failing to set config key %s", value, key)
+			} else {
+				c.OwnerId = value
+			}
+
 		default:
-			return fmt.Errorf("config setting %s not found", key)
+			return c.setCostValue(key, value)
 		}
 	}
 	return nil
 }
 
-func (conf *config) getConfigMap() smartcontract.StringMap {
-	sMap := smartcontract.StringMap{
-		Fields: make(map[string]string),
+func (c *config) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, Settings[Cost]) {
+		return fmt.Errorf("config setting %s not found", key)
 	}
-	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(conf.MinLock)/1e10)
-	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", conf.MinDuration)
-	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", conf.MaxDuration)
-	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", conf.MaxDestinations)
-	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", conf.MaxDescriptionLength)
-	return sMap
+
+	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
+	for _, costFunction := range costFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		c.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
+}
+
+func (c *config) getConfigMap() smartcontract.StringMap {
+	fields := map[string]string{
+		Settings[MinLock]:              fmt.Sprintf("%v", float64(c.MinLock)/1e10),
+		Settings[MinDuration]:          fmt.Sprintf("%v", c.MinDuration),
+		Settings[MaxDuration]:          fmt.Sprintf("%v", c.MaxDuration),
+		Settings[MaxDestinations]:      fmt.Sprintf("%v", c.MaxDestinations),
+		Settings[MaxDescriptionLength]: fmt.Sprintf("%v", c.MaxDescriptionLength),
+		Settings[OwnerId]:              fmt.Sprintf("%v", c.OwnerId),
+	}
+
+	for _, key := range costFunctions {
+		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", c.Cost[strings.ToLower(key)])
+	}
+
+	return smartcontract.StringMap{
+		Fields: fields,
+	}
 }
 
 func (vsc *VestingSmartContract) updateConfig(
@@ -142,15 +208,16 @@ func (vsc *VestingSmartContract) updateConfig(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	if txn.ClientID != owner {
-		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
-	}
-
 	var conf *config
 	if conf, err = vsc.getConfig(balances); err != nil {
 		return "", common.NewError("update_config",
 			"can't get config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("update_config", func() bool {
+		return conf.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	update := &smartcontract.StringMap{}
@@ -174,17 +241,6 @@ func (vsc *VestingSmartContract) updateConfig(
 // helpers
 //
 
-func (vsc *VestingSmartContract) getConfigBytes(
-	balances chainstate.StateContextI,
-) (b []byte, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configurations from sc.yaml
 func getConfiguredConfig() (conf *config, err error) {
 	const prefix = "smart_contracts.vestingsc."
@@ -198,6 +254,8 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
+	conf.OwnerId = scconf.GetString(prefix + "owner_id")
+	conf.Cost = scconf.GetStringMapInt(prefix + "cost")
 
 	err = conf.validate()
 	if err != nil {
@@ -209,23 +267,30 @@ func getConfiguredConfig() (conf *config, err error) {
 func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {
-	var confb []byte
-	confb, err = vsc.getConfigBytes(balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		conf, err = getConfiguredConfig()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		conf = new(config)
-		if err = conf.Decode(confb); err != nil {
-			return nil, err
-		}
+	conf = new(config)
+	err = balances.GetTrieNode(scConfigKey(vsc.ID), conf)
+	switch err {
+	case nil:
+		return conf, nil
+	case util.ErrValueNotPresent:
+		return vsc.setupConfig(balances)
+	default:
+		return nil, err
 	}
-	return conf, nil
+}
+
+func (vsc *VestingSmartContract) setupConfig(
+	balances chainstate.StateContextI,
+) (conf *config, err error) {
+
+	if conf, err = getConfiguredConfig(); err != nil {
+		return
+	}
+	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	if err != nil {
+		return nil, err
+	}
+	return
 }
 
 //
@@ -237,15 +302,10 @@ func (vsc *VestingSmartContract) getConfigHandler(
 	params url.Values,
 	balances chainstate.StateContextI,
 ) (interface{}, error) {
-	res, err := vsc.getConfig(balances)
+	conf, err := vsc.getConfig(balances)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, common.NewErrInternal("can't get config", err.Error())
-		}
-		res, err = getConfiguredConfig()
-		if err != nil {
-			return nil, common.NewErrInternal("can't read config from file", err.Error())
-		}
+		return nil, common.NewErrInternal("can't get config", err.Error())
 	}
-	return res.getConfigMap(), nil
+
+	return conf.getConfigMap(), nil
 }

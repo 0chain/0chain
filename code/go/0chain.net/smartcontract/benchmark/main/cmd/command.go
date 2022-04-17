@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"time"
+
+	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
@@ -17,9 +20,12 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+const (
+	defaultConfigPath = "testdata/benchmark.yaml"
 )
 
 var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
@@ -40,13 +46,15 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 }
 
 func init() {
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 	node.Self = &node.SelfNode{
-		Node: &node.Node{},
+		Node: node.Provider(),
 	}
 	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
 	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")
 	rootCmd.PersistentFlags().StringSlice("omit", nil, "list endpoints to omit")
+	rootCmd.PersistentFlags().String("config", defaultConfigPath, "path to config file")
+	rootCmd.PersistentFlags().String("load", "", "path to mpt")
 }
 
 func Execute() error {
@@ -58,18 +66,36 @@ var rootCmd = &cobra.Command{
 	Short: "Benchmark 0chain smart-contract",
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
-		GetViper("testdata/benchmark.yaml")
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered in benchmark function", r)
+			}
+		}()
+		totalTimer := time.Now()
+		// path to config file can only come from command line options
+		loadPath, configPath := loadPath(cmd.Flags())
+
+		GetViper(loadPath)
 		log.PrintSimSettings()
 
 		tests, omittedTests := setupOptions(cmd.Flags())
 		log.Println("read in command line options")
 
-		mpt, root, data := setUpMpt("db")
-		log.Println("finished setting up blockchain")
+		mpt, root, data := getMpt(loadPath, configPath)
+		log.Println("finished setting up blockchain", "root", string(root))
 
+		savePath := viper.GetString(bk.OptionSavePath)
+		if len(savePath) > 0 && loadPath != savePath {
+			if err := viper.WriteConfigAs(path.Join(savePath, "benchmark.yaml")); err != nil {
+				log.Fatal("cannot copy config file to", savePath)
+			}
+		}
+		testsTimer := time.Now()
 		suites := getTestSuites(data, tests, omittedTests)
 		results := runSuites(suites, mpt, root, data)
-
+		log.Println()
+		log.Println("tests took", time.Since(testsTimer))
+		log.Println("benchmark took", time.Since(totalTimer))
 		printResults(results)
 	},
 }

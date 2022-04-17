@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
@@ -5,25 +6,20 @@ package miner
 import (
 	"context"
 	"errors"
-	"fmt"
-	"math"
+	"log"
 	"math/rand"
-	"time"
+
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
-	"go.uber.org/zap"
-
+	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -82,243 +78,87 @@ func hasDST(pb, b []*transaction.Transaction) (has bool) {
 	return false // has not
 }
 
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
-	bsh chain.BlockStateHandler, waitOver bool) error {
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	mc.updateFinalizedBlock(ctx, b)
 
-	var clients = make(map[string]*client.Client)
-	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
+	if isTestingOnUpdateFinalizedBlock(b.Round) {
+		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
+			log.Panicf("Conductor: error while sending round info result: %v", err)
+		}
+	}
+}
 
-	// wasting this because []interface{} != []*transaction.Transaction in Go
-	var (
-		etxns  = make([]datastore.Entity, mc.BlockSize)
-		txnMap = make(map[datastore.Key]bool, mc.BlockSize)
+func isTestingOnUpdateFinalizedBlock(round int64) bool {
+	s := crpc.Client().State()
+	var isTestingFunc func(round int64, generator bool, typeRank int) bool
+	switch {
+	case s.ExtendNotNotarisedBlock != nil:
+		isTestingFunc = s.ExtendNotNotarisedBlock.IsTesting
 
-		invalidTxns      []datastore.Entity
-		idx              int32
-		ierr             error
-		count            int32
-		roundMismatch    bool
-		roundTimeout     bool
-		failedStateCount int32
-		byteSize         int64
+	case s.BreakingSingleBlock != nil:
+		isTestingFunc = s.BreakingSingleBlock.IsTesting
 
-		state         = crpc.Client().State()
-		pb            = b.PrevBlock
-		selfKey       = node.Self.GetKey()
-		isDoubleSpend bool
-		dstxn         *transaction.Transaction
-	)
+	case s.SendInsufficientProposals != nil:
+		isTestingFunc = s.SendInsufficientProposals.IsTesting
 
-	isDoubleSpend = state.DoubleSpendTransaction.IsBy(state, selfKey) &&
-		pb != nil && len(pb.Txns) > 0 && len(pb.Txns) > 0 &&
-		!hasDST(b.Txns, pb.Txns)
+	case s.NotarisingNonExistentBlock != nil:
+		isTestingFunc = s.NotarisingNonExistentBlock.IsTesting
 
-	if isDoubleSpend {
-		dstxn = pb.Txns[rand.Intn(len(pb.Txns))] // a random one
-	}
+	case s.ResendProposedBlock != nil:
+		isTestingFunc = s.ResendProposedBlock.IsTesting
 
-	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
-		if _, ok := txnMap[txn.GetKey()]; ok {
-			return false
-		}
-		var debugTxn = txn.DebugTxn()
-		if !mc.validateTransaction(b, txn) {
-			invalidTxns = append(invalidTxns, txn)
-			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.Any("now", common.Now()))
-			}
-			return false
-		}
-		if debugTxn {
-			logging.Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
-		}
-		if dstxn == nil || (dstxn != nil && txn.Hash != dstxn.Hash) {
-			if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
-				if err != nil {
-					ierr = err
-				}
-				return false
-			}
-		}
-		events, err := mc.UpdateState(ctx, b, txn)
-		b.Events = append(b.Events, events...)
-		if err != nil {
-			if debugTxn {
-				logging.Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
-			}
-			failedStateCount++
-			return false
-		}
+	case s.ResendNotarisation != nil:
+		isTestingFunc = s.ResendNotarisation.IsTesting
 
-		// Setting the score lower so the next time blocks are generated
-		// these transactions don't show up at the top
-		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
-		txnMap[txn.GetKey()] = true
-		b.Txns[idx] = txn
-		if debugTxn {
-			logging.Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
-		}
-		etxns[idx] = txn
-		b.AddTransaction(txn)
-		byteSize += int64(len(txn.TransactionData)) + int64(len(txn.TransactionOutput))
-		if txn.PublicKey == "" {
-			clients[txn.ClientID] = nil
-		}
-		idx++
-		return true
-	}
-	var roundTimeoutCount = mc.GetRoundTimeoutCount()
-	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
-		count++
-		if mc.GetCurrentRound() > b.Round {
-			roundMismatch = true
-			return false
-		}
-		if roundTimeoutCount != mc.GetRoundTimeoutCount() {
-			roundTimeout = true
-			return false
-		}
-		txn, ok := qe.(*transaction.Transaction)
-		if !ok {
-			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
-			return true
-		}
-		if txnProcessor(ctx, txn) {
-			if idx >= mc.BlockSize || byteSize >= mc.MaxByteSize {
-				return false
-			}
-		}
-		return true
-	}
-	start := time.Now()
-	b.CreationDate = common.Now()
-	if b.CreationDate < b.PrevBlock.CreationDate {
-		b.CreationDate = b.PrevBlock.CreationDate
-	}
-	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
-	collectionName := txn.GetCollectionName()
-	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
-	if isDoubleSpend {
-		txnIterHandler(ctx, dstxn) // inject double-spend transaction
-	}
-	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
-	if len(invalidTxns) > 0 {
-		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
-		go mc.deleteTxns(invalidTxns) // OK to do in background
-	}
-	if roundMismatch {
-		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
-		return ErrRoundMismatch
-	}
-	if roundTimeout {
-		logging.Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
-		return ErrRoundTimeout
-	}
-	if ierr != nil {
-		logging.Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
-	}
-	if err != nil {
-		return err
-	}
-	blockSize := idx
-	var reusedTxns int32
-	if blockSize < mc.BlockSize && byteSize < mc.MaxByteSize && mc.ReuseTransactions {
-		blocks := mc.GetUnrelatedBlocks(10, b)
-		rcount := 0
-		for _, ub := range blocks {
-			for _, txn := range ub.Txns {
-				rcount++
-				rtxn := mc.txnToReuse(txn)
-				needsVerification := (ub.MinerID != node.Self.Underlying().GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
-				if needsVerification {
-					if err := rtxn.ValidateWrtTime(ctx, ub.CreationDate); err != nil {
-						continue
-					}
-				}
-				if txnProcessor(ctx, rtxn) {
-					if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
-						break
-					}
-				}
-			}
-			if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
-				break
-			}
-		}
-		reusedTxns = idx - blockSize
-		blockSize = idx
-		logging.Logger.Error("generate block (reused txns)",
-			zap.Int64("round", b.Round), zap.Int("ub", len(blocks)),
-			zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount),
-			zap.Int32("blockSize", idx))
-	}
-	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
-		if !waitOver && blockSize < mc.MinBlockSize {
-			b.Txns = nil
-			logging.Logger.Debug("generate block (insufficient txns)",
-				zap.Int64("round", b.Round),
-				zap.Int32("iteration_count", count),
-				zap.Int32("block_size", blockSize))
-			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
-		}
-		b.Txns = b.Txns[:blockSize]
-		etxns = etxns[:blockSize]
-	}
-	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
-		if err != nil {
-			return err
-		}
-	}
-	if config.DevConfiguration.IsBlockRewards {
-		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, clients)
-		if err != nil {
-			return err
-		}
-	}
-	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
-	if count > 10*mc.BlockSize {
-		logging.Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
+	case s.BadTimeoutVRFS != nil:
+		isTestingFunc = s.BadTimeoutVRFS.IsTesting
+
+	case s.BlockStateChangeRequestor != nil && s.BlockStateChangeRequestor.GetType() != cases.BSCRChangeNode:
+		isTestingFunc = s.BlockStateChangeRequestor.IsTesting
+
+	case s.MinerNotarisedBlockRequestor != nil:
+		isTestingFunc = s.MinerNotarisedBlockRequestor.IsTesting
+
+	case s.FBRequestor != nil:
+		isTestingFunc = s.FBRequestor.IsTesting
+
+	default:
+		return false
 	}
 
-	if err = client.GetClients(ctx, clients); err != nil {
-		logging.Logger.Error("generate block (get clients error)", zap.Error(err))
-		return common.NewError("get_clients_error", err.Error())
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(round)
+	return isTestingFunc(round, nodeType == generator, typeRank)
+}
+
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+	if isIgnoringGenerateBlock(b.Round) {
+		return nil
 	}
 
-	logging.Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
+	return mc.generateBlockWorker.Run(ctx, func() error {
+		return mc.generateBlock(ctx, b, minerChain, waitOver)
+	})
+}
 
-	bsh.UpdatePendingBlock(ctx, b, etxns)
-	for _, txn := range b.Txns {
-		if txn.PublicKey != "" {
-			txn.ClientID = datastore.EmptyKey
-			continue
-		}
-		cl := clients[txn.ClientID]
-		if cl == nil || cl.PublicKey == "" {
-			logging.Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
-			return common.NewError("invalid_client", "client not available")
-		}
-		txn.PublicKey = cl.PublicKey
-		txn.ClientID = datastore.EmptyKey
+func isIgnoringGenerateBlock(rNum int64) bool {
+	cfg := crpc.Client().State().NotarisingNonExistentBlock
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(rNum)
+	// we need to ignore generating block phase on configured round and on the Generator1 node
+	return cfg != nil && cfg.OnRound == rNum && nodeType == generator && typeRank == 1
+}
+
+func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
+	// inject double-spend transaction if configured
+	pb := b.PrevBlock
+	state := crpc.Client().State()
+	selfKey := node.Self.GetKey()
+	isDoubleSpend := state.DoubleSpendTransaction.IsBy(state, selfKey) && pb != nil && len(pb.Txns) > 0 && !hasDST(b.Txns, pb.Txns)
+	if !isDoubleSpend {
+		return
 	}
-	b.ClientStateHash = b.ClientState.GetRoot()
-	bgTimer.UpdateSince(start)
-	logging.Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
-
-	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
-		return err
-	}
-
-	b.SetBlockState(block.StateGenerated)
-	b.SetStateStatus(block.StateSuccessful)
-	logging.Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
-	block.StateSanityCheck(ctx, b)
-	b.ComputeTxnMap()
-	bsHistogram.Update(int64(len(b.Txns)))
-	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
-	return nil
+	dstxn := pb.Txns[rand.Intn(len(pb.Txns))]     // a random one from the previous block
+	state.DoubleSpendTransactionHash = dstxn.Hash // exclude the duplicate transactio from checks
+	logging.Logger.Info("injecting double-spend transaction", zap.String("hash", dstxn.Hash))
+	txnIterHandler(ctx, dstxn) // inject double-spend transaction
 }

@@ -12,39 +12,72 @@ import (
 // Burn inputData - is a BurnPayload.
 // EthereumAddress => required
 // Nonce => required
-func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) Burn(
+	trans *transaction.Transaction,
+	inputData []byte,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	const (
+		code = "failed to burn"
+	)
+
+	var (
+		info = fmt.Sprintf(
+			"transaction Hash %s, clientID: %s, payload: %s",
+			trans.Hash,
+			trans.ClientID,
+			string(inputData),
+		)
+	)
+
 	gn, err := GetGlobalNode(balances)
 	if err != nil {
-		return "", common.NewError("failed to burn", fmt.Sprintf("failed to get global node error: %s, Client ID: %s", err.Error(), trans.Hash))
+		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
+		return "", common.NewError(code, msg)
 	}
 
 	// check burn amount
-	if trans.Value < gn.MinBurnAmount {
-		err = common.NewError("failed to burn", fmt.Sprintf("amount requested(%v) is lower than min amount for burn (%v)", trans.Value, gn.MinBurnAmount))
+	if state.Balance(trans.Value*1e10) < gn.MinBurnAmount {
+		msg := fmt.Sprintf(
+			"amount (value) requested (%v) is lower than min burn amount (%v), %s",
+			trans.Value,
+			gn.MinBurnAmount,
+			info,
+		)
+		err = common.NewError(code, msg)
 		return
 	}
 
 	payload := &BurnPayload{}
 	err = payload.Decode(inputData)
 	if err != nil {
+		msg := fmt.Sprintf("payload decode error: %v, %s", err, info)
+		err = common.NewError(code, msg)
 		return
 	}
 
 	if payload.EthereumAddress == "" {
-		err = common.NewError("failed to burn", "ethereum address is required")
+		err = common.NewError(code, "ethereum address is required "+info)
 		return
 	}
 
 	// get user node and update nonce
 	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
-		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v) with nonce != 1, ClientID=%s, hash=%s", err.Error(), trans.ClientID, trans.Hash))
+		msg := fmt.Sprintf("get user node error %v with nonce != 1 (%d), %s", err, payload.Nonce, info)
+		err = common.NewError(code, msg)
 		return
 	}
 
 	// check nonce is correct (current + 1)
 	if un.Nonce+1 != payload.Nonce {
-		err = common.NewError("failed to burn", fmt.Sprintf("the payload nonce (%v) should be 1 higher than the current nonce (%v)", payload.Nonce, un.Nonce))
+		msg := fmt.Sprintf(
+			"the payload nonce (%v) should be 1 higher than the current nonce (%v), %s",
+			payload.Nonce,
+			un.Nonce,
+			info,
+		)
+		err = common.NewError(code, msg)
 		return
 	}
 

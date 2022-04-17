@@ -3,11 +3,11 @@ package faucetsc
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-
 	"0chain.net/smartcontract"
 
 	// "encoding/json"
@@ -34,7 +34,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params u
 	var resp periodicResponse
 	resp.Start = un.StartTime
 	resp.Used = un.Used
-	resp.Restart = (gn.IndividualReset - time.Now().Sub(un.StartTime)).String()
+	resp.Restart = (gn.IndividualReset - time.Since(un.StartTime)).String()
 	if gn.PeriodicLimit >= un.Used {
 		resp.Allowed = gn.PeriodicLimit - un.Used
 	} else {
@@ -51,7 +51,7 @@ func (fc *FaucetSmartContract) globalPeriodicLimit(_ context.Context, _ url.Valu
 	var resp periodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
-	resp.Restart = (gn.GlobalReset - time.Now().Sub(gn.StartTime)).String()
+	resp.Restart = (gn.GlobalReset - time.Since(gn.StartTime)).String()
 	if gn.GlobalLimit > gn.Used {
 		resp.Allowed = gn.GlobalLimit - gn.Used
 	} else {
@@ -85,14 +85,21 @@ func (fc *FaucetSmartContract) getConfigHandler(
 		faucetConfig = gn.FaucetConfig
 	}
 
+	fields := map[string]string{
+		Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
+		Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
+		Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
+		Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
+		Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
+		Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
+		Settings[OwnerId]:         fmt.Sprintf("%v", faucetConfig.OwnerId),
+	}
+
+	for _, key := range costFunctions {
+		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", faucetConfig.Cost[strings.ToLower(key)])
+	}
+
 	return smartcontract.StringMap{
-		Fields: map[string]string{
-			Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
-			Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
-			Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
-			Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
-			Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
-			Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
-		},
+		Fields: fields,
 	}, nil
 }

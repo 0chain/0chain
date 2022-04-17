@@ -2,6 +2,7 @@ package logging
 
 import (
 	"os"
+	"path/filepath"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -25,11 +26,11 @@ var (
 )
 
 //InitLogging - initialize the logging submodule
-func InitLogging(mode string) {
-	var logName = "log/0chain.log"
-	var n2nLogName = "log/n2n.log"
-	var memLogName = "log/memUsage.log"
-	var hcLogName = "log/hc.log"
+func InitLogging(mode, workdir string) {
+	var logName = filepath.Join(workdir, "log/0chain.log")
+	var n2nLogName = filepath.Join(workdir, "log/n2n.log")
+	var memLogName = filepath.Join(workdir, "log/memUsage.log")
+	var hcLogName = filepath.Join(workdir, "log/hc.log")
 
 	var logWriter = getWriteSyncer(logName)
 	var n2nLogWriter = getWriteSyncer(n2nLogName)
@@ -53,7 +54,10 @@ func InitLogging(mode string) {
 			memLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), memLogWriter)
 		}
 	}
-	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
+	if err := cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level"))); err != nil {
+		panic(err)
+	}
+
 	cfg.Encoding = "console"
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -143,6 +147,6 @@ func getWriteSyncer(logName string) zapcore.WriteSyncer {
 		LocalTime:  false,
 		Compress:   false, // disabled by default
 	}
-	ioWriter.Rotate()
+	_ = ioWriter.Rotate()
 	return zapcore.AddSync(ioWriter)
 }

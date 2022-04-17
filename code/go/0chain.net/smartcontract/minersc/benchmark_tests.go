@@ -18,6 +18,10 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 )
 
+var (
+	owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+)
+
 type BenchTest struct {
 	name     string
 	endpoint func(
@@ -231,14 +235,12 @@ func BenchmarkTests(
 					"min_s":                  "1",
 					"max_delegates":          "200",
 					"reward_round_frequency": "64250",
-					"interest_rate":          "0.0",
 					"reward_rate":            "1.0",
 					"share_ratio":            "50",
 					"block_reward":           "021",
 					"max_charge":             "0.5",
 					"epoch":                  "6415000000",
 					"reward_decline_rate":    "0.1",
-					"interest_decline_rate":  "0.1",
 					"max_mint":               "1500000.0",
 				},
 			}).Encode(),

@@ -2,73 +2,29 @@ package event
 
 import (
 	"errors"
-	"sort"
-	"strconv"
 
-	"0chain.net/core/encryption"
+	"golang.org/x/net/context"
 
-	"0chain.net/smartcontract/dbs/postgresql"
-
-	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 )
 
 type Event struct {
 	gorm.Model
-	BlockNumber int64  `json:"block_number"`
-	TxHash      string `json:"tx_hash"`
-	Type        string `json:"type"`
-	Tag         string `json:"tag"`
+	BlockNumber int64  `json:"block_number" gorm:"index:idx_event"`
+	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
+	Type        int    `json:"type" gorm:"index:idx_event"`
+	Tag         int    `json:"tag" gorm:"index:idx_event"`
+	Index       string `json:"index" gorm:"index:idx_event"`
 	Data        string `json:"data"`
 }
 
-func (ev *Event) hashData() string {
-	return strconv.Itoa(int(ev.BlockNumber)) + ":" +
-		ev.TxHash + ":" + ev.Type + ":" + ev.Tag
-}
-
-func (ev *Event) Hash() string {
-	return encryption.Hash(ev.hashData())
-}
-
-func HashEvents(events []Event) string {
-	var hashes []string
-	for _, event := range events {
-		hashes = append(hashes, event.Hash())
-	}
-	sort.Strings(hashes)
-	var hashStr string
-	for _, subHash := range hashes {
-		hashStr += subHash
-	}
-	return encryption.Hash(hashStr)
-}
-
-func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
-	db, err := postgresql.GetPostgresSqlDb(config)
-	if err != nil {
-		return nil, err
-	}
-	return &EventDb{
-		Store: db,
-	}, nil
-}
-
-type EventDb struct {
-	dbs.Store
-}
-
-func (edb *EventDb) AutoMigrate() error {
-	return edb.Store.Get().AutoMigrate(&Event{})
-}
-
-func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
+func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, error) {
 	if edb.Store == nil {
 		return nil, errors.New("cannot find event database")
 	}
 
 	if search.BlockNumber == 0 && len(search.TxHash) == 0 &&
-		len(search.Type) == 0 && len(search.Tag) == 0 {
+		search.Type == 0 && search.Tag == 0 {
 		return nil, errors.New("no search field")
 	}
 
@@ -80,39 +36,98 @@ func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
 	if len(search.TxHash) > 0 {
 		db = db.Where("tx_hash", search.TxHash).Find(eventTable)
 	}
-	if len(search.Type) > 0 {
+	if EventType(search.Type) != TypeNone {
 		db = db.Where("type", search.Type).Find(eventTable)
 	}
-	if len(search.Tag) > 0 {
+	if EventTag(search.Tag) != TagNone {
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
 
 	var events []Event
-	db.Find(&events)
+	db.WithContext(ctx).Find(&events)
 	return events, nil
 }
 
-func (edb *EventDb) AddEvents(events []Event) {
-	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().Create(&events)
-	}
-}
-
-func (edb *EventDb) GetEvents(block int64) ([]Event, error) {
+func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error) {
 	var events []Event
 	if edb.Store == nil {
 		return events, errors.New("event database is nil")
 	}
-	result := edb.Store.Get().Find(&events)
+	result := edb.Store.Get().WithContext(ctx).Find(&events)
 	return events, result.Error
 }
 
-func (edb *EventDb) drop() error {
-	return edb.Store.Get().Migrator().DropTable(&Event{})
+func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
+	if edb.Store != nil && len(events) > 0 {
+		edb.Store.Get().WithContext(ctx).Create(&events)
+	}
 }
 
-func (edb *EventDb) first() Event {
-	event := &Event{}
-	_ = edb.Store.Get().First(event)
-	return *event
+func (edb *EventDb) Drop() error {
+	err := edb.Store.Get().Migrator().DropTable(&Event{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Transaction{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Error{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Validator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Block{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ReadMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Miner{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Curator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&DelegatePool{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Allocation{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

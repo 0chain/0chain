@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"errors"
-	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -23,38 +22,9 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 			"decoding request: %v", err)
 	}
 
-	if update.ServiceCharge < 0 {
-		return "", common.NewErrorf("update_sharder_settings",
-			"invalid negative service charge: %v", update.ServiceCharge)
-	}
-
-	if update.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("update_sharder_settings",
-			"max_charge is greater than allowed by SC: %v > %v",
-			update.ServiceCharge, gn.MaxCharge)
-	}
-
-	if update.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("update_sharder_settings",
-			"invalid negative number_of_delegates: %v", update.ServiceCharge)
-	}
-
-	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("update_sharder_settings",
-			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			update.ServiceCharge, gn.MaxDelegates)
-	}
-
-	if update.MinStake < gn.MinStake {
-		return "", common.NewErrorf("update_sharder_settings",
-			"min_stake is less than allowed by SC: %v > %v",
-			update.MinStake, gn.MinStake)
-	}
-
-	if update.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("update_sharder_settings",
-			"max_stake is greater than allowed by SC: %v > %v",
-			update.MaxStake, gn.MaxStake)
+	err = validateNodeSettings(update, gn, "update_sharder_settings")
+	if err != nil {
+		return "", err
 	}
 
 	var sn *MinerNode
@@ -62,6 +32,11 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("update_sharder_settings", err.Error())
 	}
+
+	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
+		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
+	}
+
 	if sn.Delete {
 		return "", common.NewError("update_settings", "can't update settings of sharder being deleted")
 	}
@@ -73,9 +48,14 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	sn.NumberOfDelegates = update.NumberOfDelegates
 	sn.MinStake = update.MinStake
 	sn.MaxStake = update.MaxStake
+	sn.LastSettingUpdateRound = balances.GetBlock().Round
 
 	if err = sn.save(balances); err != nil {
 		return "", common.NewErrorf("update_sharder_settings", "saving: %v", err)
+	}
+
+	if err = emitUpdateSharder(sn, balances, false); err != nil {
+		return "", common.NewErrorf("update_sharder_settings", "saving(event): %v", err)
 	}
 
 	return string(sn.Encode()), nil
@@ -134,22 +114,9 @@ func (msc *MinerSmartContract) AddSharder(
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
-	if newSharder.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("add_sharder",
-			"invalid negative number_of_delegates: %v",
-			newSharder.ServiceCharge)
-	}
-
-	if newSharder.MinStake < gn.MinStake {
-		return "", common.NewErrorf("add_sharder",
-			"min_stake is less than allowed by SC: %v > %v",
-			newSharder.MinStake, gn.MinStake)
-	}
-
-	if newSharder.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("add_sharder",
-			"max_stake is greater than allowed by SC: %v > %v",
-			newSharder.MaxStake, gn.MaxStake)
+	err = validateNodeSettings(newSharder, gn, "add_sharder")
+	if err != nil {
+		return "", common.NewErrorf("add_sharder", "validate node setting failed: %v", zap.Error(err))
 	}
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
@@ -179,6 +146,11 @@ func (msc *MinerSmartContract) AddSharder(
 	_, err = balances.InsertTrieNode(newSharder.GetKey(), newSharder)
 	if err != nil {
 		return "", common.NewErrorf("add_sharder", "saving sharder: %v", err)
+	}
+
+	err = emitAddSharder(newSharder, balances)
+	if err != nil {
+		return "", common.NewErrorf("add_sharder", "saving sharder(event): %v", err)
 	}
 
 	// save all sharders list
@@ -223,37 +195,40 @@ func (msc *MinerSmartContract) DeleteSharder(
 	return "", nil
 }
 
-func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) (err error) {
-	var pn *PhaseNode
-	if pn, err = GetPhaseNode(balances); err != nil {
-		return
+func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
+	pn, err := GetPhaseNode(balances)
+	if err != nil {
+		return err
 	}
+
 	if pn.Phase == Unknown {
-		err = common.NewError("failed to delete from view change", "phase is unknown")
-		return
+		return common.NewError("failed to delete from view change", "phase is unknown")
 	}
-	if pn.Phase != Wait {
-		sharders := &MinerNodes{}
-		if sharders, err = getShardersKeepList(balances); err != nil {
-			logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
-				zap.Error(err))
-			return common.NewErrorf("delete_sharder_from_view_change",
-				"failed to get sharders list: %v", err)
-		}
-		for i, v := range sharders.Nodes {
-			if v.ID == sn.ID {
-				sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
-				break
+
+	if pn.Phase == Wait {
+		return common.NewError("failed to delete from view change", "magic block has already been created for next view change")
+	}
+
+	sharders, err := getShardersKeepList(balances)
+	if err != nil {
+		logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
+			zap.Error(err))
+		return common.NewErrorf("delete_sharder_from_view_change",
+			"failed to get sharders list: %v", err)
+	}
+	for i, v := range sharders.Nodes {
+		if v.ID == sn.ID {
+			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
+
+			if err = emitDeleteSharder(sn.ID, balances); err != nil {
+				return err
 			}
+			break
 		}
-		if _, err = balances.InsertTrieNode(ShardersKeepKey, sharders); err != nil {
-			return
-		}
-	} else {
-		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
-		return
 	}
-	return
+
+	_, err = balances.InsertTrieNode(ShardersKeepKey, sharders)
+	return err
 }
 
 //------------- local functions ---------------------
@@ -298,13 +273,9 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 
 	sn := NewMinerNode()
 	sn.ID = sid
-	ss, err := balances.GetTrieNode(sn.GetKey())
+	err := balances.GetTrieNode(sn.GetKey(), sn)
 	if err != nil {
 		return nil, err
-	}
-
-	if err = sn.Decode(ss.Encode()); err != nil {
-		return nil, fmt.Errorf("invalid state: decoding sharder: %v", err)
 	}
 
 	return sn, nil

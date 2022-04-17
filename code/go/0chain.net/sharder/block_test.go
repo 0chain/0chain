@@ -44,15 +44,7 @@ const (
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
-	cd, err := os.Getwd()
-	require.NoError(t, err)
-
-	tmpDir := filepath.Join(cd, "tmp")
-	err = os.RemoveAll(tmpDir)
-	err = os.MkdirAll(tmpDir, 0700)
-	require.NoError(t, err)
-
-	dbDir, err := ioutil.TempDir(tmpDir, "dbs")
+	dbDir, err := ioutil.TempDir("", "dbs")
 	require.NoError(t, err)
 
 	blockDir := filepath.Join(dbDir, blockDataDir)
@@ -93,13 +85,13 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
 
 	closeAndClear = func() {
-		err = os.RemoveAll(tmpDir)
-		require.NoError(t, err)
-
 		rDB.Close()
 		bDB.Close()
 		rsDB.Close()
 		bsDB.Close()
+
+		err = os.RemoveAll(dbDir)
+		require.NoError(t, err)
 	}
 
 	return
@@ -110,8 +102,9 @@ func makeTestChain(t *testing.T) *sharder.Chain {
 	if !ok {
 		t.Fatal("types missmatching")
 	}
+	conf := chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
+	ch.Config = conf
 	ch.Initialize()
-	ch.BlockSize = 1024
 	sharder.SetupSharderChain(ch)
 	chain.SetServerChain(ch)
 	return sharder.GetSharderChain()
@@ -225,7 +218,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.HashBlock()
-
+	makeTestChain(t)
 	sharder.GetSharderChain().AddBlock(b)
 
 	type fields struct {

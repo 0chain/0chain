@@ -11,7 +11,6 @@ import (
 )
 
 func TestUpdate(t *testing.T) {
-	const mock_owner = "mock owner"
 	type args struct {
 		config  Config
 		updates minersc.GlobalSettings
@@ -32,7 +31,7 @@ func TestUpdate(t *testing.T) {
 		chain := NewChainFromConfig()
 
 		return args{
-			config:  *chain.Config,
+			config:  chain.Config,
 			updates: p.updates,
 		}
 	}

@@ -1,29 +1,53 @@
 package zcnsc_test
 
 import (
-	"0chain.net/chaincore/chain"
+	"encoding/json"
+	"fmt"
+
+	"0chain.net/smartcontract/stakepool"
+
+	"0chain.net/chaincore/chain/state"
+
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/smartcontract/zcnsc"
-	"encoding/json"
-	"fmt"
 )
 
 const (
-	AddAuthorizer = "AddAuthorizerFunc"
+	AddAuthorizer          = "AddAuthorizer"
+	DeleteAuthorizer       = "DeleteAuthorizer"
+	AddAuthorizerStakePool = "addAuthorizerStakePool"
+	clientPrefixID         = "fred"
+	authorizerPrefixID     = "authorizer"
+	zcnAddressId           = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
 )
 
 var (
-	zcnAddressId                  = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	tokens                float64 = 10
-	clientSignatureScheme         = "bls0chain"
-	authorizers                   = []string{clientId, clientId + "1", clientId + "2"}
+	events map[string]*AuthorizerNode
+	//authorizers       = make(map[string]*Authorizer, len(authorizersID))
+	authorizersID     = []string{authorizerPrefixID + "_0", authorizerPrefixID + "_1", authorizerPrefixID + "_2"}
+	clients           = []string{clientPrefixID + "_0", clientPrefixID + "_1", clientPrefixID + "_2"}
+	defaultAuthorizer = authorizersID[0]
+	defaultClient     = clients[0]
 )
 
+type Authorizer struct {
+	Scheme encryption.SignatureScheme
+	Node   *AuthorizerNode
+}
+
+func (n *Authorizer) Sign(payload string) (string, error) {
+	return n.Scheme.Sign(payload)
+}
+
+func (n *Authorizer) Verify(sig, hash string) (bool, error) {
+	return n.Scheme.Verify(sig, hash)
+}
+
 func CreateDefaultTransactionToZcnsc() *transaction.Transaction {
-	return CreateTransactionToZcnsc(clientId, tokens)
+	return CreateAddAuthorizerTransaction(defaultClient, MakeMockStateContext())
 }
 
 func addTransactionData(tr *transaction.Transaction, methodName string, input []byte) {
@@ -36,50 +60,111 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Transaction {
-	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
-	err := sigScheme.GenerateKeys()
-	if err != nil {
-		panic(err)
+func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
+	scheme := ctx.GetSignatureScheme()
+	_ = scheme.GenerateKeys()
+	txn := &transaction.Transaction{
+		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
+		ClientID:          fromClient,
+		ToClientID:        zcnAddressId,
+		Value:             int64(zcnToBalance(1)),
+		CreationDate:      startTime,
+		PublicKey:         scheme.GetPublicKey(),
+		TransactionData:   "",
+		Signature:         "",
+		Fee:               0,
+		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionOutput: "",
+		OutputHash:        "",
 	}
+	addTransactionData(txn, DeleteAuthorizer, nil)
+	return txn
+}
 
-	pk := sigScheme.GetPublicKey()
+func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
+	scheme := ctx.GetSignatureScheme()
+	_ = scheme.GenerateKeys()
 
 	var txn = &transaction.Transaction{
-		HashIDField:           datastore.HashIDField{Hash: txHash + "_transaction"},
-		CollectionMemberField: datastore.CollectionMemberField{},
-		VersionField:          datastore.VersionField{},
-		ClientID:              fromClient,
-		ToClientID:            zcnAddressId,
-		Value:                 int64(zcnToBalance(amount)),
-		CreationDate:          startTime,
-		PublicKey:             pk,
-		ChainID:               "",
-		TransactionData:       "",
-		Signature:             "",
-		Fee:                   0,
-		TransactionType:       transaction.TxnTypeSmartContract,
-		TransactionOutput:     "",
-		OutputHash:            "",
-		Status:                0,
+		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
+		ClientID:          fromClient,
+		ToClientID:        zcnAddressId,
+		Value:             int64(zcnToBalance(1)),
+		CreationDate:      startTime,
+		PublicKey:         scheme.GetPublicKey(),
+		TransactionData:   "",
+		Signature:         "",
+		Fee:               0,
+		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionOutput: "",
+		OutputHash:        "",
 	}
 
-	publicKey := &AuthorizerParameter{PublicKey: txn.PublicKey, URL: "https://localhost:9876"}
-	pkBytes, err := json.Marshal(publicKey)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	addTransactionData(txn, AddAuthorizer, pkBytes)
+	addTransactionData(txn, AddAuthorizer, CreateAuthorizerParamPayload(fromClient))
 
 	return txn
 }
 
-func CreateAuthorizerParam() *AuthorizerParameter {
+func CreateTransaction(fromClient, method string, payload []byte, ctx state.StateContextI) *transaction.Transaction {
+	scheme := ctx.GetSignatureScheme()
+	_ = scheme.GenerateKeys()
+
+	var txn = &transaction.Transaction{
+		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
+		ClientID:          fromClient,
+		ToClientID:        zcnAddressId,
+		Value:             int64(zcnToBalance(1)),
+		CreationDate:      startTime,
+		PublicKey:         scheme.GetPublicKey(),
+		TransactionData:   "",
+		Signature:         "",
+		Fee:               0,
+		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionOutput: "",
+		OutputHash:        "",
+	}
+
+	addTransactionData(txn, method, payload)
+
+	return txn
+}
+
+func CreateAuthorizerParam(delegateWalletID string) *AuthorizerParameter {
 	return &AuthorizerParameter{
 		PublicKey: "public key",
 		URL:       "http://localhost:2344",
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  delegateWalletID,
+			MinStake:        12345678,
+			MaxStake:        12345678,
+			MaxNumDelegates: 12345678,
+			ServiceCharge:   12345678,
+		},
 	}
+}
+
+func CreateAuthorizerStakingPoolParam(delegateWalletID string) *AuthorizerStakePoolParameter {
+	return &AuthorizerStakePoolParameter{
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  delegateWalletID,
+			MinStake:        100,
+			MaxStake:        100,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
+		},
+	}
+}
+
+func CreateAuthorizerParamPayload(delegateWalletID string) []byte {
+	p := CreateAuthorizerParam(delegateWalletID)
+	encode, _ := p.Encode()
+	return encode
+}
+
+func CreateAuthorizerStakingPoolParamPayload(delegateWalletID string) []byte {
+	p := CreateAuthorizerStakingPoolParam(delegateWalletID)
+	encode, _ := p.Encode()
+	return encode
 }
 
 func CreateZCNSmartContract() *ZCNSmartContract {
@@ -95,10 +180,11 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 		ID:                 ADDRESS,
 		MinMintAmount:      111,
 		PercentAuthorizers: 70,
+		MinAuthorizers:     1,
 		MinBurnAmount:      100,
 		MinStakeAmount:     200,
-		BurnAddress:        "0",
-		MinAuthorizers:     1,
+		BurnAddress:        "0xBEEF",
+		MaxFee:             0,
 	}
 }
 
@@ -109,48 +195,35 @@ func createBurnPayload() *BurnPayload {
 	}
 }
 
-func CreateMintPayload(receiverId string, authorizers []string) (*MintPayload, string, error) {
-	m := &MintPayload{
+func CreateMintPayload(ctx *mockStateContext, receiverId string) (payload *MintPayload, err error) {
+	payload = &MintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
 		Nonce:             1,
 		ReceivingClientID: receiverId,
 	}
 
-	signatures, pk, err := createTransactionSignatures(m, authorizers)
-	if err != nil {
-		return nil, pk, err
-	}
+	payload.Signatures, err = createTransactionSignatures(ctx, payload)
 
-	m.Signatures = signatures
-
-	return m, pk, nil
+	return
 }
 
-func createTransactionSignatures(m *MintPayload, authorizers []string) ([]*AuthorizerSignature, string, error) {
+func createTransactionSignatures(ctx *mockStateContext, m *MintPayload) ([]*AuthorizerSignature, error) {
 	var sigs []*AuthorizerSignature
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	err := signatureScheme.GenerateKeys()
-	if err != nil {
-		return nil, "", err
+	for _, authorizer := range ctx.authorizers {
+		signature, err := authorizer.Sign(m.GetStringToSign())
+		if err != nil {
+			return nil, err
+		}
+
+		sigs = append(sigs, &AuthorizerSignature{
+			ID:        authorizer.Node.ID,
+			Signature: signature,
+		})
 	}
 
-	signature, err := signatureScheme.Sign(m.GetStringToSign())
-	if err != nil {
-		return nil, "", err
-	}
-
-	for _, id := range authorizers {
-		sigs = append(
-			sigs,
-			&AuthorizerSignature{
-				ID:        id,
-				Signature: signature,
-			})
-	}
-
-	return sigs, signatureScheme.GetPublicKey(), nil
+	return sigs, nil
 }
 
 func createUserNode(id string, nonce int64) *UserNode {
@@ -160,9 +233,10 @@ func createUserNode(id string, nonce int64) *UserNode {
 	}
 }
 
-func CreateMockAuthorizer(clientId string) *AuthorizerNode {
-	tr := CreateTransactionToZcnsc(clientId, 100)
-	authorizerNode := GetNewAuthorizer(tr.PublicKey, clientId, "https://localhost:9876")
-	_, _, _ = authorizerNode.Staking.DigPool(tr.Hash, tr)
-	return authorizerNode
-}
+//
+//func CreateMockAuthorizer(clientId string, ctx state.StateContextI) (*AuthorizerNode, error) {
+//	tr := CreateAddAuthorizerTransaction(clientId, ctx, 100)
+//	authorizerNode := NewAuthorizer(clientId, tr.PublicKey, "https://localhost:9876")
+//	_, _, err := authorizerNode.LockingPool.DigPool(tr.Hash, tr)
+//	return authorizerNode, err
+//}

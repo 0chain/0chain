@@ -117,7 +117,7 @@ func (mt *MerkleTree) VerifyPath(hash Hashable, path *MTPath) bool {
 
 /*GetPathByIndex - get the path of a leaf node at index i */
 func (mt *MerkleTree) GetPathByIndex(idx int) *MTPath {
-	path := make([]string, mt.levels-1, mt.levels-1)
+	path := make([]string, mt.levels-1)
 	mpath := &MTPath{LeafIndex: idx}
 	if idx&1 == 1 {
 		path[0] = mt.tree[idx-1]

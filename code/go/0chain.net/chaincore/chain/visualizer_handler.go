@@ -7,6 +7,8 @@ import (
 	"sort"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/node"
 )
@@ -18,7 +20,7 @@ type bNode struct {
 	Rank               int     `json:"rank"`
 	GeneratorID        int     `json:"generator_id"`
 	GeneratorName      string  `json:"generator_name"`
-	ChainWeight        float64 `json:"chain_weight"`
+	Weight             float64 `json:"chain_weight"`
 	Verifications      int     `json:"verifications"`
 	Verified           bool    `json:"verified"`
 	VerificationFailed bool    `json:"verification_failed"`
@@ -79,7 +81,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 			Rank:               b.RoundRank,
 			GeneratorID:        miner.SetIndex,
 			GeneratorName:      miner.Description,
-			ChainWeight:        b.ChainWeight,
+			Weight:             b.Weight(),
 			Verifications:      b.VerificationTicketsSize(),
 			Verified:           b.GetVerificationStatus() != block.VerificationPending,
 			VerificationFailed: b.GetVerificationStatus() == block.VerificationFailed,
@@ -94,5 +96,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 	//TODO: make CORS more restrictive
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bNodes)
+	if err := json.NewEncoder(w).Encode(bNodes); err != nil {
+		logging.Logger.Error("http write json failed", zap.Error(err))
+	}
 }

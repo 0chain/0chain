@@ -73,12 +73,8 @@ func TestVestingSmartContract(t *testing.T) {
 		balances = newTestBalances()
 		set      *clientPools
 		get      *clientPools
-		getb     []byte
 		err      error
 	)
-
-	_, err = vsc.getClientPoolsBytes(clientID, balances)
-	assert.Equal(t, util.ErrValueNotPresent, err)
 
 	_, err = vsc.getClientPools(clientID, balances)
 	assert.Equal(t, util.ErrValueNotPresent, err)
@@ -91,11 +87,6 @@ func TestVestingSmartContract(t *testing.T) {
 	set.Pools = []string{"a", "b", "c"}
 	err = set.save(vsc.ID, clientID, balances)
 	require.NoError(t, err)
-
-	getb, err = vsc.getClientPoolsBytes(clientID, balances)
-	require.NoError(t, err)
-
-	assert.Equal(t, string(set.Encode()), string(getb))
 
 	get, err = vsc.getClientPools(clientID, balances)
 	require.NoError(t, err)
@@ -112,7 +103,7 @@ func TestVestingSmartContract(t *testing.T) {
 	params.Set("client_id", clientID)
 	var got interface{}
 	got, err = vsc.getClientPoolsHandler(ctx, params, balances)
-	get, err = vsc.getOrCreateClientPools(clientID, balances)
+	_, err = vsc.getOrCreateClientPools(clientID, balances)
 	require.NoError(t, err)
 	assert.Equal(t, set, got)
 }

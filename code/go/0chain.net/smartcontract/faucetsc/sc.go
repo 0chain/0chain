@@ -3,6 +3,7 @@ package faucetsc
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	sc "0chain.net/smartcontract"
 	metrics "github.com/rcrowley/go-metrics"
@@ -21,7 +22,6 @@ import (
 )
 
 const (
-	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
 	name    = "faucet"
 )
@@ -32,7 +32,7 @@ type FaucetSmartContract struct {
 
 func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
 	var fcCopy = &FaucetSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
 	return fcCopy
@@ -56,6 +56,21 @@ func (fc *FaucetSmartContract) GetAddress() string {
 
 func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
 	return fc.SmartContract.RestHandlers
+}
+
+func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
+	node, err := fc.getGlobalVariables(t, balances)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if node.Cost == nil {
+		return math.MaxInt32, err
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, err
+	}
+	return cost, nil
 }
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
@@ -83,12 +98,16 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
 	}
 	if state.Balance(gn.PourAmount)+un.Used > gn.PeriodicLimit {
-		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)", t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
+		return false, common.NewError("invalid_request",
+			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
+				t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
 	}
 	if state.Balance(gn.PourAmount)+gn.Used > gn.GlobalLimit {
-		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)", t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
+		return false, common.NewError("invalid_request",
+			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
+				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
 	}
-	Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
+	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
 }
 
@@ -98,14 +117,16 @@ func (fc *FaucetSmartContract) updateSettings(
 	balances c_state.StateContextI,
 	gn *GlobalNode,
 ) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("update_settings", "only the owner can update the limits")
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		return gn.FaucetConfig.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	var input sc.StringMap
 	err := input.Decode(inputData)
 	if err != nil {
-		return "", common.NewError("update_settings", "limit request not formated correctly")
+		return "", common.NewError("update_settings", "limit request not formatted correctly")
 	}
 
 	if err := gn.updateConfig(input.Fields); err != nil {
@@ -136,12 +157,14 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
-		balances.AddTransfer(transfer)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", err
+		}
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
-			return err.Error(), nil
+			return "", err
 		}
 		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
@@ -161,7 +184,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	if clientBalance >= state.Balance(t.Value) {
 		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
-		balances.AddTransfer(transfer)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", err
+		}
 		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			return "", err
@@ -174,13 +199,7 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 
 func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
 	un := &UserNode{ID: id}
-	us, err := balances.GetTrieNode(un.GetKey(globalKey))
-	if err != nil {
-		return un, err
-	}
-	if err := un.Decode(us.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+	err := balances.GetTrieNode(un.GetKey(globalKey), un)
 	return un, err
 }
 
@@ -190,7 +209,8 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
-	if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.IndividualReset || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.GlobalReset {
+	if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.IndividualReset ||
+		common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.GlobalReset {
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
@@ -199,26 +219,22 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
-	gv, err := balances.GetTrieNode(gn.GetKey())
-	if err != nil {
+	err := balances.GetTrieNode(gn.GetKey(), gn)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		if gn.FaucetConfig == nil {
+			gn.FaucetConfig = getConfig()
+		}
 		return gn, err
+	default:
+		return nil, err
 	}
-	if err := gn.Decode(gv.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	if gn.FaucetConfig == nil {
-		gn.FaucetConfig = getConfig()
-	}
-	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
-	}
-	if gn.FaucetConfig == nil {
-		gn.FaucetConfig = getConfig()
 	}
 
 	if err == nil {

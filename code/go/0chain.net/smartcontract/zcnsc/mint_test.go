@@ -1,27 +1,24 @@
 package zcnsc_test
 
 import (
-	"0chain.net/chaincore/chain"
+	"math/rand"
+	"testing"
+	"time"
+
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
-
 	logging.Logger = zap.NewNop()
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	expected, _, err := CreateMintPayload("client0", []string{"1", "2", "3"})
+	ctx := MakeMockStateContext()
+	expected, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 	actual := &MintPayload{}
 	err = actual.Decode(expected.Encode())
@@ -40,16 +37,15 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
-
-	payload, _, err := CreateMintPayload("client0", authorizers)
+	payload, err := CreateMintPayload(ctx, defaultAuthorizer)
 	require.NoError(t, err)
 
-	for _, authorizer := range authorizers {
-		transaction := CreateTransactionToZcnsc(authorizer, tokens)
+	for _, client := range clients {
+		transaction := CreateAddAuthorizerTransaction(client, ctx)
 
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 
-		require.NoError(t, err, "Testing authorizer: '%s'", authorizer)
+		require.NoError(t, err, "Testing authorizer: '%s'", client)
 		require.NotNil(t, response)
 		require.NotEmpty(t, response)
 	}
@@ -57,15 +53,15 @@ func Test_FuzzyMintTest(t *testing.T) {
 
 // TBD
 func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
-	payload, _, err := CreateMintPayload(clientId, authorizers)
+	ctx := MakeMockStateContext()
+	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := MakeMockStateContext()
 
 	payload.Nonce = 1
-	node, err := GetUserNode(clientId, ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	node.Nonce = payload.Nonce - 1
@@ -74,12 +70,4 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-}
-
-func Test_Chain_Prerequisite_test(t *testing.T) {
-	ch := chain.GetServerChain()
-	require.NotNil(t, ch)
-	require.NotNil(t, ch.ClientSignatureScheme)
-	require.NotEmpty(t, ch.ClientSignatureScheme)
-	require.NotNil(t, ch.GetSignatureScheme())
 }

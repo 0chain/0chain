@@ -206,19 +206,18 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 	*PhaseNode, error) {
 
 	pn := &PhaseNode{}
-	phaseNodeBytes, err := statectx.GetTrieNode(pn.GetKey())
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-	if phaseNodeBytes == nil {
+	err := statectx.GetTrieNode(pn.GetKey(), pn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		pn.Phase = Start
 		pn.CurrentRound = statectx.GetBlock().Round
 		pn.StartRound = statectx.GetBlock().Round
 		return pn, nil
 	}
-	if err := pn.Decode(phaseNodeBytes.Encode()); err != nil {
-		return nil, err
-	}
+
 	pn.CurrentRound = statectx.GetBlock().Round
 	return pn, nil
 }
@@ -785,7 +784,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)))
 
 	for _, v := range dkgMinersList.SimpleNodes {
-		n := &node.Node{}
+		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
@@ -797,11 +796,20 @@ func (msc *MinerSmartContract) createMagicBlock(
 		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive
 		n.InPrevMB = pmb.Miners.HasNode(v.ID)
-		magicBlock.Miners.AddNode(n)
+		if err := magicBlock.Miners.AddNode(n); err != nil {
+			return nil, err
+		}
+
+		mn := NewMinerNode()
+		mn.SimpleNode = v
+		mn.Status = n.Status
+		if err := emitAddOrOverwriteMiner(mn, balances); err != nil {
+			return nil, err
+		}
 	}
 
 	for _, v := range sharders.Nodes {
-		n := &node.Node{}
+		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
@@ -813,7 +821,15 @@ func (msc *MinerSmartContract) createMagicBlock(
 		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive
 		n.InPrevMB = pmb.Sharders.HasNode(v.ID)
-		magicBlock.Sharders.AddNode(n)
+		if err := magicBlock.Sharders.AddNode(n); err != nil {
+			return nil, err
+		}
+
+		sn := v
+		sn.Status = n.Status
+		if err := emitAddOrOverwriteSharder(sn, balances); err != nil {
+			return nil, err
+		}
 	}
 
 	magicBlock.Hash = magicBlock.GetHash()

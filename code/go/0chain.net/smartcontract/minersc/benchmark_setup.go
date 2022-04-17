@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"strconv"
 
 	"0chain.net/chaincore/block"
@@ -20,6 +21,7 @@ import (
 func AddMockNodes(
 	clients []string,
 	nodeType NodeType,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []string {
 	var (
@@ -85,12 +87,41 @@ func AddMockNodes(
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
+
+		if viper.GetBool(benchmark.EventDbEnabled) {
+			if nodeType == NodeTypeMiner {
+				minerDb := event.Miner{
+					MinerID:           newNode.ID,
+					LastHealthCheck:   newNode.LastHealthCheck,
+					PublicKey:         newNode.PublicKey,
+					ServiceCharge:     newNode.ServiceCharge,
+					NumberOfDelegates: newNode.NumberOfDelegates,
+					MinStake:          newNode.MinStake,
+					MaxStake:          newNode.MaxStake,
+				}
+				_ = eventDb.Store.Get().Create(&minerDb)
+			} else {
+				sharderDb := event.Sharder{
+					SharderID:         newNode.ID,
+					LastHealthCheck:   newNode.LastHealthCheck,
+					PublicKey:         newNode.PublicKey,
+					ServiceCharge:     newNode.ServiceCharge,
+					NumberOfDelegates: newNode.NumberOfDelegates,
+					MinStake:          newNode.MinStake,
+					MaxStake:          newNode.MaxStake,
+				}
+				_ = eventDb.Store.Get().Create(&sharderDb)
+			}
+		}
 	}
 	if nodeType == NodeTypeMiner {
 		dkgMiners := NewDKGMinerNodes()
 		dkgMiners.SimpleNodes = nodeMap
 		dkgMiners.T = viper.GetInt(benchmark.InternalT)
 		_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+		if err != nil {
+			panic(err)
+		}
 
 		mpks := block.NewMpks()
 		for key := range nodeMap {
@@ -101,10 +132,16 @@ func AddMockNodes(
 
 		}
 		_, err = balances.InsertTrieNode(MinersMPKKey, mpks)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
 			Nodes: allNodes.Nodes[1:],
 		})
+		if err != nil {
+			panic(err)
+		}
 	}
 	_, err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {

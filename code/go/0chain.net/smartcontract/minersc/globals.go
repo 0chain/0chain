@@ -3,7 +3,10 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
@@ -18,6 +21,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
+
+//msgp:ignore GlobalSetting
+//go:generate msgp -io=false -tests=false -v
 
 type GlobalSetting int
 
@@ -37,6 +43,7 @@ const (
 	Owner   // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
+	BlockMaxCost
 	BlockMaxByteSize
 	BlockReplicators
 	BlockGenerationTimout        // todo from miner.update
@@ -61,6 +68,7 @@ const (
 	TransactionPayloadMaxSize
 	TransactionTimeout // todo from global
 	TransactionMinFee  // todo from global
+	TransactionExempt
 	ClientSignatureScheme
 	ClientDiscover // todo from chain
 	MessagesVerificationTicketsTo
@@ -119,6 +127,7 @@ var GlobalSettingName = []string{
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
+	"server_chain.block.max_block_cost",
 	"server_chain.block.max_byte_size",
 	"server_chain.block.replicators",
 	"server_chain.block.generation.timeout",
@@ -141,6 +150,7 @@ var GlobalSettingName = []string{
 	"server_chain.transaction.payload.max_size",
 	"server_chain.transaction.timeout",
 	"server_chain.transaction.min_fee",
+	"server_chain.transaction.exempt",
 	"server_chain.client.signature_scheme",
 	"server_chain.client.discover",
 	"server_chain.messages.verification_tickets_to",
@@ -180,10 +190,27 @@ var GlobalSettingName = []string{
 	"server_chain.health_check.show_counters",
 }
 
+var GlobalSettingsIgnored = map[string]bool{
+	GlobalSettingName[DbsEventsEnabled]:         true,
+	GlobalSettingName[DbsEventsName]:            true,
+	GlobalSettingName[DbsEventsUser]:            true,
+	GlobalSettingName[DbsEventsPassword]:        true,
+	GlobalSettingName[DbsEventsHost]:            true,
+	GlobalSettingName[DbsEventsPort]:            true,
+	GlobalSettingName[DbsEventsMaxIdleConns]:    true,
+	GlobalSettingName[DbsEventsMaxOpenConns]:    true,
+	GlobalSettingName[DbsEventsConnMaxLifetime]: true,
+}
+
 // GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
 var GlobalSettingInfo = map[string]struct {
 	settingType smartcontract.ConfigType
-	mutable     bool
+
+	// Indicates that the settings cannot be changed by a transaction
+	// This includes both true immutable settings and settings that are local
+	// and are changed by restarting editing 0chain.yaml and restarting the module
+	// todo we need to split up immutable and stored in MPT and local so can't be changed in transaction
+	mutable bool
 }{
 	GlobalSettingName[State]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Dkg]:                               {smartcontract.Boolean, false},
@@ -198,6 +225,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
+	GlobalSettingName[BlockMaxCost]:                      {smartcontract.Int, true},
 	GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
 	GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
 	GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, false},
@@ -220,6 +248,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[TransactionPayloadMaxSize]:         {smartcontract.Int, true},
 	GlobalSettingName[TransactionTimeout]:                {smartcontract.Int, false},
 	GlobalSettingName[TransactionMinFee]:                 {smartcontract.Int64, false},
+	GlobalSettingName[TransactionExempt]:                 {smartcontract.Strings, true},
 	GlobalSettingName[ClientSignatureScheme]:             {smartcontract.String, true},
 	GlobalSettingName[ClientDiscover]:                    {smartcontract.Boolean, false},
 	GlobalSettingName[MessagesVerificationTicketsTo]:     {smartcontract.String, true},
@@ -235,15 +264,15 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {smartcontract.Int, false},
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {smartcontract.Int, false},
 
-	GlobalSettingName[DbsEventsEnabled]:         {smartcontract.Boolean, true},
-	GlobalSettingName[DbsEventsName]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsUser]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsPassword]:        {smartcontract.String, true},
-	GlobalSettingName[DbsEventsHost]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsPort]:            {smartcontract.String, true},
-	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, true},
-	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, true},
-	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, true},
+	GlobalSettingName[DbsEventsEnabled]:         {smartcontract.Boolean, false},
+	GlobalSettingName[DbsEventsName]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsUser]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsPassword]:        {smartcontract.String, false},
+	GlobalSettingName[DbsEventsHost]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsPort]:            {smartcontract.String, false},
+	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, false},
+	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, false},
+	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, false},
 
 	GlobalSettingName[HealthCheckDeepScanEnabled]:                 {smartcontract.Boolean, false},
 	GlobalSettingName[HealthCheckDeepScanBatchSize]:               {smartcontract.Int64, false},
@@ -262,12 +291,9 @@ var GlobalSettingInfo = map[string]struct {
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
 
-func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
-}
-
 type GlobalSettings struct {
-	Fields map[string]string `json:"fields"`
+	Version int64             `json:"version"`
+	Fields  map[string]string `json:"fields"`
 }
 
 func newGlobalSettings() *GlobalSettings {
@@ -291,6 +317,7 @@ func (gl *GlobalSettings) Decode(p []byte) error {
 }
 
 func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
+	gl.Version += 1
 	_, err := balances.InsertTrieNode(GLOBALS_KEY, gl)
 	return err
 }
@@ -303,7 +330,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 			return fmt.Errorf("'%s' is not a valid global setting", key)
 		}
 		if !info.mutable {
-			return fmt.Errorf("%s is an immutable setting", key)
+			return fmt.Errorf("%s cannot be modified via a transaction", key)
 		}
 		_, err = smartcontract.StringToInterface(value, info.settingType)
 		if err != nil {
@@ -312,6 +339,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		}
 		gl.Fields[key] = value
 	}
+
 	return nil
 }
 
@@ -383,7 +411,7 @@ func (gl *GlobalSettings) GetInt64(field GlobalSetting) (int64, error) {
 	}
 	value, ok := iValue.(int64)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", key, value))
+		return value, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
 	return value, nil
 }
@@ -464,47 +492,61 @@ func (gl *GlobalSettings) GetBool(field GlobalSetting) (bool, error) {
 	return value, nil
 }
 
+// GetStrings returns a global setting as a []string], a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetStrings(field GlobalSetting) ([]string, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return nil, err
+	}
+
+	iValue, err := smartcontract.StringToInterface(gl.Fields[key], smartcontract.Strings)
+	if err != nil {
+		return viper.GetStringSlice(key), nil
+	}
+	value, ok := iValue.([]string)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
+	}
+	return value, nil
+}
+
 func getStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
 	for key := range GlobalSettingInfo {
-		globals[key] = viper.GetString(key)
+		if _, ok := GlobalSettingsIgnored[key]; ok {
+			continue
+		}
+		if key == "server_chain.transaction.exempt" {
+			globals[key] = strings.Join(viper.GetStringSlice(key), ",")
+		} else {
+			globals[key] = viper.GetString(key)
+		}
 	}
 	return globals
 }
 
-func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
-	val, err := balances.GetTrieNode(GLOBALS_KEY)
-	if err != nil {
-		return nil, err
-	}
-	return val.Encode(), nil
-}
-
 func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
-	var err error
-	var poolb []byte
-	if poolb, err = getGlobalSettingsBytes(balances); err != nil {
+	gl := newGlobalSettings()
+
+	err := balances.GetTrieNode(GLOBALS_KEY, gl)
+	if err != nil {
 		return nil, err
 	}
-	gl := newGlobalSettings()
-	err = gl.Decode(poolb)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return gl, err
+
+	return gl, nil
 }
 
 func (msc *MinerSmartContract) updateGlobals(
 	txn *transaction.Transaction,
 	inputData []byte,
-	_ *GlobalNode,
+	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if txn.ClientID != owner {
-		return "", common.NewError("update_globals",
-			"unauthorized access - only the owner can update the variables")
+	if err := smartcontractinterface.AuthorizeWithOwner("update_globals", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
 	}
-
 	var changes smartcontract.StringMap
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_globals", err.Error())
@@ -522,11 +564,11 @@ func (msc *MinerSmartContract) updateGlobals(
 	}
 
 	if err = globals.update(changes); err != nil {
-		return "", common.NewErrorf("update_settings", "validation: %v", err.Error())
+		return "", common.NewErrorf("update_globals", "validation: %v", err.Error())
 	}
 
 	if err := globals.save(balances); err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_globals", err.Error())
 	}
 
 	return "", nil

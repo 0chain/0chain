@@ -1,7 +1,10 @@
 package zcnsc
 
 import (
-	"0chain.net/chaincore/chain"
+	"math/rand"
+	"strconv"
+	"testing"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
@@ -9,12 +12,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
-	"errors"
-	"fmt"
-	"github.com/herumi/bls/ffi/go/bls"
-	"math/rand"
-	"strconv"
-	"testing"
 )
 
 type benchTest struct {
@@ -48,130 +45,84 @@ func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
 // Get private key from wallet
 // Sign payload using authorizer private key
 // Collect N signatures
-// Send it to mind endpoint
+// Send it to mint endpoint
 
-func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
+func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
+
+	indexOfNewAuth := len(data.Clients) - 1
 
 	return createTestSuite(
 		[]benchTest{
 			{
-				name:     benchmark.Zcn + AddAuthorizerFunc,
+				name:     benchmark.ZcnSc + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createTransaction(data.Clients[addingAuthorizer], data.PublicKeys[addingAuthorizer]),
-				input:    createAuthorizerPayload(data, addingAuthorizer),
+				txn:      createTransaction(data.Clients[indexOfNewAuth], data.PublicKeys[indexOfNewAuth]),
+				input:    createAuthorizerPayload(data, indexOfNewAuth),
 			},
 			{
-				name:     benchmark.Zcn + DeleteAuthorizerFunc,
+				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
-				txn:      createTransaction(data.Clients[removableAuthorizer], data.PublicKeys[removableAuthorizer]),
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    nil,
 			},
 			{
-				name:     benchmark.Zcn + BurnFunc,
+				name:     benchmark.ZcnSc + BurnFunc,
 				endpoint: sc.Burn,
 				txn:      createRandomBurnTransaction(data.Clients, data.PublicKeys),
-				input:    createBurnPayload(),
+				input:    createBurnPayloadForZCNSCBurn(),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + ".1Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + ".1Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
-				input:    createMintPayload(data, 0, 1),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
+				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + ".10Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + ".10Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
-				input:    createMintPayload(data, 1, 10),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
+				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + "100Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + "100Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
-				input:    createMintPayload(data, 10, 110),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
+				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),
 			},
 		},
 	)
 }
 
-// How authorizer signs the message
-type proofOfBurn struct {
-	TxnID             string `json:"ethereum_txn_id"`
-	Amount            int64  `json:"amount"`
-	ReceivingClientID string `json:"receiving_client_id"` // 0ZCN address
-	Nonce             int64  `json:"nonce"`
-	Signature         string `json:"signature"`
-}
-
-//bLS0ChainScheme - a signature scheme for BLS0Chain Signature
-type bLS0ChainScheme struct {
-	privateKey []byte
-	publicKey  []byte
-}
-
-func (b0 *bLS0ChainScheme) SetPrivateKey(privateKey string) {
-	b0.privateKey = []byte(privateKey)
-}
-
-func (b0 *bLS0ChainScheme) Sign(hash interface{}) (string, error) {
-	var sk bls.SecretKey
-	_ = sk.SetLittleEndian(b0.privateKey)
-	rawHash, err := encryption.GetRawHash(hash)
-	if err != nil {
-		return "", err
-	}
-	sig := sk.Sign(string(rawHash))
-	return sig.SerializeToHexStr(), nil
-}
-
-func (pb *proofOfBurn) Hash() string {
-	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", pb.TxnID, pb.Amount, pb.Nonce, pb.ReceivingClientID))
-}
-
-func (pb *proofOfBurn) sign(privateKey string) (err error) {
-	scheme := &bLS0ChainScheme{}
-	scheme.SetPrivateKey(privateKey)
-	pb.Signature, err = scheme.Sign(pb.Hash())
-	return
-}
-
-func (pb *proofOfBurn) verifySignature(publicKey string) error {
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	_ = signatureScheme.SetPublicKey(publicKey)
-	ok, err := signatureScheme.Verify(pb.Signature, pb.Hash())
-	if err != nil || !ok {
-		return errors.New("failed to verify ")
-	}
-	return nil
-}
-
-func createMintPayload(data benchmark.BenchData, from, to int) []byte {
+func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchmark.BenchData, from, to int) []byte {
 	var sigs []*AuthorizerSignature
 
 	client := data.Clients[1]
+	lim := len(authorizers)
 
-	for i := from; i < to; i++ {
-		index := randomIndex(len(data.PublicKeys))
+	for i := from; i < to && i < lim; i++ {
 
-		pb := proofOfBurn{
+		auth := authorizers[i]
+
+		pb := &proofOfBurn{
 			TxnID:             encryption.Hash(strconv.Itoa(i)),
 			Amount:            100,
 			ReceivingClientID: client,
 			Nonce:             0,
+			Scheme:            scheme,
 		}
 
-		err := pb.sign(data.PrivateKeys[index])
+		err := pb.sign(data.PrivateKeys[i])
 		if err != nil {
 			panic(err)
 		}
 
 		sig := &AuthorizerSignature{
-			ID:        data.Clients[index],
+			ID:        auth.ID,
 			Signature: pb.Signature,
 		}
 
-		err = pb.verifySignature(data.PublicKeys[index])
+		err = pb.verifySignature(auth.PublicKey)
 		if err != nil {
 			panic(err)
 		}
@@ -180,36 +131,38 @@ func createMintPayload(data benchmark.BenchData, from, to int) []byte {
 	}
 
 	// mintNonce = mintNonce + 1
-	payload := MintPayload{
+	payload := &MintPayload{
 		EthereumTxnID:     "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
 		Amount:            1,
 		Nonce:             mintNonce + 1,
 		Signatures:        sigs,
 		ReceivingClientID: client,
 	}
+
 	return payload.Encode()
 }
 
-func createBurnPayload() []byte {
+func createBurnPayloadForZCNSCBurn() []byte {
 	burnNonce = burnNonce + 1
-	payload := BurnPayload{
+	payload := &BurnPayload{
 		Nonce:           burnNonce,
 		EthereumAddress: "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
 	}
+
 	return payload.Encode()
 }
 
 func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
-	an := authorizerNodeArg{
+	an := &authorizerNodeArg{
 		PublicKey: data.PublicKeys[index],
 		URL:       "http://localhost:303" + strconv.Itoa(index),
 	}
+
 	return an.Encode()
 }
 
-func createRandomTransaction(clients, publicKey []string) *transaction.Transaction {
-	index := randomIndex(len(clients))
-	return createTransaction(clients[index], publicKey[index])
+func createRandomTransaction(id, publicKey string) *transaction.Transaction {
+	return createTransaction(id, publicKey)
 }
 
 func createRandomBurnTransaction(clients, publicKey []string) *transaction.Transaction {

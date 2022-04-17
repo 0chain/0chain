@@ -32,13 +32,8 @@ import (
   ToDo: This is adapted from blobber code. Need to find a way to reuse this
 */
 
-const maxRetries = 5
-
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
-
-//TxnConfirmationTime time to wait before checking the status
-const TxnConfirmationTime = 15
 
 const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
@@ -54,8 +49,7 @@ const RegisterClient = "/v1/client/put"
 var httpClient *http.Client
 
 func init() {
-	var transport *http.Transport
-	transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout:   1 * time.Second,
@@ -110,7 +104,13 @@ func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg.Add(len(urls))
 
 	for _, u := range urls {
-		go SendPostRequest(u, data, ID, pkey, &wg)
+		go func(url string) {
+			if _, err := SendPostRequest(url, data, ID, pkey, &wg); err != nil {
+				logging.N2n.Error("send post request failed",
+					zap.String("url", url),
+					zap.Error(err))
+			}
+		}(u)
 	}
 	wg.Wait()
 }
@@ -142,7 +142,13 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
-		go sendTransactionToURL(txnURL, txn, ID, pkey, nil)
+		go func(url string) {
+			if _, err := sendTransactionToURL(url, txn, ID, pkey, nil); err != nil {
+				logging.N2n.Error("send transaction failed",
+					zap.String("url", url),
+					zap.Error(err))
+			}
+		}(txnURL)
 	}
 }
 
@@ -287,6 +293,7 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 			logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
 			numErrs++
 			errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+			response.Body.Close()
 			continue
 		}
 
@@ -493,15 +500,14 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 			if err != nil {
 				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
 			}
-			summary.Decode(bodyBytes)
-			logging.Logger.Info("get magic block -- entity", zap.Any("summary", summary))
-			// logging.Logger.Info("get magic block -- entity", zap.Any("magic_block", entity), zap.Any("string of magic block", string(bodyBytes)))
+			err = summary.Decode(bodyBytes)
 			if err != nil {
 				logging.Logger.Error("Error unmarshalling response", zap.Any("error", err))
 				numErrs++
 				errString = errString + sharder + ":" + err.Error()
 				continue
 			}
+			logging.Logger.Info("get magic block -- entity", zap.Any("summary", summary))
 			retObj = summary
 			numSuccess++
 		}
@@ -615,6 +621,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 }
 
 //GetMagicBlockCall for smart contract to get magic block
+//TODO not used, remove this func
 func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
 	var retObj interface{}
 	numSuccess := 0
@@ -632,7 +639,11 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 		var err error
 		for {
 			response, err = httpClient.Get(u)
-			if err != nil || retried >= 4 || response.StatusCode != http.StatusTooManyRequests {
+			if err != nil {
+				break
+			}
+			if retried >= 4 || response.StatusCode != http.StatusTooManyRequests {
+				response.Body.Close()
 				break
 			}
 			response.Body.Close()

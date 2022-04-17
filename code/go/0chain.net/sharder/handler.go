@@ -17,15 +17,26 @@ import (
 	"0chain.net/core/common"
 )
 
-/* SetupHandlers sets up the necessary API end points */
-func SetupHandlers() {
-	http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(BlockHandler)))
-	http.HandleFunc("/v1/block/magic/get", common.UserRateLimit(common.ToJSONResponse(MagicBlockHandler)))
-	http.HandleFunc("/v1/transaction/get/confirmation", common.UserRateLimit(common.ToJSONResponse(TransactionConfirmationHandler)))
-	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
-	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
-	http.HandleFunc("/_health_check", common.UserRateLimit(HealthCheckWriter))
-	http.HandleFunc("/v1/sharder/get/stats", common.UserRateLimit(common.ToJSONResponse(SharderStatsHandler)))
+const (
+	getBlockV1Pattern = "/v1/block/get"
+)
+
+func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
+	reqRespHandlers := map[string]common.ReqRespHandlerf{
+		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
+		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
+		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
+		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
+		"/_chain_stats":                    ChainStatsWriter,
+		"/_health_check":                   HealthCheckWriter,
+		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
+	}
+
+	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range reqRespHandlers {
+		handlers[pattern] = common.UserRateLimit(handler)
+	}
+	return handlers
 }
 
 /*BlockHandler - a handler to respond to block queries */
@@ -49,12 +60,11 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		}
 		roundEntity := sc.GetSharderRound(roundNumber)
 		if roundEntity == nil {
-			roundEntity, err = sc.GetRoundFromStore(ctx, roundNumber)
+			_, err = sc.GetRoundFromStore(ctx, roundNumber)
 			if err != nil {
 				return nil, err
 			}
 		}
-		hash = roundEntity.BlockHash
 
 		hash, err = sc.GetBlockHash(ctx, roundNumber)
 		if err != nil {
@@ -74,7 +84,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
 	Anything older than that, there is a cost to query the database and get the round information anyway.
 	*/
-	for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+	for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange() {
 		b, err = sc.GetBlockFromStore(hash, roundEntity)
 		if err != nil {
 			return nil, err
@@ -94,7 +104,7 @@ func MagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error
 	b, err := chain.GetServerChain().GetBlock(ctx, mbm.Hash)
 	if err != nil {
 		lfb := sc.GetLatestFinalizedBlock()
-		for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+		for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange() {
 			b, err = sc.GetBlockFromStore(mbm.Hash, roundEntity)
 			if err != nil {
 				return nil, err

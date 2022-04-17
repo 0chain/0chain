@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"0chain.net/core/encryption"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHashStringToBytes(t *testing.T) {
@@ -145,7 +146,10 @@ func TestSecureSerializableValue_Encode(t *testing.T) {
 			spv := &SecureSerializableValue{
 				Buffer: tt.fields.Buffer,
 			}
-			if got := spv.Encode(); !reflect.DeepEqual(got, tt.want) {
+			got, err := spv.MarshalMsg(nil)
+			require.NoError(t, err)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Encode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -185,7 +189,8 @@ func TestSecureSerializableValue_Decode(t *testing.T) {
 			spv := &SecureSerializableValue{
 				Buffer: tt.fields.Buffer,
 			}
-			if err := spv.Decode(tt.args.buf); (err != nil) != tt.wantErr {
+			_, err := spv.UnmarshalMsg(tt.args.buf)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

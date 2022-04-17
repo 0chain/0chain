@@ -64,7 +64,9 @@ func (b0a BLS0ChainAggregateSignatureScheme) Verify() (bool, error) {
 	}
 	var agg bls.GT
 	var asigG1 bls.G1
-	asigG1.Deserialize(asig.Serialize())
+	if err := asigG1.Deserialize(asig.Serialize()); err != nil {
+		return false, err
+	}
 	bls.Pairing(&agg, &asigG1, GenG2)
 	if !agg.IsEqual(agtmul) {
 		return false, errors.New("aggregate signature validation failed")

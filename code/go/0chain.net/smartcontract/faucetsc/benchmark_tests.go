@@ -3,6 +3,8 @@ package faucetsc
 import (
 	"testing"
 
+	"0chain.net/core/viper"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -11,6 +13,8 @@ import (
 	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
 )
+
+const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 
 type BenchTest struct {
 	name     string
@@ -66,7 +70,7 @@ func BenchmarkTests(
 			name:     "faucet.update-settings",
 			endpoint: "updateSettings",
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID: viper.GetString(bk.FaucetOwner),
 				Value:    3,
 			},
 			input: (&sc.StringMap{
@@ -77,6 +81,7 @@ func BenchmarkTests(
 					Settings[GlobalLimit]:     "5",
 					Settings[IndividualReset]: "7s",
 					Settings[GlobalReset]:     "11m",
+					Settings[OwnerId]:         owner,
 				},
 			}).Encode(),
 		},

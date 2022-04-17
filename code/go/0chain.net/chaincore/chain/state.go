@@ -2,12 +2,18 @@ package chain
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
+	"strings"
 	"time"
 
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
 
-	"errors"
+	metrics "github.com/rcrowley/go-metrics"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
@@ -20,8 +26,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
-	metrics "github.com/rcrowley/go-metrics"
-	"go.uber.org/zap"
 )
 
 //SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
@@ -31,16 +35,20 @@ func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
-var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
-
 /*ComputeState - compute the state for the block */
-func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
-	return c.computeState(ctx, b)
+func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
+	return c.ComputeBlockStateWithLock(ctx, func() error {
+		//check whether we already computed it
+		if b.IsStateComputed() {
+			return nil
+		}
+		return c.computeState(ctx, b)
+	})
 }
 
 // ComputeOrSyncState - try to compute state and if there is an error, just sync it
 func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.computeState(ctx, b)
+	err := c.ComputeState(ctx, b)
 	if err != nil {
 		bsc, err := c.getBlockStateChange(b)
 		if err != nil {
@@ -77,7 +85,9 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			zap.String("hash", b.Hash))
 		return err
 	}
-	return b.SaveChanges(ctx, c)
+	cctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	return b.SaveChanges(cctx, c)
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
@@ -96,20 +106,27 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 }
 
 //ExecuteSmartContract - executes the smart contract for the transaction
-func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances bcstate.StateContextI) (string, error) {
+func (c *Chain) ExecuteSmartContract(
+	ctx context.Context,
+	t *transaction.Transaction,
+	scData *sci.SmartContractTransactionData,
+	balances bcstate.StateContextI) (string, error) {
+
 	var output string
 	var err error
 	ts := time.Now()
 	done := make(chan bool, 1)
-	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout)
-	defer cancelf()
+
+	sct := time.NewTimer(c.SmartContractTimeout())
 	go func() {
-		output, err = smartcontract.ExecuteSmartContract(cctx, t, balances)
+		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
 		done <- true
 	}()
 	select {
-	case <-cctx.Done():
-		return "", common.NewError("smart_contract_execution_ctx_err", cctx.Err().Error())
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case <-sct.C:
+		return "", transaction.ErrSmartContractContext
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
@@ -124,12 +141,37 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(
-	ctx context.Context, b *block.Block, txn *transaction.Transaction,
-) ([]event.Event, error) {
+func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, txn)
+	return c.updateState(ctx, b, bState, txn)
+}
+
+func (c *Chain) EstimateTransactionCost(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (int, error) {
+	var (
+		clientState = CreateTxnMPT(bState) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, txn, nil)
+	)
+
+	if txn.TransactionType == transaction.TxnTypeSmartContract {
+		var scData sci.SmartContractTransactionData
+		dataBytes := []byte(txn.TransactionData)
+		err := json.Unmarshal(dataBytes, &scData)
+		if err != nil {
+			logging.Logger.Error("Error while decoding the JSON from transaction",
+				zap.Any("input", txn.TransactionData), zap.Any("error", err))
+			return math.MaxInt32, err
+		}
+		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
+		logging.Logger.Debug("transaction cost", zap.Int("cost", cost), zap.String("tx_hash", txn.Hash),
+			zap.String("func", scData.FunctionName))
+		return cost, err
+	}
+
+	return 0, nil
 }
 
 // NewStateContext creation helper.
@@ -139,56 +181,111 @@ func (c *Chain) NewStateContext(
 	txn *transaction.Transaction,
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
-		txn,
+	return bcstate.NewStateContext(b, s, txn,
 		c.GetBlockSharders,
-		c.GetLatestFinalizedMagicBlock,
+		func() *block.Block {
+			return c.GetLatestFinalizedMagicBlock(context.Background())
+		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
 		eventDb,
 	)
 }
 
-func (c *Chain) updateState(
-	ctx context.Context, b *block.Block, txn *transaction.Transaction,
-) (events []event.Event, err error) {
-
+func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
 	// check if the block's ClientState has root value
-	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
+	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
 		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
-			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(b.ClientState.GetRoot()), b.Round)
+			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(bState.GetRoot()), b.Round)
 	}
 
 	var (
-		clientState = CreateTxnMPT(b.ClientState) // begin transaction
-		startRoot   = clientState.GetRoot()
+		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
+		startRoot   = sctx.GetState().GetRoot()
 	)
 	defer func() { events = sctx.GetEvents() }()
+
+	//we should check that client has enough funds to pay for transaction before heavy computations are executed
+	if err = sctx.Validate(); err != nil {
+		return
+	}
 
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
 		var output string
-		t := time.Now()
-		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
+
+		var scData sci.SmartContractTransactionData
+		dataBytes := []byte(txn.TransactionData)
+		err = json.Unmarshal(dataBytes, &scData)
 		if err != nil {
+			logging.Logger.Error("Error while decoding the JSON from transaction",
+				zap.Any("input", txn.TransactionData), zap.Any("error", err))
+			return nil, err
+		}
+
+		t := time.Now()
+		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
+		switch err {
+		//internal errors
+		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
 			sctx.EmitError(err)
-			logging.Logger.Error("Error executing the SC",
+			logging.Logger.Error("Error executing the SC, internal error",
 				zap.Error(err),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
+				zap.Duration("time_spent", time.Since(t)),
 				zap.Any("txn", txn))
-			return
+			//return original error, to handle upwards
+			return events, err
+		default:
+			if err != nil {
+				sctx.EmitError(err)
+
+				if strings.Contains(err.Error(), "node not found") {
+					logging.Logger.Error("Error executing the SC, internal error",
+						zap.Error(err),
+						zap.String("block", b.Hash),
+						zap.String("begin client state", util.ToHex(startRoot)),
+						zap.String("prev block", b.PrevBlock.Hash),
+						zap.Duration("time_spent", time.Since(t)),
+						zap.Any("txn", txn))
+					return events, err
+				}
+
+				logging.Logger.Debug("Error executing the SC, chargeable error",
+					zap.Error(err),
+					zap.String("client id", txn.ClientID),
+					zap.String("block", b.Hash),
+					zap.String("begin client state", util.ToHex(startRoot)),
+					zap.String("prev block", b.PrevBlock.Hash),
+					zap.Duration("time_spent", time.Since(t)),
+					zap.Any("txn", txn))
+
+				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
+				clientState = CreateTxnMPT(bState) // begin transaction
+				sctx = c.NewStateContext(b, clientState, txn, nil)
+
+				output = err.Error()
+				txn.Status = transaction.TxnError
+			}
 		}
 		txn.TransactionOutput = output
-		logging.Logger.Info("SC executed with output",
-			zap.Any("txn_output", txn.TransactionOutput),
+		logging.Logger.Info("SC executed",
+			zap.String("client id", txn.ClientID),
+			zap.String("block", b.Hash),
+			zap.Int64("round", b.Round),
+			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.Any("txn_hash", txn.Hash),
-			zap.Any("txn_exec_time", time.Since(t)))
+			zap.String("txn_func", scData.FunctionName),
+			zap.Int("txn_status", txn.Status),
+			zap.Any("txn_exec_time", time.Since(t)),
+			zap.String("begin client state", util.ToHex(startRoot)),
+			zap.Any("current_root", util.ToHex(sctx.GetState().GetRoot())))
 
 	case transaction.TxnTypeData:
 
@@ -200,7 +297,8 @@ func (c *Chain) updateState(
 				zap.Any("txn type", txn.TransactionType),
 				zap.Any("transaction_ClientID", txn.ClientID),
 				zap.Any("minersc_address", minersc.ADDRESS),
-				zap.Any("state_Balance", state.Balance(txn.Fee)))
+				zap.Any("state_Balance", state.Balance(txn.Fee)),
+				zap.Any("current_root", sctx.GetState().GetRoot()))
 			return
 		}
 	default:
@@ -221,17 +319,16 @@ func (c *Chain) updateState(
 		}
 	}
 
-	if err = sctx.Validate(); err != nil {
-		return
-	}
-
 	for _, transfer := range sctx.GetTransfers() {
 		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to transfer amount",
+				zap.Any("txn type", txn.TransactionType),
+				zap.String("txn data", txn.TransactionData),
 				zap.Any("transfer_ClientID", transfer.ClientID),
 				zap.Any("to_ClientID", transfer.ToClientID),
-				zap.Any("amount", transfer.Amount))
+				zap.Any("amount", transfer.Amount),
+				zap.Error(err))
 			return
 		}
 	}
@@ -259,7 +356,7 @@ func (c *Chain) updateState(
 	}
 
 	// commit transaction
-	if err = b.ClientState.MergeMPTChanges(clientState); err != nil {
+	if err = bState.MergeMPTChanges(clientState); err != nil {
 		if state.DebugTxn() {
 			logging.Logger.DPanic("update state - merge mpt error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -270,13 +367,21 @@ func (c *Chain) updateState(
 		return
 	}
 
+	//logging.Logger.Debug("update state - root",
+	//	zap.String("block", b.Hash),
+	//	zap.String("txn", txn.Hash),
+	//	zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
+	//	zap.String("begin", util.ToHex(startRoot)),
+	//	zap.String("root", util.ToHex(clientState.GetRoot())))
+
 	if state.DebugTxn() {
+		// TODO: fix me, the b does not has the state changes
 		if err = block.ValidateState(context.TODO(), b, startRoot); err != nil {
 			logging.Logger.DPanic("update state - state validation failure",
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(b.ClientState, c.OwnerID)
+		os, err = c.getState(bState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -284,7 +389,10 @@ func (c *Chain) updateState(
 		}
 	}
 
-	txn.Status = transaction.TxnSuccess
+	//if status is not set
+	if txn.Status == 0 {
+		txn.Status = transaction.TxnSuccess
+	}
 	return
 }
 
@@ -320,7 +428,10 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	if fs.Balance < amount {
-		return ErrInsufficientBalance
+		logging.Logger.Error("transfer amount - insufficient balance",
+			zap.Any("balance", fs.Balance),
+			zap.Any("transfer", amount))
+		return transaction.ErrInsufficientBalance
 	}
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
@@ -338,7 +449,14 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	sctx.SetStateContext(fs)
+
+	if err := sctx.SetStateContext(fs); err != nil {
+		logging.Logger.Error("transfer amount - set state context failed",
+			zap.Int64("round", b.Round),
+			zap.String("state txn hash", fs.TxnHash),
+			zap.Error(err))
+		return err
+	}
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
@@ -357,7 +475,13 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	sctx.SetStateContext(ts)
+	if err := sctx.SetStateContext(ts); err != nil {
+		logging.Logger.Error("transfer amount - set state context failed",
+			zap.Int64("round", b.Round),
+			zap.String("state txn hash", fs.TxnHash),
+			zap.Error(err))
+		return err
+	}
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -389,9 +513,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+				_, _ = fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+			_, _ = fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 			block.PrintStates(clientState, b.ClientState)
 			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
@@ -400,7 +524,13 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return common.NewError("mint_amount - get state", err.Error())
 	}
-	sctx.SetStateContext(ts)
+	if err := sctx.SetStateContext(ts); err != nil {
+		logging.Logger.Error("transfer amount - set state context failed",
+			zap.String("txn hash", ts.TxnHash),
+			zap.Error(err))
+		return err
+	}
+
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -411,9 +541,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 					if txn == nil {
 						break
 					}
-					fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+					_, _ = fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 				}
-				fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+				_, _ = fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 				block.PrintStates(clientState, b.ClientState)
 				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
@@ -438,14 +568,13 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
-	ss, err := clientState.GetNodeValue(util.Path(clientID))
+	err := clientState.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return s, err
 	}
-	s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	return s, nil
 }
 
@@ -455,7 +584,8 @@ the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
+	st := &state.State{}
+	err := b.ClientState.GetNodeValue(util.Path(clientID), st)
 	if err != nil {
 		if !b.IsStateComputed() {
 			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
@@ -466,7 +596,6 @@ func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) 
 		}
 		return nil, err
 	}
-	st := c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	return st, nil
 }
 

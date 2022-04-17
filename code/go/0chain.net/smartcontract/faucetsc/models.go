@@ -1,9 +1,11 @@
 package faucetsc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/core/common"
@@ -14,21 +16,13 @@ import (
 	"0chain.net/core/util"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
 	Start   time.Time     `json:"start_time"`
 	Restart string        `json:"time_left"`
 	Allowed state.Balance `json:"tokens_allowed"`
-}
-
-func (pr *periodicResponse) encode() []byte {
-	buff, _ := json.Marshal(pr)
-	return buff
-}
-
-func (pr *periodicResponse) decode(input []byte) error {
-	err := json.Unmarshal(input, pr)
-	return err
 }
 
 type GlobalNode struct {
@@ -61,7 +55,6 @@ func (gn *GlobalNode) Decode(input []byte) error {
 }
 
 func (gn *GlobalNode) updateConfig(fields map[string]string) error {
-	var err error
 	for key, value := range fields {
 		switch key {
 		case Settings[PourAmount]:
@@ -89,20 +82,58 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			}
 			gn.GlobalLimit = state.Balance(fAmount * 1e10)
 		case Settings[IndividualReset]:
-			gn.IndividualReset, err = time.ParseDuration(value)
+			ir, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+
+			gn.IndividualReset = ir
 		case Settings[GlobalReset]:
-			gn.GlobalReset, err = time.ParseDuration(value)
+			gr, err := time.ParseDuration(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
 			}
+
+			gn.GlobalReset = gr
+
+		case Settings[OwnerId]:
+			_, err := hex.DecodeString(value)
+			if err != nil {
+				return fmt.Errorf("key %s, %v should be valid hex string", key, value)
+			}
+			gn.OwnerId = value
+
 		default:
-			return fmt.Errorf("key %s not recognised as setting", key)
+			return gn.setCostValue(key, value)
 		}
 	}
 	return nil
+}
+
+func (gn *GlobalNode) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, Settings[Cost]) {
+		return fmt.Errorf("key %s not recognised as setting", key)
+	}
+	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
+	for _, costFunction := range costFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		gn.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
 }
 
 func (gn *GlobalNode) validate() error {
@@ -120,6 +151,7 @@ func (gn *GlobalNode) validate() error {
 	case gn.GlobalReset < gn.IndividualReset:
 		return common.NewError("failed to validate global node", fmt.Sprintf("global reset(%v) is less than individual reset(%v)", gn.GlobalReset, gn.IndividualReset))
 	}
+
 	return nil
 }
 

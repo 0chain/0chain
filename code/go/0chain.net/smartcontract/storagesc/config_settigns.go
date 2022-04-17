@@ -3,7 +3,10 @@ package storagesc
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -42,8 +45,6 @@ const (
 	WritePoolMaxLockPeriod
 
 	StakePoolMinLock
-	StakePoolInterestRate
-	StakePoolInterestInterval
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -69,18 +70,48 @@ const (
 	ChallengeEnabled
 	ChallengeGenerationRate
 	MaxChallengesPerGeneration
+	ValidatorsPerChallenge
 	MaxDelegates
 
 	BlockRewardBlockReward
 	BlockRewardQualifyingStake
 	BlockRewardSharderWeight
 	BlockRewardMinerWeight
-	BlockRewardBlobberCapacityWeight
-	BlockRewardBlobberUsageWeight
+	BlockRewardBlobberWeight
 
 	ExposeMpt
 
-	NumberOfSettings
+	Cost
+	CostUpdateSettings
+	CostReadRedeem
+	CostCommitConnection
+	CostNewAllocationRequest
+	CostUpdateAllocationRequest
+	CostFinalizeAllocation
+	CostCancelAllocation
+	CostAddFreeStorageAssigner
+	CostFreeAllocationRequest
+	CostFreeUpdateAllocation
+	CostAddCurator
+	CostRemoveCurator
+	CostBlobberHealthCheck
+	CostUpdateBlobberSettings
+	CostPayBlobberBlockRewards
+	CostCuratorTransferAllocation
+	CostChallengeRequest
+	CostChallengeResponse
+	CostGenerateChallenges
+	CostAddValidator
+	CostAddBlobber
+	CostNewReadPool
+	CostReadPoolLock
+	CostReadPoolUnlock
+	CostWritePoolLock
+	CostWritePoolUnlock
+	CostStakePoolLock
+	CostStakePoolUnlock
+	CostStakePoolPayInterests
+	CostCommitSettingsChanges
 )
 
 var (
@@ -102,8 +133,6 @@ var (
 		"writepool.max_lock_period",
 
 		"stakepool.min_lock",
-		"stakepool.interest_rate",
-		"stakepool.interest_interval",
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
@@ -129,17 +158,51 @@ var (
 		"challenge_enabled",
 		"challenge_rate_per_mb_min",
 		"max_challenges_per_generation",
+		"validators_per_challenge",
 		"max_delegates",
 
 		"block_reward.block_reward",
 		"block_reward.qualifying_stake",
 		"block_reward.sharder_ratio",
 		"block_reward.miner_ratio",
-		"block_reward.blobber_capacity_ratio",
-		"block_reward.blobber_usage_ratio",
+		"block_reward.blobber_ratio",
 
 		"expose_mpt",
+
+		"cost",
+		"cost.update_settings",
+		"cost.read_redeem",
+		"cost.commit_connection",
+		"cost.new_allocation_request",
+		"cost.update_allocation_request",
+		"cost.finalize_allocation",
+		"cost.cancel_allocation",
+		"cost.add_free_storage_assigner",
+		"cost.free_allocation_request",
+		"cost.free_update_allocation",
+		"cost.add_curator",
+		"cost.remove_curator",
+		"cost.blobber_health_check",
+		"cost.update_blobber_settings",
+		"cost.pay_blobber_block_rewards",
+		"cost.curator_transfer_allocation",
+		"cost.challenge_request",
+		"cost.challenge_response",
+		"cost.generate_challenges",
+		"cost.add_validator",
+		"cost.add_blobber",
+		"cost.new_read_pool",
+		"cost.read_pool_lock",
+		"cost.read_pool_unlock",
+		"cost.write_pool_lock",
+		"cost.write_pool_unlock",
+		"cost.stake_pool_lock",
+		"cost.stake_pool_unlock",
+		"cost.stake_pool_pay_interests",
+		"cost.commit_settings_changes",
 	}
+
+	NumberOfSettings = len(SettingName)
 
 	Settings = map[string]struct {
 		setting    Setting
@@ -161,9 +224,7 @@ var (
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock":          {StakePoolMinLock, smartcontract.Int64},
-		"stakepool.interest_rate":     {StakePoolInterestRate, smartcontract.Float64},
-		"stakepool.interest_interval": {StakePoolInterestInterval, smartcontract.Duration},
+		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.StateBalance},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.StateBalance},
@@ -189,37 +250,73 @@ var (
 		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
 		"challenge_rate_per_mb_min":            {ChallengeGenerationRate, smartcontract.Float64},
 		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
+		"validators_per_challenge":             {ValidatorsPerChallenge, smartcontract.Int},
 		"max_delegates":                        {MaxDelegates, smartcontract.Int},
 
-		"block_reward.block_reward":           {BlockRewardBlockReward, smartcontract.StateBalance},
-		"block_reward.qualifying_stake":       {BlockRewardQualifyingStake, smartcontract.StateBalance},
-		"block_reward.sharder_ratio":          {BlockRewardSharderWeight, smartcontract.Float64},
-		"block_reward.miner_ratio":            {BlockRewardMinerWeight, smartcontract.Float64},
-		"block_reward.blobber_capacity_ratio": {BlockRewardBlobberCapacityWeight, smartcontract.Float64},
-		"block_reward.blobber_usage_ratio":    {BlockRewardBlobberUsageWeight, smartcontract.Float64},
+		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.StateBalance},
+		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.StateBalance},
+		"block_reward.sharder_ratio":    {BlockRewardSharderWeight, smartcontract.Float64},
+		"block_reward.miner_ratio":      {BlockRewardMinerWeight, smartcontract.Float64},
+		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
 
 		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
+
+		"cost":                             {Cost, smartcontract.Cost},
+		"cost.update_settings":             {CostUpdateSettings, smartcontract.Cost},
+		"cost.read_redeem":                 {CostReadRedeem, smartcontract.Cost},
+		"cost.commit_connection":           {CostCommitConnection, smartcontract.Cost},
+		"cost.new_allocation_request":      {CostNewAllocationRequest, smartcontract.Cost},
+		"cost.update_allocation_request":   {CostUpdateAllocationRequest, smartcontract.Cost},
+		"cost.finalize_allocation":         {CostFinalizeAllocation, smartcontract.Cost},
+		"cost.cancel_allocation":           {CostCancelAllocation, smartcontract.Cost},
+		"cost.add_free_storage_assigner":   {CostAddFreeStorageAssigner, smartcontract.Cost},
+		"cost.free_allocation_request":     {CostFreeAllocationRequest, smartcontract.Cost},
+		"cost.free_update_allocation":      {CostFreeUpdateAllocation, smartcontract.Cost},
+		"cost.add_curator":                 {CostAddCurator, smartcontract.Cost},
+		"cost.remove_curator":              {CostRemoveCurator, smartcontract.Cost},
+		"cost.blobber_health_check":        {CostBlobberHealthCheck, smartcontract.Cost},
+		"cost.update_blobber_settings":     {CostUpdateBlobberSettings, smartcontract.Cost},
+		"cost.pay_blobber_block_rewards":   {CostPayBlobberBlockRewards, smartcontract.Cost},
+		"cost.curator_transfer_allocation": {CostCuratorTransferAllocation, smartcontract.Cost},
+		"cost.challenge_request":           {CostChallengeRequest, smartcontract.Cost},
+		"cost.challenge_response":          {CostChallengeResponse, smartcontract.Cost},
+		"cost.generate_challenges":         {CostGenerateChallenges, smartcontract.Cost},
+		"cost.add_validator":               {CostAddValidator, smartcontract.Cost},
+		"cost.add_blobber":                 {CostAddBlobber, smartcontract.Cost},
+		"cost.new_read_pool":               {CostNewReadPool, smartcontract.Cost},
+		"cost.read_pool_lock":              {CostReadPoolLock, smartcontract.Cost},
+		"cost.read_pool_unlock":            {CostReadPoolUnlock, smartcontract.Cost},
+		"cost.write_pool_lock":             {CostWritePoolLock, smartcontract.Cost},
+		"cost.write_pool_unlock":           {CostWritePoolUnlock, smartcontract.Cost},
+		"cost.stake_pool_lock":             {CostStakePoolLock, smartcontract.Cost},
+		"cost.stake_pool_unlock":           {CostStakePoolUnlock, smartcontract.Cost},
+		"cost.stake_pool_pay_interests":    {CostStakePoolPayInterests, smartcontract.Cost},
+		"cost.commit_settings_changes":     {CostCommitSettingsChanges, smartcontract.Cost},
 	}
 )
 
-func (conf *scConfig) getConfigMap() smartcontract.StringMap {
-	var im smartcontract.StringMap
-	im.Fields = make(map[string]string)
-	for key, info := range Settings {
+func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
+	var out smartcontract.StringMap
+	out.Fields = make(map[string]string)
+	for _, key := range SettingName {
+		info, ok := Settings[strings.ToLower(key)]
+		if !ok {
+			return out, fmt.Errorf("SettingName %s not found in Settings", key)
+		}
 		iSetting := conf.get(info.setting)
 		if info.configType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
-				panic(fmt.Sprintf("%s key not implemented as state.balance", key))
+				return out, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
 			iSetting = float64(sbSetting) / x10
 		}
-		im.Fields[key] = fmt.Sprintf("%v", iSetting)
+		out.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
-	return im
+	return out, nil
 }
 
-func (conf *scConfig) setInt(key string, change int) {
+func (conf *Config) setInt(key string, change int) error {
 	switch Settings[key].setting {
 	case FreeAllocationDataShards:
 		conf.FreeAllocationSettings.DataShards = change
@@ -231,14 +328,18 @@ func (conf *scConfig) setInt(key string, change int) {
 		conf.FailedChallengesToRevokeMinLock = change
 	case MaxChallengesPerGeneration:
 		conf.MaxChallengesPerGeneration = change
+	case ValidatorsPerChallenge:
+		conf.ValidatorsPerChallenge = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
-		panic("key: " + key + "not implemented as int")
+		return fmt.Errorf("key: %v not implemented as int", key)
 	}
+
+	return nil
 }
 
-func (conf *scConfig) setBalance(key string, change state.Balance) {
+func (conf *Config) setBalance(key string, change state.Balance) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
@@ -271,11 +372,13 @@ func (conf *scConfig) setBalance(key string, change state.Balance) {
 		}
 		conf.BlockReward.QualifyingStake = change
 	default:
-		panic("key: " + key + "not implemented as balance")
+		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
+
+	return nil
 }
 
-func (conf *scConfig) setInt64(key string, change int64) {
+func (conf *Config) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
 	case MinAllocSize:
 		conf.MinAllocSize = change
@@ -299,17 +402,14 @@ func (conf *scConfig) setInt64(key string, change int64) {
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
 	default:
-		panic("key: " + key + "not implemented as int64")
+		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
+
+	return nil
 }
 
-func (conf *scConfig) setFloat64(key string, change float64) {
+func (conf *Config) setFloat64(key string, change float64) error {
 	switch Settings[key].setting {
-	case StakePoolInterestRate:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.InterestRate = change
 	case FreeAllocationReadPoolFraction:
 		conf.FreeAllocationSettings.ReadPoolFraction = change
 	case ValidatorReward:
@@ -328,22 +428,18 @@ func (conf *scConfig) setFloat64(key string, change float64) {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.MinerWeight = change
-	case BlockRewardBlobberCapacityWeight:
+	case BlockRewardBlobberWeight:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlobberCapacityWeight = change
-	case BlockRewardBlobberUsageWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
-		}
-		conf.BlockReward.BlobberUsageWeight = change
+		conf.BlockReward.BlobberWeight = change
 	default:
-		panic("key: " + key + "not implemented as float64")
+		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
+	return nil
 }
 
-func (conf *scConfig) setDuration(key string, change time.Duration) {
+func (conf *Config) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
 		conf.TimeUnit = change
@@ -373,76 +469,107 @@ func (conf *scConfig) setDuration(key string, change time.Duration) {
 			conf.WritePool = &writePoolConfig{}
 		}
 		conf.WritePool.MaxLockPeriod = change
-	case StakePoolInterestInterval:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.InterestInterval = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
 		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
 	default:
-		panic("key: " + key + "not implemented as duration")
+		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
+	return nil
 }
 
-func (conf *scConfig) setBoolean(key string, change bool) {
+func (conf *Config) setBoolean(key string, change bool) error {
 	switch Settings[key].setting {
 	case ChallengeEnabled:
 		conf.ChallengeEnabled = change
 	case ExposeMpt:
 		conf.ExposeMpt = change
 	default:
-		panic("key: " + key + "not implemented as boolean")
+		return fmt.Errorf("key: %v not implemented as boolean", key)
 	}
+	return nil
 }
 
-func (conf *scConfig) set(key string, change string) error {
-	switch Settings[key].configType {
+func (conf *Config) setCost(key string, change int) {
+	if change < 0 {
+		return
+	}
+	conf.Cost[strings.TrimPrefix(key, fmt.Sprintf("%s.", SettingName[Cost]))] = change
+}
+
+func (conf *Config) set(key string, change string) error {
+	key = strings.ToLower(key)
+	s, ok := Settings[key]
+	if !ok {
+		return fmt.Errorf("unknown key %s, can't set value %v", key, change)
+	}
+
+	switch s.configType {
 	case smartcontract.Int:
 		if value, err := strconv.Atoi(change); err == nil {
-			conf.setInt(key, value)
+			if err := conf.setInt(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			conf.setBalance(key, state.Balance(value*x10))
+			if err := conf.setBalance(key, state.Balance(value*x10)); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
 	case smartcontract.Int64:
 		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
-			conf.setInt64(key, value)
+			if err := conf.setInt64(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
 	case smartcontract.Float64:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			conf.setFloat64(key, value)
+			if err := conf.setFloat64(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
 	case smartcontract.Duration:
 		if value, err := time.ParseDuration(change); err == nil {
-			conf.setDuration(key, value)
+			if err := conf.setDuration(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
 		}
 	case smartcontract.Boolean:
 		if value, err := strconv.ParseBool(change); err == nil {
-			conf.setBoolean(key, value)
+			if err := conf.setBoolean(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
+	case smartcontract.Cost:
+		if key == SettingName[Cost] {
+			return fmt.Errorf("cost update key must follow cost.* format")
+		}
+		value, err := strconv.Atoi(change)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, change)
+		}
+		conf.setCost(key, value)
 	default:
-		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].configType])
+		return fmt.Errorf("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].configType])
 	}
 	return nil
 }
 
-func (conf *scConfig) get(key Setting) interface{} {
+func (conf *Config) get(key Setting) interface{} {
 	switch key {
 	case MaxMint:
 		return conf.MaxMint
@@ -472,10 +599,6 @@ func (conf *scConfig) get(key Setting) interface{} {
 		return conf.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
-	case StakePoolInterestRate:
-		return conf.StakePool.InterestRate
-	case StakePoolInterestInterval:
-		return conf.StakePool.InterestInterval
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
@@ -520,6 +643,8 @@ func (conf *scConfig) get(key Setting) interface{} {
 		return conf.ChallengeGenerationRate
 	case MaxChallengesPerGeneration:
 		return conf.MaxChallengesPerGeneration
+	case ValidatorsPerChallenge:
+		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:
@@ -530,18 +655,79 @@ func (conf *scConfig) get(key Setting) interface{} {
 		return conf.BlockReward.SharderWeight
 	case BlockRewardMinerWeight:
 		return conf.BlockReward.MinerWeight
-	case BlockRewardBlobberCapacityWeight:
-		return conf.BlockReward.BlobberCapacityWeight
-	case BlockRewardBlobberUsageWeight:
-		return conf.BlockReward.BlobberUsageWeight
+	case BlockRewardBlobberWeight:
+		return conf.BlockReward.BlobberWeight
 	case ExposeMpt:
 		return conf.ExposeMpt
+	case Cost:
+		return ""
+	case CostUpdateSettings:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostReadRedeem:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadRedeem], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostCommitConnection:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitConnection], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostNewAllocationRequest:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostNewAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostUpdateAllocationRequest:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostFinalizeAllocation:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFinalizeAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostCancelAllocation:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCancelAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostAddFreeStorageAssigner:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddFreeStorageAssigner], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostFreeAllocationRequest:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFreeAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostFreeUpdateAllocation:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFreeUpdateAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostAddCurator:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostRemoveCurator:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostRemoveCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostBlobberHealthCheck:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostBlobberHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostUpdateBlobberSettings:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateBlobberSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostPayBlobberBlockRewards:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostPayBlobberBlockRewards], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostCuratorTransferAllocation:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCuratorTransferAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostChallengeRequest:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostChallengeRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostChallengeResponse:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostChallengeResponse], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostGenerateChallenges:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostGenerateChallenges], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostAddValidator:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostAddBlobber:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostNewReadPool:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostNewReadPool], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostReadPoolLock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostReadPoolUnlock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostWritePoolLock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostWritePoolUnlock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostStakePoolLock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostStakePoolUnlock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostStakePoolPayInterests:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolPayInterests], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostCommitSettingsChanges:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitSettingsChanges], fmt.Sprintf("%s.", SettingName[Cost])))]
+
 	default:
 		panic("Setting not implemented")
 	}
 }
 
-func (conf *scConfig) update(changes smartcontract.StringMap) error {
+func (conf *Config) update(changes smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
 		if err := conf.set(key, value); err != nil {
 			return err
@@ -557,9 +743,16 @@ func (ssc *StorageSmartContract) updateSettings(
 	input []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	if t.ClientID != owner {
+	var conf *Config
+	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
-			"unauthorized access - only the owner can update the variables")
+			"can't get config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		return conf.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	var newChanges smartcontract.StringMap
@@ -593,7 +786,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	var conf *scConfig
+	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
 			"can't get config: "+err.Error())
@@ -625,21 +818,17 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 }
 
 func getSettingChanges(balances cstate.StateContextI) (*smartcontract.StringMap, error) {
-	val, err := balances.GetTrieNode(settingChangesKey)
-	if err != nil || val == nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		return smartcontract.NewStringMap(), nil
-	}
-
 	var changes = new(smartcontract.StringMap)
-	err = changes.Decode(val.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	if changes.Fields == nil {
+	err := balances.GetTrieNode(settingChangesKey, changes)
+	switch err {
+	case nil:
+		if len(changes.Fields) == 0 {
+			return smartcontract.NewStringMap(), nil
+		}
+		return changes, nil
+	case util.ErrValueNotPresent:
 		return smartcontract.NewStringMap(), nil
+	default:
+		return nil, err
 	}
-	return changes, nil
 }

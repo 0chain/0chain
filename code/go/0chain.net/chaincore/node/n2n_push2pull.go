@@ -2,9 +2,9 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"sync"
 	"time"
 
@@ -15,7 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var pushDataCache = cache.NewLRUCache(100)
+var (
+	pushDataCache      = cache.NewLRUCache(100)
+	pullingEntityCache = newPullingCache(1000, 5)
+)
 
 //pushDataCacheEntry - cached push data
 type pushDataCacheEntry struct {
@@ -37,24 +40,6 @@ func getPushToPullTime(n *Node) float64 {
 	return pullRequestTime + sendTime
 }
 
-var pullDataCache = cache.NewLRUCache(100)
-
-type nodeRequest struct {
-	node      *Node
-	requested bool
-}
-
-const (
-	pullStatePulling = 1
-	pullStateFailed  = iota
-	pullStateDone    = iota
-)
-
-type pullDataCacheEntry struct {
-	sentBy []*nodeRequest
-	state  int8
-}
-
 func p2pKey(uri string, id string) string {
 	return uri + ":" + id
 }
@@ -67,13 +52,10 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 	pcde, err := pushDataCache.Get(key)
 	if err != nil {
 		logging.N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
-		return nil, common.NewError("request_data_not_found", "Requested data is not found")
+		return nil, common.NewErrorf("request_data_not_found", "Requested data is not found, key: %v", key)
 	}
-	//N2n.Debug("push to pull", zap.String("key", key))
 	return pcde, nil
 }
-
-var pullLock sync.Mutex
 
 /*pullEntityHandler - pull an entity that wasn't pushed as it's large and pulling is cheaper */
 func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datastore.JSONEntityReqResponderF, entityName string, entityID datastore.Key) {
@@ -101,64 +83,11 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	params.Add("id", datastore.ToString(entityID))
 	rhandler := pullDataRequestor(params, phandler)
 
-	addRequestNode := func(key string, requestNode *nodeRequest) *pullDataCacheEntry {
-		pullLock.Lock()
-		defer pullLock.Unlock()
-		var pcde *pullDataCacheEntry
-		cval, err := pullDataCache.Get(key)
-		if err != nil {
-			pcde = &pullDataCacheEntry{sentBy: []*nodeRequest{requestNode}}
-			pullDataCache.Add(key, pcde)
-		} else {
-			pcde = cval.(*pullDataCacheEntry)
-			pcde.sentBy = append(pcde.sentBy, requestNode)
-		}
-		if pcde.state == pullStateDone || pcde.state == pullStatePulling {
-			return nil
-		}
-		pcde.state = pullStatePulling
-		return pcde
-	}
-	getNextNodeToRequest := func(pcde *pullDataCacheEntry) *nodeRequest {
-		pullLock.Lock()
-		defer pullLock.Unlock()
-		sort.SliceStable(pcde.sentBy, func(i, j int) bool {
-			if pcde.sentBy[i].requested == pcde.sentBy[j].requested {
-				if pcde.sentBy[i].requested {
-					return true
-				}
-				return pcde.sentBy[i].node.getTime(pullURL) < pcde.sentBy[j].node.getTime(pullURL)
-			}
-			return !pcde.sentBy[i].requested
-		})
-		requestNode := pcde.sentBy[0]
-		if requestNode.requested {
-			pcde.state = pullStateFailed
-			return nil
-		}
-		return requestNode
-	}
-
-	key := p2pKey(uri, entityID)
-	var requestNode = &nodeRequest{node: nd}
-	var pcde = addRequestNode(key, requestNode)
-	if pcde == nil {
-		return
-	}
-	for true {
-		requestNode = getNextNodeToRequest(pcde)
-		if requestNode == nil {
-			break
-		}
-		requestNode.requested = true
-		result := rhandler(ctx, requestNode.node)
-		if result {
-			pcde.state = pullStateDone
-			break
-		} else {
-			//N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
-		}
-	}
+	pullKey := fmt.Sprintf("%s:%s", entityName, entityID)
+	// entity with the same key id will be cached till the first request is returned
+	pullingEntityCache.pullOrCacheRequest(ctx, pullKey, func(ctx context.Context) bool {
+		return rhandler(ctx, nd)
+	})
 }
 
 func isPullRequest(r *http.Request) bool {
@@ -171,4 +100,87 @@ func updatePullStats(sender *Node, uri string, length int, ts time.Time) {
 	timer.UpdateSince(ts)
 	sizer := sender.GetSizeMetric(mkey)
 	sizer.Update(int64(length))
+}
+
+// pullingCache represents the cache for pulling request.
+// the key is the 'entityName:id', and value is a buffered channel
+type pullingCache struct {
+	cache *cache.LRU
+	mutex sync.Mutex
+	// chanSize is the channel buffer size
+	chanSize int
+}
+
+func newPullingCache(cacheSize, chanSize int) *pullingCache {
+	return &pullingCache{
+		cache:    cache.NewLRUCache(cacheSize),
+		chanSize: chanSize,
+	}
+}
+
+type pullHandlerFunc func(ctx context.Context) bool
+
+// pullOrCacheRequest checks if the entity id is in the cache, add it if not exist, and return false
+// to indicate the entity was not in the cache, otherwise reject it and return true.
+func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullHandler pullHandlerFunc) {
+	c.mutex.Lock()
+	v, err := c.cache.Get(key)
+	switch err {
+	case cache.ErrKeyNotFound:
+		ch := make(chan pullHandlerFunc, c.chanSize)
+		ch <- pullHandler
+		if err := c.cache.Add(key, ch); err != nil {
+			logging.Logger.Warn("cache pull handler func failed", zap.Error(err))
+		}
+
+		c.mutex.Unlock()
+
+		go c.runHandler(ctx, key, ch)
+		return
+	case nil:
+		ch, ok := v.(chan pullHandlerFunc)
+		if ok {
+			select {
+			case ch <- pullHandler:
+			default:
+			}
+		}
+	default:
+		logging.Logger.Error("Unexpected error on pulling entity", zap.Error(err))
+	}
+	c.mutex.Unlock()
+}
+
+func (c *pullingCache) runHandler(ctx context.Context, key string, ch chan pullHandlerFunc) {
+	wg := sync.WaitGroup{}
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	// have workers to process the pulling requests concurrently
+	for i := 0; i < c.chanSize; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case <-cctx.Done():
+			case f, ok := <-ch:
+				if ok {
+					if f(cctx) {
+						// remove from cache when process successfully
+						c.mutex.Lock()
+						if ch != nil {
+							close(ch)
+							ch = nil
+						}
+
+						c.cache.Remove(key)
+						c.mutex.Unlock()
+						cancel()
+						return
+					}
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
 }

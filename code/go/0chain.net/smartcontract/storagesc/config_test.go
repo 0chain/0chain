@@ -25,15 +25,13 @@ func TestGetBlockPayments(t *testing.T) {
 			name:                 "equal",
 			SharderRatio:         5.0,
 			MinerRatio:           10.0,
-			BlobberCapacityRatio: 15.0,
-			BlobberUsageRatio:    20.0,
+			BlobberCapacityRatio: 35.0,
 
 			want: want{
 				blockReward{
-					SharderWeight:         0.1,
-					MinerWeight:           0.2,
-					BlobberCapacityWeight: 0.3,
-					BlobberUsageWeight:    0.4,
+					SharderWeight: 0.1,
+					MinerWeight:   0.2,
+					BlobberWeight: 0.7,
 				},
 			},
 		},
@@ -45,7 +43,7 @@ func TestGetBlockPayments(t *testing.T) {
 			t.Parallel()
 
 			var br = blockReward{}
-			br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio, tt.BlobberUsageRatio)
+			br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio)
 			require.EqualValues(t, br, tt.want.reward)
 		})
 	}

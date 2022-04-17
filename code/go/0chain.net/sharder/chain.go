@@ -3,10 +3,12 @@ package sharder
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -31,7 +33,10 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
-	transactionCacheSize := int(c.BlockSize) * blockCacheSize
+	transactionCacheSize := int(c.BlockSize()) * blockCacheSize
+	if transactionCacheSize > 5000 {
+		transactionCacheSize = 5000
+	}
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
@@ -39,6 +44,7 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
+	sharderChain.processingBlocks = cache.NewLRUCache(1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -63,6 +69,9 @@ type Chain struct {
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
 	TieringStats   *MinioStats
+
+	processingBlocks *cache.LRU
+	pbMutex          sync.RWMutex
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
@@ -77,10 +86,7 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
 func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
-	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
-	if gr == nil || gb == nil {
-		panic("Genesis round/block can not be null")
-	}
+	_, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
 	//sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
 	// Save the block
@@ -111,7 +117,12 @@ func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block,
 
 /*GetBlockFromStoreBySummary - get the block from the store */
 func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Block, error) {
-	return blockstore.GetStore().ReadWithBlockSummary(bs)
+	b, err := blockstore.GetStore().ReadWithBlockSummary(bs)
+	if err != nil {
+		logging.Logger.Error("get block from store by summary failed", zap.Error(err))
+		return nil, err
+	}
+	return b, nil
 }
 
 /*GetRoundFromStore - get the round from a store*/
@@ -195,8 +206,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
 
 	// check is it notarized
-	err = sc.VerifyNotarization(bl.lfb, bl.lfb.GetVerificationTickets(),
-		bl.r.GetRoundNumber())
+	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
 	if err != nil {
 		Logger.Error("load_lfb - verify notarization failed",
 			zap.Error(err),
@@ -205,14 +215,11 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		err = nil // not a real error
 		return    // do nothing, if not notarized
 	}
+	bl.lfb.SetBlockNotarized()
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
-	_, _, err = bl.r.AddNotarizedBlock(bl.lfb)
-	if err != nil {
-		Logger.Error("load_lfb - add notarized block failed", zap.Error(err))
-		return
-	}
+	_, _ = bl.r.AddNotarizedBlock(bl.lfb)
 
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
@@ -257,7 +264,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 	if err != nil {
 		// fatality, can't find related LFMB
 		return nil, common.NewErrorf("load_lfb",
-			"related magic block not found: %v", err)
+			"related magic block not found: hash: %v, err: %v", lfb.LatestFinalizedMagicBlockHash, err)
 	}
 
 	// with current implementation it's a case
@@ -324,6 +331,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
+			Logger.Error("load_lfb, could not get block from store", zap.Error(err))
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 
@@ -402,7 +410,6 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	bl.nlfmb, err = sc.loadHighestMagicBlock(ctx, bl.lfb)
 	if err != nil {
 		Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
-		err = nil // reset this error and exit
 	}
 
 	return bl // got them all (or excluding the nlfmb)

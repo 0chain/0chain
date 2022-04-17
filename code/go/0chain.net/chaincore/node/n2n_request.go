@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"math/rand"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,27 +38,63 @@ func GetFetchStrategy() int {
 // RequestEntity - request an entity from nodes in the pool, returns when any node has response
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
-	var nodes []*Node
-	np.mmx.Lock()
+	var nds []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodes(true)
+		nds = np.shuffleNodes(true)
 	} else {
-		nodes = np.getNodesByLargeMessageTime()
+		nds = np.GetNodesByLargeMessageTime()
 	}
-	np.mmx.Unlock()
 
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
-	wg := &sync.WaitGroup{}
-	doneC := make(chan struct{})
-	nodeC := make(chan *Node, len(nodes))
-	for _, nd := range nodes {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
+	var (
+		total  = len(nds)
+		minNum = 4
+		reqNum int
+	)
+
+	if total < minNum {
+		reqNum = total
+	} else {
+		reqNum = int(math.Ceil(float64(total) / 10.0))
+		if reqNum < minNum {
+			reqNum = minNum
 		}
+	}
+
+	return sendRequestConcurrent(ctx, nds[:reqNum], rhandler)
+
+	//reqNum := (1 / 10) * len(nds)
+	//batchSize := 4
+	//batchNum := total / batchSize
+	//if total%batchSize > 0 {
+	//	batchNum++
+	//}
+	//
+	//for i := 0; i < batchNum; i++ {
+	//	start := i * batchSize
+	//	end := (i + 1) * batchSize
+	//	if end > total {
+	//		end = total
+	//	}
+	//
+	//	select {
+	//	case <-ctx.Done():
+	//		logging.Logger.Error("request entity - context done", zap.Error(ctx.Err()))
+	//		return nil
+	//	default:
+	//		n := sendRequestConcurrent(ctx, nds[start:end], rhandler)
+	//		if n != nil {
+	//			return n
+	//		}
+	//	}
+	//}
+
+	//return nil
+}
+
+func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler) *Node {
+	wg := &sync.WaitGroup{}
+	nodeC := make(chan *Node, len(nds))
+	for _, nd := range nds {
 		if nd.GetStatus() == NodeStatusInactive {
 			continue
 		}
@@ -68,10 +104,9 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 
 		wg.Add(1)
 		go func(n *Node) {
-			if rhandler(ctx, n) {
+			if handler(ctx, n) {
 				select {
 				case nodeC <- n:
-					cancel()
 				default:
 				}
 			}
@@ -79,17 +114,14 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		}(nd)
 	}
 
-	go func() {
-		wg.Wait()
-		close(doneC)
-	}()
-
-	select {
-	case <-doneC:
-		return nil
-	case n := <-nodeC:
+	wg.Wait()
+	close(nodeC)
+	n, ok := <-nodeC
+	if ok {
 		return n
 	}
+
+	return nil
 }
 
 // RequestEntityFromAll - requests an entity from all the nodes
@@ -100,7 +132,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodesLock(true)
+		nodes = np.shuffleNodes(true)
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}
@@ -159,6 +191,7 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
 	return func(params *url.Values, handler datastore.JSONEntityReqResponderF) SendHandler {
 		return func(ctx context.Context, provider *Node) bool {
+			entityMeta := entityMetadata
 			timer := provider.GetTimer(uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
@@ -177,41 +210,96 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
-			eName := ""
-			if entityMetadata != nil {
-				eName = entityMetadata.GetName()
-			}
-			SetRequestHeaders(req, options, entityMetadata)
-			cctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-			req = req.WithContext(cctx)
-			// Keep the number of messages to a node bounded
 
 			var (
 				ts       time.Time
-				selfNode *Node
+				selfNode = Self.Underlying()
 				resp     *http.Response
+				cancel   func()
+				eName    string
 			)
 
+			if entityMeta != nil {
+				eName = entityMeta.GetName()
+			}
+
+			SetRequestHeaders(req, options, entityMeta)
+			// Keep the number of messages to a node bounded
+
+			var (
+				tm       *time.Timer
+				closeTmC = make(chan struct{})
+			)
 			func() {
 				provider.Grab()
 				defer provider.Release()
-
-				time.AfterFunc(timeout, cancel)
 				ts = time.Now()
-				selfNode = Self.Underlying()
+
 				selfNode.SetLastActiveTime(ts)
 				selfNode.InduceDelay(provider)
+
+				var cctx context.Context
+				tm = time.NewTimer(timeout)
+				cctx, cancel = context.WithCancel(ctx)
+				go func() {
+					select {
+					case <-tm.C:
+						cancel()
+					case <-closeTmC:
+					}
+				}()
+				req = req.WithContext(cctx)
 				resp, err = httpClient.Do(req)
 			}()
+			defer cancel()
 
 			duration := time.Since(ts)
+			var buf bytes.Buffer
+			switch err {
+			case nil:
+				if tm != nil {
+					tm.Stop()
+					close(closeTmC)
+				}
+				defer resp.Body.Close()
 
-			if err != nil {
-				provider.AddSendErrors(1)
-				provider.AddErrorCount(1)
-				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
-					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
+				if resp.StatusCode == http.StatusNotModified {
+					provider.SetStatus(NodeStatusActive)
+					provider.SetLastActiveTime(time.Now())
+					provider.SetErrorCount(provider.GetSendErrors())
+					logging.N2n.Debug("requesting - not modified",
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
+						zap.Any("params", params))
+					return true
+				}
+
+				// reset context timeout so that the
+				// following data reading would not be canceled due to timeout
+				_, err := buf.ReadFrom(resp.Body)
+				if err != nil {
+					logging.N2n.Error("requesting - read response failed",
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
+						zap.Any("params", params), zap.Error(err))
+					return false
+				}
+			default:
+				ue, ok := err.(*url.Error)
+				if ok && ue.Unwrap() != context.Canceled {
+					// requests could be canceled when the miner has received a response
+					// from any of the remotes.
+					provider.AddSendErrors(1)
+					provider.AddErrorCount(1)
+					logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
+				}
 				return false
 			}
 
@@ -221,7 +309,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			provider.SetErrorCount(provider.GetSendErrors())
 
 			if resp.StatusCode != http.StatusOK {
-				data := string(getDataAndClose(resp.Body))
+				data := buf.String()
 				logging.N2n.Error("requesting",
 					zap.Int("from", selfNode.SetIndex),
 					zap.Int("to", provider.SetIndex),
@@ -233,21 +321,33 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					zap.String("response", data))
 				return false
 			}
-			if entityMetadata == nil {
+			if entityMeta == nil {
 				eName = resp.Header.Get(HeaderRequestEntityName)
 				if eName == "" {
 					logging.N2n.Error("requesting - no entity name in header", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri))
 				}
-				entityMetadata = datastore.GetEntityMetadata(eName)
-				if entityMetadata == nil {
-					data := string(getDataAndClose(resp.Body))
-					logging.N2n.Error("requesting - unknown entity", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName),
+				logging.N2n.Debug("requesting entityMetadata nil, get from response header",
+					zap.Int("from", selfNode.SetIndex),
+					zap.Int("to", provider.SetIndex),
+					zap.Duration("duration", duration),
+					zap.String("handler", uri),
+					zap.Any("params", params),
+					zap.String("entity", eName))
+				entityMeta = datastore.GetEntityMetadata(eName)
+				if entityMeta == nil {
+					data := buf.String()
+					logging.N2n.Error("requesting - unknown entity",
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
 						zap.String("response", data))
 					return false
 				}
 			}
 
-			size, entity, err := getResponseEntity(resp, entityMetadata)
+			size, entity, err := getResponseEntity(resp, &buf, entityMeta)
 			if err != nil {
 				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
@@ -256,10 +356,18 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			timer.UpdateSince(ts)
 			sizer := provider.GetSizeMetric(uri)
 			sizer.Update(int64(size))
-			logging.N2n.Info("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
-			_, err = handler(cctx, entity)
+			logging.N2n.Info("requesting",
+				zap.Int("from", selfNode.SetIndex),
+				zap.Int("to", provider.SetIndex),
+				zap.Duration("duration", duration),
+				zap.String("handler", uri),
+				zap.String("entity", eName),
+				zap.Any("id", entity.GetKey()),
+				zap.Any("params", params),
+				zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
+			_, err = handler(ctx, entity)
 			if err != nil {
-				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
+				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMeta.GetName()), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			return true
@@ -315,7 +423,11 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				options.CODEC = CODEC_MSGPACK
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
-			buffer = getResponseData(options, entity)
+			buffer, err = getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
+				return
+			}
 		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
@@ -331,13 +443,19 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		sdata := buffer.Bytes()
-		w.Write(sdata)
+		sData := buffer.Bytes()
+		if _, err := w.Write(sData); err != nil {
+			logging.N2n.Error("message received - http write failed",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
+
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}
-			updatePullStats(sender, uri, len(sdata), ts)
+			updatePullStats(sender, uri, len(sData), ts)
 		}
 		logging.N2n.Info("message received", zap.Int("from", sender.SetIndex),
 			zap.Int("to", Self.Underlying().SetIndex),
@@ -372,7 +490,11 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				options.CODEC = CODEC_MSGPACK
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
-			buffer = getResponseData(options, entity)
+			buffer, err = getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
+				return
+			}
 		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
@@ -387,8 +509,14 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		sdata := buffer.Bytes()
-		w.Write(sdata)
+		sData := buffer.Bytes()
+		if _, err := w.Write(sData); err != nil {
+			logging.N2n.Error("message received - http write failed",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+		}
+
 		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
@@ -401,5 +529,3 @@ func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			zap.Int("codec", options.CODEC))
 	}
 }
-
-var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))

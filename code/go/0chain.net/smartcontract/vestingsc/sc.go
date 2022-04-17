@@ -3,7 +3,9 @@ package vestingsc
 import (
 	"0chain.net/chaincore/smartcontract"
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -15,7 +17,6 @@ import (
 
 const (
 	ADDRESS = "2bba5b05949ea59c80aed3ac3474d7379d3be737e8eb5a968c52295e48333ead"
-	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 )
 
 type RestPoints = map[string]smartcontractinterface.SmartContractRestHandler
@@ -32,12 +33,12 @@ func NewVestingSmartContract() smartcontractinterface.SmartContractInterface {
 	return vscCopy
 }
 
-func (ipsc *VestingSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
+func (vsc *VestingSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return vsc.SmartContract.HandlerStats(ctx, params)
 }
 
-func (ipsc *VestingSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
+func (vsc *VestingSmartContract) GetExecutionStats() map[string]interface{} {
+	return vsc.SmartContractExecutionStats
 }
 
 func (vsc *VestingSmartContract) GetName() string {
@@ -50,6 +51,21 @@ func (vsc *VestingSmartContract) GetAddress() string {
 
 func (vsc *VestingSmartContract) GetRestPoints() RestPoints {
 	return vsc.RestHandlers
+}
+
+func (vsc *VestingSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) (int, error) {
+	node, err := vsc.getConfig(balances)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if node.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := node.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
 }
 
 func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,

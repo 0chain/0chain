@@ -7,6 +7,9 @@ import (
 	"0chain.net/chaincore/tokenpool"
 )
 
+//msgp:ignore DelegatePool
+//go:generate msgp -io=false -tests=false -v
+
 type PoolStats struct {
 	DelegateID   string        `json:"delegate_id"`
 	High         state.Balance `json:"high"` // } interests and rewards

@@ -12,6 +12,8 @@ import (
 	"0chain.net/core/encryption"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 type ShareOrSigns struct {
 	ID           string                      `json:"id"`
 	ShareOrSigns map[string]*bls.DKGKeyShare `json:"share_or_sign"`
@@ -46,17 +48,28 @@ func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, sche
 			if !ok {
 				return nil, false
 			}
-			signatureScheme.SetPublicKey(pk)
+			if err := signatureScheme.SetPublicKey(pk); err != nil {
+				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				return nil, false
+			}
 			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
 			if !sigOK || err != nil {
-				logging.Logger.Error("failed to validate share or sings", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 				return nil, false
 			}
 		} else {
 			var sij bls.Key
-			sij.SetHexString(share.Share)
-			if !bls.ValidateShare(bls.ConvertStringToMpk(mpks.Mpks[sos.ID].Mpk), sij, bls.ComputeIDdkg(key)) {
-				logging.Logger.Error("failed to validate share or sings", zap.Any("share", share), zap.Any("sij.pi", sij.GetPublicKey().GetHexString()))
+			if err := sij.SetHexString(share.Share); err != nil {
+				return nil, false
+			}
+			pks, err := bls.ConvertStringToMpk(mpks.Mpks[sos.ID].Mpk)
+			if err != nil {
+				logging.Logger.Error("failed to convert mpks", zap.Error(err))
+				return nil, false
+			}
+
+			if !bls.ValidateShare(pks, sij, bls.ComputeIDdkg(key)) {
+				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.Any("sij.pi", sij.GetPublicKey().GetHexString()))
 				return nil, false
 			}
 			keys = append(keys, key)

@@ -11,6 +11,20 @@ To run
 go build -tags bn256 && ./main benchmark | column -t -s,
 ```
 
+It can take a long time to generate a MPT for the simulation. To help with this 
+it is possible to save a MPT for use later, set the options.save_path key in
+[benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
+```yaml
+options:
+  save_path: ./saved_data
+```
+You can now reuse this database using the load option in the command line
+```bash
+go build -tags bn256 && ./main benchmark --load saved_data  | column -t -s,
+```
+
+-
+
 To run only a subset of the test suits
 ```bash
 go build -tags bn256
@@ -29,6 +43,24 @@ and enter them in a comma delimited list.
 go build -tags bn256
 ./main benchmark --omit "storage_rest.allocation, storage_rest.allocations" | column -t -s,
 ```
+
+To use the event database you need a to set up a local postgreSQL database. Login in parameters
+are read from the benchmark yaml, dbs.events section.
+```yanl
+dbs:
+  events:
+    enabled: true
+    name: events_db
+    user: zchain_user
+    password: zchian
+    host: localhost
+    port: 5432
+    max_idle_conns: 100
+    max_open_conns: 200
+    conn_max_lifetime: 20s
+```
+Set enabled to false if you have not setup a postgreSQL database. Some of the Rest Api
+endpoint will not work without an event database.
 
 You can also set all these options in the
 [benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).

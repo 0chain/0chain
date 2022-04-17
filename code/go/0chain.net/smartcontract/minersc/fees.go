@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -24,32 +25,6 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 		mn.TotalStaked += int64(pool.Balance)
 		delete(mn.Pending, id)
 	}
-}
-
-// pay interests for active pools
-func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *GlobalNode,
-	balances cstate.StateContextI) (err error) {
-
-	if !gn.canMint() {
-		return // no mints anymore
-	}
-
-	// all active
-	for _, pool := range mn.Active {
-		var amount = state.Balance(float64(pool.Balance) * gn.InterestRate)
-		if amount == 0 {
-			continue
-		}
-		var mint = state.NewMint(ADDRESS, pool.DelegateID, amount)
-		if err = balances.AddMint(mint); err != nil {
-			return common.NewErrorf("pay_fees/pay_interests",
-				"error adding mint for stake %v-%v: %v", mn.ID, pool.ID, err)
-		}
-		msc.addMint(gn, mint.Amount) //
-		pool.AddInterests(amount)    // stat
-	}
-
-	return
 }
 
 // LRU cache in action.
@@ -198,9 +173,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			return fmt.Errorf("could not get miner node: %v", er)
 		}
 
-		if err = msc.payInterests(mn, gn, balances); err != nil {
-			return
-		}
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
 		}
@@ -237,9 +209,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			return fmt.Errorf("could not found sharder node: %v", er)
 		}
 
-		if err = msc.payInterests(sn, gn, balances); err != nil {
-			return
-		}
 		if err = msc.unlockDeleted(sn, round, balances); err != nil {
 			return
 		}
@@ -351,17 +320,21 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	var pn *PhaseNode
-	if pn, err = GetPhaseNode(balances); err != nil {
-		return
-	}
-	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"error inserting phase node: %v", err)
-	}
+	if config.DevConfiguration.ViewChange {
+		// TODO: cache the phase node so if when there's no view change happens, we
+		// can avoid unnecessary MPT access
+		var pn *PhaseNode
+		if pn, err = GetPhaseNode(balances); err != nil {
+			return
+		}
+		if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
+			return "", common.NewErrorf("pay_fees",
+				"error inserting phase node: %v", err)
+		}
 
-	if err = msc.adjustViewChange(gn, balances); err != nil {
-		return // adjusting view change error
+		if err = msc.adjustViewChange(gn, balances); err != nil {
+			return // adjusting view change error
+		}
 	}
 
 	var mb = balances.GetBlock()
@@ -440,6 +413,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"saving generator node: %v", err)
+	}
+
+	if err = emitUpdateMiner(mn, balances, false); err != nil {
+		return "", common.NewErrorf("pay_fees", "saving generator node to db: %v", err)
 	}
 
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {

@@ -3,6 +3,7 @@ package minersc_test
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 	"0chain.net/chaincore/state"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 
@@ -23,12 +24,14 @@ import (
 
 const x10 float64 = 10 * 1000 * 1000 * 1000
 
+const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+
 func TestSettings(t *testing.T) {
 	require.Len(t, SettingName, int(NumberOfSettings))
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[name].Setting])
+		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].Setting])
 	}
 }
 
@@ -65,7 +68,7 @@ func TestUpdateSettings(t *testing.T) {
 					//}
 
 					//var setting interface{} = getConfField(*conf, key)
-					var setting interface{} = gn.Get(Settings[key].Setting)
+					setting, _ := gn.Get(Settings[key].Setting)
 					fmt.Println("setting", setting, "value", value)
 					switch Settings[key].ConfigType {
 					case smartcontract.Int:
@@ -139,7 +142,7 @@ func TestUpdateSettings(t *testing.T) {
 			msc:      msc,
 			txn:      txn,
 			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
-			gn:       &GlobalNode{},
+			gn:       &GlobalNode{OwnerId: owner},
 			balances: balances,
 		}
 	}
@@ -157,7 +160,7 @@ func TestUpdateSettings(t *testing.T) {
 		{
 			title: "all_settigns",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					"min_stake":              "0.0",
 					"max_stake":              "100",
@@ -170,15 +173,14 @@ func TestUpdateSettings(t *testing.T) {
 					"min_s":                  "1",
 					"max_delegates":          "200",
 					"reward_round_frequency": "64250",
-					"interest_rate":          "0.0",
 					"reward_rate":            "1.0",
 					"share_ratio":            "50",
 					"block_reward":           "021",
 					"max_charge":             "0.5",
 					"epoch":                  "6415000000",
 					"reward_decline_rate":    "0.1",
-					"interest_decline_rate":  "0.1",
 					"max_mint":               "1500000.0",
+					"owner_id":               owner,
 				},
 			},
 		},

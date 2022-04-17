@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/mocks"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -45,26 +45,32 @@ func init() {
 	viper.Set("development.smart_contract.multisig", true)
 	viper.Set("development.smart_contract.miner", true)
 	viper.Set("development.smart_contract.vesting", true)
+
 	config.SmartContractConfig = viper.New()
+	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.interestpoolsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+
 	setupsc.SetupSmartContracts()
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 }
 
 func TestExecuteRestAPI(t *testing.T) {
 	t.Parallel()
 
 	gn := &faucetsc.GlobalNode{}
-	blob := gn.Encode()
+	blob, err := gn.MarshalMsg(nil)
+	require.NoError(t, err)
 
 	sc := mocks.StateContextI{}
-	sc.On("GetTrieNode", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) util.Serializable {
-			return &util.SecureSerializableValue{Buffer: blob}
-		},
-		func(_ datastore.Key) error {
-			return nil
-		},
-	)
+	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(nil).Run(
+		func(args mock.Arguments) {
+			v := args.Get(1).(*faucetsc.GlobalNode)
+			_, err := v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+		})
 
 	type args struct {
 		ctx      context.Context
@@ -205,7 +211,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 17,
+			restpoints: 30,
 		},
 		{
 			name:       "interest",
@@ -220,7 +226,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "miner",
 			address:    minersc.ADDRESS,
-			restpoints: 15,
+			restpoints: 21,
 		},
 		{
 			name:       "vesting",
@@ -228,9 +234,9 @@ func TestGetSmartContract(t *testing.T) {
 			restpoints: 3,
 		},
 		{
-			name:       "zcn",
+			name:       "zcnsc",
 			address:    zcnsc.ADDRESS,
-			restpoints: 1,
+			restpoints: 3,
 		},
 		{
 			name:    "Nil_OK",
@@ -270,26 +276,26 @@ func makeTestStateContextIMock() *mocks.StateContextI {
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*faucetsc.GlobalNode")).Return(
-		func(_ datastore.Key, _ util.Serializable) datastore.Key {
+		func(_ datastore.Key, _ util.MPTSerializable) datastore.Key {
 			return ""
 		},
-		func(_ datastore.Key, _ util.Serializable) error {
+		func(_ datastore.Key, _ util.MPTSerializable) error {
 			return nil
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNodes")).Return(
-		func(_ datastore.Key, _ util.Serializable) datastore.Key {
+		func(_ datastore.Key, _ util.MPTSerializable) datastore.Key {
 			return ""
 		},
-		func(_ datastore.Key, _ util.Serializable) error {
+		func(_ datastore.Key, _ util.MPTSerializable) error {
 			return nil
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNode")).Return(
-		func(_ datastore.Key, _ util.Serializable) datastore.Key {
+		func(_ datastore.Key, _ util.MPTSerializable) datastore.Key {
 			return ""
 		},
-		func(_ datastore.Key, _ util.Serializable) error {
+		func(_ datastore.Key, _ util.MPTSerializable) error {
 			return nil
 		},
 	)
@@ -307,17 +313,16 @@ func TestExecuteWithStats(t *testing.T) {
 	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
 
 	gn := &faucetsc.GlobalNode{}
-	blob := gn.Encode()
+	blob, err := gn.MarshalMsg(nil)
+	require.NoError(t, err)
 
 	stateContextIMock := makeTestStateContextIMock()
-	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) util.Serializable {
-			return &util.SecureSerializableValue{Buffer: blob}
-		},
-		func(_ datastore.Key) error {
-			return nil
-		},
-	)
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(nil).Run(
+		func(args mock.Arguments) {
+			v := args.Get(1).(*faucetsc.GlobalNode)
+			_, err := v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+		})
 
 	type args struct {
 		smcoi    sci.SmartContractInterface
@@ -377,24 +382,79 @@ func TestExecuteWithStats(t *testing.T) {
 func TestExecuteSmartContract(t *testing.T) {
 	t.Parallel()
 
-	gn := &minersc.GlobalNode{}
-	blob := gn.Encode()
-
 	stateContextIMock := makeTestStateContextIMock()
-	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) util.Serializable {
-			return &util.SecureSerializableValue{Buffer: blob}
-		},
-		func(_ datastore.Key) error {
-			return nil
-		},
-	)
+	stateContextIMock.On("GetTrieNode",
+		mock.AnythingOfType("string"),
+		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
+			minerNodes := &minersc.MinerNodes{}
+			blob, err := minerNodes.MarshalMsg(nil)
+			require.NoError(t, err)
+
+			_, err = v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+			return true
+		})).Return(nil)
+	stateContextIMock.On("GetTrieNode",
+		mock.AnythingOfType("string"),
+		mock.MatchedBy(func(v *minersc.GlobalNode) bool {
+			gn := &minersc.GlobalNode{}
+			blob, err := gn.MarshalMsg(nil)
+			require.NoError(t, err)
+
+			_, err = v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+			return true
+		})).Return(nil)
+	stateContextIMock.On("GetTrieNode",
+		mock.AnythingOfType("string"),
+		mock.MatchedBy(func(v *minersc.SimpleNode) bool {
+			sn := &minersc.SimpleNode{}
+			blob, err := sn.MarshalMsg(nil)
+			require.NoError(t, err)
+
+			_, err = v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+			return true
+		})).Return(nil)
+	stateContextIMock.On("GetTrieNode",
+		mock.AnythingOfType("string"),
+		mock.MatchedBy(func(v *minersc.MinerNode) bool {
+			mn := &minersc.MinerNode{SimpleNode: &minersc.SimpleNode{}}
+			blob, err := mn.MarshalMsg(nil)
+			require.NoError(t, err)
+
+			_, err = v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+			return true
+		})).Return(nil)
+	stateContextIMock.On("GetTrieNode",
+		mock.AnythingOfType("string"),
+		mock.MatchedBy(func(v *faucetsc.GlobalNode) bool {
+			gn := &faucetsc.GlobalNode{}
+			blob, err := gn.MarshalMsg(nil)
+			require.NoError(t, err)
+
+			_, err = v.UnmarshalMsg(blob)
+			require.NoError(t, err)
+			return true
+		})).Return(nil)
 
 	type args struct {
 		ctx      context.Context
 		t        *transaction.Transaction
+		td       *sci.SmartContractTransactionData
 		balances chstate.StateContextI
 	}
+
+	smartContractData := sci.SmartContractTransactionData{
+		FunctionName: "miner_health_check",
+	}
+
+	scData, err := json.Marshal(smartContractData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -407,15 +467,23 @@ func TestExecuteSmartContract(t *testing.T) {
 				t: &transaction.Transaction{
 					ToClientID: "unknown",
 				},
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "miner_health_check",
+					InputData:    json.RawMessage{},
+				},
 			},
 			wantErr: true,
 		},
 		{
 			name: "Invalid_JSON_Data_ERR",
 			args: args{
+				balances: stateContextIMock,
 				t: &transaction.Transaction{
-					ToClientID:      minersc.ADDRESS,
-					TransactionData: "}{",
+					ToClientID: faucetsc.ADDRESS,
+				},
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "update-settings",
+					InputData:    json.RawMessage("}{"),
 				},
 			},
 			wantErr: true,
@@ -426,21 +494,13 @@ func TestExecuteSmartContract(t *testing.T) {
 				balances: stateContextIMock,
 				t: &transaction.Transaction{
 					ToClientID: minersc.ADDRESS,
-					TransactionData: func() string {
-						smartContractData := sci.SmartContractTransactionData{
-							FunctionName: "miner_health_check",
-						}
-
-						blob, err := json.Marshal(smartContractData)
-						if err != nil {
-							t.Fatal(err)
-						}
-
-						return string(blob)
-					}(),
+				},
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "miner_health_check",
+					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0,\"last_setting_update_round\":0}}",
 			wantErr: false,
 		},
 	}
@@ -449,7 +509,7 @@ func TestExecuteSmartContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ExecuteSmartContract(tt.args.ctx, tt.args.t, tt.args.balances)
+			got, err := ExecuteSmartContract(tt.args.t, tt.args.td, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v", err, tt.wantErr)
 				return

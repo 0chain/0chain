@@ -109,22 +109,6 @@ func (sc *Chain) StoreRound(r *round.Round) error {
 	return nil
 }
 
-/*GetMostRecentRoundFromDB - gives the most recent round added to db*/
-func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, error) {
-	remd := datastore.GetEntityMetadata("round")
-	rctx := ememorystore.WithEntityConnection(ctx, remd)
-	defer ememorystore.Close(rctx)
-	c := ememorystore.GetEntityCon(rctx, remd)
-	r := remd.Instance().(*round.Round)
-	iterator := c.Conn.NewIterator(c.ReadOptions)
-	defer iterator.Close()
-	iterator.SeekToLast()
-	if iterator.Valid() {
-		datastore.FromJSON(iterator.Value().Data(), r)
-	}
-	return r, iterator.Err()
-}
-
 // ReadHealthyRound -
 func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
 	hr := datastore.GetEntity("healthy_round").(*HealthyRound)

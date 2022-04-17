@@ -16,16 +16,17 @@ import (
 func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
-	mbits, err := balances.GetTrieNode(pkey)
-	if err != nil && err != util.ErrValueNotPresent {
-		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
-			zap.String("key", pkey))
+	mn := NewMinerNode()
+	err := balances.GetTrieNode(pkey, mn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
+				zap.String("key", pkey))
+		}
 		return false
 	}
-	if mbits != nil {
-		return true
-	}
-	return false
+
+	return true
 }
 
 // AddMiner Function to handle miner register
@@ -79,43 +80,14 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
-		logging.Logger.Error("add_miner: public key or ID is empty")
+		logging.Logger.Error("public key or ID is empty")
 		return "", common.NewError("add_miner",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
-	if newMiner.ServiceCharge < 0 {
-		return "", common.NewErrorf("add_miner",
-			"invalid negative service charge: %v", newMiner.ServiceCharge)
-	}
-
-	if newMiner.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("add_miner",
-			"max_charge is greater than allowed by SC: %v > %v",
-			newMiner.ServiceCharge, gn.MaxCharge)
-	}
-
-	if newMiner.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("add_miner",
-			"invalid negative number_of_delegates: %v", newMiner.ServiceCharge)
-	}
-
-	if newMiner.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("add_miner",
-			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			newMiner.ServiceCharge, gn.MaxDelegates)
-	}
-
-	if newMiner.MinStake < gn.MinStake {
-		return "", common.NewErrorf("add_miner",
-			"min_stake is less than allowed by SC: %v > %v",
-			newMiner.MinStake, gn.MinStake)
-	}
-
-	if newMiner.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("add_miner",
-			"max_stake is greater than allowed by SC: %v > %v",
-			newMiner.MaxStake, gn.MaxStake)
+	err = validateNodeSettings(newMiner, gn, "add_miner")
+	if err != nil {
+		return "", err
 	}
 
 	newMiner.NodeType = NodeTypeMiner // set node type
@@ -137,6 +109,13 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
 		}
+
+		err = emitAddMiner(newMiner, balances)
+		if err != nil {
+			return "", common.NewErrorf("add_miner",
+				"insert new miner: %v", err)
+		}
+
 		update = true
 	}
 
@@ -269,6 +248,11 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
 			delete(dkgMiners.SimpleNodes, mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+			if err != nil {
+				return
+			}
+
+			err = emitDeleteMiner(mn.ID, balances)
 		}
 	} else {
 		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
@@ -287,38 +271,9 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 			"decoding request: %v", err)
 	}
 
-	if update.ServiceCharge < 0 {
-		return "", common.NewErrorf("update_sharder_settings",
-			"invalid negative service charge: %v", update.ServiceCharge)
-	}
-
-	if update.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("update_miner_settings",
-			"max_charge is greater than allowed by SC: %v > %v",
-			update.ServiceCharge, gn.MaxCharge)
-	}
-
-	if update.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("update_miner_settings",
-			"invalid negative number_of_delegates: %v", update.ServiceCharge)
-	}
-
-	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("update_miner_settings",
-			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			update.ServiceCharge, gn.MaxDelegates)
-	}
-
-	if update.MinStake < gn.MinStake {
-		return "", common.NewErrorf("update_miner_settings",
-			"min_stake is less than allowed by SC: %v > %v",
-			update.MinStake, gn.MinStake)
-	}
-
-	if update.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("update_miner_settings",
-			"max_stake is greater than allowed by SC: %v > %v",
-			update.MaxStake, gn.MaxStake)
+	err = validateNodeSettings(update, gn, "update_miner_settings")
+	if err != nil {
+		return "", err
 	}
 
 	var mn *MinerNode
@@ -330,6 +285,10 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		mn.ID = update.ID
 	default:
 		return "", common.NewError("update_miner_settings", err.Error())
+	}
+
+	if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
+		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
 	}
 
 	if mn.Delete {
@@ -344,8 +303,13 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	mn.NumberOfDelegates = update.NumberOfDelegates
 	mn.MinStake = update.MinStake
 	mn.MaxStake = update.MaxStake
+	mn.LastSettingUpdateRound = balances.GetBlock().Round
 
 	if err = mn.save(balances); err != nil {
+		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
+	}
+
+	if err = emitUpdateMiner(mn, balances, false); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
 
@@ -366,14 +330,6 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 		logging.Logger.Info(msg + " allminerslist is empty")
 		return
 	}
-
-	logging.Logger.Info(msg)
-	for _, miner := range allMinersList.Nodes {
-		logging.Logger.Info("allminerslist",
-			zap.String("url", miner.N2NHost),
-			zap.String("ID", miner.ID))
-	}
-
 }
 
 func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
@@ -386,16 +342,61 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 
 // getMinerNode
 func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+
 	mn := NewMinerNode()
 	mn.ID = id
-	ms, err := state.GetTrieNode(mn.GetKey())
+	err := state.GetTrieNode(mn.GetKey(), mn)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := mn.Decode(ms.Encode()); err != nil {
-		return nil, err
+	return mn, nil
+}
+
+func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
+	if node.ServiceCharge < 0 {
+		return common.NewErrorf(opcode,
+			"invalid negative service charge: %v", node.ServiceCharge)
 	}
 
-	return mn, nil
+	if node.ServiceCharge > gn.MaxCharge {
+		return common.NewErrorf(opcode,
+			"max_charge is greater than allowed by SC: %v > %v",
+			node.ServiceCharge, gn.MaxCharge)
+	}
+
+	if node.NumberOfDelegates <= 0 {
+		return common.NewErrorf(opcode,
+			"invalid non-positive number_of_delegates: %v", node.NumberOfDelegates)
+	}
+
+	if node.NumberOfDelegates > gn.MaxDelegates {
+		return common.NewErrorf(opcode,
+			"number_of_delegates greater than max_delegates of SC: %v > %v",
+			node.NumberOfDelegates, gn.MaxDelegates)
+	}
+
+	if node.MinStake < gn.MinStake {
+		return common.NewErrorf(opcode,
+			"min_stake is less than allowed by SC: %v > %v",
+			node.MinStake, gn.MinStake)
+	}
+
+	if node.MinStake < 0 || node.MaxStake < 0 {
+		return common.NewErrorf(opcode,
+			"invalid negative min_stake: %v or max_stake: %v", node.MinStake, node.MaxStake)
+	}
+
+	if node.MinStake > node.MaxStake {
+		return common.NewErrorf(opcode,
+			"invalid node request results in min_stake greater than max_stake: %v > %v", node.MinStake, node.MaxStake)
+	}
+
+	if node.MaxStake > gn.MaxStake {
+		return common.NewErrorf(opcode,
+			"max_stake is greater than allowed by SC: %v > %v",
+			node.MaxStake, gn.MaxStake)
+	}
+
+	return nil
 }

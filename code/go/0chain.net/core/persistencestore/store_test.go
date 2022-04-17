@@ -2,11 +2,14 @@ package persistencestore_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
+	"0chain.net/core/logging"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
@@ -16,6 +19,7 @@ import (
 
 func init() {
 	block.SetupEntity(persistencestore.GetStorageProvider())
+	logging.InitLogging("test", "")
 }
 
 func makeTestMocks() (*mocks.SessionI, *mocks.QueryI, *mocks.IteratorI) {
@@ -84,7 +88,13 @@ func TestStore_Read(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			im.On("Scan", mock.AnythingOfType("*string")).Return(
+			im.On("Scan", mock.MatchedBy(func(s *string) bool {
+				ps := &persistencestore.Store{}
+				v, err := json.Marshal(ps)
+				require.NoError(t, err)
+				*s = string(v)
+				return true
+			})).Return(
 				func(_ ...interface{}) bool {
 					return tt.scan
 				},

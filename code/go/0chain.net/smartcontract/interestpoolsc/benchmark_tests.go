@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	sc "0chain.net/smartcontract"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -39,14 +40,17 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	var isc = InterestPoolSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	isc.setSC(isc.SmartContract, &smartcontract.BCContext{})
-	un := isc.getUserNode(bt.txn.ClientID, balances)
-	gn := isc.getGlobalNode(balances, bt.endpoint)
-	var err error
+	un, err := isc.getUserNode(bt.txn.ClientID, balances)
+	require.NoError(b, err)
+
+	gn, err := isc.getGlobalNode(balances, bt.endpoint)
+	require.NoError(b, err)
+
 	switch bt.endpoint {
 	case "lock":
 		_, err = isc.lock(bt.Transaction(), un, gn, bt.input, balances)
@@ -83,6 +87,7 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{
 				CreationDate: 2 * common.Timestamp(viper.GetDuration(bk.InterestPoolMinLockPeriod)),
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 			},
 			input: (&poolStat{
 				ID: getInterestPoolId(0),
@@ -92,7 +97,8 @@ func BenchmarkTests(
 			name:     "interest_pool.updateVariables",
 			endpoint: "updateVariables",
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID:   viper.GetString(bk.InterestPoolOwner),
+				ToClientID: ADDRESS,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{

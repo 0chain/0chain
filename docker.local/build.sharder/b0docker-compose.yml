@@ -39,19 +39,6 @@ services:
       - ../sql_script/:/docker-entrypoint-initdb.d/
     networks:
       default:
-  postgres-post:
-    image: postgres:14
-    environment:
-      POSTGRES_PORT: 5432
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_HOST_AUTH_METHOD: trust
-    volumes:
-      - ../bin:/0chain/bin
-      - ../sql:/0chain/sql
-      - ../sql_script/:/docker-entrypoint-initdb.d/
-    links:
-      - postgres:postgres
 
   sharder:
     image: "sharder"
@@ -68,6 +55,7 @@ services:
       - CASSANDRA_CLUSTER=cassandra
     depends_on:
       - cassandra-init
+      - postgres
     links:
       - cassandra-init:cassandra-init
     volumes:

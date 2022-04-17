@@ -31,9 +31,15 @@ func main() {
 				panic(err)
 			}
 			defer writer.Close()
-			sigScheme.WriteKeys(writer)
+			err = sigScheme.WriteKeys(writer)
+			if err != nil {
+				panic(err)
+			}
 		} else {
-			sigScheme.WriteKeys(os.Stdout)
+			err = sigScheme.WriteKeys(os.Stdout)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	if len(keysFile) == 0 {

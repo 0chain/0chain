@@ -5,11 +5,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 )
 
 // SendBlock - send the block proposal to the network.
-func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) sendBlock(ctx context.Context, b *block.Block) {
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(ctx, VerifyBlockSender(b))
@@ -63,4 +64,11 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 		m2s := mb.Sharders
 		m2s.SendAll(ctx, FinalizedBlockSender(b))
 	}
+}
+
+/*SendVRFShare - send the round vrf share */
+func (mc *Chain) sendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
+	mb := mc.GetMagicBlock(vrfs.Round)
+	m2m := mb.Miners
+	m2m.SendAll(ctx, RoundVRFSender(vrfs))
 }

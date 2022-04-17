@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -17,6 +18,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/stakepool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,20 +33,22 @@ const (
 
 func TestAddChallenge(t *testing.T) {
 	type parameters struct {
-		numBlobbers   int
-		numValidators int
-		dataShards    int
-		randomSeed    int
+		numBlobbers            int
+		numValidators          int
+		validatorsPerChallenge int
+		randomSeed             int
 	}
 
 	type args struct {
-		alloc         *StorageAllocation
-		validators    *ValidatorNodes
-		challengeID   string
-		creationDate  common.Timestamp
-		r             *rand.Rand
-		challengeSeed int64
-		balances      cstate.StateContextI
+		alloc               *StorageAllocation
+		storageChallenge    *StorageChallenge
+		blobberChallengeObj *BlobberChallenge
+		allocChallengeObj   *AllocationChallenge
+		blobberAllocation   *BlobberAllocation
+		validators          *partitions.Partitions
+		r                   *rand.Rand
+		blobberID           string
+		balances            cstate.StateContextI
 	}
 
 	type want struct {
@@ -52,8 +57,21 @@ func TestAddChallenge(t *testing.T) {
 		errorMsg   string
 	}
 
-	parametersToArgs := func(p parameters) args {
-		var blobbers = []*StorageNode{}
+	parametersToArgs := func(p parameters, ssc *StorageSmartContract) args {
+
+		balances := &mockStateContext{
+			store: make(map[datastore.Key]util.MPTSerializable),
+		}
+
+		blobberChallenge, err := partitions.CreateIfNotExists(
+			balances,
+			ALL_BLOBBERS_CHALLENGE_KEY,
+			allBlobbersChallengePartitionSize)
+		if err != nil {
+			panic(err)
+		}
+
+		var blobbers []*StorageNode
 		var blobberMap = make(map[string]*BlobberAllocation)
 		for i := 0; i < p.numBlobbers; i++ {
 			var sn = StorageNode{
@@ -64,70 +82,135 @@ func TestAddChallenge(t *testing.T) {
 				AllocationRoot: "root " + sn.ID,
 				Stats:          &StorageAllocationStats{},
 			}
+
+			_, err := blobberChallenge.AddItem(
+				balances,
+				&BlobberChallengeNode{
+					BlobberID: sn.ID,
+				})
+			require.NoError(t, err)
 		}
-		var validators = ValidatorNodes{}
+
+		validators, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+		require.NoError(t, err)
 		for i := 0; i < p.numValidators; i++ {
-			validators.Nodes = append(validators.Nodes, &ValidationNode{
-				ID: strconv.Itoa(i),
-			})
+			_, err := validators.AddItem(
+				balances,
+				&ValidationPartitionNode{
+					Id:  strconv.Itoa(i),
+					Url: strconv.Itoa(i) + ".com",
+				},
+			)
+			require.NoError(t, err)
 		}
+
+		var bID string
+		r := rand.New(rand.NewSource(int64(p.randomSeed)))
+		if p.numBlobbers > 0 {
+
+			var bcList []BlobberChallengeNode
+			err := blobberChallenge.GetRandomItems(balances, r, &bcList)
+			require.NoError(t, err)
+			i := rand.Intn(len(bcList))
+			bcItem := bcList[i]
+			bID = bcItem.BlobberID
+		}
+
+		selectedValidators := make([]*ValidationNode, 0)
+		var randSlice []ValidationPartitionNode
+		err = validators.GetRandomItems(balances, r, &randSlice)
+		require.NoError(t, err)
+
+		perm := r.Perm(len(randSlice))
+		for i := 0; i < minInt(len(randSlice), p.validatorsPerChallenge+1); i++ {
+			if randSlice[perm[i]].Id != bID {
+				selectedValidators = append(selectedValidators,
+					&ValidationNode{
+						ID:      randSlice[perm[i]].Id,
+						BaseURL: randSlice[perm[i]].Url,
+					})
+			}
+			if len(selectedValidators) >= p.validatorsPerChallenge {
+				break
+			}
+		}
+
+		allocChall, err := ssc.getAllocationChallenge("", balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			allocChall = new(AllocationChallenge)
+		}
+		var storageChallenge = new(StorageChallenge)
+		storageChallenge.TotalValidators = len(selectedValidators)
+		storageChallenge.BlobberID = bID
+		storageChallenge.Created = creationDate
+
+		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
+			blobberChall = new(BlobberChallenge)
+		}
+
 		return args{
 			alloc: &StorageAllocation{
-				Blobbers:   blobbers,
 				BlobberMap: blobberMap,
-				DataShards: p.dataShards,
 				Stats:      &StorageAllocationStats{},
 			},
-			validators: &validators,
-			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
+			allocChallengeObj:   allocChall,
+			storageChallenge:    storageChallenge,
+			blobberAllocation:   blobberMap[bID],
+			blobberChallengeObj: blobberChall,
+			validators:          validators,
+			r:                   r,
+			blobberID:           bID,
+
 			balances: &mockStateContext{
-				store: make(map[datastore.Key]util.Serializable),
+				store: make(map[datastore.Key]util.MPTSerializable),
 			},
 		}
 	}
 
 	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
-		require.EqualValues(t, want.error, err != nil)
 		if want.error {
+			require.Error(t, err)
 			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
+
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
-		if p.numValidators > p.dataShards {
-			require.EqualValues(t, len(challenge.Validators), p.dataShards)
+
+		if p.numValidators > p.validatorsPerChallenge {
+			require.EqualValues(t, challenge.TotalValidators, p.validatorsPerChallenge)
+
 		} else {
-			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
+			require.EqualValues(t, challenge.TotalValidators, p.numValidators-1)
 		}
-		for i, v := range want.validators {
-			require.EqualValues(t, strconv.Itoa(v), challenge.Validators[i].ID)
-		}
+		require.EqualValues(t, len(want.validators), challenge.TotalValidators)
 	}
 
 	tests := []struct {
-		name       string
-		parameters parameters
-		want       want
+		name string
+		parameters
+		want want
 	}{
 		{
-			name: "OK validators > dataShards",
+			name: "OK validators > validatorsPerChallenge",
 			parameters: parameters{
-				numBlobbers:   10,
-				numValidators: 10,
-				dataShards:    4,
-				randomSeed:    1,
+				numBlobbers:            10,
+				numValidators:          10,
+				validatorsPerChallenge: 4,
+				randomSeed:             1,
 			},
 			want: want{
 				validators: []int{6, 3, 8, 4},
 			},
 		},
 		{
-			name: "OK dataShards > validators",
+			name: "OK validatorsPerChallenge > validators",
 			parameters: parameters{
-				numBlobbers:   6,
-				numValidators: 6,
-				dataShards:    10,
-				randomSeed:    1,
+				numBlobbers:            6,
+				numValidators:          6,
+				validatorsPerChallenge: 10,
+				randomSeed:             1,
 			},
 			want: want{
 				validators: []int{3, 0, 1, 4, 2},
@@ -136,28 +219,33 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "Error no blobbers",
 			parameters: parameters{
-				numBlobbers:   0,
-				numValidators: 6,
-				dataShards:    10,
-				randomSeed:    1,
+				numBlobbers:            0,
+				numValidators:          6,
+				validatorsPerChallenge: 10,
+				randomSeed:             1,
 			},
 			want: want{
 				error:    true,
-				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+				errorMsg: "add_challenge: no blobber to add challenge to",
 			},
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			args := parametersToArgs(tt.parameters)
 			var ssc = &StorageSmartContract{
 				SmartContract: sci.NewSC(ADDRESS),
 			}
 
-			resp, err := ssc.addChallenge(args.alloc, args.validators, args.challengeID,
-				args.creationDate, args.r, args.challengeSeed, args.balances)
+			args := parametersToArgs(tt.parameters, ssc)
+
+			resp, err := ssc.addChallenge(args.alloc,
+				args.storageChallenge,
+				args.blobberChallengeObj,
+				args.allocChallengeObj,
+				args.blobberAllocation,
+				args.balances)
+
 			validate(t, resp, err, tt.parameters, tt.want)
 		})
 	}
@@ -178,7 +266,7 @@ func TestBlobberReward(t *testing.T) {
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
 	var writePoolBalances = []int64{23423, 33333333, 234234234}
 	var otherWritePools = 4
-	var scYaml = scConfig{
+	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 30 * time.Minute,
@@ -253,14 +341,10 @@ func TestBlobberPenalty(t *testing.T) {
 	}
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
 	var writePoolBalances = []int64{23423, 33333333, 234234234}
-	var blobberOffer = int64(123000)
+	var size = int64(123000)
 	var otherWritePools = 4
-	var scYaml = scConfig{
-		MaxMint: zcnToBalance(4000000.0),
-		StakePool: &stakePoolConfig{
-			InterestRate:     0.0000334,
-			InterestInterval: time.Minute,
-		},
+	var scYaml = Config{
+		MaxMint:                    zcnToBalance(4000000.0),
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 30 * time.Minute,
@@ -269,6 +353,7 @@ func TestBlobberPenalty(t *testing.T) {
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.30,
 		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
+		writePrice:              1,
 	}
 	var validatorYamls = []mockBlobberYaml{
 		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
@@ -277,15 +362,15 @@ func TestBlobberPenalty(t *testing.T) {
 	t.Run("test blobberPenalty ", func(t *testing.T) {
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
 	t.Run("test blobberPenalty ", func(t *testing.T) {
-		var blobberOffer = int64(10000)
+		var size = int64(10000)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -293,7 +378,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
 	})
@@ -302,7 +387,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var validatorStakes = [][]int64{{45, 666, 4533}, {}, {10}}
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errNoStakePools))
 		require.True(t, strings.Contains(err.Error(), errRewardValidator))
@@ -312,7 +397,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var challengePoolBalance = state.Balance(0)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
 	})
@@ -320,7 +405,7 @@ func TestBlobberPenalty(t *testing.T) {
 
 func testBlobberPenalty(
 	t *testing.T,
-	scYaml scConfig,
+	scYaml Config,
 	blobberYaml mockBlobberYaml,
 	validatorYamls []mockBlobberYaml,
 	stakes []int64,
@@ -330,7 +415,7 @@ func testBlobberPenalty(
 	otherWritePools int,
 	challengePoolIntegralValue, challengePoolBalance state.Balance,
 	partial float64,
-	blobberOffer int64,
+	size int64,
 	previous, thisChallange, thisExpires, now common.Timestamp,
 ) (err error) {
 	var f = formulaeBlobberReward{
@@ -347,7 +432,7 @@ func testBlobberPenalty(
 		challengePoolBalance:       int64(challengePoolBalance),
 		partial:                    partial,
 		previousChallange:          previous,
-		blobberOffer:               blobberOffer,
+		size:                       size,
 		thisChallange:              thisChallange,
 		thisExpires:                thisExpires,
 		now:                        now,
@@ -355,7 +440,7 @@ func testBlobberPenalty(
 
 	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 		wpBalances, otherWritePools, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, blobberOffer)
+		challengePoolBalance, thisChallange, thisExpires, now, size)
 
 	err = ssc.blobberPenalty(txn, allocation, previous, challenge, details, validators, ctx)
 	if err != nil {
@@ -377,7 +462,7 @@ func testBlobberPenalty(
 
 func testBlobberReward(
 	t *testing.T,
-	scYaml scConfig,
+	scYaml Config,
 	blobberYaml mockBlobberYaml,
 	validatorYamls []mockBlobberYaml,
 	stakes []int64,
@@ -434,7 +519,7 @@ func testBlobberReward(
 
 func setupChallengeMocks(
 	t *testing.T,
-	scYaml scConfig,
+	scYaml Config,
 	blobberYaml mockBlobberYaml,
 	validatorYamls []mockBlobberYaml,
 	stakes []int64,
@@ -444,7 +529,7 @@ func setupChallengeMocks(
 	otherWritePools int,
 	challengePoolIntegralValue, challengePoolBalance state.Balance,
 	thisChallange, thisExpires, now common.Timestamp,
-	blobberOffer int64,
+	size int64,
 ) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
 	*BlobberChallenge, *BlobberAllocation, *mockStateContext) {
 	require.Len(t, validatorStakes, len(validators))
@@ -466,8 +551,10 @@ func setupChallengeMocks(
 		BlobberID:                  blobberId,
 		ChallengePoolIntegralValue: challengePoolIntegralValue,
 		Terms: Terms{
+			WritePrice:              zcnToBalance(blobberYaml.writePrice),
 			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		},
+		Size: size,
 	}
 
 	var txn = &transaction.Transaction{
@@ -482,7 +569,6 @@ func setupChallengeMocks(
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -491,7 +577,7 @@ func setupChallengeMocks(
 			nil,
 		),
 		clientBalance: zcnToBalance(3),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -532,13 +618,9 @@ func setupChallengeMocks(
 	sp.Settings.ServiceCharge = blobberYaml.serviceCharge
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
-		sp.Pools["paula"+id] = &delegatePool{}
+		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
 		sp.Pools["paula"+id].Balance = state.Balance(stake)
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
-	}
-	sp.Offers[allocation.ID] = &offerPool{
-		Expire: thisExpires,
-		Lock:   state.Balance(blobberOffer),
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
 	require.NoError(t, sp.save(ssc.ID, challenge.BlobberID, ctx))
@@ -548,10 +630,9 @@ func setupChallengeMocks(
 		var sPool = newStakePool()
 		sPool.Settings.ServiceCharge = validatorYamls[i].serviceCharge
 		for j, stake := range validatorStakes[i] {
-			var pool = &delegatePool{}
+			var pool = &stakepool.DelegatePool{}
 			pool.Balance = state.Balance(stake)
 			var id = validator + " delegate " + strconv.Itoa(j)
-			pool.DelegateID = id
 			sPool.Pools[id] = pool
 		}
 		sPool.Settings.DelegateWallet = validator + " wallet"
@@ -567,7 +648,7 @@ func setupChallengeMocks(
 
 type formulaeBlobberReward struct {
 	t                                                  *testing.T
-	scYaml                                             scConfig
+	scYaml                                             Config
 	blobberYaml                                        mockBlobberYaml
 	validatorYamls                                     []mockBlobberYaml
 	stakes                                             []int64
@@ -578,7 +659,7 @@ type formulaeBlobberReward struct {
 	challengePoolIntegralValue, challengePoolBalance   int64
 	partial                                            float64
 	previousChallange, thisChallange, thisExpires, now common.Timestamp
-	blobberOffer                                       int64
+	size                                               int64
 }
 
 func (f formulaeBlobberReward) reward() int64 {
@@ -596,13 +677,6 @@ func (f formulaeBlobberReward) validatorsReward() int64 {
 	var totalReward = float64(f.reward())
 
 	return int64(totalReward * validatorCut)
-}
-
-func (f formulaeBlobberReward) validatorReward() int64 {
-	var total = float64(f.validatorsReward())
-	var numberValidators = float64(len(f.validators))
-
-	return int64(total / numberValidators)
 }
 
 func (f formulaeBlobberReward) blobberReward() int64 {
@@ -633,18 +707,6 @@ func (f formulaeBlobberReward) validatorServiceCharge(validator string) int64 {
 	return int64(rewardPerValidator * serviceCharge)
 }
 
-func (f formulaeBlobberReward) blobberDelegateReward(index int) int64 {
-	require.True(f.t, index < len(f.stakes))
-	var totalStake = 0.0
-	for _, stake := range f.stakes {
-		totalStake += float64(stake)
-	}
-	var delegateStake = float64(f.stakes[index])
-	var totalDelegateReward = float64(f.blobberReward() - f.blobberServiceCharge())
-
-	return int64(totalDelegateReward * delegateStake / totalStake)
-}
-
 func (f formulaeBlobberReward) indexFromValidator(validator string) int {
 	for i, v := range f.validators {
 		if v == validator {
@@ -667,29 +729,6 @@ func (f formulaeBlobberReward) validatorDelegateReward(validator string, delegat
 	return int64(deleatesReward * delegateStake / totalStake)
 }
 
-func (f formulaeBlobberReward) totalMoved() int64 {
-	var reward = float64(f.reward())
-	var validators = float64((f.validatorsReward()))
-	var partial = f.partial
-	var movedBack = (reward - validators) * (1 - partial)
-
-	return int64(reward - movedBack)
-}
-
-func (f formulaeBlobberReward) blobberPenalty() int64 {
-	var totalAction = float64(f.reward())
-	var validatorReward = float64(f.validatorsReward())
-	var blobberRisk = totalAction - validatorReward
-	var slash = f.scYaml.BlobberSlash
-	var slashedAmount = int64(blobberRisk * slash)
-
-	if f.blobberOffer <= slashedAmount {
-		return f.blobberOffer
-	} else {
-		return slashedAmount
-	}
-}
-
 func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
 	require.True(f.t, index < len(f.stakes))
 	var totalStake = 0.0
@@ -703,9 +742,10 @@ func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
 	var validatorReward = float64(f.validatorsReward())
 	var blobberRisk = totalAction - validatorReward
 	var slashedAmount = int64(blobberRisk * slash)
+	var offer = int64(sizeInGB(f.size) * float64(zcnToInt64(f.blobberYaml.writePrice)))
 
-	if f.blobberOffer <= slashedAmount {
-		return int64(float64(f.blobberOffer) * delegateStake / totalStake)
+	if offer <= slashedAmount {
+		return int64(float64(offer) * delegateStake / totalStake)
 	} else {
 		return int64(float64(slashedAmount) * delegateStake / totalStake)
 	}
@@ -719,85 +759,31 @@ func confirmBlobberPenalty(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
+	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
 
-	require.InDelta(t, f.challengePoolBalance-(f.reward()-f.validatorsReward()),
-		int64(challengePool.Balance), errDelta)
-
-	require.EqualValues(t, 0, int64(blobber.Rewards.Charge))
-	require.EqualValues(t, 0, int64(blobber.Rewards.Blobber))
+	require.EqualValues(t, 0, int64(blobber.Reward))
+	require.EqualValues(t, 0, int64(blobber.Reward))
 
 	for _, sp := range validatorsSPs {
 		for wallet, pool := range sp.Pools {
 			var wSplit = strings.Split(wallet, " ")
-			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Charge), errDelta)
-			require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Validator), errDelta)
+			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
 			index, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Rewards), errDelta)
+			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
 		}
 	}
 
 	if f.scYaml.BlobberSlash > 0.0 {
-		require.InDelta(t, f.blobberOffer-f.blobberPenalty(), int64(blobber.Offers[challengePool.ID].Lock), errDelta)
 		for _, pool := range blobber.Pools {
 			var delegate = strings.Split(pool.DelegateID, " ")
 			index, err := strconv.Atoi(delegate[1])
 			require.NoError(t, err)
-			require.InDelta(t, f.delegatePenalty(index), int64(pool.Penalty), errDelta)
+
 			require.InDelta(t, f.stakes[index]-f.delegatePenalty(index), int64(pool.Balance), errDelta)
 		}
 	}
 
-	validators := make(map[string]bool)
-	for _, v := range f.validators {
-		validators[v] = false
-	}
-	var validatorDelegates = make(map[string][]bool)
-	for i, v := range f.validators {
-		validatorDelegates[v] = []bool{}
-		for range f.validatorStakes[i] {
-			validatorDelegates[v] = append(validatorDelegates[v], false)
-		}
-	}
-
-	var totalAmount = int64(0)
-	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, storageScId, transfer.ClientID)
-		var amount = int64(transfer.Amount)
-		totalAmount += amount
-		var wallet = strings.Split(transfer.ToClientID, " ")
-		var validator = wallet[0]
-		if wallet[1] == "wallet" { // validator service charge
-			done, ok := validators[validator]
-			require.True(t, ok)
-			require.False(t, done)
-			require.InDelta(t, f.validatorServiceCharge(validator), amount, errDelta)
-			validators[validator] = true
-			continue
-		}
-		require.Len(t, wallet, 3)
-		index, err := strconv.Atoi(wallet[2])
-		delegates, ok := validatorDelegates[validator]
-		require.True(t, ok)
-		require.False(t, delegates[index])
-		require.NoError(t, err)
-		require.InDelta(t, f.validatorDelegateReward(validator, index), amount, errDelta)
-		validatorDelegates[validator][index] = true
-	}
-	require.InDelta(t, f.validatorsReward(), totalAmount, errDelta)
-
-	for v, done := range validators {
-		if !done {
-			require.InDelta(t, f.validatorServiceCharge(v), 0, errDelta)
-		}
-	}
-	for v, delegates := range validatorDelegates {
-		for index, done := range delegates {
-			if !done {
-				require.InDelta(t, f.validatorDelegateReward(v, index), 0, errDelta)
-			}
-		}
-	}
 }
 
 func confirmBlobberReward(
@@ -808,98 +794,17 @@ func confirmBlobberReward(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.rewardReturned(), int64(challengePool.Balance), errDelta)
-
-	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Rewards.Charge), errDelta)
-	require.InDelta(t, f.blobberReward()-f.blobberServiceCharge(), int64(blobber.Rewards.Blobber), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
+	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 
 	for _, sp := range validatorsSPs {
 		for wallet, pool := range sp.Pools {
 			var wSplit = strings.Split(wallet, " ")
-			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Charge), errDelta)
-			require.InDelta(t, f.validatorReward()-f.validatorServiceCharge(wSplit[0]), int64(sp.Rewards.Validator), errDelta)
+			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
 			index, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Rewards), errDelta)
-		}
-	}
-
-	var blobberPaid = false
-	var blobberDelegaresPaid = []bool{}
-	for range f.stakes {
-		blobberDelegaresPaid = append(blobberDelegaresPaid, false)
-	}
-	validators := make(map[string]bool)
-	for _, v := range f.validators {
-		validators[v] = false
-	}
-	var validatorDelegates = make(map[string][]bool)
-	for i, v := range f.validators {
-		validatorDelegates[v] = []bool{}
-		for range f.validatorStakes[i] {
-			validatorDelegates[v] = append(validatorDelegates[v], false)
-		}
-	}
-
-	var totalAmount = int64(0)
-	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, storageScId, transfer.ClientID)
-		var amount = int64(transfer.Amount)
-		totalAmount += amount
-		var wallet = strings.Split(transfer.ToClientID, " ")
-		if wallet[0] == blobberId { // blobber service charge
-			require.False(t, blobberPaid)
-			require.InDelta(t, f.blobberServiceCharge(), amount, errDelta)
-			blobberPaid = true
-			continue
-		}
-		if wallet[0] == "delegate" { // payment  to blobber delegate
-			index, err := strconv.Atoi(wallet[1])
-			require.NoError(t, err)
-			require.False(t, blobberDelegaresPaid[index])
-			require.InDelta(t, f.blobberDelegateReward(index), amount, errDelta)
-			blobberDelegaresPaid[index] = true
-			continue
-		}
-		var validator = wallet[0]
-		if wallet[1] == "wallet" { // validator service charge
-			done, ok := validators[validator]
-			require.True(t, ok)
-			require.False(t, done)
-			require.InDelta(t, f.validatorServiceCharge(validator), amount, errDelta)
-			validators[validator] = true
-			continue
-		}
-		require.Len(t, wallet, 3)
-		index, err := strconv.Atoi(wallet[2])
-		delegates, ok := validatorDelegates[validator]
-		require.True(t, ok)
-		require.False(t, delegates[index])
-		require.NoError(t, err)
-		require.InDelta(t, f.validatorDelegateReward(validator, index), amount, errDelta)
-		validatorDelegates[validator][index] = true
-	}
-	require.InDelta(t, f.totalMoved(), totalAmount, errDelta)
-
-	if !blobberPaid {
-		require.InDelta(t, f.blobberServiceCharge(), 0, errDelta)
-	}
-	require.True(t, blobberPaid)
-	for index, done := range blobberDelegaresPaid {
-		if !done {
-			require.InDelta(t, f.blobberDelegateReward(index), 0, errDelta)
-		}
-	}
-	for v, done := range validators {
-		if !done {
-			require.InDelta(t, f.validatorServiceCharge(v), 0, errDelta)
-		}
-	}
-	for v, delegates := range validatorDelegates {
-		for index, done := range delegates {
-			if !done {
-				require.InDelta(t, f.validatorDelegateReward(v, index), 0, errDelta)
-			}
+			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
 		}
 	}
 }

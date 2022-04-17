@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/state"
@@ -20,11 +21,15 @@ const (
 	Boolean
 	String
 	StateBalance
-	NumberOfTypes
+	Key
+	Cost
+	Strings
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 var ConfigTypeName = []string{
-	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance",
+	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance","Cost", "datastore.Key", "[]string",
 }
 
 type StringMap struct {
@@ -78,6 +83,8 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 	case StateBalance:
 		value, err := strconv.ParseInt(input, 10, 64)
 		return state.Balance(value), err
+	case Strings:
+		return strings.Split(input, ","), nil
 	default:
 		panic(fmt.Sprintf("StringToInterface input %s unsupported type %v", input, iType))
 	}

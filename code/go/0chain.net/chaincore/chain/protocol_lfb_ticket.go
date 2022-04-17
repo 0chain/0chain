@@ -8,15 +8,15 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 // compile-time resolution
@@ -27,7 +27,7 @@ var LFBTicketSender node.EntitySendHandler
 
 // - Setup LFBTicketSender on initialization
 // - Register LFB Ticket entity meta data
-func init() {
+func setupLFBTicketSender() {
 	// 1. Setup LFBTicketSender.
 	var options = node.SendOptions{
 		Timeout:            node.TimeoutSmallMessage,
@@ -81,7 +81,7 @@ type LFBTicket struct {
 	IsOwn     bool     `json:"-"`          // is own
 }
 
-func (lfbt *LFBTicket) addSender(sharder string) {
+func (lfbt *LFBTicket) addSender(sharder string) { //nolint
 	for _, sh := range lfbt.Senders {
 		if sharder == sh {
 			return // already hae
@@ -135,7 +135,7 @@ func (*LFBTicket) GetEntityMetadata() datastore.EntityMetadata {
 
 func (*LFBTicket) SetKey(datastore.Key)                      {}
 func (*LFBTicket) GetScore() int64                           { return 0 }
-func (*LFBTicket) ComputeProperties()                        {}
+func (*LFBTicket) ComputeProperties() error                  { return nil }
 func (*LFBTicket) Validate(context.Context) error            { return nil }
 func (*LFBTicket) Read(context.Context, datastore.Key) error { return nil }
 func (*LFBTicket) Write(context.Context) error               { return nil }
@@ -190,7 +190,6 @@ func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 	case c.unsubLFBTicket <- sub:
 	case <-c.lfbTickerWorkerIsDone:
 	}
-	return
 }
 
 // GetLatestLFBTicket
@@ -274,6 +273,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			ticket = prev // the latest in the channel
 
 			if ticket.Round <= latest.Round {
+				logging.Logger.Debug("update lfb ticket -  ticket.Round <= latest.Round",
+					zap.Int64("ticket.Round", ticket.Round),
+					zap.Int64("latest.Round", latest.Round))
 				continue // not updated
 			}
 
@@ -301,6 +303,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			// update latest
 			latest = ticket //
+			logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 
 			// don't broadcast a received LFB ticket, since its already
 			// broadcasted by its sender
@@ -320,6 +323,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			b = prev // use latest, regardless order in the channel
 
 			if b.Round <= latest.Round {
+				logging.Logger.Debug("update lfb ticket - b.Round <= latest.Round",
+					zap.Int64("b.Round", b.Round),
+					zap.Int64("latest.Round", latest.Round))
 				continue // not updated
 			}
 
@@ -332,6 +338,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
 			latest = ticket // update the latest
+			logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
@@ -384,4 +391,58 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		zap.Int64("round", ticket.Round))
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
+}
+
+// StartLFMBWorker starts the worker for getting latest finalized magic block
+func (c *Chain) StartLFMBWorker(ctx context.Context) {
+	var (
+		lfmb  *block.Block
+		clone *block.Block
+	)
+
+	for {
+		select {
+		case c.getLFMB <- lfmb:
+		case c.getLFMBClone <- clone:
+		case v := <-c.updateLFMB:
+			lfmb = v.block
+			clone = v.clone
+			logging.Logger.Debug("update LFMB", zap.Int64("round", lfmb.Round))
+			v.reply <- struct{}{}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block.Block) {
+	v := &updateLFMBWithReply{
+		block: lfmb,
+		clone: lfmb.Clone(),
+		reply: make(chan struct{}, 1),
+	}
+	select {
+	case c.updateLFMB <- v:
+		<-v.reply
+	case <-ctx.Done():
+		logging.Logger.Debug("update LFMB missed")
+	}
+}
+
+// IsBlockSyncing checks if the miner is syncing blocks
+func (c *Chain) IsBlockSyncing() bool {
+	var (
+		lfb          = c.GetLatestFinalizedBlock()
+		lfbTkt       = c.GetLatestLFBTicket(context.Background())
+		aheadN       = int64(3)
+		currentRound = c.GetCurrentRound()
+	)
+
+	if currentRound < lfbTkt.Round ||
+		lfb.Round+aheadN < lfbTkt.Round ||
+		lfb.Round+int64(config.GetLFBTicketAhead()) < currentRound {
+		return true
+	}
+
+	return false
 }

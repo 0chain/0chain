@@ -2,10 +2,10 @@ package smartcontract
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -73,22 +73,19 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 }
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj != nil {
-		var smartContractData sci.SmartContractTransactionData
-		dataBytes := []byte(t.TransactionData)
-		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
-			return "", err
-		}
-		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
-		transactionOutput, err := ExecuteWithStats(contractObj, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, t, scData.FunctionName, scData.InputData, balances)
 		if err != nil {
 			return "", err
 		}
 		return transactionOutput, nil
 	}
 	return "", common.NewError("invalid_smart_contract_address", "Invalid Smart Contract address")
+}
+
+func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) (int, error) {
+	contractObj := getSmartContract(t.ToClientID)
+	return contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
 }

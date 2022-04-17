@@ -8,4 +8,4 @@ services:
     volumes:
       - ../config:/0chain/go/0chain.net/docker.local/config
 
-    command: ./bin/magicBlock --config_file magicBlock_5_miners_1_sharder
+    command: ./bin/magicBlock --prepare --config_file magicBlock_5_miners_1_sharder

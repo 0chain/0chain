@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"sync"
+	"time"
 
 	"github.com/0chain/gorocksdb"
 
@@ -30,13 +31,17 @@ const (
 	SSTTypePlainTable      = 1
 )
 
+var (
+	PNodeDBCompression = gorocksdb.LZ4Compression
+)
+
 var sstType = SSTTypeBlockBasedTable
 
 /*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
+func NewPNodeDB(dataDir, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
-	opts.SetCompression(gorocksdb.LZ4Compression)
+	opts.SetCompression(PNodeDBCompression)
 	if sstType == SSTTypePlainTable {
 		opts.SetAllowMmapReads(true)
 		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
@@ -73,7 +78,7 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 	}
 	defer data.Free()
 	buf := data.Data()
-	if buf == nil || len(buf) == 0 {
+	if len(buf) == 0 {
 		return nil, ErrNodeNotFound
 	}
 	return CreateNode(bytes.NewReader(buf))
@@ -115,6 +120,7 @@ func (pndb *PNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
 
 /*MultiPutNode - implement interface */
 func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+	ts := time.Now()
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Destroy()
 	for idx, key := range keys {
@@ -127,6 +133,12 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 		}
 	}
 	err := pndb.db.Write(pndb.wo, wb)
+	if err != nil {
+		logging.Logger.Debug("pnode save nodes failed",
+			zap.Int64("round", pndb.version),
+			zap.Any("duration", ts),
+			zap.Error(err))
+	}
 	return err
 }
 

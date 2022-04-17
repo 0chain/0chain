@@ -41,7 +41,7 @@ const (
 )
 
 // RegisterClient registers client on BC.
-func (mc *Chain) RegisterClient() {
+func (c *Chain) RegisterClient() {
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var (
 			clientMetadataProvider = datastore.GetEntityMetadata("client")
@@ -62,7 +62,7 @@ func (mc *Chain) RegisterClient() {
 	}
 
 	var (
-		mb               = mc.GetCurrentMagicBlock()
+		mb               = c.GetCurrentMagicBlock()
 		miners           = mb.Miners.CopyNodesMap()
 		registered       = 0
 		thresholdByCount = config.GetThresholdCount()
@@ -101,7 +101,7 @@ func (mc *Chain) RegisterClient() {
 		zap.Int("consensus", consensus))
 }
 
-func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
+func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 	getStatePathFunc := func(n *node.Node) string {
 		switch n.Type {
 		case node.NodeTypeMiner:
@@ -127,10 +127,10 @@ func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
 		}
 		return ""
 	}
-	return mc.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
+	return c.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
 }
 
-func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
+func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
 
 	var (
@@ -139,11 +139,11 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 		selfNodeKey  = selfNode.GetKey()
 	)
 
-	if mc.IsActiveInChain() && remote == false {
+	if c.IsActiveInChain() && !remote {
 
 		var (
-			sp        = getStatePath(selfNode)
-			list, err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp)
+			sp  = getStatePath(selfNode)
+			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, allNodesList)
 		)
 
 		if err != nil {
@@ -152,20 +152,10 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 			return false
 		}
 
-		if list == nil {
-			return false
-		}
-
-		if err = allNodesList.Decode(list.Encode()); err != nil {
-			logging.Logger.Error("failed to decode block state node",
-				zap.Any("error", err))
-			return false
-		}
-
 	} else {
 
 		var (
-			mb       = mc.GetCurrentMagicBlock()
+			mb       = c.GetCurrentMagicBlock()
 			sharders = mb.Sharders.N2NURLs()
 			relPath  = getAPIPath(selfNode)
 			err      error
@@ -192,10 +182,10 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	return false
 }
 
-func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
+func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
 	var (
-		active = mc.IsActiveInChain()
-		mb     = mc.GetCurrentMagicBlock()
+		active = c.IsActiveInChain()
+		mb     = c.GetCurrentMagicBlock()
 
 		found, pastTime bool
 		urls            []string
@@ -219,7 +209,7 @@ func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Trans
 
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
 		if active {
-			lfb := mc.GetLatestFinalizedBlock()
+			lfb := c.GetLatestFinalizedBlock()
 			pastTime = lfb != nil &&
 				!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		} else {
@@ -239,10 +229,10 @@ func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Trans
 	return found
 }
 
-func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
+func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	selfNode := node.Self.Underlying()
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		mc.ID, selfNode.PublicKey)
+		c.ID, selfNode.PublicKey)
 
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
@@ -260,7 +250,10 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.NumberOfDelegates = viper.GetInt("number_of_delegates")
 	mn.MinStake = state.Balance(viper.GetFloat64("min_stake") * 1e10)
 	mn.MaxStake = state.Balance(viper.GetFloat64("max_stake") * 1e10)
-
+	mn.Geolocation = minersc.SimpleNodeGeolocation{
+		Latitude:  viper.GetFloat64("latitude"), // are these good to be added in 0chain.yaml?
+		Longitude: viper.GetFloat64("longitude"),
+	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
 		scData.Name = scNameAddMiner
@@ -272,20 +265,20 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	mb := mc.GetCurrentMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
 
-func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
+func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
 	selfNode := node.Self.Underlying()
 	if selfNode.Type != node.NodeTypeSharder {
 		return nil, errors.New("only sharder")
 	}
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		mc.ID, selfNode.PublicKey)
+		c.ID, selfNode.PublicKey)
 
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
@@ -302,14 +295,14 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	mb := mc.GetCurrentMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
 
-func (mc *Chain) IsRegisteredSharderKeep(ctx context.Context, remote bool) bool {
-	return mc.isRegisteredEx(ctx,
+func (c *Chain) IsRegisteredSharderKeep(ctx context.Context, remote bool) bool {
+	return c.isRegisteredEx(ctx,
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeSharder {
 				return minersc.ShardersKeepKey
@@ -371,7 +364,6 @@ func isValueZero(v reflect.Value) bool {
 	default:
 		panic("reflect.Value.IsZero")
 	}
-	return false
 }
 
 // The isZero returns true if given value is zero. It can be replaced with
@@ -485,7 +477,7 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // the mechanics here.
 //
 // Other side, for 3 sharders, two of which is behind the active one. The two
-// sharders behind will never give correct result (but give most consensus).
+// sharders behind will never give correct resultC (but give most consensus).
 // Thus we can't use most consensual response. Pew-pew.
 //
 // Probably, block requesting verifying, and syncing its state and then
@@ -548,7 +540,7 @@ func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
 // E.g. phase with highest starting round (the highness is in priority) and
 // it there is collisions, then it chooses phase with most consensus.
 //
-// The methods optimistically (non-blocking) sends the result to internal
+// The methods optimistically (non-blocking) sends the resultC to internal
 // phaseEvetns channel.
 //
 // There is no a worker uses the GetPhaseFromSharders in the chaincore/chain.
@@ -560,16 +552,17 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 		got util.Serializable
 	)
 
-	shardersN2NURLs := c.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs
+	brief := c.GetLatestFinalizedMagicBlockBrief()
+	if brief == nil {
+		return
+	}
+	shardersN2NURLs := brief.ShardersN2NURLs
 	got = GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetPhase,
 		shardersN2NURLs, func() util.Serializable {
 			return new(minersc.PhaseNode)
 		}, func(val util.Serializable) bool {
 			if pn, ok := val.(*minersc.PhaseNode); ok {
-				if pn.StartRound < cmb.StartingRound {
-					return true // reject
-				}
-				return false // keep
+				return pn.StartRound < cmb.StartingRound
 			}
 			return true // reject
 		}, func(val util.Serializable) (high int64) {
@@ -598,8 +591,7 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 	err error) {
 
-	var seri util.Serializable
-	seri, err = c.GetBlockStateNode(b, minersc.PhaseKey)
+	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
@@ -608,12 +600,6 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 
 	if err == util.ErrValueNotPresent {
 		err = nil // not a real error, Miner SC just is not started (yet)
-		return
-	}
-
-	if err = pn.Decode(seri.Encode()); err != nil {
-		err = fmt.Errorf("get_block_phase -- can't decode: %v, block %d",
-			err, b.Round)
 		return
 	}
 
