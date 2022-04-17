@@ -1,5 +1,10 @@
 # TestNet Setup with Docker Containers
 
+[![Build](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml)
+[![Test](https://github.com/0chain/0chain/actions/workflows/unit-test.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/unit-test.yml)
+[![GoDoc](https://godoc.org/github.com/0chain/0chain?status.png)](https://godoc.org/github.com/0chain/0chain)
+[![codecov](https://codecov.io/gh/0chain/0chain/branch/staging/graph/badge.svg)](https://codecov.io/gh/0chain/0chain)
+
 ## Table of Contents
 
 - [Changelog](#changelog)

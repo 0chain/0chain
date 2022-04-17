@@ -3,6 +3,8 @@ package faucetsc
 import (
 	"testing"
 
+	"0chain.net/core/viper"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -68,7 +70,7 @@ func BenchmarkTests(
 			name:     "faucet.update-settings",
 			endpoint: "updateSettings",
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID: viper.GetString(bk.FaucetOwner),
 				Value:    3,
 			},
 			input: (&sc.StringMap{

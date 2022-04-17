@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -117,7 +118,7 @@ func TestMiners(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -247,7 +248,7 @@ func TestGetMiners(t *testing.T) {
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer eventDb.Drop()
 	assert.NoError(t, err, "error while migrating database")
 	createMiners(t, eventDb, 10)
 
@@ -269,11 +270,78 @@ func TestGetMiners(t *testing.T) {
 	})
 }
 
+func TestGetMinerLocations(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer func() {
+		err = eventDb.Drop()
+		assert.NoError(t, err, "error while dropping database")
+	}()
+	assert.NoError(t, err, "error while migrating database")
+	createMinersWithLocation(t, eventDb, 12)
+	t.Run("miner locations without any filters", func(t *testing.T) {
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, 0, 0)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 12, len(locations), "all miners should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.MinerID, 10, 0)
+			assert.NoError(t, err, "miner id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+	t.Run("locations for miners which are active", func(t *testing.T) {
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 5, len(locations), "locations of only active miners should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.MinerID, 10, 0)
+			assert.NoError(t, err, "miner id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+	t.Run("locations for miners which are inactive", func(t *testing.T) {
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 5, len(locations), "locations of only active miners should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.MinerID, 10, 0)
+			assert.NoError(t, err, "miner id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+}
+
 func createMiners(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		m := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
 		err := eventDb.addOrOverwriteMiner(m)
 		assert.NoError(t, err, "inserting miners failed")
+	}
+}
+
+func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
+	for i := 0; i < count; i++ {
+		s := Miner{Active: i%2 == 0, MinerID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		err := eventDb.addOrOverwriteMiner(s)
+		assert.NoError(t, err, "There should be no error")
 	}
 }
 

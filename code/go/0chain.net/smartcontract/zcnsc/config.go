@@ -25,30 +25,20 @@ const (
 	MinAuthorizers     = "min_authorizers"
 	MinBurnAmount      = "min_burn_amount"
 	MinStakeAmount     = "min_stake_amount"
+	MinLockAmount      = "min_lock_amount"
 	BurnAddress        = "burn_address"
 	MaxFee             = "max_fee"
 	OwnerID            = "owner_id"
 	Cost               = "cost"
+	MaxDelegates       = "max_delegates"
 )
 
 var CostFunctions = []string{
-	"mint",
-	"burn",
-	"DeleteAuthorizer",
-	"AddAuthorizer",
+	MintFunc,
+	BurnFunc,
+	DeleteAuthorizerFunc,
+	AddAuthorizerFunc,
 }
-
-// ZCNSConfig config both for GlobalNode and AuthorizerNode
-//type ZCNSConfig struct {
-//	MinMintAmount      state.Balance `json:"min_mint_amount"`
-//	MinBurnAmount      state.Balance `json:"min_burn_amount"`
-//	MinStakeAmount     state.Balance `json:"min_stake_amount"`
-//	MaxFee             state.Balance `json:"max_fee"`
-//	PercentAuthorizers float64       `json:"percent_authorizers"`
-//	MinAuthorizers     int64         `json:"min_authorizers"`
-//	BurnAddress        string        `json:"burn_address"`
-//	OwnerId            datastore.Key `json:"owner_id"`
-//}
 
 func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
 	const (
@@ -92,13 +82,16 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 	fields := map[string]string{
 		MinMintAmount:      fmt.Sprintf("%v", gn.MinMintAmount),
-		PercentAuthorizers: fmt.Sprintf("%v", gn.PercentAuthorizers),
-		MinAuthorizers:     fmt.Sprintf("%v", gn.MinAuthorizers),
 		MinBurnAmount:      fmt.Sprintf("%v", gn.MinBurnAmount),
 		MinStakeAmount:     fmt.Sprintf("%v", gn.MinStakeAmount),
+		PercentAuthorizers: fmt.Sprintf("%v", gn.PercentAuthorizers),
+		MinAuthorizers:     fmt.Sprintf("%v", gn.MinAuthorizers),
+		MinLockAmount:      fmt.Sprintf("%v", gn.MinLockAmount),
 		MaxFee:             fmt.Sprintf("%v", gn.MaxFee),
 		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
+		Cost:               fmt.Sprintf("%v", gn.Cost),
+		MaxDelegates:       fmt.Sprintf("%v", gn.MaxDelegates),
 	}
 
 	for _, key := range CostFunctions {
@@ -117,14 +110,16 @@ func section(section string) string {
 func loadSettings() (conf *GlobalNode) {
 	conf = new(GlobalNode)
 	conf.MinMintAmount = state.Balance(cfg.GetInt(section(MinMintAmount)))
-	conf.PercentAuthorizers = cfg.GetFloat64(section(PercentAuthorizers))
-	conf.MinAuthorizers = cfg.GetInt64(section(MinAuthorizers))
 	conf.MinBurnAmount = state.Balance(cfg.GetInt64(section(MinBurnAmount)))
 	conf.MinStakeAmount = state.Balance(cfg.GetInt64(section(MinStakeAmount)))
-	conf.BurnAddress = cfg.GetString(section(BurnAddress))
+	conf.PercentAuthorizers = cfg.GetFloat64(section(PercentAuthorizers))
+	conf.MinAuthorizers = cfg.GetInt64(section(MinAuthorizers))
+	conf.MinLockAmount = cfg.GetInt64(section(MinLockAmount))
 	conf.MaxFee = state.Balance(cfg.GetInt64(section(MaxFee)))
+	conf.BurnAddress = cfg.GetString(section(BurnAddress))
 	conf.OwnerId = cfg.GetString(section(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(Cost)
+	conf.MaxDelegates = cfg.GetInt(section(MaxDelegates))
 
 	return conf
 }

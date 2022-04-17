@@ -1,26 +1,26 @@
 simulation:
-  num_clients: 30000
-  num_active_clients: 30000
-  num_miners: 110
-  num_active_miners: 110
-  nun_sharders: 30
-  nun_active_sharders: 30
-  num_allocations: 300000
-  num_blobbers: 3000
-  num_validators: 3000
+  num_clients: 21
+  num_active_clients: 21
+  num_miners: 5
+  num_active_miners: 5
+  nun_sharders: 5
+  nun_active_sharders: 5
+  num_allocations: 30
+  num_blobbers: 10
+  num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
-  num_blobbers_per_Allocation: 40 # ideally make this even
-  num_blobber_delegates: 100
-  num_miner_delegates: 100
-  num_sharder_delegates: 100
+  num_blobbers_per_Allocation: 4 # ideally make this even
+  num_blobber_delegates: 10
+  num_miner_delegates: 10
+  num_sharder_delegates: 10
   num_curators: 1
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
   num_write_redeem_allocation: 1
   num_challenges_blobber: 1
-  num_authorisers: 05
-  num_reward_partition_blobber: 100
+  num_authorisers: 12
+  num_reward_partition_blobber: 5
 
 options:
   verbose: true
@@ -36,12 +36,14 @@ options:
     - "vesting"
     - "vesting_rest"
     - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
 dbs:
   events:
-    enabled: false
+    enabled: true
     name: events_db
     user: zchain_user
     password: zchian
@@ -53,6 +55,7 @@ dbs:
 
 smart_contracts:
   minersc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_delegates: 0
     max_delegates: 200
     min_stakke: 0.0
@@ -81,8 +84,9 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
 
   storagesc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_alloc_size: 1024
-    min_alloc_duration: 5m
+    min_alloc_duration: 1y
     max_read_price: 100.0
     max_write_price: 100.0
     max_challenge_completion_time: 30m
@@ -133,17 +137,20 @@ smart_contracts:
       blobber_ratio: 50
       trigger_period: 30
   interestpoolsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 10
     apr: 0.1
     min_lock_period: 1m
     max_mint: 1500000.0
   vestingsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 0.01
     min_duration: 1m
     max_duration: 1000h
     max_destinations: 10
     max_description_length: 100
-  zcn:
+  zcnsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_mint_amount: 1
     percent_authorizers: 0
     min_authorizers: 1
@@ -151,6 +158,9 @@ smart_contracts:
     min_stake_amount: 0
     max_fee: 100
     burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
+
+  faucetsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
 
 internal:
   t: 2
