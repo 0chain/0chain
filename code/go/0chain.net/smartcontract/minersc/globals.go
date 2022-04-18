@@ -40,7 +40,8 @@ const (
 	Multisig                          // todo from development
 
 	Vesting // todo from development
-	Owner   // do we want to set this.
+	Zcn
+	Owner // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
 	BlockMaxCost
@@ -124,6 +125,7 @@ var GlobalSettingName = []string{
 	"development.smart_contract.miner",
 	"development.smart_contract.multisig",
 	"development.smart_contract.vesting",
+	"development.smart_contract.zcn",
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
@@ -222,6 +224,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Miner]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Multisig]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Vesting]:                           {smartcontract.Boolean, false},
+	GlobalSettingName[Zcn]:                               {smartcontract.Boolean, false},
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},

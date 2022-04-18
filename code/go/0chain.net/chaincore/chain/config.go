@@ -41,6 +41,18 @@ const (
 )
 
 type Config interface {
+	State() bool
+	Dkg() bool
+	ViewChange() bool
+	BlockRewards() bool
+	Storage() bool
+	Faucet() bool
+	Interest() bool
+	// Indicates is fees enabled
+	Miner() bool
+	Multisig() bool
+	Vesting() bool
+	Zcn() bool
 	OwnerID() datastore.Key
 	BlockSize() int32
 	MinBlockSize() int32
@@ -99,6 +111,9 @@ func NewConfigImpl(conf *ConfigData) *ConfigImpl {
 	return &ConfigImpl{conf: conf}
 }
 
+// This is to provide access to chain configuration from packages which don't have
+// direct access to 'chain' package. Instead they can read the configuration using
+// 'conf' package. example: conf.Configuration.ReadValue("BlockSize")
 func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
 	elements := reflect.ValueOf(&c.conf).Elem()
 	i := 0
@@ -117,6 +132,72 @@ func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
 	return elements.Field(i).Interface(), nil
 }
 
+func (c *ConfigImpl) State() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.State
+}
+func (c *ConfigImpl) Dkg() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Dkg
+}
+func (c *ConfigImpl) ViewChange() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.ViewChange
+}
+func (c *ConfigImpl) BlockRewards() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.BlockRewards
+}
+func (c *ConfigImpl) Storage() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Storage
+}
+func (c *ConfigImpl) Faucet() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Faucet
+}
+func (c *ConfigImpl) Interest() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Interest
+}
+func (c *ConfigImpl) Miner() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Miner
+}
+func (c *ConfigImpl) Multisig() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Multisig
+}
+func (c *ConfigImpl) Vesting() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Vesting
+}
+func (c *ConfigImpl) Zcn() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.Zcn
+}
 func (c *ConfigImpl) OwnerID() datastore.Key {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
@@ -360,7 +441,18 @@ type HealthCheckCycleScan struct {
 
 //ConfigData - chain Configuration
 type ConfigData struct {
-	version              int64         `json:"-"`                       //version of config to track updates
+	version              int64         `json:"-"` //version of config to track updates
+	State                bool          `json:"state"`
+	Dkg                  bool          `json:"dkg"`
+	ViewChange           bool          `json:"view_change"`
+	BlockRewards         bool          `json:"block_rewards"`
+	Storage              bool          `json:"storage"`
+	Faucet               bool          `json:"faucet"`
+	Interest             bool          `json:"interest"`
+	Miner                bool          `json:"miner"` // Indicates is fees enabled
+	Multisig             bool          `json:"multisig"`
+	Vesting              bool          `json:"vesting"`
+	Zcn                  bool          `json:"zcn"`
 	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
 	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
 	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have
@@ -410,6 +502,17 @@ func (c *ConfigImpl) FromViper() {
 	defer c.guard.Unlock()
 
 	conf := c.conf
+	conf.State = viper.GetBool("server_chain.state")
+	conf.Dkg = viper.GetBool("server_chain.dkg")
+	conf.ViewChange = viper.GetBool("server_chain.view_change")
+	conf.BlockRewards = viper.GetBool("server_chain.block_rewards")
+	conf.Storage = viper.GetBool("server_chain.smart_contract.storage")
+	conf.Faucet = viper.GetBool("server_chain.smart_contract.faucet")
+	conf.Interest = viper.GetBool("server_chain.smart_contract.interest")
+	conf.Miner = viper.GetBool("server_chain.smart_contract.miner")
+	conf.Multisig = viper.GetBool("server_chain.smart_contract.multisig")
+	conf.Vesting = viper.GetBool("server_chain.smart_contract.vesting")
+	conf.Zcn = viper.GetBool("server_chain.smart_contract.zcn")
 	conf.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	conf.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	conf.MaxBlockCost = viper.GetInt("server_chain.block.max_block_cost")
@@ -502,7 +605,7 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 
 	conf := c.conf
 	old := conf.version
-	if old == cf.Version {
+	if old >= cf.Version {
 		return nil
 	}
 
@@ -510,6 +613,46 @@ func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
 	logging.Logger.Debug("Updating config", zap.Int64("old version", old), zap.Int64("new version", conf.version))
 
 	var err error
+	conf.State, err = cf.GetBool(minersc.State)
+	if err != nil {
+		return err
+	}
+	conf.Dkg, err = cf.GetBool(minersc.Dkg)
+	if err != nil {
+		return err
+	}
+	conf.ViewChange, err = cf.GetBool(minersc.ViewChange)
+	if err != nil {
+		return err
+	}
+	conf.BlockRewards, err = cf.GetBool(minersc.BlockRewards)
+	if err != nil {
+		return err
+	}
+	conf.Storage, err = cf.GetBool(minersc.Storage)
+	if err != nil {
+		return err
+	}
+	conf.Faucet, err = cf.GetBool(minersc.Faucet)
+	if err != nil {
+		return err
+	}
+	conf.Miner, err = cf.GetBool(minersc.Miner)
+	if err != nil {
+		return err
+	}
+	conf.Multisig, err = cf.GetBool(minersc.Multisig)
+	if err != nil {
+		return err
+	}
+	conf.Vesting, err = cf.GetBool(minersc.Vesting)
+	if err != nil {
+		return err
+	}
+	conf.Zcn, err = cf.GetBool(minersc.Zcn)
+	if err != nil {
+		return err
+	}
 	conf.MinBlockSize, err = cf.GetInt32(minersc.BlockMinSize)
 	if err != nil {
 		return err
