@@ -3,36 +3,16 @@ package storagesc
 import (
 	"encoding/json"
 
-	c_state "0chain.net/chaincore/chain/state"
+	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
-const allValidatorsPartitionSize = 50
-
-func getValidatorsList(balances c_state.StateContextI) (partitions.RandPartition, error) {
-	all, err := partitions.GetRandomSelector(ALL_VALIDATORS_KEY, balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		all = partitions.NewRandomSelector(
-			ALL_VALIDATORS_KEY,
-			allValidatorsPartitionSize,
-			nil,
-			partitions.ItemValidator,
-		)
-	}
-	all.SetCallback(nil)
-	return all, nil
-}
-
-func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
 	newValidator := &ValidationNode{}
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
 	if err != nil {
@@ -53,22 +33,23 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 				"new validator id does not match a registered blobber: "+err.Error())
 		}
 
-		allValidatorsList, err := getValidatorsList(balances)
+		validatorPartitions, err := getValidatorsList(balances)
 		if err != nil {
 			return "", common.NewError("add_validator_failed",
 				"Failed to get validator list."+err.Error())
 		}
-		_, err = allValidatorsList.Add(
-			&partitions.ValidationNode{
+
+		_, err = validatorPartitions.AddItem(
+			balances,
+			&ValidationPartitionNode{
 				Id:  t.ClientID,
 				Url: newValidator.BaseURL,
-			}, balances,
-		)
+			})
 		if err != nil {
 			return "", err
 		}
-		err = allValidatorsList.Save(balances)
-		if err != nil {
+
+		if err := validatorPartitions.Save(balances); err != nil {
 			return "", err
 		}
 

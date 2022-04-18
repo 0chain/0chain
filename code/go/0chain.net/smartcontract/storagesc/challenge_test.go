@@ -45,7 +45,7 @@ func TestAddChallenge(t *testing.T) {
 		blobberChallengeObj *BlobberChallenge
 		allocChallengeObj   *AllocationChallenge
 		blobberAllocation   *BlobberAllocation
-		validators          partitions.RandPartition
+		validators          *partitions.Partitions
 		r                   *rand.Rand
 		blobberID           string
 		balances            cstate.StateContextI
@@ -59,15 +59,16 @@ func TestAddChallenge(t *testing.T) {
 
 	parametersToArgs := func(p parameters, ssc *StorageSmartContract) args {
 
-		blobberChallenge := partitions.NewRandomSelector(
-			ALL_BLOBBERS_CHALLENGE_KEY,
-			allBlobbersChallengePartitionSize,
-			nil,
-			partitions.ItemBlobberChallenge,
-		)
-
 		balances := &mockStateContext{
 			store: make(map[datastore.Key]util.MPTSerializable),
+		}
+
+		blobberChallenge, err := partitions.CreateIfNotExists(
+			balances,
+			ALL_BLOBBERS_CHALLENGE_KEY,
+			allBlobbersChallengePartitionSize)
+		if err != nil {
+			panic(err)
 		}
 
 		var blobbers []*StorageNode
@@ -82,26 +83,23 @@ func TestAddChallenge(t *testing.T) {
 				Stats:          &StorageAllocationStats{},
 			}
 
-			_, err := blobberChallenge.Add(
-				&partitions.BlobberChallengeNode{
+			_, err := blobberChallenge.AddItem(
+				balances,
+				&BlobberChallengeNode{
 					BlobberID: sn.ID,
-				}, balances)
+				})
 			require.NoError(t, err)
 		}
 
-		validators := partitions.NewRandomSelector(
-			ALL_VALIDATORS_KEY,
-			allValidatorsPartitionSize,
-			nil,
-			partitions.ItemValidator,
-		)
-
+		validators, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+		require.NoError(t, err)
 		for i := 0; i < p.numValidators; i++ {
-			_, err := validators.Add(
-				&partitions.ValidationNode{
+			_, err := validators.AddItem(
+				balances,
+				&ValidationPartitionNode{
 					Id:  strconv.Itoa(i),
 					Url: strconv.Itoa(i) + ".com",
-				}, balances,
+				},
 			)
 			require.NoError(t, err)
 		}
@@ -109,24 +107,27 @@ func TestAddChallenge(t *testing.T) {
 		var bID string
 		r := rand.New(rand.NewSource(int64(p.randomSeed)))
 		if p.numBlobbers > 0 {
-			bcList, err := blobberChallenge.GetRandomSlice(r, balances)
+
+			var bcList []BlobberChallengeNode
+			err := blobberChallenge.GetRandomItems(balances, r, &bcList)
 			require.NoError(t, err)
 			i := rand.Intn(len(bcList))
 			bcItem := bcList[i]
-			bID = bcItem.Name()
+			bID = bcItem.BlobberID
 		}
 
 		selectedValidators := make([]*ValidationNode, 0)
-		randSlice, err := validators.GetRandomSlice(r, balances)
+		var randSlice []ValidationPartitionNode
+		err = validators.GetRandomItems(balances, r, &randSlice)
 		require.NoError(t, err)
 
 		perm := r.Perm(len(randSlice))
 		for i := 0; i < minInt(len(randSlice), p.validatorsPerChallenge+1); i++ {
-			if randSlice[perm[i]].Name() != bID {
+			if randSlice[perm[i]].Id != bID {
 				selectedValidators = append(selectedValidators,
 					&ValidationNode{
-						ID:      randSlice[perm[i]].Name(),
-						BaseURL: randSlice[perm[i]].Data(),
+						ID:      randSlice[perm[i]].Id,
+						BaseURL: randSlice[perm[i]].Url,
 					})
 			}
 			if len(selectedValidators) >= p.validatorsPerChallenge {
@@ -188,7 +189,6 @@ func TestAddChallenge(t *testing.T) {
 
 	tests := []struct {
 		name string
-
 		parameters
 		want want
 	}{
