@@ -134,12 +134,17 @@ const (
 	DeploymentMainNet     = 2
 )
 
+type ConfigReader interface {
+	ReadValue(name string) (interface{}, error)
+}
+
 /*Config - all the config options passed from the command line*/
 type Config struct {
 	Host           string
 	Port           int
 	ChainID        string
 	DeploymentMode byte
+	ChainConfig    ConfigReader
 }
 
 /*Configuration of the system */

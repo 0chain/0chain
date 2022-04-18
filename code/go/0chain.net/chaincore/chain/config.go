@@ -1,6 +1,9 @@
 package chain
 
 import (
+	"errors"
+	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -72,6 +75,7 @@ type Config interface {
 	Update(configMap *minersc.GlobalSettings) error
 	TxnExempt() map[string]bool
 	MinTxnFee() int64
+	ReadValue(name string) (interface{}, error)
 }
 
 type ConfigImpl struct {
@@ -93,6 +97,24 @@ func UpdateConfigImpl(conf *ConfigImpl, data *ConfigData) {
 
 func NewConfigImpl(conf *ConfigData) *ConfigImpl {
 	return &ConfigImpl{conf: conf}
+}
+
+func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
+	elements := reflect.ValueOf(&c.conf).Elem()
+	i := 0
+	for ; i < elements.NumField(); i++ {
+		if elements.Type().Field(i).Name == name {
+			break
+		}
+	}
+	if i == elements.NumField() {
+		return nil, errors.New(fmt.Sprintf("ConfigImpl - Read Value By Name. %v Is not a valid configuration name", name))
+	}
+
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return elements.Field(i).Interface(), nil
 }
 
 func (c *ConfigImpl) OwnerID() datastore.Key {
