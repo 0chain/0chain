@@ -704,17 +704,61 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances c_state.StateContextI,
 ) (*challengeOutput, error) {
 
-	var blobberChallenges []BlobberChallengeNode
-	err := blobberChallengeList.GetRandomItems(balances, challRand, &blobberChallenges)
-	if err != nil {
-		return nil, common.NewError("generate_challenges",
-			"error getting random slice from blobber challenge partition")
+	const maxBCPartitionSelect = 5
+
+	partitionSelect := minInt(blobberChallengeList.Length(), maxBCPartitionSelect)
+	if partitionSelect == 0 {
+		return nil, common.NewError("populate_challenge",
+			"blobber challenge is an empty partition")
 	}
 
-	randomIndex := challRand.Intn(len(blobberChallenges))
-	bcItem := blobberChallenges[randomIndex]
-	Logger.Debug("generate_challenges", zap.Int("random index", randomIndex),
-		zap.String("blobber id", bcItem.BlobberID), zap.Int("blobber challenges", len(blobberChallenges)))
+	type bChallResp struct {
+		item  []BlobberChallengeNode
+		index int
+		err   error
+	}
+	bChallRespCh := make(chan bChallResp, partitionSelect)
+	defer close(bChallRespCh)
+
+	for i := 0; i < partitionSelect; i++ {
+		go func(i int) {
+			var blobberChallenges []BlobberChallengeNode
+			err := blobberChallengeList.GetRandomItems(balances, challRand, &blobberChallenges)
+			if err != nil {
+				bChallRespCh <- bChallResp{
+					err: common.NewError("generate_challenges",
+						"error getting random slice from blobber challenge partition"),
+				}
+				return
+			}
+			bChallRespCh <- bChallResp{
+				item:  blobberChallenges,
+				index: i,
+			}
+		}(i)
+	}
+
+	// maintaining the order of blobber selected for randomness consistency
+	blobberParts := make([][]BlobberChallengeNode, partitionSelect)
+	for i := 0; i < partitionSelect; i++ {
+		resp := <-bChallRespCh
+		if resp.err != nil {
+			return nil, resp.err
+		}
+		blobberParts[resp.index] = resp.item
+	}
+
+	var bcItem BlobberChallengeNode
+	var maxUsedCap int64
+	for i := 0; i < partitionSelect; i++ {
+		randomIndex := challRand.Intn(len(blobberParts[i]))
+		tempItem := blobberParts[i][randomIndex]
+
+		if tempItem.UsedCapacity > maxUsedCap {
+			maxUsedCap = tempItem.UsedCapacity
+			bcItem = tempItem
+		}
+	}
 
 	blobberID := bcItem.BlobberID
 	if blobberID == "" {
@@ -735,7 +779,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition, %v", err)
 	}
 
-	randomIndex = challRand.Intn(len(bcAllocPartition))
+	randomIndex := challRand.Intn(len(bcAllocPartition))
 	bcAllocItem := bcAllocPartition[randomIndex]
 
 	allocID := bcAllocItem.ID
