@@ -25,7 +25,7 @@ func emitAddOrOverwriteBlobber(
 		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
 
 		Capacity:        sn.Capacity,
-		Used:            sn.Used,
+		Allocated:       sn.Allocated,
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
@@ -65,7 +65,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"max_offer_duration":        sn.Terms.MaxOfferDuration.String(),
 			"challenge_completion_time": sn.Terms.ChallengeCompletionTime.String(),
 			"capacity":                  sn.Capacity,
-			"used":                      sn.Used,
+			"used":                      sn.Allocated,
 			"last_health_check":         int64(sn.LastHealthCheck),
 			"delegate_wallet":           sn.StakePoolSettings.DelegateWallet,
 			"min_stake":                 int64(sn.StakePoolSettings.MinStake),

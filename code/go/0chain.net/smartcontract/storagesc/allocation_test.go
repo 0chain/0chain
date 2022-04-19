@@ -905,7 +905,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				ChallengeCompletionTime: 15 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
-			Used:            5 * GB,  //  5 GB
+			Allocated:       5 * GB,  //  5 GB
 			LastHealthCheck: 0,
 		},
 		&StorageNode{
@@ -919,7 +919,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				ChallengeCompletionTime: 10 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
-			Used:            10 * GB, // 10 GB
+			Allocated:       10 * GB, // 10 GB
 			LastHealthCheck: 0,
 		},
 	}
@@ -1067,8 +1067,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 9. no tokens to lock (client balance check)
 
-	allBlobbers.Nodes[0].Used = 5 * GB
-	allBlobbers.Nodes[1].Used = 10 * GB
+	allBlobbers.Nodes[0].Allocated = 5 * GB
+	allBlobbers.Nodes[1].Allocated = 10 * GB
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
@@ -1078,8 +1078,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 10. ok
 
-	allBlobbers.Nodes[0].Used = 5 * GB
-	allBlobbers.Nodes[1].Used = 10 * GB
+	allBlobbers.Nodes[0].Allocated = 5 * GB
+	allBlobbers.Nodes[1].Allocated = 10 * GB
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
@@ -1103,8 +1103,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	var sb = newTestAllBlobbers()
 	sb.Nodes[0].LastHealthCheck = tx.CreationDate
 	sb.Nodes[1].LastHealthCheck = tx.CreationDate
-	sb.Nodes[0].Used += 10 * GB
-	sb.Nodes[1].Used += 10 * GB
+	sb.Nodes[0].Allocated += 10 * GB
+	sb.Nodes[1].Allocated += 10 * GB
 
 	// blobbers saved in all blobbers list
 	allBlobbers, err = ssc.getBlobbersList(balances)
@@ -1294,8 +1294,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	tx.Value = 400
 
-	allBlobbers.Nodes[0].Used = 5 * GB
-	allBlobbers.Nodes[1].Used = 10 * GB
+	allBlobbers.Nodes[0].Allocated = 5 * GB
+	allBlobbers.Nodes[1].Allocated = 10 * GB
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 

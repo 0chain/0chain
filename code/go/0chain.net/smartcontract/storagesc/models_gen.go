@@ -2439,9 +2439,9 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Capacity"
 	o = append(o, 0xa8, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79)
 	o = msgp.AppendInt64(o, z.Capacity)
-	// string "Used"
+	// string "Allocated"
 	o = append(o, 0xa4, 0x55, 0x73, 0x65, 0x64)
-	o = msgp.AppendInt64(o, z.Used)
+	o = msgp.AppendInt64(o, z.Allocated)
 	// string "BytesWritten"
 	o = append(o, 0xac, 0x42, 0x79, 0x74, 0x65, 0x73, 0x57, 0x72, 0x69, 0x74, 0x74, 0x65, 0x6e)
 	o = msgp.AppendInt64(o, z.BytesWritten)
@@ -2577,10 +2577,10 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Capacity")
 				return
 			}
-		case "Used":
-			z.Used, bts, err = msgp.ReadInt64Bytes(bts)
+		case "Allocated":
+			z.Allocated, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Used")
+				err = msgp.WrapError(err, "Allocated")
 				return
 			}
 		case "BytesWritten":
