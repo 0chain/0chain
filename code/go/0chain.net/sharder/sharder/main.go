@@ -94,7 +94,7 @@ func main() {
 	flag.StringVar(&workdir, "work_dir", "", "work_dir")
 
 	flag.Parse()
-	config.Configuration.DeploymentMode = byte(*deploymentMode)
+	config.Configuration().DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig(workdir)
 	config.SetupSmartContractConfig(workdir)
@@ -116,7 +116,7 @@ func main() {
 	}
 	reader.Close()
 
-	config.Configuration.ChainID = viper.GetString("server_chain.id")
+	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
 	reader, err = os.Open(*keysFile)
@@ -124,7 +124,7 @@ func main() {
 		panic(err)
 	}
 
-	config.SetServerChainID(config.Configuration.ChainID)
+	config.SetServerChainID(config.Configuration().ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
 	initEntities(workdir)
@@ -292,7 +292,7 @@ func main() {
 	initHandlers(sc)
 
 	go sc.RegisterClient()
-	if config.DevConfiguration.IsFeeEnabled {
+	if sc.Config.Miner() {
 		go sc.SetupSC(ctx)
 	}
 

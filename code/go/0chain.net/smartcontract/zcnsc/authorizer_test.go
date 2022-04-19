@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
@@ -25,6 +26,7 @@ func init() {
 	chain.ServerChain = new(chain.Chain)
 
 	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
+	config.Configuration().ChainConfig = chain.ServerChain.Config
 	logging.Logger = zap.NewNop()
 }
 

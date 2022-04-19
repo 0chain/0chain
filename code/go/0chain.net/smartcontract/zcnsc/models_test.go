@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/chain"
@@ -22,6 +23,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
 	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
+	config.Configuration().ChainConfig = chain.ServerChain.Config
 
 	logging.Logger = zap.NewNop()
 }

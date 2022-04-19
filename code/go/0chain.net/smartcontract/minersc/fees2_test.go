@@ -351,7 +351,11 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	require.NoError(t, err)
 
 	// Add information only relevant to view change rounds
-	config.DevConfiguration.ViewChange = zChainYaml.viewChange
+	config.Configuration().ChainConfig = &config.TestConfigReader{
+		Fields: map[string]interface{}{
+			"ViewChange": zChainYaml.viewChange,
+		},
+	}
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
 		var allMinersList = NewDKGMinerNodes()

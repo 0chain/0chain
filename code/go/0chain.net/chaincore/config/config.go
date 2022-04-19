@@ -1,8 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"0chain.net/core/viper"
@@ -138,6 +140,31 @@ type ConfigReader interface {
 	ReadValue(name string) (interface{}, error)
 }
 
+// This is defined to avoid 'nil pointer reference' to ConfigChain
+// And also to be used for setting the configuration for Test purposes
+type TestConfigReader struct {
+	Fields map[string]interface{}
+	mu     sync.Mutex
+}
+
+func (cr *TestConfigReader) ReadValue(name string) (interface{}, error) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	v, found := cr.Fields[name]
+	if !found {
+		return nil, errors.New("ChainConfig - Read Config - Invalid configuration name")
+	}
+	return v, nil
+}
+
+func (cr *TestConfigReader) WriteValue(name string, val interface{}) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	cr.Fields[name] = val
+}
+
 /*Config - all the config options passed from the command line*/
 type Config struct {
 	Host           string
@@ -148,21 +175,30 @@ type Config struct {
 }
 
 /*Configuration of the system */
-var Configuration Config
+var configuration Config
+
+func Configuration() *Config {
+	if configuration.ChainConfig == nil {
+		configuration.ChainConfig = &TestConfigReader{
+			Fields: map[string]interface{}{},
+		}
+	}
+	return &configuration
+}
 
 /*TestNet - is the server running in TestNet mode? */
 func TestNet() bool {
-	return Configuration.DeploymentMode == DeploymentTestNet
+	return Configuration().DeploymentMode == DeploymentTestNet
 }
 
 /*Development - is the server running in development mode? */
 func Development() bool {
-	return Configuration.DeploymentMode == DeploymentDevelopment
+	return Configuration().DeploymentMode == DeploymentDevelopment
 }
 
 /*MainNet - is the server running in mainnet mode? */
 func MainNet() bool {
-	return Configuration.DeploymentMode == DeploymentMainNet
+	return Configuration().DeploymentMode == DeploymentMainNet
 }
 
 /*ErrSupportedChain error for indicating which chain is supported by the server */

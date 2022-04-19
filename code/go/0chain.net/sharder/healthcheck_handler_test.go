@@ -1,11 +1,13 @@
 package sharder
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -18,6 +20,7 @@ func makeTestChain(t *testing.T) *Chain {
 		t.Fatal("types missmatching")
 	}
 	ch.Config = chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
+	config.Configuration().ChainConfig = ch.Config
 	ch.Initialize()
 	SetupSharderChain(ch)
 	chain.SetServerChain(ch)

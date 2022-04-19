@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -102,7 +101,7 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
-	if !config.DevConfiguration.ViewChange {
+	if !sc.Config.ViewChange() {
 		return // don't send sharder_keep if view_change is false
 	}
 

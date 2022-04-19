@@ -243,7 +243,9 @@ func (sc *StateContext) Validate() error {
 		}
 	}
 	totalValue := state.Balance(sc.txn.Value)
-	if config.DevConfiguration.IsFeeEnabled {
+	isFeeEnabledValue, err := config.Configuration().ChainConfig.ReadValue("Miner")
+	isFeeEnabled := err != nil && isFeeEnabledValue == true
+	if isFeeEnabled {
 		totalValue += state.Balance(sc.txn.Fee)
 	}
 	if amount > totalValue {

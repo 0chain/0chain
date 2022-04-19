@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"go.uber.org/zap"
@@ -17,6 +18,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
 	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
+	config.Configuration().ChainConfig = chain.ServerChain.Config
 
 	logging.Logger = zap.NewNop()
 }

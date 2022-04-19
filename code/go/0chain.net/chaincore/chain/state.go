@@ -17,7 +17,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -306,7 +305,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		return nil, fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
-	if config.DevConfiguration.IsFeeEnabled {
+	if c.Config.Miner() {
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS,
 			state.Balance(txn.Fee)))
 		if err != nil {
@@ -466,7 +465,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	if err != nil {
 		if state.DebugTxn() {
-			if config.DevConfiguration.State {
+			if c.Config.State() {
 				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 			if state.Debug() {
@@ -486,7 +485,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
-			if config.DevConfiguration.State {
+			if c.Config.State() {
 				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 			if state.Debug() {
@@ -535,7 +534,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
-			if config.DevConfiguration.State {
+			if c.Config.State() {
 				logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 				for _, txn := range b.Txns {
 					if txn == nil {

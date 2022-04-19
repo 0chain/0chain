@@ -224,8 +224,11 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
+
+	isViewchangeValue, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
+	isViewChange := err != nil && isViewchangeValue == true
 	// move phase condition
-	var movePhase = config.DevConfiguration.ViewChange &&
+	var movePhase = isViewChange &&
 		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
 
 	// move
@@ -276,7 +279,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		}
 	}
 
-	_, err := balances.InsertTrieNode(pn.GetKey(), pn)
+	_, err = balances.InsertTrieNode(pn.GetKey(), pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		Logger.DPanic("failed to set phase node -- insert failed",
 			zap.Any("error", err))
