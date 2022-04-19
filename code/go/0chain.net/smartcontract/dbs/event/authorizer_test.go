@@ -34,7 +34,7 @@ func TestAuthorizers(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestAuthorizers(t *testing.T) {
 	_, err = authorizer_2.exists(eventDb)
 	require.NoError(t, err, "Error while checking if Authorizer exists in event Database")
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 
 }

@@ -59,6 +59,6 @@ func TestCuratorEvent(t *testing.T) {
 	eventDb.Get().Table("curators").Count(&count)
 	require.Equal(t, int64(0), count, "Curator not getting deleted")
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 }

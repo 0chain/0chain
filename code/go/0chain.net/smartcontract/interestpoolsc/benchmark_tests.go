@@ -87,6 +87,7 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{
 				CreationDate: 2 * common.Timestamp(viper.GetDuration(bk.InterestPoolMinLockPeriod)),
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 			},
 			input: (&poolStat{
 				ID: getInterestPoolId(0),
@@ -96,7 +97,8 @@ func BenchmarkTests(
 			name:     "interest_pool.updateVariables",
 			endpoint: "updateVariables",
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID:   viper.GetString(bk.InterestPoolOwner),
+				ToClientID: ADDRESS,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
