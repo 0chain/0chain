@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
-	"fmt"
-	"time"
 )
 
 func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
@@ -67,7 +68,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 			},
 			Terms:           blobberIDTermMapping[b.BlobberID].Terms,
 			Capacity:        b.Capacity,
-			Used:            b.Used,
+			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.StakePoolSettings{
@@ -83,7 +84,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		tempBlobberAllocation := &BlobberAllocation{
 			BlobberID:     b.BlobberID,
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
-			Size:          b.Used,
+			Size:          b.Allocated,
 			Terms:         terms,
 			MinLockDemand: state.Balance(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
 		}
