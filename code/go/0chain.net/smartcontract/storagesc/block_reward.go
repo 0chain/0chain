@@ -16,7 +16,6 @@ import (
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
 )
@@ -65,7 +64,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			"cannot get block rewards: "+err.Error())
 	}
 
-	allBlobbers, err := getActivePassedBlobbersList(balances, conf.BlockReward.TriggerPeriod)
+	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
@@ -80,8 +79,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 	r := rand.New(rand.NewSource(randomSeed))
 
-	blobberPartition, err := allBlobbers.GetRandomSlice(r, balances)
-	if err != nil {
+	var blobberRewards []BlobberRewardNode
+	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards); err != nil {
 		logging.Logger.Info("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
 		return nil
@@ -93,13 +92,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	var wg sync.WaitGroup
-	errorChan := make(chan error, len(blobberPartition))
-	spChan := make(chan spResp, len(blobberPartition))
-	for i, b := range blobberPartition {
+	errorChan := make(chan error, len(blobberRewards))
+	spChan := make(chan spResp, len(blobberRewards))
+	for i, br := range blobberRewards {
 		wg.Add(1)
-		go func(b partitions.PartitionItem, i int) {
+		go func(b BlobberRewardNode, i int) {
 			defer wg.Done()
-			if sp, err := ssc.getStakePool(b.Name(), balances); err != nil {
+			if sp, err := ssc.getStakePool(b.ID, balances); err != nil {
 				errorChan <- err
 			} else {
 				spChan <- spResp{
@@ -107,7 +106,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 					sp:    sp,
 				}
 			}
-		}(b, i)
+		}(br, i)
 	}
 	wg.Wait()
 	close(errorChan)
@@ -119,30 +118,23 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		}
 	}
 
-	stakePools := make([]*stakePool, len(blobberPartition))
+	stakePools := make([]*stakePool, len(blobberRewards))
 	for resp := range spChan {
 		stakePools[resp.index] = resp.sp
 	}
 
-	qualifyingBlobberIds := make([]string, len(blobberPartition))
+	qualifyingBlobberIds := make([]string, len(blobberRewards))
 
-	for i, b := range blobberPartition {
-		var blobber partitions.BlobberRewardNode
-
-		err = blobber.Decode(b.Encode())
-		if err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"can't decode blobber reward node: "+err.Error())
-		}
+	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
 		stake := float64(sp.stake())
 
-		gamma := maths.GetGamma(A, B, alpha, blobber.TotalData, blobber.DataRead)
-		zeta := maths.GetZeta(I, K, mu, float64(blobber.WritePrice), float64(blobber.ReadPrice))
-		qualifyingBlobberIds[i] = blobber.ID
+		gamma := maths.GetGamma(A, B, alpha, br.TotalData, br.DataRead)
+		zeta := maths.GetZeta(I, K, mu, float64(br.WritePrice), float64(br.ReadPrice))
+		qualifyingBlobberIds[i] = br.ID
 		totalQStake += stake
-		blobberWeight := (gamma*zeta*float64(blobber.SuccessChallenges) + 1) * stake
+		blobberWeight := (gamma*zeta*float64(br.SuccessChallenges) + 1) * stake
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
 	}

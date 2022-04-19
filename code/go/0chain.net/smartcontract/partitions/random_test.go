@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/chaincore/mocks"
-
 	"0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/require"
 )
@@ -73,12 +72,13 @@ func TestFuzzyRandom(t *testing.T) {
 	}
 
 	var mockCallBack ChangePartitionCallback = func(
-		item PartitionItem,
+		id string,
+		item []byte,
 		from, to int,
 		_ state.StateContextI,
 	) error {
 		for i := 0; i < len(items); i++ {
-			if items[i].item == item.Name() {
+			if items[i].item == id {
 				if items[i].division != from {
 					require.EqualValues(t, items[i].division, from)
 				}
@@ -114,27 +114,28 @@ func TestFuzzyRandom(t *testing.T) {
 		action := getAction(i)
 		switch action.action {
 		case Add:
-			partition, err := rs.AddRand(action.item, r, balances)
-			require.NoError(t, err, fmt.Sprintf("action Add: %v, error: %v", action, err))
+			partition, err := rs.AddRand(balances, action.item, r)
+			require.NoError(t, err, fmt.Sprintf("action AddItem: %v, error: %v", action, err))
 			items = append(items, fuzzyItem{
-				item:     action.item.Name(),
+				item:     action.item.GetID(),
 				division: partition,
 			})
 
 		case Remove:
-			err := rs.Remove(action.item, action.divisionId, balances)
+			err := rs.Remove(balances, action.item, action.divisionId)
 			require.NoError(t, err, fmt.Sprintf("action Remove: %v, error: %v", action, err))
 			for index, fuzzyItem := range items {
-				if fuzzyItem.item == action.item.Name() {
+				if fuzzyItem.item == action.item.GetID() {
 					items[index] = items[len(items)-1]
 					items = items[:len(items)-1]
 					break
 				}
 			}
 		case GetRandomPartition:
-			list, err := rs.GetRandomSlice(r, balances)
+			var strItems []StringItem
+			err := rs.GetRandomItems(balances, r, &strItems)
 			require.NoError(t, err, fmt.Sprintf("action Change: %v, error: %v", action, err))
-			require.True(t, len(list) <= rs.PartitionSize)
+			require.True(t, len(strItems) <= rs.PartitionSize)
 		default:
 			require.Fail(t, "action not found")
 		}
@@ -146,4 +147,28 @@ func TestFuzzyRandom(t *testing.T) {
 	}
 	require.EqualValues(t, count, len(items))
 
+}
+
+type StringItem string
+
+func (si StringItem) GetID() string {
+	return string(si)
+}
+
+func (si *StringItem) MarshalMsg(o []byte) ([]byte, error) {
+	return []byte(*si), nil
+}
+
+func (si *StringItem) UnmarshalMsg(b []byte) ([]byte, error) {
+	*si = StringItem(b)
+	return nil, nil
+}
+
+func (si *StringItem) Msgsize() int {
+	return len(*si)
+}
+
+func ItemFromString(name string) PartitionItem {
+	v := StringItem(name)
+	return &v
 }
