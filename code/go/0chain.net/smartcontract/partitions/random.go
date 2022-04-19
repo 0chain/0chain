@@ -294,10 +294,6 @@ func (rs *randomSelector) Size(state state.StateContextI) (int, error) {
 	return (rs.NumPartitions-1)*rs.PartitionSize + lastPartition.length(), nil
 }
 
-func (rs *randomSelector) Length() int {
-	return rs.NumPartitions
-}
-
 func (rs *randomSelector) Save(balances state.StateContextI) error {
 	var numPartitions = 0
 	for i, partition := range rs.Partitions {
