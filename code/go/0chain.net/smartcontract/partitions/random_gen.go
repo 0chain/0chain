@@ -7,39 +7,11 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z ItemType) MarshalMsg(b []byte) (o []byte, err error) {
+func (z randomSelectorDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendInt(o, int(z))
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *ItemType) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	{
-		var zb0001 int
-		zb0001, bts, err = msgp.ReadIntBytes(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		(*z) = ItemType(zb0001)
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z ItemType) Msgsize() (s int) {
-	s = msgp.IntSize
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z *randomSelectorDecode) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 3
 	// string "Name"
-	o = append(o, 0x84, 0xa4, 0x4e, 0x61, 0x6d, 0x65)
+	o = append(o, 0x83, 0xa4, 0x4e, 0x61, 0x6d, 0x65)
 	o = msgp.AppendString(o, z.Name)
 	// string "PartitionSize"
 	o = append(o, 0xad, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x69, 0x7a, 0x65)
@@ -47,9 +19,6 @@ func (z *randomSelectorDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "NumPartitions"
 	o = append(o, 0xad, 0x4e, 0x75, 0x6d, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73)
 	o = msgp.AppendInt(o, z.NumPartitions)
-	// string "ItemType"
-	o = append(o, 0xa8, 0x49, 0x74, 0x65, 0x6d, 0x54, 0x79, 0x70, 0x65)
-	o = msgp.AppendInt(o, int(z.ItemType))
 	return
 }
 
@@ -89,16 +58,6 @@ func (z *randomSelectorDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "NumPartitions")
 				return
 			}
-		case "ItemType":
-			{
-				var zb0002 int
-				zb0002, bts, err = msgp.ReadIntBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "ItemType")
-					return
-				}
-				z.ItemType = ItemType(zb0002)
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -112,7 +71,7 @@ func (z *randomSelectorDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *randomSelectorDecode) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 14 + msgp.IntSize + 14 + msgp.IntSize + 9 + msgp.IntSize
+func (z randomSelectorDecode) Msgsize() (s int) {
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 14 + msgp.IntSize + 14 + msgp.IntSize
 	return
 }

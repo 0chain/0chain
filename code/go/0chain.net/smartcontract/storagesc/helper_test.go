@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/partitions"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -18,6 +16,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
 
 	"go.uber.org/zap"
 
@@ -381,7 +380,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 func genChall(t testing.TB, ssc *StorageSmartContract,
 	blobberID string, now int64, prevID, challID string, seed int64,
-	valids partitions.RandPartition, allocID string, blobber *StorageNode,
+	valids *partitions.Partitions, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
 	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
@@ -404,7 +403,8 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
+	var valSlice []ValidationPartitionNode
+	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)
 	storChall.TotalValidators = len(valSlice)
 
 	storChall.AllocationID = allocID
