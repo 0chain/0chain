@@ -80,6 +80,11 @@ func (p *Partitions) Size(state state.StateContextI) (int, error) {
 	return p.rs.Size(state)
 }
 
+// Remove removes the partition item from given partIndex in Partitions
+func (p *Partitions) Remove(state state.StateContextI, partIndex int, item PartitionItem) error {
+	return p.rs.Remove(state, item, partIndex)
+}
+
 // GetRandomItems returns items of partition size number from random partition,
 // if the last partition is not full, it will try to get and fill it with its partition
 // of index - 1.

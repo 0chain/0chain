@@ -862,6 +862,54 @@ func (sa *StorageAllocation) removeBlobber(
 			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
 			removedBlobber.Used -= d.Size
+
+			if d.ChallengePartitionLoc != nil {
+				blobberAllocChallPartition, err := getBlobbersChallengeAllocationList(removeId, balances)
+				if err != nil {
+					return nil, fmt.Errorf("cannot getch blobber allocation partition: %v", err)
+				}
+				err = blobberAllocChallPartition.Remove(balances, d.ChallengePartitionLoc.Location,
+					&BlobberChallengeAllocationNode{ID: sa.ID})
+				if err != nil {
+					return nil, fmt.Errorf("error removing allocation from challenge partition: %v", err)
+				}
+				sa.BlobberDetails[i].ChallengePartitionLoc = nil
+				if err = blobberAllocChallPartition.Save(balances); err != nil {
+					return nil, fmt.Errorf("error saving allocation challenge partition: %v", err)
+				}
+
+				blobberAllocChallSize, err := blobberAllocChallPartition.Size(balances)
+				if err != nil {
+					return nil, fmt.Errorf("error getting size of challenge partition: %v", err)
+				}
+				if blobberAllocChallSize == 0 {
+					bcPartitionLoc, err := ssc.getBlobberChallengePartitionLocation(removeId, balances)
+					if err != nil {
+						return nil, fmt.Errorf("error retrieving blobber challenge partition location: %v", err)
+					}
+
+					bcPartition, err := getBlobbersChallengeList(balances)
+					if err != nil {
+						return nil, fmt.Errorf("error retrieving blobber challenge partition: %v", err)
+					}
+
+					err = bcPartition.Remove(balances, bcPartitionLoc.PartitionLocation.Location,
+						&BlobberChallengeNode{BlobberID: removeId})
+					if err != nil {
+						return nil, fmt.Errorf("error removing blobber from challenge partition: %v", err)
+					}
+
+					err = bcPartition.Save(balances)
+					if err != nil {
+						return nil, fmt.Errorf("error saving blobber challenge partition: %v", err)
+					}
+
+					_, err = balances.DeleteTrieNode(bcPartitionLoc.GetKey(ssc.ID))
+					if err != nil {
+						return nil, fmt.Errorf("error deleting blobber challenge partition location: %v", err)
+					}
+				}
+			}
 			found = true
 			break
 		}
