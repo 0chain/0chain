@@ -453,10 +453,11 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				var challResp ChallengeResponse
 				challResp.ID = chall.ID
 
-				validators, err := valids.GetRandomSlice(r, balances)
+				var validators []ValidationPartitionNode
+				err = valids.GetRandomItems(balances, r, &validators)
 				require.NoError(b, err)
 				for _, v := range validators {
-					var vx = blobsMap[v.Name()]
+					var vx = blobsMap[v.Id]
 					challResp.ValidationTickets = append(
 						challResp.ValidationTickets,
 						vx.validTicket(b, chall.ID, chall.BlobberID, true, tp),
