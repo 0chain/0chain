@@ -704,7 +704,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances c_state.StateContextI,
 ) (*challengeOutput, error) {
 
-	const maxBCPartitionSelect = 5
+	const blobbersPopulation = 5
 
 	var bcItem BlobberChallengeNode
 	var maxUsedCap int64
@@ -716,7 +716,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge partition")
 	}
 
-	for i := 0; i < maxBCPartitionSelect; i++ {
+	for i := 0; i < blobbersPopulation; i++ {
 		randomIndex := challRand.Intn(len(blobberChallenges))
 		tempItem := blobberChallenges[randomIndex]
 
