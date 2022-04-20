@@ -112,6 +112,7 @@ const (
 	CostStakePoolUnlock
 	CostStakePoolPayInterests
 	CostCommitSettingsChanges
+	CostCollectReward
 )
 
 var (
@@ -200,6 +201,7 @@ var (
 		"cost.stake_pool_unlock",
 		"cost.stake_pool_pay_interests",
 		"cost.commit_settings_changes",
+		"cost.collect_reward",
 	}
 
 	NumberOfSettings = len(SettingName)
@@ -292,6 +294,7 @@ var (
 		"cost.stake_pool_unlock":           {CostStakePoolUnlock, smartcontract.Cost},
 		"cost.stake_pool_pay_interests":    {CostStakePoolPayInterests, smartcontract.Cost},
 		"cost.commit_settings_changes":     {CostCommitSettingsChanges, smartcontract.Cost},
+		"cost.collect_reward":              {CostCollectReward, smartcontract.Cost},
 	}
 )
 
@@ -721,6 +724,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolPayInterests], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostCommitSettingsChanges:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitSettingsChanges], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostCollectReward:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCollectReward], fmt.Sprintf("%s.", SettingName[Cost])))]
 
 	default:
 		panic("Setting not implemented")
