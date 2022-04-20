@@ -241,14 +241,16 @@ func (sn *AllocationChallenge) addChallenge(challenge *AllocationStorageChalleng
 }
 
 type StorageChallenge struct {
-	Created         common.Timestamp  `json:"created"`
-	ID              string            `json:"id"`
-	TotalValidators int               `json:"total_validators"`
-	AllocationID    string            `json:"allocation_id"`
-	BlobberID       string            `json:"blobber_id"`
-	Responded       bool              `json:"responded"`
-	PrevID          string            `json:"prev_id"`
-	Validators      []*ValidationNode `json:"validators"`
+	Created         common.Timestamp `json:"created"`
+	ID              string           `json:"id"`
+	TotalValidators int              `json:"total_validators"`
+	AllocationID    string           `json:"allocation_id"`
+	BlobberID       string           `json:"blobber_id"`
+	Responded       bool             `json:"responded"`
+
+	// these key are not required anywhere by chain, but is useful for blobber
+	PrevID     string            `json:"prev_id"`
+	Validators []*ValidationNode `json:"validators"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
