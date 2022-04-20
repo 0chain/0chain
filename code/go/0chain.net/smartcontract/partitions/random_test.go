@@ -122,7 +122,7 @@ func TestFuzzyRandom(t *testing.T) {
 			})
 
 		case Remove:
-			err := rs.Remove(balances, action.item, action.divisionId)
+			err := rs.RemoveItem(balances, action.item, action.divisionId)
 			require.NoError(t, err, fmt.Sprintf("action Remove: %v, error: %v", action, err))
 			for index, fuzzyItem := range items {
 				if fuzzyItem.item == action.item.GetID() {
