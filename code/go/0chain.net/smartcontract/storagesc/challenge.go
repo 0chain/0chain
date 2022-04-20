@@ -784,6 +784,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	var storageChallenge = new(StorageChallenge)
 	storageChallenge.ID = challengeID
 	storageChallenge.TotalValidators = len(selectedValidators)
+	storageChallenge.Validators = selectedValidators
 	storageChallenge.BlobberID = blobberID
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = t.CreationDate

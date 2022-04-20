@@ -166,6 +166,12 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 		sn.ChallengeIDMap = make(map[string]struct{})
 	}
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
+		if len(sn.ChallengeIDs) > 0 {
+			lastChallengeID := sn.ChallengeIDs[len(sn.ChallengeIDs)-1]
+			challenge.PrevID = lastChallengeID
+		} else if sn.LatestCompletedChallenge != nil {
+			challenge.PrevID = sn.LatestCompletedChallenge.ID
+		}
 		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
 		sn.ChallengeIDMap[challenge.ID] = struct{}{}
 		return true
@@ -235,12 +241,14 @@ func (sn *AllocationChallenge) addChallenge(challenge *AllocationStorageChalleng
 }
 
 type StorageChallenge struct {
-	Created         common.Timestamp `json:"created"`
-	ID              string           `json:"id"`
-	TotalValidators int              `json:"total_validators"`
-	AllocationID    string           `json:"allocation_id"`
-	BlobberID       string           `json:"blobber_id"`
-	Responded       bool             `json:"responded"`
+	Created         common.Timestamp  `json:"created"`
+	ID              string            `json:"id"`
+	TotalValidators int               `json:"total_validators"`
+	AllocationID    string            `json:"allocation_id"`
+	BlobberID       string            `json:"blobber_id"`
+	Responded       bool              `json:"responded"`
+	PrevID          string            `json:"prev_id"`
+	Validators      []*ValidationNode `json:"validators"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
