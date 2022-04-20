@@ -149,6 +149,8 @@ func TestAddChallenge(t *testing.T) {
 			blobberChall = new(BlobberChallenge)
 		}
 
+		setConfig(t, balances)
+
 		return args{
 			alloc: &StorageAllocation{
 				BlobberMap: blobberMap,
