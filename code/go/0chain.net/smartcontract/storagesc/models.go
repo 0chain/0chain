@@ -173,11 +173,18 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
+type AllocationStorageChallenge struct {
+	Created   common.Timestamp `json:"created"`
+	ID        string           `json:"id"`
+	BlobberID string           `json:"blobber_id"`
+	Responded bool             `json:"responded"`
+}
+
 type AllocationChallenge struct {
-	AllocationID             string                       `json:"allocation_id"`
-	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+	AllocationID             string                                 `json:"allocation_id"`
+	Challenges               []*AllocationStorageChallenge          `json:"challenges"`
+	ChallengeMap             map[string]*AllocationStorageChallenge `json:"-" msg:"-"`
+	LatestCompletedChallenge *AllocationStorageChallenge            `json:"latest_completed_challenge"`
 }
 
 func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
@@ -202,20 +209,20 @@ func (sn *AllocationChallenge) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
-	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	sn.ChallengeMap = make(map[string]*AllocationStorageChallenge)
 	for _, challenge := range sn.Challenges {
 		sn.ChallengeMap[challenge.ID] = challenge
 	}
 	return nil
 }
 
-func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
+func (sn *AllocationChallenge) addChallenge(challenge *AllocationStorageChallenge) bool {
 
 	if sn.Challenges == nil {
-		sn.Challenges = make([]*StorageChallenge, 0)
+		sn.Challenges = make([]*AllocationStorageChallenge, 0)
 	}
 	if sn.ChallengeMap == nil {
-		sn.ChallengeMap = make(map[string]*StorageChallenge)
+		sn.ChallengeMap = make(map[string]*AllocationStorageChallenge)
 	}
 
 	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {

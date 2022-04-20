@@ -1022,7 +1022,14 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return string(challengeBytes), err
 	}
 
-	addedAllocChallenge := allocChallengeObj.addChallenge(storageChallenge)
+	allocStorageChall := &AllocationStorageChallenge{
+		Created:   storageChallenge.Created,
+		ID:        storageChallenge.ID,
+		BlobberID: storageChallenge.BlobberID,
+		Responded: storageChallenge.Responded,
+	}
+
+	addedAllocChallenge := allocChallengeObj.addChallenge(allocStorageChall)
 	if !addedAllocChallenge {
 		challengeBytes, err := json.Marshal(storageChallenge)
 		return string(challengeBytes), err

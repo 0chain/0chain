@@ -414,7 +414,13 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
 
-	require.True(t, allocChall.addChallenge(storChall))
+	allocStorageChall := &AllocationStorageChallenge{
+		Created:   storChall.Created,
+		ID:        storChall.ID,
+		BlobberID: storChall.BlobberID,
+		Responded: storChall.Responded,
+	}
+	require.True(t, allocChall.addChallenge(allocStorageChall))
 	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
 	require.NoError(t, err)
 

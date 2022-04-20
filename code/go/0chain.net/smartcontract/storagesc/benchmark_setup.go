@@ -413,8 +413,14 @@ func setupMockChallenges(
 		if err != nil {
 			log.Fatal(err)
 		}
+		allocStorageChall := &AllocationStorageChallenge{
+			Created:   storageChall.Created,
+			ID:        storageChall.ID,
+			BlobberID: storageChall.BlobberID,
+			Responded: storageChall.Responded,
+		}
 		if bcAdded {
-			ac.addChallenge(storageChall)
+			ac.addChallenge(allocStorageChall)
 		}
 	}
 }
