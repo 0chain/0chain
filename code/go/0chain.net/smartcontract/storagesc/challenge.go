@@ -1006,6 +1006,13 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberAllocation *BlobberAllocation,
 	balances c_state.StateContextI) (resp string, err error) {
 
+	// SC configurations
+	conf, err := sc.getConfig(balances, false)
+	if err != nil {
+		return "", common.NewErrorf("add_challenges",
+			"can't get SC configurations: %v", err)
+	}
+
 	if storageChallenge.BlobberID == "" {
 		return "", common.NewError("add_challenge",
 			"no blobber to add challenge to")
@@ -1014,6 +1021,13 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	if blobberAllocation == nil {
 		return "", common.NewError("add_challenge",
 			"no blobber Allocation to add challenge to")
+	}
+
+	if len(blobberChallengeObj.ChallengeIDs) > conf.MaxOpenChallengesPerBlobber {
+		Logger.Info("skipping generate challenge",
+			zap.String("blobber", blobberChallengeObj.BlobberID),
+			zap.Int("challenges limit reached", conf.MaxOpenChallengesPerBlobber))
+		return "", nil
 	}
 
 	addedChallenge := blobberChallengeObj.addChallenge(storageChallenge)
