@@ -164,9 +164,7 @@ func TestAddChallenge(t *testing.T) {
 			r:                   r,
 			blobberID:           bID,
 
-			balances: &mockStateContext{
-				store: make(map[datastore.Key]util.MPTSerializable),
-			},
+			balances: balances,
 		}
 	}
 
