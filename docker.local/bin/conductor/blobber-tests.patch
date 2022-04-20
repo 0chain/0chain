@@ -27,22 +27,13 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/config/0chain_blobber.yaml b/config/0chain_blobber.yaml
---- a/config/0chain_blobber.yaml	(revision fdc1434a9e1d97b5bbf5d478ed4852f42d6cee32)
-+++ b/config/0chain_blobber.yaml	(date 1617001259716)
-@@ -36,7 +36,7 @@
- # a task and redeem tokens, it should be big enough
- read_lock_timeout: 1m
- write_lock_timeout: 1m
--max_file_size: 104857600 #100MB
-+max_file_size: 524288000 #500MB
- 
- # update_allocations_interval used to refresh known allocation objects from SC
- update_allocations_interval: 1m
+--- a/config/0chain_blobber.yaml
++++ b/config/0chain_blobber.yaml
 @@ -55,7 +55,7 @@
  block_worker: http://198.18.0.98:9091
  
  handlers:
--  rate_limit: 0 # 0 per second . it can't too small one if a large file is download with blocks
+-  rate_limit: 0 # 10 per second . it can't too small one if a large file is download with blocks
 +  rate_limit: 1000 # 1000 per second . it can't too small one if a large file is download with blocks
  
  server_chain:
@@ -94,17 +85,17 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/docker.local/b0docker-compose.yml b/docker.local/b0docker-compose.yml
---- a/docker.local/b0docker-compose.yml	(revision fdc1434a9e1d97b5bbf5d478ed4852f42d6cee32)
-+++ b/docker.local/b0docker-compose.yml	(date 1616497300109)
-@@ -7,6 +7,7 @@
+--- a/docker.local/b0docker-compose.yml
++++ b/docker.local/b0docker-compose.yml
+@@ -7,6 +7,7 @@ services:
        POSTGRES_HOST: postgres
        POSTGRES_USER: postgres
        POSTGRES_HOST_AUTH_METHOD: trust
 +      POSTGRES_PASSWORD: secret
+ #expose_ci_port
      volumes:
        - ./blobber${BLOBBER}/data/postgresql:/var/lib/postgresql/data
-     networks:
-@@ -17,6 +18,7 @@
+@@ -18,6 +19,7 @@ services:
        POSTGRES_PORT: 5432
        POSTGRES_HOST: postgres
        POSTGRES_USER: postgres
