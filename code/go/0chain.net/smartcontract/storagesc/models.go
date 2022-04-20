@@ -103,7 +103,7 @@ type ChallengeResponse struct {
 
 type BlobberChallenge struct {
 	BlobberID                string              `json:"blobber_id"`
-	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
+	LatestCompletedChallenge *StorageChallenge   `json:"latest_completed_challenge"`
 	ChallengeIDs             []string            `json:"challenge_ids"`
 	ChallengeIDMap           map[string]struct{} `json:"-" msg:"-"`
 }

@@ -684,6 +684,11 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
+type OpenChallengeResponse struct {
+	BlobberID  string              `json:"blobber_id"`
+	Challenges []*StorageChallenge `json:"challenges"`
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
@@ -698,8 +703,21 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	blobberChallengeObj.ChallengeIDs = make([]string, 0)
 	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
 	switch err {
-	case nil, util.ErrValueNotPresent:
-		return blobberChallengeObj, nil
+	case nil:
+		var challenges []*StorageChallenge
+		for _, chall := range blobberChallengeObj.ChallengeIDs {
+			challenge, err := ssc.getStorageChallenge(chall, balances)
+			if err != nil {
+				return "", common.NewErrInternal("fail to fetch challenge", err.Error())
+			}
+			challenges = append(challenges, challenge)
+		}
+		return &OpenChallengeResponse{
+			BlobberID:  blobberID,
+			Challenges: challenges,
+		}, nil
+	case util.ErrValueNotPresent:
+		return nil, nil
 	default:
 		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
 	}
