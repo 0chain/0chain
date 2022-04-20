@@ -534,6 +534,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	}
 
 	ts.Balance += amount
+	logging.Logger.Info("piers mintAmount", zap.Any("save ts", ts), zap.String("toClient", toClient))
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
