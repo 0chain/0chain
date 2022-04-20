@@ -72,13 +72,8 @@ func (edb *EventDb) addOrOverwriteValidator(vn Validator) error {
 	return result.Error
 }
 
-type validatorAggregateStats struct {
-	Reward      int64 `json:"reward"`
-	TotalReward int64 `json:"total_reward"`
-}
-
-func (edb *EventDb) validatorAggregateStats(id string) (*validatorAggregateStats, error) {
-	var validator validatorAggregateStats
+func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats, error) {
+	var validator providerAggregateStats
 	result := edb.Store.Get().
 		Model(&Validator{}).
 		Where(&Validator{ValidatorID: id}).

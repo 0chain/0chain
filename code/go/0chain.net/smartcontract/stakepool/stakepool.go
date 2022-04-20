@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"sort"
 
+	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -196,6 +200,7 @@ func (sp *StakePool) DistributeRewards(
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}
+		logging.Logger.Info("piers DistributeRewards end", zap.Any("spUpdate", spUpdate))
 		return nil
 	}
 
