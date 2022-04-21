@@ -6,7 +6,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
@@ -79,15 +78,16 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
+	// Info: temporarily disabling fee check because fee is still 0 on
 	// compare the global min of authorizerNode Authorizer to that of the transaction amount
-	if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
-		msg := fmt.Sprintf(
-			"min stake amount '(%d)' > transaction value '(%d)'",
-			globalNode.MinStakeAmount, tran.Value)
-		err = common.NewError(code, msg)
-		Logger.Error("min stake amount > transaction value", zap.Error(err))
-		return "", err
-	}
+	//if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
+	//	msg := fmt.Sprintf(
+	//		"min stake amount '(%d)' > transaction value '(%d)'",
+	//		globalNode.MinStakeAmount, tran.Value)
+	//	err = common.NewError(code, msg)
+	//	Logger.Error("min stake amount > transaction value", zap.Error(err))
+	//	return "", err
+	//}
 
 	// Validating StakePoolSettings against GlobalNode settings
 
