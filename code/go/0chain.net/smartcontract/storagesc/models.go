@@ -249,8 +249,10 @@ type StorageChallenge struct {
 	Responded       bool             `json:"responded"`
 
 	// these key are not required anywhere by chain, but is useful for blobber
-	PrevID     string            `json:"prev_id"`
-	Validators []*ValidationNode `json:"validators"`
+	PrevID         string            `json:"prev_id"`
+	Validators     []*ValidationNode `json:"validators"`
+	RandomNumber   int64             `json:"seed"`
+	AllocationRoot string            `json:"allocation_root"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {

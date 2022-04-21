@@ -682,8 +682,8 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 }
 
 type challengeInput struct {
-	cr          *rand.Rand
-	challengeID string
+	challengeSeed int64
+	challengeID   string
 }
 
 type challengeOutput struct {
@@ -697,12 +697,14 @@ type challengeOutput struct {
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
 	blobberChallengeList *partitions.Partitions,
-	challRand *rand.Rand,
+	challengeSeed int64,
 	validators *partitions.Partitions,
 	t *transaction.Transaction,
 	challengeID string,
 	balances c_state.StateContextI,
 ) (*challengeOutput, error) {
+
+	challRand := rand.New(rand.NewSource(challengeSeed))
 
 	var blobberChallenges []BlobberChallengeNode
 	err := blobberChallengeList.GetRandomItems(balances, challRand, &blobberChallenges)
@@ -788,6 +790,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.BlobberID = blobberID
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = t.CreationDate
+	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
+	storageChallenge.RandomNumber = challengeSeed
 
 	blobberChallengeObj, err := sc.getBlobberChallenge(blobberID, balances)
 	if err != nil {
@@ -833,7 +837,7 @@ func (sc *StorageSmartContract) asyncGenerateChallenges(
 	for d := range data {
 		resp, err := sc.populateGenerateChallenge(
 			blobberChallengeList,
-			d.cr,
+			d.challengeSeed,
 			validators,
 			t,
 			d.challengeID,
@@ -876,11 +880,10 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		return common.NewErrorf("generate_challenge",
 			"Error in creating challenge seed: %v", err)
 	}
-	cr := rand.New(rand.NewSource(int64(challengeSeed)))
 
 	result, err := sc.populateGenerateChallenge(
 		blobberChallengeList,
-		cr,
+		int64(challengeSeed),
 		validators,
 		t,
 		challengeID,
@@ -960,10 +963,9 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 				zap.Any("challengeID", challengeID))
 			continue
 		}
-		cr := rand.New(rand.NewSource(int64(challengeSeed)))
 		data <- challengeInput{
-			cr:          cr,
-			challengeID: challengeID,
+			challengeSeed: int64(challengeSeed),
+			challengeID:   challengeID,
 		}
 	}
 	close(data)
