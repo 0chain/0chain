@@ -864,7 +864,7 @@ func (sa *StorageAllocation) removeBlobber(
 			removedBlobber.Used -= d.Size
 
 			if d.ChallengePartitionLoc != nil {
-				if err := removeBlobberAllocationFromChallPartition(removeId, sa.ID,
+				if err := removeBlobberAllocation(removeId, sa.ID,
 					d.ChallengePartitionLoc.Location, ssc, balances); err != nil {
 					return nil, err
 				}
@@ -942,7 +942,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	return blobbers, nil
 }
 
-func removeBlobberAllocationFromChallPartition(
+func removeBlobberAllocation(
 	removeId string,
 	allocID string,
 	allocPartitionIndex int,
@@ -961,7 +961,7 @@ func removeBlobberAllocationFromChallPartition(
 	if err != nil {
 		return fmt.Errorf("error getting size of challenge partition: %v", err)
 	}
-	if blobberAllocChallSize-1 <= 0 {
+	if blobberAllocChallSize == 0 {
 		bcPartitionLoc, err := ssc.getBlobberChallengePartitionLocation(removeId, balances)
 		if err != nil {
 			return fmt.Errorf("error retrieving blobber challenge partition location: %v", err)
