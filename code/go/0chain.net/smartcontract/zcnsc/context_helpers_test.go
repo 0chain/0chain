@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -37,116 +35,6 @@ type mockStateContext struct {
 	authorizers  map[string]*Authorizer
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
-}
-
-func (ctx *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetBlock() *block.Block {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) SetMagicBlock(*block.MagicBlock) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetState() util.MerklePatriciaTrieI {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetTransaction() *transaction.Transaction {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetClientBalance(datastore.Key) (state.Balance, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) SetStateContext(*state.State) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) AddTransfer(*state.Transfer) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) AddSignedTransfer(*state.SignedTransfer) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) AddMint(*state.Mint) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetTransfers() []*state.Transfer {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetSignedTransfers() []*state.SignedTransfer {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetMints() []*state.Mint {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) Validate() error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetBlockSharders(*block.Block) []string {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) EmitError(error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetEvents() []event.Event {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ctx *mockStateContext) GetEventDB() *event.EventDb {
-	//TODO implement me
-	panic("implement me")
 }
 
 func MakeMockStateContext() *mockStateContext {
