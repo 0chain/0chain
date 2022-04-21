@@ -2395,9 +2395,9 @@ func (z *StorageAllocationStats) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 8
+	// map header, size 10
 	// string "Created"
-	o = append(o, 0x88, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+	o = append(o, 0x8a, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o, err = z.Created.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Created")
@@ -2444,6 +2444,12 @@ func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 			}
 		}
 	}
+	// string "RandomNumber"
+	o = append(o, 0xac, 0x52, 0x61, 0x6e, 0x64, 0x6f, 0x6d, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72)
+	o = msgp.AppendInt64(o, z.RandomNumber)
+	// string "AllocationRoot"
+	o = append(o, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
+	o = msgp.AppendString(o, z.AllocationRoot)
 	return
 }
 
@@ -2572,6 +2578,18 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					}
 				}
 			}
+		case "RandomNumber":
+			z.RandomNumber, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "RandomNumber")
+				return
+			}
+		case "AllocationRoot":
+			z.AllocationRoot, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "AllocationRoot")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -2594,6 +2612,7 @@ func (z *StorageChallenge) Msgsize() (s int) {
 			s += 1 + 3 + msgp.StringPrefixSize + len(z.Validators[za0001].ID) + 8 + msgp.StringPrefixSize + len(z.Validators[za0001].BaseURL) + 18 + z.Validators[za0001].StakePoolSettings.Msgsize()
 		}
 	}
+	s += 13 + msgp.Int64Size + 15 + msgp.StringPrefixSize + len(z.AllocationRoot)
 	return
 }
 
