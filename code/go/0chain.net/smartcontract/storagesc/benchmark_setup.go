@@ -171,9 +171,9 @@ func AddMockChallenges(
 	challenges := make([]BlobberChallenge, len(blobbers))
 	allocationChall := make([]AllocationChallenge, numAllocations)
 
-	partition, err := getBlobbersChallengeList(balances)
+	partition, err := partitions.CreateIfNotExists(balances, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -524,7 +524,6 @@ func AddMockValidators(
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 
-	//valParts, err := CreateValidationNodePartitionsIfNotExists(balances)
 	valParts, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
 	if err != nil {
 		panic(err)
