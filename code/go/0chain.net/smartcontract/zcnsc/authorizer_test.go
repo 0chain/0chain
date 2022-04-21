@@ -140,28 +140,6 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	require.Equal(t, state.Balance(100*1e10), globalNode.MinStakeAmount)
 }
 
-// INFO: Temporarily disabled as fees will be updated in global fee update
-//func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
-//	ctx := MakeMockStateContext()
-//	sc := CreateZCNSmartContract()
-//
-//	client := defaultAuthorizer + time.Now().String()
-//	input := CreateAuthorizerParamPayload(client)
-//
-//	tr := CreateAddAuthorizerTransaction(client, ctx)
-//	tr.Value = 99
-//
-//	node := CreateSmartContractGlobalNode()
-//	node.MinStakeAmount = state.Balance(100 * 1e10)
-//	err := node.Save(ctx)
-//	require.NoError(t, err)
-//
-//	resp, err := sc.AddAuthorizer(tr, input, ctx)
-//	require.Error(t, err)
-//	require.Empty(t, resp)
-//	require.Contains(t, err.Error(), "min stake amount")
-//}
-
 func Test_Should_FailWithoutInputData(t *testing.T) {
 	ctx := MakeMockStateContext()
 
