@@ -21,7 +21,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/mitchellh/mapstructure v1.4.3
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
