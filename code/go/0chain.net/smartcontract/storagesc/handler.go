@@ -129,7 +129,7 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	}
 
 	sn := blobberTableToStorageNode(*blobber)
-	return sn, err
+	return sn, nil
 }
 
 // GetBlobberCountHandler returns Blobber count from its individual stored value.
@@ -204,9 +204,10 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	}
 
 	var sns storageNodesResponse
-	for _, blobber := range blobbers {
+	sns.Nodes = make([]storageNodeResponse, len(blobbers))
+	for i, blobber := range blobbers {
 		sn := blobberTableToStorageNode(blobber)
-		sns.Nodes = append(sns.Nodes, sn)
+		sns.Nodes[i] = sn
 	}
 	return sns, nil
 }
@@ -264,6 +265,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		Size:              int(request.Size),
 		AllocationSize:    allocationSize,
 		PreferredBlobbers: request.PreferredBlobbers,
+		NumberOfBlobbers:  numberOfBlobbers,
 	})
 	if err != nil || len(blobberIDs) == 0 {
 		return nil, fmt.Errorf("no blobbers found %v", err)

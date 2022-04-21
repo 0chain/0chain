@@ -3,7 +3,6 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
@@ -14,10 +13,6 @@ import (
 func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
-	dur, err := time.ParseDuration(sn.Terms.MaxOfferDuration.String())
-	if err != nil {
-		return err
-	}
 	data, err := json.Marshal(&event.Blobber{
 		BlobberID:               sn.ID,
 		BaseURL:                 sn.BaseURL,
@@ -26,7 +21,7 @@ func emitAddOrOverwriteBlobber(
 		ReadPrice:               int64(sn.Terms.ReadPrice),
 		WritePrice:              int64(sn.Terms.WritePrice),
 		MinLockDemand:           sn.Terms.MinLockDemand,
-		MaxOfferDuration:        dur,
+		MaxOfferDuration:        sn.Terms.MaxOfferDuration,
 		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime,
 
 		Capacity:        sn.Capacity,
@@ -58,10 +53,6 @@ func emitAddOrOverwriteBlobber(
 }
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
-	dur, err := time.ParseDuration(sn.Terms.MaxOfferDuration.String())
-	if err != nil {
-		return err
-	}
 	data, err := json.Marshal(&dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
@@ -71,7 +62,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"read_price":                int64(sn.Terms.ReadPrice),
 			"write_price":               int64(sn.Terms.WritePrice),
 			"min_lock_demand":           sn.Terms.MinLockDemand,
-			"max_offer_duration":        dur,
+			"max_offer_duration":        sn.Terms.MaxOfferDuration,
 			"challenge_completion_time": sn.Terms.ChallengeCompletionTime.String(),
 			"capacity":                  sn.Capacity,
 			"used":                      sn.Used,

@@ -1096,17 +1096,16 @@ List:
 type blobberVerificationFunction func(blobber *StorageNode) (kick bool, err string)
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, list []*StorageNode,
-	creationDate common.Timestamp, bsize int64, balances chainstate.StateContextI) (
-	filtered []*StorageNode, err []string) {
+func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*StorageNode,
+	creationDate common.Timestamp, balances chainstate.StateContextI) (
+	[]*StorageNode, []string) {
 
 	var (
-		errors = make([]string, 0)
+		errors   = make([]string, 0, len(blobbers))
+		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
 	filtered = make([]*StorageNode, 0)
-	fmt.Println("came here for validations")
-
-	for _, b := range list {
+	for _, b := range blobbers {
 		var sp *stakePool
 		var err error
 		if sp, err = ssc.getStakePool(b.ID, balances); err != nil {

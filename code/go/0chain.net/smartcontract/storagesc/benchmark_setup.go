@@ -468,10 +468,7 @@ func AddMockBlobbers(
 			panic(err)
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
-			dur, err := time.ParseDuration(blobber.Terms.MaxOfferDuration.String())
-			if err != nil {
-				panic(err)
-			}
+
 			blobberDb := event.Blobber{
 				BlobberID:               blobber.ID,
 				BaseURL:                 blobber.BaseURL,
@@ -480,7 +477,7 @@ func AddMockBlobbers(
 				ReadPrice:               int64(blobber.Terms.ReadPrice),
 				WritePrice:              int64(blobber.Terms.WritePrice),
 				MinLockDemand:           blobber.Terms.MinLockDemand,
-				MaxOfferDuration:        dur,
+				MaxOfferDuration:        blobber.Terms.MaxOfferDuration,
 				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime,
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,

@@ -111,7 +111,7 @@ type Config struct {
 	BlobberSlash float64 `json:"blobber_slash"`
 
 	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
-	MaxBlobbersPerAllocation int `json:" max_blobbers_per_allocation"`
+	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
 
 	// price limits for blobbers
 
@@ -379,7 +379,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxWritePrice = state.Balance(
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
-	fmt.Println(conf.MaxBlobbersPerAllocation, pfx+"max_blobbers_per_allocation")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
@@ -448,6 +447,8 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
+
+	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	err = conf.validate()
 	return
 }
