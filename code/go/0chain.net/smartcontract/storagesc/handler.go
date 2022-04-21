@@ -212,8 +212,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	return sns, nil
 }
 
-// GetAllocationBlobbersHandler returns list of all blobbers alive (e.g. excluding
-// blobbers with zero capacity).
+// GetAllocationBlobbersHandler returns list of all blobbers alive that match the allocation request.
 func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
