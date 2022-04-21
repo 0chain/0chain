@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/storagesc"
 	"github.com/herumi/bls/ffi/go/bls"
 	"go.uber.org/zap"
 
@@ -555,11 +557,21 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 			logging.Logger.Error("chain.stateDB insert failed", zap.Error(err))
 		}
 	}
+
+	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil)
+	mustInitPartitions(state)
+
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
 	}
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func mustInitPartitions(state cstate.StateContextI) {
+	if err := storagesc.InitPartitions(state); err != nil {
+		logging.Logger.Panic("storagesc init partitions failed", zap.Error(err))
+	}
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
