@@ -78,17 +78,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Info: temporarily disabling fee check because fee is still 0 on
-	// compare the global min of authorizerNode Authorizer to that of the transaction amount
-	//if globalNode.MinStakeAmount > state.Balance(tran.Value*1e10) {
-	//	msg := fmt.Sprintf(
-	//		"min stake amount '(%d)' > transaction value '(%d)'",
-	//		globalNode.MinStakeAmount, tran.Value)
-	//	err = common.NewError(code, msg)
-	//	Logger.Error("min stake amount > transaction value", zap.Error(err))
-	//	return "", err
-	//}
-
 	// Validating StakePoolSettings against GlobalNode settings
 
 	// Check existing Authorizer
