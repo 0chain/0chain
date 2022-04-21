@@ -161,10 +161,9 @@ type Config struct {
 	BlockReward *blockReward `json:"block_reward"`
 
 	// Allow direct access to MPT
-	ExposeMpt                   bool           `json:"expose_mpt"`
-	MaxOpenChallengesPerBlobber int            `json:"max_open_challenges_per_blobber"`
-	OwnerId                     string         `json:"owner_id"`
-	Cost                        map[string]int `json:"cost"`
+	ExposeMpt bool           `json:"expose_mpt"`
+	OwnerId   string         `json:"owner_id"`
+	Cost      map[string]int `json:"cost"`
 }
 
 func (sc *Config) validate() (err error) {
@@ -442,7 +441,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
-	conf.MaxOpenChallengesPerBlobber = scc.GetInt(pfx + "max_open_challenges_per_blobber")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
 	err = conf.validate()

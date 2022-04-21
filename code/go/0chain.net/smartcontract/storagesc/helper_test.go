@@ -374,7 +374,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		BlobberWeight:           0.5,
 	}
 
-	conf.MaxOpenChallengesPerBlobber = 100
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return
 }

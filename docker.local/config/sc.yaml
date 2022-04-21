@@ -190,8 +190,6 @@ smart_contracts:
     max_charge: 0.50
     # reward paid out every block
     expose_mpt: true
-    # max open challenges per blobber
-    max_open_challenges_per_blobber: 100
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000
