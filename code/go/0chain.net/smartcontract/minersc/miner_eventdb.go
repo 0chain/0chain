@@ -42,6 +42,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 	return MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
+			Reward: edbMiner.Rewards,
 			Settings: stakepool.StakePoolSettings{
 				DelegateWallet:  edbMiner.DelegateWallet,
 				ServiceCharge:   edbMiner.ServiceCharge,
