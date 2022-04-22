@@ -435,10 +435,8 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 				blobberChall, err := ssc.getBlobberChallenge(blobberID, balances)
 				require.NoError(b, err)
-				blobberAllocChall, ok := alloc.BlobberMap[blobberID]
-				require.True(b, ok)
 
-				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, blobberAllocChall, common.Now(), balances)
+				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, common.Now(), balances)
 
 				require.NoError(b, err)
 

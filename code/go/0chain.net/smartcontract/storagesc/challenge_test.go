@@ -236,7 +236,6 @@ func TestAddChallenge(t *testing.T) {
 			resp, err := ssc.addChallenge(args.alloc,
 				args.storageChallenge,
 				args.blobberChallengeObj,
-				args.blobberAllocation,
 				common.Now(),
 				args.balances)
 

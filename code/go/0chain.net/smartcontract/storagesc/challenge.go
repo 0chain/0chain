@@ -833,7 +833,6 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		alloc,
 		result.storageChallenge,
 		result.blobberChallenge,
-		result.blobberAlloc,
 		t.CreationDate,
 		balances,
 	)
@@ -920,7 +919,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 		challengeString, err = sc.addChallenge(alloc, result.storageChallenge,
 			result.blobberChallenge,
-			result.blobberAlloc,
 			t.CreationDate,
 			balances)
 
@@ -942,7 +940,6 @@ func (sc *StorageSmartContract) addChallenge(
 	alloc *StorageAllocation,
 	storageChallenge *StorageChallenge,
 	blobberChallengeObj *BlobberChallenge,
-	blobberAllocation *BlobberAllocation,
 	now common.Timestamp,
 	balances c_state.StateContextI) (resp string, err error) {
 
@@ -951,29 +948,15 @@ func (sc *StorageSmartContract) addChallenge(
 			"no blobber to add challenge to")
 	}
 
-	if blobberAllocation == nil {
+	if _, ok := alloc.BlobberMap[blobberChallengeObj.BlobberID]; !ok {
 		return "", common.NewError("add_challenge",
 			"no blobber Allocation to add challenge to")
 	}
-
-	blobber, err := sc.getBlobber(blobberChallengeObj.BlobberID, balances)
-	if err != nil {
+	blobberAllocation := alloc.BlobberMap[blobberChallengeObj.BlobberID]
+	if err = blobberChallengeObj.removeExpiredChallenges(now, alloc, sc, balances); err != nil {
 		return "", common.NewError("add_challenge",
-			"error fetching blobber")
+			"error removing expired challenges: "+err.Error())
 	}
-
-	i := 0
-	for _, chall := range blobberChallengeObj.Challenges {
-		expiry := chall.Created + toSeconds(blobber.Terms.ChallengeCompletionTime)
-		if now <= expiry {
-			break
-		}
-		delete(blobberChallengeObj.ChallengeIDMap, chall.ID)
-		alloc.Stats.ChallengeFailed(chall.ID)
-		blobberAllocation.Stats.ChallengeFailed(chall.ID)
-		i++
-	}
-	blobberChallengeObj.Challenges = blobberChallengeObj.Challenges[i:]
 
 	addedChallenge := blobberChallengeObj.addChallenge(storageChallenge)
 	if !addedChallenge {

@@ -182,6 +182,31 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
+func (sn *BlobberChallenge) removeExpiredChallenges(
+	now common.Timestamp,
+	alloc *StorageAllocation,
+	sc *StorageSmartContract,
+	balances chainstate.StateContextI) error {
+	blobber, err := sc.getBlobber(sn.BlobberID, balances)
+	if err != nil {
+		return fmt.Errorf("error fetching blobber: %v", err)
+	}
+
+	i := 0
+	for _, chall := range sn.Challenges {
+		expiry := chall.Created + toSeconds(blobber.Terms.ChallengeCompletionTime)
+		if now <= expiry {
+			break
+		}
+		delete(sn.ChallengeIDMap, chall.ID)
+		alloc.Stats.ChallengeFailed(chall.ID)
+		alloc.BlobberMap[sn.BlobberID].Stats.ChallengeFailed(chall.ID)
+		i++
+	}
+	sn.Challenges = sn.Challenges[i:]
+	return nil
+}
+
 type StorageChallenge struct {
 	Created         common.Timestamp `json:"created"`
 	ID              string           `json:"id"`
