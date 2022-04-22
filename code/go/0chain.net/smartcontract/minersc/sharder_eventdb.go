@@ -43,6 +43,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 	return MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
+			Reward: edbSharder.Rewards,
 			Settings: stakepool.StakePoolSettings{
 				DelegateWallet:  edbSharder.DelegateWallet,
 				ServiceCharge:   edbSharder.ServiceCharge,
