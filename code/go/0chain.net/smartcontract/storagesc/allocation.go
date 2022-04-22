@@ -143,6 +143,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 }
 
 type newAllocationRequest struct {
+	Name                       string           `json:"name"`
 	DataShards                 int              `json:"data_shards"`
 	ParityShards               int              `json:"parity_shards"`
 	Size                       int64            `json:"size"`
@@ -159,6 +160,7 @@ type newAllocationRequest struct {
 // storageAllocation from the request
 func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa = new(StorageAllocation)
+	sa.Name = nar.Name
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
 	sa.Size = nar.Size
@@ -442,6 +444,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 
 type updateAllocationRequest struct {
 	ID              string           `json:"id"`              // allocation id
+	Name            string           `json:"name"`            // allocation name
 	OwnerID         string           `json:"owner_id"`        // Owner of the allocation
 	Size            int64            `json:"size"`            // difference
 	Expiration      common.Timestamp `json:"expiration_date"` // difference
@@ -1091,6 +1094,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
+	alloc.Name = request.Name
 
 	// close allocation now
 	if newExpiration <= t.CreationDate {
