@@ -1094,7 +1094,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
-	alloc.Name = request.Name
+	if len(request.Name) > 0 {
+		alloc.Name = request.Name
+	}
 
 	// close allocation now
 	if newExpiration <= t.CreationDate {

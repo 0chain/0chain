@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
-	"fmt"
-	"time"
 )
 
 func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
@@ -94,6 +95,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 	sa := &StorageAllocation{
 		ID:             alloc.AllocationID,
 		Tx:             alloc.TransactionID,
+		Name:           alloc.AllocationName,
 		DataShards:     alloc.DataShards,
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
@@ -155,6 +157,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 	alloc := &event.Allocation{
 		AllocationID:               sa.ID,
+		AllocationName:             sa.Name,
 		TransactionID:              sa.Tx,
 		DataShards:                 sa.DataShards,
 		ParityShards:               sa.ParityShards,
