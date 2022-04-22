@@ -43,7 +43,6 @@ func TestAddChallenge(t *testing.T) {
 		alloc               *StorageAllocation
 		storageChallenge    *StorageChallenge
 		blobberChallengeObj *BlobberChallenge
-		allocChallengeObj   *AllocationChallenge
 		blobberAllocation   *BlobberAllocation
 		validators          *partitions.Partitions
 		r                   *rand.Rand
@@ -135,10 +134,6 @@ func TestAddChallenge(t *testing.T) {
 			}
 		}
 
-		allocChall, err := ssc.getAllocationChallenge("", balances)
-		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
-			allocChall = new(AllocationChallenge)
-		}
 		var storageChallenge = new(StorageChallenge)
 		storageChallenge.TotalValidators = len(selectedValidators)
 		storageChallenge.BlobberID = bID
@@ -154,7 +149,6 @@ func TestAddChallenge(t *testing.T) {
 				BlobberMap: blobberMap,
 				Stats:      &StorageAllocationStats{},
 			},
-			allocChallengeObj:   allocChall,
 			storageChallenge:    storageChallenge,
 			blobberAllocation:   blobberMap[bID],
 			blobberChallengeObj: blobberChall,
@@ -242,8 +236,8 @@ func TestAddChallenge(t *testing.T) {
 			resp, err := ssc.addChallenge(args.alloc,
 				args.storageChallenge,
 				args.blobberChallengeObj,
-				args.allocChallengeObj,
 				args.blobberAllocation,
+				common.Now(),
 				args.balances)
 
 			validate(t, resp, err, tt.parameters, tt.want)

@@ -8,143 +8,6 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *AllocationChallenge) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
-	// string "AllocationID"
-	o = append(o, 0x83, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
-	o = msgp.AppendString(o, z.AllocationID)
-	// string "Challenges"
-	o = append(o, 0xaa, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.Challenges)))
-	for za0001 := range z.Challenges {
-		if z.Challenges[za0001] == nil {
-			o = msgp.AppendNil(o)
-		} else {
-			o, err = z.Challenges[za0001].MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, "Challenges", za0001)
-				return
-			}
-		}
-	}
-	// string "LatestCompletedChallenge"
-	o = append(o, 0xb8, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
-	if z.LatestCompletedChallenge == nil {
-		o = msgp.AppendNil(o)
-	} else {
-		o, err = z.LatestCompletedChallenge.MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "LatestCompletedChallenge")
-			return
-		}
-	}
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *AllocationChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "AllocationID":
-			z.AllocationID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "AllocationID")
-				return
-			}
-		case "Challenges":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Challenges")
-				return
-			}
-			if cap(z.Challenges) >= int(zb0002) {
-				z.Challenges = (z.Challenges)[:zb0002]
-			} else {
-				z.Challenges = make([]*StorageChallenge, zb0002)
-			}
-			for za0001 := range z.Challenges {
-				if msgp.IsNil(bts) {
-					bts, err = msgp.ReadNilBytes(bts)
-					if err != nil {
-						return
-					}
-					z.Challenges[za0001] = nil
-				} else {
-					if z.Challenges[za0001] == nil {
-						z.Challenges[za0001] = new(StorageChallenge)
-					}
-					bts, err = z.Challenges[za0001].UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Challenges", za0001)
-						return
-					}
-				}
-			}
-		case "LatestCompletedChallenge":
-			if msgp.IsNil(bts) {
-				bts, err = msgp.ReadNilBytes(bts)
-				if err != nil {
-					return
-				}
-				z.LatestCompletedChallenge = nil
-			} else {
-				if z.LatestCompletedChallenge == nil {
-					z.LatestCompletedChallenge = new(StorageChallenge)
-				}
-				bts, err = z.LatestCompletedChallenge.UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "LatestCompletedChallenge")
-					return
-				}
-			}
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *AllocationChallenge) Msgsize() (s int) {
-	s = 1 + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 11 + msgp.ArrayHeaderSize
-	for za0001 := range z.Challenges {
-		if z.Challenges[za0001] == nil {
-			s += msgp.NilSize
-		} else {
-			s += z.Challenges[za0001].Msgsize()
-		}
-	}
-	s += 25
-	if z.LatestCompletedChallenge == nil {
-		s += msgp.NilSize
-	} else {
-		s += z.LatestCompletedChallenge.Msgsize()
-	}
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
 func (z *Allocations) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
@@ -657,6 +520,71 @@ func (z *BlobberAllocation) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *BlobberChallengeData) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 2
+	// string "ID"
+	o = append(o, 0x82, 0xa2, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ID)
+	// string "Created"
+	o = append(o, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+	o, err = z.Created.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Created")
+		return
+	}
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *BlobberChallengeData) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "ID":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		case "Created":
+			bts, err = z.Created.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Created")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *BlobberChallengeData) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Created.Msgsize()
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *BlobberChallengeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
@@ -674,11 +602,25 @@ func (z *BlobberChallengeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "ChallengeIDs"
-	o = append(o, 0xac, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x49, 0x44, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.ChallengeIDs)))
-	for za0001 := range z.ChallengeIDs {
-		o = msgp.AppendString(o, z.ChallengeIDs[za0001])
+	// string "Challenges"
+	o = append(o, 0xaa, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Challenges)))
+	for za0001 := range z.Challenges {
+		if z.Challenges[za0001] == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			// map header, size 2
+			// string "ID"
+			o = append(o, 0x82, 0xa2, 0x49, 0x44)
+			o = msgp.AppendString(o, z.Challenges[za0001].ID)
+			// string "Created"
+			o = append(o, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+			o, err = z.Challenges[za0001].Created.MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "Challenges", za0001, "Created")
+				return
+			}
+		}
 	}
 	return
 }
@@ -724,23 +666,63 @@ func (z *BlobberChallengeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) 
 					return
 				}
 			}
-		case "ChallengeIDs":
+		case "Challenges":
 			var zb0002 uint32
 			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "ChallengeIDs")
+				err = msgp.WrapError(err, "Challenges")
 				return
 			}
-			if cap(z.ChallengeIDs) >= int(zb0002) {
-				z.ChallengeIDs = (z.ChallengeIDs)[:zb0002]
+			if cap(z.Challenges) >= int(zb0002) {
+				z.Challenges = (z.Challenges)[:zb0002]
 			} else {
-				z.ChallengeIDs = make([]string, zb0002)
+				z.Challenges = make([]*BlobberChallengeData, zb0002)
 			}
-			for za0001 := range z.ChallengeIDs {
-				z.ChallengeIDs[za0001], bts, err = msgp.ReadStringBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "ChallengeIDs", za0001)
-					return
+			for za0001 := range z.Challenges {
+				if msgp.IsNil(bts) {
+					bts, err = msgp.ReadNilBytes(bts)
+					if err != nil {
+						return
+					}
+					z.Challenges[za0001] = nil
+				} else {
+					if z.Challenges[za0001] == nil {
+						z.Challenges[za0001] = new(BlobberChallengeData)
+					}
+					var zb0003 uint32
+					zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Challenges", za0001)
+						return
+					}
+					for zb0003 > 0 {
+						zb0003--
+						field, bts, err = msgp.ReadMapKeyZC(bts)
+						if err != nil {
+							err = msgp.WrapError(err, "Challenges", za0001)
+							return
+						}
+						switch msgp.UnsafeString(field) {
+						case "ID":
+							z.Challenges[za0001].ID, bts, err = msgp.ReadStringBytes(bts)
+							if err != nil {
+								err = msgp.WrapError(err, "Challenges", za0001, "ID")
+								return
+							}
+						case "Created":
+							bts, err = z.Challenges[za0001].Created.UnmarshalMsg(bts)
+							if err != nil {
+								err = msgp.WrapError(err, "Challenges", za0001, "Created")
+								return
+							}
+						default:
+							bts, err = msgp.Skip(bts)
+							if err != nil {
+								err = msgp.WrapError(err, "Challenges", za0001)
+								return
+							}
+						}
+					}
 				}
 			}
 		default:
@@ -763,9 +745,13 @@ func (z *BlobberChallengeDecode) Msgsize() (s int) {
 	} else {
 		s += z.LatestCompletedChallenge.Msgsize()
 	}
-	s += 13 + msgp.ArrayHeaderSize
-	for za0001 := range z.ChallengeIDs {
-		s += msgp.StringPrefixSize + len(z.ChallengeIDs[za0001])
+	s += 11 + msgp.ArrayHeaderSize
+	for za0001 := range z.Challenges {
+		if z.Challenges[za0001] == nil {
+			s += msgp.NilSize
+		} else {
+			s += 1 + 3 + msgp.StringPrefixSize + len(z.Challenges[za0001].ID) + 8 + z.Challenges[za0001].Created.Msgsize()
+		}
 	}
 	return
 }

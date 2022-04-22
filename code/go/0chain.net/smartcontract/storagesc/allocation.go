@@ -1235,36 +1235,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	passRates = make([]float64, 0, len(alloc.BlobberDetails))
 	var failed, successful int64 = 0, 0
 
-	allocChallenge, err := sc.getAllocationChallenge(alloc.ID, balances)
-	switch err {
-	case util.ErrValueNotPresent:
-	case nil:
-		for _, c := range allocChallenge.Challenges {
-			blobberID := c.BlobberID
-			d, ok := alloc.BlobberMap[blobberID]
-			if !ok {
-				continue
-			}
-
-			if d.Stats == nil {
-				d.Stats = new(StorageAllocationStats) // make sure
-			}
-
-			if c.Responded || c.AllocationID != alloc.ID {
-				continue // already accepted, already rewarded/penalized
-			}
-			var expire = c.Created + toSeconds(d.Terms.ChallengeCompletionTime)
-			if expire < now {
-				d.Stats.FailedChallenges++
-			} else {
-				d.Stats.SuccessChallenges++
-			}
-		}
-
-	default:
-		return nil, fmt.Errorf("getting allocation challenge: %v", err)
-	}
-
 	for _, d := range alloc.BlobberDetails {
 
 		d.Stats.OpenChallenges = 0

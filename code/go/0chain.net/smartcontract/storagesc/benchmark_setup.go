@@ -166,9 +166,8 @@ func AddMockChallenges(
 	validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
-	numAllocations := viper.GetInt(sc.NumAllocations)
 	challenges := make([]BlobberChallenge, len(blobbers))
-	allocationChall := make([]AllocationChallenge, numAllocations)
+	blobAlloc := make(map[string]map[string]bool)
 
 	partition, err := getBlobbersChallengeList(balances)
 	if err != nil {
@@ -186,12 +185,11 @@ func AddMockChallenges(
 				blobbers[bIndex],
 				&challenges[bIndex],
 				validators,
-				&allocationChall[i],
+				blobAlloc,
 				balances,
 			)
 		}
 	}
-	blobAlloc := make(map[string]map[string]bool)
 
 	// adding blobber challenges and blobber challenge partition
 	for _, ch := range challenges {
@@ -218,20 +216,6 @@ func AddMockChallenges(
 	err = partition.Save(balances)
 	if err != nil {
 		panic(err)
-	}
-
-	// adding allocation challenges
-	for _, ch := range allocationChall {
-		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
-		if err != nil {
-			panic(err)
-		}
-		for _, b := range ch.Challenges {
-			if _, ok := blobAlloc[b.BlobberID]; !ok {
-				blobAlloc[b.BlobberID] = make(map[string]bool)
-			}
-			blobAlloc[b.BlobberID][ch.AllocationID] = true
-		}
 	}
 
 	// adding blobber challenge allocation partition
@@ -395,11 +379,10 @@ func setupMockChallenges(
 	blobber *StorageNode,
 	bc *BlobberChallenge,
 	validators []*ValidationNode,
-	ac *AllocationChallenge,
+	blobAlloc map[string]map[string]bool,
 	balances cstate.StateContextI,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
-	ac.AllocationID = allocationId
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
 		storageChall := &StorageChallenge{
@@ -408,13 +391,11 @@ func setupMockChallenges(
 			TotalValidators: len(selValidators),
 			BlobberID:       blobber.ID,
 		}
-		bcAdded := bc.addChallenge(storageChall)
+		bc.addChallenge(storageChall)
+		blobAlloc[blobber.ID][allocationId] = true
 		_, err := balances.InsertTrieNode(storageChall.GetKey(ADDRESS), storageChall)
 		if err != nil {
 			log.Fatal(err)
-		}
-		if bcAdded {
-			ac.addChallenge(storageChall)
 		}
 	}
 }

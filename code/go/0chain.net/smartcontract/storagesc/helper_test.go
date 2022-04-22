@@ -392,14 +392,6 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 		blobberChall.BlobberID = blobberID
 	}
 
-	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		t.Fatal("unexpected error:", err)
-	}
-	if err == util.ErrValueNotPresent {
-		allocChall = new(AllocationChallenge)
-		allocChall.AllocationID = allocID
-	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
@@ -412,10 +404,6 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
-	require.NoError(t, err)
-
-	require.True(t, allocChall.addChallenge(storChall))
-	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
 	require.NoError(t, err)
 
 	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)

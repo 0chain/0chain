@@ -101,11 +101,16 @@ type ChallengeResponse struct {
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
+type BlobberChallengeData struct {
+	ID      string           `json:"id"`
+	Created common.Timestamp `json:"created"`
+}
+
 type BlobberChallenge struct {
-	BlobberID                string              `json:"blobber_id"`
-	LatestCompletedChallenge *StorageChallenge   `json:"lastest_completed_challenge"`
-	ChallengeIDs             []string            `json:"challenge_ids"`
-	ChallengeIDMap           map[string]struct{} `json:"-" msg:"-"`
+	BlobberID                string                  `json:"blobber_id"`
+	LatestCompletedChallenge *StorageChallenge       `json:"latest_completed_challenge"`
+	ChallengeIDMap           map[string]struct{}     `json:"-" msg:"-"`
+	Challenges               []*BlobberChallengeData `json:"challenges"`
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
@@ -131,8 +136,8 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 		return err
 	}
 	sn.ChallengeIDMap = make(map[string]struct{})
-	for _, challengeID := range sn.ChallengeIDs {
-		sn.ChallengeIDMap[challengeID] = struct{}{}
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeIDMap[challenge.ID] = struct{}{}
 	}
 	return nil
 }
@@ -154,76 +159,26 @@ func (sn *BlobberChallenge) UnmarshalMsg(data []byte) ([]byte, error) {
 	*sn = BlobberChallenge(*d)
 
 	sn.ChallengeIDMap = make(map[string]struct{})
-	for _, challenge := range sn.ChallengeIDs {
-		sn.ChallengeIDMap[challenge] = struct{}{}
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeIDMap[challenge.ID] = struct{}{}
 	}
 	return o, nil
 }
 
 func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 
-	if sn.ChallengeIDs == nil {
+	if sn.ChallengeIDMap == nil {
 		sn.ChallengeIDMap = make(map[string]struct{})
 	}
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
-		sn.ChallengeIDs = append(sn.ChallengeIDs, challenge.ID)
+		bcData := &BlobberChallengeData{
+			ID:      challenge.ID,
+			Created: challenge.Created,
+		}
+		sn.Challenges = append(sn.Challenges, bcData)
 		sn.ChallengeIDMap[challenge.ID] = struct{}{}
 		return true
 	}
-	return false
-}
-
-type AllocationChallenge struct {
-	AllocationID             string                       `json:"allocation_id"`
-	Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*StorageChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
-}
-
-func (sn *AllocationChallenge) GetKey(globalKey string) datastore.Key {
-	return globalKey + ":allocationchallenge:" + sn.AllocationID
-}
-
-func (sn *AllocationChallenge) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
-}
-
-func (sn *AllocationChallenge) GetHash() string {
-	return util.ToHex(sn.GetHashBytes())
-}
-
-func (sn *AllocationChallenge) GetHashBytes() []byte {
-	return encryption.RawHash(sn.Encode())
-}
-
-func (sn *AllocationChallenge) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	sn.ChallengeMap = make(map[string]*StorageChallenge)
-	for _, challenge := range sn.Challenges {
-		sn.ChallengeMap[challenge.ID] = challenge
-	}
-	return nil
-}
-
-func (sn *AllocationChallenge) addChallenge(challenge *StorageChallenge) bool {
-
-	if sn.Challenges == nil {
-		sn.Challenges = make([]*StorageChallenge, 0)
-	}
-	if sn.ChallengeMap == nil {
-		sn.ChallengeMap = make(map[string]*StorageChallenge)
-	}
-
-	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
-		sn.Challenges = append(sn.Challenges, challenge)
-		sn.ChallengeMap[challenge.ID] = challenge
-		return true
-	}
-
 	return false
 }
 
@@ -539,13 +494,13 @@ type StorageAllocationStats struct {
 	LatestClosedChallengeTxn string `json:"latest_closed_challenge"`
 }
 
-func (s *StorageAllocationStats) Success(challengeID string) {
+func (s *StorageAllocationStats) ChallengeSuccessful(challengeID string) {
 	s.LatestClosedChallengeTxn = challengeID
 	s.SuccessChallenges++
 	s.OpenChallenges--
 }
 
-func (s *StorageAllocationStats) Fail(challengeID string) {
+func (s *StorageAllocationStats) ChallengeFailed(challengeID string) {
 	s.LatestClosedChallengeTxn = challengeID
 	s.FailedChallenges++
 	s.OpenChallenges--

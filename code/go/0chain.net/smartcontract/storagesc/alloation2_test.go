@@ -361,25 +361,12 @@ func testCancelAllocation(
 	)
 
 	require.True(t, len(challenges) <= len(blobbers))
-	for i, blobberChallenges := range challenges {
+	for i := range challenges {
 		var bc = BlobberChallenge{
 			BlobberID: strconv.Itoa(i),
 		}
 
-		var ac = AllocationChallenge{
-			AllocationID: sAllocation.ID,
-			Challenges:   []*StorageChallenge{},
-		}
-		for _, created := range blobberChallenges {
-			ac.Challenges = append(ac.Challenges, &StorageChallenge{
-				AllocationID: sAllocation.ID,
-				BlobberID:    bc.BlobberID,
-				Created:      created,
-			})
-		}
 		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
-		require.NoError(t, err)
-		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
 		require.NoError(t, err)
 	}
 
