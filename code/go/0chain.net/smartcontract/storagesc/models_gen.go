@@ -2219,9 +2219,9 @@ func (z *StorageAllocationStats) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "FailedChallenges"
 	o = append(o, 0xb0, 0x46, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73)
 	o = msgp.AppendInt64(o, z.FailedChallenges)
-	// string "LastestClosedChallengeTxn"
-	o = append(o, 0xb9, 0x4c, 0x61, 0x73, 0x74, 0x65, 0x73, 0x74, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x54, 0x78, 0x6e)
-	o = msgp.AppendString(o, z.LastestClosedChallengeTxn)
+	// string "LatestClosedChallengeTxn"
+	o = append(o, 0xb8, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x54, 0x78, 0x6e)
+	o = msgp.AppendString(o, z.LatestClosedChallengeTxn)
 	return
 }
 
@@ -2285,10 +2285,10 @@ func (z *StorageAllocationStats) UnmarshalMsg(bts []byte) (o []byte, err error) 
 				err = msgp.WrapError(err, "FailedChallenges")
 				return
 			}
-		case "LastestClosedChallengeTxn":
-			z.LastestClosedChallengeTxn, bts, err = msgp.ReadStringBytes(bts)
+		case "LatestClosedChallengeTxn":
+			z.LatestClosedChallengeTxn, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "LastestClosedChallengeTxn")
+				err = msgp.WrapError(err, "LatestClosedChallengeTxn")
 				return
 			}
 		default:
@@ -2305,7 +2305,7 @@ func (z *StorageAllocationStats) UnmarshalMsg(bts []byte) (o []byte, err error) 
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageAllocationStats) Msgsize() (s int) {
-	s = 1 + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.Int64Size + 16 + msgp.Int64Size + 15 + msgp.Int64Size + 18 + msgp.Int64Size + 17 + msgp.Int64Size + 26 + msgp.StringPrefixSize + len(z.LastestClosedChallengeTxn)
+	s = 1 + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.Int64Size + 16 + msgp.Int64Size + 15 + msgp.Int64Size + 18 + msgp.Int64Size + 17 + msgp.Int64Size + 25 + msgp.StringPrefixSize + len(z.LatestClosedChallengeTxn)
 	return
 }
 

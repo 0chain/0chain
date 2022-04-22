@@ -529,14 +529,26 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 }
 
 type StorageAllocationStats struct {
-	UsedSize                  int64  `json:"used_size"`
-	NumWrites                 int64  `json:"num_of_writes"`
-	ReadsSize                 int64  `json:"reads_size"`
-	TotalChallenges           int64  `json:"total_challenges"`
-	OpenChallenges            int64  `json:"num_open_challenges"`
-	SuccessChallenges         int64  `json:"num_success_challenges"`
-	FailedChallenges          int64  `json:"num_failed_challenges"`
-	LastestClosedChallengeTxn string `json:"latest_closed_challenge"`
+	UsedSize                 int64  `json:"used_size"`
+	NumWrites                int64  `json:"num_of_writes"`
+	ReadsSize                int64  `json:"reads_size"`
+	TotalChallenges          int64  `json:"total_challenges"`
+	OpenChallenges           int64  `json:"num_open_challenges"`
+	SuccessChallenges        int64  `json:"num_success_challenges"`
+	FailedChallenges         int64  `json:"num_failed_challenges"`
+	LatestClosedChallengeTxn string `json:"latest_closed_challenge"`
+}
+
+func (s *StorageAllocationStats) Success(challengeID string) {
+	s.LatestClosedChallengeTxn = challengeID
+	s.SuccessChallenges++
+	s.OpenChallenges--
+}
+
+func (s *StorageAllocationStats) Fail(challengeID string) {
+	s.LatestClosedChallengeTxn = challengeID
+	s.FailedChallenges++
+	s.OpenChallenges--
 }
 
 type BlobberAllocation struct {

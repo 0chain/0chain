@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
-	"fmt"
-	"time"
 )
 
 func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
@@ -102,14 +103,14 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
 		Stats: &StorageAllocationStats{
-			UsedSize:                  alloc.UsedSize,
-			NumWrites:                 alloc.NumWrites,
-			ReadsSize:                 alloc.ReadSize,
-			TotalChallenges:           alloc.TotalChallenges,
-			OpenChallenges:            alloc.OpenChallenges,
-			SuccessChallenges:         alloc.SuccessfulChallenges,
-			FailedChallenges:          alloc.FailedChallenges,
-			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
+			UsedSize:                 alloc.UsedSize,
+			NumWrites:                alloc.NumWrites,
+			ReadsSize:                alloc.ReadSize,
+			TotalChallenges:          alloc.TotalChallenges,
+			OpenChallenges:           alloc.OpenChallenges,
+			SuccessChallenges:        alloc.SuccessfulChallenges,
+			FailedChallenges:         alloc.FailedChallenges,
+			LatestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
 		BlobberDetails:             blobberDetails,
 		BlobberMap:                 blobberMap,
@@ -187,7 +188,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		alloc.OpenChallenges = sa.Stats.OpenChallenges
 		alloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
 		alloc.FailedChallenges = sa.Stats.FailedChallenges
-		alloc.LatestClosedChallengeTxn = sa.Stats.LastestClosedChallengeTxn
+		alloc.LatestClosedChallengeTxn = sa.Stats.LatestClosedChallengeTxn
 	}
 
 	return alloc, nil

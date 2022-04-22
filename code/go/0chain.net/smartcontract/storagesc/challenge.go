@@ -534,13 +534,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				"First challenge on the list is not same as the one"+
 					" attempted to redeem")
 		}
-		alloc.Stats.LastestClosedChallengeTxn = challReq.ID
-		alloc.Stats.SuccessChallenges++
-		alloc.Stats.OpenChallenges--
-
-		details.Stats.LastestClosedChallengeTxn = challReq.ID
-		details.Stats.SuccessChallenges++
-		details.Stats.OpenChallenges--
+		alloc.Stats.Success(challReq.ID)
+		details.Stats.Success(challReq.ID)
 
 		_, err = balances.InsertTrieNode(challReq.GetKey(sc.ID), challReq)
 		if err != nil {
@@ -604,13 +599,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				"First challenge on the list is not same as the one"+
 					" attempted to redeem")
 		}
-		alloc.Stats.LastestClosedChallengeTxn = challReq.ID
-		alloc.Stats.FailedChallenges++
-		alloc.Stats.OpenChallenges--
-
-		details.Stats.LastestClosedChallengeTxn = challReq.ID
-		details.Stats.FailedChallenges++
-		details.Stats.OpenChallenges--
+		alloc.Stats.Fail(challReq.ID)
+		details.Stats.Fail(challReq.ID)
 
 		_, err := balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
 		if err != nil {
