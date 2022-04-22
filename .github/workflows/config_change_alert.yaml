@@ -12,7 +12,7 @@ on:
     branches: 
       - staging
     types:
-    - closed
+      - closed
     paths:
       - docker.local/config/0chain.yaml
       - docker.local/config/sc.yaml
