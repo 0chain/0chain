@@ -77,7 +77,7 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "should be 1 higher than the current nonce")
+	require.Contains(t, err.Error(), "nonce given (1) for burning client (fred_0) must be greater by 1 than the current node nonce (1) for Node.ID: 'fred_0'")
 	require.Empty(t, burn)
 
 	// case 2
@@ -89,7 +89,7 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 
 	burn, err = contract.Burn(tr, payload.Encode(), ctx)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "should be 1 higher than the current nonce")
+	require.Contains(t, err.Error(), "nonce given (1) for burning client (fred_0) must be greater by 1 than the current node nonce (2) for Node.ID: 'fred_0'")
 	require.Empty(t, burn)
 }
 
