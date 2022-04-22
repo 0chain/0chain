@@ -1635,9 +1635,9 @@ func (z *RewardPartitionLocation) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 27
+	// map header, size 28
 	// string "ID"
-	o = append(o, 0xde, 0x0, 0x1b, 0xa2, 0x49, 0x44)
+	o = append(o, 0xde, 0x0, 0x1c, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Tx"
 	o = append(o, 0xa2, 0x54, 0x78)
@@ -1804,6 +1804,9 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	for za0005 := range z.Curators {
 		o = msgp.AppendString(o, z.Curators[za0005])
 	}
+	// string "Name"
+	o = append(o, 0xa4, 0x4e, 0x61, 0x6d, 0x65)
+	o = msgp.AppendString(o, z.Name)
 	return
 }
 
@@ -2143,6 +2146,12 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 					return
 				}
 			}
+		case "Name":
+			z.Name, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Name")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -2191,6 +2200,7 @@ func (z *StorageAllocationDecode) Msgsize() (s int) {
 	for za0005 := range z.Curators {
 		s += msgp.StringPrefixSize + len(z.Curators[za0005])
 	}
+	s += 5 + msgp.StringPrefixSize + len(z.Name)
 	return
 }
 
