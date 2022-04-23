@@ -181,6 +181,10 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
 			sc.BlobberSlash)
 	}
+	if sc.MaxBlobbersPerAllocation <= 0 {
+		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
+			sc.MaxBlobbersPerAllocation)
+	}
 	if sc.MinBlobberCapacity < 0 {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
 			sc.MinBlobberCapacity)
@@ -372,13 +376,13 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
+	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice = state.Balance(
 		scc.GetFloat64(pfx+"max_read_price") * 1e10)
 	conf.MinWritePrice = state.Balance(
 		scc.GetFloat64(pfx+"min_write_price") * 1e10)
 	conf.MaxWritePrice = state.Balance(
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
-	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
