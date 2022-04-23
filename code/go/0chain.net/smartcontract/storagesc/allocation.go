@@ -1241,7 +1241,8 @@ func (sc *StorageSmartContract) cancelledPassRates(alloc *StorageAllocation,
 		bc, err := sc.getBlobberChallenge(d.BlobberID, balances)
 		switch err {
 		case nil:
-			for i, chall := range bc.Challenges {
+			for i := 0; i < len(bc.Challenges); i++ {
+				chall := bc.Challenges[i]
 				if chall.AllocationID == alloc.ID {
 					if i == len(bc.Challenges)-1 {
 						bc.Challenges = bc.Challenges[:i]
