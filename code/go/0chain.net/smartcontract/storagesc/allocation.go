@@ -372,6 +372,14 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 
+	for _, b := range blobberNodes {
+		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		if err != nil {
+			return "", common.NewErrorf("allocation_creation_failed",
+				"can't save blobber: %v", err)
+		}
+
+	}
 	return resp, err
 }
 
