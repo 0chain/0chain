@@ -864,6 +864,13 @@ func (sa *StorageAllocation) removeBlobber(
 			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
 			removedBlobber.Used -= d.Size
+
+			if d.ChallengePartitionLoc != nil {
+				if err := removeBlobberAllocation(removeId, sa.ID,
+					d.ChallengePartitionLoc.Location, ssc, balances); err != nil {
+					return nil, err
+				}
+			}
 			found = true
 			break
 		}
@@ -935,6 +942,58 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	return blobbers, nil
+}
+
+func removeBlobberAllocation(
+	removeId string,
+	allocID string,
+	allocPartitionIndex int,
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI) error {
+	blobberAllocChallPartition, err := getBlobbersChallengeAllocationList(removeId, balances)
+	if err != nil {
+		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
+	}
+	err = blobberAllocChallPartition.RemoveItem(balances, allocPartitionIndex, allocID)
+	if err != nil {
+		return fmt.Errorf("error removing allocation from challenge partition: %v", err)
+	}
+
+	blobberAllocChallSize, err := blobberAllocChallPartition.Size(balances)
+	if err != nil {
+		return fmt.Errorf("error getting size of challenge partition: %v", err)
+	}
+	if blobberAllocChallSize == 0 {
+		bcPartitionLoc, err := ssc.getBlobberChallengePartitionLocation(removeId, balances)
+		if err != nil {
+			return fmt.Errorf("error retrieving blobber challenge partition location: %v", err)
+		}
+
+		bcPartition, err := getBlobbersChallengeList(balances)
+		if err != nil {
+			return fmt.Errorf("error retrieving blobber challenge partition: %v", err)
+		}
+
+		err = bcPartition.RemoveItem(balances, bcPartitionLoc.PartitionLocation.Location, removeId)
+		if err != nil {
+			return fmt.Errorf("error removing blobber from challenge partition: %v", err)
+		}
+
+		err = bcPartition.Save(balances)
+		if err != nil {
+			return fmt.Errorf("error saving blobber challenge partition: %v", err)
+		}
+
+		_, err = balances.DeleteTrieNode(bcPartitionLoc.GetKey(ssc.ID))
+		if err != nil {
+			return fmt.Errorf("error deleting blobber challenge partition location: %v", err)
+		}
+	}
+
+	if err = blobberAllocChallPartition.Save(balances); err != nil {
+		return fmt.Errorf("error saving allocation challenge partition: %v", err)
+	}
+	return nil
 }
 
 type StorageAllocationDecode StorageAllocation
