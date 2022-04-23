@@ -102,8 +102,9 @@ type ChallengeResponse struct {
 }
 
 type BlobberChallengeData struct {
-	ID      string           `json:"id"`
-	Created common.Timestamp `json:"created"`
+	ID           string           `json:"id"`
+	AllocationID string           `json:"allocation_id"`
+	Created      common.Timestamp `json:"created"`
 }
 
 type BlobberChallenge struct {
@@ -172,8 +173,9 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	}
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
 		bcData := &BlobberChallengeData{
-			ID:      challenge.ID,
-			Created: challenge.Created,
+			ID:           challenge.ID,
+			Created:      challenge.Created,
+			AllocationID: challenge.AllocationID,
 		}
 		sn.Challenges = append(sn.Challenges, bcData)
 		sn.ChallengeIDMap[challenge.ID] = struct{}{}

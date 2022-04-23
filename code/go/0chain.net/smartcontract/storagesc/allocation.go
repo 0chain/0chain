@@ -1225,7 +1225,7 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 
 // a blobber can not send a challenge response, thus we have to check out
 // challenge requests and their expiration
-func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
+func (sc *StorageSmartContract) cancelledPassRates(alloc *StorageAllocation,
 	now common.Timestamp, balances chainstate.StateContextI) (
 	passRates []float64, err error) {
 
@@ -1236,6 +1236,39 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	var failed, successful int64 = 0, 0
 
 	for _, d := range alloc.BlobberDetails {
+
+		var foundChallenge bool
+		bc, err := sc.getBlobberChallenge(d.BlobberID, balances)
+		switch err {
+		case nil:
+			for i, chall := range bc.Challenges {
+				if chall.AllocationID == alloc.ID {
+					if i == len(bc.Challenges)-1 {
+						bc.Challenges = bc.Challenges[:i]
+					} else {
+						bc.Challenges = append(bc.Challenges[:i], bc.Challenges[i+1:]...)
+					}
+					delete(bc.ChallengeIDMap, chall.ID)
+					expire := chall.Created + toSeconds(d.Terms.ChallengeCompletionTime)
+					if now > expire {
+						alloc.Stats.ChallengeFailed(chall.ID)
+						d.Stats.ChallengeFailed(chall.ID)
+					}
+					foundChallenge = true
+				}
+			}
+		case util.ErrValueNotPresent:
+			continue
+		default:
+			return nil, fmt.Errorf("error getting blobber challenge" + err.Error())
+		}
+
+		if foundChallenge {
+			_, err = balances.InsertTrieNode(bc.GetKey(sc.ID), bc)
+			if err != nil {
+				return nil, fmt.Errorf("error saving blobber challenge: " + err.Error())
+			}
+		}
 
 		d.Stats.OpenChallenges = 0
 		d.Stats.TotalChallenges = d.Stats.SuccessChallenges + d.Stats.FailedChallenges
@@ -1285,7 +1318,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	}
 
 	var passRates []float64
-	passRates, err = sc.canceledPassRates(alloc, t.CreationDate, balances)
+	passRates, err = sc.cancelledPassRates(alloc, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
