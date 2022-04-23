@@ -332,6 +332,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
 	conf.ValidatorsPerChallenge = 10
+	conf.MaxBlobbersPerAllocation = 10
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB

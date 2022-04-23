@@ -306,7 +306,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
-	var sa = request.storageAllocation() // (set fields, including expiration)
 
 	if len(request.PreferredBlobbers) < (request.DataShards + request.ParityShards) {
 		return "", common.NewErrorf("allocation_creation_failed",
@@ -324,6 +323,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.Error(err))
 	}
 
+	if request.Owner == "" {
+		request.Owner = t.ClientID
+		request.OwnerPublicKey = t.PublicKey
+	}
+
+	var sa = request.storageAllocation() // (set fields, including expiration)
 	blobberNodes, bSize, err := sc.validateBlobbers(
 		t.CreationDate, sa, balances, inputBlobbers.Nodes)
 	if err != nil {
