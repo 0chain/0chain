@@ -86,13 +86,13 @@ func (p *partition) update(it PartitionItem) error {
 	return errors.New("item not found")
 }
 
-func (p *partition) remove(item PartitionItem) error {
+func (p *partition) remove(id string) error {
 	if len(p.Items) == 0 {
 		return fmt.Errorf("searching empty partition")
 	}
-	index := p.findIndex(item)
+	index := p.findIndex(id)
 	if index == notFound {
-		return fmt.Errorf("cannot findIndex item %v in partition", item)
+		return fmt.Errorf("cannot findIndex id %v in partition", id)
 	}
 	p.Items[index] = p.Items[len(p.Items)-1]
 	p.Items = p.Items[:len(p.Items)-1]
@@ -137,9 +137,9 @@ func (p *partition) find(id string) (item, bool) {
 	return item{}, false
 }
 
-func (p *partition) findIndex(searchItem PartitionItem) int {
+func (p *partition) findIndex(id string) int {
 	for i, item := range p.Items {
-		if item.ID == searchItem.GetID() {
+		if item.ID == id {
 			return i
 		}
 	}
