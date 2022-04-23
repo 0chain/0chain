@@ -1256,6 +1256,7 @@ func (sc *StorageSmartContract) cancelledPassRates(alloc *StorageAllocation,
 						d.Stats.ChallengeFailed(chall.ID)
 					}
 					foundChallenge = true
+					i--
 				}
 			}
 		case util.ErrValueNotPresent:
