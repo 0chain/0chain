@@ -36,8 +36,8 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 
 	found := false
 	if len(blobberChallengeObj.Challenges) > 0 {
-		latestOpenChallengeID := blobberChallengeObj.Challenges[0].ID
-		if latestOpenChallengeID == challengeCompleted.ID {
+		earliestOpenChallengeID := blobberChallengeObj.Challenges[0].ID
+		if earliestOpenChallengeID == challengeCompleted.ID {
 			found = true
 		}
 	}

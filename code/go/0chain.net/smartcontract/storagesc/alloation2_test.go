@@ -365,6 +365,13 @@ func testCancelAllocation(
 		var bc = BlobberChallenge{
 			BlobberID: strconv.Itoa(i),
 		}
+		for j, created := range challenges[i] {
+			bc.Challenges = append(bc.Challenges, &BlobberChallengeData{
+				ID:           bc.BlobberID + strconv.Itoa(j),
+				AllocationID: sAllocation.ID,
+				Created:      created,
+			})
+		}
 
 		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
 		require.NoError(t, err)
