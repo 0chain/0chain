@@ -258,5 +258,5 @@ smart_contracts:
     cost:
       mint: 100
       burn: 100
-      DeleteAuthorizer: 100
-      AddAuthorizer: 100
+      delete-authorizer: 100
+      add-authorizer: 100
