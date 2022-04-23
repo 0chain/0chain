@@ -89,9 +89,9 @@ func (rs *randomSelector) addRawItem(state state.StateContextI, item item) (int,
 	return len(rs.Partitions) - 1, nil
 }
 
-func (rs *randomSelector) Remove(
+func (rs *randomSelector) RemoveItem(
 	state state.StateContextI,
-	item PartitionItem,
+	id string,
 	index int,
 ) error {
 	part, err := rs.getPartition(state, index)
@@ -99,7 +99,7 @@ func (rs *randomSelector) Remove(
 		return err
 	}
 
-	err = part.remove(item)
+	err = part.remove(id)
 	if err != nil {
 		return err
 	}
