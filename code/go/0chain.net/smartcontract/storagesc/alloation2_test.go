@@ -686,7 +686,7 @@ func (f *formulaeFinalizeAllocation) minLockDelegatePayment(blobber, delegate in
 
 func (f *formulaeFinalizeAllocation) blobberServiceCharge(blobberIndex int) int64 {
 	var serviceCharge = blobberYaml.serviceCharge
-	var blobberRewards = float64(f._blobberReward(blobberIndex))
+	var blobberRewards = f._blobberReward(blobberIndex)
 
 	return int64(blobberRewards * serviceCharge)
 }
@@ -734,8 +734,6 @@ func (f *formulaeFinalizeAllocation) setCancelPassRates() {
 		for _, created := range f.challengeCreation[i] {
 			if created < deadline {
 				failed++
-			} else {
-				successful++
 			}
 		}
 		var total = successful + failed
