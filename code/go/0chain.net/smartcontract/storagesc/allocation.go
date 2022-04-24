@@ -317,10 +317,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
-	inputBlobbers, err := sc.getBlobbers(request.PreferredBlobbers, balances)
-	if err != nil {
-		logging.Logger.Error("unable to fetch blobber in new_allocation",
-			zap.Error(err))
+	inputBlobbers := sc.getBlobbers(request.PreferredBlobbers, balances)
+	if len(inputBlobbers.Nodes) < (request.DataShards + request.ParityShards) {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"Not enough provided blobbers found in mpt")
 	}
 
 	if request.Owner == "" {
@@ -376,14 +376,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 
-	for _, b := range blobberNodes {
-		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
-		if err != nil {
-			return "", common.NewErrorf("allocation_creation_failed",
-				"can't save blobber: %v", err)
-		}
-
-	}
 	return resp, err
 }
 
@@ -452,14 +444,11 @@ func (sc *StorageSmartContract) selectBlobbers(
 
 // getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
 func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
-	balances chainstate.StateContextI) (*StorageNodes, error) {
-	blobbers, err := sc.getBlobbersByIDs(blobberIDs, balances)
-	if err != nil {
-		return nil, fmt.Errorf("error finding blobbers %v", err)
-	}
+	balances chainstate.StateContextI) *StorageNodes {
+	blobbers := sc.getBlobbersByIDs(blobberIDs, balances)
 	return &StorageNodes{
 		Nodes: blobbers,
-	}, err
+	}
 }
 
 func (sc *StorageSmartContract) validateBlobbers(
@@ -576,24 +565,24 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 	return alloc.BlobberDetails[0].Size + uar.getBlobbersSizeDiff(alloc)
 }
 
-func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainstate.StateContextI) ([]*StorageNode, error) {
+func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainstate.StateContextI) []*StorageNode {
 
-	blobbers := make([]*StorageNode, len(ids))
+	var blobbers []*StorageNode
 	type blobberResp struct {
 		index   int
 		blobber *StorageNode
 	}
 
 	blobberCh := make(chan blobberResp, len(ids))
-	errorCh := make(chan error)
 	var wg sync.WaitGroup
 	for i, details := range ids {
 		wg.Add(1)
 		go func(index int, blobberId string) {
 			defer wg.Done()
 			blobber, err := sc.getBlobber(blobberId, balances)
-			if err != nil {
-				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
+			if err != nil || blobber == nil {
+				logging.Logger.Debug("can't get blobber", zap.String("blobberId", blobberId), zap.Error(err))
+				return
 			}
 			blobberCh <- blobberResp{
 				index:   index,
@@ -602,18 +591,12 @@ func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainsta
 		}(i, details)
 	}
 	wg.Wait()
-	close(errorCh)
 	close(blobberCh)
-	for err := range errorCh {
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	for resp := range blobberCh {
-		blobbers[resp.index] = resp.blobber
+		blobbers = append(blobbers, resp.blobber)
 	}
-	return blobbers, nil
+	return blobbers
 }
 
 // getAllocationBlobbers loads blobbers of an allocation from store

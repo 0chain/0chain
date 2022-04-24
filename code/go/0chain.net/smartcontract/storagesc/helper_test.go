@@ -302,6 +302,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b.id)
 		blobs = append(blobs, b)
 	}
 
@@ -351,6 +352,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
 	conf.MaxMint = 100e10
+	conf.MaxBlobbersPerAllocation = 50
 
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       10,

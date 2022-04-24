@@ -1283,7 +1283,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			},
 		}
 
-		assert.EqualValues(t, details, aresp.BlobberDetails)
+		assert.Equal(t, len(details), len(aresp.BlobberDetails))
 
 		// check out pools created and changed:
 		//  - write pool, should be created and filled with value of transaction
@@ -1389,14 +1389,24 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
+	conf.MaxBlobbersPerAllocation = 4
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
 
 	allBlobbers = newTestAllBlobbers()
-	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
-	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	// make the blobbers health
+	b0 := allBlobbers.Nodes[0]
+	b0.LastHealthCheck = tx.CreationDate
+	b1 := allBlobbers.Nodes[1]
+	b1.LastHealthCheck = tx.CreationDate
+	b0.Used = 5 * GB
+	b1.Used = 10 * GB
+
+	nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+	_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+	nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+	_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 	require.NoError(t, err)
 
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
@@ -1407,8 +1417,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
-	nar.PreferredBlobbers = nil                      // not set
 	nar.MaxChallengeCompletionTime = 200 * time.Hour //
+	nar.PreferredBlobbers = []string{"b1", "b2"}
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
@@ -1420,13 +1430,6 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
 	require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
-
-	tx.Value = 400
-
-	allBlobbers.Nodes[0].Used = 5 * GB
-	allBlobbers.Nodes[1].Used = 10 * GB
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
-	require.NoError(t, err)
 
 	balances.(*testBalances).balances[clientID] = 1100
 
@@ -1555,8 +1558,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		balances             = newTestBalances(t, false)
 		client               = newClient(50*x10, balances)
 		tp, exp        int64 = 100, 1000
-		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0,
-			balances)
+		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 		alloc *StorageAllocation
 		resp  string
@@ -1849,8 +1851,8 @@ func Test_preferred_blobbers(t *testing.T) {
 	// allocation request to modify and create
 	var getAllocRequest = func() (nar *newAllocationRequest) {
 		nar = new(newAllocationRequest)
-		nar.DataShards = 10
-		nar.ParityShards = 10
+		nar.DataShards = 2
+		nar.ParityShards = 2
 		nar.Expiration = common.Timestamp(exp)
 		nar.Owner = client.id
 		nar.OwnerPublicKey = client.pk
@@ -1880,7 +1882,7 @@ func Test_preferred_blobbers(t *testing.T) {
 			"invalid test, not enough blobbers to choose preferred")
 		pb = make([]string, 0, n)
 		for i := 0; i < n; i++ {
-			pb = append(pb, getBlobberURL(blobs[i].id))
+			pb = append(pb, blobs[i].id)
 		}
 		return
 	}
@@ -1898,8 +1900,7 @@ func Test_preferred_blobbers(t *testing.T) {
 		)
 		require.NoError(t, err)
 	Preferred:
-		for _, url := range pbl {
-			var id = blobberIDByURL(url)
+		for _, id := range pbl {
 			for _, d := range alloc.BlobberDetails {
 				if id == d.BlobberID {
 					continue Preferred // ok
@@ -1961,9 +1962,9 @@ func Test_preferred_blobbers(t *testing.T) {
 		}
 
 		// make the preferred blobbers unhealthy
-		for _, url := range pbl {
+		for _, id := range pbl {
 			var b *StorageNode
-			b, err = ssc.getBlobber(blobberIDByURL(url), balances)
+			b, err = ssc.getBlobber(id, balances)
 			require.NoError(t, err)
 			b.LastHealthCheck = 0
 			updateBlobber(t, b)
