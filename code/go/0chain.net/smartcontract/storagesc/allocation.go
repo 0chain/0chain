@@ -329,8 +329,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
-	blobberNodes, bSize, err := sc.validateBlobbers(
-		t.CreationDate, sa, balances, inputBlobbers.Nodes)
+	blobberNodes, bSize, err := sc.validateBlobbers(t.CreationDate, sa, balances, inputBlobbers.Nodes)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
@@ -489,7 +488,7 @@ func (sc *StorageSmartContract) validateBlobbers(
 		balances)
 
 	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation" + strings.Join(errs, "\n"))
+		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
 	}
 
 	sa.BlobberDetails = make([]*BlobberAllocation, 0)

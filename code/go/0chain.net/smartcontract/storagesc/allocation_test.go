@@ -924,12 +924,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid character '}' looking for beginning of value"
 		errMsg5 = "allocation_creation_failed: " +
 			"invalid request: invalid read_price range"
-		errMsg5p9 = "allocation_creation_failed: " +
-			"invalid request: missing owner id"
 		errMsg6 = "allocation_creation_failed: " +
-			"Not enough blobbers to honor the allocation"
+			"Blobbers provided are not enough to honour the allocation"
 		errMsg7 = "allocation_creation_failed: " +
-			"Not enough blobbers to honor the allocation"
+			"Not enough blobbers to honor the allocation: value not present, value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"not enough tokens to honor the min lock demand (0 < 270)"
 		errMsg9 = "allocation_creation_failed: " +
@@ -964,206 +962,353 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// 1.
-
-	_, err = ssc.newAllocationRequest(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg1)
-
-	// setup unhealthy blobbers
-	var allBlobbers = newTestAllBlobbers()
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
-	require.NoError(t, err)
-
+	t.Run("unexpected end of JSON input", func(t *testing.T) {
+		_, err = ssc.newAllocationRequest(&tx, nil, balances)
+		requireErrMsg(t, err, errMsg1)
+	})
+	t.Run("No client id in transaction", func(t *testing.T) {
+		tx.ClientID = ""
+		_, err = ssc.newAllocationRequest(&tx, nil, balances)
+		requireErrMsg(t, err, errMsg3)
+	})
 	// 3.
-
-	tx.ClientID = ""
-	_, err = ssc.newAllocationRequest(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg3)
+	t.Run("invalid character", func(t *testing.T) {
+		tx.ClientID = clientID
+		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances)
+		requireErrMsg(t, err, errMsg4)
+	})
 
 	// 4.
+	t.Run("invalid read_price range", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
 
-	tx.ClientID = clientID
-	_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances)
-	requireErrMsg(t, err, errMsg4)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		requireErrMsg(t, err, errMsg5)
+	})
 
-	// 5. invalid request
+	t.Run("Blobbers provided are not enough to honour the allocation", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 
-	var nar newAllocationRequest
-	nar.ReadPriceRange = PriceRange{20, 10}
+		//_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		//requireErrMsg(t, err, errMsg5p9)
+	})
 
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg5)
+	t.Run("Blobbers provided are not enough to honour the allocation", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Owner = clientID
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		requireErrMsg(t, err, errMsg6)
+	})
 
-	// 6. missing owner id
+	t.Run("Blobbers provided are not enough to honour the allocation 2", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Owner = clientID
+		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
-	nar.Owner = clientID
-	nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
-	nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-	nar.Size = 20 * GB
-	nar.DataShards = 1
-	nar.ParityShards = 1
-	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
-	nar.Owner = "" // not set
-	nar.OwnerPublicKey = pubKey
-	nar.PreferredBlobbers = nil                      // not set
-	nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		requireErrMsg(t, err, errMsg6)
+	})
 
-	//_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	//requireErrMsg(t, err, errMsg5p9)
+	t.Run("Blobbers provided are not enough to honour the allocation no pools", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Owner = clientID
+		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
+		// 7. missing stake pools (not enough blobbers)
+		var allBlobbers = newTestAllBlobbers()
+		// make the blobbers health
+		b0 := allBlobbers.Nodes[0]
+		b0.LastHealthCheck = tx.CreationDate
+		b1 := allBlobbers.Nodes[1]
+		b1.LastHealthCheck = tx.CreationDate
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		require.NoError(t, err)
 
-	// 6 .filtered blobbers
-
-	nar.Owner = clientID
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg6)
-
-	// 6. not enough blobbers (no health blobbers)
-
-	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
-
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg6)
-
-	// 7. missing stake pools (not enough blobbers)
-
-	// make the blobbers health
-	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
-	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
-	require.NoError(t, err)
-
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg7)
-
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		requireErrMsg(t, err, errMsg7)
+	})
 	// 8. not enough tokens
+	t.Run("not enough tokens to honor the min lock demand (0 < 270)", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Owner = clientID
+		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
+		var allBlobbers = newTestAllBlobbers()
+		// make the blobbers health
+		b0 := allBlobbers.Nodes[0]
+		b0.LastHealthCheck = tx.CreationDate
+		b1 := allBlobbers.Nodes[1]
+		b1.LastHealthCheck = tx.CreationDate
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		require.NoError(t, err)
 
-	var (
-		sp1, sp2 = newStakePool(), newStakePool()
-		dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
-	)
-	dp1.Balance, dp2.Balance = 20e10, 20e10
-	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-	require.NoError(t, sp1.save(ssc.ID, "b1", balances))
-	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
+		var (
+			sp1, sp2 = newStakePool(), newStakePool()
+			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
+		)
+		dp1.Balance, dp2.Balance = 20e10, 20e10
+		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
+		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
+		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
-	tx.Value = 0
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg8)
-
+		tx.Value = 0
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		requireErrMsg(t, err, errMsg8)
+	})
 	// 9. no tokens to lock (client balance check)
+	t.Run("Blobbers provided are not enough to honour the allocation no pools", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Owner = clientID
+		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
+		var allBlobbers = newTestAllBlobbers()
+		// make the blobbers health
+		b0 := allBlobbers.Nodes[0]
+		b0.LastHealthCheck = tx.CreationDate
+		b1 := allBlobbers.Nodes[1]
+		b1.LastHealthCheck = tx.CreationDate
+		b0.Used = 5 * GB
+		b1.Used = 10 * GB
 
-	allBlobbers.Nodes[0].Used = 5 * GB
-	allBlobbers.Nodes[1].Used = 10 * GB
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
-	require.NoError(t, err)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		require.NoError(t, err)
 
-	tx.Value = 400
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg9)
+		var (
+			sp1, sp2 = newStakePool(), newStakePool()
+			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
+		)
+		dp1.Balance, dp2.Balance = 20e10, 20e10
+		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
+		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
+		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
+		tx.Value = 400
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		requireErrMsg(t, err, errMsg9)
+
+	})
 	// 10. ok
+	t.Run("Blobbers provided are not enough to honour the allocation no pools", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
+		nar.Owner = "" // not set
+		nar.OwnerPublicKey = pubKey
+		nar.PreferredBlobbers = nil                      // not set
+		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Owner = clientID
+		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
+		var allBlobbers = newTestAllBlobbers()
+		// make the blobbers health
+		b0 := allBlobbers.Nodes[0]
+		b0.LastHealthCheck = tx.CreationDate
+		b1 := allBlobbers.Nodes[1]
+		b1.LastHealthCheck = tx.CreationDate
+		b0.Used = 5 * GB
+		b1.Used = 10 * GB
 
-	allBlobbers.Nodes[0].Used = 5 * GB
-	allBlobbers.Nodes[1].Used = 10 * GB
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
-	require.NoError(t, err)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		require.NoError(t, err)
 
-	balances.balances[clientID] = 1100
+		var (
+			sp1, sp2 = newStakePool(), newStakePool()
+			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
+		)
+		dp1.Balance, dp2.Balance = 20e10, 20e10
+		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
+		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
+		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
-	tx.Value = 400
-	resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	require.NoError(t, err)
+		balances.balances[clientID] = 1100
 
-	// check response
-	var aresp StorageAllocation
-	require.NoError(t, aresp.Decode([]byte(resp)))
+		tx.Value = 400
+		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		require.NoError(t, err)
 
-	assert.Equal(t, txHash, aresp.ID)
-	assert.Equal(t, 1, aresp.DataShards)
-	assert.Equal(t, 1, aresp.ParityShards)
-	assert.Equal(t, int64(20*GB), aresp.Size)
-	assert.Equal(t, tx.CreationDate+100, aresp.Expiration)
+		// check response
+		var aresp StorageAllocation
+		require.NoError(t, aresp.Decode([]byte(resp)))
 
-	// expected blobbers after the allocation
-	var sb = newTestAllBlobbers()
-	sb.Nodes[0].LastHealthCheck = tx.CreationDate
-	sb.Nodes[1].LastHealthCheck = tx.CreationDate
-	sb.Nodes[0].Used += 10 * GB
-	sb.Nodes[1].Used += 10 * GB
+		assert.Equal(t, txHash, aresp.ID)
+		assert.Equal(t, 1, aresp.DataShards)
+		assert.Equal(t, 1, aresp.ParityShards)
+		assert.Equal(t, int64(20*GB), aresp.Size)
+		assert.Equal(t, tx.CreationDate+100, aresp.Expiration)
 
-	// blobbers saved in all blobbers list
-	allBlobbers, err = ssc.getBlobbersList(balances)
-	require.NoError(t, err)
-	assert.EqualValues(t, sb.Nodes, allBlobbers.Nodes)
-	// independent saved blobbers
-	var b1, b2 *StorageNode
-	b1, err = ssc.getBlobber("b1", balances)
-	require.NoError(t, err)
-	assert.EqualValues(t, sb.Nodes[0], b1)
-	b2, err = ssc.getBlobber("b2", balances)
-	require.NoError(t, err)
-	assert.EqualValues(t, sb.Nodes[1], b2)
+		// expected blobbers after the allocation
+		var sb = newTestAllBlobbers()
+		sb.Nodes[0].LastHealthCheck = tx.CreationDate
+		sb.Nodes[1].LastHealthCheck = tx.CreationDate
+		sb.Nodes[0].Used += 10 * GB
+		sb.Nodes[1].Used += 10 * GB
 
-	assert.Equal(t, clientID, aresp.Owner)
-	assert.Equal(t, pubKey, aresp.OwnerPublicKey)
+		// blobbers saved in all blobbers list
+		var ab []*StorageNode
+		loaded0, err := ssc.getBlobber(b0.ID, balances)
+		loaded1, err := ssc.getBlobber(b1.ID, balances)
+		ab = append(ab, loaded0)
+		ab = append(ab, loaded1)
+		require.NoError(t, err)
+		assert.EqualValues(t, sb.Nodes, ab)
+		// independent saved blobbers
+		var blob1, blob2 *StorageNode
+		blob1, err = ssc.getBlobber("b1", balances)
+		require.NoError(t, err)
+		assert.EqualValues(t, sb.Nodes[0], blob1)
+		blob2, err = ssc.getBlobber("b2", balances)
+		require.NoError(t, err)
+		assert.EqualValues(t, sb.Nodes[1], blob2)
 
-	if assert.NotNil(t, aresp.Stats) {
-		assert.Zero(t, *aresp.Stats)
-	}
+		assert.Equal(t, clientID, aresp.Owner)
+		assert.Equal(t, pubKey, aresp.OwnerPublicKey)
 
-	assert.Nil(t, aresp.PreferredBlobbers)
-	assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
-	assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
-	assert.Equal(t, 15*time.Second, aresp.ChallengeCompletionTime) // max
-	assert.Equal(t, tx.CreationDate, aresp.StartTime)
-	assert.False(t, aresp.Finalized)
+		if assert.NotNil(t, aresp.Stats) {
+			assert.Zero(t, *aresp.Stats)
+		}
 
-	// details
-	var details = []*BlobberAllocation{
-		&BlobberAllocation{
-			BlobberID:     "b1",
-			AllocationID:  txHash,
-			Size:          10 * GB,
-			Stats:         &StorageAllocationStats{},
-			Terms:         sb.Nodes[0].Terms,
-			MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
-			Spent:         0,
-		},
-		&BlobberAllocation{
-			BlobberID:     "b2",
-			AllocationID:  txHash,
-			Size:          10 * GB,
-			Stats:         &StorageAllocationStats{},
-			Terms:         sb.Nodes[1].Terms,
-			MinLockDemand: 104, // (wp * (size/GB) * mld) / time_unit
-			Spent:         0,
-		},
-	}
+		assert.NotNil(t, aresp.PreferredBlobbers)
+		assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
+		assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
+		assert.Equal(t, 15*time.Second, aresp.ChallengeCompletionTime) // max
+		assert.Equal(t, tx.CreationDate, aresp.StartTime)
+		assert.False(t, aresp.Finalized)
 
-	assert.EqualValues(t, details, aresp.BlobberDetails)
+		// details
+		var details = []*BlobberAllocation{
+			&BlobberAllocation{
+				BlobberID:     "b1",
+				AllocationID:  txHash,
+				Size:          10 * GB,
+				Stats:         &StorageAllocationStats{},
+				Terms:         sb.Nodes[0].Terms,
+				MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
+				Spent:         0,
+			},
+			&BlobberAllocation{
+				BlobberID:     "b2",
+				AllocationID:  txHash,
+				Size:          10 * GB,
+				Stats:         &StorageAllocationStats{},
+				Terms:         sb.Nodes[1].Terms,
+				MinLockDemand: 104, // (wp * (size/GB) * mld) / time_unit
+				Spent:         0,
+			},
+		}
 
-	// check out pools created and changed:
-	//  - write pool, should be created and filled with value of transaction
-	//  - stake pool, offer should be added
-	//  - challenge pool, should be created
+		assert.EqualValues(t, details, aresp.BlobberDetails)
 
-	// 1. write pool
-	var wp *writePool
-	wp, err = ssc.getWritePool(clientID, balances)
-	require.NoError(t, err)
-	assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
+		// check out pools created and changed:
+		//  - write pool, should be created and filled with value of transaction
+		//  - stake pool, offer should be added
+		//  - challenge pool, should be created
 
-	_, err = ssc.getStakePool("b1", balances)
-	require.NoError(t, err)
+		// 1. write pool
+		var wp *writePool
+		wp, err = ssc.getWritePool(clientID, balances)
+		require.NoError(t, err)
+		assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
-	_, err = ssc.getStakePool("b2", balances)
-	require.NoError(t, err)
+		_, err = ssc.getStakePool("b1", balances)
+		require.NoError(t, err)
 
-	// 3. challenge pool existence
-	var cp *challengePool
-	cp, err = ssc.getChallengePool(aresp.ID, balances)
-	require.NoError(t, err)
+		_, err = ssc.getStakePool("b2", balances)
+		require.NoError(t, err)
 
-	assert.Zero(t, cp.Balance)
+		// 3. challenge pool existence
+		var cp *challengePool
+		cp, err = ssc.getChallengePool(aresp.ID, balances)
+		require.NoError(t, err)
+
+		assert.Zero(t, cp.Balance)
+	})
 }
 
 func Test_updateAllocationRequest_decode(t *testing.T) {
