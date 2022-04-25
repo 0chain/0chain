@@ -466,7 +466,7 @@ func (uar *updateAllocationRequest) validate(
 	if uar.SetImmutable && alloc.IsImmutable {
 		return errors.New("allocation is already immutable")
 	}
-	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 {
+	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 && len(uar.Name) == 0 {
 		if !uar.SetImmutable {
 			return errors.New("update allocation changes nothing")
 		}
