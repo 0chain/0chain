@@ -353,7 +353,7 @@ func testCancelAllocation(
 		now:                  now,
 		challengeCreation:    challenges,
 	}
-	f.setCancelPassRates()
+	f.setFinilizationPassRates()
 
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
 		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
