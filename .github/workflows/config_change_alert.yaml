@@ -4,17 +4,24 @@ on:
   push:
    branches: 
      - staging
+   paths:
+      - docker.local/config/0chain.yaml
+      - docker.local/config/sc.yaml
+  
   pull_request:
-   branches: 
-     - staging
+    branches: 
+      - staging
+    types:
+      - closed
+    paths:
+      - docker.local/config/0chain.yaml
+      - docker.local/config/sc.yaml
    
 jobs:
-  test:
+  Config_Alert:
     runs-on: docker-builds
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+      - uses: actions/checkout@v1
 
       - name: Get changed files using defaults
         id: changed-files

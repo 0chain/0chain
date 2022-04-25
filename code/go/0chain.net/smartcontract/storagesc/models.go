@@ -776,6 +776,8 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
+	// Name is the name of an allocation
+	Name string `json:"name"`
 }
 
 func (sa *StorageAllocation) validateAllocationBlobber(
