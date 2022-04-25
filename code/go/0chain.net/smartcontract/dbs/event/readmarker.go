@@ -18,8 +18,8 @@ type ReadMarker struct {
 	TransactionID string  `json:"transaction_id"`
 	OwnerID       string  `json:"owner_id"`
 	Timestamp     int64   `json:"timestamp"`
-	ReadSize      int64   `json:"read_size"`
-	ReadSizeInGB  float64 `json:"read_size_in_gb"`
+	ReadCounter   int64   `json:"read_counter"`
+	ReadSize      float64 `json:"read_size"`
 	Signature     string  `json:"signature"`
 	PayerID       string  `json:"payer_id"`
 	AuthTicket    string  `json:"auth_ticket"`

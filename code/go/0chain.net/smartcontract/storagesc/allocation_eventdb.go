@@ -95,6 +95,7 @@ func allocationTableToAllocationInfo(alloc *event.Allocation, eventDb *event.Eve
 	sa := StorageAllocation{
 		ID:             alloc.AllocationID,
 		Tx:             alloc.TransactionID,
+		Name:           alloc.AllocationName,
 		DataShards:     alloc.DataShards,
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
@@ -102,13 +103,13 @@ func allocationTableToAllocationInfo(alloc *event.Allocation, eventDb *event.Eve
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
 		Stats: &StorageAllocationStats{
-			UsedSize:                 alloc.UsedSize,
-			NumWrites:                alloc.NumWrites,
-			ReadsSize:                alloc.ReadSize,
-			TotalChallenges:          alloc.TotalChallenges,
-			OpenChallenges:           alloc.OpenChallenges,
-			SuccessChallenges:        alloc.SuccessfulChallenges,
-			FailedChallenges:         alloc.FailedChallenges,
+			UsedSize:                  alloc.UsedSize,
+			NumWrites:                 alloc.NumWrites,
+			NumReads:                  alloc.NumReads,
+			TotalChallenges:           alloc.TotalChallenges,
+			OpenChallenges:            alloc.OpenChallenges,
+			SuccessChallenges:         alloc.SuccessfulChallenges,
+			FailedChallenges:          alloc.FailedChallenges,
 			LatestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
 		BlobberDetails:             blobberDetails,
@@ -158,6 +159,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 	alloc := &event.Allocation{
 		AllocationID:               sa.ID,
+		AllocationName:             sa.Name,
 		TransactionID:              sa.Tx,
 		DataShards:                 sa.DataShards,
 		ParityShards:               sa.ParityShards,
@@ -185,7 +187,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 	if sa.Stats != nil {
 		alloc.NumWrites = sa.Stats.NumWrites
-		alloc.ReadSize = sa.Stats.ReadsSize
+		alloc.NumReads = sa.Stats.NumReads
 		alloc.TotalChallenges = sa.Stats.TotalChallenges
 		alloc.OpenChallenges = sa.Stats.OpenChallenges
 		alloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
