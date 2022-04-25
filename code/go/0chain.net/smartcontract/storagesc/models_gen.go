@@ -529,11 +529,11 @@ func (z *BlobberChallengeData) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "AllocationID"
 	o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
 	o = msgp.AppendString(o, z.AllocationID)
-	// string "Created"
-	o = append(o, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
-	o, err = z.Created.MarshalMsg(o)
+	// string "CreatedAt"
+	o = append(o, 0xa9, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
+	o, err = z.CreatedAt.MarshalMsg(o)
 	if err != nil {
-		err = msgp.WrapError(err, "Created")
+		err = msgp.WrapError(err, "CreatedAt")
 		return
 	}
 	return
@@ -569,10 +569,10 @@ func (z *BlobberChallengeData) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "AllocationID")
 				return
 			}
-		case "Created":
-			bts, err = z.Created.UnmarshalMsg(bts)
+		case "CreatedAt":
+			bts, err = z.CreatedAt.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Created")
+				err = msgp.WrapError(err, "CreatedAt")
 				return
 			}
 		default:
@@ -589,7 +589,7 @@ func (z *BlobberChallengeData) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *BlobberChallengeData) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 8 + z.Created.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + z.CreatedAt.Msgsize()
 	return
 }
 
@@ -625,11 +625,11 @@ func (z *BlobberChallengeDecode) MarshalMsg(b []byte) (o []byte, err error) {
 			// string "AllocationID"
 			o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
 			o = msgp.AppendString(o, z.Challenges[za0001].AllocationID)
-			// string "Created"
-			o = append(o, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
-			o, err = z.Challenges[za0001].Created.MarshalMsg(o)
+			// string "CreatedAt"
+			o = append(o, 0xa9, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
+			o, err = z.Challenges[za0001].CreatedAt.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Challenges", za0001, "Created")
+				err = msgp.WrapError(err, "Challenges", za0001, "CreatedAt")
 				return
 			}
 		}
@@ -727,10 +727,10 @@ func (z *BlobberChallengeDecode) UnmarshalMsg(bts []byte) (o []byte, err error) 
 								err = msgp.WrapError(err, "Challenges", za0001, "AllocationID")
 								return
 							}
-						case "Created":
-							bts, err = z.Challenges[za0001].Created.UnmarshalMsg(bts)
+						case "CreatedAt":
+							bts, err = z.Challenges[za0001].CreatedAt.UnmarshalMsg(bts)
 							if err != nil {
-								err = msgp.WrapError(err, "Challenges", za0001, "Created")
+								err = msgp.WrapError(err, "Challenges", za0001, "CreatedAt")
 								return
 							}
 						default:
@@ -768,7 +768,7 @@ func (z *BlobberChallengeDecode) Msgsize() (s int) {
 		if z.Challenges[za0001] == nil {
 			s += msgp.NilSize
 		} else {
-			s += 1 + 3 + msgp.StringPrefixSize + len(z.Challenges[za0001].ID) + 13 + msgp.StringPrefixSize + len(z.Challenges[za0001].AllocationID) + 8 + z.Challenges[za0001].Created.Msgsize()
+			s += 1 + 3 + msgp.StringPrefixSize + len(z.Challenges[za0001].ID) + 13 + msgp.StringPrefixSize + len(z.Challenges[za0001].AllocationID) + 10 + z.Challenges[za0001].CreatedAt.Msgsize()
 		}
 	}
 	return

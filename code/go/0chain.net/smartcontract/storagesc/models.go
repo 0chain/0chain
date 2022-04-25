@@ -104,7 +104,7 @@ type ChallengeResponse struct {
 type BlobberChallengeData struct {
 	ID           string           `json:"id"`
 	AllocationID string           `json:"allocation_id"`
-	Created      common.Timestamp `json:"created"`
+	CreatedAt    common.Timestamp `json:"created"`
 }
 
 type BlobberChallenge struct {
@@ -174,7 +174,7 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
 		bcData := &BlobberChallengeData{
 			ID:           challenge.ID,
-			Created:      challenge.Created,
+			CreatedAt:    challenge.Created,
 			AllocationID: challenge.AllocationID,
 		}
 		sn.Challenges = append(sn.Challenges, bcData)
@@ -198,7 +198,7 @@ func (sn *BlobberChallenge) removeExpiredAllocationChallenges(
 
 	i := 0
 	for _, chall := range sn.Challenges {
-		expiry := chall.Created + toSeconds(blobber.Terms.ChallengeCompletionTime)
+		expiry := chall.CreatedAt + toSeconds(blobber.Terms.ChallengeCompletionTime)
 		if now <= expiry {
 			break
 		}

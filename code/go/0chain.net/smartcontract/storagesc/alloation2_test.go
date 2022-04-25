@@ -369,7 +369,7 @@ func testCancelAllocation(
 			bc.Challenges = append(bc.Challenges, &BlobberChallengeData{
 				ID:           bc.BlobberID + strconv.Itoa(j),
 				AllocationID: sAllocation.ID,
-				Created:      created,
+				CreatedAt:    created,
 			})
 		}
 
