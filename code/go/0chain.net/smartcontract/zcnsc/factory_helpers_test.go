@@ -4,24 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/chaincore/chain/state"
-
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/stakepool"
 	. "0chain.net/smartcontract/zcnsc"
 )
 
 const (
-	AddAuthorizer          = "AddAuthorizer"
-	DeleteAuthorizer       = "DeleteAuthorizer"
-	AddAuthorizerStakePool = "addAuthorizerStakePool"
-	clientPrefixID         = "fred"
-	authorizerPrefixID     = "authorizer"
-	zcnAddressId           = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	clientPrefixID     = "fred"
+	authorizerPrefixID = "authorizer"
 )
 
 var (
@@ -66,7 +60,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 	txn := &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
-		ToClientID:        zcnAddressId,
+		ToClientID:        ADDRESS,
 		Value:             int64(zcnToBalance(1)),
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
@@ -77,7 +71,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 		TransactionOutput: "",
 		OutputHash:        "",
 	}
-	addTransactionData(txn, DeleteAuthorizer, nil)
+	addTransactionData(txn, DeleteAuthorizerFunc, nil)
 	return txn
 }
 
@@ -88,7 +82,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 	var txn = &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
-		ToClientID:        zcnAddressId,
+		ToClientID:        ADDRESS,
 		Value:             int64(zcnToBalance(1)),
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
@@ -100,7 +94,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		OutputHash:        "",
 	}
 
-	addTransactionData(txn, AddAuthorizer, CreateAuthorizerParamPayload(fromClient))
+	addTransactionData(txn, AddAuthorizerFunc, CreateAuthorizerParamPayload(fromClient))
 
 	return txn
 }
@@ -112,7 +106,7 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 	var txn = &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
-		ToClientID:        zcnAddressId,
+		ToClientID:        ADDRESS,
 		Value:             int64(zcnToBalance(1)),
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
@@ -129,8 +123,8 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 	return txn
 }
 
-func CreateAuthorizerParam(delegateWalletID string) *AuthorizerParameter {
-	return &AuthorizerParameter{
+func CreateAuthorizerParam(delegateWalletID string) *AddAuthorizerPayload {
+	return &AddAuthorizerPayload{
 		PublicKey: "public key",
 		URL:       "http://localhost:2344",
 		StakePoolSettings: stakepool.StakePoolSettings{
@@ -143,8 +137,8 @@ func CreateAuthorizerParam(delegateWalletID string) *AuthorizerParameter {
 	}
 }
 
-func CreateAuthorizerStakingPoolParam(delegateWalletID string) *AuthorizerStakePoolParameter {
-	return &AuthorizerStakePoolParameter{
+func CreateAuthorizerStakingPoolParam(delegateWalletID string) *UpdateAuthorizerStakePoolPayload {
+	return &UpdateAuthorizerStakePoolPayload{
 		StakePoolSettings: stakepool.StakePoolSettings{
 			DelegateWallet:  delegateWalletID,
 			MinStake:        100,

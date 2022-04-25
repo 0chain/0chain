@@ -6,9 +6,8 @@ import (
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/chaincore/mocks"
-
 	chainstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/mock"

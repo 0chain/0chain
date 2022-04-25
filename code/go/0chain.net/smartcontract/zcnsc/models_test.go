@@ -126,7 +126,7 @@ func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 }
 
 func Test_PublicKey(t *testing.T) {
-	pk := AuthorizerParameter{}
+	pk := AddAuthorizerPayload{}
 
 	err := pk.Decode(nil)
 	require.Error(t, err)
@@ -144,7 +144,7 @@ func Test_PublicKey(t *testing.T) {
 	bytes, err := json.Marshal(pk)
 	require.NoError(t, err)
 
-	expected := AuthorizerParameter{}
+	expected := AddAuthorizerPayload{}
 	err = expected.Decode(bytes)
 	require.NoError(t, err)
 	require.Equal(t, expected.PublicKey, pk.PublicKey)
