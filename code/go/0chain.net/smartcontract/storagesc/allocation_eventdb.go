@@ -106,7 +106,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
-			ReadsSize:                 alloc.ReadSize,
+			NumReads:                  alloc.NumReads,
 			TotalChallenges:           alloc.TotalChallenges,
 			OpenChallenges:            alloc.OpenChallenges,
 			SuccessChallenges:         alloc.SuccessfulChallenges,
@@ -185,7 +185,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 	if sa.Stats != nil {
 		alloc.NumWrites = sa.Stats.NumWrites
-		alloc.ReadSize = sa.Stats.ReadsSize
+		alloc.NumReads = sa.Stats.NumReads
 		alloc.TotalChallenges = sa.Stats.TotalChallenges
 		alloc.OpenChallenges = sa.Stats.OpenChallenges
 		alloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
