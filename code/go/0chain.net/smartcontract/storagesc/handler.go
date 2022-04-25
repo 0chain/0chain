@@ -343,7 +343,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Con
 	if err != nil {
 		return nil, common.NewErrInternal("can't get allocation list", err.Error())
 	}
-	result := make([]*StorageAllocation, 0)
+	result := make([]*AllocationInfo, 0)
 	for _, allocationID := range allocations.List {
 		allocationObj := &StorageAllocation{}
 		allocationObj.ID = allocationID
@@ -351,13 +351,18 @@ func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Con
 		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 		switch err {
 		case nil:
-			if balances.GetEventDB() != nil {
-				err = allocationObj.getBlobbers(balances)
-				if err != nil {
-					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-				}
+			var blobberIDs []string
+			for _, b := range allocationObj.BlobberDetails {
+				blobberIDs = append(blobberIDs, b.BlobberID)
 			}
-			result = append(result, allocationObj)
+			blobbers, err := ssc.getBlobbers(blobberIDs, balances)
+			if err != nil {
+				return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+			}
+			result = append(result, &AllocationInfo{
+				StorageAllocation: *allocationObj,
+				Blobbers:          blobbers,
+			})
 		case util.ErrValueNotPresent:
 			continue
 		default:
@@ -472,7 +477,8 @@ const (
 	cantGetBlobber    = "can't get blobber"
 )
 
-func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	logging.Logger.Info("AllocationStatsHandler",
 		zap.Bool("is event db present", balances.GetEventDB() != nil))
 	allocationID := params.Get("allocation")
@@ -484,24 +490,30 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
 
-	if balances.GetEventDB() != nil {
-		err = allocationObj.getBlobbers(balances)
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-		}
+	var blobberIDs []string
+	for _, b := range allocationObj.BlobberDetails {
+		blobberIDs = append(blobberIDs, b.BlobberID)
+	}
+	blobbers, err := ssc.getBlobbers(blobberIDs, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 	}
 
-	return allocationObj, nil
+	return &AllocationInfo{
+		StorageAllocation: *allocationObj,
+		Blobbers:          blobbers,
+	}, nil
 }
 
-func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values,
+	balances cstate.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
 
 	if balances.GetEventDB() == nil {
 		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
 	}
 
-	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
+	allocation, err := getAllocationInfoFromDb(allocationID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}

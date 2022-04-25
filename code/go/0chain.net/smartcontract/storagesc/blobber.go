@@ -52,6 +52,22 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
+func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
+	balances cstate.StateContextI) (blobbers []*StorageNode, err error) {
+
+	for _, blobberID := range blobberIDs {
+		blobber := new(StorageNode)
+		blobber.ID = blobberID
+		err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
+		if err != nil {
+			return nil, err
+		}
+		blobbers = append(blobbers, blobber)
+	}
+
+	return
+}
+
 func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
 	balances cstate.StateContextI) (blobberChallLocation *BlobberChallengePartitionLocation, err error) {
 
