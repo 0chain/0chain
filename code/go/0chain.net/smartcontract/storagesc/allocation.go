@@ -1305,7 +1305,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	}
 
 	var passRates []float64
-	passRates, err = sc.cancelledPassRates(alloc, t.CreationDate, balances)
+	passRates, err = sc.finalizedPassRates(alloc)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1315,7 +1315,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	// new values
 	alloc.Expiration, alloc.ChallengeCompletionTime = t.CreationDate, 0
 
-	var sps = []*stakePool{}
+	var sps []*stakePool
 	for _, d := range alloc.BlobberDetails {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(d.BlobberID, balances); err != nil {

@@ -115,7 +115,7 @@ type BlobberChallenge struct {
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + ":blobberchallenge:" + sn.BlobberID)
+	return globalKey + ":blobberchallenge:" + sn.BlobberID
 }
 
 func (sn *BlobberChallenge) Encode() []byte {
