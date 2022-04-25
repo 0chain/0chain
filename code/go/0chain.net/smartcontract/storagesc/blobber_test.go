@@ -216,7 +216,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadSize:        1 * GB,
+			ReadCounter:     1 * GB / (64 * KB),
 			PayerID:         client.id,
 		}
 		rm.ReadMarker.Signature, err = client.scheme.Sign(
@@ -293,7 +293,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadSize:        1 * GB,
+			ReadCounter:     1 * GB / (64 * KB),
 			PayerID:         reader.id,
 			AuthTicket:      &at,
 		}

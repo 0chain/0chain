@@ -835,6 +835,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					}
 					q := u.Query()
 					q.Set("id", clientID)
+					q.Set("pool_id", "-")
 					u.RawQuery = q.Encode()
 
 					req := httptest.NewRequest(http.MethodGet, u.String(), nil)
