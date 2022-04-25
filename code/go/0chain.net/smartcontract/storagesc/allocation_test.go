@@ -792,7 +792,7 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.Expiration = common.Now()
 	nar.Owner = clientID
 	nar.OwnerPublicKey = clientPk
-	nar.PreferredBlobbers = []string{"one", "two"}
+	nar.Blobbers = []string{"one", "two"}
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
 	var alloc = nar.storageAllocation()
@@ -803,7 +803,7 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	require.Equal(t, alloc.Owner, nar.Owner)
 	require.Equal(t, alloc.OwnerPublicKey, nar.OwnerPublicKey)
 	require.True(t, isEqualStrings(alloc.PreferredBlobbers,
-		nar.PreferredBlobbers))
+		nar.Blobbers))
 	require.Equal(t, alloc.ReadPriceRange, nar.ReadPriceRange)
 	require.Equal(t, alloc.WritePriceRange, nar.WritePriceRange)
 }
@@ -817,7 +817,7 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	ne.Expiration = 1240
 	ne.Owner = clientID
 	ne.OwnerPublicKey = clientPk
-	ne.PreferredBlobbers = []string{"b1", "b2"}
+	ne.Blobbers = []string{"b1", "b2"}
 	ne.ReadPriceRange = PriceRange{1, 2}
 	ne.WritePriceRange = PriceRange{2, 3}
 	require.NoError(t, nd.decode(mustEncode(t, &ne)))
@@ -999,7 +999,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 
 		//_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
@@ -1018,7 +1018,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
@@ -1037,7 +1037,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
@@ -1058,7 +1058,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
@@ -1069,9 +1069,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b0.LastHealthCheck = tx.CreationDate
 		b1 := allBlobbers.Nodes[1]
 		b1.LastHealthCheck = tx.CreationDate
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		nar.Blobbers = append(nar.Blobbers, b0.ID)
 		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.ID)
 		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 		require.NoError(t, err)
 
@@ -1091,7 +1091,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
@@ -1101,9 +1101,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b0.LastHealthCheck = tx.CreationDate
 		b1 := allBlobbers.Nodes[1]
 		b1.LastHealthCheck = tx.CreationDate
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		nar.Blobbers = append(nar.Blobbers, b0.ID)
 		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.ID)
 		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 		require.NoError(t, err)
 
@@ -1133,7 +1133,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
@@ -1146,9 +1146,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b0.Used = 5 * GB
 		b1.Used = 10 * GB
 
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		nar.Blobbers = append(nar.Blobbers, b0.ID)
 		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.ID)
 		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 		require.NoError(t, err)
 
@@ -1179,7 +1179,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.PreferredBlobbers = nil                      // not set
+		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
@@ -1192,9 +1192,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b0.Used = 5 * GB
 		b1.Used = 10 * GB
 
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+		nar.Blobbers = append(nar.Blobbers, b0.ID)
 		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
-		nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.ID)
 		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 		require.NoError(t, err)
 
@@ -1403,9 +1403,9 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	b0.Used = 5 * GB
 	b1.Used = 10 * GB
 
-	nar.PreferredBlobbers = append(nar.PreferredBlobbers, b0.ID)
+	nar.Blobbers = append(nar.Blobbers, b0.ID)
 	_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
-	nar.PreferredBlobbers = append(nar.PreferredBlobbers, b1.ID)
+	nar.Blobbers = append(nar.Blobbers, b1.ID)
 	_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 	require.NoError(t, err)
 
@@ -1418,7 +1418,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
 	nar.MaxChallengeCompletionTime = 200 * time.Hour //
-	nar.PreferredBlobbers = []string{"b1", "b2"}
+	nar.Blobbers = []string{"b1", "b2"}
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
@@ -1893,7 +1893,7 @@ func Test_preferred_blobbers(t *testing.T) {
 			nar = getAllocRequest()
 			pbl = getPreferredBlobbers(blobs, 4)
 		)
-		nar.PreferredBlobbers = pbl
+		nar.Blobbers = pbl
 		var (
 			allocID    = newAlloc(t, nar)
 			alloc, err = ssc.getAllocation(allocID, balances)
@@ -1925,7 +1925,7 @@ func Test_preferred_blobbers(t *testing.T) {
 			pbl = getBlobbersNotExists(4)
 			err error
 		)
-		nar.PreferredBlobbers = pbl
+		nar.Blobbers = pbl
 		tp += 100
 		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
 		require.Error(t, err) // expected error
@@ -1971,7 +1971,7 @@ func Test_preferred_blobbers(t *testing.T) {
 		}
 
 		nar.Expiration += common.Timestamp(tp)
-		nar.PreferredBlobbers = pbl
+		nar.Blobbers = pbl
 		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
 		require.Error(t, err) // expected error
 	})

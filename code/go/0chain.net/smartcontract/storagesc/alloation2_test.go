@@ -60,7 +60,7 @@ func TestNewAllocation(t *testing.T) {
 		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
-		PreferredBlobbers: []string{"0", "1", "2", "3",
+		Blobbers: []string{"0", "1", "2", "3",
 			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
@@ -850,7 +850,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	require.NoError(t, err)
 	var individualBlobbers = SortedBlobbers{}
-	for _, id := range request.PreferredBlobbers {
+	for _, id := range request.Blobbers {
 		var b *StorageNode
 		b, err = ssc.getBlobber(id, ctx)
 		if err != nil && err.Error() == errValueNotPresent {

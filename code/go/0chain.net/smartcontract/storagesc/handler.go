@@ -263,7 +263,7 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		},
 		Size:              int(request.Size),
 		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.PreferredBlobbers,
+		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	})
 	if err != nil || len(blobberIDs) == 0 {

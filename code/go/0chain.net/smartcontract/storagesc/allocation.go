@@ -149,7 +149,7 @@ type newAllocationRequest struct {
 	Expiration                 common.Timestamp `json:"expiration_date"`
 	Owner                      string           `json:"owner_id"`
 	OwnerPublicKey             string           `json:"owner_public_key"`
-	PreferredBlobbers          []string         `json:"preferred_blobbers"`
+	Blobbers                   []string         `json:"blobbers"`
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
@@ -166,7 +166,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.Owner = nar.Owner
 	sa.OwnerPublicKey = nar.OwnerPublicKey
 	sa.WritePoolOwners = append(sa.WritePoolOwners, nar.Owner)
-	sa.PreferredBlobbers = nar.PreferredBlobbers
+	sa.PreferredBlobbers = nar.Blobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
@@ -307,17 +307,17 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"malformed request: %v", err)
 	}
 
-	if len(request.PreferredBlobbers) < (request.DataShards + request.ParityShards) {
+	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Blobbers provided are not enough to honour the allocation")
 	}
 
-	if len(request.PreferredBlobbers) > conf.MaxBlobbersPerAllocation {
+	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
-	inputBlobbers := sc.getBlobbers(request.PreferredBlobbers, balances)
+	inputBlobbers := sc.getBlobbers(request.Blobbers, balances)
 	if len(inputBlobbers.Nodes) < (request.DataShards + request.ParityShards) {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Not enough provided blobbers found in mpt")
