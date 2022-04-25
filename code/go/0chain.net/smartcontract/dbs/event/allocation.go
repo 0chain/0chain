@@ -12,6 +12,7 @@ import (
 type Allocation struct {
 	gorm.Model
 	AllocationID               string        `json:"allocation_id" gorm:"uniqueIndex"`
+	AllocationName             string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
 	TransactionID              string        `json:"transaction_id"`
 	DataShards                 int           `json:"data_shards"`
 	ParityShards               int           `json:"parity_shards"`
