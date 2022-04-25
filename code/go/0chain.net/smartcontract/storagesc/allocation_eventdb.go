@@ -95,6 +95,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 	sa := &StorageAllocation{
 		ID:             alloc.AllocationID,
 		Tx:             alloc.TransactionID,
+		Name:           alloc.AllocationName,
 		DataShards:     alloc.DataShards,
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
@@ -156,6 +157,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 	alloc := &event.Allocation{
 		AllocationID:               sa.ID,
+		AllocationName:             sa.Name,
 		TransactionID:              sa.Tx,
 		DataShards:                 sa.DataShards,
 		ParityShards:               sa.ParityShards,
