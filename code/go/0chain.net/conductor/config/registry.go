@@ -2,9 +2,12 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+
+	"0chain.net/conductor/config/cases"
 )
 
 type flowExecuteFunc func(name string, ex Executor, val interface{},
@@ -28,6 +31,10 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return ex.CleanupBC(tm)
 	})
+	register("env", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return env(ex, val)
+	})
 
 	// common nodes control (start / stop, lock / unlock)
 
@@ -46,6 +53,12 @@ func init() {
 	register("stop", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return stop(ex, val, tm)
+	})
+
+	// checks
+	register("expect_active_set", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return expectActiveSet(ex, val)
 	})
 
 	// wait for an event of the monitor
@@ -87,7 +100,12 @@ func init() {
 		return waitSharderKeep(ex, val, tm)
 	})
 
-	// control nodes behavior / misbehavior (view change)
+	// control nodes behavior / misbehavior
+
+	register("generators_failure", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return configureGeneratorsFailure(name, ex, val)
+	})
 
 	register("set_revealed", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
@@ -343,4 +361,198 @@ func init() {
 		return ex.Challenges(&cs)
 	})
 
+	register(saveLogsDirectiveName, func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.SaveLogs(); err != nil {
+			log.Printf("Warning, logs are not saved, err: %v", err)
+		}
+
+		return nil
+	})
+
+	// checks
+
+	register("configure_not_notarised_block_extension_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewNotNotarisedBlockExtension()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_send_different_blocks_from_first_generator_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewSendDifferentBlocksFromFirstGenerator(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_send_different_blocks_from_all_generators_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewSendDifferentBlocksFromAllGenerators(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_breaking_single_block", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewBreakingSingleBlock()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_send_insufficient_proposals_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewSendInsufficientProposals()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_verifying_non_existent_block_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableServerStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewVerifyingNonExistentBlock(ex.GetServerStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_notarising_non_existent_block_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableServerStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewNotarisingNonExistentBlock(ex.GetServerStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_resend_proposed_block_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewResendProposedBlock()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_resend_notarisation_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewResendNotarisation()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_bad_timeout_vrfs_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableServerStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewBadTimeoutVRFS(ex.GetServerStatsCollector(), ex.GetMonitorID())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_half_nodes_down_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewHalfNodesDown(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_block_state_change_requestor_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableClientStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewBlockStateChangeRequestor(ex.GetClientStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_miner_notarised_block_requestor_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableClientStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewMinerNotarisedBlockRequestor(ex.GetClientStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_fb_requestor_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableClientStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewFBRequestor(ex.GetClientStatsCollector())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("configure_missing_lfb_tickets_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		cfg := cases.NewMissingLFBTickets(ex.MinersNum())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &TestCaseCheck{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.MakeTestCaseCheck(cfg)
+	})
 }

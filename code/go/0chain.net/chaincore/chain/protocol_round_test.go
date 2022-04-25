@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"0chain.net/core/common"
+	"context"
 	"strconv"
 	"testing"
 
@@ -8,12 +10,16 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 	lfmb := &block.Block{
 		HashIDField: datastore.HashIDField{Hash: "lfmb"},
 	}
+	cancel, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	common.SetupRootContext(cancel)
 	cases := []struct {
 		Name        string
 		MagicBlocks []int64
@@ -56,7 +62,18 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
-			chain := &Chain{latestFinalizedMagicBlock: lfmb, magicBlockStartingRounds: map[int64]*block.Block{}}
+			chain := &Chain{
+				magicBlockStartingRounds: map[int64]*block.Block{},
+				getLFMB:                  make(chan *block.Block),
+				updateLFMB:               make(chan *updateLFMBWithReply, 1),
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			doneC := make(chan struct{})
+			go func() {
+				chain.StartLFMBWorker(ctx)
+				close(doneC)
+			}()
+			chain.updateLatestFinalizedMagicBlock(ctx, lfmb)
 			for _, r := range test.MagicBlocks {
 				chain.magicBlockStartingRounds[r] = &block.Block{
 					HashIDField: datastore.HashIDField{Hash: strconv.FormatInt(r, 10)},
@@ -66,13 +83,16 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 			for _, checkRound := range test.CheckRounds {
 				mr := &round.Round{Number: checkRound.Round}
 				got := chain.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
-				assert.NotNil(t, got)
+				require.NotNil(t, got)
 				if checkRound.WantRound == -1 {
 					assert.Equal(t, lfmb, got)
 				} else {
 					assert.Equal(t, chain.magicBlockStartingRounds[checkRound.WantRound].Hash, got.Hash)
 				}
 			}
+
+			cancel()
+			<-doneC
 		})
 	}
 }

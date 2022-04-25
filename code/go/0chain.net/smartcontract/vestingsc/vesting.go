@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -18,6 +19,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//msgp:ignore info destInfo addRequest
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 // internal errors
 
@@ -53,7 +57,7 @@ func (sr *stopRequest) decode(b []byte) error {
 //
 
 type destination struct {
-	ID     datastore.Key `json:"id"`     // destination ID
+	ID     string        `json:"id"`     // destination ID
 	Amount state.Balance `json:"amount"` // amount to vest for the destination (initial)
 	Vested state.Balance `json:"vested"` // tokens already vested
 	// Last tokens transfer time. The Last is for statistic and represent
@@ -200,7 +204,7 @@ type vestingPool struct {
 	StartTime    common.Timestamp `json:"start_time"`   //
 	ExpireAt     common.Timestamp `json:"expire_at"`    //
 	Destinations destinations     `json:"destinations"` //
-	ClientID     datastore.Key    `json:"client_id"`    // the pool owner
+	ClientID     string           `json:"client_id"`    // the pool owner
 }
 
 // newVestingPool returns new empty uninitialized vesting pool.
@@ -516,28 +520,13 @@ type info struct {
 // helpers
 //
 
-func (vsc *VestingSmartContract) getPoolBytes(poolID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
-
-	var val util.Serializable
-	if val, err = balances.GetTrieNode(poolID); err != nil {
-		return
-	}
-
-	return val.Encode(), nil
-}
-
 func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
 	balances chainstate.StateContextI) (vp *vestingPool, err error) {
 
-	var poolb []byte
-	if poolb, err = vsc.getPoolBytes(poolID, balances); err != nil {
-		return
-	}
-
 	vp = newVestingPool()
-	if err = vp.Decode(poolb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	err = balances.GetTrieNode(poolID, vp)
+	if err != nil {
+		return nil, err
 	}
 
 	return
@@ -557,7 +546,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	}
 
 	var conf *config
-	if conf, err = getConfig(); err != nil {
+	if conf, err = vsc.getConfig(balances); err != nil {
 		return "", common.NewError("create_vesting_pool_failed",
 			"can't get SC configurations: "+err.Error())
 	}

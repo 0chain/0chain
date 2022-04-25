@@ -78,18 +78,6 @@ func extractBlockSharders(sharders []*sharder, n int) (bs []string) {
 	return
 }
 
-func getBlockSharders(sharders []*sharder, bs []string) (got []*sharder) {
-	got = make([]*sharder, 0, len(bs))
-	for _, sh := range sharders {
-		for _, id := range bs {
-			if sh.sharder.id == id {
-				got = append(got, sh)
-			}
-		}
-	}
-	return
-}
-
 func createPreviousMagicBlock(miners []*miner, sharders []*sharder) (
 	b *block.Block) {
 
@@ -171,21 +159,17 @@ func Test_payFees(t *testing.T) {
 
 	setConfig(t, balances)
 
-	t.Run("add miners", func(t *testing.T) {
-		for i := 0; i < 10; i++ {
-			miners = append(miners, newMiner(t, msc, now, stakeHolders,
-				stakeVal, balances))
-			now += 10
-		}
-	})
+	for i := 0; i < 10; i++ {
+		miners = append(miners, newMiner(t, msc, now, stakeHolders,
+			stakeVal, balances))
+		now += 10
+	}
 
-	t.Run("add sharders", func(t *testing.T) {
-		for i := 0; i < 10; i++ {
-			sharders = append(sharders, newSharder(t, msc, now, stakeHolders,
-				stakeVal, balances))
-			now += 10
-		}
-	})
+	for i := 0; i < 10; i++ {
+		sharders = append(sharders, newSharder(t, msc, now, stakeHolders,
+			stakeVal, balances))
+		now += 10
+	}
 
 	// add all the miners to DKG miners list
 	// add all the miners and the sharders to latest finalized magic block
@@ -545,9 +529,8 @@ func Test_payFees(t *testing.T) {
 	t.Run("epoch", func(t *testing.T) {
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err)
-		var ir, rr = gn.InterestRate, gn.RewardRate
+		var rr = gn.RewardRate
 		gn.epochDecline()
-		assert.True(t, gn.InterestRate < ir)
 		assert.True(t, gn.RewardRate < rr)
 	})
 

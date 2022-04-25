@@ -1,12 +1,15 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+
+	"0chain.net/smartcontract/stakepool"
+
+	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -15,6 +18,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
 
 //
 // client write pool (consist of allocation pools)
@@ -33,10 +38,6 @@ func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
 	return wp.Pools.blobberCut(allocID, blobberID, now)
-}
-
-func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) {
-	wp.Pools.removeEmpty(allocID, ap)
 }
 
 // Encode implements util.Serializable interface.
@@ -139,32 +140,16 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 // smart contract methods
 //
 
-// getWritePoolBytes of a client
-func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	balances chainState.StateContextI) (wp *writePool, err error) {
-
-	var poolb []byte
-	if poolb, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
-		return
-	}
 	wp = new(writePool)
-	err = wp.Decode(poolb)
+	err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID), wp)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, err
 	}
-	return
+
+	return wp, nil
 }
 
 func (ssc *StorageSmartContract) createEmptyWritePool(
@@ -215,7 +200,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if t.Value < int64(mld) {
+	if t.Value < int64(mld) || t.Value <= 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
 	}
@@ -257,11 +242,6 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		lr.TargetId = t.ClientID
 	}
 
-	// remembers who funded the write pool, so tokens get returned to funder on unlock
-	if err := ssc.addToFundedPools(t.ClientID, lr.TargetId, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
 	var wp *writePool
 	if wp, err = ssc.getWritePool(lr.TargetId, balances); err != nil {
 		if err != util.ErrValueNotPresent {
@@ -275,7 +255,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	if t.Value < conf.MinLock {
+	if t.Value < conf.MinLock || t.Value <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
@@ -293,7 +273,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	// check client balance
-	if err = checkFill(t, balances); err != nil {
+	if err = stakepool.CheckClientBalance(t, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
@@ -361,6 +341,11 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
+	// remembers who funded the write pool, so tokens get returned to funder on unlock
+	if err := ssc.addToFundedPools(t.ClientID, ap.ID, balances); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
+	}
+
 	// save new linked allocation pool
 	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	if err != nil {
@@ -387,7 +372,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 		req.PoolOwner = t.ClientID
 	}
 
-	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolOwner, balances)
+	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolID, balances)
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}

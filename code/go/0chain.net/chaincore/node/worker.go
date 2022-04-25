@@ -82,7 +82,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 
 func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	logging.N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
-	nodes := np.shuffleNodesLock(true)
+	nodes := np.shuffleNodes(true)
 	for i, node := range nodes {
 		select {
 		case <-ctx.Done():
@@ -150,6 +150,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 					zap.String("pool miners pointer", fmt.Sprintf("%p", np)))
 				return
 			}
+			defer resp.Body.Close()
 
 			logging.N2n.Debug("node active check - ping success",
 				zap.Int64("start round", startRound),
@@ -162,7 +163,6 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 				info.AsOf = time.Now()
 				nd.SetInfo(info)
 			}
-			resp.Body.Close()
 			if !nd.IsActive() {
 				logging.N2n.Info("Node active",
 					zap.String("node_type", nd.GetNodeTypeName()),
@@ -177,45 +177,18 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	np.ComputeNetworkStats()
 }
 
-/*DownloadNodeData - downloads the node definition data for the given pool type from the given node */
-func (np *Pool) DownloadNodeData(node *Node) bool {
-	url := fmt.Sprintf("%v/_nh/list/%v", node.GetN2NURLBase(), node.GetNodeType())
-	client := &http.Client{Timeout: TimeoutLargeMessage}
-	resp, err := client.Get(url)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	dnp := NewPool(NodeTypeMiner)
-	ReadNodes(resp.Body, dnp, dnp)
-	var changed = false
-	for _, node := range dnp.Nodes {
-		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.SetStatus(NodeStatusActive)
-			np.AddNode(node)
-			changed = true
-		}
-	}
-	if changed {
-		np.ComputeProperties()
-	}
-	return true
-}
-
 func (n *Node) MemoryUsage() {
 	ticker := time.NewTicker(5 * time.Minute)
-	for true {
-		select {
-		case <-ticker.C:
-			common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+	for {
+		<-ticker.C
+		common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
 
-			// Average time duration to add go routine logs to 0chain.log file => 618.184µs
-			// Average increase in file size for each update => 10 kB
-			if viper.GetBool("logging.memlog") {
-				buf := new(bytes.Buffer)
-				pprof.Lookup("goroutine").WriteTo(buf, 1)
-				logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
-			}
+		// Average time duration to add go routine logs to 0chain.log file => 618.184µs
+		// Average increase in file size for each update => 10 kB
+		if viper.GetBool("logging.memlog") {
+			buf := new(bytes.Buffer)
+			_ = pprof.Lookup("goroutine").WriteTo(buf, 1)
+			logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
 		}
 	}
 }

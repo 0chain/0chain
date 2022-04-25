@@ -19,9 +19,6 @@ import (
 //
 // test extension
 //
-func (rp *readPool) total(now int64) state.Balance {
-	return rp.Pools.total(now)
-}
 
 func (rp *readPool) allocTotal(allocID string,
 	now int64) state.Balance {
@@ -105,15 +102,15 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 
 		rp *readPool
 
-		b, err = ssc.getReadPoolBytes(clientID, balances)
+		_, err = ssc.getReadPool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	rp = new(readPool)
 	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-	b, err = ssc.getReadPoolBytes(clientID, balances)
+	b, err := ssc.getReadPool(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, rp.Encode(), b)
+	assert.EqualValues(t, rp, b)
 }
 
 func TestStorageSmartContract_getReadPool(t *testing.T) {
@@ -125,14 +122,13 @@ func TestStorageSmartContract_getReadPool(t *testing.T) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
-		rps, err = ssc.getReadPool(clientID, balances)
+		_, err   = ssc.getReadPool(clientID, balances)
 		nrps     = new(readPool)
 	)
 
 	requireErrMsg(t, err, errMsg1)
-	nrps = new(readPool)
 	require.NoError(t, nrps.save(ssc.ID, clientID, balances))
-	rps, err = ssc.getReadPool(clientID, balances)
+	rps, err := ssc.getReadPool(clientID, balances)
 	require.NoError(t, err)
 	require.EqualValues(t, nrps, rps)
 }
@@ -171,7 +167,7 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
-		conf scConfig
+		conf Config
 		err  error
 	)
 	conf.ReadPool = rpc
@@ -224,6 +220,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	var fp fundedPools = []string{client.id}
 	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
+	require.NoError(t, err)
 
 	// 1. no pool
 	_, err = ssc.readPoolLock(&tx, nil, balances)
@@ -253,7 +250,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	requireErrMsg(t, err, errMsg6)
 	// 7. no such allocation
 	lr.Duration = 15 * time.Second
-	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	require.Error(t, err)
 
 	balances.balances[client.id] = 200e10

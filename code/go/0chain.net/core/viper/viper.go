@@ -175,6 +175,11 @@ func (v *Viper) GetStringMapString(key string) map[string]string {
 	return cast.ToStringMapString(v.Get(key))
 }
 
+// GetStringMapString returns the value associated with the key as a map of strings.
+func (v *Viper) GetStringMapInt(key string) map[string]int {
+	return cast.ToStringMapInt(v.Get(key))
+}
+
 // GetStringMapStringSlice returns the value associated with the key as a map to a slice of strings.
 func (v *Viper) GetStringMapStringSlice(key string) map[string][]string {
 	return cast.ToStringMapStringSlice(v.Get(key))
@@ -382,4 +387,13 @@ func (v *Viper) WriteConfigFile(filename string) error {
 	defer v.mutex.Unlock()
 
 	return v.viper.WriteConfigAs(filename)
+}
+
+// SetConfigType sets the type of the configuration returned by the
+// remote source, e.g. "json".
+func (v *Viper) SetConfigType(in string) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	v.viper.SetConfigType(in)
 }

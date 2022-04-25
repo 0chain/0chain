@@ -11,14 +11,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/zcnsc"
+
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -33,7 +35,6 @@ import (
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 )
 
 func init() {
@@ -43,11 +44,17 @@ func init() {
 	viper.Set("development.smart_contract.miner", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.vesting", true)
-	viper.Set("development.smart_contract.zrc20", true)
+	viper.Set("development.smart_contract.zcn", true)
 	viper.Set("development.smart_contract.multisig", true)
 	config.SmartContractConfig = viper.New()
+	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.interestpoolsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+
 	setupsc.SetupSmartContracts()
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 	common.ConfigRateLimits()
 	block.SetupEntity(memorystore.GetStorageProvider())
 }
@@ -60,50 +67,9 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 	)
 
 	lfb := block.NewBlock("", 1)
-	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	serverChain := chain.NewChainFromConfig()
 	serverChain.LatestFinalizedBlock = lfb
-
-	type (
-		sortedBlobbers []*storagesc.StorageNode
-		storageNodes   struct {
-			Nodes sortedBlobbers
-		}
-
-		stakePoolConfig struct {
-			MinLock          int64         `json:"min_lock"`
-			InterestRate     float64       `json:"interest_rate"`
-			InterestInterval time.Duration `json:"interest_interval"`
-		}
-		scConfig struct {
-			TimeUnit                        time.Duration    `json:"time_unit"`
-			MaxMint                         state.Balance    `json:"max_mint"`
-			Minted                          state.Balance    `json:"minted"`
-			MinAllocSize                    int64            `json:"min_alloc_size"`
-			MinAllocDuration                time.Duration    `json:"min_alloc_duration"`
-			MaxChallengeCompletionTime      time.Duration    `json:"max_challenge_completion_time"`
-			MinOfferDuration                time.Duration    `json:"min_offer_duration"`
-			MinBlobberCapacity              int64            `json:"min_blobber_capacity"`
-			ValidatorReward                 float64          `json:"validator_reward"`
-			BlobberSlash                    float64          `json:"blobber_slash"`
-			MaxReadPrice                    state.Balance    `json:"max_read_price"`
-			MaxWritePrice                   state.Balance    `json:"max_write_price"`
-			FailedChallengesToCancel        int              `json:"failed_challenges_to_cancel"`
-			FailedChallengesToRevokeMinLock int              `json:"failed_challenges_to_revoke_min_lock"`
-			ChallengeEnabled                bool             `json:"challenge_enabled"`
-			MaxChallengesPerGeneration      int              `json:"max_challenges_per_generation"`
-			ChallengeGenerationRate         float64          `json:"challenge_rate_per_mb_min"`
-			MinStake                        state.Balance    `json:"min_stake"`
-			MaxStake                        state.Balance    `json:"max_stake"`
-			MaxDelegates                    int              `json:"max_delegates"`
-			MaxCharge                       float64          `json:"max_charge"`
-			StakePool                       *stakePoolConfig `json:"stakepool"`
-		}
-
-		userStakePools struct {
-			Pools map[datastore.Key][]datastore.Key `json:"pools"`
-		}
-	)
 
 	type args struct {
 		w *httptest.ResponseRecorder
@@ -136,7 +102,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -162,14 +128,14 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			name: "Faucet_/personalPeriodicLimit_Empty_User_Node_404",
 			chain: func() *chain.Chain {
 				gn := &faucetsc.GlobalNode{ID: faucetsc.ADDRESS}
-				blob, err := json.Marshal(gn)
+				blob, err := gn.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(gn.ID + gn.ID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -195,7 +161,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			name: "Faucet_/personalPeriodicLimit_Decoding_User_Node_Err_500",
 			chain: func() *chain.Chain {
 				gn := &faucetsc.GlobalNode{ID: faucetsc.ADDRESS}
-				blob, err := json.Marshal(gn)
+				blob, err := gn.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -206,7 +172,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				uk := encryption.Hash(faucetsc.ADDRESS + clientID)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
 					t.Fatal(err)
 				}
@@ -237,12 +203,12 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:  "Faucet_/globalPerodicLimit_Empty_Global_Node_404",
+			name:  "Faucet_/globalPeriodicLimit_Empty_Global_Node_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -251,13 +217,13 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Faucet_/globalPerodicLimit_Decoding_Global_Node_Err_500",
+			name: "Faucet_/globalPeriodicLimit_Decoding_Global_Node_Err_500",
 			chain: func() *chain.Chain {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
@@ -270,7 +236,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -299,7 +265,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
@@ -377,7 +343,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -413,7 +379,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.AllShardersKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -441,7 +407,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -469,7 +435,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.GlobalNodeKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -497,7 +463,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.AllMinersKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -525,7 +491,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ShardersKeepKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -553,7 +519,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.DKGMinersKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -581,7 +547,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -620,14 +586,14 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 						"key": {},
 					},
 				}
-				blob, err := json.Marshal(un)
+				blob, err := un.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -668,7 +634,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 						minerID: {},
 					},
 				}
-				blob, err := json.Marshal(un)
+				blob, err := un.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -679,7 +645,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				mk := encryption.Hash(minersc.ADDRESS + minerID)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
 					t.Fatal(err)
 				}
@@ -731,7 +697,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.MinersMPKKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -773,7 +739,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.GroupShareOrSignsKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -815,7 +781,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.MagicBlockKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -841,7 +807,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			name: "Minersc_/nodePoolStat_Not_Found_404",
 			chain: func() *chain.Chain {
 				mn := minersc.NewMinerNode()
-				blob, err := json.Marshal(mn)
+				blob, err := mn.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -849,7 +815,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -870,6 +836,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					}
 					q := u.Query()
 					q.Set("id", clientID)
+					q.Set("pool_id", "-")
 					u.RawQuery = q.Encode()
 
 					req := httptest.NewRequest(http.MethodGet, u.String(), nil)
@@ -885,7 +852,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -935,7 +902,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + encryption.Hash(":"))
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -977,7 +944,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1005,7 +972,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1084,19 +1051,15 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		{
 			name: "Storagesc_/allocation_min_lock_Invalid_Config_500",
 			chain: func() *chain.Chain {
-				sn := storageNodes{
-					Nodes: []*storagesc.StorageNode{
-						{},
-					},
-				}
-				blob, err := json.Marshal(sn)
+				sn := storagesc.SortedBlobbers{}
+				blob, err := sn.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ALL_BLOBBERS_KEY)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1172,7 +1135,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenge:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1215,7 +1178,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenge:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1243,7 +1206,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ALL_BLOBBERS_KEY)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1377,19 +1340,20 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getStakePoolStat_No_Blobber_404",
 			chain: func() *chain.Chain {
-				blob, err := json.Marshal(&scConfig{})
+				conf := &storagesc.Config{}
+				blob, err := conf.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1410,26 +1374,27 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getStakePoolStat_No_Stake_Pool_404",
 			chain: func() *chain.Chain {
-				blob, err := json.Marshal(&scConfig{})
+				scc := &storagesc.Config{}
+				blob, err := scc.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				v := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
 
 				bl := storagesc.StorageNode{}
-				blob, err = json.Marshal(bl)
+				blob, err = bl.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1462,7 +1427,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name:  "Storagesc_/getUserStakePoolStat_No_Config_404",
@@ -1477,22 +1442,20 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getUserStakePoolStat_No_User_Stake_Pool_404",
 			chain: func() *chain.Chain {
-				conf := &scConfig{
-					StakePool: &stakePoolConfig{},
-				}
-				blob, err := json.Marshal(conf)
+				conf := &storagesc.Config{}
+				blob, err := conf.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1513,38 +1476,36 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name: "Storagesc_/getUserStakePoolStat_No_Stake_Pool_404",
 			chain: func() *chain.Chain {
-				conf := &scConfig{
-					StakePool: &stakePoolConfig{},
-				}
-				blob, err := json.Marshal(conf)
+				conf := &storagesc.Config{}
+				blob, err := conf.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				v := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
 
-				sp := &userStakePools{
+				sp := &stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						"key": {"key"},
 					},
 				}
-				blob, err = json.Marshal(sp)
+				blob, err = sp.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
 				v2 := util.SecureSerializableValue{Buffer: blob}
-				k2 := encryption.Hash(storagesc.ADDRESS + ":stakepool:userpools:")
+				k2 := stakepool.UserStakePoolsKey(spenum.Blobber, storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k2), &v2); err != nil {
 					t.Fatal(err)
 				}
@@ -1564,7 +1525,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusBadRequest,
 		},
 		{
 			name:  "Storagesc_/getChallengePoolStat_400",
@@ -1587,7 +1548,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + allocationID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1622,7 +1583,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			name: "Storagesc_/getChallengePoolStat_No_Challenge_Pool_404",
 			chain: func() *chain.Chain {
 				sa := &storagesc.StorageAllocation{}
-				blob, err := json.Marshal(sa)
+				blob, err := sa.MarshalMsg(nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1630,7 +1591,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + allocationID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1695,7 +1656,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(vestingsc.ADDRESS + ":clientvestingpools:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1734,7 +1695,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				test.chain.HandleSCRest(test.args.w, test.args.r)
 				d, err := ioutil.ReadAll(test.args.w.Result().Body)
 				require.NoError(t, err)
-				assert.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
+				require.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
 			},
 		)
 	}
@@ -1783,8 +1744,8 @@ func TestGetSCRestOutput(t *testing.T) {
 			address: vestingsc.ADDRESS,
 		},
 		{
-			name:    "zrc20sc",
-			address: zrc20sc.ADDRESS,
+			name:    "zcn",
+			address: zcnsc.ADDRESS,
 		},
 		{
 			name:    "invalid",

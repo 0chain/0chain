@@ -1,14 +1,18 @@
 package state
 
 import (
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
+
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
+//msgp:ignore State
+
+//go:generate msgp -io=false -tests=false -v
 //Balance - any quantity that is represented as an integer in the lowest denomination
 type Balance int64
 
@@ -38,9 +42,17 @@ func (s *State) GetHashBytes() []byte {
 /*Encode - implement SecureSerializableValueI interface */
 func (s *State) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
+	// if s.TxnHashBytes are not set, the State can't be deserialized later
+	if s.TxnHashBytes == nil {
+		panic(errors.New("State isn't properly initialized"))
+	}
 	buf.Write(s.TxnHashBytes)
-	binary.Write(buf, binary.LittleEndian, s.Round)
-	binary.Write(buf, binary.LittleEndian, s.Balance)
+	if err := binary.Write(buf, binary.LittleEndian, s.Round); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, s.Balance); err != nil {
+		panic(err)
+	}
 	return buf.Bytes()
 }
 
@@ -51,18 +63,32 @@ func (s *State) Decode(data []byte) error {
 	var balance Balance
 	s.TxnHashBytes = make([]byte, 32)
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {
-		logging.Logger.Error("invalid state")
+		return errors.New("invalid state")
 	}
-	binary.Read(buf, binary.LittleEndian, &origin)
-	binary.Read(buf, binary.LittleEndian, &balance)
+	if err := binary.Read(buf, binary.LittleEndian, &origin); err != nil {
+		return err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &balance); err != nil {
+		return err
+	}
 	s.Round = origin
 	s.Balance = Balance(balance)
 	return nil
 }
 
+func (s *State) MarshalMsg([]byte) ([]byte, error) {
+	return s.Encode(), nil
+}
+
+func (s *State) UnmarshalMsg(data []byte) ([]byte, error) {
+	err := s.Decode(data)
+	return nil, err
+}
+
 //ComputeProperties - logic to compute derived properties
-func (s *State) ComputeProperties() {
+func (s *State) ComputeProperties() error {
 	s.TxnHash = hex.EncodeToString(s.TxnHashBytes)
+	return nil
 }
 
 /*SetRound - set the round for this state to make it unique if the same logical state is arrived again in a different round */
@@ -79,15 +105,4 @@ func (s *State) SetTxnHash(txnHash string) error {
 	s.TxnHash = txnHash
 	s.TxnHashBytes = hashBytes
 	return nil
-}
-
-//Deserializer - a deserializer to convert raw serialized data to a state object
-type Deserializer struct {
-}
-
-//Deserialize - implement interface
-func (bd *Deserializer) Deserialize(sv util.Serializable) util.Serializable {
-	s := &State{}
-	s.Decode(sv.Encode())
-	return s
 }

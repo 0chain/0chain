@@ -1,9 +1,10 @@
 package storagesc
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/common"
 
@@ -25,7 +26,7 @@ func TestStorageAllocation_validate(t *testing.T) {
 	var (
 		now   common.Timestamp = 150
 		alloc StorageAllocation
-		conf  scConfig
+		conf  Config
 	)
 
 	conf.MinAllocSize = 10 * 1024

@@ -1,11 +1,14 @@
 package interestpoolsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"time"
+
+	"0chain.net/chaincore/smartcontract"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -21,7 +24,6 @@ import (
 
 const (
 	Seperator = smartcontractinterface.Seperator
-	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 	ADDRESS   = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
 	name      = "interest"
 	YEAR      = time.Duration(time.Hour * 8784)
@@ -33,7 +35,7 @@ type InterestPoolSmartContract struct {
 
 func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterface {
 	var ipscCopy = &InterestPoolSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
 	return ipscCopy
@@ -59,10 +61,29 @@ func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontracti
 	return ipsc.RestHandlers
 }
 
+func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
+	n, err := ipsc.getGlobalNode(balances, funcName)
+	if err != nil {
+		return math.MaxInt32, fmt.Errorf("can't get global node, %v", err)
+	}
+	if n == nil {
+		return math.MaxInt32, errors.New("can't get global node")
+	}
+	if n.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := n.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
+}
+
 func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
 	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
 	ipsc.SmartContract.RestHandlers["/getLockConfig"] = ipsc.getLockConfig
+	ipsc.SmartContract.RestHandlers["/getConfig"] = ipsc.getConfig
 	ipsc.SmartContractExecutionStats["lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "lock"), nil)
 	ipsc.SmartContractExecutionStats["unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "unlock"), nil)
 	ipsc.SmartContractExecutionStats["updateVariables"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "updateVariables"), nil)
@@ -94,10 +115,12 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		return "", common.NewError("failed locking tokens", "can't mint anymore")
 	}
 	pool := newInterestPool()
-	pool.TokenLockInterface = &tokenLock{StartTime: t.CreationDate, Duration: npr.Duration, Owner: un.ClientID}
+	pool.TokenLockInterface = &TokenLock{StartTime: t.CreationDate, Duration: npr.Duration, Owner: un.ClientID}
 	transfer, resp, err := pool.DigPool(t.Hash, t)
 	if err == nil {
-		balances.AddTransfer(transfer)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("failed locking tokens", "could not add transfer: %v", err)
+		}
 		pool.APR = gn.APR
 		pool.TokensEarned = state.Balance(
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
@@ -111,12 +134,16 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		}
 		// add to total minted
 		gn.TotalMinted += pool.TokensEarned
-		balances.InsertTrieNode(gn.getKey(), gn)
+		if _, err := balances.InsertTrieNode(gn.getKey(), gn); err != nil {
+			return "", common.NewError("failed locking tokens", err.Error())
+		}
 		// add to user pools
 		if err := un.addPool(pool); err != nil {
 			return "", err
 		}
-		balances.InsertTrieNode(un.getKey(gn.ID), un)
+		if _, err := balances.InsertTrieNode(un.getKey(gn.ID), un); err != nil {
+			return "", common.NewError("failed locking tokens", err.Error())
+		}
 		return resp, nil
 	}
 	return "", err
@@ -139,79 +166,65 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 		if err != nil {
 			return "", common.NewError("failed to unlock tokens", fmt.Sprintf("error deleting pool from user node: %v", err.Error()))
 		}
-		balances.AddTransfer(transfer)
-		balances.InsertTrieNode(un.getKey(gn.ID), un)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("failed to unlock token", "add transfer err: %v", err)
+		}
+		if _, err := balances.InsertTrieNode(un.getKey(gn.ID), un); err != nil {
+			return "", common.NewError("failed to unlock tokens", err.Error())
+		}
 		return response, nil
 	}
 	return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
 }
 
-func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("failed to update variables", "unauthorized access - only the owner can update the variables")
-	}
-	newGn := &GlobalNode{SimpleGlobalNode: &SimpleGlobalNode{}}
-	err := newGn.Decode(inputData)
-	if err != nil {
-		return "", common.NewError("failed to update variables", "request not formatted correctly")
-	}
-	const pfx = "smart_contracts.interestpoolsc."
-	var conf = config.SmartContractConfig
-	if newGn.APR > 0.0 {
-		gn.APR = newGn.APR
-		conf.Set(pfx+"interest_rate", gn.APR)
-	}
-	if newGn.MinLockPeriod > 0 {
-		gn.MinLockPeriod = newGn.MinLockPeriod
-		conf.Set(pfx+"min_lock_period", gn.MinLockPeriod)
-	}
-	if newGn.MinLock > 0 {
-		gn.MinLock = newGn.MinLock
-		conf.Set(pfx+"min_lock", gn.MinLock)
-	}
-	if newGn.MaxMint > 0 {
-		gn.MaxMint = newGn.MaxMint
-		conf.Set(pfx+"max_mint", gn.MaxMint)
-	}
-	balances.InsertTrieNode(gn.getKey(), gn)
-	return string(gn.Encode()), nil
-}
-
-func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_state.StateContextI) *UserNode {
+func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_state.StateContextI) (*UserNode, error) {
 	un := newUserNode(id)
-	userBytes, err := balances.GetTrieNode(un.getKey(ip.ID))
-	if err == nil {
-		err = un.Decode(userBytes.Encode())
-		if err == nil {
-			return un
-		}
+	err := balances.GetTrieNode(un.getKey(ip.ID), un)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		return un, nil
+	default:
+		return nil, err
 	}
-	return un
 }
 
-func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) *GlobalNode {
+func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) (*GlobalNode, error) {
 	gn := newGlobalNode()
-	globalBytes, err := balances.GetTrieNode(gn.getKey())
-	if err == nil {
-		if err := gn.Decode(globalBytes.Encode()); err == nil {
-			return gn
+	err := balances.GetTrieNode(gn.getKey(), gn)
+	switch err {
+	case nil:
+		return gn, nil
+	case util.ErrValueNotPresent:
+		const pfx = "smart_contracts.interestpoolsc."
+		var conf = config.SmartContractConfig
+		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
+		gn.APR = conf.GetFloat64(pfx + "apr")
+		gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
+		gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+		gn.OwnerId = conf.GetString(pfx + "owner_id")
+		gn.Cost = conf.GetStringMapInt(pfx + "cost")
+		if funcName != "updateVariables" {
+			if _, err := balances.InsertTrieNode(gn.getKey(), gn); err != nil {
+				return nil, err
+			}
 		}
+		return gn, nil
+	default:
+		return nil, err
 	}
-	const pfx = "smart_contracts.interestpoolsc."
-	var conf = config.SmartContractConfig
-	gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
-	gn.APR = conf.GetFloat64(pfx + "apr")
-	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
-	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
-	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
-		balances.InsertTrieNode(gn.getKey(), gn)
-	}
-	return gn
 }
 
 func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
-	un := ip.getUserNode(t.ClientID, balances)
-	gn := ip.getGlobalNode(balances, funcName)
+	un, err := ip.getUserNode(t.ClientID, balances)
+	if err != nil {
+		return "", common.NewError("failed execution - get user node", err.Error())
+	}
+
+	gn, err := ip.getGlobalNode(balances, funcName)
+	if err != nil {
+		return "", common.NewError("failed execution - get global node", err.Error())
+	}
+
 	switch funcName {
 	case "lock":
 		return ip.lock(t, un, gn, inputData, balances)
@@ -220,6 +233,6 @@ func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcNam
 	case "updateVariables":
 		return ip.updateVariables(t, gn, inputData, balances)
 	default:
-		return "", common.NewError("failed execution", "no function with that name")
+		return "", common.NewErrorf("failed execution", "no interest pool smart contract method with name %s", funcName)
 	}
 }

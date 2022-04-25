@@ -1,0 +1,40 @@
+name: config_change_alert
+
+on:
+  push:
+   branches: 
+     - staging
+   paths:
+      - docker.local/config/0chain.yaml
+      - docker.local/config/sc.yaml
+  
+  pull_request:
+    branches: 
+      - staging
+    types:
+      - closed
+    paths:
+      - docker.local/config/0chain.yaml
+      - docker.local/config/sc.yaml
+   
+jobs:
+  Config_Alert:
+    runs-on: docker-builds
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Get changed files using defaults
+        id: changed-files
+        uses: tj-actions/changed-files@v18.4
+             
+      - name: Run step when a 0chain.yaml file changes
+        if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml')
+        run: |
+          echo "Your 0chain.yaml file has been modified."
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
+      
+      - name: Run step when a sc.yaml file changes
+        if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml')
+        run: |
+          echo "Your sc.yaml file has been modified."
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your sc.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}

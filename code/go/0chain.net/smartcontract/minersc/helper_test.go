@@ -1,9 +1,10 @@
 package minersc
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
-	"strconv"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -29,12 +30,6 @@ import (
 )
 
 // test helpers
-
-const x10 = 10 * 1000 * 1000 * 1000
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -75,15 +70,15 @@ type Client struct {
 	pk      string                     // public key
 	scheme  encryption.SignatureScheme // pk/sk
 	balance state.Balance              // client wallet balance
-
-	keep state.Balance // keep latest know balance (manual control)
 }
 
 func newClient(balance state.Balance, balances cstate.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	if err := scheme.GenerateKeys(); err != nil {
+		panic(err)
+	}
 
 	client = new(Client)
 	client.balance = balance
@@ -206,7 +201,7 @@ func mustEncode(t *testing.T, val interface{}) []byte {
 	return b
 }
 
-func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
+func mustSave(t *testing.T, key datastore.Key, val util.MPTSerializable,
 	balances cstate.StateContextI) {
 
 	var _, err = balances.InsertTrieNode(key, val)
@@ -228,14 +223,12 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.LastRound = 0
 	gn.MaxStake = state.Balance(100.0e10)
 	gn.MinStake = state.Balance(0.01e10)
-	gn.InterestRate = 0.1
 	gn.RewardRate = 1.0
 	gn.ShareRatio = 0.10
 	gn.BlockReward = state.Balance(0.7e10)
 	gn.MaxCharge = 0.5 // %
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
-	gn.InterestDeclineRate = 0.1
 	gn.MaxMint = state.Balance(4e6 * 1e10)
 	gn.Minted = 0
 
@@ -251,14 +244,21 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	mb.Sharders = node.NewPool(node.NodeTypeSharder)
 	for _, mn := range miners {
 		var n = node.Provider()
-		n.SetID(mn.id)
+		err := n.SetID(mn.id)
+		require.NoError(t, err)
+		n.PublicKey = mn.pk
 		n.Type = node.NodeTypeMiner
+		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
 		mb.Miners.AddNode(n)
 	}
 	for _, sh := range sharders {
 		var n = node.Provider()
-		n.SetID(sh.id)
+		err := n.SetID(sh.id)
+		require.NoError(t, err)
+
+		n.PublicKey = sh.pk
 		n.Type = node.NodeTypeSharder
+		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
 		mb.Sharders.AddNode(n)
 	}
 
@@ -266,7 +266,7 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	require.NoError(t, err, "setting magic block")
 }
 
-func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
+func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
 	balances cstate.StateContextI) {
 
 	var gn, err = getGlobalNode(balances)
@@ -285,4 +285,30 @@ func newTestMinerSC() (msc *MinerSmartContract) {
 	msc.SmartContractExecutionStats["mintedTokens"] =
 		metrics.GetOrRegisterCounter("mintedTokens", nil)
 	return
+}
+
+func (msc *MinerSmartContract) ConfigHandler(
+	ctx context.Context,
+	values url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	return msc.configHandler(ctx, values, balances)
+}
+
+func (msc *MinerSmartContract) UpdateSettings(
+	t *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.updateSettings(t, inputData, gn, balances)
+}
+
+func (msc *MinerSmartContract) UpdateGlobals(
+	txn *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.updateGlobals(txn, inputData, gn, balances)
 }

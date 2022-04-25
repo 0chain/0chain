@@ -30,18 +30,20 @@ type MerklePatriciaTrieI interface {
 	GetVersion() Sequence
 
 	GetRoot() Key
-	SetRoot(root Key)
 
-	GetNodeValue(path Path) (Serializable, error)
-	Insert(path Path, value Serializable) (Key, error)
+	GetNodeValue(path Path, v MPTSerializable) error
+	// GetNodeValueRaw returns the raw data slice on the given path
+	GetNodeValueRaw(path Path) ([]byte, error)
+	Insert(path Path, value MPTSerializable) (Key, error)
 	Delete(path Path) (Key, error)
 
 	Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error
 
 	IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error
 
-	GetChangeCollector() ChangeCollectorI
-	ResetChangeCollector(root Key)
+	// get root, changes and deletes
+	GetChanges() (Key, []*NodeChange, []Node, Key)
+	GetChangeCount() int
 	SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error
 
 	// useful for syncing up
@@ -58,6 +60,7 @@ type MerklePatriciaTrieI interface {
 	Validate() error
 
 	MergeMPTChanges(mpt2 MerklePatriciaTrieI) error
+	MergeChanges(newRoot Key, changes []*NodeChange, deletes []Node, startRoot Key) error
 	MergeDB(ndb NodeDB, root Key) error
 }
 

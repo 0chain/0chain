@@ -39,15 +39,12 @@ func main() {
 
 	if discoveryFile == nil || signatureScheme == nil || numWallets == nil || t == nil || n == nil {
 		panic("Missing an argument.")
-		return // Never reached, but this helps our static analysis.
 	}
 	if !encryption.IsValidThresholdSignatureScheme(*signatureScheme) {
 		panic("Invalid signature scheme.")
-		return // Never reached, but this helps our static analysis.
 	}
 	if *t > *n {
 		panic("Required: t <= n.")
-		return // Never reached, but this helps our static analysis.
 	}
 
 	c = config{
@@ -62,9 +59,9 @@ func main() {
 	// Initialize 0chain.net/core/logging
 	chainconfig.Configuration.DeploymentMode = chainconfig.DeploymentDevelopment
 	chainconfig.SetupDefaultConfig()
-	chainconfig.SetupConfig()
-	chainconfig.SetupSmartContractConfig()
-	InitLogging("development")
+	chainconfig.SetupConfig("")
+	chainconfig.SetupSmartContractConfig("")
+	InitLogging("development", "")
 
 	// Find our miners and sharders.
 	discoverPoolMembers(c.discoveryFile)
@@ -222,10 +219,10 @@ func doProposalWithAllN(w testWallet) {
 			expectedOutput = fmt.Sprintf("success %d:", remainingVotes)
 		case remainingVotes == 0:
 			// Enough votes.
-			expectedOutput = fmt.Sprint("success 0: transfer executed")
+			expectedOutput = "success 0: transfer executed"
 		default:
 			// Extra unnecessary votes, i.e. more than t-of-n votes.
-			expectedOutput = fmt.Sprint("success 0: proposal previously executed")
+			expectedOutput = "success 0: proposal previously executed"
 		}
 
 		if !strings.HasPrefix(output, expectedOutput) {
@@ -275,7 +272,7 @@ func doProposalWithT(id int, w testWallet, finished int) {
 			expectedOutput = fmt.Sprintf("success %d:", remainingVotes)
 		case remainingVotes == 0:
 			// Enough votes.
-			expectedOutput = fmt.Sprint("success 0: transfer executed")
+			expectedOutput = "success 0: transfer executed"
 		}
 
 		if !strings.HasPrefix(output, expectedOutput) {

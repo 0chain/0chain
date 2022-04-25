@@ -10,17 +10,17 @@ import (
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/minersc"
 )
 
 const (
-	LOCKUPTIME90DAYS = time.Duration(time.Second * 10)
+	LOCKUPTIME90DAYS = time.Second * 10
 	C0               = "client_0"
 	C1               = "client_1"
 )
 
 type tokenLock struct {
+	tokenpool.MockTokenLockInterface
 	StartTime common.Timestamp `json:"start_time"`
 	Duration  time.Duration    `json:"duration"`
 }
@@ -80,7 +80,7 @@ func TestTransferToLockPool(t *testing.T) {
 		t.Errorf("transfer happened before lock expired\n\tstart time: %v\n\ttxn time: %v\n", p0.IsLocked(txn), txn.CreationDate)
 	}
 
-	time.Sleep(LOCKUPTIME90DAYS)
+	time.Sleep(LOCKUPTIME90DAYS + time.Second)
 	txn.CreationDate = common.Now()
 	_, _, err = p0.TransferTo(p1, 9, txn)
 	if err != nil {
@@ -243,7 +243,7 @@ func TestZcnLockingPool_GetID(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   datastore.Key
+		want   string
 	}{
 		{
 			name: "OK",
@@ -383,8 +383,8 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 		TokenLockInterface tokenpool.TokenLockInterface
 	}
 	type args struct {
-		fromClientID datastore.Key
-		toClientID   datastore.Key
+		fromClientID string
+		toClientID   string
 		value        state.Balance
 		entity       interface{}
 	}
@@ -477,8 +477,8 @@ func TestZcnLockingPool_EmptyPool(t *testing.T) {
 		TokenLockInterface tokenpool.TokenLockInterface
 	}
 	type args struct {
-		fromClientID datastore.Key
-		toClientID   datastore.Key
+		fromClientID string
+		toClientID   string
 		entity       interface{}
 	}
 	tests := []struct {

@@ -3,11 +3,17 @@ package conductrpc
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/rpc"
+	"strings"
 	"sync"
 
+	"0chain.net/conductor/cases"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var ErrShutdown = errors.New("server shutdown")
@@ -110,6 +116,8 @@ type Server struct {
 	// it work. E.g. the node has started and waits the conductor to enter BC.
 	onNodeReady chan NodeName
 
+	CurrentTest cases.TestCase
+
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
@@ -120,6 +128,9 @@ type Server struct {
 
 	// node id -> node name mapping
 	names map[NodeID]NodeName
+
+	NodesServerStatsCollector *stats.NodesServerStats
+	NodesClientStatsCollector *stats.NodesClientStats
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -192,7 +203,6 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 
 	ns.state.send(ns.poll) // initial state sending
 	s.nodes[name] = ns
-	return
 }
 
 // not for updating
@@ -230,7 +240,20 @@ func (s *Server) UpdateStates(names []NodeName, update UpdateStateFunc) (
 	err error) {
 
 	for _, name := range names {
-		s.UpdateState(name, update)
+		if err := s.UpdateState(name, update); err != nil {
+			logging.Logger.Warn("update state failed", zap.Error(err))
+		}
+	}
+	return
+}
+
+func (s *Server) UpdateAllStates(update UpdateStateFunc) (
+	err error) {
+
+	for name := range s.nodes {
+		if err := s.UpdateState(name, update); err != nil {
+			logging.Logger.Warn("update state failed", zap.Error(err))
+		}
 	}
 	return
 }
@@ -403,8 +426,75 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 }
 
 //
+// checks
+//
+
+func (s *Server) ConfigureTestCase(blob []byte, _ *struct{}) error {
+	log.Printf("configuring test case: %s", string(blob))
+	return s.CurrentTest.Configure(blob)
+}
+
+func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
+	log.Printf("adding result to the test case: %s", string(blob))
+	return s.CurrentTest.AddResult(blob)
+}
+
+// GetMinersNum returns current miners number.
+func (s *Server) GetMinersNum() int {
+	var minersNum int
+	for nodeName, node := range s.nodes {
+		if strings.Contains(string(nodeName), "miner") && node != nil {
+			minersNum++
+		}
+	}
+	return minersNum
+}
+
+//
+// stats
+//
+
+func (s *Server) AddBlockServerStats(ss *stats.BlockRequest, _ *struct{}) error {
+	s.NodesServerStatsCollector.AddBlockStats(ss)
+	return nil
+}
+
+func (s *Server) AddVRFSServerStats(ss *stats.VRFSRequest, _ *struct{}) error {
+	s.NodesServerStatsCollector.AddVRFSStats(ss)
+	return nil
+}
+
+func (s *Server) AddBlockClientStats(reqBlob []byte, _ *struct{}) error {
+	req := new(BlockRequest)
+	if err := req.Decode(reqBlob); err != nil {
+		return err
+	}
+
+	s.NodesClientStatsCollector.AddBlockStats(req.Req, req.ReqType)
+	return nil
+}
+
+//
 // flow
 //
+
+// EnableServerStatsCollector initializes Server.NodesServerStatsCollector,
+// and updates State.ServerStatsCollectorEnabled for all nodes.
+func (s *Server) EnableServerStatsCollector() error {
+	s.NodesServerStatsCollector = stats.NewNodesServerStats()
+	return s.UpdateAllStates(func(state *State) {
+		state.ServerStatsCollectorEnabled = true
+	})
+}
+
+// EnableClientStatsCollector initializes Server.NodesClientStatsCollector,
+// and updates State.ClientStatsCollectorEnabled for all nodes.
+func (s *Server) EnableClientStatsCollector() error {
+	s.NodesClientStatsCollector = stats.NewNodesClientStats()
+	return s.UpdateAllStates(func(state *State) {
+		state.ClientStatsCollectorEnabled = true
+	})
+}
 
 // Close the server waiting.
 func (s *Server) Close() (err error) {

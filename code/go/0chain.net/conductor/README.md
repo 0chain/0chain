@@ -23,6 +23,7 @@ The important details in the config file are the following.
 
 - details of all nodes used
 - custom commands used in tests
+- `stuck_warning_threshold` setting to show additional output when the chain is stuck for more than specified duration
 
 ### Conductor test suite
 
@@ -118,12 +119,12 @@ Below are the basic setup required to run the test suites.
 ```
 
 NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images.
-
+  
 ```sh
 (cd 0chain && ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
 ```
 
-3. Confirm that view change rounds are set to 50 on `0chain/docker.local/config.yaml`
+3. Confirm that view change rounds are set to 50 on `0chain/docker.local/config/sc.yaml`
 
 ```yaml
 start_rounds: 50
@@ -149,7 +150,7 @@ wait_rounds: 50
 
 ## Running view-change tests
 
-1. Set `view_change: true` on `0chain/docker.local/config.yaml`
+1. Set `view_change: true` on `0chain/docker.local/config/0chain.yaml`
 2. Run view-change tests
 
 ```sh
@@ -265,6 +266,7 @@ enable:
 
 - `set_monitor` - initiate the node from where blockchain events will be accepted
 - `cleanup_bc` - stop all nodes, reset rounds, and clean up data using `cleanup_command` defined on `conductor.config.yaml`
+- `env` - set environment variables that might affect commands to start/stop nodes. e.g. `CLI_ARGS` will effectively add arguments to command in `b0docker-compose.yml`
 
 2. **common nodes control**
 
@@ -358,8 +360,9 @@ enable:
 4. **control nodes behavior / misbehavior**
 
 - `set_revealed` - reveal the list of nodes. A revealed node sends it share.
-- `unset_revealed` - hid the list of nodes. A hidden node does not sends it share.
+- `unset_revealed` - hide the list of nodes. A hidden node does not sends it share.
   - This is currently UNUSED
+- `generators_failure` - prevents generators selected at start of the specified round (as in some setups they aren't known beforehand) from generating blocks for the duration of the whole round including all restarts.
 
 5. **Byzantine blockchain**
 
@@ -517,7 +520,7 @@ enable:
 
 #### Custom commands
 
-The list is available on [conductor.config.yaml](https://github.com/0chain/0chain/blob/c93e6022bee40e76eb35c408d8117dfb41b30bf7/docker.local/config/conductor.config.yaml#L117).
+The list is available on [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml#L146).
 
 ### Adding new command
 

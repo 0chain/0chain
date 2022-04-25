@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -31,7 +33,7 @@ var (
 )
 
 /*TransactionGenerator - generates a steady stream of transactions */
-func TransactionGenerator(c *chain.Chain) {
+func TransactionGenerator(c *chain.Chain, workdir string) {
 	wallet.SetupWallet()
 
 	viper.SetDefault("development.txn_generation.max_txn_fee", 10000)
@@ -43,17 +45,26 @@ func TransactionGenerator(c *chain.Chain) {
 	viper.SetDefault("development.txn_generation.min_txn_value", 100)
 	minValue = viper.GetInt64("development.txn_generation.min_txn_value")
 
-	var numClients = viper.GetInt("development.txn_generation.wallets")
-	var numTxns int32
+	var (
+		numClients = viper.GetInt("development.txn_generation.wallets")
+		numTxns    int32
+		numWorkers int
+	)
 
-	GenerateClients(c, numClients)
-	numWorkers := 1
+	GenerateClients(c, numClients, workdir)
 
-	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize)
+	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize())
 	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
 	if blockSize <= 0 {
 		return
 	}
+
+	// validate the maxFee and minFee, maxFee must > minFee, otherwise, will panic
+	if maxFee-minFee <= 0 {
+		logging.Logger.Panic(fmt.Sprintf("development.txn_generation.max_txn_fee must be greater than "+
+			"development.txn_generation.min_txn_fee, max_fee: %v, min_fee: %v", maxFee, minFee))
+	}
+
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1
@@ -61,13 +72,13 @@ func TransactionGenerator(c *chain.Chain) {
 		numWorkers = 1
 	case blockSize <= 1000:
 		numWorkers = 2
-		numTxns = blockSize / 2
+		//numTxns = blockSize / 2
 	case blockSize <= 10000:
 		numWorkers = 4
-		numTxns = blockSize / 2
+		//numTxns = blockSize / 2
 	case blockSize <= 100000:
 		numWorkers = 8
-		numTxns = blockSize / 2
+		//numTxns = blockSize / 2
 	default:
 		numWorkers = 16
 	}
@@ -92,7 +103,7 @@ func TransactionGenerator(c *chain.Chain) {
 	var timerCount int64
 	ts := rand.NewSource(time.Now().UnixNano())
 	trng := rand.New(ts)
-	for true {
+	for {
 		numTxns = trng.Int31n(blockSize)
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
@@ -142,7 +153,7 @@ func TransactionGenerator(c *chain.Chain) {
 						} else {
 							txn = createDataTransaction(prng)
 						}
-						_, err := transaction.PutTransaction(ctx, txn)
+						_, err := transaction.PutTransactionWithoutVerifySig(ctx, txn)
 						if err != nil {
 							logging.Logger.Info("transaction generator", zap.Any("error", err))
 						}
@@ -158,7 +169,7 @@ func TransactionGenerator(c *chain.Chain) {
 func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transaction {
 	var wf, wt *wallet.Wallet
 	csize := len(wallets)
-	for true {
+	for {
 		wf = wallets[prng.Intn(csize)]
 		wt = wallets[prng.Intn(csize)]
 		if wf != wt {
@@ -179,12 +190,12 @@ func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 }
 
 /*GetOwnerWallet - get the owner wallet. Used to get the initial state get going */
-func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
+func GetOwnerWallet(c *chain.Chain, workdir string) *wallet.Wallet {
 	var keysFile string
-	if c.ClientSignatureScheme == "ed25519" {
-		keysFile = "config/owner_keys.txt"
+	if c.ClientSignatureScheme() == "ed25519" {
+		keysFile = filepath.Join(workdir, "config/owner_keys.txt")
 	} else {
-		keysFile = "config/b0owner_keys.txt"
+		keysFile = filepath.Join(workdir, "config/b0owner_keys.txt")
 	}
 	reader, err := os.Open(keysFile)
 	if err != nil {
@@ -212,8 +223,8 @@ func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
 }
 
 /*GenerateClients - generate the given number of clients */
-func GenerateClients(c *chain.Chain, numClients int) {
-	ownerWallet := GetOwnerWallet(c)
+func GenerateClients(c *chain.Chain, numClients int, workdir string) {
+	ownerWallet := GetOwnerWallet(c, workdir)
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
 
@@ -230,7 +241,9 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
-		w.Initialize(c.ClientSignatureScheme)
+		if err := w.Initialize(c.ClientSignatureScheme()); err != nil {
+			panic(err)
+		}
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed
@@ -243,7 +256,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
 		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
-		_, err := transaction.PutTransaction(tctx, txn)
+		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
@@ -252,7 +265,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
 			viper.GetInt64("development.faucet.refill_amount"),
 			`{"name":"refill","input":{}}`, 0)
-		_, err := transaction.PutTransaction(tctx, txn)
+		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Info("client generator - faucet refill", zap.Any("error", err))
 		}

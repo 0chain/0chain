@@ -1,11 +1,12 @@
 package storagesc
 
 import (
+	"errors"
+	"fmt"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
-	"errors"
-	"fmt"
 )
 
 // Created using StorageAllocation.getAllocationPools
@@ -15,6 +16,14 @@ type allocationWritePools struct {
 	ids             []string
 	writePools      []*writePool
 	allocationPools allocationPools
+}
+
+func (awp *allocationWritePools) activeAllocationPools(
+	allocID string, now common.Timestamp,
+) allocationPools {
+	var cut = awp.allocationPools.allocationCut(allocID)
+	cut = removeExpired(cut, now)
+	return cut
 }
 
 func (awp *allocationWritePools) getOwnerWP() (*writePool, error) {

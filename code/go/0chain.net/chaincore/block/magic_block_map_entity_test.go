@@ -2,12 +2,12 @@ package block
 
 import (
 	"context"
-	"encoding/json"
 	"reflect"
 	"testing"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/mocks"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMagicBlockMap_GetEntityMetadata(t *testing.T) {
@@ -233,12 +233,6 @@ func TestMagicBlockMap_Write(t *testing.T) {
 }
 
 func TestMagicBlockMap_Encode(t *testing.T) {
-	mbm := &MagicBlockMap{Hash: "hash", BlockRound: 2}
-	blob, err := json.Marshal(mbm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	type fields struct {
 		IDField    datastore.IDField
 		Hash       string
@@ -248,15 +242,24 @@ func TestMagicBlockMap_Encode(t *testing.T) {
 		name   string
 		fields fields
 		want   []byte
+		err    error
 	}{
 		{
-			name: "OK",
+			name: "OK - no ID",
 			fields: fields{
-				IDField:    mbm.IDField,
-				Hash:       mbm.Hash,
-				BlockRound: mbm.BlockRound,
+				Hash:       "hash",
+				BlockRound: 2,
 			},
-			want: blob,
+			want: []byte(`{"id":0,"hash":"hash","block_round":2}`),
+		},
+		{
+			name: "OK - with ID",
+			fields: fields{
+				IDField:    datastore.IDField{ID: "100"},
+				Hash:       "hash",
+				BlockRound: 2,
+			},
+			want: []byte(`{"id":100,"hash":"hash","block_round":2}`),
 		},
 	}
 	for _, tt := range tests {
@@ -274,52 +277,40 @@ func TestMagicBlockMap_Encode(t *testing.T) {
 }
 
 func TestMagicBlockMap_Decode(t *testing.T) {
-	mbm := &MagicBlockMap{Hash: "hash", BlockRound: 2}
-	blob, err := json.Marshal(mbm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	type fields struct {
-		IDField    datastore.IDField
-		Hash       string
-		BlockRound int64
-	}
-	type args struct {
-		input []byte
-	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-		want    *MagicBlockMap
+		name string
+		//fields  fields
+		input []byte
+		want  *MagicBlockMap
+		err   error
 	}{
 		{
-			name: "OK",
-			fields: fields{
-				IDField:    mbm.IDField,
-				Hash:       mbm.Hash,
-				BlockRound: mbm.BlockRound,
+			name:  "OK - no id",
+			input: []byte(`{"id":0,"hash":"hash","block_round":2}`),
+			want: &MagicBlockMap{
+				Hash:       "hash",
+				BlockRound: 2,
 			},
-			args:    args{input: blob},
-			want:    mbm,
-			wantErr: false,
+		},
+		{
+			name:  "OK",
+			input: []byte(`{"id":100,"hash":"hash","block_round":2}`),
+			want: &MagicBlockMap{
+				IDField:    datastore.IDField{ID: "100"},
+				Hash:       "hash",
+				BlockRound: 2,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mb := &MagicBlockMap{
-				IDField:    tt.fields.IDField,
-				Hash:       tt.fields.Hash,
-				BlockRound: tt.fields.BlockRound,
+			var mb MagicBlockMap
+			if err := mb.Decode(tt.input); err != nil {
+				require.Equal(t, tt.err, err)
+				return
 			}
-			if err := mb.Decode(tt.args.input); (err != nil) != tt.wantErr {
-				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if !reflect.DeepEqual(mb, tt.want) {
-				t.Errorf("Decode() error = %v, want = %v", mb, tt.want)
-			}
+
+			require.Equal(t, tt.want, &mb)
 		})
 	}
 }

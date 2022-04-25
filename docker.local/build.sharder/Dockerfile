@@ -1,30 +1,32 @@
 # Compile the sharder in an un-tagged image so the final, tagged image can be smaller:
 FROM zchain_build_base as sharder_build
+ENV ROOT=/0chain
+ENV SRC_DIR=$ROOT/code/go/0chain.net
 ENV GO111MODULE=on
 
 # Add the source code:
-COPY code/go/0chain.net /0chain.net
+COPY ./code/go/0chain.net/go.mod $SRC_DIR/
+COPY ./code/go/0chain.net/go.sum $SRC_DIR/
+
+RUN cd $SRC_DIR && go mod download -x
+
+COPY ./code/go/0chain.net $SRC_DIR
+COPY ./generate_mocks.sh $ROOT
+
+RUN go get github.com/vektra/mockery/v2/.../
+RUN cd $ROOT && ls && ./generate_mocks.sh
 
 # Set workdir
-WORKDIR /0chain.net
+WORKDIR $SRC_DIR
 
-# Build libzstd:
-# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
-# FIXME: Also, is there a way we can move this to zchain_build_base?
+RUN go mod vendor -v
 
-RUN [[ -d /0chain.net/vendor ]] || ( \
-    go mod download && \
-    go mod vendor -v && \
-    dir=github.com/valyala/gozstd && \
-    rm -r vendor/$dir && \
-    mv $GOPATH/pkg/mod/$dir* vendor/$dir )
+RUN rm -r ./vendor/github.com/valyala/gozstd
 
-RUN cd vendor/github.com/valyala/gozstd* && \
-    chmod -R +w . && \
-    make clean libzstd.a
+RUN cp -r /gozstd ./vendor/github.com/valyala/gozstd
 
 # Set workdir
-WORKDIR /0chain.net/sharder/sharder
+WORKDIR $SRC_DIR/sharder/sharder
 
 # Build it:
 ARG GIT_COMMIT
@@ -35,4 +37,4 @@ RUN go build -mod vendor -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain
 FROM zchain_run_base
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
-COPY --from=sharder_build /0chain.net/sharder/sharder/sharder $APP_DIR/bin/
+COPY --from=sharder_build $APP_DIR/code/go/0chain.net/sharder/sharder/sharder $APP_DIR/bin/

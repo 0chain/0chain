@@ -1,12 +1,20 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/config/cases"
+	"0chain.net/conductor/dirs"
 )
 
 //
@@ -18,6 +26,29 @@ func (r *Runner) setupTimeout(tm time.Duration) {
 	if tm <= 0 {
 		<-r.timer.C // drain zero timeout
 	}
+}
+
+func (r *Runner) doStart(name NodeName, lock, errIfAlreadyStarted bool) (err error) {
+	var n, ok = r.conf.Nodes.NodeByName(name)
+	if !ok {
+		return fmt.Errorf("(doStart): unknown node: %q", name)
+	}
+	if n.IsStarted() {
+		if errIfAlreadyStarted {
+			return fmt.Errorf("(doStart): node already started: %s", n.Name)
+		} else {
+			return nil
+		}
+	}
+	// miners and sharders, but skip blobbers
+	if !r.conf.IsSkipWait(name) {
+		r.server.AddNode(name, lock)   // expected server interaction
+		r.waitNodes[name] = struct{}{} // wait list
+	}
+	if err := n.Start(r.conf.Logs, r.conf.Env); err != nil {
+		return fmt.Errorf("starting %s: %v", n.Name, err)
+	}
+	return nil
 }
 
 //
@@ -41,7 +72,47 @@ func (r *Runner) SetMonitor(name NodeName) (err error) {
 func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 	r.stopAll()
 	r.resetRounds()
-	return r.conf.CleanupBC()
+	err = r.conf.CleanupBC()
+	if err != nil {
+		log.Printf("Cleanup_BC: do cleanup result %v", err)
+	}
+	return err
+}
+
+// SaveLogs copies current execution logs contained in the "workDir/node-n/log" to the
+// "docker.local/conductor.backup-logs/testCaseName".
+func (r *Runner) SaveLogs() error {
+	now := time.Now().Format(time.RFC822)
+	for _, node := range r.conf.Nodes {
+		var (
+			source       = filepath.Join(node.WorkDir, "log")
+			testCaseName = strings.Replace(r.currTestCaseName, " ", "_", -1) + "_" + now
+			destination  = filepath.Join("docker.local", "conductor.backup_logs", testCaseName, string(node.Name))
+		)
+		if err := os.MkdirAll(destination, 0755); err != nil {
+			return err
+		}
+		if err := dirs.CopyDir(source, destination); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// set additional environment variables
+func (r *Runner) SetEnv(env map[string]string) (err error) {
+	if r.verbose {
+		keys := make([]string, len(env))
+		i := 0
+		for k := range env {
+			keys[i] = k
+			i++
+		}
+		log.Printf(" [INF] setting test-specific environment variables: %s", strings.Join(keys, ","))
+	}
+	r.conf.Env = env
+	return nil
 }
 
 //
@@ -60,19 +131,8 @@ func (r *Runner) Start(names []NodeName, lock bool,
 
 	// start nodes
 	for _, name := range names {
-		var n, ok = r.conf.Nodes.NodeByName(name) //
-		if !ok {
-			return fmt.Errorf("(start): unknown node: %q", name)
-		}
-
-		// miners and sharders, but skip blobbers
-		if !r.conf.IsSkipWait(name) {
-			r.server.AddNode(name, lock)   // expected server interaction
-			r.waitNodes[name] = struct{}{} // wait list
-		}
-
-		if err = n.Start(r.conf.Logs); err != nil {
-			return fmt.Errorf("starting %s: %v", n.Name, err)
+		if err := r.doStart(name, lock, true); err != nil {
+			return err
 		}
 	}
 	return
@@ -108,11 +168,33 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		log.Print("stopping ", n.Name, "...")
 		if err := n.Stop(); err != nil {
 			log.Printf("stopping %s: %v", n.Name, err)
-			n.Kill()
+			if err := n.Kill(); err != nil {
+				log.Printf("kill failed: %v", err)
+			}
 		}
 		log.Print(n.Name, " stopped")
 	}
 	return
+}
+
+//
+// checks
+//
+
+func (r *Runner) ExpectActiveSet(emb config.ExpectMagicBlock) (
+	err error) {
+
+	if r.verbose {
+		log.Print(" [INF] checking the active set ")
+	}
+	if r.lastVC == nil {
+		return errors.New("no VC info yet!")
+	}
+	err = r.checkMagicBlock(&emb, r.lastVC)
+	if err == nil {
+		log.Println("[OK] active set")
+	}
+	return err
 }
 
 //
@@ -163,7 +245,7 @@ func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
 			}
 		} else if wr.Shift != 0 {
 			// shift without a name means shift from current round
-			wr.Round = r.lastRound + wr.Shift
+			wr.Round = r.lastAcceptedRound.Round + wr.Shift
 		}
 	}
 
@@ -227,6 +309,14 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 
 	r.setupTimeout(tm)
 	r.waitAdd = wadd
+	if wadd.Start {
+		// start nodes that haven't been started yet
+		for _, name := range append(wadd.Sharders, append(wadd.Miners, wadd.Blobbers...)...) {
+			if err := r.doStart(name, false, false); err != nil {
+				return err
+			}
+		}
+	}
 	return
 }
 
@@ -247,7 +337,7 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 		log.Print(" [INF] wait no progress ", wait.String())
 	}
 
-	r.waitNoProgressUntil = time.Now().Add(wait)
+	r.waitNoProgress = config.WaitNoProgress{Start: time.Now().Add(noProgressSeconds * time.Second), Until: time.Now().Add(wait)}
 	r.setupTimeout(wait)
 	return
 }
@@ -437,14 +527,30 @@ func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
 }
 
 //
-// Byzantine VC miners.
+// Misbehavior
 //
+
+func (r *Runner) ConfigureGeneratorsFailure(round Round) (
+	err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] configure generators failure for round %v", round)
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.GeneratorsFailureRoundNumber = round
+	})
+	if err != nil {
+		return fmt.Errorf("configuring generators failure for round %v: %v", round, err)
+	}
+	return
+}
 
 func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	err error) {
 
 	if r.verbose {
-		log.Printf(" [INF] set reveled of %s to %t", ss, pin)
+		log.Printf(" [INF] set revealed of %s to %t", ss, pin)
 	}
 
 	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {
@@ -455,6 +561,10 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	}
 	return
 }
+
+//
+// Byzantine VC miners.
+//
 
 func (r *Runner) MPK(mpk *config.Bad) (err error) {
 	r.verbosePrintByGoodBad("MPK", mpk)
@@ -632,4 +742,133 @@ func (r *Runner) verbosePrintByGoodBad(label string, bad *config.Bad) {
 		log.Printf(" [INF] set '%s' of %s: good %s, bad %s",
 			label, bad.By, bad.Good, bad.Bad)
 	}
+}
+
+// MinersNum implements config.Executor interface.
+func (r *Runner) MinersNum() int {
+	return r.server.GetMinersNum()
+}
+
+// GetMonitorID implements config.Executor interface.
+func (r *Runner) GetMonitorID() string {
+	monitorName := r.monitor
+	for _, node := range r.conf.Nodes {
+		if node.Name == monitorName {
+			return string(node.ID)
+		}
+	}
+	return ""
+}
+
+// EnableServerStatsCollector implements config.Executor interface.
+func (r *Runner) EnableServerStatsCollector() error {
+	return r.server.EnableServerStatsCollector()
+}
+
+// EnableClientStatsCollector implements config.Executor interface.
+func (r *Runner) EnableClientStatsCollector() error {
+	return r.server.EnableClientStatsCollector()
+}
+
+// GetServerStatsCollector implements config.Executor interface.
+func (r *Runner) GetServerStatsCollector() *stats.NodesServerStats {
+	return r.server.NodesServerStatsCollector
+}
+
+// GetClientStatsCollector implements config.Executor interface.
+func (r *Runner) GetClientStatsCollector() *stats.NodesClientStats {
+	return r.server.NodesClientStatsCollector
+}
+
+//
+// Checks
+//
+
+// ConfigureTestCase implements config.Executor interface.
+func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) error {
+	if r.verbose {
+		log.Printf(" [INF] configuring \"%s\" test case", configurator.Name())
+	}
+
+	err := r.server.UpdateAllStates(func(state *conductrpc.State) {
+		switch cfg := configurator.(type) {
+		case *cases.NotNotarisedBlockExtension:
+			state.ExtendNotNotarisedBlock = cfg
+
+		case *cases.SendDifferentBlocksFromFirstGenerator:
+			state.SendDifferentBlocksFromFirstGenerator = cfg
+
+		case *cases.SendDifferentBlocksFromAllGenerators:
+			state.SendDifferentBlocksFromAllGenerators = cfg
+
+		case *cases.BreakingSingleBlock:
+			state.BreakingSingleBlock = cfg
+
+		case *cases.SendInsufficientProposals:
+			state.SendInsufficientProposals = cfg
+
+		case *cases.VerifyingNonExistentBlock:
+			state.VerifyingNonExistentBlock = cfg
+
+		case *cases.NotarisingNonExistentBlock:
+			state.NotarisingNonExistentBlock = cfg
+
+		case *cases.ResendProposedBlock:
+			state.ResendProposedBlock = cfg
+
+		case *cases.ResendNotarisation:
+			state.ResendNotarisation = cfg
+
+		case *cases.BadTimeoutVRFS:
+			state.BadTimeoutVRFS = cfg
+
+		case *cases.HalfNodesDown:
+			state.HalfNodesDown = cfg
+
+		case *cases.BlockStateChangeRequestor:
+			state.BlockStateChangeRequestor = cfg
+
+		case *cases.MinerNotarisedBlockRequestor:
+			state.MinerNotarisedBlockRequestor = cfg
+
+		case *cases.FBRequestor:
+			state.FBRequestor = cfg
+
+		case *cases.MissingLFBTickets:
+			state.MissingLFBTicket = cfg
+
+		default:
+			log.Panicf("unknown test case name: %s", configurator.Name())
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("error while updating all states on \"%s\" test case: %v", configurator.Name(), err)
+	}
+
+	r.server.CurrentTest = configurator.TestCase()
+	r.currTestCaseName = configurator.Name()
+
+	return nil
+}
+
+// MakeTestCaseCheck implements config.Executor interface.
+func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
+	if r.verbose {
+		log.Print(" [INF] making test case check")
+	}
+
+	if r.server.CurrentTest == nil {
+		return errors.New("check is not set up")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.WaitTime)
+	defer cancel()
+	success, err := r.server.CurrentTest.Check(ctx)
+	if err != nil {
+		return err
+	}
+	if !success {
+		return errors.New("check failed")
+	}
+	return nil
 }

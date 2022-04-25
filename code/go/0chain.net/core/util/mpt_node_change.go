@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"sync"
 
 	"0chain.net/core/logging"
@@ -23,10 +24,9 @@ type ChangeCollectorI interface {
 	DeleteChange(oldNode Node)
 	GetChanges() []*NodeChange
 	GetDeletes() []Node
+	GetStartRoot() Key
 
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
-
-	PrintChanges(w io.Writer)
 
 	Validate() error
 	Clone() ChangeCollectorI
@@ -34,17 +34,22 @@ type ChangeCollectorI interface {
 
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
-	Changes map[string]*NodeChange
-	Deletes map[string]Node
-	mutex   sync.RWMutex
+	startRoot Key
+	Changes   map[string]*NodeChange
+	Deletes   map[string]Node
+	mutex     sync.RWMutex
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
-func NewChangeCollector() ChangeCollectorI {
-	cc := &ChangeCollector{}
+func NewChangeCollector(startRoot Key) ChangeCollectorI {
+	cc := &ChangeCollector{startRoot: startRoot}
 	cc.Changes = make(map[string]*NodeChange)
 	cc.Deletes = make(map[string]Node)
 	return cc
+}
+
+func (cc *ChangeCollector) GetStartRoot() Key {
+	return cc.startRoot
 }
 
 /*AddChange - implement interface */
@@ -55,7 +60,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
-		change.New = newNode.Clone()
+		change.New = newNode
 		cc.Changes[nhash] = change
 		return
 	}
@@ -68,14 +73,14 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 				return
 			}
 		}
-		prevChange.New = newNode.Clone()
+		prevChange.New = newNode
 		cc.Changes[nhash] = prevChange
 	} else {
 		change := &NodeChange{}
-		change.New = newNode.Clone()
-		change.Old = oldNode.Clone()
+		change.New = newNode
+		change.Old = oldNode
 		cc.Changes[nhash] = change
-		cc.Deletes[ohash] = oldNode.Clone()
+		cc.Deletes[ohash] = oldNode
 	}
 }
 
@@ -85,9 +90,21 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	defer cc.mutex.Unlock()
 	ohash := oldNode.GetHash()
 	if _, ok := cc.Changes[ohash]; ok {
+		if DebugMPTNode {
+			logging.Logger.Debug("DeleteChange existing change",
+				zap.String("ohash", ohash),
+				zap.String("stack", string(debug.Stack())),
+			)
+		}
 		delete(cc.Changes, ohash)
 	} else {
-		cc.Deletes[ohash] = oldNode.Clone()
+		if DebugMPTNode {
+			logging.Logger.Debug("DeleteChange adding to deletes",
+				zap.String("ohash", ohash),
+				zap.String("stack", string(debug.Stack())),
+			)
+		}
+		cc.Deletes[ohash] = oldNode
 	}
 }
 
@@ -125,21 +142,12 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	nodes := make([]Node, len(cc.Changes))
 	idx := 0
 	for _, c := range cc.Changes {
-		if _, ok := c.New.(*LeafNode); ok && origin != c.New.GetOrigin() {
-			oldHash := c.New.GetHashBytes()
-			oldOrigin := c.New.GetOrigin()
+		// use old key as UpdateVersion would not change the key even the node has been updated
+		keys[idx] = c.New.GetHashBytes()
+		if origin != c.New.GetOrigin() {
 			c.New.SetOrigin(origin)
-			keys[idx] = c.New.GetHashBytes()
-			logging.Logger.Warn("Updating origin of a leaf node may break references ",
-				zap.Int64("oldOrigin", int64(oldOrigin)),
-				zap.String("oldHash", ToHex(oldHash)),
-				zap.Int64("newOrigin", int64(origin)),
-				zap.String("newHash", ToHex(keys[idx])),
-			)
-		} else {
-			c.New.SetOrigin(origin)
-			keys[idx] = c.New.GetHashBytes()
 		}
+
 		nodes[idx] = c.New
 		idx++
 	}
@@ -158,17 +166,17 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	if len(cc.Changes) == 0 && (!includeDeletes || len(cc.Deletes) == 0) {
 		return nil
 	}
-	if pndb, ok := ndb.(*PNodeDB); ok {
-		pndb.Flush()
-	}
+	// TODO: make the calling of Flush() configurable, and
+	// call it on production env.
+	//if pndb, ok := ndb.(*PNodeDB); ok {
+	//	pndb.Flush()
+	//}
+	//logging.Logger.Debug("update changes - flushed", zap.Duration("duration", time.Since(ts)))
 	return nil
 }
 
-//PrintChanges - implement interface
-func (cc *ChangeCollector) PrintChanges(w io.Writer) {
-	cc.mutex.RLock()
-	defer cc.mutex.RUnlock()
-	for idx, c := range cc.Changes {
+func PrintChanges(w io.Writer, changes []*NodeChange) {
+	for idx, c := range changes {
 		if c.Old != nil {
 			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
 		} else {

@@ -1,16 +1,20 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/smartcontract/stakepool"
+
+	cstate "0chain.net/chaincore/chain/state"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -23,7 +27,6 @@ import (
 func Test_newStakePool(t *testing.T) {
 	var sp = newStakePool()
 	assert.NotNil(t, sp.Pools)
-	assert.NotNil(t, sp.Offers)
 }
 
 func Test_stakePoolKey(t *testing.T) {
@@ -36,20 +39,6 @@ func Test_stakePool_Encode_Decode(t *testing.T) {
 	assert.EqualValues(t, spe, spd)
 }
 
-func Test_stakePool_offersStake(t *testing.T) {
-	var (
-		sp  = newStakePool()
-		now = common.Now()
-	)
-	assert.Zero(t, sp.offersStake(now, false))
-	sp.Offers["alloc_id"] = &offerPool{
-		Lock:   90,
-		Expire: now,
-	}
-	assert.Equal(t, state.Balance(90), sp.offersStake(now-1, false))
-	assert.Equal(t, state.Balance(0), sp.offersStake(now, false))
-}
-
 func Test_stakePool_save(t *testing.T) {
 	const blobID = "blob_id"
 	var (
@@ -60,33 +49,9 @@ func Test_stakePool_save(t *testing.T) {
 	assert.NotZero(t, balances.tree[stakePoolKey(ADDRESS, blobID)])
 }
 
-func Test_stakePool_fill(t *testing.T) {
-	const (
-		clientID = "client_id"
-	)
-
-	var (
-		sp       = newStakePool()
-		balances = newTestBalances(t, false)
-		tx       = transaction.Transaction{
-			ClientID:   clientID,
-			ToClientID: ADDRESS,
-			Value:      90,
-		}
-		err error
-	)
-
-	balances.setTransaction(t, &tx)
-	balances.balances[clientID] = 100e10
-
-	_, _, err = sp.dig(&tx, balances)
-	require.NoError(t, err)
-	assert.Equal(t, state.Balance(90), sp.stake())
-}
-
 type mockStakePool struct {
 	zcnAmount float64
-	MintAt    common.Timestamp
+	MintAt    int64
 }
 
 const (
@@ -94,7 +59,6 @@ const (
 	transactionHash  = "12345678"
 	clientId         = "sally"
 	errDelta         = 6 // for testing values with rounding errors
-	offerId          = "offer"
 	errStakePoolLock = "stake_pool_lock_failed: "
 	errStakeTooSmall = "too small stake to lock"
 )
@@ -109,65 +73,41 @@ type splResponse struct {
 
 func TestStakePoolLock(t *testing.T) {
 	var err error
-	scYaml = &scConfig{
+	scYaml = &Config{
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
 
 		StakePool: &stakePoolConfig{
-			InterestRate:     0.0000334,
-			InterestInterval: 1 * time.Minute,
-			MinLock:          int64(zcnToBalance(0.1)),
+			MinLock: int64(zcnToBalance(0.1)),
 		},
 	}
 
-	t.Run("stake pool lock", func(t *testing.T) {
-		var value = 10 * scYaml.StakePool.MinLock
-
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
-		var delegates = []mockStakePool{
-			{2, creationDate - period - 1},
-			{3, creationDate - period + 1},
-			{5, 0},
-			{3, creationDate - period},
-		}
-		var offers = []common.Timestamp{creationDate + 1, creationDate - 1, creationDate}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
-		require.NoError(t, err)
-	})
-
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		var value = scYaml.StakePool.MinLock - 1
-
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
+		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
+		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		scYaml.Minted = scYaml.MaxMint
-		var value = 10 * scYaml.StakePool.MinLock
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
+		var value = scYaml.StakePool.MinLock - 1
+		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
+		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errStakePoolLock))
 	})
 }
 
-func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []mockStakePool, offers []common.Timestamp) error {
+func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []mockStakePool) error {
 	var f = formulaeStakePoolLock{
 		value:         value,
 		clientBalance: clientBalance,
 		delegates:     delegates,
-		offers:        offers,
 		scYaml:        *scYaml,
 		now:           creationDate,
 	}
@@ -186,15 +126,15 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,
 			nil,
 		),
 		clientBalance: state.Balance(clientBalance),
-		store:         make(map[datastore.Key]util.Serializable),
+		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
@@ -212,27 +152,13 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	var stakePool = newStakePool()
 	for i, stake := range delegates {
 		var id = strconv.Itoa(i)
-		stakePool.Pools["pool"+id] = &delegatePool{
-			DelegateID: strconv.Itoa(i),
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      id,
-					Balance: zcnToBalance(stake.zcnAmount),
-				},
-			},
-			MintAt: stake.MintAt,
+		stakePool.Pools["pool"+id] = &stakepool.DelegatePool{
+			Balance:      zcnToBalance(stake.zcnAmount),
+			RoundCreated: stake.MintAt,
 		}
 	}
-	for i, expires := range offers {
-		var id = strconv.Itoa(i)
-		stakePool.Offers[offerId+id] = &offerPool{
-			//Lock:   zcnToBalance(offer.zcn),
-			Expire: expires,
-		}
-	}
-
-	var usp = newUserStakePools()
-	require.NoError(t, usp.save(ssc.ID, txn.ClientID, ctx))
+	var usp = stakepool.NewUserStakePools()
+	require.NoError(t, usp.Save(spenum.Blobber, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
@@ -242,8 +168,8 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 	newStakePool, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
-	var newUsp *userStakePools
-	newUsp, err = ssc.getOrCreateUserStakePool(txn.ClientID, ctx)
+	var newUsp *stakepool.UserStakePools
+	newUsp, err = stakepool.GetUserStakePool(spenum.Blobber, txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)
@@ -252,39 +178,16 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 }
 
 func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, newStakePool stakePool,
-	newUsp userStakePools, ctx cstate.StateContextI) {
+	newUsp stakepool.UserStakePools, ctx cstate.StateContextI) {
 	for _, transfer := range ctx.GetTransfers() {
 		require.EqualValues(t, f.value, int64(transfer.Amount))
 		require.EqualValues(t, storageScId, transfer.ToClientID)
 		require.EqualValues(t, clientId, transfer.ClientID)
 		txPool, ok := newStakePool.Pools[transactionHash]
 		require.True(t, ok)
-		require.EqualValues(t, clientId, txPool.DelegateID)
-		require.EqualValues(t, f.now, txPool.MintAt)
+		require.EqualValues(t, f.now, txPool.RoundCreated)
 	}
 
-	var minted = []bool{}
-	for range f.delegates {
-		minted = append(minted, false)
-	}
-	for _, mint := range ctx.GetMints() {
-		index, err := strconv.Atoi(mint.ToClientID)
-		require.NoError(t, err)
-		require.InDelta(t, f.delegateInterest(index), int64(mint.Amount), errDelta)
-		require.EqualValues(t, storageScId, mint.Minter)
-		minted[index] = true
-	}
-	for delegate, wasMinted := range minted {
-		if !wasMinted {
-			require.EqualValues(t, f.delegateInterest(delegate), 0, errDelta)
-		}
-	}
-
-	for offer, expires := range f.offers {
-		var key = offerId + strconv.Itoa(offer)
-		_, ok := newStakePool.Offers[key]
-		require.EqualValues(t, expires > f.now, ok)
-	}
 	pools, ok := newUsp.Pools[blobberId]
 	require.True(t, ok)
 	require.Len(t, pools, 1)
@@ -302,32 +205,6 @@ type formulaeStakePoolLock struct {
 	value         int64
 	clientBalance int64
 	delegates     []mockStakePool
-	offers        []common.Timestamp
-	scYaml        scConfig
+	scYaml        Config
 	now           common.Timestamp
-}
-
-func (f formulaeStakePoolLock) delegateInterest(delegate int) int64 {
-	var interestRate = scYaml.StakePool.InterestRate
-	var numberOfPayments = float64(f.numberOfInterestPayments(delegate))
-	var stake = float64(zcnToInt64(f.delegates[delegate].zcnAmount))
-
-	return int64(stake * numberOfPayments * interestRate)
-}
-
-func (f formulaeStakePoolLock) numberOfInterestPayments(delegate int) int64 {
-	var activeTime = int64(f.now - f.delegates[delegate].MintAt)
-	var period = int64(f.scYaml.StakePool.InterestInterval.Seconds())
-	var periods = activeTime / period
-
-	// round down to previous integer
-	if activeTime%period == 0 {
-		if periods-1 >= 0 {
-			return periods - 1
-		} else {
-			return 0
-		}
-	} else {
-		return periods
-	}
 }
