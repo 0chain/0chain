@@ -953,7 +953,7 @@ func (sc *StorageSmartContract) addChallenge(
 			"no blobber Allocation to add challenge to")
 	}
 	blobberAllocation := alloc.BlobberMap[blobberChallengeObj.BlobberID]
-	if err = blobberChallengeObj.removeExpiredChallenges(now, alloc, sc, balances); err != nil {
+	if _, err = blobberChallengeObj.removeExpiredAllocationChallenges(now, alloc, sc, balances); err != nil {
 		return "", common.NewError("add_challenge",
 			"error removing expired challenges: "+err.Error())
 	}

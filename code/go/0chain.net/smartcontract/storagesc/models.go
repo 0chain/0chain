@@ -184,14 +184,16 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
-func (sn *BlobberChallenge) removeExpiredChallenges(
+func (sn *BlobberChallenge) removeExpiredAllocationChallenges(
 	now common.Timestamp,
 	alloc *StorageAllocation,
 	sc *StorageSmartContract,
-	balances chainstate.StateContextI) error {
+	balances chainstate.StateContextI) (bool, error) {
+
+	var isChanged bool
 	blobber, err := sc.getBlobber(sn.BlobberID, balances)
 	if err != nil {
-		return fmt.Errorf("error fetching blobber: %v", err)
+		return isChanged, fmt.Errorf("error fetching blobber: %v", err)
 	}
 
 	i := 0
@@ -200,13 +202,21 @@ func (sn *BlobberChallenge) removeExpiredChallenges(
 		if now <= expiry {
 			break
 		}
-		delete(sn.ChallengeIDMap, chall.ID)
-		alloc.Stats.ChallengeFailed(chall.ID)
-		alloc.BlobberMap[sn.BlobberID].Stats.ChallengeFailed(chall.ID)
-		i++
+		if chall.AllocationID == alloc.ID {
+			isChanged = true
+			delete(sn.ChallengeIDMap, chall.ID)
+			alloc.Stats.ChallengeFailed(chall.ID)
+			alloc.BlobberMap[sn.BlobberID].Stats.ChallengeFailed(chall.ID)
+			if i == len(sn.Challenges)-1 {
+				sn.Challenges = sn.Challenges[:i]
+			} else {
+				sn.Challenges = append(sn.Challenges[:i], sn.Challenges[i+1:]...)
+			}
+		} else {
+			i++
+		}
 	}
-	sn.Challenges = sn.Challenges[i:]
-	return nil
+	return isChanged, nil
 }
 
 type StorageChallenge struct {

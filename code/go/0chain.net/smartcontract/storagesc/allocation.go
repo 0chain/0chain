@@ -1241,23 +1241,8 @@ func (sc *StorageSmartContract) cancelledPassRates(alloc *StorageAllocation,
 		bc, err := sc.getBlobberChallenge(d.BlobberID, balances)
 		switch err {
 		case nil:
-			for i := 0; i < len(bc.Challenges); i++ {
-				chall := bc.Challenges[i]
-				if chall.AllocationID == alloc.ID {
-					if i == len(bc.Challenges)-1 {
-						bc.Challenges = bc.Challenges[:i]
-					} else {
-						bc.Challenges = append(bc.Challenges[:i], bc.Challenges[i+1:]...)
-					}
-					delete(bc.ChallengeIDMap, chall.ID)
-					expire := chall.Created + toSeconds(d.Terms.ChallengeCompletionTime)
-					if now > expire {
-						alloc.Stats.ChallengeFailed(chall.ID)
-						d.Stats.ChallengeFailed(chall.ID)
-					}
-					foundChallenge = true
-					i--
-				}
+			if foundChallenge, err = bc.removeExpiredAllocationChallenges(now, alloc, sc, balances); err != nil {
+				return nil, fmt.Errorf("error removing expired challenges: " + err.Error())
 			}
 		case util.ErrValueNotPresent:
 			continue
