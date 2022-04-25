@@ -353,7 +353,7 @@ func testCancelAllocation(
 		now:                  now,
 		challengeCreation:    challenges,
 	}
-	f.setFinilizationPassRates()
+	f.setCancelPassRates()
 
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
 		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
@@ -731,20 +731,31 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
 	f._passRates = []float64{}
-	var deadline = f.now - toSeconds(blobberYaml.challengeCompletionTime)
+	//var deadline = f.now - toSeconds(blobberYaml.challengeCompletionTime)
+	//
+	//for i, details := range f.allocation.BlobberDetails {
+	//	var successful = float64(details.Stats.SuccessChallenges)
+	//	var failed = float64(details.Stats.FailedChallenges)
+	//
+	//	require.Len(f.t, f.challengeCreation[i], int(details.Stats.OpenChallenges))
+	//	for _, created := range f.challengeCreation[i] {
+	//		if created < deadline {
+	//			failed++
+	//		}
+	//	}
+	//	var total = successful + failed
+	//	//fmt.Println("pass rate i", i, "successful", successful, "failed", failed)
+	//	if total == 0 {
+	//		f._passRates = append(f._passRates, 1.0)
+	//	} else {
+	//		f._passRates = append(f._passRates, successful/total)
+	//	}
+	//}
 
-	for i, details := range f.allocation.BlobberDetails {
-		var successful = float64(details.Stats.SuccessChallenges)
+	for _, details := range f.allocation.BlobberDetails {
+		var successful = float64(details.Stats.SuccessChallenges + details.Stats.OpenChallenges)
 		var failed = float64(details.Stats.FailedChallenges)
-
-		require.Len(f.t, f.challengeCreation[i], int(details.Stats.OpenChallenges))
-		for _, created := range f.challengeCreation[i] {
-			if created < deadline {
-				failed++
-			}
-		}
 		var total = successful + failed
-		//fmt.Println("pass rate i", i, "successful", successful, "failed", failed)
 		if total == 0 {
 			f._passRates = append(f._passRates, 1.0)
 		} else {
