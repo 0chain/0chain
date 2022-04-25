@@ -1661,8 +1661,3 @@ func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool,
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
 }
-
-type AllocationInfo struct {
-	StorageAllocation `json:",inline"`
-	Blobbers          []*StorageNode `json:"blobbers"`
-}

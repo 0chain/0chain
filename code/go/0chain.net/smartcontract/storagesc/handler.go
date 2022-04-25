@@ -880,3 +880,8 @@ func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate
 
 	return 0, fmt.Errorf("storageSmartContract is nil")
 }
+
+type AllocationInfo struct {
+	StorageAllocation `json:",inline"`
+	Blobbers          []*StorageNode `json:"blobbers"`
+}
