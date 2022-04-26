@@ -2274,9 +2274,9 @@ func (z *StorageAllocationStats) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 6
+	// map header, size 7
 	// string "Created"
-	o = append(o, 0x86, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+	o = append(o, 0x87, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o, err = z.Created.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Created")
@@ -2294,6 +2294,9 @@ func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "BlobberID"
 	o = append(o, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
+	// string "PrevID"
+	o = append(o, 0xa6, 0x50, 0x72, 0x65, 0x76, 0x49, 0x44)
+	o = msgp.AppendString(o, z.PrevID)
 	// string "Responded"
 	o = append(o, 0xa9, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x65, 0x64)
 	o = msgp.AppendBool(o, z.Responded)
@@ -2348,6 +2351,12 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BlobberID")
 				return
 			}
+		case "PrevID":
+			z.PrevID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "PrevID")
+				return
+			}
 		case "Responded":
 			z.Responded, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
@@ -2368,7 +2377,7 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageChallenge) Msgsize() (s int) {
-	s = 1 + 8 + z.Created.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + msgp.IntSize + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.BoolSize
+	s = 1 + 8 + z.Created.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + msgp.IntSize + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 7 + msgp.StringPrefixSize + len(z.PrevID) + 10 + msgp.BoolSize
 	return
 }
 
