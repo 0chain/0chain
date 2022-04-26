@@ -216,6 +216,10 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("events db is not initialised")
+	}
+
 	var err error
 	var creationDate = balances.GetTransaction().CreationDate
 
@@ -236,14 +240,13 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	}
 	// number of blobbers required
 	var numberOfBlobbers = sa.DataShards + sa.ParityShards
+	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
+		return nil, common.NewErrorf("allocation_creation_failed",
+			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
+	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
 	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
-
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("events db is not initialised")
-	}
-
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
 		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
 		MaxOfferDuration:           dur,
