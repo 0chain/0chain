@@ -1,15 +1,14 @@
 package minersc
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net/url"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/url"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -75,4 +74,18 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 		return errors.New("URL or ID is not specified")
 	}
 	return nil
+}
+
+func (mn *MinerNode) GetNodePools(status string) map[string]*stakepool.DelegatePool {
+	if len(status) == 0 {
+		return mn.Pools
+	}
+
+	var pools map[string]*stakepool.DelegatePool
+	for id, pool := range mn.Pools {
+		if pool.Status.String() == status {
+			pools[id] = pool
+		}
+	}
+	return pools
 }

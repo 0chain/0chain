@@ -483,8 +483,8 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 	var (
 		id     = params.Get("id")
 		poolID = params.Get("pool_id")
-		//status = params.Get("status")
-		sn *MinerNode
+		status = params.Get("status")
+		sn     *MinerNode
 	)
 
 	if sn, err = getMinerNode(id, balances); err != nil {
@@ -492,7 +492,7 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 	}
 
 	if poolID == "" {
-		return sn.Pools, nil
+		return sn.GetNodePools(status), nil
 	}
 
 	if pool, ok := sn.Pools[poolID]; ok {
