@@ -1,11 +1,12 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
-	"encoding/json"
-	"fmt"
 )
 
 // TransactionID and BlockNumber is added at the time of emitting event
@@ -19,6 +20,9 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 		Size:                   wm.Size,
 		Timestamp:              int64(wm.Timestamp),
 		Signature:              wm.Signature,
+		LookupHash:             wm.LookupHash,
+		Name:                   wm.Name,
+		ContentHash:            wm.ContentHash,
 	}
 }
 
