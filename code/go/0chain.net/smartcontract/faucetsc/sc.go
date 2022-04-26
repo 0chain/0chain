@@ -157,18 +157,15 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
-		logging.Logger.Info("piers pour", zap.Any("transfer", transfer))
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", err
 		}
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
-		logging.Logger.Info("piers pour insert user", zap.Any("user", user))
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
 			return "", err
 		}
-		logging.Logger.Info("piers pour insert gn", zap.Any("gn", gn))
 		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			return "", err

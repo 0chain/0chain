@@ -434,7 +434,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return transaction.ErrInsufficientBalance
 	}
 	ts, err := c.getState(clientState, toClient)
-	logging.Logger.Info("piers transferAmount", zap.String("toClient", toClient), zap.Any("get ts", ts))
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -484,7 +483,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	ts.Balance += amount
-	logging.Logger.Info("piers transferAmount", zap.Any("save ts", ts), zap.String("toClient", toClient))
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
@@ -534,7 +532,6 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	}
 
 	ts.Balance += amount
-	logging.Logger.Info("piers mintAmount", zap.Any("save ts", ts), zap.String("toClient", toClient))
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {

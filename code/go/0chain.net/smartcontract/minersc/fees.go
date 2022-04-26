@@ -466,8 +466,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		partf = state.Balance(float64(fee) / float64(len(sharders)))
 		partm = state.Balance(float64(mint) / float64(len(sharders)))
 	)
-	Logger.Info("piers payShardersAndDelegates",
-		zap.Any("partf", partf), zap.Any("partm", partm))
+
 	// part for every sharder
 	for _, sh := range sharders {
 		if err = sh.StakePool.DistributeRewards(
