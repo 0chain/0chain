@@ -17,7 +17,7 @@ require (
 	github.com/gomodule/redigo v1.8.8
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls v0.0.0-20220420050213-cf2b578f1c41
+	github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe

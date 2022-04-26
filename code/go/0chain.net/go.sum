@@ -294,8 +294,6 @@ github.com/hashicorp/serf v0.9.6/go.mod h1:TXZNMjZQijwlDvp+r0b63xZ45H7JmCmgg4gpT
 github.com/hashicorp/serf v0.9.7/go.mod h1:TXZNMjZQijwlDvp+r0b63xZ45H7JmCmgg4gpTwn9UV4=
 github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef h1:jWyKgbg5RNrPE02JGGlbegGTszFryC1p6G7Pctwf1Do=
 github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef/go.mod h1:i4wRNUUFF1nNmYFHM9UDl13MGoxEQkMVCLAd82qZz4s=
-github.com/herumi/bls v0.0.0-20220420050213-cf2b578f1c41 h1:kc7/S+KqJsBtm7+hzwOEMies+j+ZlcYSzbIAdaGuUrU=
-github.com/herumi/bls v0.0.0-20220420050213-cf2b578f1c41/go.mod h1:CnmR5QZ/QBnBE8Z55O+OtmUc6ICUdrOW9fwSRQwz5Bo=
 github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72 h1:9ld9NR0ZyRIrh6P4TAEETBMsG2OP5YcV4zCzyUBuGpA=
 github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72/go.mod h1:XegVNAXVOgj/0XnsW1j7XOe1zOopaaOfqHODIJBo+Ks=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
