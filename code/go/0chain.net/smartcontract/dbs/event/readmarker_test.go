@@ -111,7 +111,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 	})
 
 	t.Run("ReadMarkers size total", func(t *testing.T) {
-		gotWM, err := eventDb.GetDataReadFromAllocationForLastNBlocks(5)
+		gotWM, err := eventDb.GetDataReadFromAllocationForLastNBlocks(5, "")
 		assert.NoError(t, err)
 		assert.Equal(t, int64(300), gotWM)
 	})

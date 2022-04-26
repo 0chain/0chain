@@ -170,7 +170,7 @@ func TestGetWriteMarkers(t *testing.T) {
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("WriteMarkers size total", func(t *testing.T) {
-		gotWM, err := eventDb.GetDataWrittenToAllocationForLastNBlocks(5)
+		gotWM, err := eventDb.GetAllocationWrittenSizeInLastNBlocks(5, "")
 		assert.NoError(t, err)
 		assert.Equal(t, int64(30), gotWM)
 	})
