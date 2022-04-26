@@ -24,6 +24,11 @@ type WriteMarker struct {
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
 	BlockNumber            int64  `json:"block_number"`
+
+	// file info
+	LookupHash  string `json:"lookup_hash"`
+	Name        string `json:"name"`
+	ContentHash string `json:"content_hash"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
