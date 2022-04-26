@@ -44,6 +44,7 @@ func TestAddChallenge(t *testing.T) {
 		storageChallenge    *StorageChallenge
 		blobberChallengeObj *BlobberChallenge
 		blobberAllocation   *BlobberAllocation
+		challInfo           *StorageChallengeInfo
 		validators          *partitions.Partitions
 		r                   *rand.Rand
 		blobberID           string
@@ -144,11 +145,24 @@ func TestAddChallenge(t *testing.T) {
 			blobberChall = new(BlobberChallenge)
 		}
 
+		challInfo := &StorageChallengeInfo{
+			ID:             storageChallenge.ID,
+			Created:        storageChallenge.Created,
+			Validators:     selectedValidators,
+			RandomNumber:   int64(p.randomSeed),
+			AllocationID:   blobberMap[bID].AllocationID,
+			AllocationRoot: blobberMap[bID].AllocationRoot,
+			BlobberID:      bID,
+			PrevID:         "",
+			Responded:      false,
+		}
+
 		return args{
 			alloc: &StorageAllocation{
 				BlobberMap: blobberMap,
 				Stats:      &StorageAllocationStats{},
 			},
+			challInfo:           challInfo,
 			storageChallenge:    storageChallenge,
 			blobberAllocation:   blobberMap[bID],
 			blobberChallengeObj: blobberChall,
@@ -236,6 +250,7 @@ func TestAddChallenge(t *testing.T) {
 			resp, err := ssc.addChallenge(args.alloc,
 				args.storageChallenge,
 				args.blobberChallengeObj,
+				args.challInfo,
 				common.Now(),
 				args.balances)
 
