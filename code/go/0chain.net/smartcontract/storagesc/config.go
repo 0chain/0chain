@@ -452,7 +452,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
 
-	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	err = conf.validate()
 	return
 }

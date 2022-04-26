@@ -1165,7 +1165,6 @@ func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blob
 		errors   = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
-	filtered = make([]*StorageNode, 0)
 	for _, b := range blobbers {
 		var sp *stakePool
 		var err error

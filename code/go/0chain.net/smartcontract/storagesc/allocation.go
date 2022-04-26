@@ -570,7 +570,8 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 
 func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainstate.StateContextI) []*StorageNode {
 
-	var blobbers []*StorageNode
+	blobbers := make([]*StorageNode, 0, len(ids))
+
 	type blobberResp struct {
 		index   int
 		blobber *StorageNode
