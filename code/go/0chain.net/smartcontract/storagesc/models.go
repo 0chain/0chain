@@ -776,6 +776,8 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
+	// Name is the name of an allocation
+	Name string `json:"name"`
 }
 
 func (sa *StorageAllocation) validateAllocationBlobber(
@@ -1485,6 +1487,11 @@ type WriteMarker struct {
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
+
+	// file info
+	LookupHash  string `json:"lookup_hash"`
+	Name        string `json:"name"`
+	ContentHash string `json:"content_hash"`
 }
 
 func (wm *WriteMarker) VerifySignature(
