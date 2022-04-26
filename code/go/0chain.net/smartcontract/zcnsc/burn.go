@@ -3,6 +3,8 @@ package zcnsc
 import (
 	"fmt"
 
+	"0chain.net/core/util"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -15,7 +17,7 @@ import (
 func (zcn *ZCNSmartContract) Burn(
 	trans *transaction.Transaction,
 	inputData []byte,
-	balances cstate.StateContextI,
+	ctx cstate.StateContextI,
 ) (resp string, err error) {
 	const (
 		code = "failed to burn"
@@ -30,7 +32,7 @@ func (zcn *ZCNSmartContract) Burn(
 		)
 	)
 
-	gn, err := GetGlobalNode(balances)
+	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
 		return "", common.NewError(code, msg)
@@ -61,23 +63,29 @@ func (zcn *ZCNSmartContract) Burn(
 		return
 	}
 
-	// get user node and update nonce
-	un, err := GetUserNode(trans.ClientID, balances)
-	if err != nil && payload.Nonce != 1 {
-		msg := fmt.Sprintf("get user node error %v with nonce != 1 (%d), %s", err, payload.Nonce, info)
-		err = common.NewError(code, msg)
+	// get user node
+	un, err := GetUserNode(trans.ClientID, ctx)
+	switch err {
+	case nil:
+		if un.Nonce+1 != payload.Nonce {
+			err = common.NewError(
+				code,
+				fmt.Sprintf(
+					"nonce given (%v) for burning client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
+					payload.Nonce,
+					trans.ClientID,
+					un.Nonce,
+					un.ID,
+					info,
+				),
+			)
+			return
+		}
+	case util.ErrValueNotPresent:
+		err = common.NewError(code, "user node is nil "+info)
 		return
-	}
-
-	// check nonce is correct (current + 1)
-	if un.Nonce+1 != payload.Nonce {
-		msg := fmt.Sprintf(
-			"the payload nonce (%v) should be 1 higher than the current nonce (%v), %s",
-			payload.Nonce,
-			un.Nonce,
-			info,
-		)
-		err = common.NewError(code, msg)
+	default:
+		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
 		return
 	}
 
@@ -85,13 +93,13 @@ func (zcn *ZCNSmartContract) Burn(
 	un.Nonce++
 
 	// Save the user node
-	err = un.Save(balances)
+	err = un.Save(ctx)
 	if err != nil {
 		return
 	}
 
 	// burn the tokens
-	err = balances.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, state.Balance(trans.Value)))
+	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, state.Balance(trans.Value)))
 	if err != nil {
 		return "", err
 	}

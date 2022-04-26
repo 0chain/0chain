@@ -330,7 +330,7 @@ func (conf *Config) validateStakeRange(min, max state.Balance) (err error) {
 			max, conf.MaxStake)
 	}
 	if max < min {
-		return fmt.Errorf("max_stake less than min_stake: %v < %v", min, max)
+		return fmt.Errorf("max_stake less than min_stake: %v < %v", max, min)
 	}
 	return
 }

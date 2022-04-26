@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/partitions"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -18,6 +16,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
 
 	"go.uber.org/zap"
 
@@ -381,7 +380,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 func genChall(t testing.TB, ssc *StorageSmartContract,
 	blobberID string, now int64, prevID, challID string, seed int64,
-	valids partitions.RandPartition, allocID string, blobber *StorageNode,
+	valids *partitions.Partitions, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
 	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
@@ -392,26 +391,36 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 		blobberChall = new(BlobberChallenge)
 		blobberChall.BlobberID = blobberID
 	}
+
+	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		t.Fatal("unexpected error:", err)
+	}
+	if err == util.ErrValueNotPresent {
+		allocChall = new(AllocationChallenge)
+		allocChall.AllocationID = allocID
+	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	storChall.PrevID = prevID
-	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
-	require.NoError(t, err)
-	for _, val := range valSlice {
-		storChall.Validators = append(storChall.Validators, &ValidationNode{
-			ID:      val.Name(),
-			BaseURL: val.Data(),
-		})
-	}
-	storChall.RandomNumber = seed
+	var valSlice []ValidationPartitionNode
+	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)
+	storChall.TotalValidators = len(valSlice)
+
 	storChall.AllocationID = allocID
-	storChall.Blobber = blobber
-	storChall.AllocationRoot = allocRoot
+	storChall.BlobberID = blobber.ID
 
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
+
+	require.True(t, allocChall.addChallenge(storChall))
+	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
+	require.NoError(t, err)
+
+	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)
+	require.NoError(t, err)
+	return
 }
 
 func newTestStorageSC() (ssc *StorageSmartContract) {

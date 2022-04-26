@@ -50,13 +50,21 @@ type authorizerNode struct {
 
 func (zcn *ZCNSmartContract) GetAuthorizer(_ context.Context, params url.Values, ctx cState.StateContextI) (interface{}, error) {
 	id := params.Get("id")
+	if id == "" {
+		return nil, errors.New("Please, specify an Authorizer ID")
+	}
 
-	var ev, err = ctx.GetEventDB().GetAuthorizer(id)
+	db := ctx.GetEventDB()
+	if db == nil {
+		return nil, errors.New("Events DB is not initialized (value=nil)")
+	}
+
+	var ev, err = db.GetAuthorizer(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id)
 	}
 
-	return toAuthorizerResponse(ev)
+	return toAuthorizerResponse(ev), nil
 }
 
 func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
@@ -72,7 +80,7 @@ func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ct
 		zcnConfig = gn
 	}
 
-	return zcnConfig.ToStringMap()
+	return zcnConfig.ToStringMap(), nil
 }
 
 // GetAuthorizerNodes returns all authorizers from eventDB
@@ -101,7 +109,7 @@ func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values,
 
 // Helpers
 
-func toAuthorizerResponse(auth *event.Authorizer) (*authorizerResponse, error) {
+func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 	resp := &authorizerResponse{
 		AuthorizerID:    auth.AuthorizerID,
 		URL:             auth.URL,
@@ -116,7 +124,7 @@ func toAuthorizerResponse(auth *event.Authorizer) (*authorizerResponse, error) {
 		ServiceCharge:   auth.ServiceCharge,
 	}
 
-	return resp, nil
+	return resp
 }
 
 func toNodeResponse(events []event.Authorizer) *authorizerNodesResponse {

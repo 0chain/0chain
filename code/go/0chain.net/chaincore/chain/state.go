@@ -265,6 +265,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 				logging.Logger.Debug("Error executing the SC, chargeable error",
 					zap.Error(err),
+					zap.String("client id", txn.ClientID),
 					zap.String("block", b.Hash),
 					zap.String("begin client state", util.ToHex(startRoot)),
 					zap.String("prev block", b.PrevBlock.Hash),
@@ -281,6 +282,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed",
+			zap.String("client id", txn.ClientID),
 			zap.String("block", b.Hash),
 			zap.Int64("round", b.Round),
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),

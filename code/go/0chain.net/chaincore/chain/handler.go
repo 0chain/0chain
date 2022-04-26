@@ -94,7 +94,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 			DiagnosticsDKGHandler,
 		),
 		"/_diagnostics/round_info": common.UserRateLimit(
-			RoundInfoHandler,
+			RoundInfoHandler(c),
 		),
 		"/v1/transaction/put": common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
@@ -1324,210 +1324,216 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 }
 
 //RoundInfoHandler collects and writes information about current round
-func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if recover() != nil {
-			http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
+func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if recover() != nil {
+				http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
+			}
+		}()
+
+		roundParamQuery := ""
+
+		rn := c.GetCurrentRound()
+		roundParam := r.URL.Query().Get("round")
+		if roundParam != "" {
+			roundParamQuery = "?" + r.URL.RawQuery
+			_rn, err := strconv.ParseInt(roundParam, 10, 64)
+			if err != nil {
+				http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
+				return
+			}
+			rn = _rn
 		}
-	}()
 
-	roundParamQuery := ""
-
-	sc := GetServerChain()
-	rn := sc.GetCurrentRound()
-	roundParam := r.URL.Query().Get("round")
-	if roundParam != "" {
-		roundParamQuery = "?" + r.URL.RawQuery
-		_rn, err := strconv.ParseInt(roundParam, 10, 64)
-		if err != nil {
-			http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
+		rnd := c.GetRound(rn)
+		if rn == 0 || rnd == nil {
+			http.Error(w, fmt.Sprintf("Round not found: round=%d", rn), http.StatusNotFound)
 			return
 		}
-		rn = _rn
-	}
 
-	rnd := sc.GetRound(rn)
-	if rn == 0 || rnd == nil {
-		http.Error(w, fmt.Sprintf("Round not found: round=%d", rn), http.StatusNotFound)
-		return
-	}
-
-	PrintCSS(w)
-	fmt.Fprintf(w, "<h3>Round: %v</h3>", rn)
-	fmt.Fprintf(w, "<div>&nbsp;</div>")
-	if node.Self.Underlying().Type != node.NodeTypeMiner {
-		//ToDo: Add Sharder related round info
-		return
-	}
-
-	mb := sc.GetMagicBlock(rn)
-	if mb == nil {
-		lfmb := sc.GetLatestFinalizedMagicBlockRound(rn)
-		if lfmb != nil {
-			mb = lfmb.MagicBlock
-		}
-	}
-	if mb == nil {
-		fmt.Fprintf(w, "<h3>MagicBlock not found for round %d</h3>", rn)
-		return
-	}
-
-	rrs := int64(0)
-	if rnd.HasRandomSeed() {
-		rrs = rnd.GetRandomSeed()
-	}
-	thresholdByCount := config.GetThresholdCount()
-	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
-
-	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td class='active'>Consensus</td><td class='number'>%d</td>", consensus)
-	fmt.Fprintf(w, "<tr><td class='active'>Random Seed</td><td class='number'>%d</td>", rrs)
-	fmt.Fprintf(w, "</table>")
-
-	roundHasRanks := rnd != nil && rnd.HasRandomSeed()
-
-	getNodeLink := func(n *node.Node) string {
-		if node.Self.IsEqual(n) {
-			return fmt.Sprintf("%v", n.GetPseudoName())
-		}
-		if len(n.Path) > 0 {
-			return fmt.Sprintf("<a href='https://%v/%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Path, roundParamQuery, n.GetPseudoName())
-		}
-		return fmt.Sprintf("<a href='http://%v:%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Port, roundParamQuery, n.GetPseudoName())
-	}
-
-	// Verification and Notarization
-	blocksMap := make(map[string]*block.Block)
-	for _, b := range rnd.GetProposedBlocks() {
-		blocksMap[b.Hash] = b
-	}
-	for _, b := range rnd.GetNotarizedBlocks() {
-		blocksMap[b.Hash] = b
-	}
-
-	blocks := make([]*block.Block, 0, len(blocksMap))
-	for _, b := range blocksMap {
-		blocks = append(blocks, b)
-	}
-
-	sort.SliceStable(blocks, func(i, j int) bool {
-		b1, b2 := blocks[i], blocks[j]
-		rank1, rank2 := math.MaxInt64, math.MaxInt64
-		if m1 := mb.Miners.GetNode(b1.MinerID); m1 != nil {
-			rank1 = rnd.GetMinerRank(m1)
-		}
-		if m2 := mb.Miners.GetNode(b2.MinerID); m2 != nil {
-			rank2 = rnd.GetMinerRank(m2)
-		}
-		if rank1 == rank2 {
-			return b1.RoundTimeoutCount > b2.RoundTimeoutCount ||
-				b1.CreationDate > b2.CreationDate
-		}
-		return rank1 < rank2
-	})
-
-	fmt.Fprintf(w, "<h3>Block Verification and Notarization</h3>")
-
-	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-
-	fmt.Fprintf(w, "<tr class='header'>")
-	fmt.Fprintf(w, "<th>SetIndex</th> <th>Generator</th> <th>RRS</th> <th>RTC</th> <th>Block</th> <th>Generated At (UTC)</th> <th>Verification</th> <th>Notarization</th>")
-	fmt.Fprintf(w, "</tr>")
-
-	for _, b := range blocks {
-		fmt.Fprintf(w, "<tr><td>")
-
-		n := mb.Miners.GetNode(b.MinerID)
-		if n != nil {
-			fmt.Fprintf(w, "%d", n.SetIndex)                   // SetIndex
-			fmt.Fprintf(w, "</td><td>%s</td>", getNodeLink(n)) // Generator
-		} else {
-			fmt.Fprintf(w, "-")               // SetIndex
-			fmt.Fprintf(w, "</td><td>-</td>") // Generator
+		PrintCSS(w)
+		fmt.Fprintf(w, "<h3>Round: %v</h3>", rn)
+		fmt.Fprintf(w, "<div>&nbsp;</div>")
+		if node.Self.Underlying().Type != node.NodeTypeMiner {
+			//ToDo: Add Sharder related round info
+			return
 		}
 
-		fmt.Fprintf(w, "<td>%d (%s)</td>", b.RoundRandomSeed, boolString(b.RoundRandomSeed == rnd.GetRandomSeed())) // RRS
-		fmt.Fprintf(w, "<td>%d</td>", b.RoundTimeoutCount)                                                          // RTC
-		fmt.Fprintf(w, "<td title='%s'>%.8s</td>", b.Hash, b.Hash)                                                  // Block ID
-		fmt.Fprintf(w, "<td>%s</td>", common.ToTime(b.CreationDate).UTC().Format("2006-01-02T15:04:05"))            // Block Creation Date
-
-		tickets := b.GetVerificationTickets()
-
-		fmt.Fprintf(w, "<td style='padding: 0px;'>")
-		fmt.Fprintf(w, "<div style='display:flex;flex-direction:row;'>")
-		fmt.Fprintf(w, "  <div style='flex:1;display:flex;flex-direction:column;padding:5px;min-width:60px;'>")
-		fmt.Fprintf(w, "    <div style='flex:1;'></div><div>%d (%s)</div><div style='flex:1;'></div>", len(tickets), boolString(len(tickets) >= consensus))
-		fmt.Fprintf(w, "  </div>")
-		if len(tickets) > 0 {
-			verifiers := make([]*node.Node, 0, len(tickets))
-			for _, ticket := range tickets {
-				verifiers = append(verifiers, mb.Miners.GetNode(ticket.VerifierID))
+		mb := c.GetMagicBlock(rn)
+		if mb == nil {
+			lfmb := c.GetLatestFinalizedMagicBlockRound(rn)
+			if lfmb != nil {
+				mb = lfmb.MagicBlock
 			}
-			sortByVerifierSetIndex := func(i, j int) bool {
-				v1, v2 := verifiers[i], verifiers[j]
-				if v1 != nil && v2 != nil {
-					return v1.SetIndex < v2.SetIndex
+		}
+		if mb == nil {
+			fmt.Fprintf(w, "<h3>MagicBlock not found for round %d</h3>", rn)
+			return
+		}
+
+		rrs := int64(0)
+		if rnd.HasRandomSeed() {
+			rrs = rnd.GetRandomSeed()
+		}
+		thresholdByCount := config.GetThresholdCount()
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
+
+		fmt.Fprintf(w, "<table>")
+		fmt.Fprintf(w, "<tr><td class='active'>Consensus</td><td class='number'>%d</td>", consensus)
+		fmt.Fprintf(w, "<tr><td class='active'>Random Seed</td><td class='number'>%d</td>", rrs)
+		fmt.Fprintf(w, "</table>")
+
+		roundHasRanks := rnd != nil && rnd.HasRandomSeed()
+
+		getNodeLink := func(n *node.Node) string {
+			if node.Self.IsEqual(n) {
+				return fmt.Sprintf("%v", n.GetPseudoName())
+			}
+			if len(n.Path) > 0 {
+				return fmt.Sprintf("<a href='https://%v/%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Path, roundParamQuery, n.GetPseudoName())
+			}
+			return fmt.Sprintf("<a href='http://%v:%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Port, roundParamQuery, n.GetPseudoName())
+		}
+
+		// Verification and Notarization
+		blocksMap := make(map[string]*block.Block)
+		for _, b := range rnd.GetProposedBlocks() {
+			blocksMap[b.Hash] = b
+		}
+		for _, b := range rnd.GetNotarizedBlocks() {
+			blocksMap[b.Hash] = b
+		}
+
+		blocks := make([]*block.Block, 0, len(blocksMap))
+		for _, b := range blocksMap {
+			blocks = append(blocks, b)
+		}
+
+		if roundHasRanks {
+			sort.SliceStable(blocks, func(i, j int) bool {
+				b1, b2 := blocks[i], blocks[j]
+				rank1, rank2 := math.MaxInt64, math.MaxInt64
+				if m1 := mb.Miners.GetNode(b1.MinerID); m1 != nil {
+					rank1 = rnd.GetMinerRank(m1)
 				}
-				return v1 != nil || v2 == nil
-			}
-			sort.SliceStable(tickets, sortByVerifierSetIndex)
-			sort.SliceStable(verifiers, sortByVerifierSetIndex)
+				if m2 := mb.Miners.GetNode(b2.MinerID); m2 != nil {
+					rank2 = rnd.GetMinerRank(m2)
+				}
+				if rank1 == rank2 {
+					return b1.RoundTimeoutCount > b2.RoundTimeoutCount ||
+						b1.CreationDate > b2.CreationDate
+				}
+				return rank1 < rank2
+			})
+		}
 
-			fmt.Fprintf(w, "<div style='display:flex;flex-direction:column;padding:5px;border-left:1px solid black;'>")
-			for i, ticket := range tickets {
-				if i%4 == 0 {
-					if i > 0 {
+		fmt.Fprintf(w, "<h3>Block Verification and Notarization</h3>")
+
+		fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+
+		fmt.Fprintf(w, "<tr class='header'>")
+		fmt.Fprintf(w, "<th>SetIndex</th> <th>Generator</th> <th>RRS</th> <th>RTC</th> <th>Block</th> <th>Generated At (UTC)</th> <th>Verification</th> <th>Notarization</th>")
+		fmt.Fprintf(w, "</tr>")
+
+		for _, b := range blocks {
+			fmt.Fprintf(w, "<tr><td>")
+
+			n := mb.Miners.GetNode(b.MinerID)
+			if n != nil {
+				fmt.Fprintf(w, "%d", n.SetIndex)                   // SetIndex
+				fmt.Fprintf(w, "</td><td>%s</td>", getNodeLink(n)) // Generator
+			} else {
+				fmt.Fprintf(w, "-")               // SetIndex
+				fmt.Fprintf(w, "</td><td>-</td>") // Generator
+			}
+
+			fmt.Fprintf(w, "<td>%d (%s)</td>", b.RoundRandomSeed, boolString(b.RoundRandomSeed == rnd.GetRandomSeed())) // RRS
+			fmt.Fprintf(w, "<td>%d</td>", b.RoundTimeoutCount)                                                          // RTC
+			fmt.Fprintf(w, "<td title='%s'>%.8s</td>", b.Hash, b.Hash)                                                  // Block ID
+			fmt.Fprintf(w, "<td>%s</td>", common.ToTime(b.CreationDate).UTC().Format("2006-01-02T15:04:05"))            // Block Creation Date
+
+			tickets := b.GetVerificationTickets()
+
+			fmt.Fprintf(w, "<td style='padding: 0px;'>")
+			fmt.Fprintf(w, "<div style='display:flex;flex-direction:row;'>")
+			fmt.Fprintf(w, "  <div style='flex:1;display:flex;flex-direction:column;padding:5px;min-width:60px;'>")
+			fmt.Fprintf(w, "    <div style='flex:1;'></div><div>%d (%s)</div><div style='flex:1;'></div>", len(tickets), boolString(len(tickets) >= consensus))
+			fmt.Fprintf(w, "  </div>")
+			if len(tickets) > 0 {
+				verifiers := make([]*node.Node, 0, len(tickets))
+				for _, ticket := range tickets {
+					verifiers = append(verifiers, mb.Miners.GetNode(ticket.VerifierID))
+				}
+				sortByVerifierSetIndex := func(i, j int) bool {
+					v1, v2 := verifiers[i], verifiers[j]
+					if v1 != nil && v2 != nil {
+						return v1.SetIndex < v2.SetIndex
+					}
+					return v1 != nil || v2 == nil
+				}
+				sort.SliceStable(tickets, sortByVerifierSetIndex)
+				sort.SliceStable(verifiers, sortByVerifierSetIndex)
+
+				fmt.Fprintf(w, "<div style='display:flex;flex-direction:column;padding:5px;border-left:1px solid black;'>")
+				for i, ticket := range tickets {
+					if i%4 == 0 {
+						if i > 0 {
+							fmt.Fprintf(w, "</div>")
+						}
+						fmt.Fprintf(w, "<div style='display:flex;flex-direction:row;'>")
+					}
+					if n := verifiers[i]; n != nil {
+						fmt.Fprintf(w, "<div title='%s'>%s</div>,", ticket.VerifierID, getNodeLink(n))
+						continue
+					}
+					fmt.Fprintf(w, "<div title='%s'>%.8s</div>,", ticket.VerifierID, ticket.VerifierID)
+					if i == len(tickets)-1 {
 						fmt.Fprintf(w, "</div>")
 					}
-					fmt.Fprintf(w, "<div style='display:flex;flex-direction:row;'>")
 				}
-				if n := verifiers[i]; n != nil {
-					fmt.Fprintf(w, "<div title='%s'>%s</div>,", ticket.VerifierID, getNodeLink(n))
-					continue
-				}
-				fmt.Fprintf(w, "<div title='%s'>%.8s</div>,", ticket.VerifierID, ticket.VerifierID)
-				if i == len(tickets)-1 {
-					fmt.Fprintf(w, "</div>")
-				}
+				fmt.Fprintf(w, "</div>")
 			}
-			fmt.Fprintf(w, "</div>")
+			fmt.Fprintf(w, "</div></td>")
+
+			fmt.Fprintf(w, "<td>")
+			fmt.Fprintf(w, "-")
+			fmt.Fprintf(w, "</td></tr>")
 		}
-		fmt.Fprintf(w, "</div></td>")
+		fmt.Fprintf(w, "</table>")
 
-		fmt.Fprintf(w, "<td>")
-		fmt.Fprintf(w, "-")
-		fmt.Fprintf(w, "</td></tr>")
-	}
-	fmt.Fprintf(w, "</table>")
+		if !roundHasRanks {
+			return
+		}
+		// VRFS
+		vrfSharesMap := rnd.GetVRFShares()
+		vrfShares := make([]*round.VRFShare, 0, len(vrfSharesMap))
+		for _, share := range vrfSharesMap {
+			vrfShares = append(vrfShares, share)
+		}
+		sort.SliceStable(vrfShares, func(i, j int) bool {
+			return vrfShares[i].GetParty().SetIndex < vrfShares[j].GetParty().SetIndex
+		})
+		fmt.Fprintf(w, "<h3>VRF Shares</h3>")
+		fmt.Fprintf(w, "<table>")
+		fmt.Fprintf(w, "<tr class='header'><th>Set Index</th><th>Node</th><th>VRFS (%d/%d)</th></tr>", len(vrfShares), mb.Miners.Size())
+		for _, share := range vrfShares {
+			fmt.Fprintf(w, "<tr><td>")
+			n := share.GetParty()
+			if n != nil {
+				fmt.Fprintf(w, "%d", n.SetIndex)
+				if c.IsRoundGenerator(rnd, n) {
+					fmt.Fprintf(w, "<sup>%d</sup>", rnd.GetMinerRank(n))
+				}
+				fmt.Fprintf(w, "</td><td>%s</td>", getNodeLink(n))
 
-	// VRFS
-	vrfSharesMap := rnd.GetVRFShares()
-	vrfShares := make([]*round.VRFShare, 0, len(vrfSharesMap))
-	for _, share := range vrfSharesMap {
-		vrfShares = append(vrfShares, share)
-	}
-	sort.SliceStable(vrfShares, func(i, j int) bool {
-		return vrfShares[i].GetParty().SetIndex < vrfShares[j].GetParty().SetIndex
-	})
-	fmt.Fprintf(w, "<h3>VRF Shares</h3>")
-	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr class='header'><th>Set Index</th><th>Node</th><th>VRFS (%d/%d)</th></tr>", len(vrfShares), mb.Miners.Size())
-	for _, share := range vrfShares {
-		fmt.Fprintf(w, "<tr><td>")
-		n := share.GetParty()
-		if n != nil {
-			fmt.Fprintf(w, "%d", n.SetIndex)
-			if roundHasRanks && sc.IsRoundGenerator(rnd, n) {
-				fmt.Fprintf(w, "<sup>%d</sup>", rnd.GetMinerRank(n))
+			} else {
+				fmt.Fprintf(w, "-</td><td>-</td>")
 			}
-			fmt.Fprintf(w, "</td><td>%s</td>", getNodeLink(n))
-
-		} else {
-			fmt.Fprintf(w, "-</td><td>-</td>")
+			fmt.Fprintf(w, "<td>%v</td></tr>", share.Share)
 		}
-		fmt.Fprintf(w, "<td>%v</td></tr>", share.Share)
+		fmt.Fprintf(w, "</table>")
 	}
-	fmt.Fprintf(w, "</table>")
 }
 
 /*MinerStatsHandler - handler for the miner stats */

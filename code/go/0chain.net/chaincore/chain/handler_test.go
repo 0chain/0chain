@@ -1,6 +1,9 @@
 package chain
 
 import (
+	"bufio"
+	"bytes"
+	"crypto/rand"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -8,10 +11,20 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestGetLatestFinalizedMagicBlock(t *testing.T) {
@@ -157,4 +170,101 @@ func TestHomePageAndNotFoundHandler(t *testing.T) {
 		require.Contains(t, string(body), wantSubstring)
 		require.Equal(t, 404, w.Result().StatusCode)
 	})
+}
+
+func makeTestNode() (*node.Node, error) {
+	ss := encryption.NewBLS0ChainScheme()
+	ss.GenerateKeys()
+	pbK := ss.GetPublicKey()
+
+	nc := map[interface{}]interface{}{
+		"type":       node.NodeTypeMiner,
+		"public_ip":  "public ip",
+		"n2n_ip":     "n2n_ip",
+		"port":       8080,
+		"id":         util.ToHex([]byte(pbK)),
+		"public_key": pbK,
+	}
+	return node.NewNode(nc)
+}
+
+func generateProposedBlockToRound(t *testing.T, r *round.Round, n *node.Node) {
+	for {
+		b := block.NewBlock("", r.Number)
+		b.MinerID = n.Client.ID
+		randomData := make([]byte, 10)
+		read, err := rand.Reader.Read(randomData)
+		require.NoError(t, err)
+		require.Equal(t, read, len(randomData))
+		txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(randomData)}}
+		b.Txns = append(b.Txns, &txn)
+		b.AddTransaction(&txn)
+		b.TxnsMap = make(map[string]bool)
+		b.TxnsMap[txn.Hash] = true
+		b.HashBlock()
+		if _, added := r.AddProposedBlock(b); added {
+			break
+		}
+	}
+}
+
+func TestRoundInfoHandler(t *testing.T) {
+	runRequest := func(c Chainer) (body string) {
+		var err error
+		req, _ := http.NewRequest(http.MethodGet, "/_diagnostics/round_info", nil)
+		w := httptest.NewRecorder()
+		var loggedMessages bytes.Buffer
+		writer := bufio.NewWriter(&loggedMessages)
+		core := zapcore.NewCore(
+			zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig()),
+			zapcore.AddSync(writer),
+			zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+				return true
+			}),
+		)
+		logging.Logger = zap.New(core, zap.Development())
+		RoundInfoHandler(c)(w, req)
+		bodybytes, err := ioutil.ReadAll(w.Result().Body)
+		require.NoError(t, err)
+		require.Equal(t, 200, w.Result().StatusCode)
+		err = writer.Flush()
+		require.NoError(t, err)
+		body = string(bodybytes)
+		require.NotContains(t, loggedMessages.String(), `DPANIC`)
+		return
+	}
+
+	blocksSubstring := `Block Verification and Notarization`
+	vrfSubstring := `VRF Shares`
+
+	c := MockChainer{}
+	c.On("GetCurrentRound").Return(int64(1))
+	mb := block.NewMagicBlock()
+	mb.MagicBlockNumber = 1
+	mb.Miners = node.NewPool(1)
+	n1, err := makeTestNode()
+	require.NoError(t, err)
+	mb.Miners.AddNode(n1)
+	n2, err := makeTestNode()
+	require.NoError(t, err)
+	mb.Miners.AddNode(n2)
+	r1 := &round.Round{Number: 1}
+	generateProposedBlockToRound(t, r1, n1)
+	generateProposedBlockToRound(t, r1, n2)
+
+	c.On("GetRound", int64(1)).Return(r1)
+	c.On("GetMagicBlock", int64(1)).Return(mb)
+
+	// call RoundInfoHandler on a round without seed and ranks
+	body := runRequest(&c)
+	require.Contains(t, body, blocksSubstring)
+	require.NotContains(t, body, vrfSubstring)
+
+	r1.SetRandomSeed(time.Now().UnixNano(), 2)
+
+	// call RoundInfoHandler on a round with seed and ranks
+	body = runRequest(&c)
+	require.Contains(t, string(body), blocksSubstring)
+	require.Contains(t, string(body), vrfSubstring)
+
 }

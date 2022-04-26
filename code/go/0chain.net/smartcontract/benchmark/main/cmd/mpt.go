@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/zcnsc"
+
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
@@ -191,6 +193,7 @@ func setUpMpt(
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
 		timer = time.Now()
+
 		eventDb, err = event.NewEventDb(dbs.DbAccess{
 			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
 			Name:            viper.GetString(benchmark.EventDbName),
@@ -203,10 +206,15 @@ func setUpMpt(
 			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
 		})
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
+		err = eventDb.Drop()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		if err := eventDb.AutoMigrate(); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		log.Println("created event database\t", time.Since(timer))
 	}
@@ -231,7 +239,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		validators = storagesc.AddMockValidators(publicKeys, balances)
+		validators = storagesc.AddMockValidators(publicKeys, eventDb, balances)
 		log.Println("added validators\t", time.Since(timer))
 	}()
 
@@ -247,7 +255,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
+		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
 
@@ -255,7 +263,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
+		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
@@ -276,7 +284,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockAllocations(clients, publicKeys, balances)
+		storagesc.AddMockAllocations(clients, publicKeys, eventDb, balances)
 		log.Println("added allocations\t", time.Since(timer))
 	}()
 
@@ -291,11 +299,6 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered in setUpMpt", r)
-			}
-		}()
 		timer = time.Now()
 		storagesc.AddMockWritePools(clients, balances)
 		log.Println("added allocation write pools\t", time.Since(timer))
@@ -330,13 +333,6 @@ func setUpMpt(
 		timer = time.Now()
 		storagesc.AddMockClientAllocation(clients, balances)
 		log.Println("added client allocations\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		storagesc.AddMockAllAllocations(balances)
-		log.Println("added all allocations list\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
@@ -386,13 +382,6 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockStats(balances)
-		log.Println("added storage stats\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
 		storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
 		log.Println("added read redeems\t", time.Since(timer))
 	}()
@@ -437,12 +426,17 @@ func setUpMpt(
 		defer wg.Done()
 		timer = time.Now()
 		vestingsc.AddMockVestingPools(clients, balances)
+		vestingsc.AddMockConfig(balances)
 		log.Println("added vesting pools\t", time.Since(timer))
 	}()
 
-	// todo add zcnsc.Setup back once fixed
-
-	var benchData benchmark.BenchData
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		zcnsc.Setup(clients, publicKeys, balances)
+		log.Println("added zcnsc\t", time.Since(timer))
+	}()
 
 	wg.Add(1)
 	go func() {
@@ -452,6 +446,7 @@ func setUpMpt(
 		log.Println("added control objects\t", time.Since(timer))
 	}()
 
+	var benchData benchmark.BenchData
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -461,6 +456,7 @@ func setUpMpt(
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
 		benchData.Sharders = sharders
+
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
 		}

@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/stakepool"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/stretchr/testify/mock"
 
@@ -321,6 +323,8 @@ func TestExtendAllocation(t *testing.T) {
 				},
 			).Return(nil).Once()
 		}
+
+		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything).Return()
 
 		var sa = StorageAllocation{
 			ID:                      mockAllocationId,
@@ -691,6 +695,11 @@ func TestTransferAllocation(t *testing.T) {
 				return ca.ClientID == p.info.NewOwnerId &&
 					len(ca.Allocations.List) == 1 && ok
 			})).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -1097,8 +1106,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	sb.Nodes[0].Used += 10 * GB
 	sb.Nodes[1].Used += 10 * GB
 
-	// blobbers of the allocation
-	assert.EqualValues(t, sb.Nodes, aresp.Blobbers)
 	// blobbers saved in all blobbers list
 	allBlobbers, err = ssc.getBlobbersList(balances)
 	require.NoError(t, err)

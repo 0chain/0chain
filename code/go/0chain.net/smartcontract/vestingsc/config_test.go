@@ -9,7 +9,7 @@ import (
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -186,7 +186,7 @@ func TestUpdateConfig(t *testing.T) {
 					Settings[MaxDestinations]:      "0",
 					Settings[MaxDescriptionLength]: "17",
 					Settings[OwnerId]:              "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
-					Settings[Cost]:                 "{\"1\":1, \"2\":2, \"3\":3}",
+					fmt.Sprintf("%s.%s", Settings[Cost], costFunctions[0]): "50",
 				},
 			},
 		},

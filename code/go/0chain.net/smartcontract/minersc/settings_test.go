@@ -3,6 +3,7 @@ package minersc_test
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 	"0chain.net/chaincore/state"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 
@@ -30,7 +31,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[name].Setting])
+		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].Setting])
 	}
 }
 

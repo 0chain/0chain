@@ -41,12 +41,24 @@ func TestCuratorEvent(t *testing.T) {
 	eventDb.Get().Table("curators").Count(&count)
 	require.Equal(t, int64(1), count, "Curator not getting inserted")
 
+	c.CuratorID = "curator_id_2"
+	err = eventDb.addOrOverwriteCurator(c)
+	require.NoError(t, err, "Error while inserting Curator to event Database")
+
+	curatorIDs, err := eventDb.GetCuratorsByAllocationID("allocation_id")
+	require.NoError(t, err, "Error while listing curators for allocation ID")
+	require.Equal(t, int64(2), len(curatorIDs), "Not all curators were returned")
+
+	err = eventDb.removeCurator(c)
+	require.NoError(t, err, "Error while removing Curator to event Database")
+
+	c.CuratorID = "curator_id"
 	err = eventDb.removeCurator(c)
 	require.NoError(t, err, "Error while removing Curator to event Database")
 
 	eventDb.Get().Table("curators").Count(&count)
 	require.Equal(t, int64(0), count, "Curator not getting deleted")
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 }

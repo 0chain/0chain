@@ -35,10 +35,10 @@ on:
         description: '0block branch to deploy'
         default: 'staging'
         required: true
-       explorer_branch:
-        description: 'explorer branch to deploy'
-        default: 'staging'
-        required: true
+       test_file_filter:
+        description: 'Comma separated list of test files to run (eg. zwalletcli_register_wallet_test.go, zwalletcli_send_and_balance_test.go). If supplied, the PR will NOT be notified of the test result'
+        default: ''
+        required: false
        skip_tests:
         description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
         default: 'FALSE'
@@ -57,7 +57,8 @@ jobs:
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
       zblock_branch: ${{ github.event.inputs.zblock_branch }}
       authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
-      explorer_branch: ${{ github.event.inputs.explorer_branch }}
+      explorer_branch: master
+      test_file_filter: ${{ github.event.inputs.test_file_filter }}
       zproxy_branch: staging
       zsearch_branch: staging
       zdns_branch: staging
@@ -69,4 +70,7 @@ jobs:
       DEV3KC: ${{ secrets.DEV3KC }}
       DEV4KC: ${{ secrets.DEV4KC }}
       DEV5KC: ${{ secrets.DEV5KC }}
-      SMART_CONTRACT_OWNER_WALLET_JSON: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}
+      DEV6KC: ${{ secrets.DEV6KC }}
+      DEV7KC: ${{ secrets.DEV7KC }}
+      DEV8KC: ${{ secrets.DEV8KC }}
+      DEV9KC: ${{ secrets.DEV9KC }}

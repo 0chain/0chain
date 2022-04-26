@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/mock"
@@ -24,7 +25,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[name].setting])
+		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].setting])
 	}
 }
 

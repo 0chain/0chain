@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
 
@@ -29,19 +29,17 @@ type GlobalNode struct {
 	MinMintAmount      state.Balance  `json:"min_mint_amount"`
 	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
 	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
-	MaxFee             state.Balance  `json:"max_fee"`
-	PercentAuthorizers float64        `json:"percent_authorizers"`
+	MinLockAmount      int64          `json:"min_lock_amount"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
+	PercentAuthorizers float64        `json:"percent_authorizers"`
+	MaxFee             state.Balance  `json:"max_fee"`
 	BurnAddress        string         `json:"burn_address"`
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
+	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
 }
 
-func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
-	var (
-		err error
-	)
-
+func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 	for key, value := range cfg.Fields {
 		switch key {
 		case MinMintAmount:
@@ -85,12 +83,54 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) error {
 			gn.MaxFee = state.Balance(amount * 1e10)
 		case OwnerID:
 			gn.OwnerId = value
+		case Cost:
+			err = gn.setCostValue(Cost, value)
+			if err != nil {
+				return err
+			}
+		case MinLockAmount:
+			gn.MinLockAmount, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+			}
+		case MaxDelegates:
+			gn.MaxDelegates, err = strconv.Atoi(value)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+			}
 		default:
-			return fmt.Errorf("key %s not recognised as setting", key)
+			return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
 		}
 	}
 
 	return nil
+}
+
+func (gn *GlobalNode) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, fmt.Sprintf("%s.", Cost)) {
+		return fmt.Errorf("key %s not recognised as setting", key)
+	}
+
+	costKey := strings.ToLower(strings.TrimPrefix(key, fmt.Sprintf("%s.", Cost)))
+	for _, costFunction := range CostFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		gn.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
 }
 
 func (gn *GlobalNode) Validate() error {
@@ -115,6 +155,10 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
 	case gn.OwnerId == "":
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
+	case gn.MaxDelegates <= 0:
+		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
+	case gn.MinLockAmount <= 0:
+		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is less than 0", gn.MinLockAmount))
 	}
 	return nil
 }
@@ -159,45 +203,35 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 
 // ----- AuthorizerNode --------------------
 
+// AuthorizerNode used in `UpdateAuthorizerConfig` functions
 type AuthorizerNode struct {
-	ID        string                    `json:"id"`
-	PublicKey string                    `json:"public_key"`
-	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
-	URL       string                    `json:"url"`
-	Config    *AuthorizerConfig         `json:"config"`
+	ID        string            `json:"id"`
+	PublicKey string            `json:"public_key"`
+	URL       string            `json:"url"`
+	Config    *AuthorizerConfig `json:"config"`
 }
 
 // NewAuthorizer To review: tokenLock init values
 // PK = authorizer node public key
 // ID = authorizer node public id = Client ID
 func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
-	return &AuthorizerNode{
+	a := &AuthorizerNode{
 		ID:        ID,
 		PublicKey: PK,
 		URL:       URL,
-		Staking: &tokenpool.ZcnLockingPool{
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      "", // must be filled when DigPool is invoked. Usually this is a trx.Hash
-					Balance: 0,  // filled when we dig pool
-				},
-			},
-			TokenLockInterface: &TokenLock{
-				StartTime: 0,
-				Duration:  0,
-				Owner:     ID,
-			},
-		},
 		Config: &AuthorizerConfig{
 			Fee: 0,
 		},
 	}
+
+	return a
 }
 
 func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 	if cfg == nil {
 		return errors.New("config not initialized")
 	}
+
 	an.Config = cfg
 
 	return nil
@@ -249,23 +283,6 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		an.URL = *urlStr
 	}
 
-	if an.Staking == nil {
-		an.Staking = &tokenpool.ZcnLockingPool{
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{},
-			},
-		}
-	}
-
-	staking, ok := objMap["staking"]
-	if ok && staking != nil {
-		tokenlock := &TokenLock{}
-		err = an.Staking.Decode(*staking, tokenlock)
-		if err != nil {
-			return err
-		}
-	}
-
 	rawCfg, ok := objMap["config"]
 	if ok {
 		var cfg = &AuthorizerConfig{}
@@ -288,7 +305,7 @@ func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
 }
 
 func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	d := authorizerNodeDecode{Staking: &tokenpool.ZcnLockingPool{TokenLockInterface: &TokenLock{}}}
+	d := authorizerNodeDecode{}
 	o, err := d.UnmarshalMsg(data)
 	if err != nil {
 		return nil, err
@@ -330,12 +347,7 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 		return nil, err
 	}
 
-	return &AuthorizerNode{
-		ID:        ev.AuthorizerID,
-		URL:       ev.URL,
-		PublicKey: "",  // fetch this from MPT
-		Staking:   nil, // fetch this from MPT
-	}, nil
+	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
 }
 
 // ----- UserNode ------------------
