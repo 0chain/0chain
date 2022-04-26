@@ -7,16 +7,13 @@ import (
 	"strings"
 
 	cstate "0chain.net/chaincore/chain/state"
-
-	"0chain.net/smartcontract/dbs/event"
-
-	"0chain.net/core/encryption"
-
-	"0chain.net/chaincore/chain/state/mocks"
+	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/mock"
 )

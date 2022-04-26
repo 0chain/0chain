@@ -12,6 +12,7 @@ import (
 type Allocation struct {
 	gorm.Model
 	AllocationID               string        `json:"allocation_id" gorm:"uniqueIndex"`
+	AllocationName             string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
 	TransactionID              string        `json:"transaction_id"`
 	DataShards                 int           `json:"data_shards"`
 	ParityShards               int           `json:"parity_shards"`
@@ -36,7 +37,7 @@ type Allocation struct {
 	MovedToValidators          state.Balance `json:"moved_to_validators"`
 	TimeUnit                   int64         `json:"time_unit"`
 	NumWrites                  int64         `json:"num_writes"`
-	ReadSize                   int64         `json:"read_size"`
+	NumReads                   int64         `json:"num_reads"`
 	TotalChallenges            int64         `json:"total_challenges"`
 	OpenChallenges             int64         `json:"open_challenges"`
 	SuccessfulChallenges       int64         `json:"successful_challenges"`
