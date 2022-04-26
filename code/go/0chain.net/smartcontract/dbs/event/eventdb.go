@@ -1,14 +1,10 @@
 package event
 
 import (
-	"time"
-
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
 )
-
-const DefaultQueryTimeout = 5 * time.Second
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
@@ -49,6 +45,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
+		&Challenge{},
 	); err != nil {
 		return err
 	}

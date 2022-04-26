@@ -293,19 +293,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "collect_reward":
 		resp, err = sc.collectReward(t, input, balances)
 
-	case "generate_challenges":
-		challengesEnabled := config.SmartContractConfig.GetBool(
-			"smart_contracts.storagesc.challenge_enabled")
-		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-			if err != nil {
-				return
-			}
-		} else {
-			return "Challenges disabled in the config", nil
-		}
-		return "Challenges generated", nil
-
 	case "generate_challenge":
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")

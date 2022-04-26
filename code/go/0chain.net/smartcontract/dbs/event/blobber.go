@@ -1,9 +1,10 @@
 package event
 
 import (
-	"0chain.net/smartcontract/dbs"
 	"errors"
 	"fmt"
+
+	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
 )
@@ -180,8 +181,7 @@ func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 }
 
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {
-	var blobber Blobber
-	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", bl.BlobberID).Take(&blobber).Error
+	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", bl.BlobberID).Take(bl).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil

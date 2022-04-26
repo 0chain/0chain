@@ -521,13 +521,13 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 }
 
 type StorageAllocationStats struct {
-	UsedSize                  int64  `json:"used_size"`
-	NumWrites                 int64  `json:"num_of_writes"`
-	NumReads                  int64  `json:"num_of_reads"`
-	TotalChallenges           int64  `json:"total_challenges"`
-	OpenChallenges            int64  `json:"num_open_challenges"`
-	SuccessChallenges         int64  `json:"num_success_challenges"`
-	FailedChallenges          int64  `json:"num_failed_challenges"`
+	UsedSize                 int64  `json:"used_size"`
+	NumWrites                int64  `json:"num_of_writes"`
+	NumReads                 int64  `json:"num_of_reads"`
+	TotalChallenges          int64  `json:"total_challenges"`
+	OpenChallenges           int64  `json:"num_open_challenges"`
+	SuccessChallenges        int64  `json:"num_success_challenges"`
+	FailedChallenges         int64  `json:"num_failed_challenges"`
 	LatestClosedChallengeTxn string `json:"latest_closed_challenge"`
 }
 

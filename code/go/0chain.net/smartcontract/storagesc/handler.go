@@ -696,6 +696,23 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
+type StorageChallengeInfo struct {
+	ID             string            `json:"id"`
+	Created        common.Timestamp  `json:"created"`
+	Validators     []*ValidationNode `json:"validators"`
+	RandomNumber   int64             `json:"seed"`
+	AllocationID   string            `json:"allocation_id"`
+	AllocationRoot string            `json:"allocation_root"`
+	BlobberID      string            `json:"blobber_id"`
+	PrevID         string            `json:"prev_id"`
+	Responded      bool              `json:"responded"`
+}
+
+type ChallengesInfo struct {
+	BlobberID  string                  `json:"blobber_id"`
+	Challenges []*StorageChallengeInfo `json:"challenges"`
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
