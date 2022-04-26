@@ -659,7 +659,7 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 
 }
 
-func (ssc *StorageSmartContract) GetWritenAmountHandler(
+func (ssc *StorageSmartContract) GetWrittenAmountHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
