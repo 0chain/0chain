@@ -750,7 +750,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		ID:             challengeID,
 		Created:        t.CreationDate,
 		Validators:     selectedValidators,
-		RandomNumber:   0,
+		RandomNumber:   challengeSeed,
 		AllocationID:   allocID,
 		AllocationRoot: blobberAllocation.AllocationRoot,
 		BlobberID:      blobberID,
@@ -856,12 +856,13 @@ func (sc *StorageSmartContract) addChallenge(
 			"error removing expired challenges: "+err.Error())
 	}
 
-	addedChallenge := blobberChallengeObj.addChallenge(storageChallenge)
-	if !addedChallenge {
-		Logger.Warn("add_challenge", zap.Error(errors.New("no blobber challenge added, challenge might already exist")))
+	if ok := blobberChallengeObj.addChallenge(storageChallenge); !ok {
+		Logger.Warn("add_challenge",
+			zap.Error(errors.New("no blobber challenge added, challenge might already exist")))
 		challengeBytes, err := json.Marshal(storageChallenge)
 		return string(challengeBytes), err
 	}
+	challInfo.PrevID = storageChallenge.PrevID
 
 	_, err = balances.InsertTrieNode(storageChallenge.GetKey(sc.ID), storageChallenge)
 	if err != nil {

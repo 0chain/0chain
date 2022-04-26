@@ -172,6 +172,12 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 		sn.ChallengeIDMap = make(map[string]struct{})
 	}
 	if _, ok := sn.ChallengeIDMap[challenge.ID]; !ok {
+		if len(sn.Challenges) > 0 {
+			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
+			challenge.PrevID = lastChallenge.ID
+		} else if sn.LatestCompletedChallenge != nil {
+			challenge.PrevID = sn.LatestCompletedChallenge.ID
+		}
 		bcData := &BlobberChallengeData{
 			ID:           challenge.ID,
 			CreatedAt:    challenge.Created,
@@ -225,6 +231,7 @@ type StorageChallenge struct {
 	TotalValidators int              `json:"total_validators"`
 	AllocationID    string           `json:"allocation_id"`
 	BlobberID       string           `json:"blobber_id"`
+	PrevID          string           `json:"prev_id"`
 	Responded       bool             `json:"responded"`
 }
 
