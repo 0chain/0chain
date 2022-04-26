@@ -531,7 +531,7 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 type StorageAllocationStats struct {
 	UsedSize                  int64  `json:"used_size"`
 	NumWrites                 int64  `json:"num_of_writes"`
-	ReadsSize                 int64  `json:"reads_size"`
+	NumReads                  int64  `json:"num_of_reads"`
 	TotalChallenges           int64  `json:"total_challenges"`
 	OpenChallenges            int64  `json:"num_open_challenges"`
 	SuccessChallenges         int64  `json:"num_success_challenges"`
@@ -776,6 +776,8 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
+	// Name is the name of an allocation
+	Name string `json:"name"`
 }
 
 func (sa *StorageAllocation) validateAllocationBlobber(
@@ -862,6 +864,13 @@ func (sa *StorageAllocation) removeBlobber(
 			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
 			removedBlobber.Used -= d.Size
+
+			if d.ChallengePartitionLoc != nil {
+				if err := removeBlobberAllocation(removeId, sa.ID,
+					d.ChallengePartitionLoc.Location, ssc, balances); err != nil {
+					return nil, err
+				}
+			}
 			found = true
 			break
 		}
@@ -933,6 +942,58 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	return blobbers, nil
+}
+
+func removeBlobberAllocation(
+	removeId string,
+	allocID string,
+	allocPartitionIndex int,
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI) error {
+	blobberAllocChallPartition, err := getBlobbersChallengeAllocationList(removeId, balances)
+	if err != nil {
+		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
+	}
+	err = blobberAllocChallPartition.RemoveItem(balances, allocPartitionIndex, allocID)
+	if err != nil {
+		return fmt.Errorf("error removing allocation from challenge partition: %v", err)
+	}
+
+	blobberAllocChallSize, err := blobberAllocChallPartition.Size(balances)
+	if err != nil {
+		return fmt.Errorf("error getting size of challenge partition: %v", err)
+	}
+	if blobberAllocChallSize == 0 {
+		bcPartitionLoc, err := ssc.getBlobberChallengePartitionLocation(removeId, balances)
+		if err != nil {
+			return fmt.Errorf("error retrieving blobber challenge partition location: %v", err)
+		}
+
+		bcPartition, err := getBlobbersChallengeList(balances)
+		if err != nil {
+			return fmt.Errorf("error retrieving blobber challenge partition: %v", err)
+		}
+
+		err = bcPartition.RemoveItem(balances, bcPartitionLoc.PartitionLocation.Location, removeId)
+		if err != nil {
+			return fmt.Errorf("error removing blobber from challenge partition: %v", err)
+		}
+
+		err = bcPartition.Save(balances)
+		if err != nil {
+			return fmt.Errorf("error saving blobber challenge partition: %v", err)
+		}
+
+		_, err = balances.DeleteTrieNode(bcPartitionLoc.GetKey(ssc.ID))
+		if err != nil {
+			return fmt.Errorf("error deleting blobber challenge partition location: %v", err)
+		}
+	}
+
+	if err = blobberAllocChallPartition.Save(balances); err != nil {
+		return fmt.Errorf("error saving allocation challenge partition: %v", err)
+	}
+	return nil
 }
 
 type StorageAllocationDecode StorageAllocation
@@ -1548,11 +1609,11 @@ type ReadMarker struct {
 	AllocationID    string           `json:"allocation_id"`
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
+	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
 	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
-	ReadSize        int64            `json:"read_size"`
-	ReadSizeInGB    float64          `json:"read_size_in_gb"`
+	ReadSize        float64          `json:"read_size"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
@@ -1587,18 +1648,27 @@ func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Time
 func (rm *ReadMarker) GetHashData() string {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID,
 		rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID,
-		rm.ReadSize, rm.Timestamp)
+		rm.ReadCounter, rm.Timestamp)
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(balances chainstate.StateContextI) error {
-	if rm.ReadSize <= 0 || rm.BlobberID == "" || rm.ClientID == "" || rm.Timestamp == 0 {
+func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
+	if rm.ReadCounter <= 0 || rm.BlobberID == "" || rm.ClientID == "" || rm.Timestamp == 0 {
 		return common.NewError("invalid_read_marker", "length validations of fields failed")
 	}
 
+	if prevRM != nil {
+		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID ||
+			rm.Timestamp < prevRM.Timestamp ||
+			rm.ReadCounter < prevRM.ReadCounter {
+
+			return common.NewError("invalid_read_marker",
+				"validations with previous marker failed.")
+		}
+	}
+
 	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); !ok {
-		return common.NewError("invalid_read_marker",
-			"Signature verification failed for the read marker")
+		return common.NewError("invalid_read_marker", "Signature verification failed for the read marker")
 	}
 
 	return nil

@@ -88,7 +88,7 @@ func BenchmarkTests(
 					AllocationID:    getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Timestamp:       now,
-					ReadSize:        64 * KB,
+					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
 					PayerID:         data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])

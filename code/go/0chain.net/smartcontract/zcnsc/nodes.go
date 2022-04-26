@@ -203,6 +203,7 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 
 // ----- AuthorizerNode --------------------
 
+// AuthorizerNode used in `UpdateAuthorizerConfig` functions
 type AuthorizerNode struct {
 	ID        string            `json:"id"`
 	PublicKey string            `json:"public_key"`
@@ -346,11 +347,7 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 		return nil, err
 	}
 
-	return &AuthorizerNode{
-		ID:        ev.AuthorizerID,
-		URL:       ev.URL,
-		PublicKey: "", // fetch this from MPT
-	}, nil
+	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
 }
 
 // ----- UserNode ------------------
