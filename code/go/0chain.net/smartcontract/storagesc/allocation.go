@@ -1053,6 +1053,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't update expired allocation")
 	}
+	// adjust expiration
+	var newExpiration = alloc.Expiration + request.Expiration
+	var newSize = request.Size + alloc.Size
 
 	// get blobber of the allocation to update them
 	var blobbers []*StorageNode
@@ -1087,10 +1090,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			bd.Terms.MaxOfferDuration = blobbers[i].Terms.MaxOfferDuration
 		}
 	}
-
-	// adjust expiration
-	var newExpiration = alloc.Expiration + request.Expiration
-	var newSize = request.Size + alloc.Size
 
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
