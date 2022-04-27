@@ -607,17 +607,11 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	return nil, nil
 }
 
-type challengeInput struct {
-	cr          *rand.Rand
-	challengeID string
-}
-
 type challengeOutput struct {
 	alloc            *StorageAllocation
 	storageChallenge *StorageChallenge
 	blobberAlloc     *BlobberAllocation
 	challengeInfo    *StorageChallengeInfo
-	error            error
 }
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
