@@ -1232,53 +1232,6 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 // challenge requests and their expiration
 func (sc *StorageSmartContract) cancelledPassRates(alloc *StorageAllocation) ([]float64, error) {
 
-	//if alloc.Stats == nil {
-	//	alloc.Stats = &StorageAllocationStats{}
-	//}
-	//passRates = make([]float64, 0, len(alloc.BlobberDetails))
-	//var failed, successful int64 = 0, 0
-	//
-	//for _, d := range alloc.BlobberDetails {
-	//
-	//	var foundChallenge bool
-	//	bc, err := sc.getBlobberChallenge(d.BlobberID, balances)
-	//	switch err {
-	//	case nil:
-	//		if foundChallenge, err = bc.removeExpiredAllocationChallenges(now, alloc, sc, balances); err != nil {
-	//			return nil, fmt.Errorf("error removing expired challenges: " + err.Error())
-	//		}
-	//	case util.ErrValueNotPresent:
-	//		continue
-	//	default:
-	//		return nil, fmt.Errorf("error getting blobber challenge" + err.Error())
-	//	}
-	//
-	//	if foundChallenge {
-	//		_, err = balances.InsertTrieNode(bc.GetKey(sc.ID), bc)
-	//		if err != nil {
-	//			return nil, fmt.Errorf("error saving blobber challenge: " + err.Error())
-	//		}
-	//	}
-	//
-	//	d.Stats.OpenChallenges = 0
-	//	d.Stats.TotalChallenges = d.Stats.SuccessChallenges + d.Stats.FailedChallenges
-	//	if d.Stats.TotalChallenges == 0 {
-	//		passRates = append(passRates, 1.0)
-	//		continue
-	//	}
-	//	// success rate for the blobber allocation
-	//	//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
-	//	passRates = append(passRates, float64(d.Stats.SuccessChallenges)/float64(d.Stats.TotalChallenges))
-	//	successful += d.Stats.SuccessChallenges
-	//	failed += d.Stats.FailedChallenges
-	//}
-	//
-	//alloc.Stats.SuccessChallenges = successful
-	//alloc.Stats.FailedChallenges = failed
-	//alloc.Stats.TotalChallenges = alloc.Stats.SuccessChallenges + alloc.Stats.FailedChallenges
-	//alloc.Stats.OpenChallenges = 0
-	//return passRates, nil
-
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
 	}
@@ -1321,6 +1274,11 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
+	}
+
+	if err = alloc.removeExpiredChallenges(t.CreationDate); err != nil {
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"error removing expired challenge from allocation: %v", err)
 	}
 
 	if alloc.Owner != t.ClientID {
