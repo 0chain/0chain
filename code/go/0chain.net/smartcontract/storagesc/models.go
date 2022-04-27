@@ -842,14 +842,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(now common.Timestamp) error
 
 	i := 0
 	for _, chall := range sa.Challenges {
-		blobber, ok := sa.BlobberMap[chall.BlobberID]
-		if !ok {
-			sa.Stats.ChallengeFailed(chall.ID)
-			sa.BlobberMap[chall.BlobberID].Stats.ChallengeFailed(chall.ID)
-			delete(sa.ChallengeIDMap, chall.ID)
-			i++
-			continue
-		}
+		blobber := sa.BlobberMap[chall.BlobberID]
 		expiry := chall.CreatedAt + toSeconds(blobber.Terms.ChallengeCompletionTime)
 		if now <= expiry {
 			break
