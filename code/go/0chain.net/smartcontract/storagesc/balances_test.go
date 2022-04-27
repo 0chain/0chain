@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -40,6 +41,9 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	if mpts {
 		tb.mpts = newMptStore(t)
 	}
+
+	err := InitPartitions(tb)
+	require.NoError(t, err)
 
 	return
 }

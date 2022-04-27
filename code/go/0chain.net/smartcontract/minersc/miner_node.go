@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -220,4 +221,26 @@ func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 		ops = append(ops, mn.Active[key])
 	}
 	return
+}
+
+func (mn *MinerNode) GetNodePools(status string) map[string]*sci.DelegatePool {
+	switch strings.ToUpper(status) {
+	case PENDING:
+		return mn.Pending
+	case ACTIVE:
+		return mn.Active
+	case DELETING:
+		return mn.Deleting
+	}
+	return mergeDelegatePools(mn.Pending, mn.Active, mn.Deleting)
+}
+
+func mergeDelegatePools(maps ...map[string]*sci.DelegatePool) map[string]*sci.DelegatePool {
+	result := make(map[string]*sci.DelegatePool)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = v
+		}
+	}
+	return result
 }

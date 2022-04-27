@@ -136,7 +136,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block, bState util.MerklePa
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"generate_challenge","input":{}}`
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round": "%d"}}`, b.Round)
 	brTxn.Fee = 0
 	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
 		panic(err)
