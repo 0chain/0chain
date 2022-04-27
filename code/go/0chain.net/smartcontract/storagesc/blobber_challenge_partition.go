@@ -9,8 +9,8 @@ const allBlobbersChallengePartitionSize = 50
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-func getBlobbersChallengeList(balances state.StateContextI) (*partitions.Partitions, error) {
-	return partitions.GetPartitions(balances, ALL_BLOBBERS_CHALLENGE_KEY)
+func getBlobberChallengePartitions(balances state.StateContextI) (*partitions.Partitions, error) {
+	return partitions.GetPartitions(balances, ALL_BLOBBER_CHALLENGE_KEY)
 }
 
 type BlobberChallengeNode struct {
@@ -24,7 +24,7 @@ func (bc *BlobberChallengeNode) GetID() string {
 
 func init() {
 	regInitPartsFunc(func(state state.StateContextI) error {
-		_, err := partitions.CreateIfNotExists(state, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
+		_, err := partitions.CreateIfNotExists(state, ALL_BLOBBER_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
 		return err
 	})
 }

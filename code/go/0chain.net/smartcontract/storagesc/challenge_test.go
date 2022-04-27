@@ -43,7 +43,7 @@ func TestAddChallenge(t *testing.T) {
 		alloc               *StorageAllocation
 		storageChallenge    *StorageChallenge
 		blobberChallengeObj *BlobberChallenge
-		allocChallengeObj   *AllocationChallenge
+		allocChallengeObj   *AllocationChallenges
 		blobberAllocation   *BlobberAllocation
 		validators          *partitions.Partitions
 		r                   *rand.Rand
@@ -65,7 +65,7 @@ func TestAddChallenge(t *testing.T) {
 
 		blobberChallenge, err := partitions.CreateIfNotExists(
 			balances,
-			ALL_BLOBBERS_CHALLENGE_KEY,
+			ALL_BLOBBER_CHALLENGE_KEY,
 			allBlobbersChallengePartitionSize)
 		if err != nil {
 			panic(err)
@@ -135,9 +135,9 @@ func TestAddChallenge(t *testing.T) {
 			}
 		}
 
-		allocChall, err := ssc.getAllocationChallenge("", balances)
+		allocChall, err := ssc.getAllocationChallenges("", balances)
 		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
-			allocChall = new(AllocationChallenge)
+			allocChall = new(AllocationChallenges)
 		}
 		var storageChallenge = new(StorageChallenge)
 		storageChallenge.TotalValidators = len(selectedValidators)
@@ -151,8 +151,8 @@ func TestAddChallenge(t *testing.T) {
 
 		return args{
 			alloc: &StorageAllocation{
-				BlobberMap: blobberMap,
-				Stats:      &StorageAllocationStats{},
+				BlobberAllocsMap: blobberMap,
+				Stats:            &StorageAllocationStats{},
 			},
 			allocChallengeObj:   allocChall,
 			storageChallenge:    storageChallenge,

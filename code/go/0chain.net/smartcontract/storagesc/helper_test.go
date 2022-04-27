@@ -392,12 +392,12 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 		blobberChall.BlobberID = blobberID
 	}
 
-	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		t.Fatal("unexpected error:", err)
 	}
 	if err == util.ErrValueNotPresent {
-		allocChall = new(AllocationChallenge)
+		allocChall = new(AllocationChallenges)
 		allocChall.AllocationID = allocID
 	}
 	var storChall = new(StorageChallenge)

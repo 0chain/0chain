@@ -407,7 +407,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	var details *BlobberAllocation
-	for _, d := range alloc.BlobberDetails {
+	for _, d := range alloc.BlobberAllocs {
 		if d.BlobberID == commitRead.ReadMarker.BlobberID {
 			details = d
 			break
@@ -645,7 +645,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			" to be by the same client as owner of the allocation")
 	}
 
-	details, ok := alloc.BlobberMap[t.ClientID]
+	details, ok := alloc.BlobberAllocsMap[t.ClientID]
 	if !ok {
 		return "", common.NewError("commit_connection_failed",
 			"Blobber is not part of the allocation")
@@ -700,7 +700,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// UpdateItem saved_data on storage node
 	var storageNode *StorageNode
-	if _, ok := alloc.BlobberMap[commitConnection.WriteMarker.BlobberID]; ok {
+	if _, ok := alloc.BlobberAllocsMap[commitConnection.WriteMarker.BlobberID]; ok {
 		storageNode, err = sc.getBlobber(commitConnection.WriteMarker.BlobberID, balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
@@ -754,19 +754,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		UsedCapacity: blobber.BytesWritten,
 	}
 
-	pAllocData := &BlobberChallengeAllocationNode{
+	pAllocData := &BlobberAllocationNode{
 		ID: details.AllocationID,
-	}
-
-	bcPartition, err := getBlobbersChallengeList(balances)
-	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"error fetching blobber challenge partition: "+err.Error())
 	}
 
 	if blobberChallLocation.PartitionLocation == nil {
 		logging.Logger.Info("commit_connection",
 			zap.String("blobber doesn't exists in blobber challenge partition:", t.ClientID))
+		bcPartition, err := getBlobberChallengePartitions(balances)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error fetching blobber challenge partition: "+err.Error())
+		}
 
 		loc, err := bcPartition.AddItem(balances, pData)
 		if err != nil {
@@ -788,16 +787,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", common.NewError("commit_connection_failed",
 				"error saving blobber challenge partition")
 		}
-	} else {
-		err = bcPartition.UpdateItem(balances, blobberChallLocation.PartitionLocation.Location, pData)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error updating blobber challenge partition")
-		}
 	}
 
 	if details.ChallengePartitionLoc == nil {
-		bcAllocPartition, err := getBlobbersChallengeAllocationList(t.ClientID, balances)
+		bcAllocPartition, err := getBlobberAllocationPartitions(t.ClientID, balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error fetching blobber challenge allocation partition")

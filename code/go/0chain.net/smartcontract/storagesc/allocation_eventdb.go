@@ -113,8 +113,8 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
-		BlobberDetails:             blobberDetails,
-		BlobberMap:                 blobberMap,
+		BlobberAllocs:              blobberDetails,
+		BlobberAllocsMap:           blobberMap,
 		IsImmutable:                alloc.IsImmutable,
 		ReadPriceRange:             PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:            PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
@@ -138,7 +138,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
 	allocationTerms := make([]event.AllocationTerm, 0)
-	for _, b := range sa.BlobberDetails {
+	for _, b := range sa.BlobberAllocs {
 		allocationTerms = append(allocationTerms, event.AllocationTerm{
 			BlobberID:               b.BlobberID,
 			AllocationID:            b.AllocationID,

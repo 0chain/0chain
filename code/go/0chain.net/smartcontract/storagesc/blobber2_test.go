@@ -310,7 +310,7 @@ func testCommitBlobberRead(
 		StartTime:               allocation.startTime,
 		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		Expiration:              allocation.expiration,
-		BlobberDetails: []*BlobberAllocation{
+		BlobberAllocs: []*BlobberAllocation{
 			{
 				BlobberID: blobberId,
 				Terms: Terms{

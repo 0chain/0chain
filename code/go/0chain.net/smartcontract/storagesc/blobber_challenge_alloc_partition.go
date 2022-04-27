@@ -9,14 +9,14 @@ import (
 
 //------------------------------------------------------------------------------
 
-type BlobberChallengeAllocationNode struct {
-	ID string `json:"id"`
+type BlobberAllocationNode struct {
+	ID string `json:"id"` // allocation id
 }
 
-func (z *BlobberChallengeAllocationNode) GetID() string {
+func (z *BlobberAllocationNode) GetID() string {
 	return z.ID
 }
 
-func getBlobbersChallengeAllocationList(blobberID string, balances state.StateContextI) (*partitions.Partitions, error) {
-	return partitions.CreateIfNotExists(balances, getBlobberChallengeAllocationKey(blobberID), blobberChallengeAllocationPartitionSize)
+func getBlobberAllocationPartitions(blobberID string, balances state.StateContextI) (*partitions.Partitions, error) {
+	return partitions.CreateIfNotExists(balances, getBlobberAllocationsKey(blobberID), blobberAllocationPartitionSize)
 }

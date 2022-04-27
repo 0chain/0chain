@@ -245,7 +245,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		require.NoError(b, err)
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
-		for _, d := range alloc.BlobberDetails {
+		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
@@ -380,7 +380,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		require.NoError(b, err)
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
-		for _, d := range alloc.BlobberDetails {
+		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
@@ -424,7 +424,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 
 				// 6.3 keep for the benchmark
-				blobberID = alloc.BlobberDetails[rand.Intn(len(alloc.BlobberDetails))].BlobberID
+				blobberID = alloc.BlobberAllocs[rand.Intn(len(alloc.BlobberAllocs))].BlobberID
 
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
@@ -435,9 +435,9 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 				blobberChall, err := ssc.getBlobberChallenge(blobberID, balances)
 				require.NoError(b, err)
-				allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+				allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 				require.NoError(b, err)
-				blobberAllocChall, ok := alloc.BlobberMap[blobberID]
+				blobberAllocChall, ok := alloc.BlobberAllocsMap[blobberID]
 				require.True(b, ok)
 
 				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, allocChall, blobberAllocChall, balances)

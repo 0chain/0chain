@@ -102,7 +102,7 @@ func addMockAllocation(
 			// We need a partition location for commit_connection but does not need to be correct.
 			ChallengePartitionLoc: &partitions.PartitionLocation{},
 		}
-		sa.BlobberDetails = append(sa.BlobberDetails, &ba)
+		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 		if viper.GetBool(sc.EventDbEnabled) {
 			terms := event.AllocationTerm{
 				BlobberID:               bId,
@@ -123,7 +123,7 @@ func addMockAllocation(
 
 	if viper.GetBool(sc.EventDbEnabled) {
 		allocationTerms := make([]event.AllocationTerm, 0)
-		for _, b := range sa.BlobberDetails {
+		for _, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationTerm{
 				BlobberID:               b.BlobberID,
 				AllocationID:            b.AllocationID,
@@ -169,9 +169,9 @@ func AddMockChallenges(
 ) {
 	numAllocations := viper.GetInt(sc.NumAllocations)
 	challenges := make([]BlobberChallenge, len(blobbers))
-	allocationChall := make([]AllocationChallenge, numAllocations)
+	allocationChall := make([]AllocationChallenges, numAllocations)
 
-	partition, err := partitions.CreateIfNotExists(balances, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
+	partition, err := partitions.CreateIfNotExists(balances, ALL_BLOBBER_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -228,22 +228,22 @@ func AddMockChallenges(
 		if err != nil {
 			panic(err)
 		}
-		for _, b := range ch.Challenges {
-			if _, ok := blobAlloc[b.BlobberID]; !ok {
-				blobAlloc[b.BlobberID] = make(map[string]bool)
+		for _, oc := range ch.OpenChallenges {
+			if _, ok := blobAlloc[oc.ID]; !ok {
+				blobAlloc[oc.ID] = make(map[string]bool)
 			}
-			blobAlloc[b.BlobberID][ch.AllocationID] = true
+			blobAlloc[oc.ID][ch.AllocationID] = true
 		}
 	}
 
 	// adding blobber challenge allocation partition
 	for blobberID, val := range blobAlloc {
-		aPart, err := getBlobbersChallengeAllocationList(blobberID, balances)
+		aPart, err := getBlobberAllocationPartitions(blobberID, balances)
 		if err != nil {
 			panic(err)
 		}
 		for allocID := range val {
-			_, err = aPart.AddItem(balances, &BlobberChallengeAllocationNode{
+			_, err = aPart.AddItem(balances, &BlobberAllocationNode{
 				ID: allocID,
 			})
 			if err != nil {
@@ -394,7 +394,7 @@ func setupMockChallenges(
 	blobber *StorageNode,
 	bc *BlobberChallenge,
 	validators []*ValidationNode,
-	ac *AllocationChallenge,
+	ac *AllocationChallenges,
 	balances cstate.StateContextI,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
