@@ -171,6 +171,7 @@ func AddMockChallenges(
 	challenges := make([]BlobberChallenge, len(blobbers))
 	allocationChall := make([]AllocationChallenge, numAllocations)
 
+	_, err := partitions.CreateIfNotExists(balances, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
 	partition, err := partitions.CreateIfNotExists(balances, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
 	if err != nil {
 		log.Fatal(err)
