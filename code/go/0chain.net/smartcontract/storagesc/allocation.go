@@ -293,11 +293,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"getting blobber list: %v", err)
-	}
-
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_creation_failed",
 			"Invalid client in the transaction. No client id in transaction")
