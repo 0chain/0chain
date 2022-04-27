@@ -308,7 +308,7 @@ func TestGetMinerLocations(t *testing.T) {
 	t.Run("locations for miners which are active", func(t *testing.T) {
 		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
 		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 5, len(locations), "locations of only active miners should be returned")
+		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
 		for _, location := range locations {
 			id, err := strconv.ParseInt(location.MinerID, 10, 0)
 			assert.NoError(t, err, "miner id should be parsed to integer")
@@ -319,7 +319,7 @@ func TestGetMinerLocations(t *testing.T) {
 	t.Run("locations for miners which are inactive", func(t *testing.T) {
 		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
 		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 5, len(locations), "locations of only active miners should be returned")
+		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
 		for _, location := range locations {
 			id, err := strconv.ParseInt(location.MinerID, 10, 0)
 			assert.NoError(t, err, "miner id should be parsed to integer")

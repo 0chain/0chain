@@ -147,6 +147,9 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
 	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
 	ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
+	ssc.SmartContract.RestHandlers["/alloc_writen_size"] = ssc.GetWrittenAmountHandler
+	ssc.SmartContract.RestHandlers["/alloc_read_size"] = ssc.GetReadAmountHandler
+	ssc.SmartContract.RestHandlers["/alloc_write_marker_count"] = ssc.GetWriteMarkerCountHandler
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 	ssc.SmartContract.RestHandlers["/get_alloc_blobbers"] = ssc.GetAllocationBlobbersHandler
 	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
