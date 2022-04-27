@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -40,15 +39,14 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	type args struct {
-		alloc               *StorageAllocation
-		storageChallenge    *StorageChallenge
-		blobberChallengeObj *BlobberChallenge
-		blobberAllocation   *BlobberAllocation
-		challInfo           *StorageChallengeInfo
-		validators          *partitions.Partitions
-		r                   *rand.Rand
-		blobberID           string
-		balances            cstate.StateContextI
+		alloc             *StorageAllocation
+		storageChallenge  *StorageChallenge
+		blobberAllocation *BlobberAllocation
+		challInfo         *StorageChallengeInfo
+		validators        *partitions.Partitions
+		r                 *rand.Rand
+		blobberID         string
+		balances          cstate.StateContextI
 	}
 
 	type want struct {
@@ -140,11 +138,6 @@ func TestAddChallenge(t *testing.T) {
 		storageChallenge.BlobberID = bID
 		storageChallenge.Created = creationDate
 
-		blobberChall, err := ssc.getBlobberChallenge(bID, balances)
-		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
-			blobberChall = new(BlobberChallenge)
-		}
-
 		challInfo := &StorageChallengeInfo{
 			ID:             storageChallenge.ID,
 			Created:        storageChallenge.Created,
@@ -162,13 +155,12 @@ func TestAddChallenge(t *testing.T) {
 				BlobberMap: blobberMap,
 				Stats:      &StorageAllocationStats{},
 			},
-			challInfo:           challInfo,
-			storageChallenge:    storageChallenge,
-			blobberAllocation:   blobberMap[bID],
-			blobberChallengeObj: blobberChall,
-			validators:          validators,
-			r:                   r,
-			blobberID:           bID,
+			challInfo:         challInfo,
+			storageChallenge:  storageChallenge,
+			blobberAllocation: blobberMap[bID],
+			validators:        validators,
+			r:                 r,
+			blobberID:         bID,
 
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.MPTSerializable),
@@ -247,9 +239,9 @@ func TestAddChallenge(t *testing.T) {
 
 			args := parametersToArgs(tt.parameters, ssc)
 
-			resp, err := ssc.addChallenge(args.alloc,
+			resp, err := ssc.addChallenge(
+				args.alloc,
 				args.storageChallenge,
-				args.blobberChallengeObj,
 				args.challInfo,
 				common.Now(),
 				args.balances)
@@ -503,11 +495,11 @@ func testBlobberReward(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+	var txn, ssc, allocation, blobber, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 		wpBalances, otherWritePools, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
+	err = ssc.blobberReward(txn, allocation, previous, blobber, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}
@@ -539,7 +531,7 @@ func setupChallengeMocks(
 	thisChallange, thisExpires, now common.Timestamp,
 	size int64,
 ) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
-	*BlobberChallenge, *BlobberAllocation, *mockStateContext) {
+	*StorageNode, *BlobberAllocation, *mockStateContext) {
 	require.Len(t, validatorStakes, len(validators))
 
 	var err error
@@ -549,8 +541,8 @@ func setupChallengeMocks(
 		Expiration: thisExpires,
 		TimeUnit:   scYaml.TimeUnit,
 	}
-	var challenge = &BlobberChallenge{
-		BlobberID: blobberId,
+	var blobber = &StorageNode{
+		ID: blobberId,
 		LatestCompletedChallenge: &StorageChallenge{
 			Created: thisChallange,
 		},
@@ -631,7 +623,7 @@ func setupChallengeMocks(
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
-	require.NoError(t, sp.save(ssc.ID, challenge.BlobberID, ctx))
+	require.NoError(t, sp.save(ssc.ID, blobber.ID, ctx))
 
 	var validatorsSPs = []*stakePool{}
 	for i, validator := range validators {
@@ -651,7 +643,7 @@ func setupChallengeMocks(
 	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
-	return txn, ssc, allocation, challenge, details, ctx
+	return txn, ssc, allocation, blobber, details, ctx
 }
 
 type formulaeBlobberReward struct {

@@ -1628,7 +1628,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 		challID = fmt.Sprintf("chall-%d", i)
 		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators,
-			alloc.ID, blobber, allocRoot, balances)
+			alloc.ID, blobber, allocRoot, alloc, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID

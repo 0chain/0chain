@@ -36,12 +36,40 @@ func (ch *Challenge) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) GetChallenge(challengeID string) (Challenge, error) {
+func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	var ch Challenge
 
 	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{ChallengeID: challengeID}).First(&ch)
 	if result.Error != nil {
-		return ch, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
+		return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
+	}
+
+	return &ch, nil
+}
+
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp) ([]*Challenge, error) {
+	var chs []*Challenge
+	expiry := now - cct
+
+	result := edb.Store.Get().Model(&Challenge{}).
+		Where("blobber_id = ? AND responded = ? AND created_at <= ?",
+			blobberID, false, expiry).Find(&chs)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
+			blobberID, result.Error)
+	}
+
+	return chs, nil
+}
+
+func (edb *EventDb) GetChallengeForBlobber(blobberID, challengeID string) (*Challenge, error) {
+	var ch *Challenge
+
+	result := edb.Store.Get().Model(&Challenge{}).
+		Where("challenge_id = ? AND blobber_id = ?", challengeID, blobberID).First(&ch)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retriving Challenge with blobberid %v challengeid: %v; error: %v",
+			blobberID, challengeID, result.Error)
 	}
 
 	return ch, nil

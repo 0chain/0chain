@@ -70,13 +70,13 @@ func addMockAllocation(
 		DiverseBlobbers:            viper.GetBool(sc.StorageDiverseBlobbers),
 		WritePoolOwners:            []string{clients[cIndex]},
 		Stats: &StorageAllocationStats{
-			UsedSize:                  1,
-			NumWrites:                 1,
-			NumReads:                  1,
-			TotalChallenges:           1,
-			OpenChallenges:            1,
-			SuccessChallenges:         1,
-			FailedChallenges:          1,
+			UsedSize:                 1,
+			NumWrites:                1,
+			NumReads:                 1,
+			TotalChallenges:          1,
+			OpenChallenges:           1,
+			SuccessChallenges:        1,
+			FailedChallenges:         1,
 			LatestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
 		TimeUnit: 1 * time.Hour,
@@ -167,8 +167,9 @@ func AddMockChallenges(
 	validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
-	challenges := make([]BlobberChallenge, len(blobbers))
+	//challenges := make([]BlobberChallenge, len(blobbers))
 	blobAlloc := make(map[string]map[string]bool)
+	allocChallenges := make(map[string]*StorageChallenge)
 
 	partition, err := partitions.CreateIfNotExists(balances, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
 	if err != nil {
@@ -184,7 +185,7 @@ func AddMockChallenges(
 				getMockAllocationId(i),
 				bIndex,
 				blobbers[bIndex],
-				&challenges[bIndex],
+				allocChallenges,
 				validators,
 				blobAlloc,
 				balances,
@@ -192,35 +193,23 @@ func AddMockChallenges(
 		}
 	}
 
-	// adding blobber challenges and blobber challenge partition
-	for _, ch := range challenges {
-		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
-		if err != nil {
-			panic(err)
-		}
-
+	// adding blobber challenge allocation partition
+	for blobberID, val := range blobAlloc {
 		loc, err := partition.AddItem(balances, &BlobberChallengeNode{
-			BlobberID: ch.BlobberID,
+			BlobberID: blobberID,
 		})
 		if err != nil {
 			panic(err)
 		}
 		blobberChallLocation := new(BlobberChallengePartitionLocation)
-		blobberChallLocation.ID = ch.BlobberID
+		blobberChallLocation.ID = blobberID
 		blobberChallLocation.PartitionLocation = partitions.NewPartitionLocation(loc, common.Now())
 		blobberChallLocation.PartitionLocation = partitions.NewPartitionLocation(loc, common.Now())
 		_, err = balances.InsertTrieNode(blobberChallLocation.GetKey(ADDRESS), blobberChallLocation)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-	err = partition.Save(balances)
-	if err != nil {
-		panic(err)
-	}
 
-	// adding blobber challenge allocation partition
-	for blobberID, val := range blobAlloc {
 		aPart, err := getBlobbersChallengeAllocationList(blobberID, balances)
 		if err != nil {
 			panic(err)
@@ -237,6 +226,10 @@ func AddMockChallenges(
 		if err != nil {
 			panic(err)
 		}
+	}
+	err = partition.Save(balances)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -375,12 +368,11 @@ func setupMockChallenges(
 	allocationId string,
 	bIndex int,
 	blobber *StorageNode,
-	bc *BlobberChallenge,
+	ac map[string]*StorageChallenge,
 	validators []*ValidationNode,
 	blobAlloc map[string]map[string]bool,
 	balances cstate.StateContextI,
 ) {
-	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
 		storageChall := &StorageChallenge{
@@ -389,7 +381,7 @@ func setupMockChallenges(
 			TotalValidators: len(selValidators),
 			BlobberID:       blobber.ID,
 		}
-		bc.addChallenge(storageChall)
+		ac[allocationId] = storageChall
 		blobAlloc[blobber.ID][allocationId] = true
 		_, err := balances.InsertTrieNode(storageChall.GetKey(ADDRESS), storageChall)
 		if err != nil {
@@ -456,7 +448,7 @@ func AddMockBlobbers(
 				WritePrice:              int64(blobber.Terms.WritePrice),
 				MinLockDemand:           blobber.Terms.MinLockDemand,
 				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
-				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
+				ChallengeCompletionTime: int64(blobber.Terms.ChallengeCompletionTime),
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),

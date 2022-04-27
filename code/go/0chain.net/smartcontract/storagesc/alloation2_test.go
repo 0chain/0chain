@@ -355,27 +355,23 @@ func testCancelAllocation(
 	}
 	f.setCancelPassRates()
 
+	require.True(t, len(challenges) <= len(blobbers))
+	for i := range challenges {
+		for j := range challenges[i] {
+			challenge := &AllocationChallengeData{
+				ID:        strconv.Itoa(i) + strconv.Itoa(j),
+				BlobberID: strconv.Itoa(i),
+				CreatedAt: challenges[i][j],
+			}
+			sAllocation.Challenges = append(sAllocation.Challenges, challenge)
+			sAllocation.ChallengeIDMap[challenge.ID] = struct{}{}
+		}
+	}
+
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
 		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
 		state.Balance(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
 	)
-
-	require.True(t, len(challenges) <= len(blobbers))
-	for i := range challenges {
-		var bc = BlobberChallenge{
-			BlobberID: strconv.Itoa(i),
-		}
-		for j, created := range challenges[i] {
-			bc.Challenges = append(bc.Challenges, &BlobberChallengeData{
-				ID:           bc.BlobberID + strconv.Itoa(j),
-				AllocationID: sAllocation.ID,
-				CreatedAt:    created,
-			})
-		}
-
-		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
-		require.NoError(t, err)
-	}
 
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {

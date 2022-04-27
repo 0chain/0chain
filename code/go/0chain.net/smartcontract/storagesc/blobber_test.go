@@ -595,7 +595,7 @@ func Test_flow_reward(t *testing.T) {
 
 			challID = fmt.Sprintf("chall-%d", i)
 			genChall(t, ssc, b3.id, tp, prevID, challID, i, validators,
-				alloc.ID, blobber, allocRoot, balances)
+				alloc.ID, blobber, allocRoot, alloc, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -767,7 +767,7 @@ func Test_flow_penalty(t *testing.T) {
 
 			challID = fmt.Sprintf("chall-%d", i)
 			genChall(t, ssc, b4.id, tp, prevID, challID, i, validators,
-				alloc.ID, blobber, allocRoot, balances)
+				alloc.ID, blobber, allocRoot, alloc, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -981,7 +981,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
 				}
 				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators, alloc.ID, blobber, allocRoot, balances)
+					validators, alloc.ID, blobber, allocRoot, alloc, balances)
 				gfc++
 			}
 		}
@@ -1208,7 +1208,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
 				}
 				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators, alloc.ID, blobber, allocRoot, balances)
+					validators, alloc.ID, blobber, allocRoot, alloc, balances)
 			}
 		}
 
