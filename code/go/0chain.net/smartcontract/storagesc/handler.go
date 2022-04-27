@@ -280,16 +280,6 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 	return blobberIDs, nil
 }
 
-func paramsToMap(params url.Values) map[string]interface{} {
-
-	var paramsMap = make(map[string]interface{})
-
-	paramsMap["max_challenge_completion_time"] = params.Get("max_challenge_time")
-	paramsMap["capacity_used"] = params.Get("capacity_used")
-
-	return paramsMap
-}
-
 func (ssc *StorageSmartContract) GetTransactionByHashHandler(
 	ctx context.Context,
 	params url.Values,
