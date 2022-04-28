@@ -1,9 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"math"
 	"math/bits"
 	"strings"
@@ -1174,6 +1176,7 @@ func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blob
 		}
 		err = sa.validateAllocationBlobber(b, sp, creationDate)
 		if err != nil {
+			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errors = append(errors, err.Error())
 			continue
 		}
