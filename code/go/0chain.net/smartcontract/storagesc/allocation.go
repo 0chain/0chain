@@ -607,15 +607,11 @@ func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainsta
 	close(blobberCh)
 
 	//ensure original ordering
-	var mapped map[string]*StorageNode
+	blobbers := make([]*StorageNode, len(ids))
 	for resp := range blobberCh {
-		mapped[resp.blobber.ID] = resp.blobber
+		blobbers[resp.index] = resp.blobber
 	}
 
-	var blobbers []*StorageNode
-	for _, id := range ids {
-		blobbers = append(blobbers, mapped[id])
-	}
 	return blobbers
 }
 
