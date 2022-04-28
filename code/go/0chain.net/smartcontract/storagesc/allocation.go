@@ -336,6 +336,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", t.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	blobberNodes, bSize, err := sc.validateBlobbers(t.CreationDate, sa, balances, inputBlobbers.Nodes)
+	var bi []string
+	for _, b := range blobberNodes {
+		bi = append(bi, b.ID)
+	}
+	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
+
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
