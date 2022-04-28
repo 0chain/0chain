@@ -1,10 +1,12 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"net/url"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -70,7 +72,9 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 func (cp *challengePool) save(sscKey, allocationID string,
 	balances cstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
+	r, err := balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
+	logging.Logger.Debug("after save challenge pool", zap.String("root", r))
+
 	return
 }
 
