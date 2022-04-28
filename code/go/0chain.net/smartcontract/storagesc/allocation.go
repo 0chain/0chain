@@ -101,10 +101,11 @@ func (sc *StorageSmartContract) addUserAllocation(
 		return fmt.Errorf("failed to add allocation %s to client %s list", alloc.ID, newUser)
 	}
 
-	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
+	r, err := balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
 	if err != nil {
 		return fmt.Errorf("saving client allocations list (client: %s): %v", newUser, err)
 	}
+	logging.Logger.Debug("after client allocation save", zap.String("root", r))
 
 	return nil
 }
@@ -126,7 +127,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewError("add_allocation_failed", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	r, err := balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	logging.Logger.Debug("after allocation safe", zap.String("root", r))
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
@@ -330,6 +332,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = t.PublicKey
 	}
 
+	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", t.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	blobberNodes, bSize, err := sc.validateBlobbers(t.CreationDate, sa, balances, inputBlobbers.Nodes)
 	if err != nil {
@@ -346,9 +349,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		}
 
 		b.Used += bSize
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		r, err := balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		if err != nil {
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}
+		logging.Logger.Debug("after blobber save", zap.String("root", r))
 
 		var sp *stakePool
 		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
