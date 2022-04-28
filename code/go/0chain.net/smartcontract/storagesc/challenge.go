@@ -716,7 +716,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge partition")
 	}
 
-	var blobbersSelected []BlobberChallengeNode
+	var blobbersSelected = make([]BlobberChallengeNode, 0, maxBlobbersSelect)
 	if len(blobberChallenges) <= maxBlobbersSelect {
 		blobbersSelected = blobberChallenges
 	} else {
