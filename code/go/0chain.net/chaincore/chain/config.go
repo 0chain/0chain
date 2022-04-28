@@ -387,6 +387,13 @@ func (c *ConfigImpl) FromViper() {
 	c.guard.Lock()
 	defer c.guard.Unlock()
 
+	if err := viper.BindEnv("server_chain.dbs.events.host", "POSTGRES_HOST"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+	if err := viper.BindEnv("server_chain.dbs.events.port", "POSTGRES_PORT"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+
 	conf := c.conf
 	conf.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	conf.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
