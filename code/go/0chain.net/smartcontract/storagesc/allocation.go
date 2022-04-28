@@ -581,9 +581,6 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 }
 
 func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainstate.StateContextI) []*StorageNode {
-
-	var blobbers []*StorageNode
-
 	type blobberResp struct {
 		index   int
 		blobber *StorageNode
@@ -609,8 +606,15 @@ func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainsta
 	wg.Wait()
 	close(blobberCh)
 
+	//ensure original ordering
+	var mapped map[string]*StorageNode
 	for resp := range blobberCh {
-		blobbers = append(blobbers, resp.blobber)
+		mapped[resp.blobber.ID] = resp.blobber
+	}
+
+	var blobbers []*StorageNode
+	for _, id := range ids {
+		blobbers = append(blobbers, mapped[id])
 	}
 	return blobbers
 }
