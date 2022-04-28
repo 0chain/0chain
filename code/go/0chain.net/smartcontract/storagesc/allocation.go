@@ -306,6 +306,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	var request newAllocationRequest
+	logging.Logger.Debug("new_allocation_request", zap.String("request", string(input)))
 	if err = request.decode(input); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
