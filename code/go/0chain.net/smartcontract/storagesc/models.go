@@ -886,15 +886,15 @@ func (sa *StorageAllocation) removeBlobber(
 		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
 	}
 
-	blobber, err := ssc.getBlobber(removeId, balances)
-	if err != nil {
-		return nil, err
-	}
-	blobber.Used -= sa.bSize()
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
-	if err != nil {
-		return nil, err
-	}
+	//blobber, err := ssc.getBlobber(removeId, balances)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//blobber.Used -= sa.bSize()
+	//_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return blobbers, nil
 }
