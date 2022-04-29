@@ -402,7 +402,7 @@ func TestUpdateAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "",
+				errMsg: "allocation_updating_failed: cannot remove blobber blobber_non_existent, not in allocation",
 			}},
 	}
 
