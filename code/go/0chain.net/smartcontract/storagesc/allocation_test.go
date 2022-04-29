@@ -403,6 +403,14 @@ func TestUpdateAllocation(t *testing.T) {
 				mock.Anything,
 			).Return("", nil).Once()
 
+			balances.On(
+				"EmitEvent",
+				event.TypeStats,
+				event.TagUpdateBlobber,
+				blobber.ID,
+				mock.Anything,
+			).Return("", nil).Once()
+
 			sp := stakePool{
 				StakePool: stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
@@ -415,7 +423,13 @@ func TestUpdateAllocation(t *testing.T) {
 				mock.MatchedBy(func(s *stakePool) bool {
 					*s = sp
 					return true
-				})).Return(nil).Once()
+				})).Return(nil).Twice()
+
+			balances.On(
+				"InsertTrieNode",
+				stakePoolKey(sc.ID, arg.addBlobberID),
+				mock.Anything,
+			).Return("", nil).Once()
 		}
 
 		clientAllocation := &ClientAllocation{
