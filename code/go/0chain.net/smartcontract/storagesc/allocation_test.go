@@ -321,6 +321,12 @@ func TestUpdateAllocation(t *testing.T) {
 				*s = *blobber
 				return true
 			})).Return(nil).Once()
+
+			balances.On(
+				"InsertTrieNode",
+				blobber.GetKey(sc.ID),
+				mock.Anything,
+			).Return("", nil).Once()
 		}
 
 		alloc := &StorageAllocation{
@@ -339,6 +345,12 @@ func TestUpdateAllocation(t *testing.T) {
 			return true
 		})).Return(nil).Once()
 
+		balances.On(
+			"InsertTrieNode",
+			alloc.GetKey(sc.ID),
+			mock.Anything,
+		).Return("", nil).Once()
+
 		if len(arg.addBlobberID) > 0 {
 			blobber := &StorageNode{
 				ID: arg.addBlobberID,
@@ -354,6 +366,12 @@ func TestUpdateAllocation(t *testing.T) {
 				*s = *blobber
 				return true
 			})).Return(nil).Once()
+
+			balances.On(
+				"InsertTrieNode",
+				blobber.GetKey(sc.ID),
+				mock.Anything,
+			).Return("", nil).Once()
 
 			sp := stakePool{
 				StakePool: stakepool.StakePool{
