@@ -230,6 +230,196 @@ func TestSelectBlobbers(t *testing.T) {
 	}
 }
 
+func TestUpdateAllocation(t *testing.T) {
+	const (
+		confMinAllocSize     = 1024
+		confMinAllocDuration = 5 * time.Minute
+		mockOwner            = "mock owner"
+		mockHash             = "mock hash"
+		mockAllocationID     = "mock_allocation_id"
+		mockAllocationName   = "mock_allocation"
+		mockAllocationExpiry = common.Timestamp(2000000)
+		mockPoolId           = "mock pool id"
+		mockMaxOffDuration   = 744 * time.Hour
+		mockBlobberCapacity  = 20 * confMinAllocSize
+		mockMinPrice         = 0
+	)
+
+	type args struct {
+		numBlobbers     int
+		incSize         int64
+		incExpiry       common.Timestamp
+		setImmutable    bool
+		updateTerms     bool
+		addBlobberID    string
+		removeBlobberID string
+		dataShards      int
+		parityShards    int
+	}
+	type want struct {
+		err    bool
+		errMsg string
+	}
+
+	setup := func(arg args) (*transaction.Transaction, *StorageSmartContract, []byte, chainState.StateContextI) {
+		var (
+			balances = &mocks.StateContextI{}
+			sc       = StorageSmartContract{
+				SmartContract: sci.NewSC(ADDRESS),
+			}
+			now               = common.Timestamp(1000000)
+			blobberAllocation []*BlobberAllocation
+			blobberMap        = make(map[string]*BlobberAllocation)
+			mockState         = zcnToBalance(100)
+			mockReadPrice     = zcnToBalance(0.01)
+			mockWritePrice    = zcnToBalance(0.10)
+			mockMaxPrice      = zcnToBalance(100.0)
+		)
+
+		updateReq := updateAllocationRequest{
+			ID:              mockAllocationID,
+			Name:            mockAllocationName,
+			OwnerID:         mockOwner,
+			Size:            arg.incSize,
+			Expiration:      arg.incExpiry,
+			SetImmutable:    arg.setImmutable,
+			UpdateTerms:     arg.updateTerms,
+			AddBlobberId:    arg.addBlobberID,
+			RemoveBlobberId: arg.removeBlobberID,
+		}
+		input, err := json.Marshal(updateReq)
+		require.NoError(t, err)
+
+		var txn = transaction.Transaction{
+			ClientID:     mockOwner,
+			ToClientID:   ADDRESS,
+			CreationDate: now,
+		}
+		txn.Hash = mockHash
+
+		var conf = &Config{
+			MinAllocSize:     confMinAllocSize,
+			MinAllocDuration: confMinAllocDuration,
+		}
+		balances.On("GetTrieNode", scConfigKey(sc.ID), mock.MatchedBy(func(c *Config) bool {
+			*c = *conf
+			return true
+		})).Return(nil).Once()
+
+		for i := 0; i < arg.numBlobbers; i++ {
+			ba := &BlobberAllocation{
+				BlobberID:    "blobber_" + strconv.Itoa(i),
+				AllocationID: mockAllocationID,
+			}
+			blobberAllocation = append(blobberAllocation, ba)
+			blobberMap[ba.BlobberID] = ba
+
+			blobber := &StorageNode{
+				ID: ba.BlobberID,
+			}
+			balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
+				*s = *blobber
+				return true
+			})).Return(nil).Once()
+		}
+
+		alloc := &StorageAllocation{
+			ID:              mockAllocationID,
+			Owner:           mockOwner,
+			BlobberDetails:  blobberAllocation,
+			BlobberMap:      blobberMap,
+			Name:            mockAllocationName,
+			Size:            confMinAllocSize,
+			Expiration:      mockAllocationExpiry,
+			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
+			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
+		}
+		balances.On("GetTrieNode", alloc.GetKey(sc.ID), mock.MatchedBy(func(s *StorageAllocation) bool {
+			*s = *alloc
+			return true
+		})).Return(nil).Once()
+
+		if len(arg.addBlobberID) > 0 {
+			blobber := &StorageNode{
+				ID: arg.addBlobberID,
+				Terms: Terms{
+					MaxOfferDuration: mockMaxOffDuration,
+					ReadPrice:        mockReadPrice,
+					WritePrice:       mockWritePrice,
+				},
+				Capacity:        mockBlobberCapacity,
+				LastHealthCheck: now,
+			}
+			balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
+				*s = *blobber
+				return true
+			})).Return(nil).Once()
+
+			sp := stakePool{
+				StakePool: stakepool.StakePool{
+					Pools: map[string]*stakepool.DelegatePool{
+						mockPoolId: {},
+					},
+				},
+			}
+			sp.Pools[mockPoolId].Balance = mockState
+			balances.On("GetTrieNode", stakePoolKey(sc.ID, arg.addBlobberID),
+				mock.MatchedBy(func(s *stakePool) bool {
+					*s = sp
+					return true
+				})).Return(nil).Once()
+		}
+
+		clientAllocation := &ClientAllocation{
+			ClientID:    mockOwner,
+			Allocations: &Allocations{List: SortedList{mockAllocationID}},
+		}
+		balances.On("GetTrieNode", clientAllocation.GetKey(sc.ID), mock.MatchedBy(func(c *ClientAllocation) bool {
+			*c = *clientAllocation
+			return true
+		})).Return(nil).Once()
+
+		return &txn, &sc, input, balances
+
+	}
+
+	testCases := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "test_blobber_remove_doesnt_exist",
+			args: args{
+				numBlobbers:     6,
+				incSize:         0,
+				incExpiry:       0,
+				setImmutable:    false,
+				updateTerms:     false,
+				addBlobberID:    "add_blobber_id",
+				removeBlobberID: "blobber_non_existent",
+				dataShards:      5,
+			},
+			want: want{
+				err:    true,
+				errMsg: "",
+			}},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			txn, sc, input, balances := setup(tt.args)
+			_, err := sc.updateAllocationRequest(txn, input, balances)
+			require.EqualValues(t, tt.want.err, err != nil)
+			if err != nil {
+				require.EqualValues(t, tt.want.errMsg, err.Error())
+				return
+			}
+
+		})
+	}
+}
+
 func TestExtendAllocation(t *testing.T) {
 	const (
 		randomSeed                  = 1
