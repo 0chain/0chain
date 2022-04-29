@@ -327,6 +327,14 @@ func TestUpdateAllocation(t *testing.T) {
 				blobber.GetKey(sc.ID),
 				mock.Anything,
 			).Return("", nil).Once()
+
+			balances.On(
+				"EmitEvent",
+				event.TypeStats,
+				event.TagUpdateBlobber,
+				blobber.ID,
+				mock.Anything,
+			).Return("", nil).Once()
 		}
 
 		alloc := &StorageAllocation{
@@ -348,6 +356,14 @@ func TestUpdateAllocation(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			alloc.GetKey(sc.ID),
+			mock.Anything,
+		).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats,
+			event.TagAddOrOverwriteAllocation,
+			alloc.ID,
 			mock.Anything,
 		).Return("", nil).Once()
 
