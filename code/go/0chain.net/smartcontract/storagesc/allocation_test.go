@@ -453,7 +453,7 @@ func TestUpdateAllocation(t *testing.T) {
 				dataShards:      5,
 			},
 			want: want{
-				err: false,
+				err: true,
 			}},
 	}
 
