@@ -436,19 +436,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 	}
 
 	if len(blobberNodes) < size {
-		if sa.DiverseBlobbers {
-			// removed pre selected blobbers from list
-			for _, preferredBlobber := range blobberNodes {
-				for i, blobber := range list {
-					if blobber.BaseURL == preferredBlobber.BaseURL {
-						list = append(list[:i], list[i+1:]...)
-						break
-					}
-				}
-			}
-		} else {
-			blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
-		}
+		blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
 	}
 
 	return blobberNodes[:size], bSize, nil
