@@ -37,7 +37,7 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 type freeStorageAllocationInput struct {
 	RecipientPublicKey string   `json:"recipient_public_key"`
 	Marker             string   `json:"marker"`
-	PreferredBlobbers  []string `json:"preferred_blobbers"`
+	Blobbers           []string `json:"blobbers"`
 }
 
 func (frm *freeStorageAllocationInput) decode(b []byte) error {
@@ -250,7 +250,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
 		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
-		Blobbers:                   inputObj.PreferredBlobbers,
+		Blobbers:                   inputObj.Blobbers,
 	}
 
 	arBytes, err := request.encode()

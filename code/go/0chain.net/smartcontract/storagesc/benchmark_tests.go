@@ -152,7 +152,6 @@ func BenchmarkTests(
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
 			}(),
@@ -184,7 +183,6 @@ func BenchmarkTests(
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
 			}(),

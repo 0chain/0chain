@@ -156,7 +156,6 @@ type newAllocationRequest struct {
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
-	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
 }
 
 // storageAllocation from the request
@@ -174,7 +173,6 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
-	sa.DiverseBlobbers = nar.DiversifyBlobbers
 	return
 }
 
@@ -335,7 +333,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", t.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
-	blobberNodes, bSize, err := sc.validateBlobbers(t.CreationDate, sa, balances, inputBlobbers.Nodes)
+	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(t.CreationDate), sa, balances, inputBlobbers.Nodes)
 	var bi []string
 	for _, b := range blobberNodes {
 		bi = append(bi, b.ID)
@@ -394,7 +392,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 }
 
 func (sc *StorageSmartContract) selectBlobbers(
-	creationDate common.Timestamp,
+	creationDate time.Time,
 	allBlobbersList StorageNodes,
 	sa *StorageAllocation,
 	randomSeed int64,
@@ -416,9 +414,10 @@ func (sc *StorageSmartContract) selectBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
-		bSize, filterHealthyBlobbers(creationDate),
-		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
+	timestamp := common.Timestamp(creationDate.Unix())
+	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
+		bSize, filterHealthyBlobbers(timestamp),
+		sc.filterBlobbersByFreeSpace(timestamp, bSize, balances))
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
@@ -447,7 +446,6 @@ func (sc *StorageSmartContract) selectBlobbers(
 					}
 				}
 			}
-			blobberNodes = append(blobberNodes, sa.diversifyBlobbers(list, size-len(blobberNodes))...)
 		} else {
 			blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
 		}
@@ -466,7 +464,7 @@ func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
 }
 
 func (sc *StorageSmartContract) validateBlobbers(
-	creationDate common.Timestamp,
+	creationDate time.Time,
 	sa *StorageAllocation,
 	balances chainstate.StateContextI,
 	blobbers []*StorageNode,
@@ -487,7 +485,7 @@ func (sc *StorageSmartContract) validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(sc, blobbers, creationDate,
+	var list, errs = sa.validateEachBlobber(sc, blobbers, common.Timestamp(creationDate.Unix()),
 		balances)
 
 	if len(list) < size {

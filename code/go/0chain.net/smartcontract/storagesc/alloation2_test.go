@@ -89,14 +89,12 @@ func TestNewAllocation(t *testing.T) {
 
 	t.Run("new allocation random blobbers", func(t *testing.T) {
 		request := request
-		request.DiversifyBlobbers = false
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
 	})
 
 	t.Run("new allocation diverse blobbers", func(t *testing.T) {
 		request := request
-		request.DiversifyBlobbers = true
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
 	})
