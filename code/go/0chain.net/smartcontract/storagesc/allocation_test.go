@@ -310,12 +310,24 @@ func TestUpdateAllocation(t *testing.T) {
 			ba := &BlobberAllocation{
 				BlobberID:    "blobber_" + strconv.Itoa(i),
 				AllocationID: mockAllocationID,
+				Terms: Terms{
+					MaxOfferDuration: mockMaxOffDuration,
+					ReadPrice:        mockReadPrice,
+					WritePrice:       mockWritePrice,
+				},
 			}
 			blobberAllocation = append(blobberAllocation, ba)
 			blobberMap[ba.BlobberID] = ba
 
 			blobber := &StorageNode{
-				ID: ba.BlobberID,
+				ID:       ba.BlobberID,
+				Capacity: mockBlobberCapacity,
+				Terms: Terms{
+					MaxOfferDuration: mockMaxOffDuration,
+					ReadPrice:        mockReadPrice,
+					WritePrice:       mockWritePrice,
+				},
+				LastHealthCheck: now,
 			}
 			balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
 				*s = *blobber
