@@ -230,7 +230,7 @@ func TestSelectBlobbers(t *testing.T) {
 	}
 }
 
-func TestUpdateAllocation(t *testing.T) {
+func TestChangeBlobbers(t *testing.T) {
 	const (
 		confMinAllocSize     = 1024
 		confMinAllocDuration = 5 * time.Minute
@@ -246,10 +246,6 @@ func TestUpdateAllocation(t *testing.T) {
 
 	type args struct {
 		numBlobbers     int
-		incSize         int64
-		incExpiry       common.Timestamp
-		setImmutable    bool
-		updateTerms     bool
 		addBlobberID    string
 		removeBlobberID string
 		dataShards      int
@@ -260,8 +256,16 @@ func TestUpdateAllocation(t *testing.T) {
 		errMsg string
 	}
 
-	setup := func(arg args) (*transaction.Transaction, *StorageSmartContract, []byte, chainState.StateContextI) {
+	setup := func(arg args) (
+		[]*StorageNode,
+		string,
+		string,
+		*StorageSmartContract,
+		*StorageAllocation,
+		common.Timestamp,
+		chainState.StateContextI) {
 		var (
+			blobbers []*StorageNode
 			balances = &mocks.StateContextI{}
 			sc       = StorageSmartContract{
 				SmartContract: sci.NewSC(ADDRESS),
@@ -275,20 +279,6 @@ func TestUpdateAllocation(t *testing.T) {
 			mockWritePrice       = zcnToBalance(0.10)
 			mockMaxPrice         = zcnToBalance(100.0)
 		)
-
-		updateReq := updateAllocationRequest{
-			ID:              mockAllocationID,
-			Name:            mockAllocationName,
-			OwnerID:         mockOwner,
-			Size:            arg.incSize,
-			Expiration:      arg.incExpiry,
-			SetImmutable:    arg.setImmutable,
-			UpdateTerms:     arg.updateTerms,
-			AddBlobberId:    arg.addBlobberID,
-			RemoveBlobberId: arg.removeBlobberID,
-		}
-		input, err := json.Marshal(updateReq)
-		require.NoError(t, err)
 
 		var txn = transaction.Transaction{
 			ClientID:     mockOwner,
@@ -330,6 +320,7 @@ func TestUpdateAllocation(t *testing.T) {
 				},
 				LastHealthCheck: now,
 			}
+			blobbers = append(blobbers, blobber)
 			balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
 				*s = *blobber
 				return true
@@ -442,7 +433,7 @@ func TestUpdateAllocation(t *testing.T) {
 			return true
 		})).Return(nil).Once()
 
-		return &txn, &sc, input, balances
+		return blobbers, arg.addBlobberID, arg.removeBlobberID, &sc, alloc, now, balances
 
 	}
 
@@ -455,10 +446,6 @@ func TestUpdateAllocation(t *testing.T) {
 			name: "test_blobber_remove_doesnt_exist",
 			args: args{
 				numBlobbers:     6,
-				incSize:         0,
-				incExpiry:       0,
-				setImmutable:    false,
-				updateTerms:     false,
 				addBlobberID:    "add_blobber_id",
 				removeBlobberID: "blobber_non_existent",
 				dataShards:      5,
@@ -471,10 +458,6 @@ func TestUpdateAllocation(t *testing.T) {
 			name: "test_blobber_add_remove_blobber",
 			args: args{
 				numBlobbers:     6,
-				incSize:         0,
-				incExpiry:       0,
-				setImmutable:    false,
-				updateTerms:     false,
 				addBlobberID:    "add_blobber_id",
 				removeBlobberID: "blobber_1",
 				dataShards:      5,
@@ -486,8 +469,8 @@ func TestUpdateAllocation(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			txn, sc, input, balances := setup(tt.args)
-			_, err := sc.updateAllocationRequest(txn, input, balances)
+			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
+			_, err := sa.changeBlobbers(blobbers, addID, removeID, sc, now, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
