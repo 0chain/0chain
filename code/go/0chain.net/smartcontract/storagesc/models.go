@@ -839,7 +839,7 @@ func (sa *StorageAllocation) removeBlobber(
 ) ([]*StorageNode, error) {
 	remove, found := sa.BlobberMap[removeId]
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", removeId)
 	}
 	delete(sa.BlobberMap, removeId)
 
