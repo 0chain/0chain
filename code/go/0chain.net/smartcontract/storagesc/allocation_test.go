@@ -537,7 +537,7 @@ func TestExtendAllocation(t *testing.T) {
 			).Return(nil).Once()
 		}
 
-		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything).Return()
+		//balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything).Return()
 
 		var sa = StorageAllocation{
 			ID:                      mockAllocationId,
