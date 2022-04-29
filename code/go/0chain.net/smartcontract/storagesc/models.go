@@ -340,10 +340,8 @@ type StorageNode struct {
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	// ChallengeLocation to be replaced for BlobberChallengePartitionLocation once StorageNode is normalised
-	//ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
-	RewardPartition RewardPartitionLocation `json:"reward_partition"`
-	Information     Info                    `json:"info"`
+	RewardPartition   RewardPartitionLocation     `json:"reward_partition"`
+	Information       Info                        `json:"info"`
 }
 
 // validate the blobber configurations
@@ -378,29 +376,6 @@ func (sn *StorageNode) Encode() []byte {
 
 func (sn *StorageNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// BlobberChallengePartitionLocation is a temporary object. should be removed once StorageNode is normalised
-type BlobberChallengePartitionLocation struct {
-	ID                string                        `json:"id"`
-	PartitionLocation *partitions.PartitionLocation `json:"challenge_location"`
-}
-
-func (bcpl *BlobberChallengePartitionLocation) GetKey(globalKey string) datastore.Key {
-	return globalKey + bcpl.ID + "blobber_challenge_partition"
-}
-
-func (bcpl *BlobberChallengePartitionLocation) Encode() []byte {
-	buff, _ := json.Marshal(bcpl)
-	return buff
-}
-
-func (bcpl *BlobberChallengePartitionLocation) Decode(input []byte) error {
-	err := json.Unmarshal(input, bcpl)
 	if err != nil {
 		return err
 	}
@@ -547,7 +522,6 @@ type BlobberAllocation struct {
 	// balance.
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
 	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
-	ChallengePartitionLoc *partitions.PartitionLocation `json:"challenge_partition_loc"`
 }
 
 func newBlobberAllocation(

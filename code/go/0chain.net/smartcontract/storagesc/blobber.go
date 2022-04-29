@@ -9,8 +9,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/smartcontract/partitions"
-
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -52,18 +50,18 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
-func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
-	balances cstate.StateContextI) (blobberChallLocation *BlobberChallengePartitionLocation, err error) {
-
-	blobberChallLocation = new(BlobberChallengePartitionLocation)
-	blobberChallLocation.ID = blobberID
-	err = balances.GetTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
-	if err != nil {
-		return nil, err
-	}
-
-	return
-}
+//func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
+//	balances cstate.StateContextI) (blobberChallLocation *ChallengeReadyBlobbersPartitionLocation, err error) {
+//
+//	blobberChallLocation = new(ChallengeReadyBlobbersPartitionLocation)
+//	blobberChallLocation.ID = blobberID
+//	err = balances.GetTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return
+//}
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
@@ -645,13 +643,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			" to be by the same client as owner of the allocation")
 	}
 
-	details, ok := alloc.BlobberAllocsMap[t.ClientID]
+	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
 	if !ok {
 		return "", common.NewError("commit_connection_failed",
 			"Blobber is not part of the allocation")
 	}
 
-	detailsBytes, err := json.Marshal(details)
+	blobAllocBytes, err := json.Marshal(blobAlloc)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"error marshalling allocation blobber details")
@@ -662,37 +660,37 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid signature for write marker")
 	}
 
-	blobber, err := sc.getBlobber(details.BlobberID, balances)
+	if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
+		blobAlloc.LastWriteMarker.PreviousAllocationRoot == commitConnection.PrevAllocationRoot {
+		return string(blobAllocBytes), nil
+	}
+
+	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"error fetching blobber")
 	}
 
-	if details.AllocationRoot == commitConnection.AllocationRoot &&
-		details.LastWriteMarker != nil &&
-		details.LastWriteMarker.PreviousAllocationRoot ==
-			commitConnection.PrevAllocationRoot {
-
-		return string(detailsBytes), nil
-	}
-
-	if details.AllocationRoot != commitConnection.PrevAllocationRoot {
+	if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
 		return "", common.NewError("commit_connection_failed",
 			"Previous allocation root does not match the latest allocation root")
 	}
 
-	if details.Stats.UsedSize+commitConnection.WriteMarker.Size >
-		details.Size {
+	if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.Size >
+		blobAlloc.Size {
 
 		return "", common.NewError("commit_connection_failed",
 			"Size for blobber allocation exceeded maximum")
 	}
 
-	details.AllocationRoot = commitConnection.AllocationRoot
-	details.LastWriteMarker = commitConnection.WriteMarker
-	details.Stats.UsedSize += commitConnection.WriteMarker.Size
-	details.Stats.NumWrites++
+	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
+	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 
+	freshBlobAlloc := blobAlloc.Stats.NumWrites == 0
+	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+	blobAlloc.Stats.NumWrites++
+
+	freshChallengeReadyBlob := blobber.BytesWritten == 0
 	blobber.BytesWritten += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
@@ -728,85 +726,38 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, details,
+	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"moving tokens: %v", err)
 	}
 
-	// this should be replaced with getBlobber() once storageNode is normalised
-	blobberChallLocation, err := sc.getBlobberChallengePartitionLocation(t.ClientID, balances)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			blobberChallLocation = new(BlobberChallengePartitionLocation)
-			blobberChallLocation.ID = t.ClientID
-		} else {
-			return "", common.NewError("commit_connection_failed",
-				"error fetching blobber challenge partition location")
-		}
-	}
+	if freshChallengeReadyBlob {
+		logging.Logger.Info("commit_connection, add blobber to challenge ready partition",
+			zap.String("blobber", t.ClientID))
 
-	// partition blobber challenge
-	//todo: handle allocations are all deleted
-	pData := &BlobberChallengeNode{
-		BlobberID:    t.ClientID,
-		UsedCapacity: blobber.BytesWritten,
-	}
-
-	pAllocData := &BlobberAllocationNode{
-		ID: details.AllocationID,
-	}
-
-	if blobberChallLocation.PartitionLocation == nil {
-		logging.Logger.Info("commit_connection",
-			zap.String("blobber doesn't exists in blobber challenge partition:", t.ClientID))
-		bcPartition, err := getBlobberChallengePartitions(balances)
+		challengeReadyParts, err := addToChallengeReadBlobberPartitions(balances, t.ClientID)
 		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error fetching blobber challenge partition: "+err.Error())
+			return "", common.NewErrorf("commit_connection_failed", err.Error())
 		}
 
-		loc, err := bcPartition.AddItem(balances, pData)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error adding to blobber challenge partition: "+err.Error())
-		}
-		blobberChallLocation.PartitionLocation = partitions.NewPartitionLocation(loc, t.CreationDate)
-
-		_, err = balances.InsertTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error saving blobber")
-		}
-		logging.Logger.Info("commit_connection",
-			zap.String("blobber location added to blobber object:", t.ClientID))
-
-		err = bcPartition.Save(balances)
+		err = challengeReadyParts.Save(balances)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
 				"error saving blobber challenge partition")
 		}
 	}
 
-	if details.ChallengePartitionLoc == nil {
-		bcAllocPartition, err := getBlobberAllocationPartitions(t.ClientID, balances)
+	if freshBlobAlloc {
+		blobAllocsParts, err := addToBlobberAllocationPartitions(balances, t.ClientID, blobAlloc.AllocationID)
 		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error fetching blobber challenge allocation partition")
+			return "", common.NewError("commit_connection_failed", err.Error())
 		}
 
-		allocLoc, err := bcAllocPartition.AddItem(balances, pAllocData)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error adding to blobber challenge allocation partition")
-		}
-		details.ChallengePartitionLoc = partitions.NewPartitionLocation(allocLoc, t.CreationDate)
-
-		err = bcAllocPartition.Save(balances)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error saving blobber challenge allocation partition")
+		if err := blobAllocsParts.Save(balances); err != nil {
+			return "", common.NewErrorf("commit_connection_failed",
+				"could not save blobber allocations partitions: %v", err)
 		}
 	}
 
@@ -838,7 +789,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", common.NewError("commit_connection_failed",
 				"error saving ongoing blobber reward partition")
 		}
-
 	}
 
 	// save allocation object
@@ -873,12 +823,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"emitting write marker event: %v", err)
 	}
 
-	detailsBytes, err = json.Marshal(details.LastWriteMarker)
+	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed", "encode last write marker failed: %v", err)
 	}
 
-	return string(detailsBytes), nil
+	return string(blobAllocBytes), nil
 }
 
 // insert new blobber, filling its stake pool
