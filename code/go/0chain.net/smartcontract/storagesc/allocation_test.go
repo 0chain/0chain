@@ -321,24 +321,24 @@ func TestChangeBlobbers(t *testing.T) {
 				LastHealthCheck: now,
 			}
 			blobbers = append(blobbers, blobber)
-			balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
-				*s = *blobber
-				return true
-			})).Return(nil).Once()
-
-			balances.On(
-				"InsertTrieNode",
-				blobber.GetKey(sc.ID),
-				mock.Anything,
-			).Return("", nil).Once()
-
-			balances.On(
-				"EmitEvent",
-				event.TypeStats,
-				event.TagUpdateBlobber,
-				blobber.ID,
-				mock.Anything,
-			).Return("", nil).Once()
+			//balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
+			//	*s = *blobber
+			//	return true
+			//})).Return(nil).Once()
+			//
+			//balances.On(
+			//	"InsertTrieNode",
+			//	blobber.GetKey(sc.ID),
+			//	mock.Anything,
+			//).Return("", nil).Once()
+			//
+			//balances.On(
+			//	"EmitEvent",
+			//	event.TypeStats,
+			//	event.TagUpdateBlobber,
+			//	blobber.ID,
+			//	mock.Anything,
+			//).Return("", nil).Once()
 		}
 
 		alloc := &StorageAllocation{
@@ -354,24 +354,24 @@ func TestChangeBlobbers(t *testing.T) {
 			DataShards:      arg.dataShards,
 			ParityShards:    arg.parityShards,
 		}
-		balances.On("GetTrieNode", alloc.GetKey(sc.ID), mock.MatchedBy(func(s *StorageAllocation) bool {
-			*s = *alloc
-			return true
-		})).Return(nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			alloc.GetKey(sc.ID),
-			mock.Anything,
-		).Return("", nil).Once()
-
-		balances.On(
-			"EmitEvent",
-			event.TypeStats,
-			event.TagAddOrOverwriteAllocation,
-			alloc.ID,
-			mock.Anything,
-		).Return("", nil).Once()
+		//balances.On("GetTrieNode", alloc.GetKey(sc.ID), mock.MatchedBy(func(s *StorageAllocation) bool {
+		//	*s = *alloc
+		//	return true
+		//})).Return(nil).Once()
+		//
+		//balances.On(
+		//	"InsertTrieNode",
+		//	alloc.GetKey(sc.ID),
+		//	mock.Anything,
+		//).Return("", nil).Once()
+		//
+		//balances.On(
+		//	"EmitEvent",
+		//	event.TypeStats,
+		//	event.TagAddOrOverwriteAllocation,
+		//	alloc.ID,
+		//	mock.Anything,
+		//).Return("", nil).Once()
 
 		if len(arg.addBlobberID) > 0 {
 			blobber := &StorageNode{
@@ -389,20 +389,6 @@ func TestChangeBlobbers(t *testing.T) {
 				return true
 			})).Return(nil).Once()
 
-			balances.On(
-				"InsertTrieNode",
-				blobber.GetKey(sc.ID),
-				mock.Anything,
-			).Return("", nil).Once()
-
-			balances.On(
-				"EmitEvent",
-				event.TypeStats,
-				event.TagUpdateBlobber,
-				blobber.ID,
-				mock.Anything,
-			).Return("", nil).Once()
-
 			sp := stakePool{
 				StakePool: stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
@@ -417,21 +403,48 @@ func TestChangeBlobbers(t *testing.T) {
 					return true
 				})).Return(nil).Twice()
 
+			//balances.On(
+			//	"InsertTrieNode",
+			//	stakePoolKey(sc.ID, arg.addBlobberID),
+			//	mock.Anything,
+			//).Return("", nil).Once()
+		}
+
+		if len(arg.removeBlobberID) > 0 {
+			blobber := &StorageNode{
+				ID:       arg.removeBlobberID,
+				Capacity: mockBlobberCapacity,
+				Terms: Terms{
+					MaxOfferDuration: mockMaxOffDuration,
+					ReadPrice:        mockReadPrice,
+					WritePrice:       mockWritePrice,
+				},
+				LastHealthCheck: now,
+			}
+
 			balances.On(
 				"InsertTrieNode",
-				stakePoolKey(sc.ID, arg.addBlobberID),
+				blobber.GetKey(sc.ID),
+				mock.Anything,
+			).Return("", nil).Once()
+
+			balances.On(
+				"EmitEvent",
+				event.TypeStats,
+				event.TagUpdateBlobber,
+				blobber.ID,
 				mock.Anything,
 			).Return("", nil).Once()
 		}
 
-		clientAllocation := &ClientAllocation{
-			ClientID:    mockOwner,
-			Allocations: &Allocations{List: SortedList{mockAllocationID}},
-		}
-		balances.On("GetTrieNode", clientAllocation.GetKey(sc.ID), mock.MatchedBy(func(c *ClientAllocation) bool {
-			*c = *clientAllocation
-			return true
-		})).Return(nil).Once()
+		//clientAllocation := &ClientAllocation{
+		//	ClientID:    mockOwner,
+		//	Allocations: &Allocations{List: SortedList{mockAllocationID}},
+		//}
+		//balances.On("GetTrieNode", clientAllocation.GetKey(sc.ID), mock.MatchedBy(func(c *ClientAllocation) bool {
+		//	*c = *clientAllocation
+		//	return true
+		//})).Return(nil).Once()
 
 		return blobbers, arg.addBlobberID, arg.removeBlobberID, &sc, alloc, now, balances
 
