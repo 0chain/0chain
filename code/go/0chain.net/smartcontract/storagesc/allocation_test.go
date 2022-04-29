@@ -238,7 +238,6 @@ func TestUpdateAllocation(t *testing.T) {
 		mockHash             = "mock hash"
 		mockAllocationID     = "mock_allocation_id"
 		mockAllocationName   = "mock_allocation"
-		mockAllocationExpiry = common.Timestamp(2000000)
 		mockPoolId           = "mock pool id"
 		mockMaxOffDuration   = 744 * time.Hour
 		mockBlobberCapacity  = 20 * confMinAllocSize
@@ -267,13 +266,14 @@ func TestUpdateAllocation(t *testing.T) {
 			sc       = StorageSmartContract{
 				SmartContract: sci.NewSC(ADDRESS),
 			}
-			now               = common.Timestamp(1000000)
-			blobberAllocation []*BlobberAllocation
-			blobberMap        = make(map[string]*BlobberAllocation)
-			mockState         = zcnToBalance(100)
-			mockReadPrice     = zcnToBalance(0.01)
-			mockWritePrice    = zcnToBalance(0.10)
-			mockMaxPrice      = zcnToBalance(100.0)
+			now                  = common.Timestamp(1000000)
+			mockAllocationExpiry = common.Timestamp(2000000)
+			blobberAllocation    []*BlobberAllocation
+			blobberMap           = make(map[string]*BlobberAllocation)
+			mockState            = zcnToBalance(100)
+			mockReadPrice        = zcnToBalance(0.01)
+			mockWritePrice       = zcnToBalance(0.10)
+			mockMaxPrice         = zcnToBalance(100.0)
 		)
 
 		updateReq := updateAllocationRequest{
@@ -309,6 +309,7 @@ func TestUpdateAllocation(t *testing.T) {
 		for i := 0; i < arg.numBlobbers; i++ {
 			ba := &BlobberAllocation{
 				BlobberID:    "blobber_" + strconv.Itoa(i),
+				Size:         mockBlobberCapacity,
 				AllocationID: mockAllocationID,
 				Terms: Terms{
 					MaxOfferDuration: mockMaxOffDuration,
