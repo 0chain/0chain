@@ -404,6 +404,21 @@ func TestUpdateAllocation(t *testing.T) {
 				err:    true,
 				errMsg: "allocation_updating_failed: cannot remove blobber blobber_non_existent, not in allocation",
 			}},
+		{
+			name: "test_blobber_add_remove_blobber",
+			args: args{
+				numBlobbers:     6,
+				incSize:         0,
+				incExpiry:       0,
+				setImmutable:    false,
+				updateTerms:     false,
+				addBlobberID:    "add_blobber_id",
+				removeBlobberID: "blobber_1",
+				dataShards:      5,
+			},
+			want: want{
+				err: false,
+			}},
 	}
 
 	for _, tt := range testCases {
