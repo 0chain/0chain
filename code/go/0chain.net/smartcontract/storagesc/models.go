@@ -863,7 +863,7 @@ func (sa *StorageAllocation) removeBlobber(
 		if d.BlobberID == removeId {
 			sa.BlobberDetails[i] = sa.BlobberDetails[len(sa.BlobberDetails)-1]
 			sa.BlobberDetails = sa.BlobberDetails[:len(sa.BlobberDetails)-1]
-			removedBlobber.Used -= d.Size
+			removedBlobber.Used -= sa.bSize()
 
 			if d.ChallengePartitionLoc != nil {
 				if err := removeBlobberAllocation(removeId, sa.ID,
