@@ -347,6 +347,8 @@ func TestUpdateAllocation(t *testing.T) {
 			Expiration:      mockAllocationExpiry,
 			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
 			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
+			DataShards:      arg.dataShards,
+			ParityShards:    arg.parityShards,
 		}
 		balances.On("GetTrieNode", alloc.GetKey(sc.ID), mock.MatchedBy(func(s *StorageAllocation) bool {
 			*s = *alloc
