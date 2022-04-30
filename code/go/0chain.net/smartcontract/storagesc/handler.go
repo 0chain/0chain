@@ -260,7 +260,7 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 	//dur := common.ToTime(sa.Expiration).Sub(creationDate)
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
 		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		MaxOfferDuration:           1000000,
+		MaxOfferDuration:           time.Hour,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -281,6 +281,7 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 		NumberOfBlobbers: numberOfBlobbers,
 	})
 	if err != nil || len(blobberIDs) == 0 {
+		logging.Logger.Error("no blobbers found", zap.Error(err))
 		return nil, fmt.Errorf("no blobbers found %v", err)
 	}
 
