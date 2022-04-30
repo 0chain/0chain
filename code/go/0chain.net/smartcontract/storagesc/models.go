@@ -654,7 +654,7 @@ type StorageAllocation struct {
 	// Blobbers not to be used anywhere except /allocation and /allocations table
 	// if Blobbers are getting used in any smart-contract, we should avoid.
 	Blobbers         []*StorageNode                `json:"blobbers"`
-	BlobberAllocs    []*BlobberAllocation          `json:"blobber_allocs"`
+	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 	IsImmutable      bool                          `json:"is_immutable"`
 
