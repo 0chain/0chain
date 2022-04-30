@@ -1706,11 +1706,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 		for i, numAlloc := range want.numAllocationChallengePerBlobber {
 			blobber := "blobber_" + strconv.Itoa(i)
 			bcAllocChallenge, err := getBlobbersChallengeAllocationList(blobber, balances)
-			if numAlloc == 0 {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 			bcAllocSize, err := bcAllocChallenge.Size(balances)
 			require.NoError(t, err)
 
