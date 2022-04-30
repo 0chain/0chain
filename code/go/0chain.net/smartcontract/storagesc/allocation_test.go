@@ -1668,7 +1668,8 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			blobLoc, err := bcpartition.AddItem(balances, &BlobberChallengeNode{BlobberID: blobberID})
 			require.NoError(t, err)
 
-			bcPartitionLoc, _ := ssc.getBlobberChallengePartitionLocation(blobberID, balances)
+			bcPartitionLoc := new(BlobberChallengePartitionLocation)
+
 			bcPartitionLoc.ID = blobberID
 			bcPartitionLoc.PartitionLocation = &partitions.PartitionLocation{Location: blobLoc}
 			_, err = balances.InsertTrieNode(bcPartitionLoc.GetKey(ssc.ID), bcPartitionLoc)
