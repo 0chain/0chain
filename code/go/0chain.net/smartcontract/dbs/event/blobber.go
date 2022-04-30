@@ -172,7 +172,8 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string,
 	dbStore = dbStore.Where("last_health_check > ?", time.Now().Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
 	var blobberIDs []string
-	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
+	//return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
+	return blobberIDs, errors.New("ahtung")
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {

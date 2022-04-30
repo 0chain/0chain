@@ -255,38 +255,38 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
-	//// size of allocation for a blobber
-	//var allocationSize = sa.bSize()
-	//dur := common.ToTime(sa.Expiration).Sub(creationDate)
-	//blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
-	//	MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-	//	MaxOfferDuration:           dur,
-	//	ReadPriceRange: struct {
-	//		Min int64
-	//		Max int64
-	//	}{
-	//		Min: int64(request.ReadPriceRange.Min),
-	//		Max: int64(request.ReadPriceRange.Max),
-	//	},
-	//	WritePriceRange: struct {
-	//		Min int64
-	//		Max int64
-	//	}{
-	//		Min: int64(request.WritePriceRange.Min),
-	//		Max: int64(request.WritePriceRange.Max),
-	//	},
-	//	Size:              int(request.Size),
-	//	AllocationSize:    allocationSize,
-	//	PreferredBlobbers: request.Blobbers,
-	//	NumberOfBlobbers:  numberOfBlobbers,
-	//})
-	//if err != nil || len(blobberIDs) == 0 {
-	//	return nil, fmt.Errorf("no blobbers found %v", err)
-	//}
-	//
-	//if len(blobberIDs) < numberOfBlobbers {
-	//	return nil, errors.New("not enough blobbers to honor the allocation")
-	//}
+	// size of allocation for a blobber
+	var allocationSize = sa.bSize()
+	dur := common.ToTime(sa.Expiration).Sub(creationDate)
+	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
+		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
+		MaxOfferDuration:           dur,
+		ReadPriceRange: struct {
+			Min int64
+			Max int64
+		}{
+			Min: int64(request.ReadPriceRange.Min),
+			Max: int64(request.ReadPriceRange.Max),
+		},
+		WritePriceRange: struct {
+			Min int64
+			Max int64
+		}{
+			Min: int64(request.WritePriceRange.Min),
+			Max: int64(request.WritePriceRange.Max),
+		},
+		Size:              int(request.Size),
+		AllocationSize:    allocationSize,
+		PreferredBlobbers: request.Blobbers,
+		NumberOfBlobbers:  numberOfBlobbers,
+	})
+	if err != nil || len(blobberIDs) == 0 {
+		return nil, fmt.Errorf("no blobbers found %v", err)
+	}
+
+	if len(blobberIDs) < numberOfBlobbers {
+		return nil, errors.New("not enough blobbers to honor the allocation")
+	}
 	return []string{}, nil
 }
 
