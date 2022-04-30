@@ -1245,7 +1245,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	case util.ErrValueNotPresent:
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
-			ba, ok := alloc.BlobberAllocsMap[oc.ID]
+			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
 			if !ok {
 				continue
 			}
