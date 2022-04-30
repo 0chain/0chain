@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/partitions"
-
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -22,14 +21,14 @@ import (
 	"0chain.net/core/util"
 )
 
-//msgp:ignore StorageAllocation BlobberChallenge AllocationChallenges
+//msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
-	ALL_BLOBBERS_KEY          = ADDRESS + encryption.Hash("all_blobbers")
-	ALL_VALIDATORS_KEY        = ADDRESS + encryption.Hash("all_validators")
-	ALL_BLOBBER_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobber_challenge")
-	BLOBBER_REWARD_KEY        = ADDRESS + encryption.Hash("blobber_rewards")
+	ALL_BLOBBERS_KEY                 = ADDRESS + encryption.Hash("all_blobbers")
+	ALL_VALIDATORS_KEY               = ADDRESS + encryption.Hash("all_validators")
+	ALL_CHALLENGE_READY_BLOBBERS_KEY = ADDRESS + encryption.Hash("all_challenge_ready_blobbers")
+	BLOBBER_REWARD_KEY               = ADDRESS + encryption.Hash("blobber_rewards")
 )
 
 func getBlobberAllocationsKey(blobberID string) string {
@@ -163,6 +162,25 @@ func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool 
 func (acs *AllocationChallenges) Save(state chainstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(acs.GetKey(scAddress), acs)
 	return err
+}
+
+func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bool {
+	if _, ok := acs.ChallengeMap[challenge.ID]; !ok {
+		return false
+	}
+
+	delete(acs.ChallengeMap, challenge.ID)
+	for i := range acs.OpenChallenges {
+		if acs.OpenChallenges[i].ID == challenge.ID {
+			acs.OpenChallenges = append(
+				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
+
+			acs.LatestCompletedChallenge = challenge
+			return true
+		}
+	}
+
+	return true
 }
 
 type allocationChallengesDecoder AllocationChallenges
@@ -521,7 +539,34 @@ type BlobberAllocation struct {
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
 	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
-	// ChallengePartitionLoc is the location of blobber partition(if exists) in BlobberChallengePartition
+	// BlobberAllocationsPartitionLoc indicates the partition location for the allocation that
+	// saved in blobber allocations partitions.
+	BlobberAllocationsPartitionLoc *partitions.PartitionLocation `json:"blobber_allocs_partition_loc"`
+}
+
+// blobberPartitionsLocations that any blobber related partition locations could be
+// stored in this node
+type blobberPartitionsLocations struct {
+	ID                         string // blobber id
+	ChallengeReadyPartitionLoc *partitions.PartitionLocation
+}
+
+func (bpl *blobberPartitionsLocations) getKey(scAddress string) datastore.Key {
+	return fmt.Sprintf("%s:blobber_partitions_locations:%s", scAddress, bpl.ID)
+}
+
+func (bpl *blobberPartitionsLocations) save(state chainstate.StateContextI, scAddress string) error {
+	_, err := state.InsertTrieNode(bpl.getKey(scAddress), bpl)
+	return err
+}
+
+func (bpl *blobberPartitionsLocations) load(state chainstate.StateContextI, scAddress string) error {
+	return state.GetTrieNode(bpl.getKey(scAddress), bpl)
+}
+
+func (bpl *blobberPartitionsLocations) delete(state chainstate.StateContextI, scAddress string) error {
+	_, err := state.DeleteTrieNode(bpl.getKey(scAddress))
+	return err
 }
 
 func newBlobberAllocation(
@@ -711,20 +756,20 @@ func (sa *StorageAllocation) bSize() int64 {
 
 func (sa *StorageAllocation) removeBlobber(
 	blobbers []*StorageNode,
-	removeId string,
+	blobberID string,
 	ssc *StorageSmartContract,
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, error) {
-	remove, found := sa.BlobberAllocsMap[removeId]
+	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
 	}
-	delete(sa.BlobberAllocsMap, removeId)
+	delete(sa.BlobberAllocsMap, blobberID)
 
 	var removedBlobber *StorageNode
 	found = false
 	for i, d := range blobbers {
-		if d.ID == removeId {
+		if d.ID == blobberID {
 			removedBlobber = blobbers[i]
 			blobbers[i] = blobbers[len(blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
@@ -733,45 +778,43 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
 	}
 
 	found = false
 	for i, d := range sa.BlobberAllocs {
-		if d.BlobberID == removeId {
+		if d.BlobberID == blobberID {
 			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
 			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
-			removedBlobber.Used -= d.Size
 
-			if d.ChallengePartitionLoc != nil {
-				if err := removeBlobberAllocation(removeId, sa.ID,
-					d.ChallengePartitionLoc.Location, ssc, balances); err != nil {
-					return nil, err
-				}
+			if err := removeAllocationFromBlobber(ssc,
+				blobberID,
+				d.BlobberAllocationsPartitionLoc,
+				d.AllocationID,
+				balances); err != nil {
+				return nil, err
 			}
+
 			found = true
 			break
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", remove.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
 		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
-	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
-		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
+
+	removedBlobber.Used -= sa.bSize()
+	_, err := balances.InsertTrieNode(removedBlobber.GetKey(ssc.ID), removedBlobber)
+	if err != nil {
+		return nil, err
 	}
 
-	blobber, err := ssc.getBlobber(removeId, balances)
-	if err != nil {
-		return nil, err
-	}
-	blobber.Used -= sa.bSize()
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
-	if err != nil {
-		return nil, err
+	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
+		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
 	}
 
 	return blobbers, nil
@@ -827,55 +870,51 @@ func (sa *StorageAllocation) Save(state chainstate.StateContextI, scAddress stri
 	return err
 }
 
-func removeBlobberAllocation(
-	removeId string,
-	allocID string,
-	allocPartitionIndex int,
+// removeAllocationFromBlobber removes the allocation from blobber
+func removeAllocationFromBlobber(
 	ssc *StorageSmartContract,
+	blobberID string,
+	allocPartLoc *partitions.PartitionLocation,
+	allocID string,
 	balances chainstate.StateContextI) error {
-	blobberAllocChallPartition, err := getBlobberAllocationPartitions(removeId, balances)
+	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
 	}
-	err = blobberAllocChallPartition.RemoveItem(balances, allocPartitionIndex, allocID)
-	if err != nil {
-		return fmt.Errorf("error removing allocation from challenge partition: %v", err)
+
+	if err := blobAllocsParts.RemoveItem(balances, allocPartLoc.Location, allocID); err != nil {
+		return fmt.Errorf("could not remove allocation from blobber allocations partitions: %v", err)
 	}
 
-	blobberAllocChallSize, err := blobberAllocChallPartition.Size(balances)
+	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {
 		return fmt.Errorf("error getting size of challenge partition: %v", err)
 	}
-	if blobberAllocChallSize == 0 {
-		bcPartitionLoc, err := ssc.getBlobberChallengePartitionLocation(removeId, balances)
-		if err != nil {
-			return fmt.Errorf("error retrieving blobber challenge partition location: %v", err)
-		}
 
-		bcPartition, err := getBlobberChallengePartitions(balances)
-		if err != nil {
-			return fmt.Errorf("error retrieving blobber challenge partition: %v", err)
-		}
-
-		err = bcPartition.RemoveItem(balances, bcPartitionLoc.PartitionLocation.Location, removeId)
-		if err != nil {
-			return fmt.Errorf("error removing blobber from challenge partition: %v", err)
-		}
-
-		err = bcPartition.Save(balances)
-		if err != nil {
-			return fmt.Errorf("error saving blobber challenge partition: %v", err)
-		}
-
-		_, err = balances.DeleteTrieNode(bcPartitionLoc.GetKey(ssc.ID))
-		if err != nil {
-			return fmt.Errorf("error deleting blobber challenge partition location: %v", err)
-		}
+	if allocNum > 0 {
+		return nil
 	}
 
-	if err = blobberAllocChallPartition.Save(balances); err != nil {
-		return fmt.Errorf("error saving allocation challenge partition: %v", err)
+	// remove the blobber related resources fom MPT when there's no allocation attached to it
+	blobPartsLocs := &blobberPartitionsLocations{ID: blobberID}
+	if err := blobPartsLocs.load(balances, ssc.ID); err != nil {
+		return fmt.Errorf("could not load blobber patitions locations: %v", err)
 	}
+
+	if blobPartsLocs.ChallengeReadyPartitionLoc == nil {
+		return fmt.Errorf("challenge ready partition location is empty")
+	}
+
+	if err := partitionsChallengeReadyBlobbersRemove(balances,
+		blobPartsLocs.ChallengeReadyPartitionLoc, blobberID); err != nil {
+		return fmt.Errorf("could not remove blobber from challenge ready partitions: %v", err)
+	}
+
+	blobPartsLocs.ChallengeReadyPartitionLoc = nil
+	if err := blobPartsLocs.save(balances, ssc.ID); err != nil {
+		return fmt.Errorf("could not update blobber partitions locations node: %v", err)
+	}
+
 	return nil
 }
 
@@ -1296,8 +1335,15 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	return o, nil
 }
 
-func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges, now common.Timestamp) ([]string, error) {
-	expiredChallengeIDs := make([]string, 0, len(allocChallenges.OpenChallenges))
+// removeExpiredChallenges removes all expired challenges from the allocation,
+// return the expired challenge ids, or error if any.
+// the expired challenge ids could be used to delete the challenge node from MPT when needed
+func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
+	blobChallenges *BlobberChallenges, now common.Timestamp) ([]string, error) {
+	var (
+		expiredChallengeIDs           = make([]string, 0, len(allocChallenges.OpenChallenges))
+		lastExpiredBlobberChallengeID string
+	)
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
@@ -1309,7 +1355,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		// ChallengeCompletionTime from global config instead of the allocation's terms
 		expire := oc.CreatedAt + toSeconds(ba.Terms.ChallengeCompletionTime)
 		if expire > now {
-			// not expired, following open challenges would not expire too, so return here
+			// not expired, following open challenges would not expire too, so break here
 			break
 		}
 
@@ -1322,9 +1368,17 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 
 		sa.Stats.FailedChallenges++
 		sa.Stats.OpenChallenges--
+
+		if oc.BlobberID == blobChallenges.BlobberID {
+			lastExpiredBlobberChallengeID = oc.ID
+		}
 	}
 
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeIDs):]
+
+	if lastExpiredBlobberChallengeID != "" {
+		blobChallenges.removeChallengesTo(lastExpiredBlobberChallengeID)
+	}
 
 	return expiredChallengeIDs, nil
 }

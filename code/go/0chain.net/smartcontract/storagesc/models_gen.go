@@ -323,14 +323,14 @@ func (z *BlobberAllocation) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "ChallengePoolIntegralValue")
 		return
 	}
-	// string "ChallengePartitionLoc"
-	o = append(o, 0xb5, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x63)
-	if z.ChallengePartitionLoc == nil {
+	// string "BlobberAllocationsPartitionLoc"
+	o = append(o, 0xbe, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x63)
+	if z.BlobberAllocationsPartitionLoc == nil {
 		o = msgp.AppendNil(o)
 	} else {
-		o, err = z.ChallengePartitionLoc.MarshalMsg(o)
+		o, err = z.BlobberAllocationsPartitionLoc.MarshalMsg(o)
 		if err != nil {
-			err = msgp.WrapError(err, "ChallengePartitionLoc")
+			err = msgp.WrapError(err, "BlobberAllocationsPartitionLoc")
 			return
 		}
 	}
@@ -467,20 +467,20 @@ func (z *BlobberAllocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "ChallengePoolIntegralValue")
 				return
 			}
-		case "ChallengePartitionLoc":
+		case "BlobberAllocationsPartitionLoc":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
 				if err != nil {
 					return
 				}
-				z.ChallengePartitionLoc = nil
+				z.BlobberAllocationsPartitionLoc = nil
 			} else {
-				if z.ChallengePartitionLoc == nil {
-					z.ChallengePartitionLoc = new(partitions.PartitionLocation)
+				if z.BlobberAllocationsPartitionLoc == nil {
+					z.BlobberAllocationsPartitionLoc = new(partitions.PartitionLocation)
 				}
-				bts, err = z.ChallengePartitionLoc.UnmarshalMsg(bts)
+				bts, err = z.BlobberAllocationsPartitionLoc.UnmarshalMsg(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "ChallengePartitionLoc")
+					err = msgp.WrapError(err, "BlobberAllocationsPartitionLoc")
 					return
 				}
 			}
@@ -510,96 +510,11 @@ func (z *BlobberAllocation) Msgsize() (s int) {
 	} else {
 		s += z.Stats.Msgsize()
 	}
-	s += 6 + z.Terms.Msgsize() + 14 + z.MinLockDemand.Msgsize() + 6 + z.Spent.Msgsize() + 8 + z.Penalty.Msgsize() + 11 + z.ReadReward.Msgsize() + 9 + z.Returned.Msgsize() + 16 + z.ChallengeReward.Msgsize() + 12 + z.FinalReward.Msgsize() + 27 + z.ChallengePoolIntegralValue.Msgsize() + 22
-	if z.ChallengePartitionLoc == nil {
+	s += 6 + z.Terms.Msgsize() + 14 + z.MinLockDemand.Msgsize() + 6 + z.Spent.Msgsize() + 8 + z.Penalty.Msgsize() + 11 + z.ReadReward.Msgsize() + 9 + z.Returned.Msgsize() + 16 + z.ChallengeReward.Msgsize() + 12 + z.FinalReward.Msgsize() + 27 + z.ChallengePoolIntegralValue.Msgsize() + 31
+	if z.BlobberAllocationsPartitionLoc == nil {
 		s += msgp.NilSize
 	} else {
-		s += z.ChallengePartitionLoc.Msgsize()
-	}
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z *BlobberChallengePartitionLocation) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
-	// string "ID"
-	o = append(o, 0x82, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
-	// string "PartitionLocation"
-	o = append(o, 0xb1, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	if z.PartitionLocation == nil {
-		o = msgp.AppendNil(o)
-	} else {
-		o, err = z.PartitionLocation.MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "PartitionLocation")
-			return
-		}
-	}
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *BlobberChallengePartitionLocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ID")
-				return
-			}
-		case "PartitionLocation":
-			if msgp.IsNil(bts) {
-				bts, err = msgp.ReadNilBytes(bts)
-				if err != nil {
-					return
-				}
-				z.PartitionLocation = nil
-			} else {
-				if z.PartitionLocation == nil {
-					z.PartitionLocation = new(partitions.PartitionLocation)
-				}
-				bts, err = z.PartitionLocation.UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "PartitionLocation")
-					return
-				}
-			}
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *BlobberChallengePartitionLocation) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 18
-	if z.PartitionLocation == nil {
-		s += msgp.NilSize
-	} else {
-		s += z.PartitionLocation.Msgsize()
+		s += z.BlobberAllocationsPartitionLoc.Msgsize()
 	}
 	return
 }
@@ -3405,6 +3320,91 @@ func (z *allocationChallengesDecoder) Msgsize() (s int) {
 		s += msgp.NilSize
 	} else {
 		s += z.LatestCompletedChallenge.Msgsize()
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z *blobberPartitionsLocations) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 2
+	// string "ID"
+	o = append(o, 0x82, 0xa2, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ID)
+	// string "ChallengeReadyPartitionLoc"
+	o = append(o, 0xba, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x61, 0x64, 0x79, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x63)
+	if z.ChallengeReadyPartitionLoc == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.ChallengeReadyPartitionLoc.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "ChallengeReadyPartitionLoc")
+			return
+		}
+	}
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *blobberPartitionsLocations) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "ID":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		case "ChallengeReadyPartitionLoc":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.ChallengeReadyPartitionLoc = nil
+			} else {
+				if z.ChallengeReadyPartitionLoc == nil {
+					z.ChallengeReadyPartitionLoc = new(partitions.PartitionLocation)
+				}
+				bts, err = z.ChallengeReadyPartitionLoc.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ChallengeReadyPartitionLoc")
+					return
+				}
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *blobberPartitionsLocations) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 27
+	if z.ChallengeReadyPartitionLoc == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.ChallengeReadyPartitionLoc.Msgsize()
 	}
 	return
 }

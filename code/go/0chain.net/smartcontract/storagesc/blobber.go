@@ -50,19 +50,6 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
-//func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
-//	balances cstate.StateContextI) (blobberChallLocation *ChallengeReadyBlobbersPartitionLocation, err error) {
-//
-//	blobberChallLocation = new(ChallengeReadyBlobbersPartitionLocation)
-//	blobberChallLocation.ID = blobberID
-//	err = balances.GetTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return
-//}
-
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode, blobbers *StorageNodes,
@@ -686,11 +673,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 
-	freshBlobAlloc := blobAlloc.Stats.NumWrites == 0
 	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	blobAlloc.Stats.NumWrites++
 
-	freshChallengeReadyBlob := blobber.BytesWritten == 0
 	blobber.BytesWritten += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
@@ -733,31 +718,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	if freshChallengeReadyBlob {
-		logging.Logger.Info("commit_connection, add blobber to challenge ready partition",
-			zap.String("blobber", t.ClientID))
-
-		challengeReadyParts, err := addToChallengeReadBlobberPartitions(balances, t.ClientID)
-		if err != nil {
+	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
+		if err := sc.blobberAddAllocation(t, blobAlloc, balances); err != nil {
 			return "", common.NewErrorf("commit_connection_failed", err.Error())
-		}
-
-		err = challengeReadyParts.Save(balances)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"error saving blobber challenge partition")
-		}
-	}
-
-	if freshBlobAlloc {
-		blobAllocsParts, err := addToBlobberAllocationPartitions(balances, t.ClientID, blobAlloc.AllocationID)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed", err.Error())
-		}
-
-		if err := blobAllocsParts.Save(balances); err != nil {
-			return "", common.NewErrorf("commit_connection_failed",
-				"could not save blobber allocations partitions: %v", err)
 		}
 	}
 
@@ -829,6 +792,64 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	return string(blobAllocBytes), nil
+}
+
+// blobberAddAllocation add allocation to blobber and create related partitions if needed
+// - add allocation to blobber allocations partitions
+// - add blobber to challenge ready partitions if the allocation is the first one and
+// 	 update blobber partitions locations
+func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transaction,
+	blobAlloc *BlobberAllocation, balances cstate.StateContextI) error {
+	logging.Logger.Info("commit_connection, add allocation to blobber",
+		zap.String("blobber", txn.ClientID),
+		zap.String("allocation", blobAlloc.AllocationID))
+
+	blobAllocsParts, loc, err := partitionsBlobberAllocationsAdd(balances, txn.ClientID, blobAlloc.AllocationID)
+	if err != nil {
+		return err
+	}
+
+	blobAlloc.BlobberAllocationsPartitionLoc = loc
+
+	// there are more than one partition, so the blobber should have already been added to
+	// the challenge ready partition
+	if blobAllocsParts.Num() > 1 {
+		return nil
+	}
+
+	// check if blobber allocations partitions was empty before adding the new allocation
+	n, err := blobAllocsParts.Size(balances)
+	if err != nil {
+		return fmt.Errorf("could not get blobber allocations partition size: %v", err)
+	}
+
+	// there are more than one item in the partition, so
+	// the blobber should have been added to the challenge ready partition
+	if n > 1 {
+		return nil
+	}
+
+	// add blobber to challenge ready partitions as the allocation is the first
+	// one that added to the blobber
+	logging.Logger.Info("commit_connection, add blobber to challenge ready partitions",
+		zap.String("blobber", txn.ClientID))
+
+	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID)
+	if err != nil {
+		return fmt.Errorf("could not add blobber to challenge ready partitions")
+	}
+
+	// add the challenge ready partition location to blobber partition locations
+	bpl := &blobberPartitionsLocations{
+		ID:                         txn.ClientID,
+		ChallengeReadyPartitionLoc: crbLoc,
+	}
+
+	if err := bpl.save(balances, sc.ID); err != nil {
+		return fmt.Errorf("could not add challenge ready partition location: %v", err)
+	}
+
+	return nil
 }
 
 // insert new blobber, filling its stake pool

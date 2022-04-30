@@ -362,7 +362,7 @@ func testCancelAllocation(
 
 	require.True(t, len(challenges) <= len(blobbers))
 	for i, blobberChallenges := range challenges {
-		var bc = BlobberChallenge{
+		var bc = BlobberChallenges{
 			BlobberID: strconv.Itoa(i),
 		}
 

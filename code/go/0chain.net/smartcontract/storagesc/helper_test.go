@@ -383,12 +383,13 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	valids *partitions.Partitions, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
-	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
+	blobberChall, err := ssc.getBlobberChallenges(blobberID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		t.Fatal("unexpected error:", err)
 	}
+
 	if err == util.ErrValueNotPresent {
-		blobberChall = new(BlobberChallenge)
+		blobberChall = new(BlobberChallenges)
 		blobberChall.BlobberID = blobberID
 	}
 
@@ -410,7 +411,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.AllocationID = allocID
 	storChall.BlobberID = blobber.ID
 
-	require.True(t, blobberChall.addChallenge(storChall))
+	require.True(t, blobberChall.addChallenge(storChall.ID))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
 

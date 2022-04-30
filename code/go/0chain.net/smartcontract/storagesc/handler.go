@@ -761,12 +761,14 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	}
 
 	// return "200" with empty list, if no challenges are found
-	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	blobberChallenges := &BlobberChallenges{
+		BlobberID:    blobberID,
+		ChallengeIDs: []string{},
+	}
+	err := blobberChallenges.load(balances, ssc.ID)
 	switch err {
 	case nil, util.ErrValueNotPresent:
-		return blobberChallengeObj, nil
+		return blobberChallenges, nil
 	default:
 		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
 	}
@@ -789,17 +791,17 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 		}
 	}()
 	blobberID := params.Get("blobber")
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = blobberID
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
+	blobberChallenges := &BlobberChallenges{}
+	blobberChallenges.BlobberID = blobberID
+	blobberChallenges.ChallengeIDs = []string{}
 
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	err := balances.GetTrieNode(blobberChallenges.GetKey(ssc.ID), blobberChallenges)
 	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
 	}
 
 	challengeID := params.Get("challenge")
-	if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
+	if _, ok := blobberChallenges.ChallengeIDMap[challengeID]; !ok {
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 

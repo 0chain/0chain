@@ -278,30 +278,30 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	state, clean := prepareMPTState(t)
 	defer clean()
 
-	_, err := partitions.CreateIfNotExists(state, ALL_BLOBBER_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
+	_, err := partitions.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	require.NoError(t, err)
 
-	p, err := getBlobberChallengePartitions(state)
+	p, err := partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
-	_, err = p.AddItem(state, &BlobberChallengeNode{BlobberID: "blobber_id_1"})
+	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
 	require.NoError(t, err)
 	err = p.Save(state)
 	require.NoError(t, err)
 
-	p, err = getBlobberChallengePartitions(state)
+	p, err = partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 	s, err := p.Size(state)
 	require.NoError(t, err)
 	require.Equal(t, 1, s)
 
-	_, err = p.AddItem(state, &BlobberChallengeNode{BlobberID: "blobber_id_2"})
+	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_2"})
 	require.NoError(t, err)
 
 	err = p.Save(state)
 	require.NoError(t, err)
 
-	p, err = getBlobberChallengePartitions(state)
+	p, err = partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
 	s, err = p.Size(state)

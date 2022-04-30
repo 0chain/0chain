@@ -433,14 +433,17 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 				storageChall, err := ssc.getStorageChallenge(challID, balances)
 				require.NoError(b, err)
-				blobberChall, err := ssc.getBlobberChallenge(blobberID, balances)
-				require.NoError(b, err)
 				allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 				require.NoError(b, err)
-				blobberAllocChall, ok := alloc.BlobberAllocsMap[blobberID]
-				require.True(b, ok)
+				blobberChall, err := ssc.getBlobberChallenges(blobberID, balances)
+				require.NoError(b, err)
 
-				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, allocChall, blobberAllocChall, balances)
+				err = ssc.addChallenge(
+					alloc,
+					storageChall,
+					allocChall,
+					blobberChall,
+					balances)
 
 				require.NoError(b, err)
 
