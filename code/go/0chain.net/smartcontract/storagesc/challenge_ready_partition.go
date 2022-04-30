@@ -11,8 +11,8 @@ const allChallengeReadyBlobbersPartitionSize = 50
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-// This is a partition that will only records the ids of blobbers that can be challenged.
-// Only after blobbers have received writemarkers/readmarkers it will be added to this partitions.
+// This is a partition that will only record the blobbers ids that are ready to be challenged.
+// Only after blobbers have received writemarkers/readmarkers will it be added to the partitions.
 func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions.Partitions, error) {
 	return partitions.GetPartitions(balances, ALL_CHALLENGE_READY_BLOBBERS_KEY)
 }

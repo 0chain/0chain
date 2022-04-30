@@ -116,22 +116,6 @@ func TestAddChallenge(t *testing.T) {
 			bID = bcItem.BlobberID
 		}
 
-		//selectedValidators := make([]*ValidationNode, 0, p.numValidators)
-		//var randSlice []ValidationPartitionNode
-		//err = validators.GetRandomItems(balances, r, &randSlice)
-		//require.NoError(t, err)
-
-		//perm := r.Perm(len(randSlice))
-		//for i := 0; i < len(randSlice); i++ {
-		//	if randSlice[perm[i]].Id != bID {
-		//		selectedValidators = append(selectedValidators,
-		//			&ValidationNode{
-		//				ID:      randSlice[perm[i]].Id,
-		//				BaseURL: randSlice[perm[i]].Url,
-		//			})
-		//	}
-		//}
-
 		allocID := encryption.Hash("allocation_id")
 
 		allocChallenges, err := ssc.getAllocationChallenges(allocID, balances)
@@ -182,18 +166,18 @@ func TestAddChallenge(t *testing.T) {
 				randomSeed:    1,
 			},
 		},
-		//{
-		//	name: "Error no blobbers",
-		//	parameters: parameters{
-		//		numBlobbers:   0,
-		//		numValidators: 6,
-		//		randomSeed:    1,
-		//	},
-		//	want: want{
-		//		error:    true,
-		//		errorMsg: "add_challenge: no blobber to add challenge to",
-		//	},
-		//},
+		{
+			name: "Error no blobbers",
+			parameters: parameters{
+				numBlobbers:   0,
+				numValidators: 6,
+				randomSeed:    1,
+			},
+			want: want{
+				error:    true,
+				errorMsg: "add_challenge: no blobber to add challenge to",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

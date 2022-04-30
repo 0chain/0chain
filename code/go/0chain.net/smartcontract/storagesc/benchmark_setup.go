@@ -164,7 +164,6 @@ func addMockAllocation(
 
 func AddMockChallenges(
 	blobbers []*StorageNode,
-	//validators []*ValidationNode,
 	balances cstate.StateContextI,
 ) {
 	numAllocations := viper.GetInt(sc.NumAllocations)

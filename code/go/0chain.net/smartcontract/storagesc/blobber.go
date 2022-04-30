@@ -718,6 +718,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
+	// the first time the allocation is added  to the blobber, created related resources
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
 		if err := sc.blobberAddAllocation(t, blobAlloc, balances); err != nil {
 			return "", common.NewErrorf("commit_connection_failed", err.Error())

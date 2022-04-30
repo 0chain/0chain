@@ -324,7 +324,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockChallenges(blobbers, validators, balances)
+		storagesc.AddMockChallenges(blobbers, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
