@@ -81,7 +81,7 @@ func (mn *MinerNode) GetNodePools(status string) map[string]*stakepool.DelegateP
 		return mn.Pools
 	}
 
-	var pools map[string]*stakepool.DelegatePool
+	var pools = make(map[string]*stakepool.DelegatePool)
 	for id, pool := range mn.Pools {
 		if pool.Status.String() == status {
 			pools[id] = pool
