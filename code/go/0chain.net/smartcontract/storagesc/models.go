@@ -195,7 +195,11 @@ type StorageChallenge struct {
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
-	return globalKey + "storage_challenge:" + sc.ID
+	return storageChallengeKey(globalKey, sc.ID)
+}
+
+func storageChallengeKey(globalKey, challengeID string) datastore.Key {
+	return globalKey + "storage_challenge:" + challengeID
 }
 
 // Save saves the storage challenge to MPT state

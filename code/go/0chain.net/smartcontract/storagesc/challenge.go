@@ -1020,12 +1020,18 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	_, err := alloc.removeExpiredChallenges(allocChallenges, blobChallenges, challenge.Created)
+	expiredIDs, err := alloc.removeExpiredChallenges(allocChallenges, blobChallenges, challenge.Created)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
 
-	// TODO: remove expired challenges node from MPT? maybe delete them periodically later
+	// TODO: maybe delete them periodically later instead of remove immediately
+	for _, id := range expiredIDs {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, id))
+		if err != nil {
+			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+		}
+	}
 
 	// add the generated challenge to the open challenges list in the allocation
 	if !allocChallenges.addChallenge(challenge) {
