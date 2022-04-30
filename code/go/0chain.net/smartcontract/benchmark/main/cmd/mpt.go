@@ -223,7 +223,6 @@ func setUpMpt(
 
 	var (
 		blobbers         []*storagesc.StorageNode
-		validators       []*storagesc.ValidationNode
 		miners, sharders []string
 	)
 
@@ -233,14 +232,6 @@ func setUpMpt(
 		timer = time.Now()
 		_ = storagesc.SetMockConfig(balances)
 		log.Println("created storage config\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		validators = storagesc.AddMockValidators(publicKeys, eventDb, balances)
-		log.Println("added validators\t", time.Since(timer))
 	}()
 
 	wg.Add(1)

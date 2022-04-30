@@ -564,11 +564,6 @@ func (bpl *blobberPartitionsLocations) load(state chainstate.StateContextI, scAd
 	return state.GetTrieNode(bpl.getKey(scAddress), bpl)
 }
 
-func (bpl *blobberPartitionsLocations) delete(state chainstate.StateContextI, scAddress string) error {
-	_, err := state.DeleteTrieNode(bpl.getKey(scAddress))
-	return err
-}
-
 func newBlobberAllocation(
 	size int64,
 	allocation *StorageAllocation,
