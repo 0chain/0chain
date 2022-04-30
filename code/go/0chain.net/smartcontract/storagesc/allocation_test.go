@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool"
@@ -1631,6 +1633,107 @@ func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	cp = new(StorageAllocation)
 	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
 	return
+}
+
+func TestRemoveBlobberAllocation(t *testing.T) {
+
+	type args struct {
+		numBlobbers         int
+		numAllocInChallenge int
+		removeBlobberID     string
+		allocationID        string
+	}
+
+	type want struct {
+		numBlobberChallenge              int
+		numAllocationChallengePerBlobber []int
+		err                              bool
+		errMsg                           string
+	}
+
+	setup := func(arg args) (*StorageSmartContract, chainState.StateContextI, string, string, int) {
+		var (
+			ssc           = newTestStorageSC()
+			balances      = newTestBalances(t, false)
+			removeID      = arg.removeBlobberID
+			allocationID  = arg.allocationID
+			allocationLoc int
+		)
+
+		bcpartition, err := getBlobbersChallengeList(balances)
+		require.NoError(t, err)
+
+		for i := 0; i < arg.numBlobbers; i++ {
+			blobberID := "blobber_" + strconv.Itoa(i)
+			blobLoc, err := bcpartition.AddItem(balances, &BlobberChallengeNode{BlobberID: blobberID})
+			require.NoError(t, err)
+
+			bcPartitionLoc, _ := ssc.getBlobberChallengePartitionLocation(blobberID, balances)
+			bcPartitionLoc.ID = blobberID
+			bcPartitionLoc.PartitionLocation = &partitions.PartitionLocation{Location: blobLoc}
+			_, err = balances.InsertTrieNode(bcPartitionLoc.GetKey(ssc.ID), bcPartitionLoc)
+			require.NoError(t, err)
+
+			bcAllocPartition, err := getBlobbersChallengeAllocationList(blobberID, balances)
+			require.NoError(t, err)
+			for j := 0; j < arg.numAllocInChallenge; j++ {
+				allocID := "allocation_" + strconv.Itoa(j)
+				loc, err := bcAllocPartition.AddItem(balances, &BlobberChallengeAllocationNode{ID: allocID})
+				require.NoError(t, err)
+				if blobberID == arg.removeBlobberID && allocationID == arg.allocationID {
+					allocationLoc = loc
+				}
+			}
+			err = bcAllocPartition.Save(balances)
+			require.NoError(t, err)
+		}
+
+		err = bcpartition.Save(balances)
+		require.NoError(t, err)
+
+		return ssc, balances, removeID, allocationID, allocationLoc
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "1_allocation_challenge",
+			args: args{
+				numBlobbers:         6,
+				numAllocInChallenge: 1,
+				removeBlobberID:     "blobber_0",
+				allocationID:        "allocation_0",
+			},
+			want: want{
+				numBlobberChallenge:              5,
+				numAllocationChallengePerBlobber: []int{1, 1, 1, 1, 1},
+				err:                              false,
+			},
+		},
+		{
+			name: "2_allocation_challenge",
+			args: args{
+				numBlobbers:         6,
+				numAllocInChallenge: 2,
+				removeBlobberID:     "blobber_0",
+				allocationID:        "allocation_0",
+			},
+			want: want{
+				numBlobberChallenge:              6,
+				numAllocationChallengePerBlobber: []int{1, 2, 2, 2, 2, 2},
+				err:                              false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		ssc, balances, removeBlobberID, allocationID, allocationPartitionLoc := setup(tt.args)
+		err := removeBlobberAllocation(removeBlobberID, allocationID, allocationPartitionLoc, ssc, balances)
+		require.NoError(t, err)
+	}
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
