@@ -227,13 +227,13 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
-	//blobberIDs, err := ssc.getBlobbersForRequest(request, balances)
+	blobberIDs, err := ssc.getBlobbersForRequest(request, balances)
 
 	if err != nil {
 		return "", err
 	}
 
-	return "blobberIDs", nil
+	return blobberIDs, nil
 }
 
 func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequest, balances cstate.StateContextI) ([]string, error) {
@@ -255,39 +255,39 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
-	// size of allocation for a blobber
-	var allocationSize = sa.bSize()
-	dur := common.ToTime(sa.Expiration).Sub(creationDate)
-	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
-		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		MaxOfferDuration:           dur,
-		ReadPriceRange: struct {
-			Min int64
-			Max int64
-		}{
-			Min: int64(request.ReadPriceRange.Min),
-			Max: int64(request.ReadPriceRange.Max),
-		},
-		WritePriceRange: struct {
-			Min int64
-			Max int64
-		}{
-			Min: int64(request.WritePriceRange.Min),
-			Max: int64(request.WritePriceRange.Max),
-		},
-		Size:              int(request.Size),
-		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.Blobbers,
-		NumberOfBlobbers:  numberOfBlobbers,
-	})
-	if err != nil || len(blobberIDs) == 0 {
-		return nil, fmt.Errorf("no blobbers found %v", err)
-	}
-
-	if len(blobberIDs) < numberOfBlobbers {
-		return nil, errors.New("not enough blobbers to honor the allocation")
-	}
-	return blobberIDs, nil
+	//// size of allocation for a blobber
+	//var allocationSize = sa.bSize()
+	//dur := common.ToTime(sa.Expiration).Sub(creationDate)
+	//blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
+	//	MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
+	//	MaxOfferDuration:           dur,
+	//	ReadPriceRange: struct {
+	//		Min int64
+	//		Max int64
+	//	}{
+	//		Min: int64(request.ReadPriceRange.Min),
+	//		Max: int64(request.ReadPriceRange.Max),
+	//	},
+	//	WritePriceRange: struct {
+	//		Min int64
+	//		Max int64
+	//	}{
+	//		Min: int64(request.WritePriceRange.Min),
+	//		Max: int64(request.WritePriceRange.Max),
+	//	},
+	//	Size:              int(request.Size),
+	//	AllocationSize:    allocationSize,
+	//	PreferredBlobbers: request.Blobbers,
+	//	NumberOfBlobbers:  numberOfBlobbers,
+	//})
+	//if err != nil || len(blobberIDs) == 0 {
+	//	return nil, fmt.Errorf("no blobbers found %v", err)
+	//}
+	//
+	//if len(blobberIDs) < numberOfBlobbers {
+	//	return nil, errors.New("not enough blobbers to honor the allocation")
+	//}
+	return []string{}, nil
 }
 
 // GetFreeAllocationBlobbersHandler returns list of all blobbers alive that match the free allocation request.
