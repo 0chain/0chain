@@ -257,10 +257,10 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
-	dur := common.ToTime(sa.Expiration).Sub(creationDate)
+	//dur := common.ToTime(sa.Expiration).Sub(creationDate)
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
 		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		MaxOfferDuration:           dur,
+		//MaxOfferDuration:           1000,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -275,10 +275,10 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 			Min: int64(request.WritePriceRange.Min),
 			Max: int64(request.WritePriceRange.Max),
 		},
-		Size:              int(request.Size),
-		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.Blobbers,
-		NumberOfBlobbers:  numberOfBlobbers,
+		Size:           int(request.Size),
+		AllocationSize: allocationSize,
+		//PreferredBlobbers: request.Blobbers,
+		NumberOfBlobbers: numberOfBlobbers,
 	})
 	if err != nil || len(blobberIDs) == 0 {
 		return nil, fmt.Errorf("no blobbers found %v", err)
