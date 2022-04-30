@@ -260,7 +260,7 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 	//dur := common.ToTime(sa.Expiration).Sub(creationDate)
 	blobberIDs, err := balances.GetEventDB().GetBlobbersFromParams(event.AllocationQuery{
 		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		//MaxOfferDuration:           1000,
+		MaxOfferDuration:           1000000,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
