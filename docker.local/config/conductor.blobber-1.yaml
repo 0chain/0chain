@@ -39,14 +39,20 @@ tests:
           name: 'build_test_blobbers'
           timeout: '10m'
       - set_monitor: "sharder-1"
-      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - cleanup_bc: {}
+      - wait_add:
+          sharders: ['sharder-1']
+          miners: ['miner-1', 'miner-2', 'miner-3']
+          start: true
       # - wait_round:
       #     round: 150 # just wait the BC starts
       - start: ['0dns']
       #wait the 0dns starts
       - command:
           name: "sleep_20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          start: true
       # - wait_round:
       #     round: 250 # just wait the BC starts
       # - wait_add:
