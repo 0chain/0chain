@@ -227,13 +227,13 @@ func (ssc *StorageSmartContract) GetAllocationBlobbersHandler(
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
-	blobberIDs, err := ssc.getBlobbersForRequest(request, balances)
+	//blobberIDs, err := ssc.getBlobbersForRequest(request, balances)
 
 	if err != nil {
 		return "", err
 	}
 
-	return blobberIDs, nil
+	return "blobberIDs", nil
 }
 
 func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequest, balances cstate.StateContextI) ([]string, error) {
