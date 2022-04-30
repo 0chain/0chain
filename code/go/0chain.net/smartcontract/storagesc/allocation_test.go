@@ -1695,6 +1695,30 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 		return ssc, balances, removeID, allocationID, allocationLoc
 	}
 
+	validate := func(want want, balances chainState.StateContextI) {
+		bcPart, err := getBlobbersChallengeList(balances)
+		require.NoError(t, err)
+
+		bcPartSize, err := bcPart.Size(balances)
+		require.NoError(t, err)
+		require.Equal(t, bcPartSize, want.numBlobberChallenge)
+
+		for i, numAlloc := range want.numAllocationChallengePerBlobber {
+			blobber := "blobber_" + strconv.Itoa(i)
+			bcAllocChallenge, err := getBlobbersChallengeAllocationList(blobber, balances)
+			if numAlloc == 0 {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			bcAllocSize, err := bcAllocChallenge.Size(balances)
+			require.NoError(t, err)
+
+			require.Equal(t, numAlloc, bcAllocSize)
+		}
+
+	}
+
 	tests := []struct {
 		name string
 		args args
@@ -1710,7 +1734,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			},
 			want: want{
 				numBlobberChallenge:              5,
-				numAllocationChallengePerBlobber: []int{1, 1, 1, 1, 1},
+				numAllocationChallengePerBlobber: []int{0, 1, 1, 1, 1, 1},
 				err:                              false,
 			},
 		},
@@ -1734,6 +1758,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 		ssc, balances, removeBlobberID, allocationID, allocationPartitionLoc := setup(tt.args)
 		err := removeBlobberAllocation(removeBlobberID, allocationID, allocationPartitionLoc, ssc, balances)
 		require.NoError(t, err)
+		validate(tt.want, balances)
 	}
 }
 
