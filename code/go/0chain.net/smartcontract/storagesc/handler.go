@@ -280,11 +280,11 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	})
-	if err != nil {
-		return nil, fmt.Errorf("no blobbers found %v", err)
-	}
+	//if err != nil {
+	//	return nil, fmt.Errorf("no blobbers found %v", err)
+	//}
 
-	if len(blobberIDs) < numberOfBlobbers {
+	if err != nil || len(blobberIDs) < numberOfBlobbers {
 		return nil, errors.New("not enough blobbers to honor the allocation")
 	}
 	return blobberIDs, nil
