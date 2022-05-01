@@ -12,7 +12,7 @@ type WriteMarker struct {
 	gorm.Model
 
 	// foreign keys
-	// todo: as user(ID), allocation(ID) and transaction(ID) tables are created, enable it
+	// todo: as user(ID) tables are created, enable it
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
 	AllocationID  string `json:"allocation_id"`
