@@ -1,10 +1,8 @@
 package event
 
 import (
-	"0chain.net/core/logging"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/smartcontract/dbs"
@@ -165,7 +163,6 @@ type AllocationQuery struct {
 }
 
 func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
-	logging.Logger.Debug("get_blobbers_params", zap.Int64("max_offer_duration", allocation.MaxOfferDuration.Nanoseconds()))
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)

@@ -1089,7 +1089,7 @@ func (sa *StorageAllocation) validate(now time.Time,
 	if sa.Size < conf.MinAllocSize {
 		return errors.New("insufficient allocation size")
 	}
-	var dur = common.ToTime(sa.Expiration).Sub(now)
+	dur := common.ToTime(sa.Expiration).Sub(now)
 	if dur < conf.MinAllocDuration {
 		return errors.New("insufficient allocation duration")
 	}
