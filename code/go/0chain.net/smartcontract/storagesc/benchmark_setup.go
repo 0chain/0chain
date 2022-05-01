@@ -203,13 +203,20 @@ func AddMockChallenges(
 	blobAlloc := make(map[string]map[string]bool)
 
 	// adding blobber challenges and blobber challenge partition
+	blobbersMap := make(map[string]struct{})
 	for _, ch := range challenges {
+		if _, ok := blobbersMap[ch.BlobberID]; ok {
+			continue
+		}
+
 		loc, err := challengeReadyBlobbersPart.AddItem(balances, &ChallengeReadyBlobber{
 			BlobberID: ch.BlobberID,
 		})
 		if err != nil {
 			panic(err)
 		}
+
+		blobbersMap[ch.BlobberID] = struct{}{}
 
 		blobPartitionsLocations := &blobberPartitionsLocations{
 			ID:                         ch.BlobberID,

@@ -177,9 +177,10 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 }
 
 func (nar *newAllocationRequest) validate(conf *Config) error {
-	if nar.MaxChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("max challenge completion time exceeded")
-	}
+	// TODO: uncomment this when we start to validate max challenge completion time
+	//if nar.MaxChallengeCompletionTime > conf.MaxChallengeCompletionTime {
+	//	return errors.New("max challenge completion time exceeded")
+	//}
 
 	return nil
 }

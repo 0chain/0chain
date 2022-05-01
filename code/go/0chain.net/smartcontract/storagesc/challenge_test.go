@@ -76,7 +76,6 @@ func TestAddChallenge(t *testing.T) {
 		var blobberMap = make(map[string]*BlobberAllocation)
 
 		blobberAllocs := make([]*BlobberAllocation, 1)
-		//blobber := &StorageNode{ID: blobberID}
 		blobberAllocs[0] = &BlobberAllocation{
 			BlobberID:      blobberID,
 			AllocationRoot: "root " + blobberID,
