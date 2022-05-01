@@ -176,6 +176,14 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	return
 }
 
+func (nar *newAllocationRequest) validate(conf *Config) error {
+	if nar.MaxChallengeCompletionTime > conf.MaxChallengeCompletionTime {
+		return errors.New("max challenge completion time exceeded")
+	}
+
+	return nil
+}
+
 func (nar *newAllocationRequest) decode(b []byte) error {
 	return json.Unmarshal(b, nar)
 }
@@ -313,6 +321,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err = request.decode(input); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
+	}
+
+	if err := request.validate(conf); err != nil {
+		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	var sa = request.storageAllocation() // (set fields, including expiration)

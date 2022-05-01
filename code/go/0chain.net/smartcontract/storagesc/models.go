@@ -380,6 +380,10 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 		return errors.New("invalid blobber base url")
 	}
 
+	if sn.Terms.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
+		return errors.New("challenge completion time exceeded")
+	}
+
 	if err := sn.Geolocation.validate(); err != nil {
 		return err
 	}
