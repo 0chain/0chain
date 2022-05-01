@@ -406,10 +406,6 @@ func (sc *StorageSmartContract) selectBlobbers(
 
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
 
-	if err = sa.validate(creationDate, conf); err != nil {
-		return nil, 0, fmt.Errorf("invalid request: %v", err)
-	}
-
 	// number of blobbers required
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
