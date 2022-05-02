@@ -704,6 +704,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances c_state.StateContextI,
 ) (*challengeOutput, error) {
 
+	const maxBlobbersSelect = 5
+
+	var bcItem BlobberChallengeNode
+	var maxUsedCap int64
+
 	var blobberChallenges []BlobberChallengeNode
 	err := blobberChallengeList.GetRandomItems(balances, challRand, &blobberChallenges)
 	if err != nil {
@@ -711,10 +716,22 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge partition")
 	}
 
-	randomIndex := challRand.Intn(len(blobberChallenges))
-	bcItem := blobberChallenges[randomIndex]
-	Logger.Debug("generate_challenges", zap.Int("random index", randomIndex),
-		zap.String("blobber id", bcItem.BlobberID), zap.Int("blobber challenges", len(blobberChallenges)))
+	var blobbersSelected = make([]BlobberChallengeNode, 0, maxBlobbersSelect)
+	if len(blobberChallenges) <= maxBlobbersSelect {
+		blobbersSelected = blobberChallenges
+	} else {
+		for i := 0; i < maxBlobbersSelect; i++ {
+			randomIndex := challRand.Intn(len(blobberChallenges))
+			blobbersSelected = append(blobbersSelected, blobberChallenges[randomIndex])
+		}
+	}
+
+	for _, bc := range blobbersSelected {
+		if bc.UsedCapacity > maxUsedCap {
+			maxUsedCap = bc.UsedCapacity
+			bcItem = bc
+		}
+	}
 
 	blobberID := bcItem.BlobberID
 	if blobberID == "" {
@@ -735,7 +752,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition, %v", err)
 	}
 
-	randomIndex = challRand.Intn(len(bcAllocPartition))
+	randomIndex := challRand.Intn(len(bcAllocPartition))
 	bcAllocItem := bcAllocPartition[randomIndex]
 
 	allocID := bcAllocItem.ID

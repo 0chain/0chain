@@ -14,7 +14,8 @@ func getBlobbersChallengeList(balances state.StateContextI) (*partitions.Partiti
 }
 
 type BlobberChallengeNode struct {
-	BlobberID string `json:"blobber_id"`
+	BlobberID    string `json:"blobber_id"`
+	UsedCapacity int64  `json:"used_capacity"`
 }
 
 func (bc *BlobberChallengeNode) GetID() string {
