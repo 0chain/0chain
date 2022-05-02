@@ -1,6 +1,11 @@
 package minersc
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -10,33 +15,32 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"fmt"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
-	"math"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 type mockStateContext struct {
 	ctx                        cstate.StateContext
 	block                      *block.Block
-	store                      map[datastore.Key]util.Serializable
+	store                      map[datastore.Key]util.MPTSerializable
 	sharders                   []string
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                       { return }
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                      { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction                { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer             { return nil }
-func (sc *mockStateContext) Validate() error                                         { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme          { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)               { return }
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)   { return "", nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) { return 0, nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock            { return nil }
-
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
+func (sc *mockStateContext) Validate() error                                           { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
+func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (sc *mockStateContext) EmitError(error)                                           {}
+func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
@@ -59,11 +63,18 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-	return sc.store[key], nil
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	vv := sc.store[key]
+	d, err := vv.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
 }
@@ -118,15 +129,13 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 
 	if epochChangeRound {
 		require.InEpsilon(t, global.RewardRate, scYaml.rewardRate*(1.0-scYaml.rewardDeclineRate), errEpsilon)
-		require.InEpsilon(t, global.InterestRate, scYaml.interestRate*(1.0-scYaml.interestDeclineRate), errEpsilon)
 	} else {
-		require.EqualValues(t, global.InterestRate, scYaml.interestRate)
 		require.EqualValues(t, global.RewardRate, scYaml.rewardRate)
 	}
 
 	if viewChangeRound {
 		require.InEpsilon(t, int64(global.Minted),
-			int64(runtime.minted)+f.tokensEarned(EtBlockReward)+f.totalInterest(), errEpsilon)
+			int64(runtime.minted)+f.tokensEarned(EtBlockReward), errEpsilon)
 	} else {
 		require.InEpsilon(t, int64(global.Minted), int64(runtime.minted)+f.tokensEarned(EtBlockReward), errEpsilon)
 	}
@@ -137,78 +146,77 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 
 	var minerDelegateFees = make([]bool, len(f.minerDelegates))
 	var minerDelegateBr = make([]bool, len(f.minerDelegates))
-	var minerDelegateInt = make([]bool, len(f.minerDelegates))
 
 	sharderDelegatesFees := make([][]bool, len(f.sharderDelegates))
 	sharderDelegatesBr := make([][]bool, len(f.sharderDelegates))
-	sharderDelegatesInt := make([][]bool, len(f.sharderDelegates))
 	for i := range f.sharderDelegates {
 		sharderDelegatesFees[i] = make([]bool, len(f.sharderDelegates[i]))
 		sharderDelegatesBr[i] = make([]bool, len(f.sharderDelegates[i]))
-		sharderDelegatesInt[i] = make([]bool, len(f.sharderDelegates[i]))
+	}
+
+	isMinerID := func(id string) (bool, int) {
+		return id == ctx.GetBlock().MinerID, 0
+	}
+
+	isSharderID := func(id string) (bool, int) {
+		sharderIDs := ctx.GetBlockSharders(nil)
+		for i, s := range sharderIDs {
+			if s == id {
+				return true, i
+			}
+		}
+		return false, 0
 	}
 
 	for _, mint := range ctx.GetMints() {
 		require.EqualValues(t, minerScId, mint.Minter)
-		var wallet = strings.Split(mint.ToClientID, " ")
-		switch wallet[0] {
-		case sharderId:
-			{
-				index, err := strconv.Atoi(wallet[1])
-				require.NoError(t, err)
-				require.True(t, index/maxDelegates < len(f.sharderDelegates))
-				require.InDelta(t, f.sharderReward(t, EtBlockReward, index), int64(mint.Amount), errDelta)
-				sharderBr[index] = true
-				break
-			}
-		case minerId:
+		isMiner, _ := isMinerID(mint.ToClientID)
+		if isMiner {
 			require.InDelta(t, f.minerReward(EtBlockReward), int64(mint.Amount), errDelta)
 			minerBr = true
-			break
+			continue
+		}
+
+		isSharder, index := isSharderID(mint.ToClientID)
+		if isSharder {
+			require.True(t, index/maxDelegates < len(f.sharderDelegates))
+			require.InDelta(t, f.sharderReward(t, EtBlockReward, index), int64(mint.Amount), errDelta)
+			sharderBr[index] = true
+			continue
+		}
+
+		var wallet = strings.Split(mint.ToClientID, " ")
+		switch wallet[0] {
 		case delegateId:
-			{
-				index, err := strconv.Atoi(wallet[1])
-				require.NoError(t, err)
-				var node = index / maxDelegates
-				var delegate = index % maxDelegates
-				require.True(t, node < len(f.sharderDelegates)+1)
-				if node == 0 {
-					var blockReward = f.minerDelegateReward(t, EtBlockReward, delegate)
-					require.True(t, delegate < len(f.minerDelegates))
-					if viewChangeRound {
-						var interest = f.minerDelegateInterest(delegate)
-						if errDelta > math.Abs(float64(interest)-float64(mint.Amount)) {
-							require.False(t, minerDelegateInt[delegate])
-							minerDelegateInt[delegate] = true
-						} else {
-							require.False(t, minerDelegateBr[delegate])
-							require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
-							minerDelegateBr[delegate] = true
-						}
-					} else {
-						require.False(t, minerDelegateBr[delegate])
-						require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
-						minerDelegateBr[delegate] = true
-					}
+			index, err := strconv.Atoi(wallet[1])
+			require.NoError(t, err)
+			var node = index / maxDelegates
+			var delegate = index % maxDelegates
+			require.True(t, node < len(f.sharderDelegates)+1)
+			if node == 0 {
+				var blockReward = f.minerDelegateReward(t, EtBlockReward, delegate)
+				require.True(t, delegate < len(f.minerDelegates))
+				if viewChangeRound {
+					require.False(t, minerDelegateBr[delegate])
+					require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
+					minerDelegateBr[delegate] = true
 				} else {
-					node--
-					var blockReward = f.sharderDelegateReward(t, EtBlockReward, delegate, node)
-					if viewChangeRound {
-						var interest = f.sharderDelegateInterest(delegate, node)
-						if errDelta > math.Abs(float64(interest)-float64(mint.Amount)) {
-							require.False(t, sharderDelegatesInt[node][delegate])
-							sharderDelegatesInt[node][delegate] = true
-						} else {
-							require.False(t, sharderDelegatesBr[node][delegate])
-							require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
-							sharderDelegatesBr[node][delegate] = true
-						}
-					} else {
-						require.False(t, sharderDelegatesBr[node][delegate])
-						require.True(t, delegate < len(f.sharderDelegates[node]))
-						require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
-						sharderDelegatesBr[node][delegate] = true
-					}
+					require.False(t, minerDelegateBr[delegate])
+					require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
+					minerDelegateBr[delegate] = true
+				}
+			} else {
+				node--
+				var blockReward = f.sharderDelegateReward(t, EtBlockReward, delegate, node)
+				if viewChangeRound {
+					require.False(t, sharderDelegatesBr[node][delegate])
+					require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
+					sharderDelegatesBr[node][delegate] = true
+				} else {
+					require.False(t, sharderDelegatesBr[node][delegate])
+					require.True(t, delegate < len(f.sharderDelegates[node]))
+					require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
+					sharderDelegatesBr[node][delegate] = true
 				}
 			}
 		default:
@@ -218,22 +226,22 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 
 	for _, transfer := range ctx.GetTransfers() {
 		require.EqualValues(t, minerScId, transfer.ClientID)
-		var wallet = strings.Split(transfer.ToClientID, " ")
-		switch wallet[0] {
-		case sharderId:
-			{
-				index, err := strconv.Atoi(wallet[1])
-				require.NoError(t, err)
-				require.True(t, index/maxDelegates < len(f.sharderDelegates))
-				require.False(t, sharderFees[index])
-				require.InDelta(t, f.sharderReward(t, EtFees, index), int64(transfer.Amount), errDelta)
-				sharderFees[index] = true
-				break
-			}
-		case minerId:
+		if isMiner, _ := isMinerID(transfer.ToClientID); isMiner {
 			require.InDelta(t, f.minerReward(EtFees), int64(transfer.Amount), errDelta)
 			minerFees = true
-			break
+			continue
+		}
+
+		if isSharder, index := isSharderID(transfer.ToClientID); isSharder {
+			require.True(t, index/maxDelegates < len(f.sharderDelegates))
+			require.False(t, sharderFees[index])
+			require.InDelta(t, f.sharderReward(t, EtFees, index), int64(transfer.Amount), errDelta)
+			sharderFees[index] = true
+			continue
+		}
+
+		var wallet = strings.Split(transfer.ToClientID, " ")
+		switch wallet[0] {
 		case delegateId:
 			{
 				index, err := strconv.Atoi(wallet[1])
@@ -266,9 +274,6 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 	for i := range minerDelegateFees {
 		require.True(t, minerDelegateFees[i])
 		require.True(t, minerDelegateBr[i])
-		if viewChangeRound {
-			require.True(t, minerDelegateInt[i])
-		}
 	}
 	for i := range sharderFees {
 		require.True(t, sharderFees[i])
@@ -278,9 +283,6 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 		for j := range sharderDelegatesFees[i] {
 			require.True(t, sharderDelegatesFees[i][j])
 			require.True(t, sharderDelegatesBr[i][j])
-			if viewChangeRound {
-				require.True(t, sharderDelegatesInt[i][j])
-			}
 		}
 	}
 }
@@ -392,32 +394,4 @@ func (f formulae) sharderDelegateReward(t *testing.T, et EarningsType, delegateI
 	var sharderReward = float64(f.sharderReward(t, et, sharderId))
 
 	return int64((sharderRevenue - sharderReward) * ratio)
-}
-
-func (f formulae) minerDelegateInterest(delegateId int) int64 {
-	var investment = float64(zcnToBalance(float64(f.minerDelegates[delegateId])))
-	var interestRate = f.sc.interestRate
-
-	return int64(investment * interestRate)
-}
-
-func (f formulae) sharderDelegateInterest(delegateId, sharderId int) int64 {
-	var investment = float64(zcnToBalance(float64(f.sharderDelegates[sharderId][delegateId])))
-	var interestRate = f.sc.interestRate
-
-	return int64(investment * interestRate)
-}
-
-func (f formulae) totalInterest() int64 {
-	var totalInterest = 0.0
-	for md := range f.minerDelegates {
-		totalInterest += float64(f.minerDelegateInterest(md))
-	}
-	for s := range f.sharderDelegates {
-		for d := range f.sharderDelegates[s] {
-			totalInterest += float64(f.sharderDelegateInterest(d, s))
-		}
-	}
-
-	return int64(totalInterest)
 }

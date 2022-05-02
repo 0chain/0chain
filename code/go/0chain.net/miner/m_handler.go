@@ -11,18 +11,14 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-
 	"go.uber.org/zap"
 )
 
 var (
-	// RoundStartSender - Start a new round.
-	RoundStartSender node.EntitySendHandler
 	// RoundVRFSender - Send the round vrf.
 	RoundVRFSender node.EntitySendHandler
 	// VerifyBlockSender - Send the block to a node.
@@ -36,14 +32,9 @@ var (
 	MinerNotarizedBlockSender node.EntitySendHandler
 	// DKGShareSender - Send dkg share to a node
 	DKGShareSender node.EntityRequestor
-	// ChainStartSender - Send whether or not to start chain
-	ChainStartSender node.EntityRequestor
 	// MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized
 	// block to a node.
 	MinerLatestFinalizedBlockRequestor node.EntityRequestor
-	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
-	// magic block to a node.
-	BlockRequestor node.EntityRequestor
 )
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
@@ -64,47 +55,90 @@ func SetupM2MSenders() {
 
 }
 
-/*SetupM2MReceivers - setup receivers for miner to miner communication */
-func SetupM2MReceivers() {
-	http.HandleFunc("/v1/_m2m/round/vrf_share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/verify", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
-	http.HandleFunc("/v1/_m2m/block/verification_ticket", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/notarization", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/notarized_block", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil)))
+const (
+	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf_share"
+)
+
+func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	reqRespHandlerfMap := map[string]common.ReqRespHandlerf{
+		vrfsShareRoundM2MV1Pattern: node.ToN2NReceiveEntityHandler(
+			VRFShareHandler,
+			nil,
+		),
+		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				VerificationTicketReceiptHandler,
+				nil,
+			),
+		),
+		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
+			memorystore.WithConnectionEntityJSONHandler(
+				VerifyBlockHandler,
+				datastore.GetEntityMetadata("block")),
+			nil,
+		),
+		"/v1/_m2m/block/notarization": node.ToN2NReceiveEntityHandler(
+			NotarizationReceiptHandler,
+			nil,
+		),
+		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
+			NotarizedBlockHandler,
+			nil,
+		),
+	}
+
+	handlersMap := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range reqRespHandlerfMap {
+		handlersMap[pattern] = common.N2NRateLimit(handler)
+	}
+	return handlersMap
 }
 
-/*SetupX2MResponders - setup responders */
-func SetupX2MResponders() {
-	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
-	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
+const (
+	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized_block/get"
+)
 
-	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
-	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NSendEntityHandler(SignShareRequestHandler)))
-	http.HandleFunc("/v1/_m2m/chain/start", common.N2NRateLimit(node.ToN2NSendEntityHandler(StartChainRequestHandler)))
+func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
+	sendHandlerMap := map[string]common.JSONResponderF{
+		getNotarizedBlockX2MV1Pattern: NotarizedBlockSendHandler,
+		"/v1/_x2m/state/get":          PartialStateHandler,
+		"/v1/_m2m/dkg/share":          SignShareRequestHandler,
+		"/v1/_m2m/chain/start":        StartChainRequestHandler,
+	}
+
+	x2mRespMap := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range sendHandlerMap {
+		x2mRespMap[pattern] = common.N2NRateLimit(
+			node.ToN2NSendEntityHandler(
+				handler,
+			),
+		)
+	}
+	return x2mRespMap
+}
+
+func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlers {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
 func SetupM2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
-
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
-	BlockRequestor = node.RequestEntityHandler("/v1/block/get", options, blockEntityMetadata)
 }
 
 func SetupM2MRequestors() {
 	dkgShareEntityMetadata := datastore.GetEntityMetadata("dkg_share")
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
-
-	chainStartEntityMetadata := datastore.GetEntityMetadata("start_chain")
-	ChainStartSender = node.RequestEntityHandler("/v1/_m2m/chain/start", options, chainStartEntityMetadata)
 }
 
 // VRFShareHandler - handle the vrf share.
 func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
-
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {
 		logging.Logger.Info("VRFShare: returning invalid Entity")
@@ -121,11 +155,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		lfb   = mc.GetLatestFinalizedBlock()
 		bound = tk.Round
 	)
+
 	if lfb.Round < tk.Round {
 		bound = lfb.Round // use lower one
 	}
 	if vrfs.GetRoundNumber() < bound {
-		logging.Logger.Info("Rejecting VRFShare: old round",
+		logging.Logger.Info("Reject VRFShare: old round",
 			zap.Int64("vrfs_round", vrfs.GetRoundNumber()),
 			zap.Int64("lfb_ticket_round", tk.Round),
 			zap.Int64("lfb_round", lfb.Round),
@@ -137,12 +172,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	if vrfs.Round < mc.GetCurrentRound() {
 		var mr = mc.GetMinerRound(vrfs.Round)
 		if mr == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing miner round",
+			logging.Logger.Info("Reject VRFShare: missing miner round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 		if mr.Block == nil || !mr.Block.IsBlockNotarized() {
-			logging.Logger.Info("Rejecting VRFShare: missing HNB for the round"+
+			logging.Logger.Info("Reject VRFShare: missing HNB for the round"+
 				" or it's not notarized",
 				zap.Bool("is_not_notarized", mr.Block != nil),
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
@@ -150,8 +185,8 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		}
 		// var hnb = mr.GetHeaviestNotarizedBlock()
 		var hnb = mr.Block
-		if hnb.GetStateStatus() != block.StateSuccessful {
-			logging.Logger.Info("Rejecting VRFShare: HNB state is not successful",
+		if hnb.GetStateStatus() != block.StateSuccessful && hnb.GetStateStatus() != block.StateSynched {
+			logging.Logger.Info("Reject VRFShare: HNB state is not successful",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 				zap.String("hash", hnb.Hash))
 			return nil, nil
@@ -161,12 +196,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			party = node.GetSender(ctx)
 		)
 		if mb == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing MB for the round",
+			logging.Logger.Info("Reject VRFShare: missing MB for the round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 		if party == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing party",
+			logging.Logger.Info("Reject VRFShare: missing party",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
@@ -178,28 +213,57 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			}
 		}
 		if found == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing party in MB",
+			logging.Logger.Info("Reject VRFShare: missing party in MB",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 
-		// send verify block message, then send notarized block
+		if err := node.ValidateSenderSignature(ctx); err != nil {
+			return nil, err
+		}
+
+		// send notarized block
 		go func() {
-			mb.Miners.SendTo(VerifyBlockSender(hnb), found.ID)
-			mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
+			if _, err := mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID); err != nil {
+				logging.Logger.Error("send notarized block failed", zap.Error(err))
+			}
 		}()
 
-		logging.Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
+		logging.Logger.Info("Reject VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 			zap.String("to_miner_id", found.ID),
 			zap.String("to_miner_url", found.GetN2NURLBase()))
 		return nil, nil
 	}
 
-	var msg = NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
-	vrfs.SetParty(msg.Sender)
+	sender := node.GetSender(ctx)
+	vrfs.SetParty(sender)
+	if mr := mc.GetMinerRound(vrfs.Round); mr != nil {
+		if mr.IsVRFComplete() {
+			logging.Logger.Info("Reject VRFShare: VRF is complete for this round",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+				zap.Int("vrfs_sender_index", sender.SetIndex),
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+
+		if mr.VRFShareExist(vrfs) {
+			logging.Logger.Info("Reject VRFShare: VRF is already exist",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+				zap.Int("vrfs_sender_index", sender.SetIndex),
+				zap.String("vrfs_id", vrfs.GetKey()),
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+	}
+
+	if err := node.ValidateSenderSignature(ctx); err != nil {
+		return nil, err
+	}
+
+	var msg = NewBlockMessage(MessageVRFShare, sender, nil, nil)
 	msg.VRFShare = vrfs
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -212,25 +276,78 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 
-	var mc = GetMinerChain()
+	mc := GetMinerChain()
+
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return nil, nil
 	}
+
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {
-		logging.Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
+		logging.Logger.Debug("handle verify block", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
 
-	var err error
-	if err = b.Validate(ctx); err != nil {
-		logging.Logger.Debug("verify block handler -- can't validate",
-			zap.Int64("round", b.Round), zap.Error(err))
+	var pr = mc.GetMinerRound(b.Round - 1)
+	if pr == nil {
+		logging.Logger.Error("handle verify block -- no previous round (ignore)",
+			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
+		return nil, nil
+	}
+
+	if b.Round < mc.GetCurrentRound()-1 {
+		logging.Logger.Debug("verify block - round mismatch",
+			zap.Int64("current_round", mc.GetCurrentRound()),
+			zap.Int64("block_round", b.Round))
+		return nil, nil
+	}
+
+	//if mr := mc.getOrCreateRound(ctx, b.Round); mr != nil {
+	if mr := mc.GetMinerRound(b.Round); mr != nil {
+		//use proposed blocks as current block cache, since we store blocks there before they are added to the round
+		if mr.IsVerificationComplete() {
+			logging.Logger.Debug("handle verify block - received block for round with finished verification phase")
+			return nil, nil
+		}
+		for _, blocks := range mr.GetProposedBlocks() {
+			if blocks.Hash == b.Hash {
+				logging.Logger.Debug("handle verify block - block already received, ignore",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash))
+				return nil, nil
+			}
+		}
+	}
+
+	// return if the block already in local chain and its previous block is notarized
+	_, err := mc.GetBlock(ctx, b.Hash)
+	if err == nil { // block already exist in local chain
+		// check if previous block exist and is notarized
+		pb, err := mc.GetBlock(ctx, b.PrevHash)
+		if err == nil && pb != nil && pb.IsBlockNotarized() {
+			logging.Logger.Debug("handle verify block - block already exist, ignore",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+			return nil, nil
+		}
+	}
+
+	//cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	//defer cancel()
+	//if err := mc.isVRFComplete(cctx, b.Round, b.GetRoundRandomSeed()); err != nil {
+	//	logging.Logger.Debug("handle verify block - vrf not complete yet",
+	//		zap.Int64("round", b.Round),
+	//		zap.String("block", b.Hash),
+	//		zap.Error(err))
+	//	return nil, nil
+	//}
+
+	if err := node.ValidateSenderSignature(ctx); err != nil {
 		return nil, err
 	}
 
 	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -240,17 +357,60 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
+
+	var (
+		rn = bvt.Round
+		mc = GetMinerChain()
+	)
+
+	logging.Logger.Debug("handle vt. msg - verification ticket",
+		zap.Int64("round", bvt.Round),
+		zap.String("block", bvt.BlockID))
+
+	if mc.GetMinerRound(rn-1) == nil {
+		logging.Logger.Error("handle vt. msg -- no previous round (ignore)",
+			zap.Int64("round", rn), zap.Int64("pr", rn-1))
+		return nil, nil
+	}
+
+	b, err := mc.GetBlock(ctx, bvt.BlockID)
+	if err == nil {
+		var lfb = mc.GetLatestFinalizedBlock()
+		if b.Round < lfb.Round {
+			logging.Logger.Debug("verification message (round mismatch)",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.Int64("lfb", lfb.Round))
+			return nil, nil
+		}
+	}
+
+	var mr = mc.getOrCreateRound(ctx, rn)
+	if mr == nil {
+		logging.Logger.Error("handle vt. msg -- can't create round for ticket",
+			zap.Int64("round", rn))
+		return nil, nil
+	}
+
+	// check if the ticket has already verified
+	if mr.IsTicketCollected(&bvt.VerificationTicket) {
+		logging.Logger.Debug("handle vt. msg -- ticket already collected",
+			zap.Int64("round", rn), zap.String("block", bvt.BlockID))
+		return nil, nil
+	}
+
+	if err := node.ValidateSenderSignature(ctx); err != nil {
+		return nil, err
+	}
+
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
-	GetMinerChain().GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
-// NotarizationReceiptHandler - handles the receipt of a notarization
+// notarizationReceiptHandler - handles the receipt of a notarization
 // for a block.
-func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
-	interface{}, error) {
-
+func notarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	var notarization, ok = entity.(*Notarization)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
@@ -268,9 +428,22 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
+	b, _ := mc.GetBlock(ctx, notarization.BlockID)
+	if b != nil && b.IsBlockNotarized() && b.IsStateComputed() {
+		return nil, nil
+	}
+
+	if mc.isNotarizing(notarization.BlockID) {
+		return nil, nil
+	}
+
+	if err := node.ValidateSenderSignature(ctx); err != nil {
+		return nil, err
+	}
+
 	var msg = NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -278,98 +451,72 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	resp interface{}, err error) {
 
-	var b, ok = entity.(*block.Block)
+	var nb, ok = entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 
-	var mc = GetMinerChain()
-	if b.Round < mc.GetCurrentRound()-1 {
+	mc := GetMinerChain()
+
+	//reject cur_round -2 is a locked round, there can't be new notarization important for us
+	if nb.Round < mc.GetCurrentRound()-1 {
 		logging.Logger.Debug("notarized block handler (round older than the current round)",
-			zap.String("block", b.Hash), zap.Any("round", b.Round))
+			zap.String("block", nb.Hash), zap.Any("round", nb.Round))
 		return
 	}
 
-	var r = mc.getOrStartRoundNotAhead(ctx, b.Round)
-	if r == nil {
-		if mc.isAheadOfSharders(ctx, b.Round) {
-			logging.Logger.Debug("notarized block handler -- is ahead or no pr",
-				zap.String("block", b.Hash), zap.Any("round", b.Round),
-				zap.Bool("has_pr", mc.GetMinerRound(b.Round-1) != nil))
-			return
-		}
-		return // can't handle yet
-	}
-
-	if r.IsFinalizing() || r.IsFinalized() {
-		return // doesn't need a not. block
-	}
-
 	var lfb = mc.GetLatestFinalizedBlock()
-	if b.Round <= lfb.Round {
-		return nil, nil // doesn't need the not. block
+	if nb.Round <= lfb.Round {
+		return // doesn't need the not. block
 	}
 
-	if mc.GetMinerRound(b.Round-1) == nil {
+	//TODO in case there is no previous round create it, since notarization can't be rejected
+	if mc.GetMinerRound(nb.Round-1) == nil {
 		logging.Logger.Error("not. block handler -- no previous round (ignore)",
-			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		return nil, nil // no previous round
+			zap.Int64("round", nb.Round), zap.Int64("prev_round", nb.Round-1))
+		return // no previous round
 	}
 
-	if err := mc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
-		r.GetRoundNumber()); err != nil {
-		return nil, err
+	//this check is not correct, we won't transit to the new round, but should save notarization block
+	//if mc.isAheadOfSharders(ctx, nb.Round) {
+	//	return
+	//}
+
+	mr := mc.GetMinerRound(nb.Round)
+	if mr != nil {
+		if mr.IsFinalizing() || mr.IsFinalized() {
+			return // doesn't need a not. block
+		}
+
+		//it does not matter, we should add notarization even for complete round
+		//if mr.IsVerificationComplete() {
+		//	return // verification for the round complete
+		//}
+
+		for _, blk := range mr.GetNotarizedBlocks() {
+			if blk.Hash == nb.Hash {
+				return // already have
+			}
+		}
 	}
 
-	if r.GetRandomSeed() == 0 {
-		mc.SetRandomSeed(r, b.GetRoundRandomSeed())
+	if err = node.ValidateSenderSignature(ctx); err != nil {
+		return
 	}
 
 	var msg = &BlockMessage{
 		Sender: node.GetSender(ctx),
 		Type:   MessageNotarizedBlock,
-		Block:  b,
+		Block:  nb,
 	}
-	mc.GetBlockMessageChannel() <- msg
+
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
-// NotarizedBlockSendHandler - handles a request for a notarized block.
-func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// notarizedBlockSendHandler - handles a request for a notarized block.
+func notarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return getNotarizedBlock(ctx, r)
-}
-
-// BlockStateChangeHandler - provide the state changes associated with a block.
-func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-
-	var b, err = getNotarizedBlock(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-
-	if b.GetStateStatus() != block.StateSuccessful {
-		return nil, common.NewError("state_not_verified",
-			"state is not computed and validated locally")
-	}
-
-	var bsc = block.NewBlockStateChange(b)
-	if state.Debug() {
-		logging.Logger.Info("block state change handler", zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())),
-			zap.Int("sc_nodes", len(bsc.Nodes)))
-	}
-
-	//if len(bsc.Nodes) == 0 {
-	//	logging.Logger.Debug("get state changes - no changes", zap.Int64("round", b.Round))
-	if bsc.GetRoot() == nil {
-		cr := GetMinerChain().GetCurrentRound()
-		logging.Logger.Debug("get state changes - state nil root",
-			zap.Int64("round", b.Round),
-			zap.Int64("current_round", cr))
-	}
-
-	return bsc, nil
 }
 
 // PartialStateHandler - return the partial state from a given root.
@@ -395,11 +542,12 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 		hash = req.FormValue("block")
 
 		mc = GetMinerChain()
+		cr = mc.GetCurrentRound()
 	)
 
 	errBlockNotAvailable := common.NewError("block_not_available",
 		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
-			mc.GetCurrentRound(), r, hash))
+			cr, r, hash))
 
 	if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
@@ -418,7 +566,7 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 			"no block hash or round number is provided")
 	}
 
-	roundN, err := strconv.ParseInt(r, 10, 63)
+	roundN, err := strconv.ParseInt(r, 10, 64)
 	if err != nil {
 		return nil, err
 	}

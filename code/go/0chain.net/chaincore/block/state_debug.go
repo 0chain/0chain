@@ -29,7 +29,7 @@ func StateSanityCheck(ctx context.Context, b *Block) {
 	if !state.DebugBlock() {
 		return
 	}
-	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
+	if bytes.Equal(b.ClientStateHash, b.PrevBlock.ClientStateHash) {
 		return
 	}
 	if err := ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
@@ -41,8 +41,13 @@ func StateSanityCheck(ctx context.Context, b *Block) {
 }
 
 func validateStateChangesRoot(b *Block) error {
-	bsc := NewBlockStateChange(b)
-	if b.ClientStateHash != nil && (bsc.GetRoot() == nil || bytes.Compare(bsc.GetRoot().GetHashBytes(), b.ClientStateHash) != 0) {
+	bsc, err := NewBlockStateChange(b)
+	if err != nil {
+		return err
+	}
+
+	if b.ClientStateHash != nil && (bsc.GetRoot() == nil ||
+		!bytes.Equal(bsc.GetRoot().GetHashBytes(), b.ClientStateHash)) {
 		computedRoot := ""
 		if bsc.GetRoot() != nil {
 			computedRoot = bsc.GetRoot().GetHash()
@@ -63,8 +68,12 @@ func PrintStates(cstate util.MerklePatriciaTrieI, pstate util.MerklePatriciaTrie
 }
 
 func ValidateState(ctx context.Context, b *Block, priorRoot util.Key) error {
-	if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
-		changes := NewBlockStateChange(b)
+	if b.ClientState.GetChangeCount() > 0 {
+		changes, err := NewBlockStateChange(b)
+		if err != nil {
+			return err
+		}
+
 		stateRoot := changes.GetRoot()
 		if stateRoot == nil {
 			if StateOut != nil {
@@ -76,9 +85,10 @@ func ValidateState(ctx context.Context, b *Block, priorRoot util.Key) error {
 				logging.Logger.Error("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
 			}
 		}
-		if bytes.Compare(stateRoot.GetHashBytes(), b.ClientState.GetRoot()) != 0 {
+		if !bytes.Equal(stateRoot.GetHashBytes(), b.ClientState.GetRoot()) {
 			if StateOut != nil {
-				b.ClientState.GetChangeCollector().PrintChanges(StateOut)
+				_, changes, _, _ := b.ClientState.GetChanges()
+				util.PrintChanges(StateOut, changes)
 				b.ClientState.PrettyPrint(StateOut)
 			}
 			if state.DebugBlock() {
@@ -90,19 +100,17 @@ func ValidateState(ctx context.Context, b *Block, priorRoot util.Key) error {
 		if priorRoot == nil {
 			priorRoot = b.PrevBlock.ClientState.GetRoot()
 		}
-		err := changes.Validate(ctx)
+		err = changes.Validate(ctx)
 		if err != nil {
 			logging.Logger.Error("validate state - changes validate failure", zap.Error(err))
-			pstate := util.CloneMPT(b.ClientState)
-			pstate.SetRoot(priorRoot)
+			pstate := util.NewMerklePatriciaTrie(b.ClientState.GetNodeDB(), b.ClientState.GetVersion(), priorRoot)
 			PrintStates(b.ClientState, pstate)
 			return err
 		}
 		err = b.ClientState.Validate()
 		if err != nil {
 			logging.Logger.Error("validate state - client state validate failure", zap.Error(err))
-			pstate := util.CloneMPT(b.ClientState)
-			pstate.SetRoot(priorRoot)
+			pstate := util.NewMerklePatriciaTrie(b.ClientState.GetNodeDB(), b.ClientState.GetVersion(), priorRoot)
 			PrintStates(b.ClientState, pstate)
 			/*
 				if state.Debug() && stateOut != nil {

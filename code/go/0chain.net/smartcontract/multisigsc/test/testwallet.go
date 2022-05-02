@@ -41,6 +41,9 @@ func newTestWallet(id int, signatureScheme string, t, n int) testWallet {
 	groupClientID := clientIDForKey(groupKey)
 
 	signerKeys, err := encryption.GenerateThresholdKeyShares(signatureScheme, t, n, groupKey)
+	if err != nil {
+		panic(err)
+	}
 
 	var signerClientIDs []string
 	for _, key := range signerKeys {
@@ -211,7 +214,7 @@ func (t testWallet) getMPTWalletForSigner(signerClientID string) mptwallet.Walle
 	return mptwallet.Wallet{} // Never reached.
 }
 
-func (t testWallet) toWallet() multisigsc.Wallet {
+func (t testWallet) toWallet() multisigsc.Wallet { //nolint
 	var signerThresholdIDs []string
 	var signerPublicKeys []string
 

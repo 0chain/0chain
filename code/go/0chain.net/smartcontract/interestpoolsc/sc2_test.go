@@ -1,6 +1,11 @@
 package interestpoolsc
 
 import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -10,11 +15,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"encoding/json"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
-	"time"
 )
 
 type lockFlags struct {
@@ -262,15 +264,15 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,
 			nil,
 		),
 		clientStartBalance: zcnToBalance(startBalance),
-		store:              make(map[datastore.Key]util.Serializable),
+		store:              make(map[datastore.Key]util.MPTSerializable),
 	}
 	var globalNode = &GlobalNode{
 		ID: storageScId,
@@ -291,9 +293,12 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 	var response = &lockResponse{}
 	require.NoError(t, json.Unmarshal([]byte(output), response))
 
-	var newUserNode = isc.getUserNode(userNode.ClientID, ctx)
+	newUserNode, err := isc.getUserNode(userNode.ClientID, ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	return response, newUserNode, globalNode, err
+	return response, newUserNode, globalNode, nil
 }
 
 func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolStats *poolStat, now common.Timestamp) (
@@ -316,14 +321,14 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
 			nil,
 			nil,
+			nil,
 		),
-		store: make(map[datastore.Key]util.Serializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 	}
 
 	output, err := isc.unlock(txn, userNode, globalNode, input, ctx)
@@ -333,7 +338,8 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 
 	var response = &unlockResponse{}
 	require.NoError(t, json.Unmarshal([]byte(output), response))
-	var newUserNode = isc.getUserNode(userNode.ClientID, ctx)
+	newUserNode, err := isc.getUserNode(userNode.ClientID, ctx)
+	require.NoError(t, err)
 
 	var transfers = ctx.ctx.GetTransfers()
 	require.Len(t, transfers, 1)
@@ -346,24 +352,27 @@ const x10 = 10 * 1000 * 1000 * 1000
 type mockStateContext struct {
 	ctx                cstate.StateContext
 	clientStartBalance state.Balance
-	store              map[datastore.Key]util.Serializable
+	store              map[datastore.Key]util.MPTSerializable
 }
 
-func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block           { return nil }
-func (sc *mockStateContext) GetBlock() *block.Block                                { return nil }
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     { return }
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
-func (sc *mockStateContext) GetTransfers() []*state.Transfer                       { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer           { return nil }
-func (sc *mockStateContext) GetMints() []*state.Mint                               { return nil }
-func (sc *mockStateContext) Validate() error                                       { return nil }
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string              { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme        { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             { return }
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
-
+func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block               { return nil }
+func (sc *mockStateContext) GetBlock() *block.Block                                    { return nil }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
+func (sc *mockStateContext) GetTransfers() []*state.Transfer                           { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
+func (sc *mockStateContext) GetMints() []*state.Mint                                   { return nil }
+func (sc *mockStateContext) Validate() error                                           { return nil }
+func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string                  { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
+func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (sc *mockStateContext) EmitError(error)                                           {}
+func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {
 		return 0, util.ErrValueNotPresent
@@ -372,11 +381,22 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, er
 }
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
-func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-	return sc.store[key], nil
+func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	n, ok := sc.store[key]
+	if !ok {
+		return util.ErrValueNotPresent
+	}
+
+	b, err := n.MarshalMsg(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = v.UnmarshalMsg(b)
+	return err
 }
 
-func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
 }

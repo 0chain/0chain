@@ -1,8 +1,6 @@
 package common
 
 import (
-	"bytes"
-	"compress/zlib"
 	"reflect"
 	"testing"
 
@@ -235,9 +233,10 @@ func TestZStdCompDe_Compress(t *testing.T) {
 			zstd := &ZStdCompDe{
 				level: tt.fields.level,
 			}
-			if got := zstd.Compress(tt.args.data); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Compress() = %v, want %v", got, tt.want)
-			}
+			got, err := zstd.Compress(tt.args.data)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -538,51 +537,13 @@ func TestNewZLibCompDe(t *testing.T) {
 	}
 }
 
-func TestZLibCompDe_Compress(t *testing.T) {
-	t.Parallel()
-
-	data := []byte("data")
-	bf := bytes.NewBuffer(nil)
-	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
-	if _, err := w.Write(data); err != nil {
-		t.Error(err)
-	}
-	err := w.Close()
-	require.NoError(t, err)
-
-	type args struct {
-		data []byte
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "Test_ZLibCompDe_Compress_OK",
-			args: args{data: data},
-			want: bf.Bytes(),
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			zlibcd := &ZLibCompDe{}
-			if got := zlibcd.Compress(tt.args.data); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Compress() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestZLibCompDe_Decompress(t *testing.T) {
 	t.Parallel()
 
 	data := []byte("data")
 	cd := &ZLibCompDe{}
-	compData := cd.Compress(data)
+	compData, err := cd.Compress(data)
+	require.NoError(t, err)
 
 	// compressing with unknown dict
 	cDict, err := gozstd.NewCDict([]byte("abcde"))

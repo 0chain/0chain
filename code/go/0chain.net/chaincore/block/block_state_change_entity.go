@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -21,17 +22,21 @@ type StateChange struct {
 
 // NewBlockStateChange - if the block state computation is successfully
 // completed, provide the changes.
-func NewBlockStateChange(b *Block) *StateChange {
+func NewBlockStateChange(b *Block) (*StateChange, error) {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
-	bsc.Hash = b.ClientState.GetRoot()
-	changes := b.ClientState.GetChangeCollector().GetChanges()
+	var changes []*util.NodeChange
+	bsc.Hash, changes, _, bsc.StartRoot = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
 	}
-	bsc.ComputeProperties()
-	return bsc
+
+	if err := bsc.ComputeProperties(); err != nil {
+		return nil, err
+	}
+
+	return bsc, nil
 }
 
 var stateChangeEntityMetadata *datastore.EntityMetadataImpl
@@ -73,11 +78,19 @@ func SetupStateChange(store datastore.Store) {
 	datastore.RegisterEntityMetadata("block_state_change", stateChangeEntityMetadata)
 }
 
+func (sc *StateChange) GetChanges() []*util.NodeChange {
+	changes := make([]*util.NodeChange, len(sc.Nodes))
+	for idx, node := range sc.Nodes {
+		changes[idx] = &util.NodeChange{New: node}
+	}
+	return changes
+}
+
 //MarshalJSON - implement Marshaler interface
 func (sc *StateChange) MarshalJSON() ([]byte, error) {
 	var data = make(map[string]interface{})
 	data["block"] = sc.Block
-	return sc.MartialPartialState(data)
+	return sc.MarshalPartialStateJSON(data)
 }
 
 //UnmarshalJSON - implement Unmarshaler interface
@@ -97,5 +110,30 @@ func (sc *StateChange) UnmarshalJSON(data []byte) error {
 		logging.Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
-	return sc.UnmarshalPartialState(obj)
+	return sc.UnmarshalPartialStateJSON(obj)
+}
+
+func (sc *StateChange) MarshalMsgpack() ([]byte, error) {
+	var data = make(map[string]interface{})
+	data["block"] = sc.Block
+	return sc.MarshalPartialStateMsgpack(data)
+}
+
+func (sc *StateChange) UnmarshalMsgpack(data []byte) error {
+	var obj map[string]interface{}
+	err := msgpack.Unmarshal(data, &obj)
+	if err != nil {
+		logging.Logger.Error("unmarshal msgpack - state change", zap.Error(err))
+		return err
+	}
+	if block, ok := obj["block"]; ok {
+		if sc.Block, ok = block.(string); !ok {
+			logging.Logger.Error("unmarshal msgpack - invalid block hash", zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+	} else {
+		logging.Logger.Error("unmarshal msgpack - invalid block hash", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+	return sc.UnmarshalPartialStateMsgpack(obj)
 }

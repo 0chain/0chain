@@ -2,7 +2,9 @@ package sharder_test
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -35,58 +37,61 @@ func init() {
 }
 
 const (
-	roundDataDir    = "tmp/round"
-	blockDataDir    = "tmp/block"
-	roundSummaryDir = "tmp/roundSummary"
-	blockSummaryDir = "tmp/blockSummary"
+	roundDataDir    = "round"
+	blockDataDir    = "block"
+	roundSummaryDir = "roundSummary"
+	blockSummaryDir = "blockSummary"
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
-	cd, err := os.Getwd()
+	dbDir, err := ioutil.TempDir("", "dbs")
 	require.NoError(t, err)
 
-	err = os.RemoveAll(cd + "/tmp")
+	blockDir := filepath.Join(dbDir, blockDataDir)
 	require.NoError(t, err)
-	err = os.MkdirAll(blockDataDir, 0700)
-	require.NoError(t, err)
-
-	err = os.MkdirAll(roundDataDir, 0700)
+	err = os.MkdirAll(blockDir, 0700)
 	require.NoError(t, err)
 
-	err = os.MkdirAll(roundSummaryDir, 0700)
+	roundDir := filepath.Join(dbDir, roundDataDir)
+	err = os.MkdirAll(roundDir, 0700)
 	require.NoError(t, err)
 
-	err = os.MkdirAll(blockSummaryDir, 0700)
+	rsDir := filepath.Join(dbDir, roundSummaryDir)
+	err = os.MkdirAll(rsDir, 0700)
 	require.NoError(t, err)
 
-	rDB, err := ememorystore.CreateDB(roundDataDir)
+	bsDir := filepath.Join(dbDir, blockSummaryDir)
+	err = os.MkdirAll(bsDir, 0700)
+	require.NoError(t, err)
+
+	rDB, err := ememorystore.CreateDB(roundDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool(round.Provider().GetEntityMetadata().GetDB(), rDB)
 
-	bDB, err := ememorystore.CreateDB(blockDataDir)
+	bDB, err := ememorystore.CreateDB(blockDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool(block.Provider().GetEntityMetadata().GetDB(), bDB)
 
-	rsDB, err := ememorystore.CreateDB(roundSummaryDir)
+	rsDB, err := ememorystore.CreateDB(rsDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool("roundsummarydb", rsDB)
 
-	bsDB, err := ememorystore.CreateDB(blockSummaryDir)
+	bsDB, err := ememorystore.CreateDB(bsDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
 
 	closeAndClear = func() {
-		err = os.RemoveAll(cd + "/tmp")
-		require.NoError(t, err)
-
 		rDB.Close()
 		bDB.Close()
 		rsDB.Close()
 		bsDB.Close()
+
+		err = os.RemoveAll(dbDir)
+		require.NoError(t, err)
 	}
 
 	return
@@ -97,8 +102,9 @@ func makeTestChain(t *testing.T) *sharder.Chain {
 	if !ok {
 		t.Fatal("types missmatching")
 	}
+	conf := chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
+	ch.Config = conf
 	ch.Initialize()
-	ch.BlockSize = 1024
 	sharder.SetupSharderChain(ch)
 	chain.SetServerChain(ch)
 	return sharder.GetSharderChain()
@@ -212,7 +218,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.HashBlock()
-
+	makeTestChain(t)
 	sharder.GetSharderChain().AddBlock(b)
 
 	type fields struct {
@@ -318,7 +324,7 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 				BlockSyncStats: tt.fields.BlockSyncStats,
 				TieringStats:   tt.fields.TieringStats,
 			}
-			if err := sc.StoreBlockSummaryFromBlock(tt.args.ctx, tt.args.b); (err != nil) != tt.wantErr {
+			if err := sc.StoreBlockSummaryFromBlock(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummaryFromBlock() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

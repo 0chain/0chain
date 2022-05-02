@@ -1,5 +1,7 @@
 #!/bin/sh
 
+rm -rf docker.local/sql/*
+
 for i in $(seq 1 8)
 do
   echo "deleting miner$i logs"
@@ -13,7 +15,7 @@ do
   rm -rf docker.local/miner"$i"/data/rocksdb/state*
 done
 
-for i in $(seq 1 3)
+for i in $(seq 1 4)
 do
   echo "deleting sharder$i logs"
   rm -rf docker.local/sharder"$i"/log/*
@@ -21,9 +23,10 @@ do
   rm -rf docker.local/sharder"$i"/data/cassandra/*
   echo "deleting sharder$i rocksdb db"
   rm -rf docker.local/sharder"$i"/data/rocksdb/*
+    rm -rf docker.local/sharder"$i"/data/postgresql/*
 done
 
-for i in $(seq 1 3)
+for i in $(seq 1 4)
 do
   echo "deleting sharder$i blocks on the file system"
   rm -rf docker.local/sharder"$i"/data/blocks/*

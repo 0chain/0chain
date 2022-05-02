@@ -8,7 +8,7 @@ do
   mkdir -p docker.local/miner"$i"/log
 done
 
-for i in $(seq 1 3)
+for i in $(seq 1 4)
 do
   mkdir -p docker.local/sharder"$i"/data/blocks
   mkdir -p docker.local/sharder"$i"/data/rocksdb
@@ -16,4 +16,5 @@ do
   mkdir -p docker.local/sharder"$i"/config/cassandra
   cp config/cassandra/* docker.local/sharder"$i"/config/cassandra/.
   mkdir -p docker.local/sharder"$i"/log
+  mkdir -p docker.local/sharder"$i"/data/postgresql
 done

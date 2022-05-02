@@ -4,25 +4,26 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/core/memorystore"
 )
 
 const (
@@ -48,11 +49,17 @@ var (
 	ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
 
 	minerChain = &Chain{}
+
+	mcGuard sync.RWMutex
 )
 
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
+	mcGuard.Lock()
+	defer mcGuard.Unlock()
+
 	minerChain.Chain = c
+	minerChain.Config = c.Config
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
@@ -66,10 +73,24 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
+	minerChain.nbpMutex = &sync.Mutex{}
+	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
+	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
+	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
+	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
+	minerChain.notarizingBlocksTasks = make(map[string]chan struct{})
+	minerChain.notarizingBlocksResults = cache.NewLRUCache(1000)
+	minerChain.nbmMutex = &sync.Mutex{}
+	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
+	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
+	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
+	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
 }
 
 /*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
+	mcGuard.RLock()
+	defer mcGuard.RUnlock()
 	return minerChain
 }
 
@@ -119,14 +140,23 @@ type Chain struct {
 	// view change process control
 	viewChangeProcess
 
-	// not. blocks pulling joining at VC
-	pullingPin int64
-
 	// restart round event (rre)
 	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
 	restartRoundEventChannel             chan struct{}      // trigger rre
 	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
+	nbpMutex                             *sync.Mutex
+	notarizationBlockProcessMap          map[string]struct{}
+	notarizationBlockProcessC            chan *Notarization
+	blockVerifyC                         chan *block.Block
+	validateTxnsWithContext              *common.WithContextFunc
+	notarizingBlocksTasks                map[string]chan struct{}
+	notarizingBlocksResults              *cache.LRU
+	nbmMutex                             *sync.Mutex
+	verifyBlockNotarizationWorker        *common.WithContextFunc
+	mergeBlockVRFSharesWorker            *common.WithContextFunc
+	verifyCachedVRFSharesWorker          *common.WithContextFunc
+	generateBlockWorker                  *common.WithContextFunc
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
@@ -153,22 +183,21 @@ func (mc *Chain) unsubRestartRoundEvent(subq chan struct{}) {
 	}
 }
 
-func (mc *Chain) startPulling() (ok bool) {
-	return atomic.CompareAndSwapInt64(&mc.pullingPin, 0, 1)
-}
-
-func (mc *Chain) stopPulling() (ok bool) {
-	return atomic.CompareAndSwapInt64(&mc.pullingPin, 1, 0)
-}
-
 // SetDiscoverClients set the discover clients parameter
 func (mc *Chain) SetDiscoverClients(b bool) {
 	mc.discoverClients = b
 }
 
-// GetBlockMessageChannel - get the block messages channel.
-func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
-	return mc.blockMessageChannel
+// PushBlockMessageChannel pushes the block message to the process channel
+func (mc *Chain) PushBlockMessageChannel(bm *BlockMessage) {
+	go func() {
+		select {
+		case mc.blockMessageChannel <- bm:
+		case <-time.After(3 * time.Second):
+			logging.Logger.Warn("push block message to channel timeout",
+				zap.Any("message type", bm.Type))
+		}
+	}()
 }
 
 // SetupGenesisBlock - setup the genesis block for this chain.
@@ -193,6 +222,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(r.GetRoundNumber()))
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
+	mr.vrfSharesCache = newVRFSharesCache()
 	return &mr
 }
 
@@ -203,8 +233,16 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
-	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.AddNotarizedBlock(mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
+	if b.IsStateComputed() {
+		if err := mc.SaveChanges(ctx, b); err != nil {
+			logging.Logger.Error("set lfb save changes failed",
+				zap.Error(err),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+		}
+	}
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
@@ -218,7 +256,6 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 func (mc *Chain) SetPreviousBlock(r round.RoundI, b *block.Block, pb *block.Block) {
 	b.SetPreviousBlock(pb)
 	mc.SetRoundRank(r, b)
-	b.ComputeChainWeight()
 }
 
 // GetMinerRound - get the miner's version of the round.
@@ -235,7 +272,7 @@ func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 }
 
 // SaveClients - save clients from the block.
-func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
+func (mc *Chain) SaveClients(clients []*client.Client) error {
 	var err error
 	clientKeys := make([]datastore.Key, len(clients))
 	for idx, c := range clients {
@@ -243,7 +280,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	}
 	clientEntityMetadata := datastore.GetEntityMetadata("client")
 	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
 	defer memorystore.Close(ctx)
 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
 	if err != nil {
@@ -265,6 +302,9 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
 
 	var (
 		mb  = b.MagicBlock
@@ -299,7 +339,9 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
 
-	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
+	mc.SetLatestFinalizedMagicBlock(b)
+
+	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
 
 	// set DKG if this node is miner of new MB (it have to have the DKG)
@@ -311,6 +353,9 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	// this must be ok, if not -- return error
 	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+		logging.Logger.Error("view_change - set DKG failed",
+			zap.Int64("mb_starting_round", mb.StartingRound),
+			zap.Error(err))
 		return
 	}
 
@@ -337,37 +382,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	return
 }
 
-func (mc *Chain) ChainStarted(ctx context.Context) bool {
-	timer := time.NewTimer(time.Second)
-	timeoutCount := 0
-	for true {
-		select {
-		case <-ctx.Done():
-			return false
-		case <-timer.C:
-			var start int
-			var started int
-			mb := mc.GetCurrentMagicBlock()
-			for _, n := range mb.Miners.CopyNodesMap() {
-				mc.RequestStartChain(n, &start, &started)
-			}
-			if start >= mb.T {
-				return false
-			}
-			if started >= mb.T {
-				return true
-			}
-			if timeoutCount == 20 || mc.isStarted() {
-				return mc.isStarted()
-			}
-			timeoutCount++
-			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
-		}
-	}
-	return false
-}
-
-func StartChainRequestHandler(ctx context.Context, req *http.Request) (interface{}, error) {
+func StartChainRequestHandler(_ context.Context, req *http.Request) (interface{}, error) {
 	nodeID := req.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
 
@@ -391,37 +406,6 @@ func StartChainRequestHandler(ctx context.Context, req *http.Request) (interface
 	message.Start = !mc.isStarted()
 	message.ID = req.FormValue("round")
 	return message, nil
-}
-
-/*SendDKGShare sends the generated secShare to the given node */
-func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
-	if node.Self.Underlying().GetKey() == n.ID {
-		if !mc.isStarted() {
-			*start++
-		} else {
-			*started++
-		}
-		return nil
-	}
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		startChain, ok := entity.(*StartChain)
-		if !ok {
-			err := common.NewError("invalid object", fmt.Sprintf("entity: %v", entity))
-			logging.Logger.Error("failed to request start chain", zap.Any("error", err))
-			return nil, err
-		}
-		if startChain.Start {
-			*start++
-		} else {
-			*started++
-		}
-		return startChain, nil
-	}
-	params := &url.Values{}
-	params.Add("round", strconv.FormatInt(mc.GetCurrentRound(), 10))
-	ctx := common.GetRootContext()
-	n.RequestEntityFromNode(ctx, ChainStartSender, params, handler)
-	return nil
 }
 
 func (mc *Chain) SetStarted() {
@@ -465,4 +449,8 @@ func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	return mc.roundDkg.Put(dkg, startingRound)
+}
+
+func (mc *Chain) RejectNotarizedBlock(_ string) bool {
+	return false
 }

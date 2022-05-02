@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"sync"
+	"time"
 
 	"github.com/0chain/gorocksdb"
 
+	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -29,13 +31,17 @@ const (
 	SSTTypePlainTable      = 1
 )
 
+var (
+	PNodeDBCompression = gorocksdb.LZ4Compression
+)
+
 var sstType = SSTTypeBlockBasedTable
 
 /*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
+func NewPNodeDB(dataDir, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
-	opts.SetCompression(gorocksdb.LZ4Compression)
+	opts.SetCompression(PNodeDBCompression)
 	if sstType == SSTTypePlainTable {
 		opts.SetAllowMmapReads(true)
 		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
@@ -72,7 +78,7 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 	}
 	defer data.Free()
 	buf := data.Data()
-	if buf == nil || len(buf) == 0 {
+	if len(buf) == 0 {
 		return nil, ErrNodeNotFound
 	}
 	return CreateNode(bytes.NewReader(buf))
@@ -82,6 +88,12 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
 	err := pndb.db.Put(pndb.wo, key, data)
+	if DebugMPTNode {
+		logging.Logger.Debug("node put to PersistDB",
+			zap.String("key", ToHex(key)), zap.Error(err),
+			zap.Int64("Origin", int64(node.GetOrigin())),
+			zap.Int64("Version", int64(node.GetVersion())))
+	}
 	return err
 }
 
@@ -108,12 +120,26 @@ func (pndb *PNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
 
 /*MultiPutNode - implement interface */
 func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+	ts := time.Now()
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Destroy()
 	for idx, key := range keys {
 		wb.Put(key, nodes[idx].Encode())
+		if DebugMPTNode {
+			logging.Logger.Debug("multi node put to PersistDB",
+				zap.String("key", ToHex(key)),
+				zap.Int64("Origin", int64(nodes[idx].GetOrigin())),
+				zap.Int64("Version", int64(nodes[idx].GetVersion())))
+		}
 	}
-	return pndb.db.Write(pndb.wo, wb)
+	err := pndb.db.Write(pndb.wo, wb)
+	if err != nil {
+		logging.Logger.Debug("pnode save nodes failed",
+			zap.Int64("round", pndb.version),
+			zap.Any("duration", ts),
+			zap.Error(err))
+	}
+	return err
 }
 
 /*MultiDeleteNode - implement interface */
@@ -186,7 +212,11 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
 			if err != nil {
-				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+				Logger.Error("prune below origin - error deleting node",
+					zap.String("key", ToHex(key)),
+					zap.Any("old_version", node.GetVersion()),
+					zap.Any("new_version", version),
+					zap.Error(err))
 				return err
 			}
 		}

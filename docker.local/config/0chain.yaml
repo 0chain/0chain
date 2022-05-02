@@ -10,7 +10,7 @@ development:
   state: true
   dkg: true
   view_change: false
-  block_rewards: false
+  block_rewards: true
   smart_contract:
     storage: true
     faucet: true
@@ -19,6 +19,7 @@ development:
     miner: true
     multisig: true
     vesting: true
+    zcn: true
   txn_generation:
     wallets: 50
     max_transactions: 0
@@ -45,6 +46,7 @@ server_chain:
   block:
     min_block_size: 1
     max_block_size: 10
+    max_block_cost: 10000 #equal to 100ms
     max_byte_size: 1638400
     min_generators: 2
     generators_percent: 0.2
@@ -53,14 +55,14 @@ server_chain:
       timeout: 15
       retry_wait_time: 5 #milliseconds
     proposal:
-      max_wait_time: 180 # milliseconds
+      max_wait_time: 180ms
       wait_mode: static # static or dynamic
     consensus:
       threshold_by_count: 66 # percentage (registration)
       threshold_by_stake: 0 # percent
     sharding:
       min_active_sharders: 25 # percentage
-      min_active_replicators: 25 # percentage
+      min_active_replicators: 25 # percentageRF
     validation:
       batch_size: 1000
     reuse_txns: false
@@ -78,6 +80,15 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 30 # seconds
     min_fee: 0
+    exempt:
+      - add_miner
+      - miner_health_check
+      - add_sharder
+      - sharder_health_check
+      - contributeMpk
+      - sharder_keep
+      - shareSignsOrShares
+      - wait
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true
@@ -91,22 +102,23 @@ server_chain:
     check_interval: 10 # seconds
     time_threshold: 60 #seconds
   smart_contract:
-    timeout: 8000 # milliseconds
+    setting_update_period: 200 #rounds
+    timeout: 8000ms
   health_check:
     show_counters: true
     deep_scan:
       enabled: false
-      settle_secs: 30
+      settle_secs: 30s
       window: 0 #Full scan till round 0
-      repeat_interval_mins: 3 #minutes
-      report_status_mins: 1 #minutes
+      repeat_interval_mins: 3m #minutes
+      report_status_mins: 1m #minutes
       batch_size: 50
     proximity_scan:
       enabled: true
-      settle_secs: 30
+      settle_secs: 30s
       window: 100000 #number of blocks, Do not make 0 with minio ON, Should be less than minio old block round range
-      repeat_interval_mins: 1 #minutes
-      report_status_mins: 1 #minutes
+      repeat_interval_mins: 1m #minutes
+      report_status_mins: 1m #minutes
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: "15s" #
@@ -115,6 +127,17 @@ server_chain:
   async_blocks_fetching:
     max_simultaneous_from_miners: 100
     max_simultaneous_from_sharders: 30
+  dbs:
+    events:
+      enabled: true
+      name: events_db
+      user: zchain_user
+      password: zchian
+      host: postgres #localhost
+      port: 5432
+      max_idle_conns: 100
+      max_open_conns: 200
+      conn_max_lifetime: 20s
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
@@ -145,6 +168,10 @@ min_stake: 0.0 # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake
 max_stake: 100.0 # tokens
+# latitude is miner/sharder latitude geolocation
+latitude: 28.644800
+# longitude is miner/sharder longitude geolocation
+longitude: 77.216721
 
 minio:
   enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
@@ -158,6 +185,8 @@ cassandra:
   connection:
     delay: 10 # in seconds
     retries: 10
+#   host: cassandra
+#   port: 9042
 
 # integration tests related configurations
 integration_tests:

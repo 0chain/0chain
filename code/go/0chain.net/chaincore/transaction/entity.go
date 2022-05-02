@@ -2,13 +2,15 @@ package transaction
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"encoding/json"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -24,30 +26,40 @@ import (
 /*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
 
 var TXN_TIME_TOLERANCE int64
-var TXN_MIN_FEE int64
 
 var transactionCount uint64 = 0
 var redis_txns string
+
+// ErrTxnMissingPublicKey is returned if the transaction does not have ClientID and public key
+var (
+	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
+	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
+)
 
 func init() {
 	redis_txns = os.Getenv("REDIS_TXNS")
 }
 
-func SetupTransactionDB() {
-	memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
+	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
+		memorystore.AddPool("txndb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
+	} else {
+		//inside docker
+		memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+	}
 }
 
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.HashIDField
-	datastore.CollectionMemberField
+	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
 
-	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
-	PublicKey string        `json:"-" msgpack:"puk,omitempty"`
+	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
+	PublicKey string `json:"public_key,omitempty" msgpack:"puk,omitempty"`
 
-	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
-	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
+	ToClientID      string           `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
+	ChainID         string           `json:"chain_id,omitempty" msgpack:"chid"`
 	TransactionData string           `json:"transaction_data" msgpack:"d"`
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
@@ -74,12 +86,12 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 }
 
 /*ComputeProperties - Entity implementation */
-func (t *Transaction) ComputeProperties() {
+func (t *Transaction) ComputeProperties() error {
 	t.EntityCollection = txnEntityCollection
-	if datastore.IsEmpty(t.ChainID) {
+	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
-	t.ComputeClientID()
+	return t.ComputeClientID()
 }
 
 type smartContractTransactionData struct {
@@ -87,50 +99,52 @@ type smartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
-var exemptedSCFunctions = map[string]bool{
-	"add_miner":            true,
-	"miner_health_check":   true,
-	"add_sharder":          true,
-	"sharder_health_check": true,
-	"contributeMpk":        true,
-	"sharder_keep":         true,
-	"shareSignsOrShares":   true,
-	"wait":                 true,
-}
-
 // ValidateFee - Validate fee
-func (t *Transaction) ValidateFee() error {
+func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) error {
 	if t.TransactionData != "" {
 		var smartContractData smartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
 		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err == nil {
-			if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
-				return nil
-			}
+		if err != nil {
+			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
+			return errors.New("invalid transaction data")
+		}
+
+		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
+			return nil
 		}
 	}
-	if t.Fee < TXN_MIN_FEE {
+	if t.Fee < minTxnFee {
 		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
 	}
 	return nil
 }
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */
-func (t *Transaction) ComputeClientID() {
-	if t.PublicKey != "" {
-		if t.ClientID == "" {
-			// Doing this is OK because the transaction signature has ClientID
-			// that won't pass verification if some other client's public is put in
-			co := client.NewClient()
-			co.SetPublicKey(t.PublicKey)
-			t.ClientID = co.ID
-		}
-	} else {
-		if t.ClientID == "" {
-			logging.Logger.Error("invalid transaction", zap.String("txn", datastore.ToJSON(t).String()))
-		}
+func (t *Transaction) ComputeClientID() error {
+	if t.ClientID != "" {
+		return nil
 	}
+
+	if t.PublicKey == "" {
+		logging.Logger.Error("invalid transaction",
+			zap.Error(ErrTxnMissingPublicKey),
+			zap.String("txn", datastore.ToJSON(t).String()))
+		return ErrTxnMissingPublicKey
+	}
+
+	// Doing this is OK because the transaction signature has ClientID
+	// that won't pass verification if some other client's public is put in
+	id, err := client.GetIDFromPublicKey(t.PublicKey)
+	if err != nil {
+		logging.Logger.Error("invalid transaction public key",
+			zap.String("public key", t.PublicKey),
+			zap.Error(err))
+		return ErrTxnInvalidPublicKey
+	}
+
+	t.ClientID = id
+	return nil
 }
 
 /*ValidateWrtTime - validate entityt w.r.t given time (as now) */
@@ -150,7 +164,7 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if config.DevConfiguration.IsFeeEnabled && t.Fee < 0 {
 		return common.InvalidRequest("fee must be greater than or equal to zero")
 	}
-	err := config.ValidChain(datastore.ToString(t.ChainID))
+	err := config.ValidChain(t.ChainID)
 	if err != nil {
 		return err
 	}
@@ -238,8 +252,17 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 
 /*HashData - data used to hash the transaction */
 func (t *Transaction) HashData() string {
-	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
-	return hashdata
+	s := strings.Builder{}
+	s.WriteString(common.TimeToString(t.CreationDate))
+	s.WriteString(":")
+	s.WriteString(t.ClientID)
+	s.WriteString(":")
+	s.WriteString(t.ToClientID)
+	s.WriteString(":")
+	s.WriteString(strconv.FormatInt(t.Value, 10))
+	s.WriteString(":")
+	s.WriteString(encryption.Hash(t.TransactionData))
+	return s.String()
 }
 
 /*ComputeHash - compute the hash from the various components of the transaction */
@@ -250,8 +273,14 @@ func (t *Transaction) ComputeHash() string {
 /*VerifyHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	if t.Hash != t.ComputeHash() {
-		logging.Logger.Debug("verify hash (hash mismatch)", zap.String("hash", t.Hash), zap.String("computed_hash", t.ComputeHash()), zap.String("hash_data", t.HashData()), zap.String("txn", datastore.ToJSON(t).String()))
-		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeHash(), t.HashData()))
+		logging.Logger.Debug("verify hash (hash mismatch)",
+			zap.String("hash", t.Hash),
+			zap.String("computed_hash", t.ComputeHash()),
+			zap.String("hash_data", t.HashData()),
+			zap.String("txn", datastore.ToJSON(t).String()))
+		return common.NewError("hash_mismatch",
+			fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v",
+				t.Hash, t.ComputeHash(), t.HashData()))
 	}
 	return nil
 }
@@ -275,18 +304,45 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
 	var err error
-	var co *client.Client
-	if t.PublicKey == "" {
-		co, err = t.GetClient(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+	co, err := client.GetClientFromCache(t.ClientID)
+	if err != nil {
 		co = client.NewClient()
 		co.ID = t.ClientID
-		co.SetPublicKey(t.PublicKey)
+		if err := co.SetPublicKey(t.PublicKey); err != nil {
+			return nil, err
+		}
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
 	}
-	return co.GetSignatureScheme(), nil
+
+	if co.SigScheme == nil {
+		if t.PublicKey == "" {
+			return nil, errors.New("get signature scheme failed, empty public key in transaction")
+		}
+		co.ID = t.ClientID
+		if err := co.SetPublicKey(t.PublicKey); err != nil {
+			return nil, err
+		}
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
+	}
+
+	return co.SigScheme, nil
+}
+
+func (t *Transaction) GetPublicKeyStr(ctx context.Context) (string, error) {
+	if t.PublicKey != "" {
+		return t.PublicKey, nil
+	}
+
+	co, err := client.GetClient(ctx, t.ClientID)
+	if err != nil {
+		return "", err
+	}
+
+	return co.PublicKey, nil
 }
 
 /*Provider - entity provider for client object */
@@ -349,7 +405,7 @@ func (t *Transaction) DebugTxn() bool {
 	if !config.Development() {
 		return false
 	}
-	return strings.Index(t.TransactionData, "debug") >= 0
+	return strings.Contains(t.TransactionData, "debug")
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */
@@ -371,20 +427,36 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 
 // Clone returns a clone of the transaction instance
 func (t *Transaction) Clone() *Transaction {
-	clone := *t
-	if t.CollectionMemberField.EntityCollection != nil {
-		entityCollection := *t.CollectionMemberField.EntityCollection
-		clone.CollectionMemberField.EntityCollection = &entityCollection
+	clone := &Transaction{
+		HashIDField:       t.HashIDField,
+		VersionField:      t.VersionField,
+		ClientID:          t.ClientID,
+		PublicKey:         t.PublicKey,
+		ToClientID:        t.ToClientID,
+		ChainID:           t.ChainID,
+		TransactionData:   t.TransactionData,
+		Value:             t.Value,
+		Signature:         t.Signature,
+		CreationDate:      t.CreationDate,
+		Fee:               t.Fee,
+		TransactionType:   t.TransactionType,
+		TransactionOutput: t.TransactionOutput,
+		OutputHash:        t.OutputHash,
+		Status:            t.Status,
 	}
-	return &clone
+
+	if ent := t.CollectionMemberField.EntityCollection; ent != nil {
+		clone.CollectionMemberField.EntityCollection = &datastore.EntityCollection{
+			CollectionName:     ent.CollectionName,
+			CollectionSize:     ent.CollectionSize,
+			CollectionDuration: ent.CollectionDuration,
+		}
+	}
+	return clone
 }
 
 func SetTxnTimeout(timeout int64) {
 	TXN_TIME_TOLERANCE = timeout
-}
-
-func SetTxnFee(min int64) {
-	TXN_MIN_FEE = min
 }
 
 func GetTransactionCount() uint64 {

@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/chaincore/state"
 	"bytes"
 	"context"
 	"flag"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -37,7 +38,7 @@ var numOfTransactions int
 func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 }
 
 func getContext() (context.Context, func()) {
@@ -48,16 +49,21 @@ func getContext() (context.Context, func()) {
 	}
 }
 
-func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r round.RoundI) (*block.Block, error) {
+func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block, r round.RoundI) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
-	mc := GetMinerChain()
 	if prevBlock == nil {
 		gb := SetupGenesisBlock()
 		prevBlock = gb
 		mc.AddGenesisBlock(gb)
 	}
 	b.ChainID = prevBlock.ChainID
-	mc.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
+	if mc.Config != nil {
+		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	} else {
+		mc.Config = chain.NewConfigImpl(data)
+	}
+
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -136,6 +142,25 @@ func makeTestMinioClient() (blockstore.MinioClient, error) {
 	return blockstore.CreateMinioClientFromConfig(mConf)
 }
 
+func setupMinerChain() (*Chain, func()) {
+	mc := GetMinerChain()
+	if mc.Chain == nil {
+		mc.Chain = chain.Provider().(*chain.Chain)
+	}
+
+	mc.Config = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
+	doneC := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		mc.StartLFMBWorker(ctx)
+		close(doneC)
+	}()
+	return mc, func() {
+		cancel()
+		<-doneC
+	}
+}
+
 func TestBlockGeneration(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
@@ -143,7 +168,9 @@ func TestBlockGeneration(t *testing.T) {
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
 
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
 
@@ -182,13 +209,21 @@ func TestBlockGeneration(t *testing.T) {
 func TestBlockVerification(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+
+	defer stopAndClean()
 	ctx, clean := getContext()
 	defer clean()
+	mb := mc.GetMagicBlock(0)
 	mr := CreateRound(1)
-	mr.RandomSeed = time.Now().UnixNano()
+	nano := int64(16408760407010)
+	mr.SetRandomSeed(nano, len(mb.Miners.Nodes))
 
-	b, err := generateSingleBlock(ctx, nil, mr)
+	b, err := generateSingleBlock(ctx, mc, nil, mr)
+	if err != nil {
+		t.Errorf("Block generation failed")
+	}
+
 	if b != nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, b)
 	}
@@ -204,15 +239,19 @@ func TestTwoCorrectBlocks(t *testing.T) {
 	ctx := context.Background()
 	mr := CreateMockRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	b0, err := generateSingleBlock(ctx, nil, mr)
-	mc := GetMinerChain()
-	rd := mc.GetRound(1)
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	b0, err := generateSingleBlock(ctx, mc, nil, mr)
+	require.NoError(t, err)
+
+	rd := mc.GetRound(0)
 	require.NotNil(t, rd)
 	if b0 != nil {
 		var b1 *block.Block
-		mr2 := CreateMockRound(2)
-		mr2.RandomSeed = time.Now().UnixNano()
-		b1, err = generateSingleBlock(ctx, b0, mr2.Round)
+		mb := mc.GetMagicBlock(0)
+		mr2 := CreateMockRound(1)
+		mr2.SetRandomSeed(int64(16408760407010), len(mb.Miners.Nodes))
+		b1, err = generateSingleBlock(ctx, mc, b0, mr2.Round)
 		require.NoError(t, err)
 		_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
 	}
@@ -229,12 +268,14 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 	defer clean()
 	mr := CreateRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	b0, err := generateSingleBlock(ctx, nil, mr)
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	b0, err := generateSingleBlock(ctx, mc, nil, mr)
 	//mc := GetMinerChain()
 	if b0 != nil {
 		//var b1 *block.Block
 		mr3 := CreateRound(3)
-		_, err = generateSingleBlock(ctx, b0, mr3)
+		_, err = generateSingleBlock(ctx, mc, b0, mr3)
 		//_, err = mc.VerifyRoundBlock(ctx, b1)
 	}
 	if err == nil {
@@ -250,8 +291,10 @@ func TestBlockVerificationBadHash(t *testing.T) {
 	defer clean()
 	mr := CreateRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	b, err := generateSingleBlock(ctx, nil, mr)
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+
+	b, err := generateSingleBlock(ctx, mc, nil, mr)
 	if b != nil {
 		b.Hash = "bad hash"
 		_, err = mc.VerifyRoundBlock(ctx, mr, b)
@@ -270,7 +313,10 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 	defer clean()
 
 	mr := CreateRound(1)
-	block, _ := generateSingleBlock(ctx, nil, mr)
+	mr.RandomSeed = time.Now().UnixNano()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	block, _ := generateSingleBlock(ctx, mc, nil, mr)
 	if block != nil {
 		b.Logf("Created block with %v transactions", len(block.Txns))
 	} else {
@@ -284,8 +330,9 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
-	block, err := generateSingleBlock(ctx, nil, mr)
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	block, err := generateSingleBlock(ctx, mc, nil, mr)
 	if block != nil && err == nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, block)
 		if err != nil {
@@ -314,7 +361,7 @@ func setupTempRocksDBDir() func() {
 	}
 }
 
-func setupSelfNodeKeys() {
+func setupSelfNodeKeys() { //nolint
 	keys := "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0\naa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
 	breader := bytes.NewBuffer([]byte(keys))
 	sigScheme := encryption.NewED25519Scheme()
@@ -324,13 +371,23 @@ func setupSelfNodeKeys() {
 
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
-	mc.BlockSize = int32(numOfTransactions)
-	mp := node.NewPool(node.NodeTypeMiner)
-	mb := block.NewMagicBlock()
-	mb.Miners = mp
-	sp := node.NewPool(node.NodeTypeSharder)
-	mb.Sharders = sp
-	mc.SetMagicBlock(mb)
+	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
+	if mc.Config != nil {
+		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	} else {
+		mc.Config = chain.NewConfigImpl(data)
+	}
+
+	mb := mc.GetMagicBlock(0)
+	if mb == nil {
+		mb = block.NewMagicBlock()
+		mp := node.NewPool(node.NodeTypeMiner)
+		mb.Miners = mp
+		sp := node.NewPool(node.NodeTypeSharder)
+		mb.Sharders = sp
+		mc.SetMagicBlock(mb)
+	}
+
 	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, state.NewInitStates())
 	mr := mc.CreateRound(gr.(*round.Round))
 	mc.AddRoundBlock(gr, gb)
@@ -363,25 +420,44 @@ func SetUpSingleSelf() func() {
 		},
 	})
 
+	m := make(map[datastore.Key]encryption.SignatureScheme)
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
-	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	s1 := encryption.NewED25519Scheme()
+	s1.GenerateKeys()
+	n1.SetSignatureScheme(s1)
+	m[n1.Client.ID] = s1
+	//n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
-	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	n2.ID = "2"
+	s2 := encryption.NewED25519Scheme()
+	s2.GenerateKeys()
+	n2.SetSignatureScheme(s2)
+	m[n2.Client.ID] = s2
+	//n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
 	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
-	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
-
-	node.Self = &node.SelfNode{}
-	node.Self.Node = n1
-
-	setupSelfNodeKeys()
+	n3.ID = "3"
+	s3 := encryption.NewED25519Scheme()
+	s3.GenerateKeys()
+	n3.SetSignatureScheme(s3)
+	m[n3.Client.ID] = s3
+	//n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
 
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
 	np.AddNode(n2)
 	np.AddNode(n3)
 
+	node.Self = &node.SelfNode{}
+	node.Self.Node = np.Nodes[0]
+	node.Self.SetSignatureScheme(m[node.Self.Node.ID])
+
+	//setupSelfNodeKeys()
+
 	mb := block.NewMagicBlock()
 	mb.Miners = np
+
+	sp := node.NewPool(node.NodeTypeSharder)
+	mb.Sharders = sp
 
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
@@ -391,16 +467,21 @@ func SetUpSingleSelf() func() {
 	block.SetupBlockSummaryEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
 
-	chain.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 	round.SetupEntity(memorystore.GetStorageProvider())
 
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	c.MinGenerators = 1
-	c.RoundRange = 10000000
-	c.MinBlockSize = 1
-	c.MaxByteSize = 1638400
+	data := &chain.ConfigData{BlockSize: 1024}
+	c.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
+	data.MinGenerators = 1
+	data.RoundRange = 10000000
+	data.MinBlockSize = 1
+	data.MaxByteSize = 1638400
+
 	c.SetGenerationTimeout(15)
 	chain.SetServerChain(c)
 	SetupMinerChain(c)
@@ -414,7 +495,7 @@ func SetUpSingleSelf() func() {
 	}
 }
 
-func setupSelf() func() {
+func setupSelf() func() { //nolint
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
 	if err != nil {
@@ -461,7 +542,7 @@ func setupSelf() func() {
 
 	block.SetupEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
-	chain.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 	round.SetupEntity(memorystore.GetStorageProvider())
 
 	mb := block.NewMagicBlock()

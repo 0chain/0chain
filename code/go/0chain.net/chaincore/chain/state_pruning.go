@@ -26,18 +26,23 @@ func init() {
 }
 
 func (c *Chain) pruneClientState(ctx context.Context) {
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return
+	}
+
+	if lfb.Round <= int64(c.PruneStateBelowCount()) {
+		return
+	}
 
 	var bc = c.BlockChain
-	bc = bc.Move(-c.PruneStateBelowCount)
+	bc = bc.Move(-c.PruneStateBelowCount())
 
 	for i := 0; i < 10 && bc.Value == nil; i++ {
 		bc = bc.Prev()
 	}
 
-	var (
-		lfb = c.GetLatestFinalizedBlock()
-		bs  *block.BlockSummary
-	)
+	var bs *block.BlockSummary
 
 	if bc.Value != nil {
 		bs = bc.Value.(*block.BlockSummary)
@@ -65,7 +70,8 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	logging.Logger.Info("prune client state - new version",
 		zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("latest_finalized_round", lfb.Round),
-		zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
+		zap.Int64("round", bs.Round),
+		zap.String("block", bs.Hash),
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 
 	var newVersion = util.Sequence(bs.Round)
@@ -75,8 +81,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return // already done with pruning this
 	}
 
-	var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion)
-	mpt.SetRoot(bs.ClientStateHash)
+	var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion, bs.ClientStateHash)
 
 	var (
 		pctx = util.WithPruneStats(ctx)
@@ -143,7 +148,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			zap.Any("prune_stats", ps))
 	}
 
-	if lfb.Round-int64(c.PruneStateBelowCount) < bs.Round {
+	if lfb.Round-int64(c.PruneStateBelowCount()) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
 		return
 	}
@@ -169,9 +174,12 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		logMsg = logMsg + " - slow"
 	}
 
+	ps = util.GetPruneStats(pctx)
+
 	logf(logMsg, zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+		zap.Int64("prune_deleted", ps.Deleted),
 		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps),
 		zap.Duration("update_version_after", d1),
 		zap.Duration("prune_below_version_after", d2))

@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
@@ -35,50 +36,57 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 
 // StatusMonitor monitors and updates the node connection status on current magic block
 func (c *Chain) StatusMonitor(ctx context.Context) {
-	mb := c.GetCurrentMagicBlock()
+	mb := c.getLatestFinalizedMagicBlock(ctx)
 	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
-	cancel := startStatusMonitor(mb, ctx)
+	var cancel func()
+	if mb != nil {
+		cancel = startStatusMonitor(mb, ctx)
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			cancel()
 			return
-		case newRound := <-UpdateNodes:
-			newMB := c.GetMagicBlockNoOffset(newRound)
+		case newStartingRound := <-UpdateNodes:
+			newMB := c.GetMagicBlockNoOffset(newStartingRound)
+			if newMB == nil {
+				continue
+			}
+
 			if newMB == mb {
 				continue
 			}
 
-			N2n.Debug("Got nodes update",
-				zap.Int64("monitoring round", mb.StartingRound),
-				zap.Int64("new round", newRound),
-				zap.Int64("mb starting round", newMB.StartingRound))
+			if mb == nil {
+				mb = newMB
+				cancel = startStatusMonitor(newMB, ctx)
+				continue
+			}
 
 			if newMB.StartingRound < mb.StartingRound {
 				continue
 			}
 
-			N2n.Info("Restart status monitor - update nodes",
-				zap.Int64("update round", newRound),
-				zap.Int64("mb starting round", newMB.StartingRound))
+			Logger.Debug("[monitor] got new magic block, update nodes",
+				zap.Int64("monitoring round", mb.StartingRound),
+				zap.Int64("new mb starting round", newMB.StartingRound))
+
 			cancel()
 			mb = newMB
 			cancel = startStatusMonitor(newMB, ctx)
 		case <-newMagicBlockCheckTk.C:
-			cmb := c.GetCurrentMagicBlock()
-			// current magic block may be kicked back, restart if changed.
-			N2n.Debug("new mb status monitor ticker",
-				zap.Int64("current mb starting round", cmb.StartingRound),
-				zap.Int64("monitoring round", mb.StartingRound))
-
+			cmb := c.getLatestFinalizedMagicBlock(ctx)
+			if cmb == nil {
+				continue
+			}
 			if cmb == mb {
 				continue
 			}
 
-			N2n.Info("Restart status monitor - new mb detected",
-				zap.Int64("starting round", cmb.StartingRound),
-				zap.Int64("previous starting round", mb.StartingRound))
+			Logger.Info("[monitor] restart status monitor - new mb detected",
+				zap.Int64("monitoring starting round", mb.StartingRound),
+				zap.Int64("new mb starting round", cmb.StartingRound))
 			cancel()
 			mb = cmb
 			cancel = startStatusMonitor(cmb, ctx)
@@ -87,6 +95,8 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 }
 
 func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
+	Logger.Info("[monitor] start status monitor - update nodes",
+		zap.Int64("mb starting round", mb.StartingRound))
 	var smctx context.Context
 	smctx, cancelCtx := context.WithCancel(ctx)
 	waitMC := make(chan struct{})
@@ -94,7 +104,7 @@ func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
 	go mb.Miners.StatusMonitor(smctx, mb.StartingRound, waitMC)
 	go mb.Sharders.StatusMonitor(smctx, mb.StartingRound, waitSC)
 	return func() {
-		N2n.Debug("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
+		Logger.Info("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
 		cancelCtx()
 		select {
 		case <-waitMC:
@@ -110,29 +120,74 @@ func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
+	var (
+		finalizingRound    int64
+		cancel             func()
+		finalizingC        = make(chan round.RoundI, 2*config.GetLFBTicketAhead()+1)
+		getFinalizingRound = func() int64 {
+			return atomic.LoadInt64(&finalizingRound)
+		}
+		setFinalizingRound = func(r int64) {
+			atomic.StoreInt64(&finalizingRound, r)
+		}
+	)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case r := <-finalizingC:
+				func() {
+					setFinalizingRound(r.GetRoundNumber())
+					// TODO: make the timeout configurable
+					var cctx context.Context
+					cctx, cancel = context.WithTimeout(ctx, time.Minute)
+					defer cancel()
+					doneC := make(chan struct{})
+					go func() {
+						defer close(doneC)
+						c.finalizeRound(cctx, r)
+						c.UpdateRoundInfo(r)
+					}()
+
+					select {
+					case <-cctx.Done():
+						Logger.Warn("FinalizeRoundWorker finalize round timeout",
+							zap.Int64("round", r.GetRoundNumber()))
+					case <-doneC:
+					}
+				}()
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case r := <-c.finalizedRoundsChannel:
-			func() {
-				// TODO: make the timeout configurable
-				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-				defer cancel()
-				doneC := make(chan struct{})
-				go func() {
-					defer close(doneC)
-					c.finalizeRound(cctx, r)
-					c.UpdateRoundInfo(r)
-				}()
-
-				select {
-				case <-cctx.Done():
-					Logger.Warn("FinalizeRoundWorker finalize round timeout",
-						zap.Int64("round", r.GetRoundNumber()))
-				case <-doneC:
+			rn := r.GetRoundNumber()
+			fr := getFinalizingRound()
+			if fr > 0 && rn-fr > int64(2*config.GetLFBTicketAhead()) {
+				// drain out finalizing round channel
+				lc := len(finalizingC)
+				for i := 0; i < lc; i++ {
+					<-finalizingC
 				}
-			}()
+
+				// cancel and force move the finalizing round to current round
+				if cancel != nil {
+					cancel()
+				}
+
+				Logger.Debug("FinalizeRoundWorker - finalizing round slow, do fast moving",
+					zap.Int64("to round", rn),
+					zap.Int64("finalizing round", fr))
+			}
+
+			finalizingC <- r
+			continue
 		}
 	}
 }
@@ -150,15 +205,16 @@ type MagicBlockBrief struct {
 // GetLatestFinalizedMagicBlockBrief returns a brief info of the MagicBlock
 // to avoid the heavy copy action of the whole block
 func (c *Chain) GetLatestFinalizedMagicBlockBrief() *MagicBlockBrief {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-	return getMagicBlockBrief(c.latestFinalizedMagicBlock)
+	return getMagicBlockBrief(c.GetLatestFinalizedMagicBlock(context.Background()))
 }
 
 func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	saveFunc MagicBlockSaveFunc) (err error) {
 
 	lfmb := c.GetLatestFinalizedMagicBlockBrief()
+	if lfmb == nil {
+		return common.NewError("repair_mb_chain", "can't get lfmb")
+	}
 
 	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
 		return common.NewError("repair_mb_chain", "already have such MB")
@@ -196,7 +252,7 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 		case <-ctx.Done():
 			return
 
-		case fb := <-c.finalizedBlocksChannel:
+		case fbr := <-c.finalizedBlocksChannel:
 			func() {
 				// TODO: make the timeout configurable
 				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -206,15 +262,17 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 				doneC := make(chan struct{})
 				go func() {
 					defer close(doneC)
-					c.finalizeBlockProcess(cctx, fb, bsh)
+					c.finalizeBlockProcess(cctx, fbr.block, bsh)
 				}()
 
 				select {
 				case <-doneC:
 					Logger.Debug("finalize block process duration", zap.Any("duration", time.Since(t)))
+					fbr.resultC <- nil
 				case <-cctx.Done():
 					Logger.Warn("finalize block process context done",
 						zap.Error(cctx.Err()))
+					fbr.resultC <- cctx.Err()
 				}
 			}()
 		}
@@ -224,12 +282,56 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
 	lfb := c.GetLatestFinalizedBlock()
 	if fb.Round < lfb.Round-5 {
-		Logger.Error("slow finalized block processing",
+		Logger.Warn("finalize block - slow finalized block processing",
 			zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 	}
-	Logger.Debug("Get finalized block from channel", zap.Int64("round", fb.Round))
-	// TODO/TOTHINK: move the repair chain outside the finalized worker?
 
+	if lfb.Round == fb.Round && lfb.Hash == fb.Hash {
+		Logger.Info("finalize block - already finalized",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash))
+		return
+	}
+
+	Logger.Debug("start to finalize block",
+		zap.Int64("round", fb.Round),
+		zap.String("block", fb.Hash),
+		zap.String("prev block", fb.PrevHash))
+
+	if !fb.IsStateComputed() {
+		if fb.PrevBlock == nil {
+			pb := c.GetLocalPreviousBlock(ctx, fb)
+			if pb != nil {
+				fb.SetPreviousBlock(pb)
+			} else {
+				Logger.Error("finalize block - no previous block",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash),
+					zap.String("prev block", fb.PrevHash),
+					zap.Int64("lfb round", lfb.Round),
+					zap.String("lfb", lfb.Hash))
+			}
+		}
+
+		Logger.Debug("finalize block - state not computed, try to fetch state changes",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
+			zap.String("prev block", fb.PrevHash))
+
+		//fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
+
+		if err := c.GetBlockStateChange(fb); err != nil {
+			Logger.Error("finalize block failed, compute state failed",
+				zap.Int64("round", fb.Round),
+				zap.Error(err))
+			return
+		}
+		Logger.Debug("finalize block - sync state success",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash))
+	}
+
+	// TODO/TOTHINK: move the repair chain outside the finalized worker?
 	// make sure we have valid verified MB chain if the block contains
 	// a magic block; we already have verified and valid MB chain at this
 	// moment, let's keep it updated and verified too
@@ -237,83 +339,32 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
 		var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
 		if err != nil {
-			Logger.Error("repairing MB chain", zap.Error(err))
+			Logger.Error("finalize block - repairing MB chain", zap.Error(err))
 			return
 		}
 	}
 
 	// finalize
-	if !fb.IsStateComputed() {
-		Logger.Debug("finalize block state not computed",
-			zap.Int64("round", fb.Round))
-		err := c.ComputeOrSyncState(ctx, fb)
-		if err != nil {
-			Logger.Error("save changes - save state not successful",
-				zap.Int64("round", fb.Round),
-				zap.String("hash", fb.Hash),
-				zap.Int8("state", fb.GetBlockState()),
-				zap.Error(err))
-			if state.Debug() {
-				Logger.DPanic("save changes - state not successful")
-			}
-		}
-	} else {
-		Logger.Debug("finalize block state computed",
-			zap.Int64("round", fb.Round),
-			zap.Any("state", fb.GetStateStatus()))
-	}
-
-	switch fb.GetStateStatus() {
-	case block.StateSynched, block.StateSuccessful:
-	default:
-		Logger.Error("state_save_without_success, state can't be saved without successful computation",
-			zap.Int64("round", fb.Round))
-		return
-	}
-
-	// Fetch block state changes and apply them would reduce the blocks finalize speed
-	if fb.ClientState == nil {
-		Logger.Error("Finalize block - client state is null, get state changes from network",
-			zap.Int64("round", fb.Round),
-			zap.String("hash", fb.Hash))
-		if err := c.GetBlockStateChange(fb); err != nil {
-			Logger.Error("Finalize block - get block state changes failed",
-				zap.Error(err),
-				zap.Int64("round", fb.Round),
-				zap.String("block hash", fb.Hash))
-			return
-		}
-	}
-
 	c.finalizeBlock(ctx, fb, bsh)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
-	tick := time.Duration(c.PruneStateBelowCount) * time.Second
+	tick := time.Duration(c.PruneStateBelowCount()) * time.Second
 	timer := time.NewTimer(time.Second)
-	pruning := false
 	Logger.Debug("PruneClientStateWorker start")
 	defer func() {
 		Logger.Debug("PruneClientStateWorker stopped, we should not see this...")
 	}()
 
-	for true {
-		select {
-		case <-timer.C:
-			Logger.Debug("Do prune client state worker")
-			if pruning {
-				Logger.Info("pruning still going on")
-				continue
-			}
-			pruning = true
-			c.pruneClientState(ctx)
-			pruning = false
-			if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
-				timer = time.NewTimer(time.Second)
-			} else {
-				timer = time.NewTimer(tick)
-			}
+	for {
+		<-timer.C
+		Logger.Debug("Do prune client state worker")
+		c.pruneClientState(ctx)
+		if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
+			timer = time.NewTimer(time.Second)
+		} else {
+			timer = time.NewTimer(tick)
 		}
 	}
 }
@@ -413,11 +464,34 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 				c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
 			}()
+		case <-c.syncLFBStateNowC:
+			if isSynching {
+				continue
+			}
+
+			lfb := c.GetLatestFinalizedBlock()
+			Logger.Info("Sync LFB immediately", zap.Int64("lfb round", lfb.Round),
+				zap.Int64("current round", c.GetCurrentRound()))
+
+			cctx, cancel = context.WithCancel(ctx)
+			isSynching = true
+			go func() {
+				defer func() {
+					synchingStopC <- struct{}{}
+				}()
+				if lfb == nil {
+					return
+				}
+
+				c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
+			}()
 		case <-synchingStopC:
 			isSynching = false
 		case <-ctx.Done():
 			Logger.Info("Context done, stop SyncLFBStateWorker")
-			cancel()
+			if cancel != nil {
+				cancel()
+			}
 			return
 		}
 	}
@@ -425,8 +499,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootStateHash util.Key) {
 	Logger.Info("Sync round state from network...")
-	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
-	mpt.SetRoot(rootStateHash)
+	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round), rootStateHash)
 
 	Logger.Info("Finding missing nodes")
 	cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)
@@ -474,10 +547,13 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	saveHandler MagicBlockSaveFunc) (err error) {
 
 	var (
-		currentLFMB = c.GetLatestFinalizedMagicBlock()
-		sharders    = cmb.Sharders.N2NURLs()
-		magicBlock  *block.Block
+		sharders   = cmb.Sharders.N2NURLs()
+		magicBlock *block.Block
 	)
+	currentLFMB := c.GetLatestFinalizedMagicBlock(ctx)
+	if currentLFMB == nil {
+		return errors.New("can't get currentLFMB")
+	}
 
 	// until we have got all MB from our from store to latest given
 	for currentLFMB.Hash != latestMagicBlock.Hash {
@@ -515,9 +591,11 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 
 		Logger.Info("verify chain history",
 			zap.Any("mb_sr", magicBlock.StartingRound),
-			zap.Any("mb_hash", magicBlock.Hash))
+			zap.Any("mb_hash", magicBlock.Hash),
+			zap.Int64("mb_num", magicBlock.MagicBlockNumber))
 
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+			Logger.Error("verify chain history - update magic block failed", zap.Error(err))
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v", requestMBNum, err))
 		}
@@ -557,7 +635,7 @@ func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			c.PruneRoundStorage(ctx, getCountRoundStorage, storage...)
+			c.PruneRoundStorage(getCountRoundStorage, storage...)
 		}
 	}
 }
@@ -568,65 +646,72 @@ type MagicBlockSaver interface {
 	SaveMagicBlock() MagicBlockSaveFunc // get the saving function
 }
 
-// UpdateLatesMagicBlockFromShardersOn pulls latest finalized magic block
+// UpdateLatestMagicBlockFromShardersOn pulls latest finalized magic block
 // from sharders and verifies magic blocks chain. The method blocks
 // execution flow (it's synchronous). It uses given MagicBlock to get list
 // of sharders to request.
-func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
+func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 	mb *block.MagicBlock) (err error) {
 
-	block := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
-	if block == nil {
-		Logger.Warn("no new finalized magic block from sharders given",
+	lfmb := c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
+	if lfmb == nil {
+		Logger.Warn("no new finalized magic lfmb from sharders given",
 			zap.Strings("URLs", mb.Sharders.N2NURLs()))
 		return nil
 	}
 
-	cmb := sc.GetCurrentMagicBlock()
+	cmb := c.GetLatestFinalizedMagicBlock(ctx)
+	if cmb == nil {
+		return errors.New("can't get cmb")
+	}
+	if lfmb.Hash == cmb.Hash {
+		return nil
+	}
 
-	Logger.Info("get current magic block from sharders",
-		zap.Any("number", block.MagicBlockNumber),
-		zap.Any("sr", block.StartingRound),
-		zap.Any("hash", block.Hash))
+	Logger.Info("get magic lfmb from sharders",
+		zap.Any("number", lfmb.MagicBlockNumber),
+		zap.Any("sr", lfmb.StartingRound),
+		zap.Any("hash", lfmb.Hash),
+		zap.Int64("local lfmb", lfmb.StartingRound))
 
-	if block.MagicBlock.StartingRound <= cmb.StartingRound {
-		if block.MagicBlock.StartingRound == cmb.StartingRound && block.MagicBlock.Hash == cmb.Hash {
-			block.MagicBlock = cmb
-			sc.SetLatestFinalizedMagicBlock(block)
+	if lfmb.MagicBlock.StartingRound <= cmb.StartingRound {
+		if lfmb.MagicBlock.StartingRound == cmb.StartingRound && lfmb.MagicBlock.Hash == cmb.Hash {
+			lfmb.MagicBlock = cmb.MagicBlock
+			c.SetLatestFinalizedMagicBlock(lfmb)
 			Logger.Debug(
-				"updated lfmb to add lfmb's parent block to magicBlockStartRounds cache",
-				zap.Any("block hash", block.Hash),
-				zap.Any("block round", block.Round),
-				zap.Any("lfmb starting round", block.StartingRound),
+				"updated lfmb to add lfmb's parent lfmb to magicBlockStartRounds cache",
+				zap.Any("lfmb hash", lfmb.Hash),
+				zap.Any("lfmb round", lfmb.Round),
+				zap.Any("lfmb starting round", lfmb.StartingRound),
 			)
 		}
 		return nil // earlier than the current one
 	}
 
 	var saveMagicBlock MagicBlockSaveFunc
-	if sc.magicBlockSaver != nil {
-		saveMagicBlock = sc.magicBlockSaver.SaveMagicBlock()
+	if c.magicBlockSaver != nil {
+		saveMagicBlock = c.magicBlockSaver.SaveMagicBlock()
 	}
 
-	err = sc.VerifyChainHistoryAndRepair(ctx, block, saveMagicBlock)
+	err = c.VerifyChainHistoryAndRepair(ctx, lfmb, saveMagicBlock)
 	if err != nil {
 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
 
-	if err = sc.UpdateMagicBlock(block.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err.Error())
+	if err = c.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
+		return fmt.Errorf("failed to update magic lfmb: %v", err.Error())
 	}
-	sc.SetLatestFinalizedMagicBlock(block)
+	c.SetLatestFinalizedMagicBlock(lfmb)
 
 	return // ok, updated
 }
 
-// UpdateLatesMagicBlockFromSharders pulls latest finalized magic block
+// UpdateLatestMagicBlockFromSharders pulls latest finalized magic block
 // from sharders and verifies magic blocks chain. The method blocks
 // execution flow (it's synchronous).
-func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
+func (c *Chain) UpdateLatestMagicBlockFromSharders(ctx context.Context) (
 	err error) {
-	return sc.UpdateLatesMagicBlockFromShardersOn(ctx, sc.GetLatestMagicBlock())
+	return c.UpdateLatestMagicBlockFromShardersOn(ctx, c.GetLatestMagicBlock())
 }
 
 // UpdateMagicBlockWorker updates latest finalized magic block from active
@@ -651,9 +736,21 @@ func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
 		case <-tickq:
 		}
 
-		if err = c.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+		if err = c.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
 			Logger.Error("update_mb_worker", zap.Error(err))
 		}
 	}
 
+}
+
+// ComputeBlockStateWithLock compute block state one by one
+func (c *Chain) ComputeBlockStateWithLock(ctx context.Context, f func() error) (err error) {
+	select {
+	case c.computeBlockStateC <- struct{}{}:
+		err = f()
+		<-c.computeBlockStateC
+	case <-ctx.Done():
+		err = ctx.Err()
+	}
+	return
 }

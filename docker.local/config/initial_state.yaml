@@ -1,5 +1,8 @@
 initialStates:
   # miners
+  - id: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
+    tokens: 10000000000
+
   - id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
     tokens: 10000000000
 
@@ -32,6 +35,9 @@ initialStates:
     tokens: 10000000000
 
   - id: d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2
+    tokens: 10000000000
+
+  - id: 600396361b3c9efc3a1ad85df6930163591be04a8c12bc5226414d34a81cb8e5
     tokens: 10000000000
 
   # faucetsc

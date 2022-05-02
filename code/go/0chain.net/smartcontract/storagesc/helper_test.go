@@ -3,12 +3,10 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -18,6 +16,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
 
 	"go.uber.org/zap"
 
@@ -26,17 +25,8 @@ import (
 
 // test helpers
 
-const x10 = 10 * 1000 * 1000 * 1000
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
-
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
 	logging.Logger = zap.NewNop()
 }
@@ -69,7 +59,7 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	client = new(Client)
 	client.balance = balance
@@ -102,7 +92,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Capacity = c.cap
 	sn.Used = 0
 	sn.LastHealthCheck = 0
-	sn.StakePoolSettings.NumDelegates = 100
+	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
@@ -119,7 +109,7 @@ func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
 	vn.BaseURL = getValidatorURL(c.id)
-	vn.StakePoolSettings.NumDelegates = 100
+	vn.StakePoolSettings.MaxNumDelegates = 100
 	vn.StakePoolSettings.MinStake = 0
 	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
@@ -150,6 +140,10 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
+	blobber := new(StorageNode)
+	blobber.ID = c.id
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	require.NoError(t, err)
 	var input = c.addValidatorRequest(t)
 	return ssc.addValidator(tx, input, balances)
 }
@@ -185,7 +179,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	blob = new(Client)
 	blob.terms = terms
@@ -215,7 +209,7 @@ func addValidator(t testing.TB, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (valid *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	scheme.GenerateKeys() //nolint
 
 	valid = new(Client)
 	valid.scheme = scheme
@@ -321,7 +315,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	return deco.ID, blobs
 }
 
-func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
+func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
 	balances chainState.StateContextI) {
 
 	var _, err = balances.InsertTrieNode(key, val)
@@ -329,14 +323,15 @@ func mustSave(t testing.TB, key datastore.Key, val util.Serializable,
 }
 
 func setConfig(t testing.TB, balances chainState.StateContextI) (
-	conf *scConfig) {
+	conf *Config) {
 
-	conf = new(scConfig)
+	conf = new(Config)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
+	conf.ValidatorsPerChallenge = 10
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
@@ -348,6 +343,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.BlobberSlash = 0.1
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
+	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
 	conf.MaxCharge = 0.50   // 50%
@@ -367,9 +363,15 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	}
 
 	conf.StakePool = &stakePoolConfig{
-		MinLock:          10,
-		InterestRate:     0.01,
-		InterestInterval: 5 * time.Second,
+		MinLock: 10,
+	}
+
+	conf.BlockReward = &blockReward{
+		BlockReward:             1000,
+		BlockRewardChangePeriod: 1000,
+		BlockRewardChangeRatio:  0.1,
+		TriggerPeriod:           30,
+		BlobberWeight:           0.5,
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
@@ -378,7 +380,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 func genChall(t testing.TB, ssc *StorageSmartContract,
 	blobberID string, now int64, prevID, challID string, seed int64,
-	valids []*ValidationNode, allocID string, blobber *StorageNode,
+	valids *partitions.Partitions, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
 	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
@@ -389,18 +391,34 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 		blobberChall = new(BlobberChallenge)
 		blobberChall.BlobberID = blobberID
 	}
+
+	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		t.Fatal("unexpected error:", err)
+	}
+	if err == util.ErrValueNotPresent {
+		allocChall = new(AllocationChallenge)
+		allocChall.AllocationID = allocID
+	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	storChall.PrevID = prevID
-	storChall.Validators = valids
-	storChall.RandomNumber = seed
+	var valSlice []ValidationPartitionNode
+	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)
+	storChall.TotalValidators = len(valSlice)
+
 	storChall.AllocationID = allocID
-	storChall.Blobber = blobber
-	storChall.AllocationRoot = allocRoot
+	storChall.BlobberID = blobber.ID
 
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
+	require.NoError(t, err)
+
+	require.True(t, allocChall.addChallenge(storChall))
+	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
+	require.NoError(t, err)
+
+	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)
 	require.NoError(t, err)
 	return
 }
@@ -413,8 +431,8 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 }
 
 func stakePoolTotal(sp *stakePool) (total state.Balance) {
-	for _, pool := range sp.orderedPools() {
-		total += pool.Balance
+	for _, id := range sp.OrderedPoolIds() {
+		total += sp.Pools[id].Balance
 	}
 	return
 }

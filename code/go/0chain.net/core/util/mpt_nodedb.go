@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"go.uber.org/atomic"
-
-	"reflect"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -32,6 +32,8 @@ var (
 	// ErrValueNotPresent - error indicating given path is not present in the
 	// db.
 	ErrValueNotPresent = errors.New("value not present")
+	// ErrNilPartialStateRoot is returned when partialState.ComputeRoot() gets nil root
+	ErrNilPartialStateRoot = errors.New("partial state root is nil")
 )
 
 // global node db version
@@ -53,8 +55,6 @@ type NodeDB interface {
 	MultiDeleteNode(keys []Key) error
 
 	PruneBelowVersion(ctx context.Context, version Sequence) error
-
-	GetDBVersions() []int64
 }
 
 // StrKey - data type for the key used to store the node into some storage
@@ -91,12 +91,22 @@ func (mndb *MemoryNodeDB) getNode(key Key) (Node, error) {
 
 // unsafe
 func (mndb *MemoryNodeDB) putNode(key Key, node Node) error {
+	if DebugMPTNode {
+		logging.Logger.Debug("node put to memory", zap.String("key", ToHex(key)),
+			zap.String("stack", string(debug.Stack())),
+		)
+	}
 	mndb.Nodes[StrKey(key)] = node
 	return nil
 }
 
 // unsafe
 func (mndb *MemoryNodeDB) deleteNode(key Key) error {
+	if DebugMPTNode {
+		logging.Logger.Debug("node delete from memory", zap.String("key", ToHex(key)),
+			zap.String("stack", string(debug.Stack())),
+		)
+	}
 	delete(mndb.Nodes, StrKey(key))
 	return nil
 }
@@ -181,8 +191,8 @@ func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHan
 	return mndb.iterate(ctx, handler)
 }
 
-/*Size - implement interface */
-func (mndb *MemoryNodeDB) Size(ctx context.Context) int64 {
+// Size - implement interface
+func (mndb *MemoryNodeDB) Size(_ context.Context) int64 {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
 	return int64(len(mndb.Nodes))
@@ -244,11 +254,11 @@ func (mndb *MemoryNodeDB) Reachable(from, to Node) (ok bool) {
 	return mndb.reachable(from, to)
 }
 
-/*ComputeRoot - compute root from partial set of nodes in this db */
-func (mndb *MemoryNodeDB) ComputeRoot() (root Node) {
+// ComputeRoot - compute root from partial set of nodes in this db */
+func (mndb *MemoryNodeDB) ComputeRoot() (root Node, err error) {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
-	mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) error {
+	_ = mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) error {
 		if root == nil {
 			root = node
 			return nil
@@ -264,17 +274,30 @@ func (mndb *MemoryNodeDB) ComputeRoot() (root Node) {
 		}
 		return nil
 	})
-	return root
+
+	if root == nil {
+		return nil, ErrNilPartialStateRoot
+	}
+
+	err = mndb.validate(root)
+	if err != nil {
+		return nil, err
+	}
+
+	return root, nil
 }
 
-/*Validate - validate this MemoryNodeDB w.r.t the given root
-  It should not contain any node that can't be reachable from the root.
-  Note: The root itself can reach nodes not present in this db
-*/
+// Validate validates the nodes
 func (mndb *MemoryNodeDB) Validate(root Node) error {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
+	return mndb.validate(root)
+}
 
+// validate - validate this MemoryNodeDB w.r.t the given root
+//  It should not contain any node that can't be reachable from the root.
+//  Note: The root itself can reach nodes not present in this db
+func (mndb *MemoryNodeDB) validate(root Node) error {
 	nodes := map[StrKey]Node{
 		StrKey(root.GetHashBytes()): root,
 	}
@@ -321,25 +344,11 @@ type LevelNodeDB struct {
 	PropagateDeletes bool // Setting this to false (default) will not propagate delete to lower level db
 	DeletedNodes     map[StrKey]bool
 	version          int64
-	versions         []int64
 }
 
 // NewLevelNodeDB - create a level node db
 func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *LevelNodeDB {
-	vs := prevNDB.GetDBVersions()
 	v := levelNodeVersion.Add(1)
-
-	if len(vs) == 0 {
-		Logger.Debug("NewLevelNodeDB new thread",
-			zap.Any("predb type", reflect.TypeOf(prevNDB)),
-			zap.Any("new start db version", v),
-		)
-	}
-
-	vs = append(vs, v)
-	if len(vs) > 40 {
-		vs = vs[len(vs)-40:]
-	}
 
 	lndb := &LevelNodeDB{
 		current:          curNDB,
@@ -347,7 +356,6 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 		PropagateDeletes: propagateDeletes,
 		mutex:            &sync.RWMutex{},
 		version:          v,
-		versions:         vs,
 	}
 	lndb.DeletedNodes = make(map[StrKey]bool)
 	return lndb
@@ -358,15 +366,6 @@ func (lndb *LevelNodeDB) GetDBVersion() int64 {
 	lndb.mutex.RLock()
 	defer lndb.mutex.RUnlock()
 	return lndb.version
-}
-
-// GetDBVersions returns all tracked db versions
-func (lndb *LevelNodeDB) GetDBVersions() (versions []int64) {
-	lndb.mutex.RLock()
-	defer lndb.mutex.RUnlock()
-	versions = make([]int64, len(lndb.versions))
-	copy(versions, lndb.versions)
-	return
 }
 
 // GetCurrent returns current node db

@@ -50,7 +50,7 @@ var pullDataRequestor EntityRequestor
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(datastore.PrintEntityHandler, nil)))
+	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(SenderValidateHandler(datastore.PrintEntityHandler), nil)))
 	http.HandleFunc(pullURL, common.N2NRateLimit(ToN2NSendEntityHandler(PushToPullHandler)))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
 	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
@@ -65,6 +65,7 @@ var (
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
 	HeaderRequestChainID        = "X-Chain-Id"
 	HeaderRequestCODEC          = "X-Chain-CODEC"
+	HeaderRequestToPull         = "X-Request-To-Pull"
 
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
@@ -95,7 +96,7 @@ type SendOptions struct {
 	Pull               bool
 }
 
-/*MessageFilterI - tells wether the given message should be processed or not
+/*MessageFilterI - tells whether the given message should be processed or not
 * This will be useful since if for example a notarized block is received multiple times
 * the cost of decoding and decompressing can be avoided */
 type MessageFilterI interface {
@@ -112,8 +113,7 @@ var httpClient *http.Client
 var n2nTrace = &httptrace.ClientTrace{}
 
 func init() {
-	var transport *http.Transport
-	transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -133,8 +133,11 @@ func init() {
 	}
 }
 
-/*SENDER - key used to get the connection object from the context */
-const SENDER common.ContextKey = "node.sender"
+const (
+	// SENDER - key used to get the connection object from the context */
+	SENDER               common.ContextKey = "node.sender"
+	SENDER_VALIDATE_FUNC common.ContextKey = "node.sender_validate_func"
+)
 
 /*WithNode takes a context and adds a connection value to it */
 func WithNode(ctx context.Context, node *Node) context.Context {
@@ -144,6 +147,24 @@ func WithNode(ctx context.Context, node *Node) context.Context {
 /*GetSender returns a connection stored in the context which got created via WithConnection */
 func GetSender(ctx context.Context) *Node {
 	return ctx.Value(SENDER).(*Node)
+}
+
+// SenderValidateFunc represents the function signature for validating sender signature
+type SenderValidateFunc func() error
+
+// WithSenderValidateFunc saves the sender validate function to context
+func WithSenderValidateFunc(ctx context.Context, f SenderValidateFunc) context.Context {
+	return context.WithValue(ctx, SENDER_VALIDATE_FUNC, f)
+}
+
+// getSenderValidateFunc retrieves the sender validate function from context
+func getSenderValidateFunc(ctx context.Context) SenderValidateFunc {
+	return ctx.Value(SENDER_VALIDATE_FUNC).(SenderValidateFunc)
+}
+
+// ValidateSenderSignature retrieves sender validate function from context and run it
+func ValidateSenderSignature(ctx context.Context) error {
+	return getSenderValidateFunc(ctx)()
 }
 
 /*SetHeaders - set common request headers */
@@ -159,23 +180,17 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 var NoDataErr = common.NewError("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
-	io.Copy(ioutil.Discard, reader)
-	reader.Close()
+	_, _ = io.Copy(ioutil.Discard, reader)
+	_ = reader.Close()
 }
 
-func getDataAndClose(reader io.ReadCloser) []byte {
-	buf := &bytes.Buffer{}
-	io.Copy(buf, reader)
-	reader.Close()
-	return buf.Bytes()
-}
-
-func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	defer r.Body.Close()
-	var buffer io.Reader = r.Body
+func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(r.Body)
+		if _, err := cbuffer.ReadFrom(buffer); err != nil {
+			return nil, err
+		}
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr
@@ -190,13 +205,14 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
-	defer resp.Body.Close()
-	var buffer io.Reader = resp.Body
+func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
+	buffer := reader
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(resp.Body)
+		if _, err := cbuffer.ReadFrom(reader); err != nil {
+			return 0, nil, err
+		}
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
@@ -213,29 +229,27 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	entity := entityMetadata.Instance()
 	switch codec {
 	case CodecMsgpack:
-		if err := datastore.FromMsgpack(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromMsgpack(reader, entity); err != nil {
 			logging.N2n.Error("msgpack decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	case CodecJSON:
-		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromJSON(reader, entity); err != nil {
 			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	default:
-		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
+		if err := datastore.FromJSON(reader, entity); err != nil {
 			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	}
-	logging.N2n.Error("unknown_encoding", zap.String("encoding", codec))
-	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
-func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {
+func getResponseData(options *SendOptions, entity datastore.Entity) (*bytes.Buffer, error) {
 	var buffer *bytes.Buffer
 	if options.CODEC == datastore.CodecJSON {
 		buffer = datastore.ToJSON(entity)
@@ -243,18 +257,18 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 		buffer = datastore.ToMsgpack(entity)
 	}
 	if options.Compress {
-		cbytes := compDecomp.Compress(buffer.Bytes())
-		buffer = bytes.NewBuffer(cbytes)
+		cb, err := compDecomp.Compress(buffer.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		buffer = bytes.NewBuffer(cb)
 	}
-	return buffer
+	return buffer, nil
 }
 
 func validateChain(sender *Node, r *http.Request) bool {
 	chainID := r.Header.Get(HeaderRequestChainID)
-	if config.GetServerChainID() != chainID {
-		return false
-	}
-	return true
+	return config.GetServerChainID() == chainID
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {

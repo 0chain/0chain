@@ -1,8 +1,14 @@
 package faucetsc
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
+
+	"0chain.net/core/common"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
@@ -10,24 +16,7 @@ import (
 	"0chain.net/core/util"
 )
 
-type limitRequest struct {
-	PourAmount      state.Balance `json:"pour_amount"`
-	MaxPourAmount   state.Balance `json:"max_pour_amount"`
-	PeriodicLimit   state.Balance `json:"periodic_limit"`
-	GlobalLimit     state.Balance `json:"global_limit"`
-	IndividualReset time.Duration `json:"individual_reset"` //in hours
-	GlobalReset     time.Duration `json:"global_rest"`      //in hours
-}
-
-func (lr *limitRequest) encode() []byte {
-	buff, _ := json.Marshal(lr)
-	return buff
-}
-
-func (lr *limitRequest) decode(input []byte) error {
-	err := json.Unmarshal(input, lr)
-	return err
-}
+//go:generate msgp -io=false -tests=false -v
 
 type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
@@ -36,26 +25,11 @@ type periodicResponse struct {
 	Allowed state.Balance `json:"tokens_allowed"`
 }
 
-func (pr *periodicResponse) encode() []byte {
-	buff, _ := json.Marshal(pr)
-	return buff
-}
-
-func (pr *periodicResponse) decode(input []byte) error {
-	err := json.Unmarshal(input, pr)
-	return err
-}
-
 type GlobalNode struct {
-	ID              string        `json:"id"`
-	PourAmount      state.Balance `json:"pour_amount"`
-	MaxPourAmount   state.Balance `json:"max_pour_amount"`
-	PeriodicLimit   state.Balance `json:"periodic_limit"`
-	GlobalLimit     state.Balance `json:"global_limit"`
-	IndividualReset time.Duration `json:"individual_reset"` //in hours
-	GlobalReset     time.Duration `json:"global_rest"`      //in hours
-	Used            state.Balance `json:"used"`
-	StartTime       time.Time     `json:"start_time"`
+	*FaucetConfig `json:"faucet_config"`
+	ID            string        `json:"id"`
+	Used          state.Balance `json:"used"`
+	StartTime     time.Time     `json:"start_time"`
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
@@ -78,6 +52,107 @@ func (gn *GlobalNode) Encode() []byte {
 func (gn *GlobalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
+}
+
+func (gn *GlobalNode) updateConfig(fields map[string]string) error {
+	for key, value := range fields {
+		switch key {
+		case Settings[PourAmount]:
+			fAmount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
+			}
+			gn.PourAmount = state.Balance(fAmount * 1e10)
+		case Settings[MaxPourAmount]:
+			fAmount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
+			}
+			gn.MaxPourAmount = state.Balance(fAmount * 1e10)
+		case Settings[PeriodicLimit]:
+			fAmount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
+			}
+			gn.PeriodicLimit = state.Balance(fAmount * 1e10)
+		case Settings[GlobalLimit]:
+			fAmount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
+			}
+			gn.GlobalLimit = state.Balance(fAmount * 1e10)
+		case Settings[IndividualReset]:
+			ir, err := time.ParseDuration(value)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
+			}
+
+			gn.IndividualReset = ir
+		case Settings[GlobalReset]:
+			gr, err := time.ParseDuration(value)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to time.duration", key, value)
+			}
+
+			gn.GlobalReset = gr
+
+		case Settings[OwnerId]:
+			_, err := hex.DecodeString(value)
+			if err != nil {
+				return fmt.Errorf("key %s, %v should be valid hex string", key, value)
+			}
+			gn.OwnerId = value
+
+		default:
+			return gn.setCostValue(key, value)
+		}
+	}
+	return nil
+}
+
+func (gn *GlobalNode) setCostValue(key, value string) error {
+	if !strings.HasPrefix(key, Settings[Cost]) {
+		return fmt.Errorf("key %s not recognised as setting", key)
+	}
+	costKey := strings.ToLower(strings.TrimPrefix(key, Settings[Cost]+"."))
+	for _, costFunction := range costFunctions {
+		if costKey != strings.ToLower(costFunction) {
+			continue
+		}
+		costValue, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("key %s, unable to convert %v to integer", key, value)
+		}
+
+		if costValue < 0 {
+			return fmt.Errorf("cost.%s contains invalid value %s", key, value)
+		}
+
+		gn.Cost[costKey] = costValue
+
+		return nil
+	}
+
+	return fmt.Errorf("cost config setting %s not found", costKey)
+}
+
+func (gn *GlobalNode) validate() error {
+	switch {
+	case gn.PourAmount < 1:
+		return common.NewError("failed to validate global node", fmt.Sprintf("pour amount(%v) is less than 1", gn.PourAmount))
+	case gn.PourAmount > gn.MaxPourAmount:
+		return common.NewError("failed to validate global node", fmt.Sprintf("max pour amount(%v) is less than pour amount(%v)", gn.MaxPourAmount, gn.PourAmount))
+	case gn.MaxPourAmount > gn.PeriodicLimit:
+		return common.NewError("failed to validate global node", fmt.Sprintf("periodic limit(%v) is less than max pour amount(%v)", gn.PeriodicLimit, gn.MaxPourAmount))
+	case gn.PeriodicLimit > gn.GlobalLimit:
+		return common.NewError("failed to validate global node", fmt.Sprintf("global periodic limit(%v) is less than periodic limit(%v)", gn.GlobalLimit, gn.PeriodicLimit))
+	case toSeconds(gn.IndividualReset) < 1:
+		return common.NewError("failed to validate global node", fmt.Sprintf("individual reset(%v) is too short", gn.IndividualReset))
+	case gn.GlobalReset < gn.IndividualReset:
+		return common.NewError("failed to validate global node", fmt.Sprintf("global reset(%v) is less than individual reset(%v)", gn.GlobalReset, gn.IndividualReset))
+	}
+
+	return nil
 }
 
 type UserNode struct {

@@ -27,7 +27,7 @@ import (
 	"0chain.net/conductor/config"
 )
 
-const noProgressRounds = 10
+const noProgressSeconds = 10
 
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
@@ -35,11 +35,18 @@ func init() {
 
 // type aliases
 type (
-	NodeID    = config.NodeID
-	NodeName  = config.NodeName
-	Round     = config.Round
-	RoundName = config.RoundName
+	NodeName         = config.NodeName
+	Round            = config.Round
+	Number           = config.Number
+	ExpectMagicBlock = config.ExpectMagicBlock
 )
+
+type VCInfo struct {
+	MagicBlockNumber Number
+	Round            Round
+	Miners           []NodeName
+	Sharders         []NodeName
+}
 
 func main() {
 	log.Print("start the conductor")
@@ -140,10 +147,15 @@ type Runner struct {
 	conf    *config.Config
 	verbose bool
 
+	currTestCaseName string
+
 	// state
 
-	lastVCRound Round // last view change round
-	lastRound   Round // last accepted round
+	lastVC            *VCInfo // last view change
+	lastAcceptedRound struct {
+		Round     // last accepted round
+		time.Time // timestamp of acceptance
+	}
 
 	// wait for
 	waitPhase              config.WaitPhase              //
@@ -154,8 +166,7 @@ type Runner struct {
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
 	waitAdd                config.WaitAdd                // add_miner, add_sharder
 	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
-	waitNoProgressUntil    time.Time                     // }
-	waitNoPreogressCount   int                           // } got rounds
+	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
 	// timeout and monitor
@@ -190,7 +201,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		return tm, true
-	case !r.waitNoProgressUntil.IsZero():
+	case !r.waitNoProgress.IsZero():
 		return tm, true
 	case !r.waitNoViewChange.IsZero():
 		return tm, true
@@ -268,6 +279,13 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		}
 	}
 
+	vci := VCInfo{
+		Round:            vce.Round,
+		MagicBlockNumber: vce.Number,
+		Miners:           vce.Miners,
+		Sharders:         vce.Sharders,
+	}
+
 	r.printViewChange(vce) // if verbose
 	if !r.conf.Nodes.Has(vce.Sender) {
 		return fmt.Errorf("unknown node %q sends view change", vce.Sender)
@@ -275,7 +293,7 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	log.Println("view change:", vce.Round, vce.Sender)
 	// don't wait a VC
 	if r.waitViewChange.IsZero() {
-		r.lastVCRound = vce.Round // keep last round number
+		r.lastVC = &vci
 		return
 	}
 	// remember the round
@@ -283,61 +301,78 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		log.Printf("[OK] remember round %q: %d", rrn, vce.Round)
 		r.rounds[r.waitViewChange.RememberRound] = vce.Round
 	}
-	var emb = r.waitViewChange.ExpectMagicBlock
+	err = r.checkMagicBlock(&r.waitViewChange.ExpectMagicBlock, &vci)
+
+	log.Println("[OK] view change", vce.Round)
+
+	r.lastVC = &vci
+	r.waitViewChange = config.WaitViewChange{} // reset
+	return
+}
+
+func (r *Runner) checkMagicBlock(emb *ExpectMagicBlock, vci *VCInfo) (err error) {
 	if emb.IsZero() {
-		r.lastVCRound = vce.Round                  // keep last round number
-		r.waitViewChange = config.WaitViewChange{} // reset
-		return                                     // nothing more is here
+		return // nothing more is here
 	}
 	if rnan := emb.RoundNextVCAfter; rnan != "" {
 		var rna, ok = r.rounds[rnan]
 		if !ok {
 			return fmt.Errorf("unknown round name: %q", rnan)
 		}
-		var vcr = vce.Round // VC round
+		var vcr = vci.Round // VC round
 		if vcr != r.conf.ViewChange+rna {
 			return fmt.Errorf("VC expected at %d, but given at %d",
 				r.conf.ViewChange+rna, vcr)
 		}
 		// ok, accept
-	} else if emb.Round != 0 && vce.Round != emb.Round {
+	} else if emb.Round != 0 && vci.Round != emb.Round {
 		return fmt.Errorf("VC expected at %d, but given at %d",
-			emb.Round, vce.Round)
-	} else if emb.Number != 0 && vce.Number != emb.Number {
+			emb.Round, vci.Round)
+	} else if emb.Number != 0 && vci.MagicBlockNumber != emb.Number {
 		return fmt.Errorf("VC expected with %d number, but given number is %d",
-			emb.Number, vce.Number)
+			emb.Number, vci.MagicBlockNumber)
 	}
-	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 {
-		r.lastVCRound = vce.Round                  // keep the last VC round
-		r.waitViewChange = config.WaitViewChange{} // reset
-		return                                     // doesn't check MB for nodes
+	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 && emb.MinersCount == 0 && emb.ShardersCount == 0 {
+		return // don't check MB for nodes
 	}
 	// check for nodes
 	var okm, oks bool
 	// check miners
-	if okm = isEqual(emb.Miners, vce.Miners); !okm {
-		fmt.Println("[ERR] expected miners list:")
-		r.printNodes(emb.Miners)
-		fmt.Println("[ERR] got miners")
-		r.printNodes(vce.Miners)
+	if emb.MinersCount > 0 && len(emb.Miners) == 0 {
+		// check count only
+		if okm = (emb.MinersCount == len(vci.Miners)); !okm {
+			fmt.Println("[ERR] expected miners count:", emb.MinersCount)
+			fmt.Println("[ERR] got miners")
+			r.printNodes(vci.Miners)
+		}
+	} else {
+		if okm = isEqual(emb.Miners, vci.Miners); !okm {
+			fmt.Println("[ERR] expected miners list:")
+			r.printNodes(emb.Miners)
+			fmt.Println("[ERR] got miners")
+			r.printNodes(vci.Miners)
+		}
 	}
-
 	// check sharders
-	if oks = isEqual(emb.Sharders, vce.Sharders); !oks {
-		fmt.Println("[ERR] expected sharders list:")
-		r.printNodes(emb.Sharders)
-		fmt.Println("[ERR] got sharders")
-		r.printNodes(vce.Sharders)
+	if emb.ShardersCount > 0 && len(emb.Sharders) == 0 {
+		// check count only
+		if oks = (emb.ShardersCount == len(vci.Sharders)); !oks {
+			fmt.Println("[ERR] expected sharders count:", emb.ShardersCount)
+			fmt.Println("[ERR] got sharders")
+			r.printNodes(vci.Sharders)
+		}
+	} else {
+		if oks = isEqual(emb.Sharders, vci.Sharders); !oks {
+			fmt.Println("[ERR] expected sharders list:")
+			r.printNodes(emb.Sharders)
+			fmt.Println("[ERR] got sharders")
+			r.printNodes(vci.Sharders)
+		}
 	}
 
 	if !okm || !oks {
 		return fmt.Errorf("unexpected MB miners/sharders (see logs)")
 	}
-
-	log.Println("[OK] view change", vce.Round)
-
-	r.lastVCRound = vce.Round                  // keep the last VC round
-	r.waitViewChange = config.WaitViewChange{} // reset
 	return
 }
 
@@ -361,17 +396,21 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 		vcr Round
 		ok  bool
 	)
+	var lastVCRound Round = 0
+	if r.lastVC != nil {
+		lastVCRound = r.lastVC.Round
+	}
 	if vcrn := r.waitPhase.ViewChangeRound; vcrn != "" {
 		if vcr, ok = r.rounds[vcrn]; !ok {
 			return fmt.Errorf("unknown view_change_round of phase: %s", vcrn)
 		}
-		if vcr < r.lastVCRound {
+		if vcr < lastVCRound {
 			return // wait one more view change
 		}
-		if vcr >= r.lastVCRound+r.conf.ViewChange {
-			return fmt.Errorf("got phase %s, but after %s (%d) view change, "+
+		if vcr >= lastVCRound+r.conf.ViewChange {
+			log.Printf("got phase %s, but after %s (%d) view change, "+
 				"last known view change: %d", pe.Phase.String(), vcrn, vcr,
-				r.lastVCRound)
+				lastVCRound)
 		}
 		// ok, accept it
 	}
@@ -526,11 +565,19 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return // not the monitor node
 	}
 
-	if !r.waitNoProgressUntil.IsZero() {
-		r.waitNoPreogressCount++
-		if r.waitNoPreogressCount >= noProgressRounds {
-			return fmt.Errorf("got round %d, but 'no progress' is expected"+
-				" (got > %d rounds)", re.Round, r.waitNoPreogressCount)
+	if r.lastAcceptedRound.Round > 0 && re.Round > r.lastAcceptedRound.Round {
+		threshold := r.conf.GetStuckWarningThreshold()
+		if threshold > 0 {
+			duration := time.Since(r.lastAcceptedRound.Time)
+			if duration > threshold {
+				log.Print("[WARN] chain was stuck for ", duration)
+			}
+		}
+	}
+
+	if !r.waitNoProgress.IsZero() {
+		if r.lastAcceptedRound.Round < re.Round && time.Now().After(r.waitNoProgress.Start) {
+			return fmt.Errorf("got round %d, but 'no progress' is expected", re.Round)
 		}
 	}
 
@@ -551,12 +598,15 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if !ok {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
-	if r.verbose {
-		// log.Print(" [INF] round ", re.Round, " ", n.Name)
-	}
 
 	// set last round
-	r.lastRound = re.Round
+	r.lastAcceptedRound = struct {
+		Round
+		time.Time
+	}{
+		re.Round,
+		time.Now(),
+	}
 
 	if r.waitRound.IsZero() {
 		return // doesn't wait for a round
@@ -565,14 +615,12 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	switch {
 	case r.waitRound.Round > re.Round:
 		return // not this round
-	case r.waitRound.Round == re.Round:
-		log.Print("[OK] accept round ", re.Round)
-		r.waitRound.Round = 0 // doesn't wait anymore
-	case r.waitRound.Round < re.Round:
+	case !r.waitRound.AllowBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
 			re.Round)
 	}
-
+	log.Print("[OK] accept round ", re.Round)
+	r.waitRound = config.WaitRound{} // don't wait anymore
 	return
 }
 
@@ -691,10 +739,9 @@ func (r *Runner) proceedWaiting() (err error) {
 			}
 			r.waitCommand = nil // reset
 		case timeout := <-tm.C:
-			if !r.waitNoProgressUntil.IsZero() {
-				if timeout.UnixNano() >= r.waitNoProgressUntil.UnixNano() {
-					r.waitNoProgressUntil = time.Time{} // reset
-					r.waitNoPreogressCount = 0          // reset
+			if !r.waitNoProgress.IsZero() {
+				if timeout.UnixNano() >= r.waitNoProgress.Until.UnixNano() {
+					r.waitNoProgress = config.WaitNoProgress{} // reset
 					return
 				}
 			}
@@ -705,15 +752,6 @@ func (r *Runner) proceedWaiting() (err error) {
 		}
 	}
 	return
-}
-
-func isOk(cs []reportFlowDirective) (ok bool) {
-	for _, c := range cs {
-		if !c.success {
-			return false
-		}
-	}
-	return true
 }
 
 func okString(t bool) string {
@@ -772,7 +810,7 @@ func (r *Runner) resetWaiters() {
 	r.waitShareSignsOrShares = config.WaitShareSignsOrShares{} //
 	r.waitViewChange = config.WaitViewChange{}                 //
 	r.waitAdd = config.WaitAdd{}                               //
-	r.waitNoProgressUntil = time.Time{}                        //
+	r.waitNoProgress = config.WaitNoProgress{}                 //
 	r.waitNoViewChange = config.WaitNoViewChainge{}            //
 	r.waitSharderKeep = config.WaitSharderKeep{}               //
 	if r.waitCommand != nil {
@@ -783,8 +821,8 @@ func (r *Runner) resetWaiters() {
 }
 
 func (r *Runner) resetRounds() {
-	r.lastRound = 0
-	r.lastVCRound = 0
+	r.lastAcceptedRound.Round = 0
+	r.lastVC = nil
 }
 
 // Run the tests.
@@ -807,6 +845,7 @@ func (r *Runner) Run() (err error, success bool) {
 
 	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name
 			report.s = time.Now()
@@ -837,6 +876,12 @@ func (r *Runner) Run() (err error, success bool) {
 					log.Printf("[ERR] at the end of %d test case: %v", i, err)
 					if mustFail {
 						log.Printf("[The error is expected result of the test case]")
+					}
+
+					if testCase.Flow.IsSavingLogs() {
+						if err := r.SaveLogs(); err != nil {
+							log.Printf("Warning: error while saving logs: %v", err)
+						}
 					}
 
 					continue cases

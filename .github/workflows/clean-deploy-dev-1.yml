@@ -39,7 +39,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-20.04
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
       - uses: azure/setup-helm@v1
@@ -70,7 +70,7 @@ jobs:
      
           helm upgrade --install --wait --timeout 120s 0dns -n dev-1 --set zdns.image.tag=${{ github.event.inputs.dnsimage }} --set zdns.host=devnet-0chain.net 0chain-helm/zdns
 
-          helm upgrade --install --wait --timeout 120s blobber -n dev-1 --set blobber.blobberImage.tag=${{ github.event.inputs.blobberimage }} --set validator.validatorImage.tag=${{ github.event.inputs.blobberimage }} 0chain-helm/blobber
+          helm upgrade --install --wait --timeout 120s blobber -n dev-1 --set blobber.blobberImage.tag=${{ github.event.inputs.blobberimage }} --set validator.validatorImage.tag=${{ github.event.inputs.blobberimage }} --set blobber.host=devnet-0chain.net 0chain-helm/blobber
 
           helm upgrade --install --wait --timeout 120s 0block -n dev-1 --set block.blockImage.tag=${{ github.event.inputs.blockimage }} --set block.host=devnet-0chain.net 0chain-helm/zblock
 

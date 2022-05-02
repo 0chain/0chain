@@ -18,13 +18,14 @@ type RoundI interface {
 
 	IsRanksComputed() bool
 	GetMinerRank(miner *node.Node) int
-	GetMinersByRank(miners *node.Pool) []*node.Node
+	GetMinersByRank(miners []*node.Node) []*node.Node
 
 	AddProposedBlock(b *block.Block) (*block.Block, bool)
 	GetProposedBlocks() []*block.Block
 	GetBestRankedProposedBlock() *block.Block
 
-	AddNotarizedBlock(b *block.Block) (*block.Block, bool, error)
+	AddNotarizedBlock(b *block.Block) (*block.Block, bool)
+	UpdateNotarizedBlock(b *block.Block)
 	GetNotarizedBlocks() []*block.Block
 	GetHeaviestNotarizedBlock() *block.Block
 	GetBestRankedNotarizedBlock() *block.Block
@@ -34,8 +35,8 @@ type RoundI interface {
 	IsFinalized() bool
 	Clear()
 
-	GetState() int
-	SetState(state int)
+	GetPhase() Phase
+	SetPhase(state Phase)
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
 }

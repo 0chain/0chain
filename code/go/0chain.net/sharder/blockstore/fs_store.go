@@ -46,20 +46,40 @@ func NewFSBlockStore(rootDir string, minio MinioClient) *FSBlockStore {
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
+	defer func() {
+		if err := recover(); err != nil {
+			Logger.Error("Failed to get file", zap.Any("recover", err), zap.Int64("round", round))
+		}
+	}()
+
 	var file strings.Builder
-	var dirRoundRange = chain.GetServerChain().RoundRange
+	var dirRoundRange = chain.GetServerChain().RoundRange()
 
 	file.WriteString(fbs.RootDirectory)
 	file.WriteString(string(os.PathSeparator))
 	file.WriteString(strconv.Itoa(int(round / dirRoundRange)))
 
+	if len(hash) == 0 {
+		Logger.Warn("Hash is empty. returning only header", zap.Int64("round", round))
+		return file.String()
+	}
+
 	for i := 0; i < 3; i++ {
 		file.WriteString(string(os.PathSeparator))
+		if len(hash[3*i:]) < 3 {
+			file.WriteString(hash[3*i:])
+			break
+		}
 		file.WriteString(hash[3*i : 3*i+3]) // FIXME panics if hash size < 9
+		// i=0 => hash[0:3]
+		// i=1 => hash[3:6]
+		// i=3 => hash[6:9]
 	}
 
 	file.WriteString(string(os.PathSeparator))
-	file.WriteString(hash[9:])
+	if len(hash) > 9 {
+		file.WriteString(hash[9:])
+	}
 
 	return file.String()
 }
@@ -83,7 +103,7 @@ func (fbs *FSBlockStore) write(hash string, round int64, v datastore.Entity) err
 	if err != nil {
 		return err
 	}
-	if err := datastore.WriteJSON(w, v); err != nil {
+	if err := datastore.WriteMsgpack(w, v); err != nil {
 		return err
 	}
 	if err = w.Close(); err != nil {
@@ -104,6 +124,10 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 		return err
 	}
 	if b.MagicBlock != nil && b.Round == b.MagicBlock.StartingRound {
+		Logger.Debug("save magic block",
+			zap.Int64("round", b.Round),
+			zap.String("mb hash", b.MagicBlock.Hash),
+		)
 		return fbs.write(b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
 	}
 	return nil
@@ -202,7 +226,7 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	}
 	defer r.Close()
 	b := fbs.blockMetadataProvider.Instance().(*block.Block)
-	err = datastore.ReadJSON(r, b)
+	err = datastore.ReadMsgpack(r, b)
 	if err != nil {
 		return nil, err
 	}
@@ -248,8 +272,5 @@ func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
 
 func (fbs *FSBlockStore) CloudObjectExists(hash string) bool {
 	_, err := fbs.Minio.StatObject(fbs.Minio.BucketName(), hash, minio.StatObjectOptions{})
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }

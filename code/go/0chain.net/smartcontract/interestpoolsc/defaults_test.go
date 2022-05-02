@@ -40,17 +40,38 @@ func testPoolRequest(d time.Duration) []byte {
 
 // TEST FUNCTION
 // testGlobalNode function creates global node instance using incoming parameters
-func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr float64, minLockP time.Duration) *GlobalNode {
+func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr float64, minLockP time.Duration, ownerId datastore.Key) *GlobalNode {
 	var gn = &GlobalNode{ID: id}
 	gn.SimpleGlobalNode = &SimpleGlobalNode{
 		MaxMint:     maxMint,
 		TotalMinted: totalMint,
 		MinLock:     minLock,
 		APR:         apr,
+		OwnerId:     ownerId,
+		Cost:        map[string]int{},
 	}
 	if minLockP != 0 {
 		gn.MinLockPeriod = minLockP
 	}
+	return gn
+}
+
+func testGlobalNodeStringTime(id string, maxMint, totalMint, minLock, apr float64, minLockP string, ownerId string) *GlobalNode {
+	var gn = &GlobalNode{ID: id}
+	gn.SimpleGlobalNode = &SimpleGlobalNode{
+		MaxMint:     state.Balance(maxMint * 1e10),
+		TotalMinted: state.Balance(totalMint * 1e10),
+		MinLock:     state.Balance(minLock * 1e10),
+		APR:         apr,
+		OwnerId:     ownerId,
+		Cost:        map[string]int{},
+	}
+	mlp, err := time.ParseDuration(minLockP)
+	if err != nil {
+		panic(err)
+	}
+
+	gn.MinLockPeriod = mlp
 	return gn
 }
 
@@ -69,9 +90,36 @@ func testTxn(owner string, value int64) *transaction.Transaction {
 	}
 	t.ComputeOutputHash()
 	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys()
+	if err := scheme.GenerateKeys(); err != nil {
+		panic(err)
+	}
 	t.PublicKey = scheme.GetPublicKey()
-	t.Sign(scheme)
+	if _, err := t.Sign(scheme); err != nil {
+		panic(err)
+	}
+	return t
+}
+
+func testTxnForUnlock(client string, value int64) *transaction.Transaction {
+	t := &transaction.Transaction{
+		ClientID:          client,
+		ToClientID:        client,
+		ChainID:           config.GetMainChainID(),
+		TransactionData:   "testTxnDataOK",
+		TransactionOutput: fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, 1),
+		Value:             value,
+		TransactionType:   transaction.TxnTypeSmartContract,
+		CreationDate:      common.Now(),
+	}
+	t.ComputeOutputHash()
+	var scheme = encryption.NewBLS0ChainScheme()
+	if err := scheme.GenerateKeys(); err != nil {
+		panic(err)
+	}
+	t.PublicKey = scheme.GetPublicKey()
+	if _, err := t.Sign(scheme); err != nil {
+		panic(err)
+	}
 	return t
 }
 
@@ -80,11 +128,25 @@ func testTxn(owner string, value int64) *transaction.Transaction {
 func testBalance(client string, value int64) *testBalances {
 	t := &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
-		tree:     make(map[datastore.Key]util.Serializable),
+		tree:     make(map[datastore.Key]util.MPTSerializable),
 		txn:      testTxn(clientID1, 10),
 	}
 	if client != "" {
 		t.txn = testTxn(client, value)
+		t.setBalance(client, state.Balance(value))
+	}
+
+	return t
+}
+
+func testBalanceUnlock(client string, value int64) *testBalances {
+	t := &testBalances{
+		balances: make(map[datastore.Key]state.Balance),
+		tree:     make(map[datastore.Key]util.MPTSerializable),
+		txn:      testTxnForUnlock(client, 10),
+	}
+	if client != "" {
+		t.txn = testTxnForUnlock(client, value)
 		t.setBalance(client, state.Balance(value))
 	}
 
@@ -116,9 +178,9 @@ func testInterestPool(sec time.Duration, balance int) *interestPool {
 				Balance: state.Balance(balance),
 			},
 		},
-		TokenLockInterface: tokenLock{
+		TokenLockInterface: &TokenLock{
 			StartTime: timeNow,
-			Duration:  time.Duration(sec * time.Second),
+			Duration:  sec * time.Second,
 			Owner:     clientID1,
 		},
 	}}
@@ -132,7 +194,9 @@ func testUserNode(client string, ip *interestPool) *UserNode {
 		Pools:    make(map[datastore.Key]*interestPool),
 	}
 	if ip != nil {
-		un.addPool(ip)
+		if err := un.addPool(ip); err != nil {
+			panic(err)
+		}
 	}
 	return un
 }
@@ -162,5 +226,6 @@ func testConfiguredGlobalNode() *GlobalNode {
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	gn.Cost = map[string]int{"1": 1, "2": 2, "3": 3}
 	return gn
 }

@@ -21,18 +21,13 @@ func shouldNotFinalize(r round.RoundI) bool {
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	b *block.Block) bool {
 
-	_, ok, err := r.AddNotarizedBlock(b)
-	if err != nil {
-		Logger.Error("Add notarized block failed",
-			zap.Int64("round", r.GetRoundNumber()),
-			zap.String("block", b.Hash),
-			zap.Error(err))
-		return false
-	}
+	_, ok := r.AddNotarizedBlock(b)
 
 	if !ok && shouldNotFinalize(r) {
 		return false
 	}
+
+	sc.SetCurrentRound(r.GetRoundNumber())
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()
 		if len(nb) > 0 {
@@ -50,7 +45,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		defer close(doneC)
 		if b.ClientState != nil {
 			// check if the block's client state is correct
-			if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+			if !bytes.Equal(b.ClientStateHash, b.ClientState.GetRoot()) {
 				select {
 				case errC <- errors.New("AddNotarizedBlock block client state does not match"):
 				default:
@@ -84,6 +79,6 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		Logger.Warn("AddNotarizedBlock compute state timeout", zap.Int64("round", b.Round))
 		ret = false
 	}
-	sc.FinalizeRound(ctx, r, sc)
+	go sc.FinalizeRound(r)
 	return ret
 }

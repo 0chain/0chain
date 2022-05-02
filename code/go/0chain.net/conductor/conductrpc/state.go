@@ -2,6 +2,7 @@ package conductrpc
 
 import (
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/config/cases"
 )
 
 //
@@ -16,6 +17,8 @@ type State struct {
 	IsMonitor  bool // send monitor events (round, phase, etc)
 	IsLock     bool // node locked
 	IsRevealed bool // revealed shares
+	// Failure emulation
+	GeneratorsFailureRoundNumber Round // all generators fail on start of this round
 	// Byzantine state. Below, if a value is nil, then node behaves as usual
 	// for it.
 	//
@@ -25,6 +28,7 @@ type State struct {
 	CompetingBlock              *config.Bad
 	SignOnlyCompetingBlocks     *config.Bad
 	DoubleSpendTransaction      *config.Bad
+	DoubleSpendTransactionHash  string // internal variable to ignore this transaction in ChainHasTransaction()
 	WrongBlockSignHash          *config.Bad
 	WrongBlockSignKey           *config.Bad
 	WrongBlockHash              *config.Bad
@@ -45,10 +49,29 @@ type State struct {
 	Signatures *config.Bad
 	Publish    *config.Bad
 
+	ExtendNotNotarisedBlock               *cases.NotNotarisedBlockExtension
+	SendDifferentBlocksFromFirstGenerator *cases.SendDifferentBlocksFromFirstGenerator
+	SendDifferentBlocksFromAllGenerators  *cases.SendDifferentBlocksFromAllGenerators
+	BreakingSingleBlock                   *cases.BreakingSingleBlock
+	SendInsufficientProposals             *cases.SendInsufficientProposals
+	VerifyingNonExistentBlock             *cases.VerifyingNonExistentBlock
+	NotarisingNonExistentBlock            *cases.NotarisingNonExistentBlock
+	ResendProposedBlock                   *cases.ResendProposedBlock
+	ResendNotarisation                    *cases.ResendNotarisation
+	BadTimeoutVRFS                        *cases.BadTimeoutVRFS
+	HalfNodesDown                         *cases.HalfNodesDown
+	BlockStateChangeRequestor             *cases.BlockStateChangeRequestor
+	MinerNotarisedBlockRequestor          *cases.MinerNotarisedBlockRequestor
+	FBRequestor                           *cases.FBRequestor
+	MissingLFBTicket                      *cases.MissingLFBTickets
+
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses
 	ValidatorProof *config.Bad // blobber sends invalid proof to validators
 	Challenges     *config.Bad // blobber ignores challenges
+
+	ServerStatsCollectorEnabled bool
+	ClientStatsCollectorEnabled bool
 }
 
 // Name returns NodeName by given NodeID.
@@ -58,15 +81,13 @@ func (s *State) Name(id NodeID) NodeName {
 
 func (s *State) copy() (cp *State) {
 	cp = new(State)
-	(*cp) = (*s)
+	*cp = *s
 	return
 
 }
 
 func (s *State) send(poll chan *State) {
-	go func(state *State) {
-		poll <- state
-	}(s.copy())
+	poll <- s.copy()
 }
 
 type IsGoodOrBad interface {

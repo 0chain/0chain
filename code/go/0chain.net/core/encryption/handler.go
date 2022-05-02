@@ -16,9 +16,10 @@ func HashHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return
 		}
+		defer r.Body.Close()
 		text = string(data)
 	}
-	fmt.Fprintf(w, Hash(text))
+	fmt.Fprint(w, Hash(text))
 }
 
 /*SignHandler - returns hash of the text passed */

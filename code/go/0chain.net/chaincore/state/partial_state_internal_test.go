@@ -2,7 +2,7 @@ package state
 
 import (
 	"context"
-	"reflect"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,64 +11,24 @@ import (
 	"0chain.net/core/util"
 )
 
-func TestPartialState_GetNodeDB(t *testing.T) {
-	t.Parallel()
-
-	type fields struct {
-		Hash    util.Key
-		Version string
-		Nodes   []util.Node
-		mndb    *util.MemoryNodeDB
-		root    util.Node
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   util.NodeDB
-	}{
-		{
-			name: "OK",
-			fields: fields{
-				mndb: util.NewMemoryNodeDB(),
-			},
-			want: util.NewMemoryNodeDB(),
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := &PartialState{
-				Hash:    tt.fields.Hash,
-				Version: tt.fields.Version,
-				Nodes:   tt.fields.Nodes,
-				mndb:    tt.fields.mndb,
-				root:    tt.fields.root,
-			}
-			ps.ComputeProperties()
-			if got := ps.GetNodeDB(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetNodeDB() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestPartialState_SaveState(t *testing.T) {
 	t.Parallel()
 
-	ps := NewPartialState(util.Key("key"))
+	ps := &PartialState{
+		Hash: util.Key("key"),
+	}
 	ps.mndb = util.NewMemoryNodeDB()
 	db := util.NewMemoryNodeDB()
 	err := db.PutNode(util.Key("node key"), util.NewFullNode(&util.SecureSerializableValue{Buffer: []byte("data")}))
 	require.NoError(t, err)
 
 	type fields struct {
-		Hash    util.Key
-		Version string
-		Nodes   []util.Node
-		mndb    *util.MemoryNodeDB
-		root    util.Node
+		Hash      util.Key
+		Version   string
+		StartRoot util.Key
+		Nodes     []util.Node
+		mndb      *util.MemoryNodeDB
+		root      util.Node
 	}
 	type args struct {
 		ctx     context.Context
@@ -125,8 +85,11 @@ func TestPartialState_ComputeProperties(t *testing.T) {
 			util.NewFullNode(&util.SecureSerializableValue{Buffer: []byte("value")}),
 		},
 	}
-	ps.mndb = ps.newNodeDB()
-	ps.root = ps.mndb.ComputeRoot()
+	var err error
+	ps.mndb, err = ps.newNodeDB()
+	require.NoError(t, err)
+	ps.root, err = ps.mndb.ComputeRoot()
+	require.NoError(t, err)
 	ps.Hash = ps.root.GetHashBytes()
 
 	type fields struct {
@@ -140,6 +103,7 @@ func TestPartialState_ComputeProperties(t *testing.T) {
 		name   string
 		fields fields
 		want   *PartialState
+		err    error
 	}{
 		{
 			name: "OK",
@@ -154,9 +118,7 @@ func TestPartialState_ComputeProperties(t *testing.T) {
 			fields: fields{
 				Nodes: ps.Nodes,
 			},
-			want: &PartialState{
-				Nodes: ps.Nodes,
-			},
+			err: errors.New("partial state root hash mismatch"),
 		},
 	}
 	for _, tt := range tests {
@@ -172,60 +134,12 @@ func TestPartialState_ComputeProperties(t *testing.T) {
 				root:    tt.fields.root,
 			}
 
-			ps.ComputeProperties()
+			err := ps.ComputeProperties()
+			require.Equal(t, tt.err, err)
+			if err != nil {
+				return
+			}
 			assert.Equal(t, tt.want, ps)
-		})
-	}
-}
-
-func TestPartialState_Validate(t *testing.T) {
-	t.Parallel()
-
-	ps := PartialState{
-		Nodes: []util.Node{
-			util.NewFullNode(&util.SecureSerializableValue{Buffer: []byte("value")}),
-		},
-	}
-	ps.mndb = ps.newNodeDB()
-	ps.root = ps.mndb.ComputeRoot()
-
-	type fields struct {
-		Hash    util.Key
-		Version string
-		Nodes   []util.Node
-		mndb    *util.MemoryNodeDB
-		root    util.Node
-	}
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name:    "OK",
-			fields:  fields(ps),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ps := &PartialState{
-				Hash:    tt.fields.Hash,
-				Version: tt.fields.Version,
-				Nodes:   tt.fields.Nodes,
-				mndb:    tt.fields.mndb,
-				root:    tt.fields.root,
-			}
-			if err := ps.Validate(tt.args.ctx); (err != nil) != tt.wantErr {
-				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
 		})
 	}
 }

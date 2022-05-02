@@ -5,6 +5,9 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+
+	"0chain.net/conductor/conductrpc/stats"
+	"0chain.net/conductor/config/cases"
 )
 
 // Executor used by a Flow to perform a flow directive.
@@ -14,6 +17,7 @@ type Executor interface {
 
 	SetMonitor(name NodeName) (err error)
 	CleanupBC(timeout time.Duration) (err error)
+	SetEnv(map[string]string) (err error)
 
 	// common control
 
@@ -21,8 +25,13 @@ type Executor interface {
 	Unlock(names []NodeName, timeout time.Duration) (err error)
 	Stop(names []NodeName, timeout time.Duration) (err error)
 
-	// VC misbehavior
+	// checks
 
+	ExpectActiveSet(emb ExpectMagicBlock) (err error)
+
+	// misbehavior
+
+	ConfigureGeneratorsFailure(round Round) (err error)
 	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
 
 	// waiting
@@ -72,6 +81,32 @@ type Executor interface {
 	StorageTree(st *Bad) (err error)
 	ValidatorProof(vp *Bad) (err error)
 	Challenges(cs *Bad) (err error)
+
+	// MinersNum returns number of miner nodes.
+	MinersNum() int
+
+	// GetMonitorID returns ID of the Monitor.
+	GetMonitorID() string
+
+	// EnableServerStatsCollector enables server stats collecting.
+	EnableServerStatsCollector() error
+
+	// GetServerStatsCollector returns current server stats collector.
+	GetServerStatsCollector() *stats.NodesServerStats
+
+	// EnableClientStatsCollector enables client stats collecting.
+	EnableClientStatsCollector() error
+
+	// GetClientStatsCollector returns current client stats collector.
+	GetClientStatsCollector() *stats.NodesClientStats
+
+	SaveLogs() error
+
+	// ConfigureTestCase runs cases.TestCase's configuring with cases.TestCaseConfigurator configuration.
+	ConfigureTestCase(cases.TestCaseConfigurator) error
+
+	// MakeTestCaseCheck runs cases.TestCase's final check with TestCaseCheck configuration.
+	MakeTestCaseCheck(*TestCaseCheck) error
 }
 
 //
@@ -85,6 +120,16 @@ func setMonitor(ex Executor, val interface{}, tm time.Duration) (
 		return ex.SetMonitor(ss[0])
 	}
 	return fmt.Errorf("invalid 'set_monitor' argument type: %T", val)
+}
+
+func env(ex Executor, val interface{}) (
+	err error) {
+
+	var values map[string]string
+	if err = mapstructure.Decode(val, &values); err != nil {
+		return fmt.Errorf("decoding 'env': %v", err)
+	}
+	return ex.SetEnv(values)
 }
 
 //
@@ -217,8 +262,15 @@ func waitSharderKeep(ex Executor, val interface{},
 }
 
 //
-// control nodes behavior / misbehavior (view change)
+// control nodes behavior / misbehavior
 //
+
+func configureGeneratorsFailure(name string, ex Executor, val interface{}) (err error) {
+	if round, ok := val.(int); ok {
+		return ex.ConfigureGeneratorsFailure(Round(round))
+	}
+	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
 
 func setRevealed(name string, ex Executor, val interface{}, pin bool,
 	tm time.Duration) (err error) {
@@ -227,4 +279,17 @@ func setRevealed(name string, ex Executor, val interface{}, pin bool,
 		return ex.SetRevealed(ss, pin, tm)
 	}
 	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
+
+//
+// checks
+//
+
+func expectActiveSet(ex Executor, val interface{}) (err error) {
+	var emb ExpectMagicBlock
+	if err = mapstructure.Decode(val, &emb); err != nil {
+		return fmt.Errorf("invalid 'expect_active_set' argument type: %T, "+
+			"decoding error: %v", val, err)
+	}
+	return ex.ExpectActiveSet(emb)
 }

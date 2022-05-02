@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/chaincore/round"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 )
@@ -92,9 +93,9 @@ func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 }
 
 /*StoreRound - persists given round to ememory(rocksdb)*/
-func (sc *Chain) StoreRound(ctx context.Context, r *round.Round) error {
+func (sc *Chain) StoreRound(r *round.Round) error {
 	roundEntityMetadata := r.GetEntityMetadata()
-	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
+	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
 	defer ememorystore.Close(rctx)
 	err := r.Write(rctx)
 	if err != nil {
@@ -106,22 +107,6 @@ func (sc *Chain) StoreRound(ctx context.Context, r *round.Round) error {
 		return err
 	}
 	return nil
-}
-
-/*GetMostRecentRoundFromDB - gives the most recent round added to db*/
-func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, error) {
-	remd := datastore.GetEntityMetadata("round")
-	rctx := ememorystore.WithEntityConnection(ctx, remd)
-	defer ememorystore.Close(rctx)
-	c := ememorystore.GetEntityCon(rctx, remd)
-	r := remd.Instance().(*round.Round)
-	iterator := c.Conn.NewIterator(c.ReadOptions)
-	defer iterator.Close()
-	iterator.SeekToLast()
-	if iterator.Valid() {
-		datastore.FromJSON(iterator.Value().Data(), r)
-	}
-	return r, iterator.Err()
 }
 
 // ReadHealthyRound -

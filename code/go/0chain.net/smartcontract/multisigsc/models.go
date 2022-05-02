@@ -10,6 +10,9 @@ import (
 	"0chain.net/core/encryption"
 )
 
+//msgp:ignore Vote
+//go:generate msgp -io=false -tests=false -unexported -v
+
 const (
 	ExpirationTime = 60 * 60 * 24 * 7 // Proposals expire after one week.
 	//ExpirationTime = 30 // Value in seconds that is more appropriate for testing.
@@ -149,11 +152,7 @@ func (w Wallet) isVoteAuthorized(signingClientID string, v Vote) bool {
 	}
 
 	err := w.makeSignedTransferForVote(publicKey, v).VerifySignature(false)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func (w Wallet) makeSignedTransferForVote(signingPublicKey string, v Vote) state.SignedTransfer {
