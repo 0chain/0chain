@@ -908,7 +908,7 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	_, found := sa.BlobberMap[addId]
 	if found {
-		return nil, fmt.Errorf("allocatino already has blobber %s", addId)
+		return nil, fmt.Errorf("allocation already has blobber %s", addId)
 	}
 
 	addedBlobber, err := ssc.getBlobber(addId, balances)

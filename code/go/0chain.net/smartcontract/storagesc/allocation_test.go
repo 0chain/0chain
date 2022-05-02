@@ -247,11 +247,12 @@ func TestChangeBlobbers(t *testing.T) {
 	)
 
 	type args struct {
-		numBlobbers     int
-		addBlobberID    string
-		removeBlobberID string
-		dataShards      int
-		parityShards    int
+		numBlobbers          int
+		blobbersInAllocation int
+		addBlobberID         string
+		removeBlobberID      string
+		dataShards           int
+		parityShards         int
 	}
 	type want struct {
 		err    bool
@@ -267,11 +268,9 @@ func TestChangeBlobbers(t *testing.T) {
 		common.Timestamp,
 		chainState.StateContextI) {
 		var (
-			blobbers []*StorageNode
-			balances = &mocks.StateContextI{}
-			sc       = StorageSmartContract{
-				SmartContract: sci.NewSC(ADDRESS),
-			}
+			blobbers             []*StorageNode
+			sc                   = newTestStorageSC()
+			balances             = newTestBalances(t, false)
 			now                  = common.Timestamp(1000000)
 			mockAllocationExpiry = common.Timestamp(2000000)
 			blobberAllocation    []*BlobberAllocation
@@ -289,14 +288,14 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 		txn.Hash = mockHash
 
-		var conf = &Config{
-			MinAllocSize:     confMinAllocSize,
-			MinAllocDuration: confMinAllocDuration,
-		}
-		balances.On("GetTrieNode", scConfigKey(sc.ID), mock.MatchedBy(func(c *Config) bool {
-			*c = *conf
-			return true
-		})).Return(nil).Once()
+		//var conf = &Config{
+		//	MinAllocSize:     confMinAllocSize,
+		//	MinAllocDuration: confMinAllocDuration,
+		//}
+		//balances.On("GetTrieNode", scConfigKey(sc.ID), mock.MatchedBy(func(c *Config) bool {
+		//	*c = *conf
+		//	return true
+		//})).Return(nil).Once()
 
 		for i := 0; i < arg.numBlobbers; i++ {
 			ba := &BlobberAllocation{
@@ -309,8 +308,10 @@ func TestChangeBlobbers(t *testing.T) {
 					WritePrice:       mockWritePrice,
 				},
 			}
-			blobberAllocation = append(blobberAllocation, ba)
-			blobberMap[ba.BlobberID] = ba
+			if arg.blobbersInAllocation <= i {
+				blobberAllocation = append(blobberAllocation, ba)
+				blobberMap[ba.BlobberID] = ba
+			}
 
 			blobber := &StorageNode{
 				ID:       ba.BlobberID,
@@ -322,7 +323,8 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 				LastHealthCheck: now,
 			}
-			blobbers = append(blobbers, blobber)
+			_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+			require.NoError(t, err)
 		}
 
 		alloc := &StorageAllocation{
@@ -340,20 +342,19 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 
 		if len(arg.addBlobberID) > 0 {
-			blobber := &StorageNode{
-				ID: arg.addBlobberID,
-				Terms: Terms{
-					MaxOfferDuration: mockMaxOffDuration,
-					ReadPrice:        mockReadPrice,
-					WritePrice:       mockWritePrice,
-				},
-				Capacity:        mockBlobberCapacity,
-				LastHealthCheck: now,
-			}
-			balances.On("GetTrieNode", blobber.GetKey(sc.ID), mock.MatchedBy(func(s *StorageNode) bool {
-				*s = *blobber
-				return true
-			})).Return(nil).Once()
+			//blobber := &StorageNode{
+			//	ID: arg.addBlobberID,
+			//	Terms: Terms{
+			//		MaxOfferDuration: mockMaxOffDuration,
+			//		ReadPrice:        mockReadPrice,
+			//		WritePrice:       mockWritePrice,
+			//	},
+			//	Capacity:        mockBlobberCapacity,
+			//	LastHealthCheck: now,
+			//}
+			//
+			//_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+			//require.NoError(t, err)
 
 			sp := stakePool{
 				StakePool: stakepool.StakePool{
@@ -363,42 +364,68 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 			}
 			sp.Pools[mockPoolId].Balance = mockState
-			balances.On("GetTrieNode", stakePoolKey(sc.ID, arg.addBlobberID),
-				mock.MatchedBy(func(s *stakePool) bool {
-					*s = sp
-					return true
-				})).Return(nil).Twice()
+			_, err := balances.InsertTrieNode(stakePoolKey(sc.ID, arg.addBlobberID), &sp)
+			require.NoError(t, err)
 		}
 
-		if len(arg.removeBlobberID) > 0 {
-			blobber := &StorageNode{
-				ID:       arg.removeBlobberID,
-				Capacity: mockBlobberCapacity,
-				Terms: Terms{
-					MaxOfferDuration: mockMaxOffDuration,
-					ReadPrice:        mockReadPrice,
-					WritePrice:       mockWritePrice,
-				},
-				LastHealthCheck: now,
+		//if len(arg.removeBlobberID) > 0 {
+		//	blobber := &StorageNode{
+		//		ID:       arg.removeBlobberID,
+		//		Capacity: mockBlobberCapacity,
+		//		Terms: Terms{
+		//			MaxOfferDuration: mockMaxOffDuration,
+		//			ReadPrice:        mockReadPrice,
+		//			WritePrice:       mockWritePrice,
+		//		},
+		//		LastHealthCheck: now,
+		//	}
+		//
+		//	balances.On(
+		//		"InsertTrieNode",
+		//		blobber.GetKey(sc.ID),
+		//		mock.Anything,
+		//	).Return("", nil).Once()
+		//
+		//	balances.On(
+		//		"EmitEvent",
+		//		event.TypeStats,
+		//		event.TagUpdateBlobber,
+		//		blobber.ID,
+		//		mock.Anything,
+		//	).Return("", nil).Once()
+		//}
+
+		return blobbers, arg.addBlobberID, arg.removeBlobberID, sc, alloc, now, balances
+
+	}
+
+	validate := func(want want, arg args, sa *StorageAllocation, balances chainState.StateContextI) {
+		totalBlobbers := arg.blobbersInAllocation
+		if arg.addBlobberID != "" {
+			totalBlobbers++
+		}
+		if arg.removeBlobberID != "" {
+			totalBlobbers--
+		}
+		blobberNameMap := make(map[string]struct{}, totalBlobbers)
+		require.Equal(t, totalBlobbers, len(sa.BlobberDetails))
+
+		for _, ba := range sa.BlobberDetails {
+			blobberNameMap[ba.BlobberID] = struct{}{}
+		}
+
+		if arg.addBlobberID != "" {
+			_, ok := blobberNameMap[arg.addBlobberID]
+			require.EqualValues(t, true, ok)
+			if arg.removeBlobberID == "" {
+				require.EqualValues(t, arg.blobbersInAllocation+1, sa.ParityShards)
 			}
-
-			balances.On(
-				"InsertTrieNode",
-				blobber.GetKey(sc.ID),
-				mock.Anything,
-			).Return("", nil).Once()
-
-			balances.On(
-				"EmitEvent",
-				event.TypeStats,
-				event.TagUpdateBlobber,
-				blobber.ID,
-				mock.Anything,
-			).Return("", nil).Once()
 		}
 
-		return blobbers, arg.addBlobberID, arg.removeBlobberID, &sc, alloc, now, balances
-
+		if arg.removeBlobberID != "" {
+			_, ok := blobberNameMap[arg.removeBlobberID]
+			require.EqualValues(t, false, ok)
+		}
 	}
 
 	testCases := []struct {
@@ -407,27 +434,52 @@ func TestChangeBlobbers(t *testing.T) {
 		want want
 	}{
 		{
-			name: "test_blobber_remove_doesnt_exist",
+			name: "remove_blobber_doesnt_exist",
 			args: args{
-				numBlobbers:     6,
-				addBlobberID:    "add_blobber_id",
-				removeBlobberID: "blobber_non_existent",
-				dataShards:      5,
+				numBlobbers:          6,
+				blobbersInAllocation: 6,
+				addBlobberID:         "add_blobber_id",
+				removeBlobberID:      "blobber_non_existent",
+				dataShards:           5,
 			},
 			want: want{
 				err:    true,
 				errMsg: "cannot find blobber blobber_non_existent in allocation",
 			}},
 		{
-			name: "test_blobber_add_remove_blobber",
+			name: "add_remove_valid_blobber",
 			args: args{
-				numBlobbers:     6,
-				addBlobberID:    "add_blobber_id",
-				removeBlobberID: "blobber_1",
-				dataShards:      5,
+				numBlobbers:          6,
+				blobbersInAllocation: 5,
+				addBlobberID:         "blobber_5",
+				removeBlobberID:      "blobber_0",
+				dataShards:           5,
 			},
 			want: want{
 				err: false,
+			}},
+		{
+			name: "add_valid_blobber",
+			args: args{
+				numBlobbers:          6,
+				blobbersInAllocation: 5,
+				addBlobberID:         "blobber_5",
+				dataShards:           5,
+			},
+			want: want{
+				err: false,
+			}},
+		{
+			name: "add_duplicate_blobber",
+			args: args{
+				numBlobbers:          6,
+				blobbersInAllocation: 6,
+				addBlobberID:         "blobber_1",
+				dataShards:           5,
+			},
+			want: want{
+				err:    true,
+				errMsg: "allocation already has blobber blobber_1",
 			}},
 	}
 
@@ -440,7 +492,7 @@ func TestChangeBlobbers(t *testing.T) {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
 				return
 			}
-
+			validate(tt.want, tt.args, sa, balances)
 		})
 	}
 }
