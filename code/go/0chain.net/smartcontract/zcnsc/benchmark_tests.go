@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"github.com/spf13/viper"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -73,37 +74,27 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input:    createBurnPayloadForZCNSCBurn(),
 			},
 			{
-				name:     benchmark.ZcnSc + MintFunc + ".1Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + strconv.Itoa(viper.GetInt(benchmark.NumAuthorizers)) + "Confirmations",
 				endpoint: sc.Mint,
 				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
-			},
-			{
-				name:     benchmark.ZcnSc + MintFunc + ".10Confirmation",
-				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
+				input:    createMintPayloadForZCNSCMint(scheme, data),
 			},
 			{
 				name:     benchmark.ZcnSc + MintFunc + "100Confirmation",
 				endpoint: sc.Mint,
 				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),
+				input:    createMintPayloadForZCNSCMint(scheme, data),
 			},
 		},
 	)
 }
 
-func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchmark.BenchData, from, to int) []byte {
+func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchmark.BenchData) []byte {
 	var sigs []*AuthorizerSignature
 
 	client := data.Clients[1]
-	lim := len(authorizers)
 
-	for i := from; i < to && i < lim; i++ {
-
-		auth := authorizers[i]
-
+	for i := 0; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		pb := &proofOfBurn{
 			TxnID:             encryption.Hash(strconv.Itoa(i)),
 			Amount:            100,
@@ -118,11 +109,11 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 		}
 
 		sig := &AuthorizerSignature{
-			ID:        auth.ID,
+			ID:        data.Clients[i],
 			Signature: pb.Signature,
 		}
 
-		err = pb.verifySignature(auth.PublicKey)
+		err = pb.verifySignature(data.PublicKeys[i])
 		if err != nil {
 			panic(err)
 		}
