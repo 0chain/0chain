@@ -1,16 +1,22 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"context"
-	"encoding/json"
+	"github.com/guregu/null"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -99,11 +105,11 @@ func TestMiners(t *testing.T) {
 
 	access := dbs.DbAccess{
 		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
-		Port:            "5432",
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
@@ -112,7 +118,7 @@ func TestMiners(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -159,7 +165,7 @@ func TestMiners(t *testing.T) {
 	}
 	events := []Event{eventAddMn}
 	eventDb.AddEvents(context.TODO(), events)
-
+	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, miner.Path, mn.Path)
@@ -220,6 +226,163 @@ func TestMiners(t *testing.T) {
 	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
 
 	miner, err = eventDb.GetMiner(mn.ID)
-	require.Error(t, err)
+	assert.Error(t, err)
 
+}
+
+func TestGetMiners(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer eventDb.Drop()
+	assert.NoError(t, err, "error while migrating database")
+	createMiners(t, eventDb, 10)
+
+	t.Run("Inactive miners should be returned", func(t *testing.T) {
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
+		assert.NoError(t, err, "Error should not be returned")
+		for _, miner := range miners {
+			assert.Equal(t, false, miner.Active, "Miner is active")
+		}
+		assert.Equal(t, 5, len(miners), "All miners were not returned")
+	})
+	t.Run("Active miners should be returned", func(t *testing.T) {
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
+		assert.NoError(t, err, "Error should not be returned")
+		for _, miner := range miners {
+			assert.Equal(t, true, miner.Active, "Miner is not active")
+		}
+		assert.Equal(t, 5, len(miners), "All miners were not returned")
+	})
+}
+
+func TestGetMinerLocations(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer func() {
+		err = eventDb.Drop()
+		assert.NoError(t, err, "error while dropping database")
+	}()
+	assert.NoError(t, err, "error while migrating database")
+	createMinersWithLocation(t, eventDb, 12)
+	t.Run("miner locations without any filters", func(t *testing.T) {
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, 0, 0)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 12, len(locations), "all miners should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.MinerID, 10, 0)
+			assert.NoError(t, err, "miner id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+	t.Run("locations for miners which are active", func(t *testing.T) {
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.MinerID, 10, 0)
+			assert.NoError(t, err, "miner id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+	t.Run("locations for miners which are inactive", func(t *testing.T) {
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.MinerID, 10, 0)
+			assert.NoError(t, err, "miner id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+}
+
+func createMiners(t *testing.T, eventDb *EventDb, count int) {
+	for i := 0; i < count; i++ {
+		m := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
+		err := eventDb.addOrOverwriteMiner(m)
+		assert.NoError(t, err, "inserting miners failed")
+	}
+}
+
+func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
+	for i := 0; i < count; i++ {
+		s := Miner{Active: i%2 == 0, MinerID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		err := eventDb.addOrOverwriteMiner(s)
+		assert.NoError(t, err, "There should be no error")
+	}
+}
+
+func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
+	for i := offset; i < offset+limit; i++ {
+		want := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
+		want.CreatedAt = miners[i].CreatedAt
+		want.ID = miners[i].ID
+		want.UpdatedAt = miners[i].UpdatedAt
+		assert.Equal(t, want, miners[i], "Miners did not match")
+	}
+}
+
+func BenchmarkReturnValueMiner(t *testing.B) {
+	for i := 0; i < t.N; i++ {
+		mi := ReturnValue()
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID)
+		t.Log("")
+	}
+}
+
+func BenchmarkReturnPointerValueMiner(t *testing.B) {
+	for i := 0; i < t.N; i++ {
+		mi := ReturnPointer()
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID)
+		t.Log("")
+	}
+}
+
+func (edb *EventDb) GetMinerPointer(id string) (*Miner, error) {
+	miner := &Miner{}
+	return miner, edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{MinerID: id}).
+		First(miner).Error
+}
+
+func ReturnValue() Miner {
+	return Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true}
+}
+
+func ReturnPointer() *Miner {
+	return &Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true}
 }

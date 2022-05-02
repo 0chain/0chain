@@ -9,6 +9,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
@@ -36,33 +37,47 @@ import (
 )
 
 func main() {
+	var (
+		workdir       string
+		redisHost     string
+		redisPort     int
+		redisTxnsHost string
+		redisTxnsPort int
+	)
+
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	dkgFile := flag.String("dkg_file", "", "dkg_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
+
+	flag.StringVar(&workdir, "work_dir", "", "work_dir")
+	flag.StringVar(&redisHost, "redis_host", "", "default redis pool host")
+	flag.IntVar(&redisPort, "redis_port", 0, "default redis pool port")
+	flag.StringVar(&redisTxnsHost, "redis_txns_host", "", "TransactionDB redis host")
+	flag.IntVar(&redisTxnsPort, "redis_txns_port", 0, "TransactionDB redis port")
+
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
-	config.SetupConfig()
-	config.SetupSmartContractConfig()
+	config.SetupConfig(workdir)
+	config.SetupSmartContractConfig(workdir)
 
 	if config.Development() {
-		logging.InitLogging("development")
+		logging.InitLogging("development", workdir)
 	} else {
-		logging.InitLogging("production")
+		logging.InitLogging("production", workdir)
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-	transaction.SetTxnFee(viper.GetInt64("server_chain.transaction.min_fee"))
 
 	config.SetServerChainID(config.Configuration.ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
-	initEntities()
+	initEntities(workdir, redisHost, redisPort, redisTxnsHost, redisTxnsPort)
 	serverChain := chain.NewChainFromConfig()
 
 	signatureScheme := serverChain.GetSignatureScheme()
@@ -78,7 +93,9 @@ func main() {
 	}
 	reader.Close()
 
-	node.Self.SetSignatureScheme(signatureScheme)
+	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
+		logging.Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
+	}
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
@@ -88,14 +105,14 @@ func main() {
 	mc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
 	mc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
-	mc.SetupConfigInfoDB()
+	mc.SetupConfigInfoDB(workdir)
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
 	if *initialStatesFile == "" {
-		*initialStatesFile = viper.GetString("network.initial_states")
+		*initialStatesFile = filepath.Join(workdir, viper.GetString("network.initial_states"))
 	}
 
 	initStates := state.NewInitStates()
@@ -103,7 +120,7 @@ func main() {
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
-		*magicBlockFile = viper.GetString("network.magic_block_file")
+		*magicBlockFile = filepath.Join(workdir, viper.GetString("network.magic_block_file"))
 	}
 
 	var magicBlock *block.MagicBlock
@@ -123,7 +140,7 @@ func main() {
 	}
 
 	if state.Debug() {
-		block.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger(filepath.Join(workdir, "/tmp/state.txt"))
 	}
 
 	// TODO: put it in a better place
@@ -230,9 +247,13 @@ func main() {
 	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		genesisDKG := viper.GetInt64("network.genesis_dkg")
-		dkgShare, oldDKGShare := &bls.DKGSummary{
-			SecretShares: make(map[string]string),
-		}, &bls.DKGSummary{}
+		var (
+			oldDKGShare *bls.DKGSummary
+			dkgShare    = &bls.DKGSummary{
+				SecretShares: make(map[string]string),
+			}
+		)
+
 		dkgShare.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
 		if genesisDKG == 0 {
 			oldDKGShare, err = miner.ReadDKGSummaryFile(*dkgFile)
@@ -250,7 +271,12 @@ func main() {
 			}
 		}
 		dkgShare.SecretShares = oldDKGShare.SecretShares
-		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), magicBlock.Mpks.GetMpkMap()); err != nil {
+		mpks, err := magicBlock.Mpks.GetMpkMap()
+		if err != nil {
+			logging.Logger.Panic("Get mpks map failed", zap.Error(err))
+		}
+
+		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
 			if config.DevConfiguration.ViewChange {
 				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {
@@ -291,7 +317,7 @@ func main() {
 	miner.SetupWorkers(ctx)
 
 	if config.Development() {
-		go TransactionGenerator(mc.Chain)
+		go TransactionGenerator(mc.Chain, workdir)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -322,7 +348,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	scanner.Scan() // throw away the publickey
 	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
-	if result == false {
+	if !result {
 		return "", "", 0, "", "", errors.New("error reading Host")
 	}
 
@@ -330,7 +356,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	logging.Logger.Info("Host inside", zap.String("host", h))
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return "", "", 0, "", "", errors.New("error reading n2n host")
 	}
 
@@ -345,7 +371,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return h, n2nh, p, "", "", nil
 	}
 
@@ -353,7 +379,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	logging.Logger.Info("Path inside", zap.String("path", path))
 
 	result = scanner.Scan()
-	if result == false {
+	if !result {
 		return h, n2nh, p, path, "", nil
 	}
 
@@ -363,11 +389,17 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 }
 
-func initEntities() {
-	memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
+func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost string, redisTxnsPort int) {
+	if len(redisHost) > 0 && redisPort > 0 {
+		memorystore.InitDefaultPool(redisHost, redisPort)
+	} else {
+		//inside docker
+		memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
+	}
+
 	memoryStorage := memorystore.GetStorageProvider()
 
-	chain.SetupEntity(memoryStorage)
+	chain.SetupEntity(memoryStorage, workdir)
 	round.SetupEntity(memoryStorage)
 	round.SetupVRFShareEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
@@ -377,7 +409,7 @@ func initEntities() {
 	state.SetupStateNodes(memoryStorage)
 	client.SetupEntity(memoryStorage)
 
-	transaction.SetupTransactionDB()
+	transaction.SetupTransactionDB(redisTxnsHost, redisTxnsPort)
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
@@ -386,11 +418,11 @@ func initEntities() {
 	ememoryStorage := ememorystore.GetStorageProvider()
 	bls.SetupDKGEntity()
 	bls.SetupDKGSummary(ememoryStorage)
-	bls.SetupDKGDB()
+	bls.SetupDKGDB(workdir)
 	setupsc.SetupSmartContracts()
 
 	block.SetupMagicBlockData(ememoryStorage)
-	block.SetupMagicBlockDataDB()
+	block.SetupMagicBlockDataDB(workdir)
 }
 
 func initHandlers(c chain.Chainer) {
@@ -421,6 +453,8 @@ func initN2NHandlers(c *miner.Chain) {
 	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
+
+	chain.SetupLFBTicketSender()
 }
 
 func initWorkers(ctx context.Context) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -345,6 +346,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
 
+	if len(fb.Events) > 0 && c.GetEventDb() != nil {
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(fb.Events)
+		fb.Events = nil
+	}
+
 	if fb.MagicBlock != nil {
 		if err := c.UpdateMagicBlock(fb.MagicBlock); err != nil {
 			logging.Logger.Error("finalize block - update magic block failed",
@@ -664,6 +672,11 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 	}
 
 	if err := c.GetBlockStateChange(pb); err != nil {
+		if er := pb.InitStateDB(c.GetStateDB()); er == nil {
+			logging.Logger.Debug("sync_block - client state root exist in db", zap.Int64("round", pb.Round))
+			return pb
+		}
+
 		logging.Logger.Error("sync_block - sync state changes failed",
 			zap.Int64("round", pb.Round),
 			zap.Int64("num", opt.Num),

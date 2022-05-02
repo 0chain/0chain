@@ -175,7 +175,9 @@ jobs:
           explorer_image: latest
           zproxy_image: staging
           zsearch_image: staging
-          blobber_stake_image: latest
+          zbox_cli_branch: staging
+          zwallet_cli_branch: staging
+          custom_go_sdk_version: staging
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
@@ -184,7 +186,6 @@ jobs:
           network: ${{ env.NETWORK_URL }}
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
-          smart_contract_owner_wallet_json: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}
           svc_account_secret: ${{ github.token }}
           deploy_report_page: false
           archive_results: true

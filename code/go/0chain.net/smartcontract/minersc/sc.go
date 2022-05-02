@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
-	"strconv"
 	"sync"
 
 	"0chain.net/chaincore/smartcontract"
@@ -17,10 +17,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/rcrowley/go-metrics"
-
-	. "0chain.net/core/logging"
 )
 
 const (
@@ -87,6 +84,21 @@ func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestH
 	return msc.RestHandlers
 }
 
+func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
+	n, err := getGlobalNode(balances)
+	if err != nil {
+		return math.MaxInt32, err
+	}
+	if n.Cost == nil {
+		return math.MaxInt32, errors.New("can't get cost")
+	}
+	cost, ok := n.Cost[funcName]
+	if !ok {
+		return math.MaxInt32, errors.New("no cost given for " + funcName)
+	}
+	return cost, nil
+}
+
 //setSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
@@ -94,9 +106,11 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
 	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
+	msc.SmartContract.RestHandlers["/get_miner_geolocations"] = msc.GetMinerGeolocationsHandler
 	msc.SmartContract.RestHandlers["/get_miners_stats"] = msc.GetMinersStatsHandler
 	msc.SmartContract.RestHandlers["/get_miners_stake"] = msc.GetMinersStateHandler
 	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
+	msc.SmartContract.RestHandlers["/get_sharder_geolocations"] = msc.GetSharderGeolocationsHandler
 	msc.SmartContract.RestHandlers["/get_sharders_stats"] = msc.GetShardersStatsHandler
 	msc.SmartContract.RestHandlers["/get_sharders_stake"] = msc.GetShardersStateHandler
 	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler
@@ -155,46 +169,11 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	return scFunc(t, input, gn, balances)
 }
 
-func getHostnameAndPort(burl string) (string, int, error) {
-	hostName := ""
-	port := 0
-
-	//ToDo: does rudimentary checks. Add more checks
-	u, err := url.Parse(burl)
-	if err != nil {
-		return hostName, port, errors.New(burl + " is not a valid url. " + err.Error())
-	}
-
-	if u.Scheme != "http" { //|| u.scheme == "https"  we don't support
-		return hostName, port, errors.New(burl + " is not a valid url. It does not have scheme http")
-	}
-
-	sp := u.Port()
-	if sp == "" {
-		return hostName, port, errors.New(burl + " is not a valid url. It does not have port number")
-	}
-
-	p, err := strconv.Atoi(sp)
-	if err != nil {
-		return hostName, port, errors.New(burl + " is not a valid url. " + err.Error())
-	}
-
-	hostName = u.Hostname()
-
-	if govalidator.IsDNSName(hostName) || govalidator.IsIPv4(hostName) {
-		return hostName, p, nil
-	}
-
-	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + hostName)
-	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
-}
-
 func getGlobalNode(
 	balances cstate.StateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
-	var p util.Serializable
-	p, err = balances.GetTrieNode(GlobalNodeKey)
+	err = balances.GetTrieNode(GlobalNodeKey, gn)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -206,25 +185,22 @@ func getGlobalNode(
 		return gn, nil
 	}
 
-	if err = gn.Decode(p.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
 	return gn, nil
 }
 
 func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
 	un := NewUserNode()
 	un.ID = id
-	us, err := balances.GetTrieNode(un.GetKey())
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-	if us == nil {
+	err := balances.GetTrieNode(un.GetKey(), un)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		un = NewUserNode()
+		un.ID = id
 		return un, nil
 	}
-	err = un.Decode(us.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
+
+	un.ID = id
 	return un, nil
 }

@@ -3,6 +3,8 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
+
 	"gorm.io/gorm"
 
 	"0chain.net/chaincore/state"
@@ -20,6 +22,9 @@ type Validator struct {
 	MaxStake       state.Balance `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
+
+	Reward      int64 `json:"reward"`
+	TotalReward int64 `json:"total_reward"`
 }
 
 func (vn *Validator) exists(edb *EventDb) (bool, error) {
@@ -38,7 +43,7 @@ func (vn *Validator) exists(edb *EventDb) (bool, error) {
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
 	var vn Validator
 
-	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(vn)
+	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(&vn)
 
 	if result.Error != nil {
 		return vn, fmt.Errorf("error retriving Validation node with ID %v; error: %v", validatorID, result.Error)
@@ -64,5 +69,43 @@ func (edb *EventDb) addOrOverwriteValidator(vn Validator) error {
 
 	result := edb.Store.Get().Create(&vn)
 
+	return result.Error
+}
+
+type validatorAggregateStats struct {
+	Reward      int64 `json:"reward"`
+	TotalReward int64 `json:"total_reward"`
+}
+
+func (edb *EventDb) validatorAggregateStats(id string) (*validatorAggregateStats, error) {
+	var validator validatorAggregateStats
+	result := edb.Store.Get().
+		Model(&Validator{}).
+		Where(&Validator{ValidatorID: id}).
+		First(&validator)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving validator %v, error %v",
+			id, result.Error)
+	}
+
+	return &validator, nil
+}
+
+func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
+	var validator = Validator{ValidatorID: updates.Id}
+	exists, err := validator.exists(edb)
+
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("validator %v not in database cannot update",
+			validator.ValidatorID)
+	}
+
+	result := edb.Store.Get().
+		Model(&Validator{}).
+		Where(&Validator{ValidatorID: validator.ValidatorID}).
+		Updates(updates.Updates)
 	return result.Error
 }

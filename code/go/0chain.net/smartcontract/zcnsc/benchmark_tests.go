@@ -50,45 +50,44 @@ func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
 
-	authToDelete := authorizers[0]
-	indexOfNewAuth := len(authorizers)
+	indexOfNewAuth := len(data.Clients) - 1
 
 	return createTestSuite(
 		[]benchTest{
 			{
-				name:     benchmark.Zcn + AddAuthorizerFunc,
+				name:     benchmark.ZcnSc + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
 				txn:      createTransaction(data.Clients[indexOfNewAuth], data.PublicKeys[indexOfNewAuth]),
 				input:    createAuthorizerPayload(data, indexOfNewAuth),
 			},
 			{
-				name:     benchmark.Zcn + DeleteAuthorizerFunc,
+				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
-				txn:      createTransaction(authToDelete.ID, authToDelete.PublicKey),
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    nil,
 			},
 			{
-				name:     benchmark.Zcn + BurnFunc,
+				name:     benchmark.ZcnSc + BurnFunc,
 				endpoint: sc.Burn,
 				txn:      createRandomBurnTransaction(data.Clients, data.PublicKeys),
 				input:    createBurnPayloadForZCNSCBurn(),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + ".1Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + ".1Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + ".10Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + ".10Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
 			},
 			{
-				name:     benchmark.Zcn + MintFunc + "100Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + "100Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(),
+				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),
 			},
 		},
@@ -162,10 +161,8 @@ func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
 	return an.Encode()
 }
 
-func createRandomTransaction() *transaction.Transaction {
-	index := randomIndex(len(authorizers))
-	auth := authorizers[index]
-	return createTransaction(auth.ID, auth.PublicKey)
+func createRandomTransaction(id, publicKey string) *transaction.Transaction {
+	return createTransaction(id, publicKey)
 }
 
 func createRandomBurnTransaction(clients, publicKey []string) *transaction.Transaction {

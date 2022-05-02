@@ -17,8 +17,6 @@ import (
 )
 
 var (
-	// LatestRoundRequestor -
-	LatestRoundRequestor node.EntityRequestor
 	// RoundRequestor -
 	RoundRequestor node.EntityRequestor
 	// RoundSummariesRequestor -
@@ -35,7 +33,6 @@ var (
 func SetupS2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundEntityMetadata := datastore.GetEntityMetadata("round")
-	LatestRoundRequestor = node.RequestEntityHandler("/v1/_s2s/latest_round/get", options, roundEntityMetadata)
 
 	RoundRequestor = node.RequestEntityHandler("/v1/_s2s/round/get", options, roundEntityMetadata)
 
@@ -45,7 +42,7 @@ func SetupS2SRequestors() {
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	BlockSummaryRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummary/get", options, blockSummaryEntityMetadata)
 
-	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_JSON, Compress: true}
+	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundSummariesEntityMetadata := datastore.GetEntityMetadata("round_summaries")
 	RoundSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/roundsummaries/get", options, roundSummariesEntityMetadata)
 
@@ -63,12 +60,24 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
-// SetupX2SRespondes setups sharders responders for miner and sharders.
-func SetupX2SResponders() {
-	// BlockRequestHandler - used by nodes to get missing FB by received LFB
-	// ticket from sharder sent the ticket.
-	http.HandleFunc("/v1/_x2s/block/get",
-		node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
+const (
+	getBlockX2SV1Pattern = "/v1/_x2s/block/get"
+)
+
+func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
+	return map[string]func(http.ResponseWriter, *http.Request){
+		getBlockX2SV1Pattern: node.ToN2NSendEntityHandler(
+			// BlockRequestHandler - used by nodes to get missing FB by received LFB
+			// ticket from sharder sent the ticket.
+			RoundBlockRequestHandler,
+		),
+	}
+}
+
+func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlers {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 // RoundSummariesHandler -
@@ -154,7 +163,7 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 }
 
 // LatestRoundRequestHandler - returns latest finalized round info.
-func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (
+func LatestRoundRequestHandler(_ context.Context, _ *http.Request) (
 	resp interface{}, err error) {
 	var (
 		sc = GetSharderChain()
@@ -207,8 +216,8 @@ func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface
 	return nil, common.InvalidRequest("block hash is required")
 }
 
-// RoundBlockRequestHandler -
-func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// roundBlockRequestHandler -
+func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	hash := r.FormValue("hash")
 	var b *block.Block

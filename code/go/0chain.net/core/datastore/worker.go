@@ -103,7 +103,7 @@ type EntityChunkBuilder struct {
 
 func (ecb *EntityChunkBuilder) Run(ctx context.Context) {
 	ecb.Chunk = ecb.ChunkProvider.Create(ecb.ChunkSize)
-	for true {
+	for {
 		if ecb.MaxHoldupTime > 0 {
 			select {
 			case <-ctx.Done():
@@ -123,14 +123,6 @@ func (ecb *EntityChunkBuilder) Run(ctx context.Context) {
 			}
 		}
 	}
-}
-
-func creationDate(entity Entity) time.Time {
-	cf, ok := entity.(CreationTrackable)
-	if ok {
-		return time.Unix(int64(cf.GetCreationTime()), 0)
-	}
-	return time.Now()
 }
 
 func (ecb *EntityChunkBuilder) addEntity(qe QueuedEntity) {

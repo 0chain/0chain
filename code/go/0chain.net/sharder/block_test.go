@@ -44,15 +44,7 @@ const (
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
-	cd, err := os.Getwd()
-	require.NoError(t, err)
-
-	tmpDir := filepath.Join(cd, "tmp")
-	err = os.RemoveAll(tmpDir)
-	err = os.MkdirAll(tmpDir, 0700)
-	require.NoError(t, err)
-
-	dbDir, err := ioutil.TempDir(tmpDir, "dbs")
+	dbDir, err := ioutil.TempDir("", "dbs")
 	require.NoError(t, err)
 
 	blockDir := filepath.Join(dbDir, blockDataDir)
@@ -93,13 +85,13 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
 
 	closeAndClear = func() {
-		err = os.RemoveAll(tmpDir)
-		require.NoError(t, err)
-
 		rDB.Close()
 		bDB.Close()
 		rsDB.Close()
 		bsDB.Close()
+
+		err = os.RemoveAll(dbDir)
+		require.NoError(t, err)
 	}
 
 	return

@@ -1,12 +1,15 @@
 package event
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/guregu/null"
+	"gorm.io/gorm"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 type Sharder struct {
@@ -30,26 +33,24 @@ type Sharder struct {
 	Rewards           state.Balance
 	Fees              state.Balance
 	Active            bool
-	Longitude         int64
-	Latitude          int64
+	Longitude         float64
+	Latitude          float64
 }
 
-func (edb *EventDb) GetSharder(id string) (*Sharder, error) {
+type SharderGeolocation struct {
+	SharderID string  `json:"sharder_id"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 
 	var sharder Sharder
 
-	result := edb.Store.Get().
+	return sharder, edb.Store.Get().
 		Model(&Sharder{}).
 		Where(&Sharder{SharderID: id}).
-		First(&sharder)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving sharder %v, error %v",
-			id, result.Error)
-	}
-
-	return &sharder, nil
-
+		First(&sharder).Error
 }
 
 func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
@@ -176,6 +177,57 @@ func (sh *Sharder) exists(edb *EventDb) (bool, error) {
 	}
 
 	return true, nil
+}
+
+type SharderQuery struct {
+	gorm.Model
+	SharderID         null.String
+	N2NHost           null.String
+	Host              null.String
+	Port              null.Int
+	Path              null.String
+	PublicKey         null.String
+	ShortName         null.String
+	BuildTag          null.String
+	TotalStaked       null.Int
+	Delete            null.Bool
+	DelegateWallet    null.String
+	ServiceCharge     null.Float
+	NumberOfDelegates null.Int
+	MinStake          null.Int
+	MaxStake          null.Int
+	LastHealthCheck   null.Int
+	Rewards           null.Int
+	Fees              null.Int
+	Active            null.Bool
+	Longitude         null.Int
+	Latitude          null.Int
+}
+
+func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, offset, limit int) ([]Sharder, error) {
+	var sharders []Sharder
+	query := edb.Get().Model(&Sharder{}).Where(&filter)
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	return sharders, query.Scan(&sharders).Error
+}
+
+func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, offset, limit int) ([]SharderGeolocation, error) {
+	var sharderLocations []SharderGeolocation
+	query := edb.Get().Model(&Sharder{}).Where(&filter)
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	result := query.Scan(&sharderLocations)
+
+	return sharderLocations, result.Error
 }
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {

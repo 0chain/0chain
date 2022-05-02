@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,12 +13,12 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/viper"
 )
+
+//go:generate msgp -io=false -tests=false -v
 
 var nodes = make(map[string]*Node)
 var nodesMutex = &sync.RWMutex{}
@@ -32,33 +31,6 @@ func RegisterNode(node *Node) {
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
 	nodes[node.GetKey()] = node
-}
-
-/*DeregisterNode - deregister a node */
-func DeregisterNode(nodeID string) {
-
-	return // TODO (sfxdx): temporary disable nodes deregistering
-
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-	delete(nodes, nodeID)
-}
-
-// DeregisterNodes unregisters all nodes not from given list.
-func DeregisterNodes(keep map[string]struct{}) {
-	return // never deregister nodes for now
-
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-
-	var newNodes = make(map[string]*Node)
-	for k := range keep {
-		if n, ok := nodes[k]; ok {
-			newNodes[k] = n
-		}
-	}
-
-	nodes = newNodes // replace with new list
 }
 
 // CopyNodes returns copy of all registered nodes.
@@ -98,11 +70,25 @@ var (
 	NodeStatusInactive = 1
 )
 
-var (
-	NodeTypeMiner   int8 = 0
-	NodeTypeSharder int8 = 1
-	NodeTypeBlobber int8 = 2
+type NodeType int8
+
+const (
+	NodeTypeMiner NodeType = iota
+	NodeTypeSharder
+	NodeTypeBlobber
 )
+
+func (n NodeType) String() string {
+	switch n {
+	case NodeTypeMiner:
+		return "Miner"
+	case NodeTypeSharder:
+		return "Sharder"
+	case NodeTypeBlobber:
+		return "Blobber"
+	}
+	return ""
+}
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
@@ -113,31 +99,31 @@ type Node struct {
 	Host           string        `json:"host" yaml:"public_ip"`
 	Port           int           `json:"port" yaml:"port"`
 	Path           string        `json:"path" yaml:"path"`
-	Type           int8          `json:"type" yaml:"-"`
+	Type           NodeType      `json:"type" yaml:"-"`
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
 	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
-	LastActiveTime time.Time     `json:"-" msgpack:"-" yaml:"-"`
-	ErrorCount     int64         `json:"-" msgpack:"-" yaml:"-"`
-	CommChannel    chan struct{} `json:"-" msgpack:"-" yaml:"-"`
+	LastActiveTime time.Time     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	ErrorCount     int64         `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	CommChannel    chan struct{} `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	//These are approximiate as we are not going to lock to update
-	sent       int64 `json:"-" msgpack:"-" yaml:"-"` // messages sent to this node
-	sendErrors int64 `json:"-" msgpack:"-" yaml:"-"` // failed message sent to this node
-	received   int64 `json:"-" msgpack:"-" yaml:"-"` // messages received from this node
+	sent       int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // messages sent to this node
+	sendErrors int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // failed message sent to this node
+	received   int64 `json:"-" msgpack:"-" msg:"-" yaml:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" yaml:"-"`
-	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" yaml:"-"`
+	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
 	largeMessageSendTime uint64 `yaml:"-"`
 	smallMessageSendTime uint64 `yaml:"-"`
 
-	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
-	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
+	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" msg:"-" yaml:"-"`
+	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
-	mutex sync.RWMutex `json:"-" msgpack:"-" yaml:"-"`
+	mutex sync.RWMutex `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
-	ProtocolStats interface{} `json:"-" msgpack:"-" yaml:"-"`
+	ProtocolStats interface{} `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 
 	idBytes []byte `yaml:"-"`
 
@@ -153,7 +139,7 @@ func Provider() *Node {
 	return node
 }
 
-func Setup(node *Node) {
+func Setup(node *Node) error {
 	// queue up at most these many messages to a node
 	// because of this, we don't want the status monitoring to use this communication layer
 	node.mutex.Lock()
@@ -161,8 +147,11 @@ func Setup(node *Node) {
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	node.mutex.Unlock()
-	node.ComputeProperties()
+	if err := node.ComputeProperties(); err != nil {
+		return err
+	}
 	Self.SetNodeIfPublicKeyIsEqual(node)
+	return nil
 }
 
 func (n *Node) setupCommChannel() {
@@ -260,99 +249,60 @@ func (n *Node) SetLastActiveTime(lat time.Time) {
 	n.LastActiveTime = lat
 }
 
-/*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
-func (n *Node) Equals(n2 *Node) bool {
-	if datastore.IsEqual(n.GetKey(), n2.GetKey()) {
-		return true
-	}
-	if n.Port == n2.Port && n.Host == n2.Host {
-		return true
-	}
-	return false
-}
-
-/*Print - print node's info that is consumable by Read */
+// Print - print node's info that is consumable by read
 func (n *Node) Print(w io.Writer) {
 	fmt.Fprintf(w, "%v,%v,%v,%v,%v\n", n.GetNodeType(), n.Host, n.Port, n.GetKey(), n.PublicKey)
-}
-
-/*Read - read a node config line and create the node */
-func Read(line string) (*Node, error) {
-	node := Provider()
-	fields := strings.Split(line, ",")
-	if len(fields) != 5 {
-		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v]", line))
-	}
-	switch fields[0] {
-	case "m":
-		node.Type = NodeTypeMiner
-	case "s":
-		node.Type = NodeTypeSharder
-	case "b":
-		node.Type = NodeTypeBlobber
-	default:
-		return nil, common.NewError("unknown_node_type", fmt.Sprintf("Unkown node type %v", fields[0]))
-	}
-	node.Host = fields[1]
-	if node.Host == "" {
-		if node.Port != config.Configuration.Port {
-			node.Host = config.Configuration.Host
-		} else {
-			panic(fmt.Sprintf("invalid node setup for %v\n", node.GetKey()))
-		}
-	}
-
-	port, err := strconv.ParseInt(fields[2], 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	node.Port = int(port)
-	node.SetID(fields[3])
-	node.Client.SetPublicKey(fields[4])
-	hash := encryption.Hash(node.PublicKeyBytes)
-	if node.ID != hash {
-		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
-	}
-	node.ComputeProperties()
-	Self.SetNodeIfPublicKeyIsEqual(node)
-	return node, nil
 }
 
 /*NewNode - read a node config line and create the node */
 func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node := Provider()
-	node.Type = nc["type"].(int8)
+	node.Type = nc["type"].(NodeType)
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
-	node.SetID(nc["id"].(string))
+	if err := node.SetID(nc["id"].(string)); err != nil {
+		return nil, err
+	}
+
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
 	} else {
 		node.Description = node.GetNodeType() + node.GetKey()[:6]
 	}
 
-	node.Client.SetPublicKey(nc["public_key"].(string))
+	if err := node.Client.SetPublicKey(nc["public_key"].(string)); err != nil {
+		return nil, err
+	}
+
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewErrorf("invalid_client_id",
 			"public key: %v, client_id: %v, hash: %v\n", node.PublicKey,
 			node.ID, hash)
 	}
-	node.ComputeProperties()
+
+	if err := node.ComputeProperties(); err != nil {
+		return nil, err
+	}
+
 	Self.SetNodeIfPublicKeyIsEqual(node)
 	return node, nil
 }
 
 /*ComputeProperties - implement entity interface */
-func (n *Node) ComputeProperties() {
-	n.Client.ComputeProperties()
+func (n *Node) ComputeProperties() error {
+	if err := n.Client.ComputeProperties(); err != nil {
+		return err
+	}
+
 	if n.Host == "" {
 		n.Host = "localhost"
 	}
 	if n.N2NHost == "" {
 		n.N2NHost = n.Host
 	}
+	return nil
 }
 
 /*GetURLBase - get the end point base */
@@ -447,7 +397,7 @@ func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
 		metric = metrics.NewHistogram(metrics.NewUniformSample(256))
 		n.SizeByURI[uri] = metric
-		metrics.Register(metricID, metric)
+		_ = metrics.Register(metricID, metric)
 	}
 	return metric
 }
@@ -600,10 +550,6 @@ func serveMetricKey(uri string) string {
 	return "p?" + uri
 }
 
-func isPullRequestURI(uri string) bool {
-	return strings.HasPrefix(uri, "p?")
-}
-
 func isGetRequest(uri string) bool {
 	if strings.HasPrefix(uri, "p?") {
 		return true
@@ -631,11 +577,6 @@ func (n *Node) getOptimalLargeMessageSendTime() float64 {
 		return p2ptime
 	}
 	return sendTime
-}
-
-func (n *Node) getTime(uri string) float64 {
-	pullTimer := n.GetTimer(uri)
-	return pullTimer.Mean()
 }
 
 func (n *Node) SetNode(old *Node) {
@@ -716,10 +657,7 @@ func (n *Node) Clone() *Node {
 		CommChannel:               make(chan struct{}, 15),
 	}
 
-	cc := n.Client.Clone()
-	if cc != nil {
-		clone.Client = *cc
-	}
+	clone.Client.Copy(&n.Client)
 
 	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))
 	for k, v := range n.TimersByURI {

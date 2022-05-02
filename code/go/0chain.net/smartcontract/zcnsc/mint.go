@@ -7,58 +7,82 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/util"
+	"github.com/pkg/errors"
 )
 
 // Mint inputData - is a MintPayload
 func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
+	const (
+		code = "failed to mint"
+	)
+
+	var (
+		info = fmt.Sprintf(
+			"transaction hash %s, clientID: %s, payload: %s",
+			trans.Hash,
+			trans.ClientID,
+			string(inputData),
+		)
+	)
+
 	gn, err := GetGlobalNode(ctx)
 	if err != nil {
-		return "", common.NewError("failed to burn", fmt.Sprintf("failed to get global node error: %s, Client ID: %s", err.Error(), trans.Hash))
+		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
+		return "", common.NewError(code, msg)
 	}
 
 	payload := &MintPayload{}
 	err = payload.Decode(inputData)
 	if err != nil {
+		msg := fmt.Sprintf("payload decode error: %v, %s", err, info)
+		err = common.NewError(code, msg)
 		return
 	}
 
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
-		err = common.NewError("failed to mint", fmt.Sprintf("amount requested(%v) is lower than min amount for mint (%v)", payload.Amount, gn.MinMintAmount))
+		msg := fmt.Sprintf(
+			"amount requested (%v) is lower than min amount for mint (%v), %s",
+			payload.Amount,
+			gn.MinMintAmount,
+			info,
+		)
+		err = common.NewError(code, msg)
 		return
 	}
 
 	// get user node
 	un, err := GetUserNode(trans.ClientID, ctx)
-	if err != nil && payload.Nonce != 1 {
-		err = common.NewError("failed to mint", fmt.Sprintf("get user node error (%v)", err.Error()))
+	switch err {
+	case nil:
+		if un.Nonce+1 != payload.Nonce {
+			err = common.NewError(
+				code,
+				fmt.Sprintf(
+					"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
+					payload.Nonce,
+					payload.ReceivingClientID,
+					un.Nonce,
+					un.ID,
+					info,
+				),
+			)
+			return
+		}
+	case util.ErrValueNotPresent:
+		err = common.NewError(code, "user node is nil "+info)
 		return
-	}
-
-	if un == nil {
-		err = common.NewError("failed to mint", "user node is nil")
-		return
-	}
-
-	// check nonce is correct (current + 1)
-	if un.Nonce+1 != payload.Nonce {
-		err = common.NewError(
-			"failed to mint",
-			fmt.Sprintf(
-				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s'",
-				payload.Nonce,
-				payload.ReceivingClientID,
-				un.Nonce,
-				un.ID,
-			),
-		)
+	default:
+		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
 		return
 	}
 
 	// verify signatures of authorizers
 	err = payload.verifySignatures(ctx)
 	if err != nil {
-		err = common.NewError("failed to mint", "failed to verify signatures with error: "+err.Error())
+		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
+		err = common.NewError(code, msg)
 		return
 	}
 
@@ -72,12 +96,14 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		Amount:     payload.Amount,
 	})
 	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, add mint operation, %s", code, info))
 		return
 	}
 
 	// Save the user node
 	err = un.Save(ctx)
 	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, save MPR operation, %s", code, info))
 		return
 	}
 

@@ -7,10 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
+	// "google.golang.org/grpc/benchmark/stats"
+
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -73,7 +76,9 @@ func TestCommitBlobberRead(t *testing.T) {
 		readCounter: 0,
 		timestamp:   0,
 	}
+
 	var now common.Timestamp = 100
+	var nowRound int64 = 10
 	var read = mockReadMarker{
 		readCounter: 500,
 		timestamp:   now,
@@ -83,10 +88,10 @@ func TestCommitBlobberRead(t *testing.T) {
 		expiration: 2 * now,
 	}
 	var stakes = []mockStakePool{
-		{2, now - 1},
-		{3, now + 1},
+		{2, nowRound - 1},
+		{3, nowRound + 1},
 		{5, 0},
-		{3, now * 10},
+		{3, nowRound * 10},
 	}
 	var rPools = mockReadPools{
 		thisAllocation: []mockAllocationPool{
@@ -160,7 +165,6 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
 		require.True(t, strings.Contains(err.Error(), errReadMarker))
-		require.True(t, strings.Contains(err.Error(), errPreviousMarker))
 	})
 
 	t.Run(errEarlyAllocation, func(t *testing.T) {
@@ -229,7 +233,6 @@ func testCommitBlobberRead(
 	var err error
 	var f = formulaeCommitBlobberRead{
 		blobberYaml: blobberYaml,
-		lastRead:    lastRead,
 		read:        read,
 		allocation:  allocation,
 		stakes:      stakes,
@@ -245,9 +248,8 @@ func testCommitBlobberRead(
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
-			nil,
+			&block.Block{},
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -255,8 +257,10 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 		),
-		store: make(map[datastore.Key]util.Serializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 	}
+
+	setConfig(t, ctx)
 
 	var client = &Client{
 		balance: 10000,
@@ -281,7 +285,8 @@ func testCommitBlobberRead(
 		},
 	}
 	lastReadConnection.ReadMarker.ClientID = clientId
-	var readConection = &ReadConnection{
+
+	var readConnection = &ReadConnection{
 		ReadMarker: &ReadMarker{
 			ClientPublicKey: client.pk,
 			ReadCounter:     read.readCounter,
@@ -293,12 +298,12 @@ func testCommitBlobberRead(
 			AllocationID:    allocationId,
 		},
 	}
-	readConection.ReadMarker.Signature, err = client.scheme.Sign(
-		encryption.Hash(readConection.ReadMarker.GetHashData()))
+	readConnection.ReadMarker.Signature, err = client.scheme.Sign(
+		encryption.Hash(readConnection.ReadMarker.GetHashData()))
 	require.NoError(t, err)
-	var input = readConection.Encode()
+	var input = readConnection.Encode()
 
-	_, err = ctx.InsertTrieNode(readConection.GetKey(ssc.ID), lastReadConnection)
+	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
 	var storageAllocation = &StorageAllocation{
 		ID:                      allocationId,
@@ -316,6 +321,17 @@ func testCommitBlobberRead(
 		Owner: payerId,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
+	require.NoError(t, err)
+
+	blobber := &StorageNode{
+		ID: blobberId,
+		Terms: Terms{
+			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
+			WritePrice: zcnToBalance(blobberYaml.writePrice),
+		},
+	}
+
+	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 
 	var rPool = readPool{
 		Pools: []*allocationPool{},
@@ -347,32 +363,23 @@ func testCommitBlobberRead(
 	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
 
 	var sPool = stakePool{
-		Pools: make(map[string]*delegatePool),
-		Settings: stakePoolSettings{
-			ServiceCharge:  blobberYaml.serviceCharge,
-			DelegateWallet: delegateWallet,
+		StakePool: stakepool.StakePool{
+			Pools: make(map[string]*stakepool.DelegatePool),
+			Settings: stakepool.StakePoolSettings{
+				ServiceCharge:  blobberYaml.serviceCharge,
+				DelegateWallet: delegateWallet,
+			},
 		},
 	}
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
-		sPool.Pools["pool"+id] = &delegatePool{
-			DelegateID: strconv.Itoa(i),
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					ID:      id,
-					Balance: zcnToBalance(stake.zcnAmount),
-				},
-			},
-			MintAt: stake.MintAt,
+		sPool.Pools["pool"+id] = &stakepool.DelegatePool{
+			Balance:      zcnToBalance(stake.zcnAmount),
+			RoundCreated: stake.MintAt,
 		}
 	}
-	sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId
+	//sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId
 	require.NoError(t, sPool.save(ssc.ID, blobberId, ctx))
-
-	ss := &StorageStats{}
-	ss.Stats = &StorageAllocationStats{}
-	_, err = ctx.InsertTrieNode(ss.GetKey(ssc.ID), ss)
-	require.NoError(t, err)
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
@@ -385,14 +392,7 @@ func testCommitBlobberRead(
 	newSp, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
 
-	stats := &StorageStats{}
-	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := ctx.GetTrieNode(stats.GetKey(ssc.ID))
-	require.NoError(t, err)
-	require.NotNil(t, statsBytes)
-	require.NoError(t, stats.Decode(statsBytes.Encode()))
-
-	confirmCommitBlobberRead(t, f, resp, stats, newRp, newSp, ctx)
+	confirmCommitBlobberRead(t, f, resp, newRp, newSp, ctx)
 	return nil
 }
 
@@ -400,7 +400,6 @@ func confirmCommitBlobberRead(
 	t *testing.T,
 	f formulaeCommitBlobberRead,
 	resp string,
-	stats *StorageStats,
 	newReadPool *readPool,
 	newStakePool *stakePool,
 	ctx *mockStateContext,
@@ -411,22 +410,17 @@ func confirmCommitBlobberRead(
 	require.EqualValues(t, blobberId, respArray[0].Pool_id)
 	require.InDelta(t, f.blobberReward(), respArray[0].Balance, errDelta)
 
-	require.EqualValues(t, f.read.readCounter, stats.Stats.NumReads)
 	require.Len(t, newReadPool.Pools, len(f.readPools.thisAllocation)+f.readPools.otherAllocations)
 
-	require.InDelta(t, f.blobberCharge(), int64(newStakePool.Rewards.Charge), errDelta)
-	require.InDelta(t, f.blobberReward()-f.blobberCharge(), int64(newStakePool.Rewards.Blobber), errDelta)
+	require.InDelta(t, f.blobberCharge(), int64(newStakePool.Reward), errDelta)
 
-	require.True(t, true)
-	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, storageScId, transfer.ClientID)
-		if transfer.ToClientID == delegateWallet {
-			require.InDelta(t, f.blobberCharge(), int64(transfer.Amount), errDelta)
-		} else {
-			index, err := strconv.Atoi(transfer.ToClientID)
-			require.NoError(t, err)
-			require.InDelta(t, f.delegateRward(int64(index)), int64(transfer.Amount), errDelta)
-		}
+	for i, id := range newStakePool.OrderedPoolIds() {
+		require.InDelta(
+			t,
+			f.delegateRward(int64(i)),
+			int64(newStakePool.Pools[id].Reward),
+			errDelta,
+		)
 	}
 }
 

@@ -10,14 +10,12 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
+	"github.com/spf13/viper"
 )
 
 const (
 	authRangeStart = 0
-	authRangeEnd   = 200
 )
 
 var (
@@ -30,61 +28,40 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 	fmt.Printf("Setting up benchmarks with %d clients\n", len(clients))
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
-	addMockAuthorizers(clients, publicKeys, balances, authRangeStart, authRangeEnd)
+	addMockAuthorizers(clients, publicKeys, balances, authRangeStart)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
-
+	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)
-	gn.MinBurnAmount = config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount)
-	gn.MinStakeAmount = config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount)
+	gn.MinBurnAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount))
+	gn.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount))
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
-	gn.MaxFee = config.SmartContractConfig.GetInt64(benchmark.MaxFee)
+	gn.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.MaxFee))
 
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
 
-func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start, end int) {
-	for i := start; i < end; i++ {
+func addMockAuthorizers(clients, publicKeys []string, ctx cstate.StateContextI, start int) {
+	for i := start; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
 
-		authorizer := CreateAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
-		authorizer.Staking = createTokenPool(id)
+		authorizer := NewAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
 
 		err := authorizer.Save(ctx)
 		if err != nil {
 			panic(err)
 		}
-
-		authorizers = append(authorizers, authorizer)
-	}
-}
-
-func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
-	return &tokenpool.ZcnLockingPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      clientId,
-				Balance: 100 * 1e10,
-			},
-		},
-		TokenLockInterface: &TokenLock{
-			StartTime: common.Now(),
-			Duration:  0,
-			Owner:     clientId,
-		},
 	}
 }
 
 func addMockUserNodes(clients []string, balances cstate.StateContextI) {
-	for _, client := range clients {
-		un := &UserNode{
-			ID: client,
-		}
+	for _, clientId := range clients {
+		un := NewUserNode(clientId, 0)
 		_, _ = balances.InsertTrieNode(un.GetKey(), un)
 	}
 }

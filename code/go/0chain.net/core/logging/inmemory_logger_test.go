@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -17,7 +18,7 @@ import (
 
 func init() {
 	viper.Set("logging.console", true)
-	InitLogging("development")
+	InitLogging("development", "")
 }
 
 func TestNewMemLogger(t *testing.T) {
@@ -31,11 +32,6 @@ func TestNewMemLogger(t *testing.T) {
 			mu:           &sync.RWMutex{},
 		},
 	}
-	mc := logger.core
-	for r := mc.r; r.Value == nil; r = r.Next() {
-		r.Value = &observer.LoggedEntry{}
-	}
-
 	type args struct {
 		enc  zapcore.Encoder
 		enab zapcore.LevelEnabler
@@ -65,10 +61,17 @@ func TestNewMemLogger(t *testing.T) {
 func TestMemLogger_GetLogs(t *testing.T) {
 	t.Parallel()
 
-	ml := NewMemLogger(nil, nil)
-
-	var index = BufferSize - 1
-	mc := ml.core
+	mlEmpty := NewMemLogger(nil, nil)
+	mucfg := zap.NewProductionConfig()
+	mucfg.Level.SetLevel(zapcore.InfoLevel)
+	ml1Record := createMemLogger(mucfg)
+	cfg := zap.NewDevelopmentConfig()
+	option := createOptionFromCores(ml1Record.GetCore())
+	l, err := cfg.Build(option)
+	require.NoError(t, err)
+	l.Info("test")
+	index := BufferSize - 1
+	mc := ml1Record.core
 	logs := make([]*observer.LoggedEntry, BufferSize)
 	mc.r.Do(func(val interface{}) {
 		if val != nil {
@@ -76,19 +79,26 @@ func TestMemLogger_GetLogs(t *testing.T) {
 			index--
 		}
 	})
-
 	type fields struct {
 		core *MemCore
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   []*observer.LoggedEntry
+		name    string
+		fields  fields
+		want    []*observer.LoggedEntry
+		wantLen int
 	}{
 		{
-			name:   "Test_MemLogger_GetLogs_OK",
-			fields: fields{core: ml.core},
-			want:   logs[index+1 : BufferSize],
+			name:    "Test_MemLogger_GetLogs_Empty_OK",
+			fields:  fields{core: mlEmpty.core},
+			want:    []*observer.LoggedEntry{},
+			wantLen: 0,
+		},
+		{
+			name:    "Test_MemLogger_GetLogs_1_Record_OK",
+			fields:  fields{core: ml1Record.core},
+			want:    logs[index+1 : BufferSize],
+			wantLen: 1,
 		},
 	}
 	for _, tt := range tests {
@@ -98,6 +108,9 @@ func TestMemLogger_GetLogs(t *testing.T) {
 
 			ml := &MemLogger{
 				core: tt.fields.core,
+			}
+			if len(tt.want) != tt.wantLen {
+				t.Errorf("Unexpected number of entries: wantLen %v, want %v", tt.wantLen, len(tt.want))
 			}
 			if got := ml.GetLogs(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetLogs() = %v, want %v", got, tt.want)

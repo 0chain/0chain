@@ -32,55 +32,9 @@ func TestSetupDatabase(t *testing.T) {
 	require.NoError(t, err)
 	defer eventDb.Close()
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-}
-
-func (edb *EventDb) drop() error {
-	err := edb.Store.Get().Migrator().DropTable(&Event{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Transaction{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Validator{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Block{})
-
-	err = edb.Store.Get().Migrator().DropTable(&ReadMarker{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Miner{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

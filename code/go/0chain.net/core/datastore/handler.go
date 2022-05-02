@@ -2,14 +2,14 @@ package datastore
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"encoding/json"
+	"go.uber.org/zap"
 
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 )
@@ -32,7 +32,7 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 			return
 		}
 		if r.Method == "OPTIONS" {
-			common.SetupCORSResponse(w, r)
+			common.SetupCORSResponse(w)
 			return
 		}
 		contentType := r.Header.Get("Content-type")
@@ -82,10 +82,14 @@ func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, err
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", object)
 	}
-	entity.ComputeProperties()
+	if err := entity.ComputeProperties(); err != nil {
+		return nil, err
+	}
+
 	if err := entity.Validate(ctx); err != nil {
 		return nil, err
 	}
+
 	if DoAsync(ctx, entity) {
 		return entity, nil
 	}

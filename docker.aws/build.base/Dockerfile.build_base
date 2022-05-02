@@ -5,7 +5,7 @@ RUN apk add bash build-base grep git
 # Install RocksDB
 RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev && \
     cd /tmp && \
-    wget -O - https://github.com/facebook/rocksdb/archive/v6.15.5.tar.gz | tar xz && \
+    wget -O - https://github.com/facebook/rocksdb/archive/v6.20.3.tar.gz | tar xz && \
     cd /tmp/rocksdb* && \
     make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 && \
     rm -R /tmp/rocksdb* && \

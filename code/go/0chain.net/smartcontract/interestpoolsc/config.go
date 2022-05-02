@@ -16,6 +16,7 @@ const (
 	MinLockPeriod
 	MaxMint
 	OwnerId
+	Cost
 )
 
 var (
@@ -25,6 +26,12 @@ var (
 		"min_lock_period",
 		"max_mint",
 		"owner_id",
+		"cost",
+	}
+	costFunctions = []string{
+		"lock",
+		"unlock",
+		"updateVariables",
 	}
 )
 
@@ -47,9 +54,13 @@ func (ip *InterestPoolSmartContract) updateVariables(
 	}
 
 	for key, value := range changes.Fields {
-		gn.set(key, value)
+		if err := gn.set(key, value); err != nil {
+			return "", common.NewError("failed to update variables", err.Error())
+		}
 	}
 
-	balances.InsertTrieNode(gn.getKey(), gn)
+	if _, err := balances.InsertTrieNode(gn.getKey(), gn); err != nil {
+		return "", common.NewError("failed to update variables", err.Error())
+	}
 	return string(gn.Encode()), nil
 }

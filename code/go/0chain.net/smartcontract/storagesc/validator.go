@@ -1,33 +1,18 @@
 package storagesc
 
 import (
-	c_state "0chain.net/chaincore/chain/state"
+	"encoding/json"
+
+	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
-const allValidatorsPartitionSize = 50
-
-func getValidatorsList(balances c_state.StateContextI) (partitions.RandPartition, error) {
-	all, err := partitions.GetRandomSelector(ALL_VALIDATORS_KEY, balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		all = partitions.NewRandomSelector(
-			ALL_VALIDATORS_KEY,
-			allValidatorsPartitionSize,
-			nil,
-			partitions.ItemValidator,
-		)
-	}
-	all.SetCallback(nil)
-	return all, nil
-}
-
-func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
 	newValidator := &ValidationNode{}
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
 	if err != nil {
@@ -35,40 +20,52 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID))
-	if err != nil {
-		if err != util.ErrValueNotPresent {
+
+	tmp := &ValidationNode{}
+	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
+	switch err {
+	case nil:
+		sc.statIncr(statUpdateValidator)
+	case util.ErrValueNotPresent:
+		_, err = sc.getBlobber(newValidator.ID, balances)
+		if err != nil {
 			return "", common.NewError("add_validator_failed",
-				"Failed to get validator."+err.Error())
+				"new validator id does not match a registered blobber: "+err.Error())
 		}
-		allValidatorsList, err := getValidatorsList(balances)
+
+		validatorPartitions, err := getValidatorsList(balances)
 		if err != nil {
 			return "", common.NewError("add_validator_failed",
 				"Failed to get validator list."+err.Error())
 		}
-		_, err = allValidatorsList.Add(
-			&partitions.ValidationNode{
+
+		_, err = validatorPartitions.AddItem(
+			balances,
+			&ValidationPartitionNode{
 				Id:  t.ClientID,
 				Url: newValidator.BaseURL,
-			}, balances,
-		)
-		if err != nil {
-			return "", err
-		}
-		err = allValidatorsList.Save(balances)
+			})
 		if err != nil {
 			return "", err
 		}
 
-		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+		if err := validatorPartitions.Save(balances); err != nil {
+			return "", err
+		}
+
+		_, err = balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+		if err != nil {
+			return "", err
+		}
 
 		sc.statIncr(statAddValidator)
 		sc.statIncr(statNumberOfValidators)
-	} else {
-		sc.statIncr(statUpdateValidator)
+	default:
+		return "", common.NewError("add_validator_failed",
+			"Failed to get validator."+err.Error())
 	}
 
-	var conf *scConfig
+	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("add_vaidator",
 			"can't get SC configurations: %v", err)
@@ -76,8 +73,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
-		&newValidator.StakePoolSettings, balances)
+	sp, err = sc.getOrUpdateStakePool(conf, t.ClientID, spenum.Validator,
+		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
@@ -86,6 +83,13 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
+	data, _ := json.Marshal(dbs.DbUpdates{
+		Id: t.ClientID,
+		Updates: map[string]interface{}{
+			"total_stake": int64(sp.stake()),
+		},
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
 
 	err = emitAddOrOverwriteValidatorTable(newValidator, balances, t)
 	if err != nil {

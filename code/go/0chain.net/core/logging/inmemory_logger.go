@@ -45,10 +45,6 @@ func NewMemLogger(enc zapcore.Encoder, enab zapcore.LevelEnabler) *MemLogger {
 			mu:           &sync.RWMutex{},
 		},
 	}
-	mc := logger.core
-	for r := mc.r; r.Value == nil; r = r.Next() {
-		r.Value = &observer.LoggedEntry{}
-	}
 	return logger
 }
 
@@ -102,7 +98,7 @@ func (ml *MemLogger) writeEntry(w io.Writer, encoder zapcore.Encoder, entry *obs
 	if err != nil {
 		return
 	}
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
 
 /*With - implement interface */

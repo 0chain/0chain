@@ -1,13 +1,14 @@
 package storagesc
 
 import (
+	"testing"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestAddToFundedPools(t *testing.T) {
@@ -33,12 +34,12 @@ func TestAddToFundedPools(t *testing.T) {
 			balances.On(
 				"GetTrieNode",
 				fundedPoolsKey(ssc.ID, p.client),
-			).Return(&existingPools, nil).Once()
+				mockSetValue(&existingPools)).Return(nil).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
 				fundedPoolsKey(ssc.ID, p.client),
-			).Return(nil, util.ErrValueNotPresent).Once()
+				mock.Anything).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
 		balances.On(
@@ -130,12 +131,13 @@ func TestIsFundedPool(t *testing.T) {
 			balances.On(
 				"GetTrieNode",
 				fundedPoolsKey(ssc.ID, p.client),
-			).Return(&existingPools, nil).Once()
+				mockSetValue(&existingPools)).Return(nil).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
 				fundedPoolsKey(ssc.ID, p.client),
-			).Return(nil, util.ErrValueNotPresent).Once()
+				mock.Anything,
+			).Return(util.ErrValueNotPresent).Once()
 		}
 
 		return ssc, balances

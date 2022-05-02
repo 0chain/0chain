@@ -34,7 +34,7 @@ func TestAuthorizers(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -46,8 +46,8 @@ func TestAuthorizers(t *testing.T) {
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
 		DelegateWallet:  "delegate wallet",
-		MinStake:        int64(state.Balance(53)),
-		MaxStake:        int64(state.Balance(57)),
+		MinStake:        state.Balance(53),
+		MaxStake:        state.Balance(57),
 		NumDelegates:    59,
 		ServiceCharge:   61.0,
 	}
@@ -59,8 +59,8 @@ func TestAuthorizers(t *testing.T) {
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
 		DelegateWallet:  "delegate wallet",
-		MinStake:        int64(state.Balance(52)),
-		MaxStake:        int64(state.Balance(57)),
+		MinStake:        state.Balance(52),
+		MaxStake:        state.Balance(57),
 		NumDelegates:    60,
 		ServiceCharge:   50.0,
 	}
@@ -84,7 +84,7 @@ func TestAuthorizers(t *testing.T) {
 	_, err = authorizer_2.exists(eventDb)
 	require.NoError(t, err, "Error while checking if Authorizer exists in event Database")
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 
 }

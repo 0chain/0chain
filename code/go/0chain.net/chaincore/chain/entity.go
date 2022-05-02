@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
 
-	"0chain.net/smartcontract/dbs/event"
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/storagesc"
 	"github.com/herumi/bls/ffi/go/bls"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -28,6 +29,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/minersc"
 )
 
@@ -90,7 +92,7 @@ type Chain struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	mutexViewChangeMB sync.RWMutex
+	mutexViewChangeMB sync.RWMutex //nolint: structcheck, unused
 
 	//Chain config goes into this object
 	Config
@@ -124,9 +126,8 @@ type Chain struct {
 
 	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
-	clientStateDeserializer state.DeserializerI
-	stateDB                 util.NodeDB
-	stateMutex              *sync.RWMutex
+	stateDB    util.NodeDB
+	stateMutex *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *finalizeBlockWithReply
@@ -150,8 +151,8 @@ type Chain struct {
 	// bcStuckTimeThreshold is the threshold time for checking if a BC is stuck
 	bcStuckTimeThreshold time.Duration
 
-	retry_wait_time  int
-	retry_wait_mutex *sync.Mutex
+	retryWaitTime  int
+	retryWaitMutex *sync.Mutex
 
 	blockFetcher *BlockFetcher
 
@@ -260,19 +261,18 @@ func getNodePath(path string) util.Path {
 	return util.Path(encryption.Hash(path))
 }
 
-func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
-	seri util.Serializable, err error) {
+func (c *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSerializable) error {
 
-	mc.stateMutex.Lock()
-	defer mc.stateMutex.Unlock()
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
 
 	if block.ClientState == nil {
-		return nil, common.NewErrorf("get_block_state_node",
+		return common.NewErrorf("get_block_state_node",
 			"client state is nil, round %d", block.Round)
 	}
 
 	s := CreateTxnMPT(block.ClientState)
-	return s.GetNodeValue(getNodePath(path))
+	return s.GetNodeValue(getNodePath(path), v)
 }
 
 func mbRoundOffset(rn int64) int64 {
@@ -353,9 +353,9 @@ func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
 func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
 	pmb *block.MagicBlock) {
 
-	var round = mbRoundOffset(mb.StartingRound)
+	r := mbRoundOffset(mb.StartingRound)
 
-	return c.GetPrevMagicBlock(round)
+	return c.GetPrevMagicBlock(r)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -428,7 +428,7 @@ func Provider() datastore.Entity {
 	c.roundsMutex = &sync.RWMutex{}
 	c.eventMutex = &sync.RWMutex{}
 
-	c.retry_wait_mutex = &sync.Mutex{}
+	c.retryWaitMutex = &sync.Mutex{}
 	c.genTimeoutMutex = &sync.Mutex{}
 	c.stateMutex = &sync.RWMutex{}
 	c.stakeMutex = &sync.Mutex{}
@@ -477,7 +477,6 @@ func (c *Chain) Initialize() {
 	//c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
-	c.clientStateDeserializer = &state.Deserializer{}
 	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB
 	//c.stateDB = util.NewMemoryNodeDB()
@@ -488,20 +487,28 @@ func (c *Chain) Initialize() {
 }
 
 /*SetupEntity - setup the entity */
-func SetupEntity(store datastore.Store) {
+func SetupEntity(store datastore.Store, workdir string) {
 	chainEntityMetadata = datastore.MetadataProvider()
 	chainEntityMetadata.Name = "chain"
 	chainEntityMetadata.Provider = Provider
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
-	SetupStateDB()
+	SetupStateDB(workdir)
 }
 
 var stateDB *util.PNodeDB
 
 //SetupStateDB - setup the state db
-func SetupStateDB() {
-	db, err := util.NewPNodeDB("data/rocksdb/state", "/0chain/log/rocksdb/state")
+func SetupStateDB(workdir string) {
+
+	datadir := "data/rocksdb/state"
+	logsdir := "/0chain/log/rocksdb/state"
+	if len(workdir) > 0 {
+		datadir = filepath.Join(workdir, datadir)
+		logsdir = filepath.Join(workdir, "log/rocksdb/state")
+	}
+
+	db, err := util.NewPNodeDB(datadir, logsdir)
 	if err != nil {
 		panic(err)
 	}
@@ -517,10 +524,10 @@ func CloseStateDB() {
 
 func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
 
-func (c *Chain) SetupConfigInfoDB() {
+func (c *Chain) SetupConfigInfoDB(workdir string) {
 	c.configInfoDB = "configdb"
 	c.configInfoStore = ememorystore.GetStorageProvider()
-	db, err := ememorystore.CreateDB("data/rocksdb/config")
+	db, err := ememorystore.CreateDB(filepath.Join(workdir, "data/rocksdb/config"))
 	if err != nil {
 		panic(err)
 	}
@@ -535,10 +542,10 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
+func (c *Chain) getInitialState(tokens state.Balance) util.MPTSerializable {
 	balance := &state.State{}
-	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	balance.Balance = state.Balance(tokens)
+	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	balance.Balance = tokens
 	return balance
 }
 
@@ -546,13 +553,25 @@ func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
 func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
-		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
+		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
+			logging.Logger.Error("chain.stateDB insert failed", zap.Error(err))
+		}
 	}
+
+	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil)
+	mustInitPartitions(state)
+
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
 	}
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func mustInitPartitions(state cstate.StateContextI) {
+	if err := storagesc.InitPartitions(state); err != nil {
+		logging.Logger.Panic("storagesc init partitions failed", zap.Error(err))
+	}
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
@@ -565,7 +584,9 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gb.MagicBlock = genesisMagicBlock
-	c.UpdateMagicBlock(gb.MagicBlock)
+	if err := c.UpdateMagicBlock(gb.MagicBlock); err != nil {
+		panic(err)
+	}
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, genesisRandomSeed)
 	gb.SetRoundRandomSeed(genesisRandomSeed)
@@ -579,22 +600,24 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	if b.Round != 0 {
 		return
 	}
-	c.UpdateMagicBlock(b.MagicBlock)
+	if err := c.UpdateMagicBlock(b.MagicBlock); err != nil {
+		panic(err)
+	}
 	c.SetLatestFinalizedMagicBlock(b)
 	c.SetLatestFinalizedBlock(b)
 	c.SetLatestDeterministicBlock(b)
 	c.blocks[b.Hash] = b
-	return
 }
 
-// AddLoadedFinalizedBlock - adds the genesis block to the chain.
+// AddLoadedFinalizedBlocks - adds the genesis block to the chain.
 func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
-	c.UpdateMagicBlock(lfmb.MagicBlock)
+	err := c.UpdateMagicBlock(lfmb.MagicBlock)
+	if err != nil {
+		logging.Logger.Warn("update magic block failed", zap.Error(err))
+	}
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
-	// c.LatestDeterministicBlock left as genesis
 	c.blocks[lfb.Hash] = lfb
-	return
 }
 
 /*AddBlock - adds a block to the cache */
@@ -604,12 +627,9 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
-/*AddNotarizedBlockToRound - adds notarized block to cache and sync info from notarized block to round  */
-func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI, error) {
-	if b.GetRoundRandomSeed() == 0 {
-		return nil, nil, common.NewError("add_notarized_block_to_round", "block has no seed")
-	}
-
+/*AddNotarizedBlockToRound - adds notarized block to round, sets RRS with block's if needed.
+Client should check if block is valid notarized block, round should be created*/
+func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 
@@ -623,33 +643,29 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		logging.Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
-	// Only for blocks with greater RTC (elder blocks)
-	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
-		r.GetTimeoutCount() < b.RoundTimeoutCount {
-
-		logging.Logger.Debug("AddNotarizedBlockToRound round and block random seed different",
-			zap.Int64("Round", r.GetRoundNumber()),
-			zap.Int64("Round_rrs", r.GetRandomSeed()),
-			zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
-			zap.Int("Round_timeout", r.GetTimeoutCount()),
-			zap.Int("Block_round_timeout", b.RoundTimeoutCount))
-		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
-		r.SetTimeoutCount(b.RoundTimeoutCount)
+	// Notarized block can be obtained before timeout, but received after timeout when in theory new RRS is obtained,
+	// we accept this notarization and set current round RRS and timeout count
+	if r.GetRandomSeed() != b.GetRoundRandomSeed() {
+		logging.Logger.Debug("RRS for notarized block is different", zap.Int64("Round_rrs", r.GetRandomSeed()),
+			zap.Int64("Block_rrs", b.GetRoundRandomSeed()), zap.Int("notarized_blocks_count", len(r.GetNotarizedBlocks())))
+		//reset round RRS only if it has no notarized rounds yet or received notarized block was obtained during next timeout (should not happen ever)
+		if len(r.GetNotarizedBlocks()) == 0 || b.RoundTimeoutCount > r.GetTimeoutCount() {
+			logging.Logger.Debug("AddNotarizedBlockToRound round and block random seed different",
+				zap.Int64("Round", r.GetRoundNumber()),
+				zap.Int64("Round_rrs", r.GetRandomSeed()),
+				zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
+				zap.Int("Round_timeout", r.GetTimeoutCount()),
+				zap.Int("Block_round_timeout", b.RoundTimeoutCount))
+			r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
+			r.SetTimeoutCount(b.RoundTimeoutCount)
+		}
 	}
 
 	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
-	if b.PrevBlock != nil {
-		b.ComputeChainWeight()
-	}
+	b, _ = r.AddNotarizedBlock(b)
 
-	var err error
-	b, _, err = r.AddNotarizedBlock(b)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return b, r, nil
+	return b, r
 }
 
 /*AddRoundBlock - add a block for a given round to the cache */
@@ -661,12 +677,9 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 		return b2
 	}
 	//TODO very dangerous code, we can break block hash with changing it!!! sort it out
-	b.SetRoundRandomSeed(r.GetRandomSeed())
-	b.RoundTimeoutCount = r.GetTimeoutCount()
+	//b.SetRoundRandomSeed(r.GetRandomSeed())
+	//b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)
-	if b.PrevBlock != nil {
-		b.ComputeChainWeight()
-	}
 	return b
 }
 
@@ -784,8 +797,7 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 
 // GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	var miners []*node.Node
-	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
+	miners := r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
@@ -905,9 +917,11 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 }
 
 /*ChainHasTransaction - indicates if this chain has the transaction */
-func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
+func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
+	visited := 0
 	for cb := b; cb != nil; pb, cb = cb, c.GetLocalPreviousBlock(ctx, cb) {
+		visited++
 		if cb.Round == 0 {
 			return false, nil
 		}
@@ -918,16 +932,11 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 			return false, nil
 		}
 	}
-	if false {
-		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+	if true {
+		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round),
+			zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate), zap.Int("visited", visited))
 	}
 	return false, ErrInsufficientChain
-}
-
-func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
-	c.stakeMutex.Lock()
-	defer c.stakeMutex.Unlock()
-	c.minersStake[minerID] = stake
 }
 
 func (c *Chain) getMiningStake(minerID datastore.Key) int {
@@ -971,14 +980,14 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 }
 
 /*DeleteRound - delete a round and associated block data */
-func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
+func (c *Chain) deleteRound(ctx context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())
 }
 
 /*DeleteRoundsBelow - delete rounds below */
-func (c *Chain) DeleteRoundsBelow(roundNumber int64) {
+func (c *Chain) deleteRoundsBelow(roundNumber int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
@@ -999,6 +1008,12 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	defer c.roundsMutex.Unlock()
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		logging.Logger.Debug("SetRandomSeed round already has the seed")
+		return false
+	}
+	//if round was notarized once it is guaranteed that RRS is set, and in this case we will not reset it,
+	//this RRS is protected with consensus and can be reset only with consensus in SetRandomSeedForNotarizedBlock
+	if len(r.GetNotarizedBlocks()) > 0 {
+		logging.Logger.Error("Current round has notarized block")
 		return false
 	}
 	if randomSeed == 0 {
@@ -1079,15 +1094,15 @@ func (c *Chain) GetGenerationTimeout() int {
 }
 
 func (c *Chain) GetRetryWaitTime() int {
-	c.retry_wait_mutex.Lock()
-	defer c.retry_wait_mutex.Unlock()
-	return c.retry_wait_time
+	c.retryWaitMutex.Lock()
+	defer c.retryWaitMutex.Unlock()
+	return c.retryWaitTime
 }
 
 func (c *Chain) SetRetryWaitTime(newWaitTime int) {
-	c.retry_wait_mutex.Lock()
-	defer c.retry_wait_mutex.Unlock()
-	c.retry_wait_time = newWaitTime
+	c.retryWaitMutex.Lock()
+	defer c.retryWaitMutex.Unlock()
+	c.retryWaitTime = newWaitTime
 }
 
 /*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
@@ -1297,7 +1312,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 }
 
-func (mc *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
+func (c *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
 	if pb == nil || pb.ClientState == nil {
 		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", pb)
 	}
@@ -1309,15 +1324,10 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 		return nil, errors.New("client state is nil")
 	}
 
-	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
-	if err != nil {
-		return nil, err
-	}
-
 	gl := &minersc.GlobalSettings{
 		Fields: make(map[string]string),
 	}
-	err = gl.Decode(val.Encode())
+	err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)), gl)
 	if err != nil {
 		return nil, err
 	}
@@ -1325,8 +1335,8 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 	return gl, nil
 }
 
-func (mc *Chain) updateConfig(pb *block.Block) {
-	clientState, err := mc.getClientState(pb)
+func (c *Chain) updateConfig(pb *block.Block) {
+	clientState, err := c.getClientState(pb)
 	if err != nil {
 		// This might happen after stopping and starting the miners
 		// and the MPT has not been setup yet.
@@ -1345,7 +1355,7 @@ func (mc *Chain) updateConfig(pb *block.Block) {
 		return
 	}
 
-	err = mc.Config.Update(configMap)
+	err = c.Config.Update(configMap)
 	if err != nil {
 		logging.Logger.Error("cannot update global settings",
 			zap.Int64("start of round", pb.Round),
@@ -1410,7 +1420,9 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	// initialize magicblock nodepools
-	c.UpdateNodesFromMagicBlock(newMagicBlock)
+	if err := c.UpdateNodesFromMagicBlock(newMagicBlock); err != nil {
+		return common.NewErrorf("failed to update magic block", "%v", err)
+	}
 
 	if lfmb != nil {
 		logging.Logger.Info("update magic block",
@@ -1431,49 +1443,32 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	return nil
 }
 
-func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
-
-	var (
-		prev = c.GetMagicBlock(newMagicBlock.StartingRound - 1) //
-		keep = collectNodes(prev, newMagicBlock)                // this and new
-	)
-
-	c.SetupNodes(newMagicBlock)
+func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) error {
+	if err := c.SetupNodes(newMagicBlock); err != nil {
+		return err
+	}
 
 	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo(newMagicBlock)
 
-	node.DeregisterNodes(keep)
-
 	// reset the monitor
 	ResetStatusMonitor(newMagicBlock.StartingRound)
+	return nil
 }
 
-func (c *Chain) SetupNodes(mb *block.MagicBlock) {
-	for _, miner := range mb.Miners.CopyNodesMap() {
-		miner.ComputeProperties()
-		node.Setup(miner)
+func (c *Chain) SetupNodes(mb *block.MagicBlock) error {
+	for _, mn := range mb.Miners.CopyNodesMap() {
+		if err := node.Setup(mn); err != nil {
+			return err
+		}
 	}
-	for _, sharder := range mb.Sharders.CopyNodesMap() {
-		sharder.ComputeProperties()
-		node.Setup(sharder)
+	for _, sh := range mb.Sharders.CopyNodesMap() {
+		if err := node.Setup(sh); err != nil {
+			return err
+		}
 	}
-}
 
-// collect nodes from given MBs
-func collectNodes(mbs ...*block.MagicBlock) (keep map[string]struct{}) {
-	keep = make(map[string]struct{})
-	for _, mb := range mbs {
-		if mb == nil {
-			continue
-		}
-		for _, pool := range []*node.Pool{mb.Miners, mb.Sharders} {
-			for _, k := range pool.Keys() {
-				keep[k] = struct{}{}
-			}
-		}
-	}
-	return
+	return nil
 }
 
 func (c *Chain) SetLatestOwnFinalizedBlockRound(r int64) {
@@ -1490,7 +1485,7 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 	return c.latestOwnFinalizedBlockRound
 }
 
-// SetLatestFinalizedBlock - set the latest finalized block.
+// SetLatestFinalizedMagicBlock - set the latest finalized block.
 // TODO: this should be called when UpdateMagicBlock is called successfully
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
@@ -1614,7 +1609,7 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	}
 }
 
-func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
+func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) ( //nolint: unused
 	err error) {
 
 	if c.viewChanger == nil {
@@ -1643,7 +1638,7 @@ func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
 	}
 }
 
-// UpdateBlock updates block
+// UpdateBlocks updates block
 func (c *Chain) UpdateBlocks(bs []*block.Block) {
 	for i := range bs {
 		r := c.GetRound(bs[i].Round)
@@ -1662,7 +1657,7 @@ func (c *Chain) UpdateBlocks(bs []*block.Block) {
 // magic block finalized. It called for every finalized block and used not
 // only for a ViewChange.
 type ViewChanger interface {
-	// ViewCahgne is method called for every finalized block.
+	// ViewChange is method called for every finalized block.
 	ViewChange(ctx context.Context, lfb *block.Block) (err error)
 }
 

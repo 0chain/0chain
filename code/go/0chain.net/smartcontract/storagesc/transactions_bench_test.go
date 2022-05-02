@@ -105,7 +105,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				client         = newClient(100000*x10, balances)
 				tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
-				conf *scConfig
+				conf *Config
 				err  error
 			)
 
@@ -184,7 +184,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 
 		tx    *transaction.Transaction
 		blobs []*Client
-		conf  *scConfig
+		conf  *Config
 		err   error
 	)
 
@@ -239,8 +239,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
-	var stats StorageStats
-	stats.Stats = new(StorageAllocationStats)
 	for _, allocID := range allocs {
 		var alloc *StorageAllocation
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -252,11 +250,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
-		stats.Stats.NumWrites += 10    // total stats
-		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
 	}
-	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-	require.NoError(b, err)
 
 	// 5. merge all transactions into p node db
 	b.Log("merge all into p node db")
@@ -284,14 +278,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 				{
 					// revert the stats to allow generation
 					tp += 1
-					var statsb util.Serializable
-					statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID))
-					require.NoError(b, err)
-					require.NoError(b, stats.Decode(statsb.Encode()))
-					stats.LastChallengedSize = 0
-					stats.LastChallengedTime = 0
-					_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-					require.NoError(b, err)
 
 					tp += 1
 					blk.PrevHash = encryption.Hash(fmt.Sprintf("block-%d", i))
@@ -300,7 +286,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 				}
 				b.StartTimer()
 
-				err = ssc.generateChallenges(tx, blk, nil, balances)
+				err = ssc.generateChallenge(tx, blk, nil, balances)
 				require.NoError(b, err)
 			}
 			b.ReportAllocs()
@@ -327,7 +313,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 		tx    *transaction.Transaction
 		blobs []*Client
-		conf  *scConfig
+		conf  *Config
 		err   error
 	)
 
@@ -388,8 +374,6 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
-	var stats StorageStats
-	stats.Stats = new(StorageAllocationStats)
 	for _, allocID := range allocs {
 		var alloc *StorageAllocation
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -401,11 +385,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
-		stats.Stats.NumWrites += 10    // total stats
-		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
 	}
-	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-	require.NoError(b, err)
 
 	// 5. merge all transactions into p node db
 	b.Log("merge all into p node db")
@@ -443,12 +423,25 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				alloc, err = ssc.getAllocation(allocID, balances)
 				require.NoError(b, err)
 
+				// 6.3 keep for the benchmark
+				blobberID = alloc.BlobberDetails[rand.Intn(len(alloc.BlobberDetails))].BlobberID
+
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
 					challBytes string
 				)
-				challBytes, err = ssc.addChallenge(alloc, valids, challID,
-					common.Timestamp(tp), r, tp, balances)
+
+				storageChall, err := ssc.getStorageChallenge(challID, balances)
+				require.NoError(b, err)
+				blobberChall, err := ssc.getBlobberChallenge(blobberID, balances)
+				require.NoError(b, err)
+				allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+				require.NoError(b, err)
+				blobberAllocChall, ok := alloc.BlobberMap[blobberID]
+				require.True(b, ok)
+
+				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, allocChall, blobberAllocChall, balances)
+
 				require.NoError(b, err)
 
 				var chall StorageChallenge
@@ -460,16 +453,19 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				var challResp ChallengeResponse
 				challResp.ID = chall.ID
 
-				for _, v := range chall.Validators {
-					var vx = blobsMap[v.ID]
+				var validators []ValidationPartitionNode
+				err = valids.GetRandomItems(balances, r, &validators)
+				require.NoError(b, err)
+				for _, v := range validators {
+					var vx = blobsMap[v.Id]
 					challResp.ValidationTickets = append(
 						challResp.ValidationTickets,
-						vx.validTicket(b, chall.ID, chall.Blobber.ID, true, tp),
+						vx.validTicket(b, chall.ID, chall.BlobberID, true, tp),
 					)
 				}
 
 				// 6.3 keep for the benchmark
-				blobberID = chall.Blobber.ID
+				//blobberID = chall.BlobberID
 
 				// 6.4 prepare transaction
 				tp += 1

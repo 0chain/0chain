@@ -18,7 +18,7 @@ type testBalances struct {
 	balances      map[datastore.Key]state.Balance
 	txn           *transaction.Transaction
 	transfers     []*state.Transfer
-	tree          map[datastore.Key]util.Serializable
+	tree          map[datastore.Key]util.MPTSerializable
 	block         *block.Block
 	blockSharders []string
 	lfmb          *block.Block
@@ -27,15 +27,15 @@ type testBalances struct {
 func newTestBalances() *testBalances {
 	return &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
-		tree:     make(map[datastore.Key]util.Serializable),
+		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
-func (tb *testBalances) zeroize() {
+func (tb *testBalances) zeroize() { //nolint
 	tb.balances = make(map[string]state.Balance)
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
+func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) { //nolint
 	tb.balances[key] = b
 }
 
@@ -43,48 +43,13 @@ func (tb *testBalances) setLFMB(lfmb *block.Block) {
 	tb.lfmb = lfmb
 }
 
-func (tb *testBalances) requireAllBeZeros(t *testing.T) {
+func (tb *testBalances) requireAllBeZeros(t *testing.T) { //nolint
 	for id, value := range tb.balances {
 		if id == ADDRESS {
 			continue
 		}
 		require.Zerof(t, value, "%s has non-zero balance: %d", id, value)
 	}
-}
-
-func (tb *testBalances) requireSpecifiedBeEqual(t *testing.T,
-	clients []*Client, value state.Balance, message string) {
-
-	for _, client := range clients {
-		require.EqualValues(t, value, tb.balances[client.id], message)
-	}
-}
-
-func (tb *testBalances) requireTotalAmountBeEqual(t *testing.T,
-	expected state.Balance) {
-
-	var total state.Balance
-	for id, value := range tb.balances {
-		if id == ADDRESS {
-			continue
-		}
-		total += value
-	}
-
-	require.EqualValues(t, expected, total, "total amount of tokens is wrong")
-}
-
-func (tb *testBalances) requireNodeAndStakersSumUpTo(t *testing.T,
-	node *Client, stakers []*Client, expected state.Balance) {
-
-	var total state.Balance
-	for _, staker := range stakers {
-		total += tb.balances[staker.id]
-	}
-	total += tb.balances[node.id]
-
-	require.EqualValues(t, expected, total,
-		"total amount distributed among node and its stakers is wrong")
 }
 
 func (tb *testBalances) GetBlock() *block.Block {
@@ -137,23 +102,27 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
-func (tb *testBalances) GetTrieNode(key datastore.Key) (
-	node util.Serializable, err error) {
-
+func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	if encryption.IsHash(key) {
-		return nil, common.NewError("failed to get trie node",
+		return common.NewError("failed to get trie node",
 			"key is too short")
 	}
 
-	var ok bool
-	if node, ok = tb.tree[key]; !ok {
-		return nil, util.ErrValueNotPresent
+	node, ok := tb.tree[key]
+	if !ok {
+		return util.ErrValueNotPresent
 	}
-	return
+	d, err := node.MarshalMsg(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = v.UnmarshalMsg(d)
+	return err
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (_ datastore.Key, _ error) {
+	node util.MPTSerializable) (_ datastore.Key, _ error) {
 
 	tb.tree[key] = node
 	return

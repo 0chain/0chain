@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"fmt"
-
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -30,6 +29,7 @@ const (
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddAuthorizer
+	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
 	TagAddOrOverwriteWriteMarker
@@ -44,25 +44,41 @@ const (
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder
+	TagAddOrOverwriteCurator
+	TagRemoveCurator
+	TagAddOrOverwriteDelegatePool
+	TagStakePoolReward
+	TagUpdateDelegatePool
+	TagAddOrOverwriteAllocation
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
-	newEvents := edb.removeDuplicate(ctx, events)
+	edb.eventsChannel <- events
+}
 
-	edb.addEvents(ctx, newEvents)
-	for _, event := range newEvents {
-		var err error = nil
-		switch EventType(event.Type) {
-		case TypeStats:
-			err = edb.addStat(event)
-		default:
-		}
-		if err != nil {
-			logging.Logger.Error(
-				"event could not be processed",
-				zap.Any("event", event),
-				zap.Error(err),
-			)
+func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	for {
+		events := <-edb.eventsChannel
+		edb.addEvents(ctx, events)
+		for _, event := range events {
+			var err error = nil
+			switch EventType(event.Type) {
+			case TypeStats:
+				err = edb.addStat(event)
+			case TypeError:
+				err = edb.addError(Error{
+					TransactionID: event.TxHash,
+					Error:         event.Data,
+				})
+			default:
+			}
+			if err != nil {
+				logging.Logger.Error(
+					"event could not be processed",
+					zap.Any("event", event),
+					zap.Error(err),
+				)
+			}
 		}
 	}
 }
@@ -181,6 +197,50 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateSharder(updates)
 	case TagDeleteSharder:
 		return edb.deleteSharder(event.Data)
+	case TagAddOrOverwriteCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteCurator(c)
+	case TagRemoveCurator:
+		var c Curator
+		err := json.Unmarshal([]byte(event.Data), &c)
+		if err != nil {
+			return err
+		}
+		return edb.removeCurator(c)
+
+	//stake pool
+	case TagAddOrOverwriteDelegatePool:
+		var sp DelegatePool
+		err := json.Unmarshal([]byte(event.Data), &sp)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteDelegatePool(sp)
+	case TagUpdateDelegatePool:
+		var spUpdate dbs.DelegatePoolUpdate
+		err := json.Unmarshal([]byte(event.Data), &spUpdate)
+		if err != nil {
+			return err
+		}
+		return edb.updateDelegatePool(spUpdate)
+	case TagStakePoolReward:
+		var spu dbs.StakePoolReward
+		err := json.Unmarshal([]byte(event.Data), &spu)
+		if err != nil {
+			return err
+		}
+		return edb.rewardUpdate(spu)
+	case TagAddOrOverwriteAllocation:
+		var alloc Allocation
+		err := json.Unmarshal([]byte(event.Data), &alloc)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteAllocation(&alloc)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

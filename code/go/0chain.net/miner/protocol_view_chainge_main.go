@@ -1,10 +1,10 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package miner
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 
 	"0chain.net/chaincore/block"
@@ -15,7 +15,6 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
 
@@ -66,7 +65,9 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		}
 
 		var signatureScheme = chain.GetServerChain().GetSignatureScheme()
-		signatureScheme.SetPublicKey(n.PublicKey)
+		if err := signatureScheme.SetPublicKey(n.PublicKey); err != nil {
+			return nil, err
+		}
 
 		var err error
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
@@ -236,66 +237,6 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	return
 }
 
-func SignShareRequestHandler(ctx context.Context, r *http.Request) (
-	resp interface{}, err error) {
-
-	var (
-		nodeID   = r.Header.Get(node.HeaderNodeID)
-		secShare = r.FormValue("secret_share")
-		mc       = GetMinerChain()
-	)
-
-	mc.viewChangeProcess.Lock()
-	defer mc.viewChangeProcess.Unlock()
-
-	if !mc.viewChangeProcess.isDKGSet() {
-		return nil, common.NewError("sign_share", "DKG is not set")
-	}
-
-	var (
-		mpks        = mc.viewChangeProcess.mpks.GetMpks()
-		lmpks, dkgt = len(mpks), mc.viewChangeProcess.viewChangeDKG.T
-	)
-	if lmpks < dkgt {
-		return nil, common.NewErrorf("sign_share", "don't have enough mpks"+
-			" yet, l mpks (%d) < dkg t (%d)", lmpks, dkgt)
-	}
-
-	var (
-		message = datastore.GetEntityMetadata("dkg_share").
-			Instance().(*bls.DKGKeyShare)
-
-		share bls.Key
-	)
-
-	if err = share.SetHexString(secShare); err != nil {
-		logging.Logger.Error("failed to set hex string", zap.Any("error", err))
-		return nil, common.NewErrorf("sign_share",
-			"setting hex string: %v", err)
-	}
-
-	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-
-	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
-		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
-			zap.Any("node_id", nodeID))
-		return nil, common.NewError("sign_share", "failed to verify DKG share")
-	}
-
-	err = mc.viewChangeProcess.viewChangeDKG.AddSecretShare(
-		bls.ComputeIDdkg(nodeID), secShare, false)
-	if err != nil {
-		return nil, common.NewErrorf("sign_share",
-			"adding secret share: %v", err)
-	}
-
-	message.Message = encryption.Hash(secShare)
-	message.Sign, err = node.Self.Sign(message.Message)
-	if err != nil {
-		logging.Logger.Error("failed to sign DKG share message", zap.Any("error", err))
-		return nil, common.NewErrorf("sign_share",
-			"signing DKG share message: %v", err)
-	}
-
+func afterSignShareRequestHandler(message *bls.DKGKeyShare, nodeID string) (messageResult *bls.DKGKeyShare, err error) {
 	return message, nil
 }

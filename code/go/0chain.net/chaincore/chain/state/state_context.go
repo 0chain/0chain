@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"sync"
 
 	"0chain.net/chaincore/block"
@@ -13,6 +14,18 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
+//msgp:ignore StateContext
+//go:generate msgp -io=false -tests=false -v
+
+type ApprovedMinter int
+
+const (
+	MinterMiner ApprovedMinter = iota
+	MinterInterestPool
+	MinterStorage
+	MinterZcn
+)
+
 var (
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
@@ -20,6 +33,13 @@ var (
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7", // storage SC
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"} //zcn SC
 )
+
+func GetMinter(minter ApprovedMinter) (string, error) {
+	if int(minter) >= len(approvedMinters) {
+		return "", fmt.Errorf("invalid minter %v", minter)
+	}
+	return approvedMinters[minter], nil
+}
 
 /*
 * The state context is available to the smart contract logic.
@@ -31,6 +51,7 @@ var (
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+//go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 // todo this needs to be split up into different interfaces
 type StateContextI interface {
@@ -41,9 +62,9 @@ type StateContextI interface {
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
-	SetStateContext(st *state.State) error                    // cannot use in smart contracts or REST endpoints
-	GetTrieNode(key datastore.Key) (util.Serializable, error) // Can use in REST endpoints
-	InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error)
+	SetStateContext(st *state.State) error                       // cannot use in smart contracts or REST endpoints
+	GetTrieNode(key datastore.Key, v util.MPTSerializable) error // Can use in REST endpoints
+	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
@@ -69,7 +90,6 @@ type StateContext struct {
 	signedTransfers               []*state.SignedTransfer
 	mints                         []*state.Mint
 	events                        []event.Event
-	clientStateDeserializer       state.DeserializerI
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
@@ -82,7 +102,6 @@ type StateContext struct {
 func NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
-	csd state.DeserializerI,
 	t *transaction.Transaction,
 	getSharderFunc func(*block.Block) []string,
 	getLastestFinalizedMagicBlock func() *block.Block,
@@ -95,7 +114,6 @@ func NewStateContext(
 	return &StateContext{
 		block:                         b,
 		state:                         s,
-		clientStateDeserializer:       csd,
 		txn:                           t,
 		getSharders:                   getSharderFunc,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
@@ -247,15 +265,13 @@ func (sc *StateContext) Validate() error {
 
 func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s := &state.State{}
-	s.Balance = state.Balance(0)
-	ss, err := sc.state.GetNodeValue(util.Path(clientID))
+	err := sc.state.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return s, err
 	}
-	s = sc.clientStateDeserializer.Deserialize(ss).(*state.State)
 	//TODO: should we apply the pending transfers?
 	return s, nil
 }
@@ -285,12 +301,12 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return sc.getSignature()
 }
 
-func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
+func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	key_hash := encryption.Hash(key)
-	return sc.state.GetNodeValue(util.Path(key_hash))
+	return sc.state.GetNodeValue(util.Path(key_hash), v)
 }
 
-func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	key_hash := encryption.Hash(key)
 	byteKey, err := sc.state.Insert(util.Path(key_hash), node)
 	return datastore.Key(byteKey), err

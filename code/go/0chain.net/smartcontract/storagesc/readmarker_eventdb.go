@@ -1,12 +1,13 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
-	"encoding/json"
-	"fmt"
 	"gorm.io/gorm"
 )
 

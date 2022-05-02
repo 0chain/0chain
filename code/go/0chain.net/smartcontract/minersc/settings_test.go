@@ -3,6 +3,7 @@ package minersc_test
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 	"0chain.net/chaincore/state"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 
@@ -30,7 +31,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[name].Setting])
+		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].Setting])
 	}
 }
 
@@ -172,14 +173,12 @@ func TestUpdateSettings(t *testing.T) {
 					"min_s":                  "1",
 					"max_delegates":          "200",
 					"reward_round_frequency": "64250",
-					"interest_rate":          "0.0",
 					"reward_rate":            "1.0",
 					"share_ratio":            "50",
 					"block_reward":           "021",
 					"max_charge":             "0.5",
 					"epoch":                  "6415000000",
 					"reward_decline_rate":    "0.1",
-					"interest_decline_rate":  "0.1",
 					"max_mint":               "1500000.0",
 					"owner_id":               owner,
 				},

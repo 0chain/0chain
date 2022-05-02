@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 
@@ -206,7 +207,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			var bfr, ok = fetching[rpl.Hash]
 			if !ok {
 				panic("BlockFetcher, invalid state: missing block fetch request")
-				continue
 			}
 
 			// got the correct response
@@ -252,8 +252,6 @@ func (bf *BlockFetcher) gotError(ctx context.Context, got chan BlockFetchReply,
 	case <-ctx.Done():
 	case got <- BlockFetchReply{Hash: hash, Err: err}:
 	}
-
-	return
 }
 
 func (bf *BlockFetcher) gotBlock(ctx context.Context, got chan BlockFetchReply,
@@ -263,8 +261,6 @@ func (bf *BlockFetcher) gotBlock(ctx context.Context, got chan BlockFetchReply,
 	case <-ctx.Done():
 	case got <- BlockFetchReply{Hash: b.Hash, Block: b}:
 	}
-
-	return
 }
 
 func (bf *BlockFetcher) fetchFromMiners(ctx context.Context,
@@ -325,6 +321,11 @@ type Chainer interface {
 		fb *block.Block, err error)
 	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
+	GetCurrentRound() int64
+	GetMagicBlock(round int64) *block.MagicBlock
+	GetLatestFinalizedMagicBlockRound(rn int64) *block.Block
+	GetRound(roundNumber int64) round.RoundI
+	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
 }
 
 //
@@ -416,28 +417,26 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	}()
 
 	for {
-		select {
-		case fb, ok := <-blockC:
-			if !ok {
-				return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
-			}
-
-			b, err := validateBlock(fb)
-			switch err {
-			case nil:
-			case context.Canceled,
-				context.DeadlineExceeded:
-				return nil, err
-			default:
-				continue
-			}
-
-			// stop requesting on first block accepted
-			cancel()
-			<-doneC
-
-			return b, nil
+		fb, ok := <-blockC
+		if !ok {
+			return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
 		}
+
+		b, err := validateBlock(fb)
+		switch err {
+		case nil:
+		case context.Canceled,
+			context.DeadlineExceeded:
+			return nil, err
+		default:
+			continue
+		}
+
+		// stop requesting on first block accepted
+		cancel()
+		<-doneC
+
+		return b, nil
 	}
 }
 
@@ -496,49 +495,47 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 	}()
 
 	for {
-		select {
-		case nb, ok := <-blockC:
-			if !ok {
-				logging.Logger.Debug("fetch_nb_from_miners - no notarized block given",
-					zap.Any("duration", time.Since(ts)))
-				return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
-			}
+		nb, ok := <-blockC
+		if !ok {
+			logging.Logger.Debug("fetch_nb_from_miners - no notarized block given",
+				zap.Any("duration", time.Since(ts)))
+			return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
+		}
 
-			if err = nb.Validate(ctx); err != nil {
-				logging.Logger.Error("fetch_nb_from_miners - invalid",
+		if err = nb.Validate(ctx); err != nil {
+			logging.Logger.Error("fetch_nb_from_miners - invalid",
+				zap.Int64("round", nb.Round), zap.String("block", hash),
+				zap.Any("block_obj", nb), zap.Error(err))
+			continue
+		}
+
+		if withVerification {
+			err = c.VerifyBlockNotarization(ctx, nb)
+			switch err {
+			case nil:
+			case context.Canceled, context.DeadlineExceeded:
+				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
 					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Any("block_obj", nb), zap.Error(err))
+					zap.Any("duration", time.Since(ts)),
+					zap.Error(err))
+				return nil, err
+			default:
+				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
+					zap.Int64("round", nb.Round), zap.String("block", hash),
+					zap.Error(err))
 				continue
 			}
-
-			if withVerification {
-				err = c.VerifyBlockNotarization(ctx, nb)
-				switch err {
-				case nil:
-				case context.Canceled, context.DeadlineExceeded:
-					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
-						zap.Int64("round", nb.Round), zap.String("block", hash),
-						zap.Any("duration", time.Since(ts)),
-						zap.Error(err))
-					return nil, err
-				default:
-					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
-						zap.Int64("round", nb.Round), zap.String("block", hash),
-						zap.Error(err))
-					continue
-				}
-			}
-
-			// cancel further requests
-			cancel()
-			<-doneC
-
-			logging.Logger.Debug("fetch_nb_from_miners -- ok",
-				zap.String("block", nb.Hash),
-				zap.Int64("round", nb.Round),
-				zap.Int("verification_tickers", nb.VerificationTicketsSize()))
-			return nb, nil
 		}
+
+		// cancel further requests
+		cancel()
+		<-doneC
+
+		logging.Logger.Debug("fetch_nb_from_miners -- ok",
+			zap.String("block", nb.Hash),
+			zap.Int64("round", nb.Round),
+			zap.Int("verification_tickers", nb.VerificationTicketsSize()))
+		return nb, nil
 	}
 }
 
@@ -606,20 +603,16 @@ func (bf *BlockFetcher) fetch(ctx context.Context,
 }
 
 func (c *Chain) GetNotarizedBlockForce(ctx context.Context, hash string, rn int64) (*block.Block, error) {
-	for true {
-		select {
-		case <-ctx.Done():
-			break
-		default:
-		}
-
+	var repl *block.Block
+	err := common.RunWithRetries(ctx, 20, func() error {
 		notarizedBlock, err := c.GetNotarizedBlock(ctx, hash, rn)
 		if err != nil {
-			continue
+			return err
 		}
-		return notarizedBlock, nil
-	}
-	return nil, context.DeadlineExceeded
+		repl = notarizedBlock
+		return nil
+	})
+	return repl, err
 }
 
 // GetNotarizedBlock - get a notarized block for a round.
@@ -678,14 +671,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (*
 	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	var err error
-	b, r, err = c.AddNotarizedBlockToRound(r, nb)
-	if err != nil {
-		logging.Logger.Error("get notarized block failed",
-			zap.Int64("cround", cround), zap.Int64("round", rn),
-			zap.String("block", hash), zap.Error(err))
-		return nil, err
-	}
+	b, r = c.AddNotarizedBlockToRound(r, nb)
 
 	// Add the round if chain does not have it
 	if c.GetRound(nb.Round) == nil {
@@ -767,14 +753,7 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	var err error
-	_, r, err = c.AddNotarizedBlockToRound(r, fb)
-	if err != nil {
-		logging.Logger.Error("async fetch fb from sharders failed",
-			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
-			zap.Error(err))
-		return
-	}
+	_, r = c.AddNotarizedBlockToRound(r, fb)
 
 	//  Add the round to chain if does not in the chain yet
 	if c.GetRound(fb.Round) == nil {

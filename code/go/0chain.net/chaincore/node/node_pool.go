@@ -2,6 +2,8 @@ package node
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -11,8 +13,13 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"github.com/vmihailenco/msgpack/v5"
+	"go.uber.org/zap"
 )
+
+//msgp:ignore Pool
+//go:generate msgp -v -io=false -tests=false -unexported
 
 //ErrNodeNotFound - to indicate that a node is not present in the pool
 var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not found")
@@ -27,19 +34,19 @@ func atomicStoreFloat64(addr *uint64, val float64) {
 
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
-	Type int8 `json:"type"`
+	Type NodeType `json:"type"`
 
 	// ---------------------------------------------
-	mmx      sync.RWMutex     `json:"-" msgpack:"-"`
-	Nodes    []*Node          `json:"-" msgpack:"-"`
+	mmx      sync.RWMutex     `json:"-" msgpack:"-" msg:"-"`
+	Nodes    []*Node          `json:"-" msgpack:"-" msg:"-"`
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
-	medianNetworkTime uint64 // float64
+	medianNetworkTime uint64 `msg:"-"` // float64
 }
 
 /*NewPool - create a new node pool of given type */
-func NewPool(Type int8) *Pool {
+func NewPool(Type NodeType) *Pool {
 	p := &Pool{
 		Type:     Type,
 		NodesMap: make(map[string]*Node),
@@ -57,12 +64,15 @@ func (np *Pool) Size() int {
 }
 
 // AddNode - add a node to the pool
-func (np *Pool) AddNode(node *Node) {
+func (np *Pool) AddNode(node *Node) error {
 	if np.Type != node.Type {
-		return
+		return errors.New("incorrect node type")
 	}
 
-	node.SetPublicKey(node.PublicKey)
+	if err := node.SetPublicKey(node.PublicKey); err != nil {
+		return fmt.Errorf("invalid public key, %v", err)
+	}
+
 	RegisterNode(node)
 
 	np.mmx.Lock()
@@ -82,6 +92,8 @@ func (np *Pool) AddNode(node *Node) {
 	np.NodesMap[node.GetKey()] = node
 	np.computeNodePositions()
 	np.mmx.Unlock()
+
+	return nil
 }
 
 /*GetNode - given node id, get the node object or nil */
@@ -145,7 +157,7 @@ func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 	return shuffled
 }
 
-// Print - print this pool. This will be used for http response and Read method
+// Print - print this pool. This will be used for http response and read method
 // should be able to consume it
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes(false)
@@ -264,7 +276,9 @@ func (np *Pool) Clone() *Pool {
 	clone.medianNetworkTime = np.medianNetworkTime
 
 	for _, v := range np.NodesMap {
-		clone.AddNode(v.Clone())
+		if err := clone.AddNode(v.Clone()); err != nil {
+			logging.Logger.Warn("pool clone - add cloned node failed", zap.Error(err))
+		}
 	}
 
 	return clone
@@ -287,7 +301,9 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 	for k := range np.NodesMap {
 		n := np.NodesMap[k]
 		if n.SigScheme == nil {
-			n.SetPublicKey(n.PublicKey)
+			if err := n.SetPublicKey(n.PublicKey); err != nil {
+				return err
+			}
 		}
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -317,7 +333,9 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 	for k := range np.NodesMap {
 		n := np.NodesMap[k]
 		if n.SigScheme == nil {
-			n.SetPublicKey(n.PublicKey)
+			if err := n.SetPublicKey(n.PublicKey); err != nil {
+				return err
+			}
 		}
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -325,3 +343,37 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 	np.computeNodePositions()
 	return nil
 }
+
+func (np *Pool) MarshalMsg(o []byte) ([]byte, error) {
+	d := poolDecode(*np) //nolint: govet
+	return d.MarshalMsg(o)
+}
+
+func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
+	d := &poolDecode{}
+	o, err := d.UnmarshalMsg(b)
+	if err != nil {
+		return nil, err
+	}
+
+	np.Nodes = make([]*Node, 0, len(d.NodesMap))
+	for k := range d.NodesMap {
+		n := d.NodesMap[k]
+		if n.SigScheme == nil {
+			if err := n.SetPublicKey(n.PublicKey); err != nil {
+				return nil, err
+			}
+		}
+		np.Nodes = append(np.Nodes, n)
+	}
+
+	np.computeNodePositions()
+	return o, nil
+}
+
+func (np *Pool) Msgsize() int {
+	d := poolDecode(*np) //nolint: govet
+	return d.Msgsize()
+}
+
+type poolDecode Pool

@@ -4,24 +4,23 @@ import (
 	"testing"
 
 	"0chain.net/smartcontract"
-
-	"0chain.net/chaincore/mocks"
+	"0chain.net/smartcontract/minersc"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	. "0chain.net/smartcontract/minersc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGlobalSettings(t *testing.T) {
-	require.Len(t, GlobalSettingName, int(NumOfGlobalSettings))
-	require.Len(t, GlobalSettingInfo, int(NumOfGlobalSettings))
+	require.Len(t, minersc.GlobalSettingName, int(minersc.NumOfGlobalSettings))
+	require.Len(t, minersc.GlobalSettingInfo, int(minersc.NumOfGlobalSettings))
 
-	for key := range GlobalSettingInfo {
+	for key := range minersc.GlobalSettingInfo {
 		found := false
-		for _, name := range GlobalSettingName {
+		for _, name := range minersc.GlobalSettingName {
 			if key == name {
 				found = true
 				break
@@ -30,8 +29,8 @@ func TestGlobalSettings(t *testing.T) {
 		require.True(t, found)
 	}
 
-	for _, name := range GlobalSettingName {
-		_, ok := GlobalSettingInfo[name]
+	for _, name := range minersc.GlobalSettingName {
+		_, ok := minersc.GlobalSettingInfo[name]
 		require.True(t, ok)
 	}
 
@@ -42,10 +41,10 @@ func TestUpdateGlobals(t *testing.T) {
 		mockNotASetting = "mock not a setting"
 	)
 	type args struct {
-		msc      *MinerSmartContract
+		msc      *minersc.MinerSmartContract
 		txn      *transaction.Transaction
 		input    []byte
-		gn       *GlobalNode
+		gn       *minersc.GlobalNode
 		balances chainstate.StateContextI
 	}
 
@@ -56,19 +55,17 @@ func TestUpdateGlobals(t *testing.T) {
 
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
-		var msc = &MinerSmartContract{
-			SmartContract: sci.NewSC(ADDRESS),
+		var msc = &minersc.MinerSmartContract{
+			SmartContract: sci.NewSC(minersc.ADDRESS),
 		}
 		var txn = &transaction.Transaction{
 			ClientID: p.client,
 		}
-		balances.On("GetTrieNode", GLOBALS_KEY).Return(&GlobalSettings{
-			Fields: make(map[string]string),
-		}, nil).Once()
+		balances.On("GetTrieNode", minersc.GLOBALS_KEY, mock.AnythingOfType("*minersc.GlobalSettings")).Return(nil).Once()
 		balances.On(
 			"InsertTrieNode",
-			GLOBALS_KEY,
-			mock.MatchedBy(func(globals *GlobalSettings) bool {
+			minersc.GLOBALS_KEY,
+			mock.MatchedBy(func(globals *minersc.GlobalSettings) bool {
 				for key, value := range p.inputMap {
 					if globals.Fields[key] != value {
 						return false
@@ -82,7 +79,7 @@ func TestUpdateGlobals(t *testing.T) {
 			msc:      msc,
 			txn:      txn,
 			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
-			gn:       &GlobalNode{OwnerId: owner},
+			gn:       &minersc.GlobalNode{OwnerId: owner},
 			balances: balances,
 		}
 	}

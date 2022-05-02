@@ -38,10 +38,8 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
 
-// HandleVerifyBlockMessage - handles the verify block message.
-func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
-	msg *BlockMessage) {
-
+// handleVerifyBlockMessage - handles the verify block message.
+func (mc *Chain) handleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
 
 	if err := mc.pushToBlockVerifyWorker(ctx, b); err != nil {
@@ -53,7 +51,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	}
 }
 
-func (mc *Chain) isVRFComplete(ctx context.Context, r int64, rrs int64) error {
+func (mc *Chain) isVRFComplete(ctx context.Context, r int64, rrs int64) error { //nolint
 	var (
 		mb           = mc.GetMagicBlock(r)
 		blsThreshold = mb.T
@@ -217,6 +215,11 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 
+	if mr.IsVerificationComplete() {
+		logging.Logger.Debug("verify block - received block for round with finished verification phase")
+		return nil
+	}
+
 	if !mr.IsVRFComplete() {
 		logging.Logger.Info("verify block - got block proposal before VRF is complete",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -260,16 +263,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	/* Since this is a notarized block, we are accepting it. */
-	b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
-	if err != nil {
-		logging.Logger.Error("verify block failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("miner", b.MinerID),
-			zap.Error(err))
-		return nil
-	}
-
+	b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
 	b = b1
 	mr = r1.(*Round)
 	logging.Logger.Info("verify block - added a notarizedBlockToRound, got notarized block with different RRS",
@@ -283,39 +277,8 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (mc *Chain) verifyTicketsWithRetry(ctx context.Context,
-	r int64, block string, bvts []*block.VerificationTicket, retryN int) error {
-	for i := 0; i < retryN; i++ {
-		err := func() error {
-			logging.Logger.Debug("verification ticket",
-				zap.Int64("round", r),
-				zap.String("block", block),
-				zap.Int("retry", i))
-			cctx, cancel := context.WithTimeout(ctx, time.Second)
-			defer cancel()
-			return mc.VerifyTickets(cctx, block, bvts, r)
-		}()
-
-		switch err {
-		case nil:
-			return nil
-		case context.DeadlineExceeded:
-			if mc.GetCurrentRound() > r {
-				return common.NewErrorf("verify_tickets_timeout", "chain moved on, round: %d", r)
-			}
-		default:
-			logging.Logger.Error("verification ticket failed",
-				zap.Int64("round", r),
-				zap.Error(err))
-			return err
-		}
-	}
-
-	return common.NewErrorf("verify_tickets_timeout", "ticket timeout with retry, round: %d", r)
-}
-
-// HandleVerificationTicketMessage - handles the verification ticket message.
-func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
+// handleVerificationTicketMessage - handles the verification ticket message.
+func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
 	msg *BlockMessage) {
 
 	var (
@@ -478,10 +441,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
-		logging.Logger.Error("process notarization - not added to round")
-		return fmt.Errorf("can't add already notarized block to round: %v", err)
-	}
+	mc.AddNotarizedBlockToRound(r, b)
 	mc.ProgressOnNotarization(r)
 
 	// update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
@@ -525,18 +485,25 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 }
 
 func (mc *Chain) ProgressOnNotarization(notRound *Round) {
-	if mc.GetCurrentRound() <= notRound.Number {
+	curNumber := mc.GetCurrentRound()
+	if curNumber <= notRound.Number {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", notRound.Number+1))
 		//notRound.CancelVerification()
 		//notRound.TryCancelBlockGeneration()
 		//TODO implement round centric context, that is cancelled when transition to the next happens
+		curRound := mc.GetMinerRound(curNumber)
 		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
+
+		if curRound != nil {
+			curRound.CancelVerification()
+			curRound.TryCancelBlockGeneration()
+		}
 	}
 }
 
-// HandleNotarizationMessage - handles the block notarization message.
-func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
+// handleNotarizationMessage - handles the block notarization message.
+func (mc *Chain) handleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
 	mc.processNotarization(ctx, msg.Notarization)
 }
 
@@ -580,7 +547,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 
 	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
-	if !mc.AddNotarizedBlock(ctx, mr, b) {
+	if !mc.AddNotarizedBlock(mr, b) {
 		finish(false)
 		return
 	}

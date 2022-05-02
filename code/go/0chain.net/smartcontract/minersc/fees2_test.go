@@ -27,7 +27,6 @@ const (
 	signatureSchemeType = encryption.SignatureSchemeEd25519
 	minerPk             = datastore.Key("25206bf74fb1afa8045acd269ef76890d8a1e34d89eb681c042ac58dbc080e30")
 	selfId              = datastore.Key("mySelfId")
-	sharderId           = "sharder"
 	delegateId          = "delegate"
 	maxDelegates        = 1000
 	errDelta            = 4 // for testing values with rounding errors
@@ -45,16 +44,14 @@ var sharderPKs = []datastore.Key{
 }
 
 type mockScYaml struct {
-	startRound          int64
-	rewardRate          float64
-	blockReward         float64
-	epoch               int64
-	rewardDeclineRate   float64
-	interestDeclineRate float64
-	interestRate        float64
-	shareRatio          float64
-	maxMint             float64
-	rewardRoundPeriod   int64
+	startRound        int64
+	rewardRate        float64
+	blockReward       float64
+	epoch             int64
+	rewardDeclineRate float64
+	shareRatio        float64
+	maxMint           float64
+	rewardRoundPeriod int64
 }
 
 type mock0ChainYaml struct {
@@ -84,16 +81,14 @@ var (
 	minerScId = approvedMinters[0]
 
 	scYaml = mockScYaml{
-		startRound:          50,
-		rewardRate:          1.0,
-		blockReward:         0.21,
-		epoch:               15000000,
-		interestRate:        0.000000555, // 0
-		rewardDeclineRate:   0.1,
-		interestDeclineRate: 0.1,
-		shareRatio:          0.8,
-		maxMint:             4000000.0,
-		rewardRoundPeriod:   250,
+		startRound:        50,
+		rewardRate:        1.0,
+		blockReward:       0.21,
+		epoch:             15000000,
+		rewardDeclineRate: 0.1,
+		shareRatio:        0.8,
+		maxMint:           4000000.0,
+		rewardRoundPeriod: 250,
 	}
 	zChainYaml = mock0ChainYaml{
 		viewChange:    false,
@@ -247,7 +242,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		RewardRate:           scYaml.rewardRate,
 		BlockReward:          zcnToBalance(scYaml.blockReward),
 		Epoch:                scYaml.epoch,
-		InterestRate:         scYaml.interestRate,
 		ShareRatio:           scYaml.shareRatio,
 		MaxMint:              zcnToBalance(scYaml.maxMint),
 		Minted:               runtime.minted,
@@ -268,7 +262,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ctx: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
-			&state.Deserializer{},
 			txn,
 			nil,
 			nil,
@@ -288,7 +281,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			PrevBlock: &block.Block{},
 		},
 		sharders: sharderIDs,
-		store:    make(map[datastore.Key]util.Serializable),
+		store:    make(map[datastore.Key]util.MPTSerializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
 				Miners:   minersPool,
@@ -338,7 +331,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 				ID:             sharderIDs[i],
 				TotalStaked:    100,
 				ServiceCharge:  zChainYaml.ServiceCharge,
-				DelegateWallet: datastore.Key(sharderIDs[i]),
+				DelegateWallet: sharderIDs[i],
 			},
 			Active: make(map[string]*sci.DelegatePool),
 		})

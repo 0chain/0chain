@@ -1,3 +1,5 @@
+dev.local/build
+code/coverage.txt
 \.*
 !.gitignore
 !.github
@@ -73,3 +75,11 @@ burn_error.txt
 code/go/0chain.net/smartcontract/benchmark/main/dbname_dataDir/
 
 code/go/0chain.net/smartcontract/benchmark/main/main
+
+dev.*.sh
+./dev.local/bin/build
+./dev.local/data
+code/go/0chain.net/miner/miner/miner
+code/go/0chain.net/sharder/sharder/sharder
+
+docker.local/conductor.backup_logs

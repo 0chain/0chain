@@ -7,12 +7,14 @@ import (
 	"0chain.net/core/common"
 )
 
-/*Key - a type for the entity key */
+//msgp:ignore Key
+
 type Key = string
 
+//go:generate msgp -io=false -tests=false -v
 /*IDField - Useful to embed this into all the entities and get consistent behavior */
 type IDField struct {
-	ID Key `json:"id" yaml:"id"`
+	ID string `json:"id" yaml:"id"`
 }
 
 /*SetKey sets the key */
@@ -31,8 +33,8 @@ func (k *IDField) Validate(ctx context.Context) error {
 }
 
 /*ComputeProperties - default dummy implementation so only entities that need this can implement */
-func (k *IDField) ComputeProperties() {
-
+func (k *IDField) ComputeProperties() error {
+	return nil
 }
 
 /*Read - abstract method for memory store read */
@@ -90,7 +92,8 @@ func (nif *NOIDField) SetKey(key Key) {
 }
 
 /*ComputeProperties - implementing the interface */
-func (nif *NOIDField) ComputeProperties() {
+func (nif *NOIDField) ComputeProperties() error {
+	return nil
 }
 
 /*Validate - implementing the interface */
@@ -107,7 +110,7 @@ func IsEmpty(key Key) bool {
 	return len(key) == 0
 }
 
-func IsEqual(key1 Key, key2 Key) bool {
+func IsEqual(key1, key2 Key) bool {
 	return key1 == key2
 }
 
@@ -118,32 +121,32 @@ var EmptyKey = Key("")
 func ToKey(key interface{}) Key {
 	switch v := key.(type) {
 	case string:
-		return Key(v)
+		return v
 	case []byte:
 		return Key(v)
 	default:
-		return Key(fmt.Sprintf("%v", v))
+		return fmt.Sprintf("%v", v)
 	}
 }
 
 /*HashIDField - Useful to embed this into all the entities and get consistent behavior */
 type HashIDField struct {
-	Hash Key `json:"hash" msgpack:"h"`
+	Hash string `json:"hash" msgpack:"h"`
 }
 
 /*GetKey - Entity implementation */
 func (h *HashIDField) GetKey() Key {
-	return ToKey(h.Hash)
+	return h.Hash
 }
 
 /*SetKey - Entity implementation */
 func (h *HashIDField) SetKey(key Key) {
-	h.Hash = ToString(key)
+	h.Hash = key
 }
 
 /*ComputeProperties - Entity implementation */
-func (h *HashIDField) ComputeProperties() {
-
+func (h *HashIDField) ComputeProperties() error {
+	return nil
 }
 
 /*Validate - Entity implementation */

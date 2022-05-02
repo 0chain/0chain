@@ -16,7 +16,7 @@ import (
 var blsPublicKeys []string
 
 func init() {
-	logging.InitLogging("testing")
+	logging.InitLogging("testing", "")
 	blsPublicKeys = make([]string, 10)
 	for i := 0; i < 10; i++ {
 		ss := encryption.NewBLS0ChainScheme()
@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-func makeTestNode(typ int8, pk string) (*node.Node, error) {
+func makeTestNode(typ node.NodeType, pk string) (*node.Node, error) {
 	nc := map[interface{}]interface{}{
 		"type":        typ,
 		"public_ip":   "public ip",

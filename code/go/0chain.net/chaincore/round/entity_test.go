@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
+	"0chain.net/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	logging.InitLogging("development")
+	logging.InitLogging("development", "")
 
 	sp := memorystore.GetStorageProvider()
 	SetupEntity(sp)
@@ -79,11 +79,11 @@ func setupRoundDBMocks() {
 
 func makeTestNode(pbK string) (*node.Node, error) {
 	nc := map[interface{}]interface{}{
-		"type":       int8(1),
+		"type":       node.NodeTypeSharder,
 		"public_ip":  "public ip",
 		"n2n_ip":     "n2n_ip",
 		"port":       8080,
-		"id":         "miners node id",
+		"id":         util.ToHex([]byte("miners node id")),
 		"public_key": pbK,
 	}
 	n, err := node.NewNode(nc)
@@ -518,24 +518,6 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 			want1: false,
 		},
 		{
-			name: "FALSE_with_no_random_seed",
-			fields: fields{
-				notarizedBlocks: []*block.Block{
-					func() *block.Block {
-						// creating new reference for same block
-						b := block.NewBlock("", b.Round)
-						b.HashBlock()
-
-						return b
-					}(),
-				},
-			},
-			args:    args{b: b3},
-			want:    b,
-			want1:   false,
-			wantErr: common.NewError("add_notarized_block", "block has no seed"),
-		},
-		{
 			name: "TRUE",
 			fields: fields{
 				notarizedBlocks: []*block.Block{
@@ -567,12 +549,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				softTimeoutCount: tt.fields.softTimeoutCount,
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
-			got, got1, err := r.AddNotarizedBlock(tt.args.b)
-			require.Equal(t, tt.wantErr, err)
-
-			if err != nil {
-				return
-			}
+			got, got1 := r.AddNotarizedBlock(tt.args.b)
 
 			if !assert.Equal(t, tt.want, got) {
 				t.Errorf("AddNotarizedBlock() got = %v, want %v", got, tt.want)
@@ -1559,7 +1536,7 @@ func TestSetupRoundSummaryDB_Panic(t *testing.T) {
 				}
 			}()
 
-			SetupRoundSummaryDB()
+			SetupRoundSummaryDB("")
 		})
 	}
 }

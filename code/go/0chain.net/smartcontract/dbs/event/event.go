@@ -2,11 +2,8 @@ package event
 
 import (
 	"errors"
-	"fmt"
-	"golang.org/x/net/context"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
+	"golang.org/x/net/context"
 
 	"gorm.io/gorm"
 )
@@ -60,39 +57,77 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func (edb *EventDb) exists(ctx context.Context, event Event) (bool, error) {
-	var count int64
-	result := edb.Store.Get().WithContext(ctx).
-		Model(&Event{}).
-		Where("tx_hash = ? AND index = ? AND tag = ? AND type = ?", event.TxHash, event.Index, event.Tag,
-			event.Type).
-		Count(&count)
-	if result.Error != nil {
-		return false, fmt.Errorf("error counting events matching %v, error %v",
-			event, result.Error)
-	}
-	return count > 0, nil
-}
-
-func (edb *EventDb) removeDuplicate(ctx context.Context, events []Event) []Event {
-	for i := len(events) - 1; i >= 0; i-- {
-		exists, err := edb.exists(ctx, events[i])
-		if err != nil {
-			logging.Logger.Error("error process event",
-				zap.Any("event", events[i]),
-				zap.Error(err),
-			)
-		}
-		if exists || err != nil {
-			events[i] = events[len(events)-1]
-			events = events[:len(events)-1]
-		}
-	}
-	return events
-}
-
 func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
 	if edb.Store != nil && len(events) > 0 {
 		edb.Store.Get().WithContext(ctx).Create(&events)
 	}
+}
+
+func (edb *EventDb) Drop() error {
+	err := edb.Store.Get().Migrator().DropTable(&Event{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Transaction{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Error{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&WriteMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Validator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Block{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ReadMarker{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Miner{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Curator{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&DelegatePool{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Allocation{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
