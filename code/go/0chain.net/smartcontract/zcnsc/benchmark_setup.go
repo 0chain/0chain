@@ -5,7 +5,6 @@ import (
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -105,16 +104,6 @@ func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
 		ID: ADDRESS,
 	}
-}
-
-type authorizerNodeArg struct {
-	PublicKey string `json:"public_key"`
-	URL       string `json:"url"`
-}
-
-func (pk *authorizerNodeArg) Encode() []byte {
-	buff, _ := json.Marshal(pk)
-	return buff
 }
 
 // todo get from sc.yaml

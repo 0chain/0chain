@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"github.com/spf13/viper"
+	"log"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -144,12 +145,16 @@ func createBurnPayloadForZCNSCBurn() []byte {
 }
 
 func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
-	an := &authorizerNodeArg{
-		PublicKey: data.PublicKeys[index],
-		URL:       "http://localhost:303" + strconv.Itoa(index),
+	an := &AddAuthorizerPayload{
+		PublicKey:         data.PublicKeys[index],
+		URL:               "http://localhost:303" + strconv.Itoa(index),
+		StakePoolSettings: getMockStakePoolSettings(data.Clients[index]),
 	}
-
-	return an.Encode()
+	ap, err := an.Encode()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ap
 }
 
 func createRandomTransaction(id, publicKey string) *transaction.Transaction {
