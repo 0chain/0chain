@@ -202,7 +202,8 @@ func AddMockChallenges(
 		}
 
 		loc, err := partition.AddItem(balances, &BlobberChallengeNode{
-			BlobberID: ch.BlobberID,
+			BlobberID:    ch.BlobberID,
+			UsedCapacity: 10,
 		})
 		if err != nil {
 			panic(err)
