@@ -49,154 +49,154 @@ func mockSetValue(v interface{}) interface{} {
 	})
 }
 
-// func TestAddFreeStorageAssigner(t *testing.T) {
-// 	const (
-// 		mockCooperationId        = "mock cooperation id"
-// 		mockPublicKey            = "mock public key"
-// 		mockAnotherPublicKey     = "another mock public key"
-// 		mockIndividualTokenLimit = 20
-// 		mockTotalTokenLimit      = 3000
-// 		mockNotOwner             = "mock not owner"
-// 	)
+func TestAddFreeStorageAssigner(t *testing.T) {
+	const (
+		mockCooperationId        = "mock cooperation id"
+		mockPublicKey            = "mock public key"
+		mockAnotherPublicKey     = "another mock public key"
+		mockIndividualTokenLimit = 20
+		mockTotalTokenLimit      = 3000
+		mockNotOwner             = "mock not owner"
+	)
 
-// 	type args struct {
-// 		ssc      *StorageSmartContract
-// 		txn      *transaction.Transaction
-// 		input    []byte
-// 		balances cstate.StateContextI
-// 	}
-// 	type want struct {
-// 		err    bool
-// 		errMsg string
-// 	}
-// 	type parameters struct {
-// 		clientId string
-// 		info     newFreeStorageAssignerInfo
-// 		exists   bool
-// 		existing freeStorageAssigner
-// 	}
-// 	var conf = &Config{
-// 		MaxIndividualFreeAllocation: zcnToBalance(mockIndividualTokenLimit),
-// 		MaxTotalFreeAllocation:      zcnToBalance(mockTotalTokenLimit),
-// 		OwnerId:                     owner,
-// 		MaxBlobbersPerAllocation:    40,
-// 	}
+	type args struct {
+		ssc      *StorageSmartContract
+		txn      *transaction.Transaction
+		input    []byte
+		balances cstate.StateContextI
+	}
+	type want struct {
+		err    bool
+		errMsg string
+	}
+	type parameters struct {
+		clientId string
+		info     newFreeStorageAssignerInfo
+		exists   bool
+		existing freeStorageAssigner
+	}
+	var conf = &Config{
+		MaxIndividualFreeAllocation: zcnToBalance(mockIndividualTokenLimit),
+		MaxTotalFreeAllocation:      zcnToBalance(mockTotalTokenLimit),
+		OwnerId:                     owner,
+		MaxBlobbersPerAllocation:    40,
+	}
 
-// 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
-// 		var balances = &mocks.StateContextI{}
-// 		var txn = &transaction.Transaction{
-// 			ClientID: p.clientId,
-// 		}
-// 		var ssc = &StorageSmartContract{
+	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
+		var balances = &mocks.StateContextI{}
+		var txn = &transaction.Transaction{
+			ClientID: p.clientId,
+		}
+		var ssc = &StorageSmartContract{
 
-// 			SmartContract: sci.NewSC(ADDRESS),
-// 		}
-// 		input, err := json.Marshal(p.info)
-// 		require.NoError(t, err)
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+		input, err := json.Marshal(p.info)
+		require.NoError(t, err)
 
-// 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
-// 			mockSetValue(conf)).Return(nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+			mockSetValue(conf)).Return(nil).Once()
 
-// 		//var newRedeemed []freeStorageRedeemed
-// 		if p.exists {
-// 			balances.On(
-// 				"GetTrieNode",
-// 				freeStorageAssignerKey(ssc.ID, p.info.Name),
-// 				mockSetValue(&p.existing),
-// 			).Return(nil).Once()
-// 		} else {
-// 			balances.On(
-// 				"GetTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name), mock.Anything,
-// 			).Return(util.ErrValueNotPresent).Once()
-// 		}
+		//var newRedeemed []freeStorageRedeemed
+		if p.exists {
+			balances.On(
+				"GetTrieNode",
+				freeStorageAssignerKey(ssc.ID, p.info.Name),
+				mockSetValue(&p.existing),
+			).Return(nil).Once()
+		} else {
+			balances.On(
+				"GetTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name), mock.Anything,
+			).Return(util.ErrValueNotPresent).Once()
+		}
 
-// 		balances.On("InsertTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name),
-// 			&freeStorageAssigner{
-// 				ClientId:           p.info.Name,
-// 				PublicKey:          p.info.PublicKey,
-// 				IndividualLimit:    zcnToBalance(p.info.IndividualLimit),
-// 				TotalLimit:         zcnToBalance(p.info.TotalLimit),
-// 				CurrentRedeemed:    p.existing.CurrentRedeemed,
-// 				RedeemedTimestamps: p.existing.RedeemedTimestamps,
-// 			}).Return("", nil).Once()
+		balances.On("InsertTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name),
+			&freeStorageAssigner{
+				ClientId:           p.info.Name,
+				PublicKey:          p.info.PublicKey,
+				IndividualLimit:    zcnToBalance(p.info.IndividualLimit),
+				TotalLimit:         zcnToBalance(p.info.TotalLimit),
+				CurrentRedeemed:    p.existing.CurrentRedeemed,
+				RedeemedTimestamps: p.existing.RedeemedTimestamps,
+			}).Return("", nil).Once()
 
-// 		return args{ssc, txn, input, balances}
-// 	}
+		return args{ssc, txn, input, balances}
+	}
 
-// 	testCases := []struct {
-// 		name       string
-// 		parameters parameters
-// 		want       want
-// 	}{
-// 		{
-// 			name: "ok_new",
-// 			parameters: parameters{
-// 				clientId: owner,
-// 				info: newFreeStorageAssignerInfo{
-// 					Name:            mockCooperationId + "ok_new",
-// 					PublicKey:       mockPublicKey,
-// 					IndividualLimit: mockIndividualTokenLimit,
-// 					TotalLimit:      mockTotalTokenLimit,
-// 				},
-// 				exists: false,
-// 			},
-// 		},
-// 		{
-// 			name: "ok_existing",
-// 			parameters: parameters{
-// 				clientId: owner,
-// 				info: newFreeStorageAssignerInfo{
-// 					Name:            mockCooperationId + "ok_existing",
-// 					PublicKey:       mockPublicKey,
-// 					IndividualLimit: mockIndividualTokenLimit,
-// 					TotalLimit:      mockTotalTokenLimit,
-// 				},
-// 				exists: true,
-// 				existing: freeStorageAssigner{
-// 					ClientId:           mockCooperationId + "ok_existing",
-// 					PublicKey:          mockAnotherPublicKey,
-// 					IndividualLimit:    mockIndividualTokenLimit / 2,
-// 					TotalLimit:         mockTotalTokenLimit / 2,
-// 					CurrentRedeemed:    mockTotalTokenLimit / 4,
-// 					RedeemedTimestamps: []common.Timestamp{20, 30, 50, 70, 110, 130, 170},
-// 				},
-// 			},
-// 		},
-// 		{
-// 			name: "not_owner",
-// 			parameters: parameters{
-// 				clientId: mockNotOwner,
-// 				info: newFreeStorageAssignerInfo{
-// 					Name:            mockCooperationId + "ok_new",
-// 					PublicKey:       mockPublicKey,
-// 					IndividualLimit: mockIndividualTokenLimit,
-// 					TotalLimit:      mockTotalTokenLimit,
-// 				},
-// 				exists: false,
-// 			},
-// 			want: want{
-// 				true,
-// 				"add_free_storage_assigner: unauthorized access - only the owner can access",
-// 			},
-// 		},
-// 	}
-// 	for _, test := range testCases {
-// 		test := test
-// 		t.Run(test.name, func(t *testing.T) {
-// 			t.Parallel()
-// 			args := setExpectations(t, test.name, test.parameters, test.want)
+	testCases := []struct {
+		name       string
+		parameters parameters
+		want       want
+	}{
+		{
+			name: "ok_new",
+			parameters: parameters{
+				clientId: owner,
+				info: newFreeStorageAssignerInfo{
+					Name:            mockCooperationId + "ok_new",
+					PublicKey:       mockPublicKey,
+					IndividualLimit: mockIndividualTokenLimit,
+					TotalLimit:      mockTotalTokenLimit,
+				},
+				exists: false,
+			},
+		},
+		{
+			name: "ok_existing",
+			parameters: parameters{
+				clientId: owner,
+				info: newFreeStorageAssignerInfo{
+					Name:            mockCooperationId + "ok_existing",
+					PublicKey:       mockPublicKey,
+					IndividualLimit: mockIndividualTokenLimit,
+					TotalLimit:      mockTotalTokenLimit,
+				},
+				exists: true,
+				existing: freeStorageAssigner{
+					ClientId:           mockCooperationId + "ok_existing",
+					PublicKey:          mockAnotherPublicKey,
+					IndividualLimit:    mockIndividualTokenLimit / 2,
+					TotalLimit:         mockTotalTokenLimit / 2,
+					CurrentRedeemed:    mockTotalTokenLimit / 4,
+					RedeemedTimestamps: []common.Timestamp{20, 30, 50, 70, 110, 130, 170},
+				},
+			},
+		},
+		{
+			name: "not_owner",
+			parameters: parameters{
+				clientId: mockNotOwner,
+				info: newFreeStorageAssignerInfo{
+					Name:            mockCooperationId + "ok_new",
+					PublicKey:       mockPublicKey,
+					IndividualLimit: mockIndividualTokenLimit,
+					TotalLimit:      mockTotalTokenLimit,
+				},
+				exists: false,
+			},
+			want: want{
+				true,
+				"add_free_storage_assigner: unauthorized access - only the owner can access",
+			},
+		},
+	}
+	for _, test := range testCases {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			args := setExpectations(t, test.name, test.parameters, test.want)
 
-// 			_, err := args.ssc.addFreeStorageAssigner(args.txn, args.input, args.balances)
+			_, err := args.ssc.addFreeStorageAssigner(args.txn, args.input, args.balances)
 
-// 			require.EqualValues(t, test.want.err, err != nil)
-// 			if err != nil {
-// 				require.EqualValues(t, test.want.errMsg, err.Error())
-// 				return
-// 			}
-// 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
-// 		})
-// 	}
-// }
+			require.EqualValues(t, test.want.err, err != nil)
+			if err != nil {
+				require.EqualValues(t, test.want.errMsg, err.Error())
+				return
+			}
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
+		})
+	}
+}
 
 func TestFreeAllocationRequest(t *testing.T) {
 	const (
@@ -316,9 +316,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil)
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY,
-			mockSetValue(mockAllBlobbers)).Return(nil).Once()
-
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
 				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
@@ -340,9 +337,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			).Return(nil)
 		}
 
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
@@ -416,7 +410,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					pool.AllocationID == mockTransactionHash &&
 					len(pool.Blobbers) == mockNumBlobbers &&
 					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
-						conf.FreeAllocationSettings.Duration).Unix())+toSeconds(mockChallengeCompletionTime)
+						conf.FreeAllocationSettings.Duration).Unix())
 			})).Return("", nil).Once()
 
 		// readPoolLock blockchain access
