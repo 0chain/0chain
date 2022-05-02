@@ -1081,29 +1081,29 @@ func (sa *StorageAllocation) validate(now time.Time,
 	conf *Config) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
-		return common.NewError("invalid_read_price_range", "invalid read_price range")
+		return errors.New("invalid read_price range")
 	}
 	if !sa.WritePriceRange.isValid() {
-		return common.NewError("invalid_write_price_range", "invalid write_price range")
+		return errors.New("invalid write_price range")
 	}
 	if sa.Size < conf.MinAllocSize {
-		return common.NewError("insufficient_allocation_size", "insufficient allocation size")
+		return errors.New("insufficient allocation size")
 	}
 	dur := common.ToTime(sa.Expiration).Sub(now)
 	if dur < conf.MinAllocDuration {
-		return common.NewError("insufficient_allocation_duration", "insufficient allocation duration")
+		return errors.New("insufficient allocation duration")
 	}
 
 	if sa.DataShards <= 0 {
-		return common.NewError("invalid_number_shards", "invalid number of data shards")
+		return errors.New("invalid number of data shards")
 	}
 
 	if sa.OwnerPublicKey == "" {
-		return common.NewError("missing_owner_public_key", "missing owner public key")
+		return errors.New("missing owner public key")
 	}
 
 	if sa.Owner == "" {
-		return common.NewError("missing_owner_id", "missing owner id")
+		return errors.New("missing owner id")
 	}
 
 	return // nil

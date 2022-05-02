@@ -922,7 +922,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"Invalid client in the transaction. No client id in transaction"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
 			"invalid character '}' looking for beginning of value"
-		errMsg5 = "allocation_creation_failed: invalid request: invalid_read_price_range: invalid read_price range"
+		errMsg5 = "allocation_creation_failed: " +
+			"invalid request: invalid read_price range"
 		errMsg6 = "allocation_creation_failed: " +
 			"Blobbers provided are not enough to honour the allocation"
 		errMsg7 = "allocation_creation_failed: " +
