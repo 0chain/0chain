@@ -246,9 +246,9 @@ func (ssc *StorageSmartContract) getBlobbersForRequest(request newAllocationRequ
 
 	var creationDate = time.Now()
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-	if err = sa.validate(creationDate, conf); err != nil {
-		return nil, fmt.Errorf("invalid request: %v", err)
-	}
+	//if err = sa.validate(creationDate, conf); err != nil {
+	//	return nil, fmt.Errorf("invalid request: %v", err)
+	//}
 	// number of blobbers required
 	var numberOfBlobbers = sa.DataShards + sa.ParityShards
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
