@@ -20,9 +20,8 @@ import (
 )
 
 var (
-	burnNonce   = int64(0)
-	mintNonce   = int64(0)
-	authorizers []*AuthorizerNode
+	burnNonce = int64(0)
+	mintNonce = int64(0)
 )
 
 func Setup(eventDb *event.EventDb, clients, publicKeys []string, balances cstate.StateContextI) {
