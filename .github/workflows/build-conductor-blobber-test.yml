@@ -14,10 +14,10 @@ jobs:
     runs-on: [self-hosted, conductor-test02]
     
     steps:
-    - name: Go 1.16.5 setup.
+    - name: Go 1.18 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16.5'
+        go-version: '1.18'
 
     - name: Get Branch
       id: get_branch
