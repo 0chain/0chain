@@ -288,15 +288,6 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 		txn.Hash = mockHash
 
-		//var conf = &Config{
-		//	MinAllocSize:     confMinAllocSize,
-		//	MinAllocDuration: confMinAllocDuration,
-		//}
-		//balances.On("GetTrieNode", scConfigKey(sc.ID), mock.MatchedBy(func(c *Config) bool {
-		//	*c = *conf
-		//	return true
-		//})).Return(nil).Once()
-
 		for i := 0; i < arg.numBlobbers; i++ {
 			ba := &BlobberAllocation{
 				BlobberID:    "blobber_" + strconv.Itoa(i),
@@ -343,19 +334,6 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 
 		if len(arg.addBlobberID) > 0 {
-			//blobber := &StorageNode{
-			//	ID: arg.addBlobberID,
-			//	Terms: Terms{
-			//		MaxOfferDuration: mockMaxOffDuration,
-			//		ReadPrice:        mockReadPrice,
-			//		WritePrice:       mockWritePrice,
-			//	},
-			//	Capacity:        mockBlobberCapacity,
-			//	LastHealthCheck: now,
-			//}
-			//
-			//_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
-			//require.NoError(t, err)
 
 			sp := stakePool{
 				StakePool: stakepool.StakePool{
@@ -368,33 +346,6 @@ func TestChangeBlobbers(t *testing.T) {
 			_, err := balances.InsertTrieNode(stakePoolKey(sc.ID, arg.addBlobberID), &sp)
 			require.NoError(t, err)
 		}
-
-		//if len(arg.removeBlobberID) > 0 {
-		//	blobber := &StorageNode{
-		//		ID:       arg.removeBlobberID,
-		//		Capacity: mockBlobberCapacity,
-		//		Terms: Terms{
-		//			MaxOfferDuration: mockMaxOffDuration,
-		//			ReadPrice:        mockReadPrice,
-		//			WritePrice:       mockWritePrice,
-		//		},
-		//		LastHealthCheck: now,
-		//	}
-		//
-		//	balances.On(
-		//		"InsertTrieNode",
-		//		blobber.GetKey(sc.ID),
-		//		mock.Anything,
-		//	).Return("", nil).Once()
-		//
-		//	balances.On(
-		//		"EmitEvent",
-		//		event.TypeStats,
-		//		event.TagUpdateBlobber,
-		//		blobber.ID,
-		//		mock.Anything,
-		//	).Return("", nil).Once()
-		//}
 
 		return blobbers, arg.addBlobberID, arg.removeBlobberID, sc, alloc, now, balances
 
@@ -457,7 +408,7 @@ func TestChangeBlobbers(t *testing.T) {
 				dataShards:           5,
 			},
 			want: want{
-				err: true,
+				err: false,
 			}},
 		{
 			name: "add_valid_blobber",
