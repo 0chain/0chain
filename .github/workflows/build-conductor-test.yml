@@ -98,9 +98,9 @@ jobs:
       run: |
         if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
-        # elif [[ "$VIEW" == "false" ]]; then
-        #   bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
-        # fi
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+        fi
       env:
         VIEW: ${{ github.event.inputs.view_change }}
 
@@ -108,9 +108,9 @@ jobs:
       run: |
         if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change.byzantine
-        # elif [[ "$VIEW" == "false" ]]; then
-        #   bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
-        # fi
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+        fi
       env:
         VIEW: ${{ github.event.inputs.view_change }}
 
@@ -118,9 +118,9 @@ jobs:
       run: |
         if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change-3
-        # elif [[ "$VIEW" == "false" ]]; then
-        #   bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
-        # fi
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
+        fi
       env:
         VIEW: ${{ github.event.inputs.view_change }}
 
