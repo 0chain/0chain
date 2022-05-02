@@ -285,6 +285,11 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	return resp, err
 }
 
+type blobberWithPool struct {
+	*StorageNode
+	Pool *stakePool
+}
+
 // newAllocationRequest creates new allocation
 func (sc *StorageSmartContract) newAllocationRequestInternal(
 	t *transaction.Transaction,
@@ -333,7 +338,17 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", t.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
-	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(t.CreationDate), sa, balances, inputBlobbers.Nodes)
+	blobbers := make([]*blobberWithPool, 0, len(inputBlobbers.Nodes))
+	for _, b := range inputBlobbers.Nodes {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
+			return "", common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
+		}
+
+		blobbers = append(blobbers, &blobberWithPool{b, sp})
+
+	}
+	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(t.CreationDate), sa, balances, blobbers)
 	var bi []string
 	for _, b := range blobberNodes {
 		bi = append(bi, b.ID)
@@ -346,7 +361,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	sa.ID = t.Hash
 	for _, b := range blobberNodes {
-		balloc := newBlobberAllocation(bSize, sa, b, t.CreationDate)
+		balloc := newBlobberAllocation(bSize, sa, b.StorageNode, t.CreationDate)
 		sa.BlobberDetails = append(sa.BlobberDetails, balloc)
 
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
@@ -360,14 +375,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		}
 		logging.Logger.Debug("after blobber save", zap.String("root", r))
 		logging.Logger.Debug("blobber", zap.String("blobber", string(b.Encode())))
-		var sp *stakePool
-		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
-			return "", fmt.Errorf("can't get blobber's stake pool: %v", err)
-		}
-		if err := sp.addOffer(balloc.Offer()); err != nil {
+
+		if err := b.Pool.addOffer(balloc.Offer()); err != nil {
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
-		if err = sp.save(sc.ID, b.ID, balances); err != nil {
+		if err = b.Pool.save(sc.ID, b.ID, balances); err != nil {
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
@@ -451,8 +463,8 @@ func (sc *StorageSmartContract) validateBlobbers(
 	creationDate time.Time,
 	sa *StorageAllocation,
 	balances chainstate.StateContextI,
-	blobbers []*StorageNode,
-) ([]*StorageNode, int64, error) {
+	blobbers []*blobberWithPool,
+) ([]*blobberWithPool, int64, error) {
 	var err error
 	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {

@@ -1081,29 +1081,29 @@ func (sa *StorageAllocation) validate(now time.Time,
 	conf *Config) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
-		return errors.New("invalid read_price range")
+		return common.NewError("invalid_read_price_range", "invalid read_price range")
 	}
 	if !sa.WritePriceRange.isValid() {
-		return errors.New("invalid write_price range")
+		return common.NewError("invalid_write_price_range", "invalid write_price range")
 	}
 	if sa.Size < conf.MinAllocSize {
-		return errors.New("insufficient allocation size")
+		return common.NewError("insufficient_allocation_size", "insufficient allocation size")
 	}
 	dur := common.ToTime(sa.Expiration).Sub(now)
 	if dur < conf.MinAllocDuration {
-		return errors.New("insufficient allocation duration")
+		return common.NewError("insufficient_allocation_duration", "insufficient allocation duration")
 	}
 
 	if sa.DataShards <= 0 {
-		return errors.New("invalid number of data shards")
+		return common.NewError("invalid_number_shards", "invalid number of data shards")
 	}
 
 	if sa.OwnerPublicKey == "" {
-		return errors.New("missing owner public key")
+		return common.NewError("missing_owner_public_key", "missing owner public key")
 	}
 
 	if sa.Owner == "" {
-		return errors.New("missing owner id")
+		return common.NewError("missing_owner_id", "missing owner id")
 	}
 
 	return // nil
@@ -1157,22 +1157,16 @@ List:
 type blobberVerificationFunction func(blobber *StorageNode) (kick bool, err string)
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*StorageNode,
+func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
 	creationDate common.Timestamp, balances chainstate.StateContextI) (
-	[]*StorageNode, []string) {
+	[]*blobberWithPool, []string) {
 
 	var (
 		errors   = make([]string, 0, len(blobbers))
-		filtered = make([]*StorageNode, 0, len(blobbers))
+		filtered = make([]*blobberWithPool, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		var sp *stakePool
-		var err error
-		if sp, err = ssc.getStakePool(b.ID, balances); err != nil {
-			errors = append(errors, err.Error())
-			continue
-		}
-		err = sa.validateAllocationBlobber(b, sp, creationDate)
+		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errors = append(errors, err.Error())

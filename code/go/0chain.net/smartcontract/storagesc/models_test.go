@@ -12,13 +12,13 @@ import (
 func TestStorageAllocation_validate(t *testing.T) {
 
 	const (
-		errMsg1 = "invalid read_price range"
-		errMsg2 = "invalid write_price range"
-		errMsg3 = "insufficient allocation size"
-		errMsg4 = "insufficient allocation duration"
-		errMsg5 = "invalid number of data shards"
-		errMsg6 = "missing owner public key"
-		errMsg7 = "missing owner id"
+		errMsg1 = "invalid_read_price_range: invalid read_price range"
+		errMsg2 = "invalid_write_price_range: invalid write_price range"
+		errMsg3 = "insufficient_allocation_size: insufficient allocation size"
+		errMsg4 = "insufficient_allocation_duration: insufficient allocation duration"
+		errMsg5 = "invalid_number_shards: invalid number of data shards"
+		errMsg6 = "missing_owner_public_key: missing owner public key"
+		errMsg7 = "missing_owner_id: missing owner id"
 	)
 
 	var (
