@@ -68,8 +68,9 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 
 func (edb *EventDb) GetAuthorizers() ([]Authorizer, error) {
 	var authorizers []Authorizer
-	result := edb.Store.Get().Model(&Authorizer{}).Find(&authorizers)
-
+	result := edb.Store.Get().
+		Model(&Authorizer{}).
+		Find(&authorizers)
 	return authorizers, result.Error
 }
 
