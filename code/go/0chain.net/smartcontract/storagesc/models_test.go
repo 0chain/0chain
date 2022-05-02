@@ -22,7 +22,7 @@ func TestStorageAllocation_validate(t *testing.T) {
 	)
 
 	var (
-		now   = time.UnixMicro(150)
+		now   = time.Unix(150, 0)
 		alloc StorageAllocation
 		conf  Config
 	)
