@@ -20,7 +20,8 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 // ChallengeReadyBlobber represents a node that is ready to be challenged,
 // it will be saved in challenge ready blobbers partitions.
 type ChallengeReadyBlobber struct {
-	BlobberID string `json:"blobber_id"`
+	BlobberID    string `json:"blobber_id"`
+	UsedCapacity uint64 `json:"used_capacity"`
 }
 
 func (bc *ChallengeReadyBlobber) GetID() string {
@@ -28,13 +29,16 @@ func (bc *ChallengeReadyBlobber) GetID() string {
 }
 
 func partitionsChallengeReadyBlobbersAdd(state state.StateContextI,
-	blobberID string) (*partitions.PartitionLocation, error) {
+	blobberID string, blobUsedCapacity uint64) (*partitions.PartitionLocation, error) {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not get challenge ready partitions, %v", err)
 	}
 
-	partIdx, err := challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{BlobberID: blobberID})
+	partIdx, err := challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{
+		BlobberID:    blobberID,
+		UsedCapacity: blobUsedCapacity,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("could not add blobber to challenge ready partition, %v", err)
 	}

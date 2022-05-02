@@ -720,7 +720,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// the first time the allocation is added  to the blobber, created related resources
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		if err := sc.blobberAddAllocation(t, blobAlloc, balances); err != nil {
+		if err := sc.blobberAddAllocation(t, blobAlloc, uint64(blobber.BytesWritten), balances); err != nil {
 			return "", common.NewErrorf("commit_connection_failed", err.Error())
 		}
 	}
@@ -800,7 +800,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 // - add blobber to challenge ready partitions if the allocation is the first one and
 // 	 update blobber partitions locations
 func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transaction,
-	blobAlloc *BlobberAllocation, balances cstate.StateContextI) error {
+	blobAlloc *BlobberAllocation, blobUsedCapacity uint64, balances cstate.StateContextI) error {
 	logging.Logger.Info("commit_connection, add allocation to blobber",
 		zap.String("blobber", txn.ClientID),
 		zap.String("allocation", blobAlloc.AllocationID))
@@ -835,7 +835,7 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 	logging.Logger.Info("commit_connection, add blobber to challenge ready partitions",
 		zap.String("blobber", txn.ClientID))
 
-	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID)
+	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, blobUsedCapacity)
 	if err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions")
 	}

@@ -704,7 +704,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	const maxBlobbersSelect = 5
 	var (
 		blobberID  string
-		maxUsedCap int64
+		maxUsedCap uint64
 	)
 
 	var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
@@ -729,8 +729,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"empty blobber id")
 	}
 
-	logging.Logger.Debug("generate_challenges", zap.Int("random index", randomIndex),
-		zap.String("blobber id", blobberID), zap.Int("blobber challenges num", len(challengeBlobbers)))
+	logging.Logger.Debug("generate_challenges", zap.String("blobber id", blobberID))
 
 	// get blobber allocations partitions
 	blobberAllocParts, err := partitionsBlobberAllocations(blobberID, balances)
@@ -747,7 +746,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	// get a random allocation
-	randomIndex = r.Intn(len(randBlobberAllocs))
+	randomIndex := r.Intn(len(randBlobberAllocs))
 	allocID := randBlobberAllocs[randomIndex].ID
 
 	// get the storage allocation from MPT
