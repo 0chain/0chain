@@ -19,7 +19,6 @@ import (
 	"0chain.net/smartcontract"
 )
 
-//msgp:ignore AuthorizerNode
 //go:generate msgp -v -io=false -tests=false -unexported
 
 // ------------- GlobalNode ------------------------
@@ -295,24 +294,6 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 	}
 
 	return nil
-}
-
-type authorizerNodeDecode AuthorizerNode
-
-func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
-	d := authorizerNodeDecode(*an)
-	return d.MarshalMsg(o)
-}
-
-func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	d := authorizerNodeDecode{}
-	o, err := d.UnmarshalMsg(data)
-	if err != nil {
-		return nil, err
-	}
-
-	*an = AuthorizerNode(d)
-	return o, nil
 }
 
 func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
