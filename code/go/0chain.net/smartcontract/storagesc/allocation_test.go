@@ -418,7 +418,7 @@ func TestChangeBlobbers(t *testing.T) {
 			_, ok := blobberNameMap[arg.addBlobberID]
 			require.EqualValues(t, true, ok)
 			if arg.removeBlobberID == "" {
-				require.EqualValues(t, arg.blobbersInAllocation+1, sa.ParityShards)
+				require.EqualValues(t, 1, sa.ParityShards)
 			}
 		}
 
@@ -456,7 +456,7 @@ func TestChangeBlobbers(t *testing.T) {
 				dataShards:           5,
 			},
 			want: want{
-				err: false,
+				err: true,
 			}},
 		{
 			name: "add_valid_blobber",
