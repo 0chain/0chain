@@ -1,19 +1,19 @@
 simulation:
-  num_clients: 100000
-  num_active_clients: 100000
-  num_miners: 100
-  num_active_miners: 100
-  nun_sharders: 25
-  nun_active_sharders: 25
-  num_allocations: 100000
-  num_blobbers: 100000
-  num_validators: 100000
+  num_clients: 21
+  num_active_clients: 21
+  num_miners: 5
+  num_active_miners: 5
+  nun_sharders: 5
+  nun_active_sharders: 5
+  num_allocations: 30
+  num_blobbers: 10
+  num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
-  num_blobbers_per_Allocation: 40 # ideally make this even
-  num_blobber_delegates: 100
-  num_miner_delegates: 100
-  num_sharder_delegates: 100
+  num_blobbers_per_Allocation: 4 # ideally make this even
+  num_blobber_delegates: 10
+  num_miner_delegates: 10
+  num_sharder_delegates: 10
   num_curators: 1
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
@@ -156,6 +156,7 @@ smart_contracts:
     min_authorizers: 1
     min_burn_amount: 1
     min_stake_amount: 0
+    max_delegates: 10
     max_fee: 100
     burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
     cost:
