@@ -308,7 +308,7 @@ func TestChangeBlobbers(t *testing.T) {
 					WritePrice:       mockWritePrice,
 				},
 			}
-			if arg.blobbersInAllocation <= i {
+			if i < arg.blobbersInAllocation {
 				blobberAllocation = append(blobberAllocation, ba)
 				blobberMap[ba.BlobberID] = ba
 			}
