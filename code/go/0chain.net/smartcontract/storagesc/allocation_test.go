@@ -325,6 +325,7 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 			require.NoError(t, err)
+			blobbers = append(blobbers, blobber)
 		}
 
 		alloc := &StorageAllocation{
