@@ -105,26 +105,48 @@ To know about the specific test cases covered by the conductor tests, navigate t
 
 Below are the basic setup required to run the test suites.
 
-1. Git clone [0chain](https://github.com/0chain/0chain)
-2. Build miner docker image for integration test
-
+### 1. Clone the repo 
 ```sh
-(cd 0chain && ./docker.local/bin/build.miners-integration-tests.sh)
+git clone git@github.com:0chain/0chain.git && cd 0chain
 ```
 
-2. Build sharder docker image for integration test
-
+### 2. Init Setup
 ```sh
-(cd 0chain && ./docker.local/bin/build.sharders-integration-tests.sh)
+./docker.local/bin/init.setup.sh
+```
+this will create folder called sharder* and miner* inside `./docker.local/` folder.
+
+### 3. Setup the network
+```sh
+./docker.local/bin/setup.network.sh
 ```
 
-NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images.
+### 4. Build the base image
+```sh
+./docker.local/bin/build.base.sh
+```
+
+### 5. Build miner and sharder docker images for integration test
+
+#### a. Build miner docker image for integration test
+
+```sh
+./docker.local/bin/build.miners-integration-tests.sh
+```
+
+#### b. Build sharder docker image for integration test
+
+```sh
+./docker.local/bin/build.sharders-integration-tests.sh
+```
+
+NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images by running the folowing:
   
 ```sh
-(cd 0chain && ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
+./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
 ```
 
-3. Confirm that view change rounds are set to 50 on `0chain/docker.local/config/sc.yaml`
+### 6. Confirm that view change rounds are set to 50 on `0chain/docker.local/config/sc.yaml`
 
 ```yaml
 start_rounds: 50
@@ -203,7 +225,13 @@ zwalletcli/
 (cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
 ```
 
-10. Add `~/.zcn/config.yaml` as follows
+10. Init setup for blobbers
+
+```sh
+(cd blobber && ./docker.local/bin/blobber.init.setup.sh)
+```
+
+11. Add `~/.zcn/config.yaml` as follows
 
 ```yaml
 block_worker: http://127.0.0.1:9091
@@ -215,7 +243,7 @@ max_txn_query: 5
 query_sleep_time: 5
 ```
 
-11. Apply if on Ubuntu 18.04
+12. Apply if on Ubuntu 18.04
 
 https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
@@ -224,7 +252,7 @@ package required by docker-compose and used by docker. A docker process
 (a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
-12. Run blobber tests
+13. Run blobber tests
 
 ```sh
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
