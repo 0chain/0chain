@@ -30,17 +30,29 @@ func (bt restBenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	return err
 }
 
-func BenchmarkRestTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
+func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
 
 	return createRestTestSuite(
 		[]restBenchTest{
 			// todo add tests for
-			// getGlobalConfig
 			// getAuthorizer
 			{
 				name:     "zcnsc_rest.getAuthorizerNodes",
 				endpoint: sc.GetAuthorizerNodes,
+			},
+			{
+				name:     "zcnsc_rest.getGlobalConfig",
+				endpoint: sc.GetGlobalConfig,
+			},
+			{
+				name:     "zcnsc_rest.getAuthorizer",
+				endpoint: sc.GetAuthorizer,
+				params: func() url.Values {
+					var values url.Values = make(map[string][]string)
+					values.Set("id", data.Clients[0])
+					return values
+				}(),
 			},
 		},
 	)
