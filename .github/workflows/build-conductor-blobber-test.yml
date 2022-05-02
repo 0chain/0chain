@@ -67,6 +67,12 @@ jobs:
       run: |
         cd zwalletcli && make install
     
+    - name: Build base images
+      run: |
+        ./docker.local/bin/build.base.sh
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+      
     - name: 0dns Patching
       run: |
         cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch || true
