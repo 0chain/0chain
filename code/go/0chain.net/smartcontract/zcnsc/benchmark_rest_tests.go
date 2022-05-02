@@ -35,8 +35,6 @@ func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) b
 
 	return createRestTestSuite(
 		[]restBenchTest{
-			// todo add tests for
-			// getAuthorizer
 			{
 				name:     "zcnsc_rest.getAuthorizerNodes",
 				endpoint: sc.GetAuthorizerNodes,
