@@ -2,15 +2,16 @@ package smartcontract_test
 
 import (
 	"0chain.net/rest"
+	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
@@ -61,6 +62,13 @@ func init() {
 func TestExecuteRestAPI(t *testing.T) {
 	t.Skip("Needs reworking as ExecuteRestAPI does not exist anymore, but should still test endpoints can be reached")
 	t.Parallel()
+
+	var mockCtx = &mocks.ReadOnlyStateContextI{}
+	mockCtx.On("GetEventDB").Return(&event.EventDb{})
+	restHandler := rest.RestHandler{
+		SCtx: mockCtx,
+	}
+	restHandler.SetupRestHandlers()
 
 	gn := &faucetsc.GlobalNode{}
 	blob, err := gn.MarshalMsg(nil)
@@ -117,6 +125,13 @@ func TestExecuteRestAPI(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
+			restpath := "/v1/screst/" + tt.args.scAdress + tt.args.restpath
+			payload := ""
+			req := httptest.NewRequest("GET", restpath, strings.NewReader(payload))
+			w := httptest.NewRecorder()
+			http.DefaultServeMux.ServeHTTP(w, req)
+
 			//got, err := ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
 
 			if (err != nil) != tt.wantErr {
@@ -213,12 +228,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 33,
-		},
-		{
-			name:       "interest",
-			address:    interestpoolsc.ADDRESS,
-			restpoints: 3,
+			restpoints: 34,
 		},
 		{
 			name:       "multisig",

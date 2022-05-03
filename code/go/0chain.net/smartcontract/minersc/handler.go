@@ -110,7 +110,7 @@ func (mrh *MinerRestHandler) getSharderGeolocationsHandler(w http.ResponseWriter
 
 	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
 	if err != nil {
-		common.Respond(w, r, nil, err())
+		common.Respond(w, r, nil, err)
 		return
 	}
 
@@ -166,7 +166,7 @@ func (mrh *MinerRestHandler) getMinerGeolocationsHandler(w http.ResponseWriter, 
 
 	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
 	if err != nil {
-		common.Respond(w, r, nil, err())
+		common.Respond(w, r, nil, err)
 		return
 	}
 
