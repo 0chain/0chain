@@ -16,3 +16,8 @@ type CollectRewardRequest struct {
 func (spr *CollectRewardRequest) Decode(p []byte) error {
 	return json.Unmarshal(p, spr)
 }
+
+func (spr *CollectRewardRequest) Encode() []byte {
+	bytes, _ := json.Marshal(spr)
+	return bytes
+}

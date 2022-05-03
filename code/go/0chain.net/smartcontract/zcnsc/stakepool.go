@@ -35,6 +35,11 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	return // ok
 }
 
+func (spr *stakePoolRequest) encode() []byte {
+	bytes, _ := json.Marshal(spr)
+	return bytes
+}
+
 // ----------- LockingPool pool --------------------------
 
 //type stakePool stakepool.StakePool
