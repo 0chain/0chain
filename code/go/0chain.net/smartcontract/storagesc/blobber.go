@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/partitions"
@@ -39,7 +38,6 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 		return nil, err
 	}
 }
-
 
 func (sc *StorageSmartContract) getBlobber(blobberID string,
 	balances cstate.StateContextI) (blobber *StorageNode, err error) {
