@@ -11,7 +11,6 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 
@@ -400,13 +399,6 @@ func setUpMpt(
 		log.Println("added faucet user nodes\t", time.Since(timer))
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		interestpoolsc.AddMockNodes(clients, balances)
-		log.Println("added user nodes\t", time.Since(timer))
-	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

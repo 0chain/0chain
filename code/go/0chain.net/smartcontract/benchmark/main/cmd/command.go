@@ -29,20 +29,19 @@ const (
 )
 
 var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
-	bk.Storage:          storagesc.BenchmarkTests,
-	bk.StorageRest:      storagesc.BenchmarkRestTests,
-	bk.Miner:            minersc.BenchmarkTests,
-	bk.MinerRest:        minersc.BenchmarkRestTests,
-	bk.Faucet:           faucetsc.BenchmarkTests,
-	bk.FaucetRest:       faucetsc.BenchmarkRestTests,
-	bk.InterestPool:     interestpoolsc.BenchmarkTests,
-	bk.InterestPoolRest: interestpoolsc.BenchmarkRestTests,
-	bk.Vesting:          vestingsc.BenchmarkTests,
-	bk.VestingRest:      vestingsc.BenchmarkRestTests,
-	bk.MultiSig:         multisigsc.BenchmarkTests,
-	bk.ZCNSCBridge:      zcnsc.BenchmarkTests,
-	bk.ZCNSCBridgeRest:  zcnsc.BenchmarkRestTests,
-	bk.Control:          control.BenchmarkTests,
+	bk.Storage:         storagesc.BenchmarkTests,
+	bk.StorageRest:     storagesc.BenchmarkRestTests,
+	bk.Miner:           minersc.BenchmarkTests,
+	bk.MinerRest:       minersc.BenchmarkRestTests,
+	bk.Faucet:          faucetsc.BenchmarkTests,
+	bk.FaucetRest:      faucetsc.BenchmarkRestTests,
+	bk.InterestPool:    interestpoolsc.BenchmarkTests,
+	bk.Vesting:         vestingsc.BenchmarkTests,
+	bk.VestingRest:     vestingsc.BenchmarkRestTests,
+	bk.MultiSig:        multisigsc.BenchmarkTests,
+	bk.ZCNSCBridge:     zcnsc.BenchmarkTests,
+	bk.ZCNSCBridgeRest: zcnsc.BenchmarkRestTests,
+	bk.Control:         control.BenchmarkTests,
 }
 
 func init() {

@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 
 	"0chain.net/chaincore/config"
 	. "0chain.net/chaincore/smartcontract"
