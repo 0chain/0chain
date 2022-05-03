@@ -35,6 +35,11 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	return // ok
 }
 
+func (spr *stakePoolRequest) encode() []byte {
+	bytes, _ := json.Marshal(spr)
+	return bytes
+}
+
 // ----------- LockingPool pool --------------------------
 
 //type stakePool stakepool.StakePool
@@ -250,7 +255,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, spr.PoolID, ctx)
+	amount, err := sp.UnlockPool(t.ClientID, spenum.Authorizer, spr.AuthorizerID, spr.PoolID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}
