@@ -94,20 +94,6 @@ func (ssc *StorageSmartContract) GetBlobberHandlerDepreciated(ctx context.Contex
 	return bl, nil
 }
 
-// Deprecated
-
-// GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
-// blobbers with zero capacity).
-func (ssc *StorageSmartContract) GetBlobbersHandlerDeprecated(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	blobbers, err := ssc.getBlobbersList(balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers list")
-	}
-	return blobbers, nil
-}
-
 // GetBlobberHandler returns Blobber object from its individual stored value.
 func (ssc *StorageSmartContract) GetBlobberHandler(
 	ctx context.Context,
@@ -196,11 +182,12 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	params url.Values, balances cstate.StateContextI,
 ) (interface{}, error) {
 	if balances.GetEventDB() == nil {
-		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+		return nil, common.NewErrInternal("events db is not initialised")
+		//return nil, errors.New("events db is not initialised")
 	}
 	blobbers, err := balances.GetEventDB().GetBlobbers()
-	if err != nil || len(blobbers) == 0 {
-		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	if err != nil {
+		return nil, err
 	}
 
 	var sns storageNodesResponse
@@ -550,27 +537,15 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
-	var allBlobbersList *StorageNodes
-	allBlobbersList, err = ssc.getBlobbersList(balances)
+	blobbers, err := ssc.getBlobbersForRequest(request, balances)
 	if err != nil {
-		return "", common.NewErrInternal("can't get blobbers list", err.Error())
+		return "", common.NewErrInternal("error selecting blobbers", err.Error())
 	}
-	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewErrInternal("can't get blobbers list",
-			"no blobbers found")
-	}
-
-	var sa = request.storageAllocation()
-
-	blobberNodes, bSize, err := ssc.selectBlobbers(
-		creationDate, *allBlobbersList, sa, creationDate.Unix(), balances)
-	if err != nil {
-		return "", common.NewErrInternal("selecting blobbers", err.Error())
-	}
-
-	var gbSize = sizeInGB(bSize)
+	sa := request.storageAllocation()
+	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand state.Balance
-	for _, b := range blobberNodes {
+	nodes := ssc.getBlobbers(blobbers, balances)
+	for _, b := range nodes.Nodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
 	}
@@ -1046,19 +1021,5 @@ func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.
 }
 
 func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate.StateContextI) (int64, error) {
-	if ssc != nil {
-		storageNodes, err := ssc.getBlobbersList(balances)
-		if err != nil {
-			return 0, fmt.Errorf("error from getBlobbersList in GetTotalData: %v", err)
-		}
-
-		var totalSavedData int64
-		for _, sn := range storageNodes.Nodes {
-			totalSavedData += sn.SavedData
-		}
-
-		return totalSavedData, nil
-	}
-
 	return 0, fmt.Errorf("storageSmartContract is nil")
 }
