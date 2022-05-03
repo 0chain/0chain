@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -25,12 +24,7 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	data := &chain.ConfigData{ClientSignatureScheme: "bls0chain"}
-	chain.ServerChain.Config = chain.NewConfigImpl(data)
-
 	logging.Logger = zap.NewNop()
-
 	configpkg.SmartContractConfig = viper.New()
 }
 
