@@ -59,7 +59,7 @@ func init() {
 }
 
 func TestExecuteRestAPI(t *testing.T) {
-	t.Skip("piers")
+	t.Skip("Needs reworking as ExecuteRestAPI does not exist anymore, but should still test endpoints can be reached")
 	t.Parallel()
 
 	gn := &faucetsc.GlobalNode{}
@@ -117,17 +117,6 @@ func TestExecuteRestAPI(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			//var mockCtx *mocks.ReadOnlyStateContextI
-			//restHandler := rest.RestHandler{
-			//	SCtx: mockCtx,
-			//}
-			//ts := httptest.NewTLSServer(nil)
-			//restHandler.SetupRestHandlers()
-			//req := httptest.NewRequest("GET", tt.args.restpath, nil)
-			//w := httptest.NewRecorder()
-			//http.ServeHTTP(rec, req)
-
 			//got, err := ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
 
 			if (err != nil) != tt.wantErr {

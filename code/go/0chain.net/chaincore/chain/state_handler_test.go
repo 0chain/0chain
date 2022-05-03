@@ -1,21 +1,17 @@
 package chain_test
 
 import (
-	"0chain.net/rest"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"0chain.net/smartcontract/zcnsc"
-
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
@@ -31,7 +27,6 @@ import (
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
@@ -1698,76 +1693,5 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				require.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
 			},
 		)
-	}
-}
-
-func TestGetSCRestOutput(t *testing.T) {
-	t.Skip("piers")
-	chain := chain.NewChainFromConfig()
-
-	getRequest := func(adress string) *http.Request {
-		tar := fmt.Sprintf("%v%v", "/v1/screst/", adress)
-		req := httptest.NewRequest(http.MethodGet, tar, nil)
-		return req
-	}
-
-	tests := []struct {
-		name    string
-		address string
-		empty   bool
-	}{
-		{
-			name:    "faucetsc",
-			address: faucetsc.ADDRESS,
-		},
-		{
-			name:    "faucetsc",
-			address: interestpoolsc.ADDRESS,
-		},
-		{
-			name:    "miner",
-			address: minersc.ADDRESS,
-		},
-		{
-			name:    "miner",
-			address: minersc.ADDRESS,
-		},
-		{
-			name:    "multisig",
-			address: multisigsc.Address,
-		},
-		{
-			name:    "storage",
-			address: storagesc.ADDRESS,
-		},
-		{
-			name:    "vesting",
-			address: vestingsc.ADDRESS,
-		},
-		{
-			name:    "zcn",
-			address: zcnsc.ADDRESS,
-		},
-		{
-			name:    "invalid",
-			address: "not_an_address",
-			empty:   true,
-		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			chain.HandleSCRest(w, getRequest(test.address))
-
-			body := w.Body.String()
-			//sc := smartcontract.ContractMap[test.address]
-			if test.empty {
-				require.EqualValues(t, body, "")
-				return
-			}
-			restPoints := rest.GetFunctionNames(test.address)
-			require.EqualValues(t, len(restPoints), strings.Count(body, "/v1/screst/*/"))
-		})
 	}
 }
