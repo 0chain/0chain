@@ -54,7 +54,7 @@ func (rh *RestHandler) SetupRestHandlers() {
 	zcnsc.SetupRestHandler(rh)
 }
 
-func (rh *RestHandler) GetFunctionNames(address string) []string {
+func GetFunctionNames(address string) []string {
 	switch address {
 	case storagesc.ADDRESS:
 		return storagesc.GetRestNames()

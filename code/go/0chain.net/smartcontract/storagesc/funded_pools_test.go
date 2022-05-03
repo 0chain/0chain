@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/chain/state/mocks"
+	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/mock"

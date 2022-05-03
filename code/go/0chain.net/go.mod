@@ -11,6 +11,7 @@ require (
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/fsnotify/fsnotify v1.5.3 // indirect
 	github.com/go-ini/ini v1.66.4 // indirect
+	github.com/go-openapi/runtime v0.24.0
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/gocql/gocql v1.0.0
 	github.com/golang/snappy v0.0.4

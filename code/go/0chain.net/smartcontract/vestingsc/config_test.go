@@ -9,7 +9,7 @@ import (
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/chain/state/mocks"
+	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
