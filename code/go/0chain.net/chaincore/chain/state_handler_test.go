@@ -1056,14 +1056,10 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				gv := util.SecureSerializableValue{Buffer: blob}
+				_ = util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				k := encryption.Hash(storagesc.ALL_BLOBBERS_KEY)
-				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
-					t.Fatal(err)
-				}
 
 				ch := chain.NewChainFromConfig()
 				ch.LatestFinalizedBlock = lfb
@@ -1203,14 +1199,10 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		{
 			name: "Storagesc_/getblobbers_500",
 			chain: func() *chain.Chain {
-				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
+				_ = util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				k := encryption.Hash(storagesc.ALL_BLOBBERS_KEY)
-				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
-					t.Fatal(err)
-				}
 
 				ch := chain.NewChainFromConfig()
 				ch.LatestFinalizedBlock = lfb

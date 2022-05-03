@@ -824,45 +824,6 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	assert.EqualValues(t, &ne, &nd)
 }
 
-func Test_updateBlobbersInAll(t *testing.T) {
-	var (
-		all        StorageNodes
-		balances   = newTestBalances(t, false)
-		b1, b2, b3 StorageNode
-		u1, u2     StorageNode
-		decode     StorageNodes
-
-		err error
-	)
-
-	b1.ID, b2.ID, b3.ID = "b1", "b2", "b3"
-	b1.Capacity, b2.Capacity, b3.Capacity = 100, 100, 100
-
-	all.Nodes = []*StorageNode{&b1, &b2, &b3}
-
-	u1.ID, u2.ID = "b1", "b2"
-	u1.Capacity, u2.Capacity = 200, 200
-
-	err = updateBlobbersInAll(&all, []*StorageNode{&u1, &u2}, balances)
-	require.NoError(t, err)
-
-	var allSeri, ok = balances.tree[ALL_BLOBBERS_KEY]
-	require.True(t, ok)
-	require.NotNil(t, allSeri)
-	sv, err := allSeri.MarshalMsg(nil)
-	require.NoError(t, err)
-	_, err = decode.UnmarshalMsg(sv)
-	require.NoError(t, err)
-
-	require.Len(t, decode.Nodes, 3)
-	assert.Equal(t, "b1", decode.Nodes[0].ID)
-	assert.Equal(t, int64(200), decode.Nodes[0].Capacity)
-	assert.Equal(t, "b2", decode.Nodes[1].ID)
-	assert.Equal(t, int64(200), decode.Nodes[1].Capacity)
-	assert.Equal(t, "b3", decode.Nodes[2].ID)
-	assert.Equal(t, int64(100), decode.Nodes[2].Capacity)
-}
-
 func Test_toSeconds(t *testing.T) {
 	if toSeconds(time.Second*60+time.Millisecond*90) != 60 {
 		t.Fatal("wrong")
@@ -1939,8 +1900,6 @@ func Test_finalize_allocation(t *testing.T) {
 //			var all, err = ssc.getBlobbersList(balances)
 //			require.NoError(t, err)
 //			all.Nodes.update(b)
-//			_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
-//			require.NoError(t, err)
 //			_, err = balances.InsertTrieNode(b.GetKey(ssc.ID), b)
 //			require.NoError(t, err)
 //		}

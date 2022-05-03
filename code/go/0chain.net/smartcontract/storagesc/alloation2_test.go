@@ -610,8 +610,6 @@ func setupMocksFinishAllocation(
 
 	var blobberList = new(StorageNodes)
 	blobberList.Nodes = blobbers
-	_, err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
-	require.NoError(t, err)
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {

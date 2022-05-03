@@ -505,10 +505,6 @@ func AddMockBlobbers(
 			}
 		}
 	}
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
-	if err != nil {
-		panic(err)
-	}
 
 	err = partition.Save(balances)
 	if err != nil {

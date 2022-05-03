@@ -533,7 +533,6 @@ contract method `payBlobberBlockRewards`.
 `payBlobberBlockRewards` makes the following `cstae.ContextI` calls:
 ```go
 val, err = balances.GetTrieNode(scConfigKey(ssc.ID))
-val, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
 
 // for each blobber
 val, err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID))

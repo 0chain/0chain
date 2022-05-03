@@ -212,29 +212,6 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 	return
 }
 */
-// update blobbers list in the all blobbers list
-func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
-	balances chainstate.StateContextI) (err error) {
-
-	// update the blobbers in all blobbers list
-	for _, b := range update {
-		all.Nodes.update(b)
-		// don't replace if blobber has removed from the all blobbers list;
-		// for example, if the blobber has removed, then it shouldn't be
-		// in the all blobbers list
-		if err := emitUpdateBlobber(b, balances); err != nil {
-			return fmt.Errorf("emmiting blobber %v: %v", b, err)
-		}
-	}
-
-	// save
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
-	if err != nil {
-		return fmt.Errorf("can't save all blobber list: %v", err)
-	}
-
-	return
-}
 
 // convert time.Duration to common.Timestamp truncating to seconds
 func toSeconds(dur time.Duration) common.Timestamp {
@@ -1598,12 +1575,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
 
-	var allb *StorageNodes
-	if allb, err = sc.getBlobbersList(balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get all blobbers list: "+err.Error())
-	}
-
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
@@ -1652,7 +1623,6 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 		// update the blobber in all (replace with existing one)
-		allb.Nodes.update(b)
 		if err := emitUpdateBlobber(b, balances); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"emitting blobber "+b.ID+": "+err.Error())
@@ -1672,13 +1642,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"moving challenge pool rest back to write pool: "+err.Error())
-	}
-
-	// save all blobbers list
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allb)
-	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving all blobbers list: "+err.Error())
 	}
 
 	// save all rest and remove allocation from all allocations list

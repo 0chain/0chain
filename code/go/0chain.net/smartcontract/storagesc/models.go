@@ -26,7 +26,6 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 var (
-	ALL_BLOBBERS_KEY           = ADDRESS + encryption.Hash("all_blobbers")
 	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
 	ALL_BLOBBERS_CHALLENGE_KEY = ADDRESS + encryption.Hash("all_blobbers_challenge")
 	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("blobber_rewards")
