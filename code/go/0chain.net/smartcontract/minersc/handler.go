@@ -47,6 +47,8 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+"/nodeStatHandler", mrh.getNodeStatHandler)
 	http.HandleFunc(miner+"/nodePoolStat", mrh.getNodePoolStat)
 	http.HandleFunc(miner+"/configs", mrh.getConfigs)
+	http.HandleFunc(miner+"/get_miner_geolocations", mrh.getMinerGeolocationsHandler)
+	http.HandleFunc(miner+"/get_sharder_geolocations", mrh.getSharderGeolocationsHandler)
 }
 
 func GetRestNames() []string {
@@ -70,7 +72,121 @@ func GetRestNames() []string {
 		"/nodeStatHandler",
 		"/nodePoolStat",
 		"/configs",
+		"/get_miner_geolocations",
+		"/get_sharder_geolocations",
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderGeolocationsHandler getSharderGeolocationsHandler
+// list minersc config settings
+//
+// parameters:
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//      required: true
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//      required: true
+//    + name: active
+//      description: active
+//      in: query
+//      type: string
+//      required: true
+//
+// responses:
+//  200: SharderGeolocation
+//  400:
+//  484:
+func (mrh *MinerRestHandler) getSharderGeolocationsHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		offsetString = r.URL.Query().Get("offset")
+		limitString  = r.URL.Query().Get("limit")
+		activeString = r.URL.Query().Get("active")
+	)
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		common.Respond(w, r, nil, err())
+		return
+	}
+
+	filter := event.SharderQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
+			return
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+
+	geolocations, err := mrh.GetEventDB().GetSharderGeolocations(filter, offset, limit)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, geolocations, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerGeolocationsHandler getMinerGeolocationsHandler
+// list minersc config settings
+//
+// parameters:
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//      required: true
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//      required: true
+//    + name: active
+//      description: active
+//      in: query
+//      type: string
+//      required: true
+//
+// responses:
+//  200: MinerGeolocation
+//  400:
+//  484:
+func (mrh *MinerRestHandler) getMinerGeolocationsHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		offsetString = r.URL.Query().Get("offset")
+		limitString  = r.URL.Query().Get("limit")
+		activeString = r.URL.Query().Get("active")
+	)
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		common.Respond(w, r, nil, err())
+		return
+	}
+
+	filter := event.MinerQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
+			return
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+
+	geolocations, err := mrh.GetEventDB().GetMinerGeolocations(filter, offset, limit)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, geolocations, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs configs
@@ -139,7 +255,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 //
 // parameters:
 //    + name: id
-//      description: offset
+//      description: id
 //      in: query
 //      type: string
 //      required: true
@@ -394,24 +510,14 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		offsetString = r.URL.Query().Get("offset")
 		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
-		offset       = 0
-		limit        = 0
-		err          error
 	)
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("offset parameter is not valid"))
-			return
-		}
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
 	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("limit parameter is not valid"))
-			return
-		}
-	}
+
 	filter := event.SharderQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
@@ -506,29 +612,19 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		offsetString = r.URL.Query().Get("offset")
 		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
-		offset       = 0
-		limit        = 0
-		err          error
 	)
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("offset parameter is not valid"))
-			return
-		}
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
 	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("limit parameter is not valid"))
-			return
-		}
-	}
+
 	filter := event.MinerQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("active paramter is not valid"))
+			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
 			return
 		}
 		filter.Active = null.BoolFrom(active)
@@ -546,6 +642,23 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, restinterface.InterfaceMap{
 		"Nodes": minersArr,
 	}, nil)
+}
+
+func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
+	if offsetString != "" {
+		offset, err = strconv.Atoi(offsetString)
+		if err != nil {
+			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err = strconv.Atoi(limitString)
+		if err != nil {
+			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
+		}
+	}
+
+	return
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools getUserPools

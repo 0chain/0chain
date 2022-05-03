@@ -61,6 +61,9 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+"/getWritePoolStat", srh.getWritePoolStat)
 	http.HandleFunc(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat)
 	http.HandleFunc(storage+"/getChallengePoolStat", srh.getChallengePoolStat)
+	http.HandleFunc(storage+"/alloc_written_size", srh.getWrittenAmountHandler)
+	http.HandleFunc(storage+"/alloc_read_size", srh.getReadAmountHandler)
+	http.HandleFunc(storage+"/alloc_write_marker_count", srh.getWriteMarkerCountHandler)
 }
 
 func GetRestNames() []string {
@@ -96,7 +99,111 @@ func GetRestNames() []string {
 		"/getWritePoolStat",
 		"/getWritePoolAllocBlobberStat",
 		"/getChallengePoolStat",
+		"/alloc_written_size",
+		"/alloc_read_size",
+		"/alloc_write_marker_count",
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadAmountHandler getReadAmountHandler
+// statistic for all locked tokens of a challenge pool
+//
+// parameters:
+//    + name: allocation_id
+//      description: allocation for which to get challenge pools statistics
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: challengePoolStat
+//  400:
+func (srh *StorageRestHandler) getWriteMarkerCountHandler(w http.ResponseWriter, r *http.Request) {
+	allocationID := r.URL.Query().Get("allocation_id")
+	if allocationID == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("allocation_id is empty"))
+		return
+	}
+
+	total, err := srh.GetEventDB().GetWriteMarkerCount(allocationID)
+	common.Respond(w, r, map[string]int64{
+		"count": total,
+	}, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadAmountHandler getReadAmountHandler
+// statistic for all locked tokens of a challenge pool
+//
+// parameters:
+//    + name: allocation_id
+//      description: allocation for which to get challenge pools statistics
+//      required: true
+//      in: query
+//      type: string
+//    + name: block_number
+//      description:block number
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: challengePoolStat
+//  400:
+func (srh *StorageRestHandler) getReadAmountHandler(w http.ResponseWriter, r *http.Request) {
+	blockNumberString := r.URL.Query().Get("block_number")
+	allocationIDString := r.URL.Query().Get("allocation_id")
+
+	if blockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block_number is empty"))
+		return
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block_number is not valid"))
+		return
+	}
+
+	total, err := srh.GetEventDB().GetDataReadFromAllocationForLastNBlocks(int64(blockNumber), allocationIDString)
+	common.Respond(w, r, map[string]int64{"total": total}, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWrittenAmountHandler getWrittenAmountHandler
+// statistic for all locked tokens of a challenge pool
+//
+// parameters:
+//    + name: allocation_id
+//      description: allocation for which to get challenge pools statistics
+//      required: true
+//      in: query
+//      type: string
+//    + name: block_number
+//      description:block number
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: challengePoolStat
+//  400:
+func (srh *StorageRestHandler) getWrittenAmountHandler(w http.ResponseWriter, r *http.Request) {
+	blockNumberString := r.URL.Query().Get("block_number")
+	allocationIDString := r.URL.Query().Get("allocation_id")
+
+	if blockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block_number is empty"))
+		return
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block_number is not valid"))
+		return
+	}
+
+	total, err := srh.GetEventDB().GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+
+	common.Respond(w, r, map[string]int64{
+		"total": total,
+	}, err)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat getChallengePoolStat
@@ -113,7 +220,6 @@ func GetRestNames() []string {
 //  200: challengePoolStat
 //  400:
 func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
-
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
 		alloc        *StorageAllocation

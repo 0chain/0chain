@@ -10,7 +10,6 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
@@ -48,11 +47,10 @@ func (rh *RestHandler) SetupRestHandlers() {
 		logging.Logger.Warn("no event database, skipping REST handlers")
 		return
 	}
-	//storagesc.SetupRestHandler(rh)
-	//minersc.SetupRestHandler(rh)
-	//faucetsc.SetupRestHandler(rh)
-	interestpoolsc.SetupRestHandler(rh)
-	//vestingsc.SetupRestHandler(rh)
+	storagesc.SetupRestHandler(rh)
+	minersc.SetupRestHandler(rh)
+	faucetsc.SetupRestHandler(rh)
+	vestingsc.SetupRestHandler(rh)
 	zcnsc.SetupRestHandler(rh)
 }
 
@@ -64,8 +62,6 @@ func (rh *RestHandler) GetFunctionNames(address string) []string {
 		return minersc.GetRestNames()
 	case faucetsc.ADDRESS:
 		return faucetsc.GetRestNames()
-	case interestpoolsc.ADDRESS:
-		return interestpoolsc.GetRestNames()
 	case vestingsc.ADDRESS:
 		return vestingsc.GetRestNames()
 	case zcnsc.ADDRESS:

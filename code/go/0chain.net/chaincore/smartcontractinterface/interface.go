@@ -15,14 +15,12 @@ type SmartContractRestHandler func(ctx context.Context, params url.Values, balan
 
 type SmartContract struct {
 	ID                          string
-	RestHandlers                map[string]SmartContractRestHandler
 	SmartContractExecutionStats map[string]interface{}
 }
 
 func NewSC(id string) *SmartContract {
-	restHandlers := make(map[string]SmartContractRestHandler)
 	scExecStats := make(map[string]interface{})
-	return &SmartContract{ID: id, RestHandlers: restHandlers, SmartContractExecutionStats: scExecStats}
+	return &SmartContract{ID: id, SmartContractExecutionStats: scExecStats}
 }
 
 // SmartContractTransactionData is passed in Transaction.TransactionData
@@ -35,7 +33,6 @@ type SmartContractTransactionData struct {
 
 type SmartContractInterface interface {
 	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
-	GetRestPoints() map[string]SmartContractRestHandler
 	GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error)
 	GetExecutionStats() map[string]interface{}
 	GetName() string
