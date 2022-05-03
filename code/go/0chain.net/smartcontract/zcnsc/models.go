@@ -222,8 +222,8 @@ type UpdateAuthorizerStakePoolPayload struct {
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
-func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte, err error) {
-	data, err = json.Marshal(pk)
+func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte) {
+	data, _ = json.Marshal(pk)
 	return
 }
 
