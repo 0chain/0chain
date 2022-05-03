@@ -19,12 +19,17 @@ type ReadMarker struct {
 	TransactionID string  `json:"transaction_id"`
 	OwnerID       string  `json:"owner_id"`
 	Timestamp     int64   `json:"timestamp"`
-	ReadSize      int64   `json:"read_size"`
-	ReadSizeInGB  float64 `json:"read_size_in_gb"`
+	ReadCounter   int64   `json:"read_counter"`
+	ReadSize      float64 `json:"read_size"`
 	Signature     string  `json:"signature"`
 	PayerID       string  `json:"payer_id"`
 	AuthTicket    string  `json:"auth_ticket"`
 	BlockNumber   int64   `json:"block_number"`
+}
+
+func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&ReadMarker{}).Select("sum(read_size)").Where("block_number > ?", blockNumber).Where("allocation_id = ?", allocationID).Find(&total).Error
 }
 
 func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, offset, limit int, isDescending bool) ([]ReadMarker, error) {

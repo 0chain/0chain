@@ -25,6 +25,11 @@ type WriteMarker struct {
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
 	BlockNumber            int64  `json:"block_number"`
+
+	// file info
+	LookupHash  string `json:"lookup_hash"`
+	Name        string `json:"name"`
+	ContentHash string `json:"content_hash"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
@@ -40,6 +45,16 @@ func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	}
 
 	return &wm, nil
+}
+
+func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).Select("sum(size)").Where("block_number > ?", blockNumber).Where("allocation_id = ?", allocationID).Find(&total).Error
+}
+
+func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).Where("allocation_id = ?", allocationID).Count(&total).Error
 }
 
 func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]WriteMarker, error) {

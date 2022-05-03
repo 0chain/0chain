@@ -48,6 +48,7 @@ services:
   sharder:
     image: "sharder"
     environment:
+      - POSTGRES_HOST=postgres
       - DOCKER=true
       - CASSANDRA_CLUSTER=cassandra
     depends_on:

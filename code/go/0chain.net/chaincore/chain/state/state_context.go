@@ -57,6 +57,7 @@ type ReadOnlyStateContextI interface {
 	GetBlock() *block.Block
 }
 
+//go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
 	ReadOnlyStateContextI

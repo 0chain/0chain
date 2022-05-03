@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -14,14 +16,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AuthorizerParameter poolStat
+//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AddAuthorizerPayload UpdateAuthorizerStakePoolPayload poolStat
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 const (
 	AuthorizerNodeType    = "authnode"
 	AuthorizerNewNodeType = "create"
 	GlobalNodeType        = "globalnode"
+	StakePoolNodeType     = "stakepool"
 	UserNodeType          = "usernode"
+)
+
+type (
+	smartContractFunction func(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (string, error)
 )
 
 // -----------  AuthorizerSignature -------------------
@@ -209,19 +216,36 @@ func (bp *BurnPayload) Decode(input []byte) error {
 	return err
 }
 
-// ------- AuthorizerParameter ------------
+// ------- UpdateAuthorizerStakePoolPayload ------------
 
-type AuthorizerParameter struct {
-	PublicKey string `json:"public_key"`
-	URL       string `json:"url"`
+type UpdateAuthorizerStakePoolPayload struct {
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
-func (pk *AuthorizerParameter) Encode() (data []byte, err error) {
+func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte, err error) {
 	data, err = json.Marshal(pk)
 	return
 }
 
-func (pk *AuthorizerParameter) Decode(input []byte) error {
+func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, pk)
+	return err
+}
+
+// ------- AddAuthorizerPayload ------------
+
+type AddAuthorizerPayload struct {
+	PublicKey         string                      `json:"public_key"`
+	URL               string                      `json:"url"`
+	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"` // Used to initially create stake pool
+}
+
+func (pk *AddAuthorizerPayload) Encode() (data []byte, err error) {
+	data, err = json.Marshal(pk)
+	return
+}
+
+func (pk *AddAuthorizerPayload) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
 }

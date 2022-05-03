@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -115,7 +116,7 @@ func TestSharders(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -245,7 +246,10 @@ func TestSharderFilter(t *testing.T) {
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer func() {
+		err = eventDb.Drop()
+		assert.NoError(t, err, "error while dropping database")
+	}()
 	assert.NoError(t, err, "error while migrating database")
 	createSharders(t, eventDb, 10)
 	t.Run("sharders which are active", func(t *testing.T) {
@@ -254,7 +258,7 @@ func TestSharderFilter(t *testing.T) {
 		for _, sharder := range sharders {
 			assert.Equal(t, true, sharder.Active, "all sharder should be active")
 		}
-		assert.Equal(t, 5, len(sharders), "only active sharders hould be returned")
+		assert.Equal(t, 5, len(sharders), "only active sharders should be returned")
 	})
 	t.Run("sharders which are not active", func(t *testing.T) {
 		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
@@ -262,13 +266,80 @@ func TestSharderFilter(t *testing.T) {
 		for _, sharder := range sharders {
 			assert.Equal(t, false, sharder.Active, "all sharder should be inactive")
 		}
-		assert.Equal(t, 5, len(sharders), "only inactive sharders hould be returned")
+		assert.Equal(t, 5, len(sharders), "only inactive sharders should be returned")
+	})
+}
+
+func TestGetSharderLocations(t *testing.T) {
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	defer func() {
+		err = eventDb.Drop()
+		assert.NoError(t, err, "error while dropping database")
+	}()
+	assert.NoError(t, err, "error while migrating database")
+	createShardersWithLocation(t, eventDb, 12)
+	t.Run("sharder locations without any filters", func(t *testing.T) {
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{}, 0, 0)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 12, len(locations), "all sharders should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			assert.NoError(t, err, "sharder id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+	t.Run("locations for sharders which are active", func(t *testing.T) {
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			assert.NoError(t, err, "sharder id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
+	})
+	t.Run("locations for sharders which are inactive", func(t *testing.T) {
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
+		assert.NoError(t, err, "There should be no error")
+		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
+		for _, location := range locations {
+			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			assert.NoError(t, err, "sharder id should be parsed to integer")
+			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
+			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
+		}
 	})
 }
 
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
+		err := eventDb.addSharder(s)
+		assert.NoError(t, err, "There should be no error")
+	}
+}
+
+func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
+	for i := 0; i < count; i++ {
+		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
 		err := eventDb.addSharder(s)
 		assert.NoError(t, err, "There should be no error")
 	}

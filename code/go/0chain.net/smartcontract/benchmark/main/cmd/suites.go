@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -57,6 +58,11 @@ func runSuite(
 		wg.Add(1)
 		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("Recovered in benchmark test", bm.Name(), "message", r)
+				}
+			}()
 			timer := time.Now()
 			log.Println("starting", bm.Name())
 			var err error
