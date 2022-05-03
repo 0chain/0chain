@@ -234,29 +234,33 @@ func TestSelectBlobbers(t *testing.T) {
 
 func TestChangeBlobbers(t *testing.T) {
 	const (
-		confMinAllocSize     = 1024
-		confMinAllocDuration = 5 * time.Minute
-		mockOwner            = "mock owner"
-		mockHash             = "mock hash"
-		mockAllocationID     = "mock_allocation_id"
-		mockAllocationName   = "mock_allocation"
-		mockPoolId           = "mock pool id"
-		mockMaxOffDuration   = 744 * time.Hour
-		mockBlobberCapacity  = 20 * confMinAllocSize
-		mockMinPrice         = 0
+		confMinAllocSize    = 1024
+		mockOwner           = "mock owner"
+		mockHash            = "mock hash"
+		mockAllocationID    = "mock_allocation_id"
+		mockAllocationName  = "mock_allocation"
+		mockPoolId          = "mock pool id"
+		mockMaxOffDuration  = 744 * time.Hour
+		mockBlobberCapacity = 20 * confMinAllocSize
+		mockMinPrice        = 0
 	)
 
 	type args struct {
-		numBlobbers          int
-		blobbersInAllocation int
-		addBlobberID         string
-		removeBlobberID      string
-		dataShards           int
-		parityShards         int
+		numBlobbers                   int
+		blobbersInAllocation          int
+		blobberInChallenge            int
+		blobbersAllocationInChallenge []int
+		addBlobberID                  string
+		removeBlobberID               string
+		dataShards                    int
+		parityShards                  int
 	}
 	type want struct {
-		err    bool
-		errMsg string
+		err                           bool
+		errMsg                        string
+		challengeEnabled              bool
+		blobberInChallenge            int
+		blobbersAllocationInChallenge []int
 	}
 
 	setup := func(arg args) (
@@ -279,6 +283,8 @@ func TestChangeBlobbers(t *testing.T) {
 			mockReadPrice        = zcnToBalance(0.01)
 			mockWritePrice       = zcnToBalance(0.10)
 			mockMaxPrice         = zcnToBalance(100.0)
+			bcPart               *partitions.Partitions
+			err                  error
 		)
 
 		var txn = transaction.Transaction{
@@ -287,6 +293,15 @@ func TestChangeBlobbers(t *testing.T) {
 			CreationDate: now,
 		}
 		txn.Hash = mockHash
+
+		if arg.blobberInChallenge > 0 {
+			bcPart, err = getBlobbersChallengeList(balances)
+			require.NoError(t, err)
+			defer func() {
+				err = bcPart.Save(balances)
+				require.NoError(t, err)
+			}()
+		}
 
 		for i := 0; i < arg.numBlobbers; i++ {
 			ba := &BlobberAllocation{
@@ -298,6 +313,34 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
+			}
+			if i < arg.blobberInChallenge {
+				bcLoc, err := bcPart.AddItem(balances, &BlobberChallengeNode{BlobberID: ba.BlobberID})
+				require.NoError(t, err)
+				bcPartitionLoc := &BlobberChallengePartitionLocation{
+					ID:                ba.BlobberID,
+					PartitionLocation: &partitions.PartitionLocation{Location: bcLoc},
+				}
+				_, err = balances.InsertTrieNode(bcPartitionLoc.GetKey(sc.ID), bcPartitionLoc)
+				require.NoError(t, err)
+
+				bcAllocations := arg.blobbersAllocationInChallenge[i]
+				bcAllocPart, err := getBlobbersChallengeAllocationList(ba.BlobberID, balances)
+				require.NoError(t, err)
+
+				for j := 0; j < bcAllocations; j++ {
+					allocID := mockAllocationID
+					if j > 0 {
+						allocID += "_" + strconv.Itoa(j)
+					}
+					allocLoc, err := bcAllocPart.AddItem(balances, &BlobberChallengeAllocationNode{ID: allocID})
+					require.NoError(t, err)
+					if j == 0 {
+						ba.ChallengePartitionLoc = &partitions.PartitionLocation{Location: allocLoc}
+					}
+				}
+				err = bcAllocPart.Save(balances)
+				require.NoError(t, err)
 			}
 			if i < arg.blobbersInAllocation {
 				blobberAllocation = append(blobberAllocation, ba)
@@ -351,7 +394,7 @@ func TestChangeBlobbers(t *testing.T) {
 
 	}
 
-	validate := func(want want, arg args, sa *StorageAllocation, balances chainState.StateContextI) {
+	validate := func(want want, arg args, sa *StorageAllocation, sc *StorageSmartContract, balances chainState.StateContextI) {
 		totalBlobbers := arg.blobbersInAllocation
 		if arg.addBlobberID != "" {
 			totalBlobbers++
@@ -377,6 +420,32 @@ func TestChangeBlobbers(t *testing.T) {
 		if arg.removeBlobberID != "" {
 			_, ok := blobberNameMap[arg.removeBlobberID]
 			require.EqualValues(t, false, ok)
+		}
+
+		if want.challengeEnabled {
+			_, err := sc.getBlobberChallengePartitionLocation(arg.removeBlobberID, balances)
+			if want.blobberInChallenge < arg.blobberInChallenge {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			for i := 0; i < arg.blobberInChallenge; i++ {
+				bcPart, err := getBlobbersChallengeList(balances)
+				require.NoError(t, err)
+
+				bcSize, err := bcPart.Size(balances)
+				require.NoError(t, err)
+				require.EqualValues(t, want.blobberInChallenge, bcSize)
+
+				blobberID := "blobber_" + strconv.Itoa(i)
+
+				allocLoc, err := getBlobbersChallengeAllocationList(blobberID, balances)
+				require.NoError(t, err)
+
+				size, err := allocLoc.Size(balances)
+				require.NoError(t, err)
+				require.EqualValues(t, want.blobbersAllocationInChallenge[i], size)
+			}
 		}
 	}
 
@@ -409,6 +478,40 @@ func TestChangeBlobbers(t *testing.T) {
 			},
 			want: want{
 				err: false,
+			}},
+		{
+			name: "add_remove_valid_blobber_with_1_challenge_allocation",
+			args: args{
+				numBlobbers:                   6,
+				blobbersInAllocation:          5,
+				blobberInChallenge:            1,
+				blobbersAllocationInChallenge: []int{1},
+				addBlobberID:                  "blobber_5",
+				removeBlobberID:               "blobber_0",
+				dataShards:                    5,
+			},
+			want: want{
+				err:                           false,
+				challengeEnabled:              true,
+				blobberInChallenge:            0,
+				blobbersAllocationInChallenge: []int{0},
+			}},
+		{
+			name: "add_remove_valid_blobber_with_more_than_1_challenge_allocation",
+			args: args{
+				numBlobbers:                   6,
+				blobbersInAllocation:          5,
+				blobberInChallenge:            1,
+				blobbersAllocationInChallenge: []int{4},
+				addBlobberID:                  "blobber_5",
+				removeBlobberID:               "blobber_0",
+				dataShards:                    5,
+			},
+			want: want{
+				err:                           false,
+				challengeEnabled:              true,
+				blobberInChallenge:            1,
+				blobbersAllocationInChallenge: []int{3},
 			}},
 		{
 			name: "add_valid_blobber",
@@ -444,7 +547,7 @@ func TestChangeBlobbers(t *testing.T) {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
 				return
 			}
-			validate(tt.want, tt.args, sa, balances)
+			validate(tt.want, tt.args, sa, sc, balances)
 		})
 	}
 }
