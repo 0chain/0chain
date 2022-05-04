@@ -105,7 +105,6 @@ func allocationTableToAllocationData(alloc *event.Allocation, eventDb *event.Eve
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
 		Expiration:     common.Timestamp(alloc.Expiration),
-		Blobbers:       storageNodes,
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
 		Stats: &StorageAllocationStats{
