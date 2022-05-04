@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/core/datastore"
@@ -332,49 +330,46 @@ func (msc *StorageSmartContract) GetErrors(
 	return &transaction, err
 }
 
-func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	logging.Logger.Info("GetAllocationsHandler",
-		zap.Bool("is event db present", balances.GetEventDB() != nil))
-
-	clientID := params.Get("client")
-	allocations, err := ssc.getAllocationsList(clientID, balances)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get allocation list", err.Error())
-	}
-	result := make([]*StorageAllocation, 0)
-	for _, allocationID := range allocations.List {
-		allocationObj := &StorageAllocation{}
-		allocationObj.ID = allocationID
-
-		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
-		switch err {
-		case nil:
-			if balances.GetEventDB() != nil {
-				err = allocationObj.getBlobbers(balances)
-				if err != nil {
-					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-				}
-			}
-			result = append(result, allocationObj)
-		case util.ErrValueNotPresent:
-			continue
-		default:
-			msg := fmt.Sprintf("can't decode allocation with id '%s'", allocationID)
-			return nil, common.NewErrInternal(msg, err.Error())
-		}
-	}
-	return result, nil
-}
+//func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Context,
+//	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+//
+//	logging.Logger.Info("GetAllocationsHandler",
+//		zap.Bool("is event db present", balances.GetEventDB() != nil))
+//
+//	clientID := params.Get("client")
+//	allocations, err := ssc.getAllocationsList(clientID, balances)
+//	if err != nil {
+//		return nil, common.NewErrInternal("can't get allocation list", err.Error())
+//	}
+//	result := make([]*StorageAllocation, 0)
+//	for _, allocationID := range allocations.List {
+//		allocationObj := &StorageAllocation{}
+//		allocationObj.ID = allocationID
+//
+//		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
+//		switch err {
+//		case nil:
+//			if balances.GetEventDB() != nil {
+//				err = allocationObj.getBlobbers(balances)
+//				if err != nil {
+//					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+//				}
+//			}
+//			result = append(result, allocationObj)
+//		case util.ErrValueNotPresent:
+//			continue
+//		default:
+//			msg := fmt.Sprintf("can't decode allocation with id '%s'", allocationID)
+//			return nil, common.NewErrInternal(msg, err.Error())
+//		}
+//	}
+//	return result, nil
+//}
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	clientID := params.Get("client")
-	if balances.GetEventDB() == nil {
-		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
-	}
 
 	allocations, err := getClientAllocationsFromDb(clientID, balances.GetEventDB())
 	if err != nil {
@@ -472,34 +467,28 @@ const (
 	cantGetBlobber    = "can't get blobber"
 )
 
-func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	logging.Logger.Info("AllocationStatsHandler",
-		zap.Bool("is event db present", balances.GetEventDB() != nil))
-	allocationID := params.Get("allocation")
-	allocationObj := &StorageAllocation{}
-	allocationObj.ID = allocationID
-
-	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
-	}
-
-	if balances.GetEventDB() != nil {
-		err = allocationObj.getBlobbers(balances)
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-		}
-	}
-
-	return allocationObj, nil
-}
+//func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+//	logging.Logger.Info("AllocationStatsHandler",
+//		zap.Bool("is event db present", balances.GetEventDB() != nil))
+//	allocationID := params.Get("allocation")
+//	allocationObj := &StorageAllocation{}
+//	allocationObj.ID = allocationID
+//
+//	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
+//	if err != nil {
+//		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+//	}
+//
+//	err = allocationObj.getBlobbers(balances)
+//	if err != nil {
+//		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+//	}
+//
+//	return allocationObj, nil
+//}
 
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
-
-	if balances.GetEventDB() == nil {
-		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
-	}
 
 	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
 	if err != nil {

@@ -1014,21 +1014,21 @@ func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 	return
 }
 
-func (sa *StorageAllocation) getBlobbers(balances chainstate.StateContextI) error {
-
-	for _, ba := range sa.BlobberDetails {
-		blobber, err := balances.GetEventDB().GetBlobber(ba.BlobberID)
-		if err != nil {
-			return err
-		}
-		sn, err := blobberTableToStorageNode(*blobber)
-		if err != nil {
-			return err
-		}
-		sa.Blobbers = append(sa.Blobbers, &sn.StorageNode)
-	}
-	return nil
-}
+//func (sa *StorageAllocation) getBlobbers(balances chainstate.StateContextI) error {
+//
+//	for _, ba := range sa.BlobberDetails {
+//		blobber, err := balances.GetEventDB().GetBlobber(ba.BlobberID)
+//		if err != nil {
+//			return err
+//		}
+//		sn, err := blobberTableToStorageNode(*blobber)
+//		if err != nil {
+//			return err
+//		}
+//		sa.Blobbers = append(sa.Blobbers, &sn.StorageNode)
+//	}
+//	return nil
+//}
 
 func (sa *StorageAllocation) addWritePoolOwner(userId string) {
 	for _, id := range sa.WritePoolOwners {
