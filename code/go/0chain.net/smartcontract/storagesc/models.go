@@ -1344,8 +1344,8 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
 	blobChallenges *BlobberChallenges, now common.Timestamp) ([]string, error) {
 	var (
-		expiredChallengeIDs           = make([]string, 0, len(allocChallenges.OpenChallenges))
-		lastExpiredBlobberChallengeID string
+		expiredChallengeIDs     = make([]string, 0, len(allocChallenges.OpenChallenges))
+		expiredBlobChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
 	)
 
 	for _, oc := range allocChallenges.OpenChallenges {
@@ -1373,14 +1373,14 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		sa.Stats.OpenChallenges--
 
 		if oc.BlobberID == blobChallenges.BlobberID {
-			lastExpiredBlobberChallengeID = oc.ID
+			expiredBlobChallengeIDs = append(expiredBlobChallengeIDs, oc.ID)
 		}
 	}
 
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeIDs):]
 
-	if lastExpiredBlobberChallengeID != "" {
-		blobChallenges.removeChallengesTo(lastExpiredBlobberChallengeID)
+	if len(expiredBlobChallengeIDs) > 0 {
+		blobChallenges.removeChallenges(expiredBlobChallengeIDs)
 	}
 
 	return expiredChallengeIDs, nil

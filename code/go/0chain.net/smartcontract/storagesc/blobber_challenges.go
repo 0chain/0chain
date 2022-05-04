@@ -61,29 +61,23 @@ func (sn *BlobberChallenges) removeChallenge(challenge *StorageChallenge) bool {
 	return false
 }
 
-// removeChallengeTo removes all open challenge ids before and include the id
-func (sn *BlobberChallenges) removeChallengesTo(id string) {
-	if id == "" {
-		return
+func (sn *BlobberChallenges) removeChallenges(ids []string) {
+	deleteMap := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		deleteMap[id] = struct{}{}
 	}
 
-	if _, ok := sn.ChallengeIDMap[id]; !ok {
-		return
-	}
-
-	var j int
-	for i, oid := range sn.ChallengeIDs {
-		if oid == id {
-			j = i
-			break
+	cids := make([]string, 0, len(sn.ChallengeIDs))
+	for _, cid := range sn.ChallengeIDs {
+		if _, ok := deleteMap[cid]; !ok {
+			cids = append(cids, cid)
+			continue
 		}
+
+		delete(sn.ChallengeIDMap, cid)
 	}
 
-	for i := 0; i <= j; i++ {
-		delete(sn.ChallengeIDMap, sn.ChallengeIDs[i])
-	}
-
-	sn.ChallengeIDs = sn.ChallengeIDs[j+1:]
+	sn.ChallengeIDs = cids
 }
 
 type blobberChallengeDecode BlobberChallenges
