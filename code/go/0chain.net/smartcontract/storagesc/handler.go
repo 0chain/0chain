@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/core/datastore"
@@ -464,31 +466,35 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 
 const (
 	cantGetAllocation = "can't get allocation"
+	cantGetBlobber    = "can't get blobber"
 )
 
-//func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-//	logging.Logger.Info("AllocationStatsHandler",
-//		zap.Bool("is event db present", balances.GetEventDB() != nil))
-//	allocationID := params.Get("allocation")
-//	allocationObj := &StorageAllocation{}
-//	allocationObj.ID = allocationID
-//
-//	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
-//	if err != nil {
-//		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
-//	}
-//
-//	err = allocationObj.getBlobbers(balances)
-//	if err != nil {
-//		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-//	}
-//
-//	return allocationObj, nil
-//}
+func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	logging.Logger.Info("AllocationStatsHandler",
+		zap.Bool("is event db present", balances.GetEventDB() != nil))
+	allocationID := params.Get("allocation")
+	allocationObj := &AllocationData{}
+	allocationObj.ID = allocationID
+
+	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+	}
+
+	err = allocationObj.getBlobbers(ssc, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
+	}
+
+	return allocationObj, nil
+}
 
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
 
+	if balances.GetEventDB() == nil {
+		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
+	}
 	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
