@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	// "0chain.net/chaincore/chain"
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
