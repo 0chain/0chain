@@ -51,6 +51,7 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+//go:generate mockery --case underscore --name=ReadOnlyStateContextI --output=./mocks
 type ReadOnlyStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
 	GetEventDB() *event.EventDb
