@@ -426,7 +426,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		zcnsc.Setup(clients, publicKeys, balances)
+		zcnsc.Setup(eventDb, clients, publicKeys, balances)
 		log.Println("added zcnsc\t", time.Since(timer))
 	}()
 
