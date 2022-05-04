@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"time"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -24,7 +23,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
-	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -672,17 +670,11 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	return nil, nil
 }
 
-type challengeInput struct {
-	cr          *rand.Rand
-	challengeID string
-}
-
 type challengeOutput struct {
 	alloc             *StorageAllocation
 	storageChallenge  *StorageChallenge
 	blobberChallenges *BlobberChallenges
 	allocChallenges   *AllocationChallenges
-	error             error
 }
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
@@ -822,34 +814,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}, nil
 }
 
-func (sc *StorageSmartContract) asyncGenerateChallenges(
-	blobberChallengeList *partitions.Partitions,
-	validators *partitions.Partitions,
-	data <-chan challengeInput,
-	result chan<- challengeOutput,
-	t *transaction.Transaction,
-	balances cstate.StateContextI) {
-
-	defer close(result)
-
-	for d := range data {
-		resp, err := sc.populateGenerateChallenge(
-			blobberChallengeList,
-			d.cr,
-			validators,
-			t,
-			d.challengeID,
-			balances)
-		if err != nil {
-			result <- challengeOutput{
-				error: err,
-			}
-		} else {
-			result <- *resp
-		}
-	}
-}
-
 func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances cstate.StateContextI) (err error) {
 
@@ -907,97 +871,6 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 			"Error in adding challenge: %v", err)
 	}
 
-	return nil
-}
-
-func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
-	b *block.Block, _ []byte, balances cstate.StateContextI) (err error) {
-
-	// SC configurations
-	var conf *Config
-	if conf, err = sc.getConfig(balances, false); err != nil {
-		return common.NewErrorf("generate_challenges",
-			"can't get SC configurations: %v", err)
-	}
-
-	numChallenges := conf.MaxChallengesPerGeneration
-	hashString := encryption.Hash(t.Hash + b.PrevHash)
-
-	validators, err := getValidatorsList(balances)
-	if err != nil {
-		return common.NewErrorf("adding_challenge_error",
-			"error getting the validators list: %v", err)
-	}
-
-	listLen, err := validators.Size(balances)
-	if err != nil {
-		return common.NewErrorf("adding_challenge_error",
-			"error checking validator size: %v", err)
-	}
-	if listLen == 0 {
-		return common.NewErrorf("adding_challenge_error",
-			"no available validators")
-	}
-
-	blobberChallengeList, err := partitionsChallengeReadyBlobbers(balances)
-	if err != nil {
-		return common.NewErrorf("adding_challenge_error",
-			"error getting the blobber challenge list: %v", err)
-	}
-
-	var (
-		data   = make(chan challengeInput, numChallenges)
-		output = make(chan challengeOutput, numChallenges)
-	)
-
-	for i := 0; i < 8; i++ {
-		go sc.asyncGenerateChallenges(blobberChallengeList, validators, data, output, t, balances)
-	}
-
-	for i := 0; i < numChallenges; i++ {
-
-		challengeID := encryption.Hash(hashString + strconv.FormatInt(int64(i), 10))
-		var challengeSeed uint64
-		challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
-		if err != nil {
-			logging.Logger.Error("Error in creating challenge seed", zap.Error(err),
-				zap.Any("challengeID", challengeID))
-			continue
-		}
-		cr := rand.New(rand.NewSource(int64(challengeSeed)))
-		data <- challengeInput{
-			cr:          cr,
-			challengeID: challengeID,
-		}
-	}
-	close(data)
-
-	for result := range output {
-
-		if result.error != nil {
-			return result.error
-		}
-		var (
-			tp    = time.Now()
-			alloc = result.alloc
-		)
-
-		err = sc.addChallenge(alloc,
-			result.storageChallenge,
-			result.allocChallenges,
-			result.blobberChallenges,
-			balances)
-		if err != nil {
-			logging.Logger.Error("Error in adding challenge", zap.Error(err),
-				zap.Any("challengeString", result.storageChallenge))
-			continue
-		}
-		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
-			if timer, ok := tm.(metrics.Timer); ok {
-				timer.Update(time.Since(tp))
-			}
-		}
-	}
 	return nil
 }
 
