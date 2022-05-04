@@ -464,7 +464,6 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 
 const (
 	cantGetAllocation = "can't get allocation"
-	cantGetBlobber    = "can't get blobber"
 )
 
 //func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
