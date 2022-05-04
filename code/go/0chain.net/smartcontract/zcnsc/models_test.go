@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	"0chain.net/core/encryption"
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
@@ -9,7 +10,6 @@ import (
 
 	"0chain.net/chaincore/state"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
@@ -20,9 +20,6 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
-
 	logging.Logger = zap.NewNop()
 }
 
@@ -30,7 +27,7 @@ func Test_ShouldSign(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -42,7 +39,7 @@ func Test_ShouldSignAndVerify(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -60,7 +57,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -70,7 +67,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	require.NotEmpty(t, sig)
 
 	pk := signatureScheme.GetPublicKey()
-	signatureScheme = chain.GetServerChain().GetSignatureScheme()
+	signatureScheme = encryption.NewBLS0ChainScheme()
 	err = signatureScheme.SetPublicKey(pk)
 	require.NoError(t, err)
 
