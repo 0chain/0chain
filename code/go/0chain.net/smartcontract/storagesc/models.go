@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -421,6 +422,7 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
+	provider.Provider
 	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
@@ -429,7 +431,6 @@ type StorageNode struct {
 	Used                    int64                  `json:"used"`          // allocated capacity
 	BytesWritten            int64                  `json:"bytes_written"` // in bytes
 	DataRead                float64                `json:"data_read"`     // in GB
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB

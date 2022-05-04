@@ -306,41 +306,19 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
-	all, err := sc.getBlobbersList(balances)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"Failed to get blobber list: "+err.Error())
-	}
-
 	var blobber *StorageNode
+	var err error
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
-	blobber.LastHealthCheck = t.CreationDate
+	blobber.HealthCheck(t.CreationDate)
 
-	var i, ok = all.Nodes.getIndex(t.ClientID)
-	// if blobber has been removed, then it shouldn't send the health check
-	// transactions
-	if !ok {
-		return "", common.NewError("blobber_health_check_failed", "blobber "+
-			t.ClientID+" not found in all blobbers list")
-	}
-	var found = all.Nodes[i]
-	found.LastHealthCheck = t.CreationDate
-	if _, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't save all blobbers list: "+err.Error())
-	}
-
-	err = emitUpdateBlobber(blobber, balances)
-	if err != nil {
+	if err = emitUpdateBlobber(blobber, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed", err.Error())
 	}
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
-		blobber)
-	if err != nil {
+	if _, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())
 	}

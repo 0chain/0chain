@@ -14,8 +14,9 @@ func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
 	data, err := json.Marshal(&event.Blobber{
-		BlobberID:               sn.ID,
-		BaseURL:                 sn.BaseURL,
+		BlobberID: sn.ID,
+		BaseURL:   sn.BaseURL,
+
 		Latitude:                sn.Geolocation.Latitude,
 		Longitude:               sn.Geolocation.Longitude,
 		ReadPrice:               int64(sn.Terms.ReadPrice),
@@ -28,6 +29,8 @@ func emitAddOrOverwriteBlobber(
 		Used:            sn.Used,
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
+		IsKilled:        sn.IsKilled,
+		IsShutDown:      sn.IsShutDown,
 
 		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 		MinStake:       int64(sn.StakePoolSettings.MinStake),
@@ -73,6 +76,8 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"num_delegates":             sn.StakePoolSettings.MaxNumDelegates,
 			"service_charge":            sn.StakePoolSettings.ServiceCharge,
 			"saved_data":                sn.SavedData,
+			"is_killed":                 sn.IsKilled,
+			"is_shut_down":              sn.IsShutDown,
 		},
 	})
 	if err != nil {

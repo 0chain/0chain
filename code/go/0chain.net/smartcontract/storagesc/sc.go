@@ -270,6 +270,10 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.updateBlobberSettings(t, input, balances)
 	case "blobber_block_rewards":
 		err = sc.blobberBlockRewards(balances)
+	case "shut_down_blobber":
+		_, err = sc.shutDownBlobber(t, input, balances)
+	case "kill_blobber":
+		_, err = sc.killBlobber(t, input, balances)
 
 	// read_pool
 

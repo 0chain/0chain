@@ -4,11 +4,6 @@ import (
 	"0chain.net/core/common"
 )
 
-// am_i_active? REST
-// update SC
-// health check SC
-// shut down SC
-// kill SC
 const healthCheckTime = 60 * 60
 
 type Status int
@@ -28,7 +23,7 @@ func (p Status) String() string {
 
 type ProviderI interface {
 	Status(now common.Timestamp) Status
-	PassHealthCheck(now common.Timestamp) error
+	HealthCheck(now common.Timestamp) error
 	ShutDown() error
 	Kill() error
 }
@@ -52,7 +47,7 @@ func (p *Provider) Status(now common.Timestamp) Status {
 	return Active
 }
 
-func (p *Provider) PassHealthCheck(now common.Timestamp) {
+func (p *Provider) HealthCheck(now common.Timestamp) {
 	p.LastHealthCheck = now
 }
 

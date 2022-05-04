@@ -9,47 +9,52 @@ import (
 )
 
 type Blobber struct {
-	gorm.Model
-	BlobberID string `json:"id" gorm:"uniqueIndex"`
-	BaseURL   string `json:"url"`
+	gorm.Model `json:"gorm_._model"`
+	BlobberID  string `json:"id" gorm:"uniqueIndex" json:"blobber_id,omitempty"`
+	BaseURL    string `json:"url" json:"base_url,omitempty"`
+
+	//provider
+	LastHealthCheck int64 `json:"last_health_check" json:"last_health_check,omitempty"`
+	IsKilled        bool  `json:"is_killed,omitempty"`
+	IsShutDown      bool  `json:"is_shut_down,omitempty"`
 
 	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude" json:"latitude,omitempty"`
+	Longitude float64 `json:"longitude" json:"longitude,omitempty"`
 
 	// terms
-	ReadPrice               int64   `json:"read_price"`
-	WritePrice              int64   `json:"write_price"`
-	MinLockDemand           float64 `json:"min_lock_demand"`
-	MaxOfferDuration        string  `json:"max_offer_duration"`
-	ChallengeCompletionTime string  `json:"challenge_completion_time"`
+	ReadPrice               int64   `json:"read_price" json:"read_price,omitempty"`
+	WritePrice              int64   `json:"write_price" json:"write_price,omitempty"`
+	MinLockDemand           float64 `json:"min_lock_demand" json:"min_lock_demand,omitempty"`
+	MaxOfferDuration        string  `json:"max_offer_duration" json:"max_offer_duration,omitempty"`
+	ChallengeCompletionTime string  `json:"challenge_completion_time" json:"challenge_completion_time,omitempty"`
 
-	Capacity        int64 `json:"capacity"`          // total blobber capacity
-	Used            int64 `json:"used"`              // allocated capacity
-	TotalDataStored int64 `json:"total_data_stored"` // total of files saved on blobber
-	LastHealthCheck int64 `json:"last_health_check"`
-	SavedData       int64 `json:"saved_data"`
+	Capacity        int64 `json:"capacity" json:"capacity,omitempty"`                   // total blobber capacity
+	Used            int64 `json:"used" json:"used,omitempty"`                           // allocated capacity
+	TotalDataStored int64 `json:"total_data_stored" json:"total_data_stored,omitempty"` // total of files saved on blobber
+
+	SavedData int64 `json:"saved_data" json:"saved_data,omitempty"`
 
 	// stake_pool_settings
-	DelegateWallet string  `json:"delegate_wallet"`
-	MinStake       int64   `json:"min_stake"`
-	MaxStake       int64   `json:"max_stake"`
-	NumDelegates   int     `json:"num_delegates"`
-	ServiceCharge  float64 `json:"service_charge"`
+	DelegateWallet string  `json:"delegate_wallet" json:"delegate_wallet,omitempty"`
+	MinStake       int64   `json:"min_stake" json:"min_stake,omitempty"`
+	MaxStake       int64   `json:"max_stake" json:"max_stake,omitempty"`
+	NumDelegates   int     `json:"num_delegates" json:"num_delegates,omitempty"`
+	ServiceCharge  float64 `json:"service_charge" json:"service_charge,omitempty"`
 
-	OffersTotal        int64 `json:"offers_total"`
-	UnstakeTotal       int64 `json:"unstake_total"`
-	Reward             int64 `json:"reward"`
-	TotalServiceCharge int64 `json:"total_service_charge"`
-	TotalStake         int64 `json:"total_stake"`
+	OffersTotal        int64 `json:"offers_total" json:"offers_total,omitempty"`
+	UnstakeTotal       int64 `json:"unstake_total" json:"unstake_total,omitempty"`
+	Reward             int64 `json:"reward" json:"reward,omitempty"`
+	TotalServiceCharge int64 `json:"total_service_charge" json:"total_service_charge,omitempty"`
+	TotalStake         int64 `json:"total_stake" json:"total_stake,omitempty"`
 
-	Name        string `json:"name" gorm:"name"`
-	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
-	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
-	Description string `json:"description" gorm:"description"`
+	Name        string `json:"name" gorm:"name" json:"name,omitempty"`
+	WebsiteUrl  string `json:"website_url" gorm:"website_url" json:"website_url,omitempty"`
+	LogoUrl     string `json:"logo_url" gorm:"logo_url" json:"logo_url,omitempty"`
+	Description string `json:"description" gorm:"description" json:"description,omitempty"`
 
-	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
-	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
+	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID" json:"write_markers,omitempty"`
+	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID" json:"read_markers,omitempty"`
 }
 
 type BlobberLatLong struct {
