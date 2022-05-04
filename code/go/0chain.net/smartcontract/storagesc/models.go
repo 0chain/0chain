@@ -848,7 +848,7 @@ func (sa *StorageAllocation) removeBlobber(
 	for i, d := range blobbers {
 		if d.ID == removeId {
 			removedBlobber = blobbers[i]
-			blobbers[i] = blobbers[len(sa.BlobberDetails)-1]
+			blobbers[i] = blobbers[len(blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
 			break
@@ -1461,6 +1461,11 @@ type WriteMarker struct {
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
+
+	// file info
+	LookupHash  string `json:"lookup_hash"`
+	Name        string `json:"name"`
+	ContentHash string `json:"content_hash"`
 }
 
 func (wm *WriteMarker) VerifySignature(
