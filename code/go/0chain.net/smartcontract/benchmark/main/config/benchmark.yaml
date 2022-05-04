@@ -156,6 +156,7 @@ smart_contracts:
     min_authorizers: 1
     min_burn_amount: 1
     min_stake_amount: 0
+    max_delegates: 10
     max_fee: 100
     burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
     cost:
