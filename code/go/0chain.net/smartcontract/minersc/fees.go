@@ -442,14 +442,14 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 	// fess and mint
 	var (
-		partf = state.Balance(float64(fee) / float64(len(sharders)))
-		partm = state.Balance(float64(mint) / float64(len(sharders)))
+		partf = float64(fee) / float64(len(sharders))
+		partm = float64(mint) / float64(len(sharders))
 	)
 
 	// part for every sharder
 	for _, sh := range sharders {
 		if err = sh.StakePool.DistributeRewards(
-			float64(partf+partm), sh.ID, spenum.Sharder, balances,
+			partf+partm, sh.ID, spenum.Sharder, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
