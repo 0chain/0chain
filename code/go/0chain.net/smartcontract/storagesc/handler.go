@@ -650,13 +650,23 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 		return nil, common.NewErrNoResource("db not initialized")
 	}
 
-	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get write markers", err.Error())
+	filename := params.Get("filename")
+
+	if filename == "" {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers", err.Error())
+		}
+
+		return writeMarkers, nil
+	} else {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationFile(allocationID, filename)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers for file", err.Error())
+		}
+
+		return writeMarkers, nil
 	}
-
-	return writeMarkers, nil
-
 }
 
 func (ssc *StorageSmartContract) GetWrittenAmountHandler(
