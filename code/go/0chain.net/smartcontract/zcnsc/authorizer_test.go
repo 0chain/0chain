@@ -7,8 +7,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -179,25 +177,6 @@ func Test_Cannot_Delete_AuthorizerFromAnotherClient(t *testing.T) {
 	authorizer, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.Empty(t, authorizer)
 	require.Error(t, err)
-}
-
-func Test_LockingBasicLogicTest(t *testing.T) {
-	tr := CreateDefaultTransactionToZcnsc()
-	z := &tokenpool.ZcnLockingPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      "0",
-				Balance: 0,
-			},
-		},
-		TokenLockInterface: &TokenLock{
-			StartTime: common.Now(),
-			Duration:  0,
-		},
-	}
-
-	locked := z.IsLocked(tr)
-	require.Equal(t, locked, true)
 }
 
 func Test_UpdateAuthorizerSettings(t *testing.T) {
