@@ -683,6 +683,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.BlobberWeight
 	case ExposeMpt:
 		return conf.ExposeMpt
+	case OwnerId:
+		return conf.OwnerId
 	case Cost:
 		return ""
 	case CostUpdateSettings:
