@@ -1011,18 +1011,6 @@ func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 	return
 }
 
-func (sa *AllocationData) getBlobbers(sc *StorageSmartContract, balances chainstate.StateContextI) error {
-
-	for _, ba := range sa.BlobberDetails {
-		blobber, err := sc.getBlobber(ba.BlobberID, balances)
-		if err != nil {
-			return err
-		}
-		sa.Blobbers = append(sa.Blobbers, blobber)
-	}
-	return nil
-}
-
 func (sa *StorageAllocation) addWritePoolOwner(userId string) {
 	for _, id := range sa.WritePoolOwners {
 		if userId == id {

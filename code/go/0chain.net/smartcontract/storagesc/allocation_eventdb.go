@@ -14,7 +14,7 @@ import (
 
 type AllocationData struct {
 	StorageAllocation `json:",inline"`
-	Blobbers          []*StorageNode
+	Blobbers          []*StorageNode `json:"blobbers"`
 }
 
 func allocationTableToAllocationData(alloc *event.Allocation, eventDb *event.EventDb) (*AllocationData, error) {
@@ -252,4 +252,16 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*All
 	}
 
 	return sas, nil
+}
+
+func (sa *AllocationData) getBlobbers(sc *StorageSmartContract, balances cstate.StateContextI) error {
+
+	for _, ba := range sa.BlobberDetails {
+		blobber, err := sc.getBlobber(ba.BlobberID, balances)
+		if err != nil {
+			return err
+		}
+		sa.Blobbers = append(sa.Blobbers, blobber)
+	}
+	return nil
 }
