@@ -1066,7 +1066,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	if len(request.AddBlobberId) > 0 {
 		blobbers, err = alloc.changeBlobbers(
-			blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
+			blobbers,
+			request.AddBlobberId,
+			request.RemoveBlobberId,
+			sc,
+			t.CreationDate,
+			conf,
+			balances,
 		)
 		if err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())

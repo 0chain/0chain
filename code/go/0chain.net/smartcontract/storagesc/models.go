@@ -263,9 +263,11 @@ func (sc *StorageChallenge) GetHashBytes() []byte {
 }
 
 type ValidationNode struct {
+	provider.Provider
 	ID                string                      `json:"id"`
 	BaseURL           string                      `json:"url"`
 	PublicKey         string                      `json:"-" msg:"-"`
+	Partition         int                         `json:"partition"`
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
@@ -785,9 +787,15 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	blobber *StorageNode,
 	sp *stakePool,
 	now common.Timestamp,
+	conf *Config,
 ) error {
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+
+	if blobber.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds())) != provider.Active {
+		return fmt.Errorf("blobber status %s is not active",
+			blobber.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds())).String())
+	}
 
 	// filter by max offer duration
 	if blobber.Terms.MaxOfferDuration < duration {
@@ -905,6 +913,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	addId, removeId string,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
+	conf *Config,
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
@@ -938,7 +947,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
-	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
+	if err := sa.validateAllocationBlobber(addedBlobber, sp, now, conf); err != nil {
 		return nil, err
 	}
 

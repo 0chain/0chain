@@ -109,6 +109,8 @@ type Config struct {
 	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
 	// tokens penalized on challenge not passed.
 	BlobberSlash float64 `json:"blobber_slash"`
+	// for blobbers and validators
+	HealthCheckPeriod time.Duration `json:"health_check_period"`
 
 	// price limits for blobbers
 
@@ -193,6 +195,9 @@ func (sc *Config) validate() (err error) {
 	if sc.MinAllocDuration < 0 {
 		return fmt.Errorf("negative min_alloc_duration: %v",
 			sc.MinAllocDuration)
+	}
+	if sc.HealthCheckPeriod <= 0 {
+		return fmt.Errorf("non-positive health check period: %v", sc.HealthCheckPeriod)
 	}
 	if sc.MaxMint < 0 {
 		return fmt.Errorf("negative max_mint: %v", sc.MaxMint)
@@ -364,6 +369,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxStake = state.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
+	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
 	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")

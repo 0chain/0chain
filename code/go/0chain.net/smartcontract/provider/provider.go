@@ -34,14 +34,14 @@ type Provider struct {
 	IsKilled        bool             `json:"is_killed"`
 }
 
-func (p *Provider) Status(now common.Timestamp) Status {
+func (p *Provider) Status(now common.Timestamp, healthCheckPeriod common.Timestamp) Status {
 	if p.IsKilled {
 		return Killed
 	}
 	if p.IsShutDown {
 		return ShutDown
 	}
-	if p.LastHealthCheck <= (now - healthCheckTime) {
+	if p.LastHealthCheck <= (now - healthCheckPeriod) {
 		return Inactive
 	}
 	return Active

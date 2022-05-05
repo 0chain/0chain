@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -447,6 +448,9 @@ func AddMockBlobbers(
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
 		blobber := &StorageNode{
+			Provider: provider.Provider{
+				LastHealthCheck: now,
+			},
 			ID:      id,
 			BaseURL: id + ".com",
 			Geolocation: StorageNodeGeolocation{
@@ -456,7 +460,6 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Used:              0,
-			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}

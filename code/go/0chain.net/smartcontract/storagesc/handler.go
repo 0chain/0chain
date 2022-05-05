@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"context"
 	"errors"
 	"fmt"
@@ -48,6 +49,9 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 	}
 	return storageNodeResponse{
 		StorageNode: StorageNode{
+			Provider: provider.Provider{
+				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			},
 			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
@@ -61,9 +65,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 				MaxOfferDuration:        maxOfferDuration,
 				ChallengeCompletionTime: challengeCompletionTime,
 			},
-			Capacity:        blobber.Capacity,
-			Used:            blobber.Used,
-			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			Capacity: blobber.Capacity,
+			Used:     blobber.Used,
 			StakePoolSettings: stakepool.StakePoolSettings{
 				DelegateWallet:  blobber.DelegateWallet,
 				MinStake:        state.Balance(blobber.MinStake),

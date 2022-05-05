@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -60,17 +61,20 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &StorageNode{
+			Provider: provider.Provider{
+				LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+			},
 			ID:      b.BlobberID,
 			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  b.Latitude,
 				Longitude: b.Longitude,
 			},
-			Terms:           blobberIDTermMapping[b.BlobberID].Terms,
-			Capacity:        b.Capacity,
-			Used:            b.Used,
-			SavedData:       b.SavedData,
-			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+			Terms:     blobberIDTermMapping[b.BlobberID].Terms,
+			Capacity:  b.Capacity,
+			Used:      b.Used,
+			SavedData: b.SavedData,
+
 			StakePoolSettings: stakepool.StakePoolSettings{
 				DelegateWallet:  b.DelegateWallet,
 				MinStake:        state.Balance(b.MinStake),
