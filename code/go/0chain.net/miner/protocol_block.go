@@ -35,9 +35,9 @@ const InsufficientTxns = "insufficient_txns"
 var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
 
 var (
-	ErrNotTimeTolerant = common.NewError("not_time_tolerant", "Transaction is behind time tolerance")
-	FutureTransaction  = common.NewError("future_transaction", "Transaction has future nonce")
-	PastTransaction    = common.NewError("past_transaction", "Transaction has past nonce")
+	ErrNotTimeTolerant = common.NewError("not_time_tolerant", "transaction is behind time tolerance")
+	FutureTransaction  = common.NewError("future_transaction", "transaction has future nonce")
+	PastTransaction    = common.NewError("past_transaction", "transaction has past nonce")
 )
 var (
 	bgTimer     metrics.Timer // block generation timer
@@ -55,12 +55,6 @@ func init() {
 
 func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
-	//if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
-	//	if err != nil {
-	//		return err
-	//	}
-	//	return common.NewError("process fee transaction", "transaction already exists")
-	//}
 	events, err := mc.UpdateState(ctx, b, bState, txn)
 	b.Events = append(b.Events, events...)
 	if err != nil {
@@ -478,14 +472,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 					return
 				}
-				//ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
-				//if ok || err != nil {
-				//	if err != nil {
-				//		logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
-				//	}
-				//	cancel = true
-				//	return
-				//}
 
 				validTxns = append(validTxns, txn)
 			}
@@ -689,14 +675,6 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
-		//we can remove it, since it won't work, every accepted transaction will be included in chain and will increment the nonce
-		//if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
-		//	if err != nil {
-		//		tii.reInclusionErr = err
-		//	}
-		//	return false
-		//}
-
 		events, err := mc.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		if err != nil {
@@ -712,7 +690,6 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 
 		// Setting the score lower so the next time blocks are generated
 		// these transactions don't show up at the top.
-		//txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		tii.txnMap[txn.GetKey()] = struct{}{}
 		b.Txns = append(b.Txns, txn)
 		if debugTxn {
@@ -952,27 +929,27 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	var reusedTxns int32
 
 	rcount := 0
-	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && len(iterInfo.currentTxns) > 0 &&
-		err != context.DeadlineExceeded {
-		for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.Config.MaxBlockCost(); i++ {
-			txn := iterInfo.currentTxns[i]
-			cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
-			if err != nil {
-				logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.Config.MaxBlockCost() &&
+		blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
+		txn := iterInfo.currentTxns[i]
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+		if err != nil {
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			break
+		}
+		if iterInfo.cost+cost >= mc.Config.MaxBlockCost() {
+			logging.Logger.Debug("generate block (too big cost, skipping)")
+			break
+		}
+		if txnProcessor(ctx, blockState, txn, iterInfo) {
+			rcount++
+			iterInfo.cost += cost
+			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 				break
-			}
-			if iterInfo.cost+cost >= mc.Config.MaxBlockCost() {
-				logging.Logger.Debug("generate block (too big cost, skipping)")
-				break
-			}
-			if txnProcessor(ctx, blockState, txn, iterInfo) {
-				rcount++
-				iterInfo.cost += cost
-				if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
-					break
-				}
 			}
 		}
+	}
+	if rcount > 0 {
 		blockSize += int32(rcount)
 		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
 	}

@@ -4,10 +4,11 @@
 package miner
 
 import (
+	"context"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
-	"context"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
