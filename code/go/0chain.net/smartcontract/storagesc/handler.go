@@ -146,6 +146,39 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	return sn, err
 }
 
+func (ssc *StorageSmartContract) GetBlobbersStatus(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	var blobberID = params.Get("blobber_id")
+	if blobberID == "" {
+		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
+	}
+
+	if balances.GetEventDB() == nil {
+		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	}
+
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+	}
+	sn, err := blobberTableToStorageNode(*blobber)
+
+	var conf *Config
+	conf, err = ssc.getConfig(balances, false)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
+	}
+
+	status := sn.Status(
+		common.Timestamp(time.Now().Second()), common.Timestamp(conf.HealthCheckPeriod.Seconds()),
+	)
+
+	return status.String(), nil
+}
+
 // GetBlobberCountHandler returns Blobber count from its individual stored value.
 func (ssc *StorageSmartContract) GetBlobberCountHandler(
 	ctx context.Context,

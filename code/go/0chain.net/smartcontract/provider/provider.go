@@ -13,6 +13,7 @@ const (
 	Inactive
 	ShutDown
 	Killed
+	NonExistent
 )
 
 var statusString = []string{"active", "inactive", "shut_down", "killed"}

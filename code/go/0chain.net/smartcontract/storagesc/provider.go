@@ -6,7 +6,9 @@ import (
 	"0chain.net/core/common"
 )
 
-func (sc *StorageSmartContract) blobberHealthCheck(
+// combine blobber and validator health checks as they both use the same server,
+// and letting them get out of sync could cause problems.
+func (sc *StorageSmartContract) healthCheck(
 	t *transaction.Transaction,
 	_ []byte,
 	balances cstate.StateContextI,
@@ -24,6 +26,25 @@ func (sc *StorageSmartContract) blobberHealthCheck(
 		return "", common.NewError("blobber_health_check_failed", err.Error())
 	}
 	if _, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber); err != nil {
+		return "", common.NewError("blobber_health_check_failed",
+			"can't save blobber: "+err.Error())
+	}
+
+	var validator = &ValidationNode{
+		ID: t.ClientID,
+	}
+	if err = balances.GetTrieNode(validator.GetKey(sc.ID), validator); err != nil {
+		return "", common.NewError("blobber_health_check_failed",
+			"can't get the blobber "+t.ClientID+": "+err.Error())
+	}
+
+	validator.HealthCheck(t.CreationDate)
+
+	err = emitAddOrOverwriteValidatorTable(validator, balances, t)
+	if err != nil {
+		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
+	}
+	if _, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())
 	}
@@ -72,34 +93,6 @@ func (sc *StorageSmartContract) killBlobber(
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())
 	}
-	return "", nil
-}
-
-func (sc *StorageSmartContract) validatorHealthCheck(
-	t *transaction.Transaction,
-	_ []byte,
-	balances cstate.StateContextI,
-) (string, error) {
-	var validator = &ValidationNode{
-		ID: t.ClientID,
-	}
-	var err error
-	if err = balances.GetTrieNode(validator.GetKey(sc.ID), validator); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't get the blobber "+t.ClientID+": "+err.Error())
-	}
-
-	validator.HealthCheck(t.CreationDate)
-
-	err = emitAddOrOverwriteValidatorTable(validator, balances, t)
-	if err != nil {
-		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
-	}
-	if _, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't save blobber: "+err.Error())
-	}
-
 	return "", nil
 }
 
