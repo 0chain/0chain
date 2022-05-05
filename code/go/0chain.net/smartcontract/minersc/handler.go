@@ -32,12 +32,6 @@ type userPools struct {
 	Pools map[string][]*delegatePoolStat `json:"pools"`
 }
 
-func newUserPools() (ups *userPools) {
-	ups = new(userPools)
-	ups.Pools = make(map[string][]*delegatePoolStat)
-	return
-}
-
 // user oriented pools requests handler
 func (msc *MinerSmartContract) GetUserPoolsHandler(
 	ctx context.Context,
@@ -60,7 +54,8 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 		return nil, errors.New("blobber not found in event database")
 	}
 
-	var ups = newUserPools()
+	ups := new(userPools)
+	ups.Pools = make(map[string][]*delegatePoolStat, len(minerPools)+len(sharderPools))
 	for _, pool := range minerPools {
 		dp := delegatePoolStat{
 			ID:         pool.PoolID,

@@ -49,27 +49,6 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(
 	return nil
 }
 
-/*
-func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
-	pool *sci.DelegatePool, _ int64, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	mn.TotalStaked -= int64(pool.Balance)
-
-	// transfer, empty
-	var transfer *state.Transfer
-	transfer, resp, err = pool.EmptyPool(ADDRESS, pool.DelegateID, nil)
-	if err != nil {
-		return "", fmt.Errorf("error emptying delegate pool: %v", err)
-	}
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", fmt.Errorf("adding transfer: %v", err)
-	}
-
-	err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, pool.ID, balances)
-	return
-}
-*/
 // unlock deleted pools
 func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {

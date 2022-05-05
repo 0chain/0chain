@@ -44,7 +44,7 @@ func (ssc *MinerSmartContract) collectReward(
 		}
 	}
 
-	if len(providerID) == 0 {
+	if providerID != txn.ClientID {
 		return "", common.NewErrorf("collect_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
 	}
