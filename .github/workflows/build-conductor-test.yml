@@ -95,21 +95,21 @@ jobs:
     
     - name: Running Fault Tolerance Tests.
       run: |
-        if [[ "$VIEW" == "true" ]]; then
+        if [ "$VIEW" == "true" ]; then
           bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
       env:
         VIEW: ${{ github.event.inputs.view_change }}
 
     - name: Running Byzantine Tests.
       run: |
-        if [[ "$VIEW" == "true" ]]; then
+        if [ "$VIEW" == "true" ]; then
           bash ./docker.local/bin/start.conductor.sh view-change.byzantine
       env:
         VIEW: ${{ github.event.inputs.view_change }}
 
     - name: Running View Change-3 Tests.
       run: |
-        if [[ "$VIEW" == "true" ]]; then
+        if [ "$VIEW" == "true" ]; then
           bash ./docker.local/bin/start.conductor.sh view-change-3
       env:
         VIEW: ${{ github.event.inputs.view_change }}
