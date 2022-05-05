@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/encryption"
+
 	"0chain.net/chaincore/state"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
@@ -21,10 +21,6 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
-	config.Configuration().ChainConfig = chain.ServerChain.Config
-
 	logging.Logger = zap.NewNop()
 }
 
@@ -32,7 +28,7 @@ func Test_ShouldSign(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -44,7 +40,7 @@ func Test_ShouldSignAndVerify(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -62,7 +58,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -72,7 +68,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	require.NotEmpty(t, sig)
 
 	pk := signatureScheme.GetPublicKey()
-	signatureScheme = chain.GetServerChain().GetSignatureScheme()
+	signatureScheme = encryption.NewBLS0ChainScheme()
 	err = signatureScheme.SetPublicKey(pk)
 	require.NoError(t, err)
 
@@ -128,7 +124,7 @@ func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 }
 
 func Test_PublicKey(t *testing.T) {
-	pk := AuthorizerParameter{}
+	pk := AddAuthorizerPayload{}
 
 	err := pk.Decode(nil)
 	require.Error(t, err)
@@ -146,7 +142,7 @@ func Test_PublicKey(t *testing.T) {
 	bytes, err := json.Marshal(pk)
 	require.NoError(t, err)
 
-	expected := AuthorizerParameter{}
+	expected := AddAuthorizerPayload{}
 	err = expected.Decode(bytes)
 	require.NoError(t, err)
 	require.Equal(t, expected.PublicKey, pk.PublicKey)

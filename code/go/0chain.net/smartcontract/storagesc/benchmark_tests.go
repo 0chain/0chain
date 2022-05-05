@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"testing"
-	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -89,7 +88,7 @@ func BenchmarkTests(
 					AllocationID:    getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Timestamp:       now,
-					ReadSize:        64 * KB,
+					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
 					PayerID:         data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
@@ -198,7 +197,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
-				CreationDate: now,
+				CreationDate: now - 1,
 				Value:        viper.GetInt64(bk.StorageMinAllocSize) * 1e10,
 			},
 			input: func() []byte {
@@ -206,7 +205,7 @@ func BenchmarkTests(
 					ID:              getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
-					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+					Expiration:      1,
 					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
@@ -222,7 +221,8 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				CreationDate: common.Timestamp((time.Hour * 1000).Seconds()) + now + 5*year,
+				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+				CreationDate: now + benchAllocationExpire + 1,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -240,7 +240,7 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				CreationDate: now + 1,
+				CreationDate: now - 1,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -520,7 +520,7 @@ func BenchmarkTests(
 				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*100,
+				CreationDate: benchWritePoolExpire + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
@@ -556,14 +556,22 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
-				ClientID:     data.Clients[0],
+				Value: int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
+				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
+					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*1000,
+				CreationDate: now + benchWritePoolExpire + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: getMockWritePoolId(viper.GetInt(bk.NumAllocations)-1, 0, 0),
+					PoolID: getMockWritePoolId(
+						viper.GetInt(bk.NumAllocations)-1,
+						getMockOwnerFromAllocationIndex(
+							viper.GetInt(bk.NumAllocations)-1,
+							viper.GetInt(bk.NumActiveClients),
+						),
+						0,
+					),
 				})
 				return bytes
 			}(),

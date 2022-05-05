@@ -5,9 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
@@ -23,10 +21,6 @@ var (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-
-	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
-	config.Configuration().ChainConfig = chain.ServerChain.Config
 	logging.Logger = zap.NewNop()
 }
 
@@ -140,27 +134,6 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	globalNode, err = GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
 	require.Equal(t, state.Balance(100*1e10), globalNode.MinStakeAmount)
-}
-
-func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
-	ctx := MakeMockStateContext()
-	sc := CreateZCNSmartContract()
-
-	client := defaultAuthorizer + time.Now().String()
-	input := CreateAuthorizerParamPayload(client)
-
-	tr := CreateAddAuthorizerTransaction(client, ctx)
-	tr.Value = 99
-
-	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = state.Balance(100 * 1e10)
-	err := node.Save(ctx)
-	require.NoError(t, err)
-
-	resp, err := sc.AddAuthorizer(tr, input, ctx)
-	require.Error(t, err)
-	require.Empty(t, resp)
-	require.Contains(t, err.Error(), "min stake amount")
 }
 
 func Test_Should_FailWithoutInputData(t *testing.T) {

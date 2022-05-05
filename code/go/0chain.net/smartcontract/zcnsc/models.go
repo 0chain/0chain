@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AuthorizerParameter AuthorizerStakePoolParameter poolStat
+//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AddAuthorizerPayload UpdateAuthorizerStakePoolPayload poolStat
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 const (
@@ -216,36 +216,36 @@ func (bp *BurnPayload) Decode(input []byte) error {
 	return err
 }
 
-// ------- AuthorizerStakePoolParameter ------------
+// ------- UpdateAuthorizerStakePoolPayload ------------
 
-type AuthorizerStakePoolParameter struct {
+type UpdateAuthorizerStakePoolPayload struct {
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
-func (pk *AuthorizerStakePoolParameter) Encode() (data []byte, err error) {
-	data, err = json.Marshal(pk)
+func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte) {
+	data, _ = json.Marshal(pk)
 	return
 }
 
-func (pk *AuthorizerStakePoolParameter) Decode(input []byte) error {
+func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
 }
 
-// ------- AuthorizerParameter ------------
+// ------- AddAuthorizerPayload ------------
 
-type AuthorizerParameter struct {
+type AddAuthorizerPayload struct {
 	PublicKey         string                      `json:"public_key"`
 	URL               string                      `json:"url"`
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"` // Used to initially create stake pool
 }
 
-func (pk *AuthorizerParameter) Encode() (data []byte, err error) {
+func (pk *AddAuthorizerPayload) Encode() (data []byte, err error) {
 	data, err = json.Marshal(pk)
 	return
 }
 
-func (pk *AuthorizerParameter) Decode(input []byte) error {
+func (pk *AddAuthorizerPayload) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
 }

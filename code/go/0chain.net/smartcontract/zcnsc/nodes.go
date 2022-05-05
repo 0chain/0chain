@@ -137,7 +137,7 @@ func (gn *GlobalNode) Validate() error {
 	const (
 		Code = "failed to validate global node"
 	)
-
+	// todo stop using hard coded values here
 	switch {
 	case gn.MinStakeAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.MinStakeAmount))
@@ -145,12 +145,12 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.MinMintAmount))
 	case gn.MaxFee < 1:
 		return common.NewError(Code, fmt.Sprintf("max fee (%v) is less than 1", gn.MaxFee))
-	case gn.MinAuthorizers < 20:
-		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 20", gn.MinAuthorizers))
+	case gn.MinAuthorizers < 1:
+		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 1", gn.MinAuthorizers))
 	case gn.MinBurnAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.MinBurnAmount))
-	case gn.PercentAuthorizers < 70:
-		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 70", gn.PercentAuthorizers))
+	case gn.PercentAuthorizers < 0:
+		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 0", gn.PercentAuthorizers))
 	case gn.BurnAddress == "":
 		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
 	case gn.OwnerId == "":
@@ -203,6 +203,7 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 
 // ----- AuthorizerNode --------------------
 
+// AuthorizerNode used in `UpdateAuthorizerConfig` functions
 type AuthorizerNode struct {
 	ID        string            `json:"id"`
 	PublicKey string            `json:"public_key"`
@@ -346,11 +347,7 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 		return nil, err
 	}
 
-	return &AuthorizerNode{
-		ID:        ev.AuthorizerID,
-		URL:       ev.URL,
-		PublicKey: "", // fetch this from MPT
-	}, nil
+	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
 }
 
 // ----- UserNode ------------------

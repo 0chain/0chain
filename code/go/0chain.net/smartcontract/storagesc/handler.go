@@ -650,13 +650,90 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 		return nil, common.NewErrNoResource("db not initialized")
 	}
 
-	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+	filename := params.Get("filename")
+
+	if filename == "" {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers", err.Error())
+		}
+
+		return writeMarkers, nil
+	} else {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationFile(allocationID, filename)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers for file", err.Error())
+		}
+
+		return writeMarkers, nil
+	}
+}
+
+func (ssc *StorageSmartContract) GetWrittenAmountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+	blockNumberString := params.Get("block_number")
+	allocationIDString := params.Get("allocation_id")
+	if blockNumberString == "" {
+		return nil, common.NewErrInternal("block_number is empty")
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
 	if err != nil {
-		return nil, common.NewErrInternal("can't get write markers", err.Error())
+		return nil, common.NewErrInternal("block_number is not valid")
 	}
 
-	return writeMarkers, nil
+	total, err := balances.GetEventDB().GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+	return map[string]int64{
+		"total": total,
+	}, err
+}
 
+func (ssc *StorageSmartContract) GetReadAmountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+	blockNumberString := params.Get("block_number")
+	allocationIDString := params.Get("allocation_id")
+	if blockNumberString == "" {
+		return nil, common.NewErrInternal("block_number is empty")
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
+	if err != nil {
+		return nil, common.NewErrInternal("block_number is not valid")
+	}
+
+	total, err := balances.GetEventDB().GetDataReadFromAllocationForLastNBlocks(int64(blockNumber), allocationIDString)
+	return map[string]int64{
+		"total": total,
+	}, err
+}
+
+func (ssc *StorageSmartContract) GetWriteMarkerCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+	allocationID := params.Get("allocation_id")
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation_id is empty")
+	}
+
+	total, err := balances.GetEventDB().GetWriteMarkerCount(allocationID)
+	return map[string]int64{
+		"count": total,
+	}, err
 }
 
 func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,

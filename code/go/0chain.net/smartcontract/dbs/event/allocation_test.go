@@ -20,6 +20,8 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
+const KB = 64 * 1024
+
 func TestAllocations(t *testing.T) {
 
 	type StorageNodeGeolocation struct {
@@ -223,7 +225,7 @@ func TestAllocations(t *testing.T) {
 			MovedToValidators:          sa.MovedToValidators,
 			TimeUnit:                   int64(sa.TimeUnit),
 			NumWrites:                  sa.Stats.NumWrites,
-			ReadSize:                   sa.Stats.ReadSize,
+			NumReads:                   sa.Stats.ReadSize / (64 * KB),
 			TotalChallenges:            sa.Stats.TotalChallenges,
 			OpenChallenges:             sa.Stats.OpenChallenges,
 			SuccessfulChallenges:       sa.Stats.SuccessChallenges,
@@ -364,7 +366,7 @@ func TestAllocations(t *testing.T) {
 		Data:        string(data),
 	}
 	eventDb.AddEvents(context.TODO(), []Event{eventAddSa})
-
+	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.DataShards, sa.DataShards)

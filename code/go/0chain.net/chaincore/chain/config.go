@@ -501,6 +501,13 @@ func (c *ConfigImpl) FromViper() {
 	c.guard.Lock()
 	defer c.guard.Unlock()
 
+	if err := viper.BindEnv("server_chain.dbs.events.host", "POSTGRES_HOST"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+	if err := viper.BindEnv("server_chain.dbs.events.port", "POSTGRES_PORT"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+
 	conf := c.conf
 	conf.State = viper.GetBool("server_chain.state.enabled")
 	conf.Dkg = viper.GetBool("server_chain.dkg")

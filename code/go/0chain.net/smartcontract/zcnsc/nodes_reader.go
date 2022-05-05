@@ -26,11 +26,7 @@ func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, err
 func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	node := NewUserNode(id, 0)
 	err := ctx.GetTrieNode(node.GetKey(), node)
-	if err != nil {
-		return nil, err
-	}
-
-	return node, nil
+	return node, err
 }
 
 func GetGlobalSavedNode(balances state.StateContextI) (*GlobalNode, error) {
