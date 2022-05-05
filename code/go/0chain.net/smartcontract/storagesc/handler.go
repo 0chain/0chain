@@ -716,6 +716,7 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
+		filename     = r.URL.Query().Get("filename")
 	)
 
 	if allocationID == "" {
@@ -723,13 +724,21 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	writeMarkers, err := srh.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("can't count write markers", err.Error()))
-		return
+	if filename == "" {
+		writeMarkers, err := srh.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers", err.Error()))
+			return
+		}
+		common.Respond(w, r, writeMarkers, nil)
+	} else {
+		writeMarkers, err := srh.GetEventDB().GetWriteMarkersForAllocationFile(allocationID, filename)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers for file", err.Error()))
+			return
+		}
+		common.Respond(w, r, writeMarkers, nil)
 	}
-
-	common.Respond(w, r, writeMarkers, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers count_readmarkers
