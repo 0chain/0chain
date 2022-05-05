@@ -115,7 +115,7 @@ func NewConfigImpl(conf *ConfigData) *ConfigImpl {
 // direct access to 'chain' package. Instead they can read the configuration using
 // 'conf' package. example: conf.Configuration.ReadValue("BlockSize")
 func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
-	elements := reflect.ValueOf(&c.conf).Elem()
+	elements := reflect.ValueOf(c.conf).Elem()
 	i := 0
 	for ; i < elements.NumField(); i++ {
 		if elements.Type().Field(i).Name == name {
@@ -502,7 +502,7 @@ func (c *ConfigImpl) FromViper() {
 	defer c.guard.Unlock()
 
 	conf := c.conf
-	conf.State = viper.GetBool("server_chain.state")
+	conf.State = viper.GetBool("server_chain.state.enabled")
 	conf.Dkg = viper.GetBool("server_chain.dkg")
 	conf.ViewChange = viper.GetBool("server_chain.view_change")
 	conf.BlockRewards = viper.GetBool("server_chain.block_rewards")
