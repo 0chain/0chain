@@ -630,6 +630,7 @@ func GetMockValidatorStakePools(
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
+	return // todo sort out validator stake pools
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
