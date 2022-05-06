@@ -162,6 +162,13 @@ type AllocationQuery struct {
 	NumberOfBlobbers  int
 }
 
+func (edb *EventDb) GetBlobberIdsFromUrls(urls []string) ([]string, error) {
+	dbStore := edb.Store.Get().Model(&Blobber{})
+	dbStore = dbStore.Where("url IN ?", urls)
+	var blobberIDs []string
+	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
+}
+
 func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())

@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -330,14 +331,31 @@ func (ssc *StorageSmartContract) GetFreeAllocationBlobbersHandler(ctx context.Co
 
 }
 
-func paramsToMap(params url.Values) map[string]interface{} {
+func (ssc *StorageSmartContract) GetBlobberIdsByUrlsHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	urlsStr := params.Get("blobber_urls")
+	if len(urlsStr) == 0 {
+		return nil, errors.New("blobber urls list is empty")
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
 
-	var paramsMap = make(map[string]interface{})
+	var urls []string
+	err := json.Unmarshal([]byte(urlsStr), &urls)
+	if err != nil {
+		return nil, errors.New("blobber urls list is malformed")
+	}
 
-	paramsMap["max_challenge_completion_time"] = params.Get("max_challenge_time")
-	paramsMap["capacity_used"] = params.Get("capacity_used")
+	if len(urls) == 0 {
+		return make([]string, 0), nil
+	}
 
-	return paramsMap
+	ids, err := balances.GetEventDB().GetBlobberIdsFromUrls(urls)
+	return ids, err
 }
 
 func (ssc *StorageSmartContract) GetTransactionByHashHandler(

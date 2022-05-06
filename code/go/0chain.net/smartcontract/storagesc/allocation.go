@@ -320,9 +320,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"Blobbers provided are not enough to honour the allocation")
 	}
 
+	//if more than limit blobbers sent, just cut them
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
+		logging.Logger.Info("Too many blobbers selected, max available", zap.Int("max_blobber_size", conf.MaxBlobbersPerAllocation))
+		request.Blobbers = request.Blobbers[:conf.MaxBlobbersPerAllocation]
 	}
 
 	inputBlobbers := sc.getBlobbers(request.Blobbers, balances)
