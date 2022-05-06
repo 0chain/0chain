@@ -12,7 +12,23 @@ import (
 	"0chain.net/smartcontract/stakepool"
 )
 
-func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, error) {
+type StorageAllocationBlobbers struct {
+	StorageAllocation `json:",inline"`
+	Blobbers          []*StorageNode `json:"blobbers"`
+}
+
+func (ad *StorageAllocationBlobbers) getBlobbers(sc *StorageSmartContract, balances cstate.StateContextI) error {
+	for _, ba := range ad.BlobberAllocs {
+		blobber, err := sc.getBlobber(ba.BlobberID, balances)
+		if err != nil {
+			return err
+		}
+		ad.Blobbers = append(ad.Blobbers, blobber)
+	}
+	return nil
+}
+
+func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
 	storageNodes := make([]*StorageNode, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
@@ -100,7 +116,6 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
 		Expiration:     common.Timestamp(alloc.Expiration),
-		Blobbers:       storageNodes,
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
 		Stats: &StorageAllocationStats{
@@ -133,7 +148,10 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, eventDb *event.
 		Curators:                curators,
 	}
 
-	return sa, nil
+	return &StorageAllocationBlobbers{
+		StorageAllocation: *sa,
+		Blobbers:          storageNodes,
+	}, nil
 }
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
@@ -212,13 +230,13 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 	return nil
 }
 
-func getStorageAllocationFromDb(id string, eventDb *event.EventDb) (*StorageAllocation, error) {
+func getStorageAllocationFromDb(id string, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
 	alloc, err := eventDb.GetAllocation(id)
 	if err != nil {
 		return nil, err
 	}
 
-	sa, err := allocationTableToStorageAllocation(alloc, eventDb)
+	sa, err := allocationTableToStorageAllocationBlobbers(alloc, eventDb)
 	if err != nil {
 		return nil, err
 	}
@@ -226,9 +244,9 @@ func getStorageAllocationFromDb(id string, eventDb *event.EventDb) (*StorageAllo
 	return sa, nil
 }
 
-func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocation, error) {
+func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {
 
-	sas := make([]*StorageAllocation, 0)
+	sas := make([]*StorageAllocationBlobbers, 0)
 
 	allocs, err := eventDb.GetClientsAllocation(clientID)
 	if err != nil {
@@ -236,7 +254,7 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*Sto
 	}
 
 	for _, alloc := range allocs {
-		sa, err := allocationTableToStorageAllocation(&alloc, eventDb)
+		sa, err := allocationTableToStorageAllocationBlobbers(&alloc, eventDb)
 		if err != nil {
 			return nil, err
 		}

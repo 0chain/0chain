@@ -343,19 +343,17 @@ func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Con
 	if err != nil {
 		return nil, common.NewErrInternal("can't get allocation list", err.Error())
 	}
-	result := make([]*StorageAllocation, 0)
+	result := make([]*StorageAllocationBlobbers, len(allocations.List))
 	for _, allocationID := range allocations.List {
-		allocationObj := &StorageAllocation{}
+		allocationObj := &StorageAllocationBlobbers{}
 		allocationObj.ID = allocationID
 
 		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 		switch err {
 		case nil:
-			if balances.GetEventDB() != nil {
-				err = allocationObj.getBlobbers(balances)
-				if err != nil {
-					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-				}
+			err = allocationObj.getBlobbers(ssc, balances)
+			if err != nil {
+				return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 			}
 			result = append(result, allocationObj)
 		case util.ErrValueNotPresent:
@@ -372,6 +370,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	clientID := params.Get("client")
+
 	if balances.GetEventDB() == nil {
 		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
 	}
@@ -476,7 +475,7 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 	logging.Logger.Info("AllocationStatsHandler",
 		zap.Bool("is event db present", balances.GetEventDB() != nil))
 	allocationID := params.Get("allocation")
-	allocationObj := &StorageAllocation{}
+	allocationObj := &StorageAllocationBlobbers{}
 	allocationObj.ID = allocationID
 
 	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
@@ -484,11 +483,9 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
 
-	if balances.GetEventDB() != nil {
-		err = allocationObj.getBlobbers(balances)
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-		}
+	err = allocationObj.getBlobbers(ssc, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 	}
 
 	return allocationObj, nil
@@ -500,7 +497,6 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	if balances.GetEventDB() == nil {
 		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
 	}
-
 	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)

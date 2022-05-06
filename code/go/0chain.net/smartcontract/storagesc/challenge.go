@@ -677,6 +677,58 @@ type challengeOutput struct {
 	allocChallenges   *AllocationChallenges
 }
 
+type challengeBlobberSelection int
+
+// randomWeightSelection select n blobbers from blobberChallenge partition and then select a blobber with the highest weight
+// randomSelection select a blobber randomly from partition
+const (
+	randomWeightSelection challengeBlobberSelection = iota
+	randomSelection
+)
+
+// selectBlobberForChallenge select blobber for challenge in random manner
+func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
+	r *rand.Rand, balances cstate.StateContextI) (string, error) {
+
+	var challengeBlobbers []ChallengeReadyBlobber
+	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
+	if err != nil {
+		return "", errors.New("error getting random slice from blobber challenge partition")
+	}
+
+	switch selection {
+	case randomWeightSelection:
+		const maxBlobbersSelect = 5
+
+		var challengeBlobber ChallengeReadyBlobber
+		var maxUsedCap uint64
+
+		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
+		if len(challengeBlobbers) <= maxBlobbersSelect {
+			blobbersSelected = challengeBlobbers
+		} else {
+			for i := 0; i < maxBlobbersSelect; i++ {
+				randomIndex := r.Intn(len(challengeBlobbers))
+				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
+			}
+		}
+
+		for _, bc := range blobbersSelected {
+			if bc.UsedCapacity > maxUsedCap {
+				maxUsedCap = bc.UsedCapacity
+				challengeBlobber = bc
+			}
+		}
+
+		return challengeBlobber.BlobberID, nil
+	case randomSelection:
+		randomIndex := r.Intn(len(challengeBlobbers))
+		return challengeBlobbers[randomIndex].BlobberID, nil
+	default:
+		return "", errors.New("invalid blobber selection pattern")
+	}
+}
+
 func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeBlobbersPartition *partitions.Partitions,
 	r *rand.Rand,
@@ -685,40 +737,14 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeID string,
 	balances cstate.StateContextI,
 ) (*challengeOutput, error) {
-	// select a random blobber to generate a challenge
-	var challengeBlobbers []ChallengeReadyBlobber
-	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
+	blobberSelection := challengeBlobberSelection(r.Intn(2))
+	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
 	if err != nil {
-		return nil, common.NewError("generate_challenges",
-			"error getting random slice from blobber challenge partition")
-	}
-
-	const maxBlobbersSelect = 5
-	var (
-		blobberID  string
-		maxUsedCap uint64
-	)
-
-	var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
-	if len(challengeBlobbers) <= maxBlobbersSelect {
-		blobbersSelected = challengeBlobbers
-	} else {
-		for i := 0; i < maxBlobbersSelect; i++ {
-			randomIndex := r.Intn(len(challengeBlobbers))
-			blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
-		}
-	}
-
-	for _, bc := range blobbersSelected {
-		if bc.UsedCapacity > maxUsedCap {
-			maxUsedCap = bc.UsedCapacity
-			blobberID = bc.BlobberID
-		}
+		return nil, common.NewError("add_challenge", err.Error())
 	}
 
 	if blobberID == "" {
-		return nil, common.NewError("add_challenges",
-			"empty blobber id")
+		return nil, common.NewError("add_challenges", "empty blobber id")
 	}
 
 	logging.Logger.Debug("generate_challenges", zap.String("blobber id", blobberID))
