@@ -108,6 +108,10 @@ jobs:
       run: | 
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
+    - name: Build blobber base
+      run: | 
+        cd blobber && ./docker.local/bin/build.base.sh
+        
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
