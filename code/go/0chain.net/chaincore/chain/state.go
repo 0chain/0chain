@@ -210,15 +210,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	)
 	defer func() { events = sctx.GetEvents() }()
 
-	s, err := c.GetStateById(sctx.GetState(), txn.ClientID)
-	if !isValid(err) {
-		return nil, err
-	}
-	if s == nil {
-		s = &state.State{}
-	}
-
-	if err := c.validateNonce(sctx, s, txn.Nonce); err != nil {
+	if err := c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
 		return nil, err
 	}
 
@@ -369,7 +361,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
-	if err = c.incrementNonce(sctx, txn.ClientID, s); err != nil {
+	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
 		logging.Logger.Error("update nonce error", zap.Any("error", err),
 			zap.Any("transaction", txn.Hash),
 			zap.String("clientID", txn.ClientID))
@@ -572,20 +564,35 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	return nil
 }
 
-func (c *Chain) validateNonce(sctx bcstate.StateContextI, s *state.State, txnNonce int64) error {
-	if s.Nonce+1 != txnNonce {
+func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
+	s, err := c.GetStateById(sctx.GetState(), fromClient)
+	if !isValid(err) {
+		return err
+	}
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if nonce+1 != txnNonce {
 		b := sctx.GetBlock()
 		logging.Logger.Error("validate nonce - error",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
-			zap.Any("local_nonce", s.Nonce))
+			zap.Any("local_nonce", s.Nonce), zap.Error(err))
 		return ErrWrongNonce
 	}
 
 	return nil
 }
 
-func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key, s *state.State) error {
+func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) error {
 	sc := sctx.GetState()
+	s, err := c.GetStateById(sc, fromClient)
+	if !isValid(err) {
+		return err
+	}
+	if s == nil {
+		s = &state.State{}
+	}
 	if err := sctx.SetStateContext(s); err != nil {
 		return err
 	}
