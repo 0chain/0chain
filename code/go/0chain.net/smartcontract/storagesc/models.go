@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 
@@ -20,6 +21,8 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
+
+const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
 
 //msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -100,18 +103,18 @@ type ChallengeResponse struct {
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
-type OpenChallenge struct {
-	ID        string           `json:"id"`         // challenge id
-	BlobberID string           `json:"blobber_id"` // blobber id
+type AllocOpenChallenge struct {
+	ID        string           `json:"id"`
 	CreatedAt common.Timestamp `json:"created_at"`
+	BlobberID string           `json:"blobber_id"` // blobber id
 }
 
 type AllocationChallenges struct {
-	AllocationID   string           `json:"allocation_id"`
-	OpenChallenges []*OpenChallenge `json:"open_challenges"`
-	//Challenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*OpenChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge         `json:"latest_completed_challenge"`
+	AllocationID   string                `json:"allocation_id"`
+	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
+	//OpenChallenges               []*StorageChallenge          `json:"challenges"`
+	ChallengeMap             map[string]*AllocOpenChallenge `json:"-" msg:"-"`
+	LatestCompletedChallenge *StorageChallenge              `json:"latest_completed_challenge"`
 }
 
 func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
@@ -131,7 +134,7 @@ func (acs *AllocationChallenges) UnmarshalMsg(b []byte) ([]byte, error) {
 	}
 
 	*acs = AllocationChallenges(*d)
-	acs.ChallengeMap = make(map[string]*OpenChallenge)
+	acs.ChallengeMap = make(map[string]*AllocOpenChallenge)
 	for _, challenge := range acs.OpenChallenges {
 		acs.ChallengeMap[challenge.ID] = challenge
 	}
@@ -141,11 +144,11 @@ func (acs *AllocationChallenges) UnmarshalMsg(b []byte) ([]byte, error) {
 
 func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool {
 	if acs.ChallengeMap == nil {
-		acs.ChallengeMap = make(map[string]*OpenChallenge)
+		acs.ChallengeMap = make(map[string]*AllocOpenChallenge)
 	}
 
 	if _, ok := acs.ChallengeMap[challenge.ID]; !ok {
-		oc := &OpenChallenge{
+		oc := &AllocOpenChallenge{
 			ID:        challenge.ID,
 			BlobberID: challenge.BlobberID,
 			CreatedAt: challenge.Created,
@@ -1338,6 +1341,10 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	return o, nil
 }
 
+func getMaxChallengeCompletionTime() time.Duration {
+	return config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)
+}
+
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids, or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
@@ -1348,6 +1355,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		expiredBlobChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
 	)
 
+	cct := getMaxChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if !ok {
@@ -1356,8 +1364,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 
 		// TODO: Not sure how the terms.ChallengeCompletionTime being set, perhaps we should get
 		// ChallengeCompletionTime from global config instead of the allocation's terms
-		expire := oc.CreatedAt + toSeconds(ba.Terms.ChallengeCompletionTime)
-		if expire > now {
+		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
 		}

@@ -253,7 +253,7 @@ func TestAddChallenge(t *testing.T) {
 			err = bc.load(args.balances, ssc.ID)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.want.openChallengeNum, len(bc.ChallengeIDs))
+			require.Equal(t, tt.want.openChallengeNum, len(bc.OpenChallenges))
 		})
 	}
 }
@@ -577,6 +577,7 @@ func setupChallengeMocks(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,

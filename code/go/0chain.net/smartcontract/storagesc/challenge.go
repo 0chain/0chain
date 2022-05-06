@@ -916,7 +916,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing alloc challenge: %v", err)
 	}
 
-	if !blobChallenges.addChallenge(challenge.ID) {
+	if !blobChallenges.addChallenge(challenge.ID, challenge.Created) {
 		return common.NewError("add_challenge", "challenge already exist in blobber")
 	}
 

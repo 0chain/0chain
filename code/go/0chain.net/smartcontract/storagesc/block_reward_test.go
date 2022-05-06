@@ -156,7 +156,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
 	sctx := state.NewStateContext(nil,
 		mpt, nil, nil, nil,
-		nil, nil, nil)
+		nil, nil, nil, nil)
 
 	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
@@ -271,7 +271,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
 	return state.NewStateContext(nil,
 		mpt, nil, nil, nil,
-		nil, nil, nil), clean
+		nil, nil, nil, nil), clean
 }
 
 func TestAddBlobberChallengeItems(t *testing.T) {

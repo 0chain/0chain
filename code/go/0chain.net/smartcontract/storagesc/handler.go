@@ -761,6 +761,12 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
+type BlobberOpenChallengesResponse struct {
+	BlobberID                string            `json:"blobber_id"`
+	ChallengeIDs             []string          `json:"challenge_ids"`
+	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"` // TODO: fix typo with Blobber and gosdk
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
@@ -770,28 +776,38 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
 	}
 
-	// return "200" with empty list, if no challenges are found
-	blobberChallenges := &BlobberChallenges{
+	rsp := &BlobberOpenChallengesResponse{
 		BlobberID:    blobberID,
 		ChallengeIDs: []string{},
 	}
+
+	// return "200" with empty list, if no challenges are found
+	blobberChallenges := &BlobberChallenges{
+		BlobberID: blobberID,
+	}
 	err := blobberChallenges.load(balances, ssc.ID)
 	switch err {
-	case nil, util.ErrValueNotPresent:
-		return blobberChallenges, nil
+	case util.ErrValueNotPresent:
+		return rsp, nil
+	case nil:
+		lfb := balances.GetLatestFinalizedBlock()
+		if lfb == nil {
+			return nil, common.NewErrInternal("chain is not ready, could not get latest finalized block")
+		}
+
+		cct := getMaxChallengeCompletionTime()
+		ocs := blobberChallenges.GetOpenChallengesNoExpire(lfb.CreationDate, cct)
+		if len(ocs) > 0 {
+			rsp.ChallengeIDs = make([]string, len(ocs))
+			for i, oc := range ocs {
+				rsp.ChallengeIDs[i] = oc.ID
+			}
+		}
+
+		return rsp, nil
 	default:
 		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
 	}
-
-	// for k, v := range blobberChallengeObj.ChallengeMap {
-	// 	if v.Response != nil {
-	// 		delete(blobberChallengeObj.ChallengeMap, k)
-	// 	}
-	// }
-
-	// return populate or empty list of challenges
-	// don't return error, if no challenges (expected by blobbers)
-	//return &blobberChallengeObj, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
@@ -803,7 +819,6 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	blobberID := params.Get("blobber")
 	blobberChallenges := &BlobberChallenges{}
 	blobberChallenges.BlobberID = blobberID
-	blobberChallenges.ChallengeIDs = []string{}
 
 	err := balances.GetTrieNode(blobberChallenges.GetKey(ssc.ID), blobberChallenges)
 	if err != nil {
@@ -811,7 +826,7 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	}
 
 	challengeID := params.Get("challenge")
-	if _, ok := blobberChallenges.ChallengeIDMap[challengeID]; !ok {
+	if _, ok := blobberChallenges.ChallengesMap[challengeID]; !ok {
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 

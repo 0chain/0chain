@@ -57,6 +57,7 @@ func (tb *mockStateContext) GetEventDB() *event.EventDb                         
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	return sc.clientBalance, nil
 }

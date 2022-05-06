@@ -256,6 +256,7 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}

@@ -45,22 +45,26 @@ func TestBlobberChallenges_removeChallenges(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			bc := BlobberChallenges{
-				ChallengeIDs:   tc.initChallengeIDs,
-				ChallengeIDMap: make(map[string]struct{}, len(tc.initChallengeIDs)),
+				OpenChallenges: make([]BlobOpenChallenge, len(tc.initChallengeIDs)),
+				ChallengesMap:  make(map[string]struct{}, len(tc.initChallengeIDs)),
+			}
+
+			for i, id := range tc.initChallengeIDs {
+				bc.OpenChallenges[i] = BlobOpenChallenge{ID: id}
 			}
 
 			for _, id := range tc.initChallengeIDs {
-				bc.ChallengeIDMap[id] = struct{}{}
+				bc.ChallengesMap[id] = struct{}{}
 			}
 
 			bc.removeChallenges(tc.removeIDs)
 
-			require.Equal(t, tc.expectChallengeIDs, bc.ChallengeIDs)
+			require.Equal(t, tc.expectChallengeIDs, bc.OpenChallenges)
 
-			require.Equal(t, len(bc.ChallengeIDs), len(bc.ChallengeIDMap))
+			require.Equal(t, len(bc.OpenChallenges), len(bc.ChallengesMap))
 
-			for _, id := range bc.ChallengeIDs {
-				_, ok := bc.ChallengeIDMap[id]
+			for _, oc := range bc.OpenChallenges {
+				_, ok := bc.ChallengesMap[oc.ID]
 				require.True(t, ok)
 			}
 		})

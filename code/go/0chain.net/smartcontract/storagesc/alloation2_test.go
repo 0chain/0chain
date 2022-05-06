@@ -368,10 +368,10 @@ func testCancelAllocation(
 
 		var ac = AllocationChallenges{
 			AllocationID: sAllocation.ID,
-			//Challenges:   []*StorageChallenge{},
+			//OpenChallenges:   []*StorageChallenge{},
 		}
 		for _, created := range blobberChallenges {
-			ac.OpenChallenges = append(ac.OpenChallenges, &OpenChallenge{
+			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
 				//AllocationID: sAllocation.ID,
 				BlobberID: bc.BlobberID,
 				CreatedAt: created,
@@ -544,6 +544,7 @@ func setupMocksFinishAllocation(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,
@@ -802,6 +803,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,
