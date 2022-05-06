@@ -128,7 +128,7 @@ jobs:
 
   conductor_view_change3_tests:
     name: CONDUCTOR-VIEW-CHANGE-3-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test04]
     
     steps:
     - uses: actions/checkout@v1
