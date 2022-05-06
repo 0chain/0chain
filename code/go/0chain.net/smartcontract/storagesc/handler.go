@@ -550,19 +550,25 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	creationDate := time.Now()
 
 	allocData := params.Get("allocation_data")
-	var request newAllocationRequest
-	if err = request.decode([]byte(allocData)); err != nil {
+	var req newAllocationRequest
+	if err = req.decode([]byte(allocData)); err != nil {
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
-	blobbers, err := ssc.getBlobbersForRequest(request, balances)
+	blobbers, err := ssc.getBlobbersForRequest(req, balances)
 	if err != nil {
 		return "", common.NewErrInternal("error selecting blobbers", err.Error())
 	}
-	sa := request.storageAllocation()
+	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand state.Balance
-	nodes := ssc.getBlobbers(blobbers, balances)
+
+	ids := append(req.Blobbers, blobbers...)
+	if len(ids) > req.ParityShards+req.DataShards {
+		ids = ids[:req.ParityShards+req.DataShards]
+	}
+
+	nodes := ssc.getBlobbers(ids, balances)
 	for _, b := range nodes.Nodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
