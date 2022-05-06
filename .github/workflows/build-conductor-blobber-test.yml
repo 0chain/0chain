@@ -60,8 +60,8 @@ jobs:
 
     - name: View Change Rounds
       run: |
-        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
-        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+        awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone blobber
       run: |
