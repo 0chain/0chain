@@ -1,13 +1,11 @@
 package event
 
 import (
+	"0chain.net/chaincore/state"
 	"fmt"
 
 	"0chain.net/smartcontract/dbs"
-
 	"gorm.io/gorm"
-
-	"0chain.net/chaincore/state"
 )
 
 type Validator struct {
@@ -15,6 +13,11 @@ type Validator struct {
 	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
 	BaseUrl     string `json:"url" gorm:"index:url"`
 	Stake       int64  `json:"stake" gorm:"index:stake"`
+
+	//provider
+	LastHealthCheck int64 `json:"last_health_check" json:"last_health_check,omitempty"`
+	IsKilled        bool  `json:"is_killed,omitempty"`
+	IsShutDown      bool  `json:"is_shut_down,omitempty"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`

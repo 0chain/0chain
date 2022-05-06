@@ -108,7 +108,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats[statUpdateValidator] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_validator"), nil)
 	ssc.SmartContractExecutionStats[statNumberOfValidators] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "number of validators"), nil)
 	// blobber
-	ssc.SmartContract.RestHandlers["/blobber_status"] = ssc.GetBlobbersStatus
+	ssc.SmartContract.RestHandlers["/storage_status"] = ssc.GetStatus
 	ssc.SmartContract.RestHandlers["/getblobbers"] = ssc.GetBlobbersHandler
 	ssc.SmartContract.RestHandlers["/getBlobber"] = ssc.GetBlobberHandler
 	ssc.SmartContract.RestHandlers["/get_blobber_count"] = ssc.GetBlobberCountHandler

@@ -164,6 +164,26 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
+			name:     "storage_rest.storage_status.blobber",
+			endpoint: ssc.GetStatus,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("id", getMockBlobberId(0))
+				values.Set("type", "blobber")
+				return values
+			}(),
+		},
+		{
+			name:     "storage_rest.storage_status.validator",
+			endpoint: ssc.GetStatus,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("id", getMockValidatorId(0))
+				values.Set("type", "validator")
+				return values
+			}(),
+		},
+		{
 			name:     "storage_rest.getReadPoolStat",
 			endpoint: ssc.getReadPoolStatHandler,
 			params: func() url.Values {

@@ -2,7 +2,10 @@ package provider
 
 import (
 	"0chain.net/core/common"
+	"fmt"
 )
+
+//go:generate msgp -v -io=false -tests=false
 
 const healthCheckTime = 60 * 60
 
@@ -16,10 +19,15 @@ const (
 	NonExistent
 )
 
-var statusString = []string{"active", "inactive", "shut_down", "killed"}
+var statusString = []string{"active", "inactive", "shut_down", "killed", "non_existent"}
 
 func (p Status) String() string {
 	return statusString[p]
+}
+
+type StatusInfo struct {
+	Status Status `json:"status"`
+	Reason string `json:"reason"`
 }
 
 type ProviderI interface {
@@ -35,17 +43,17 @@ type Provider struct {
 	IsKilled        bool             `json:"is_killed"`
 }
 
-func (p *Provider) Status(now common.Timestamp, healthCheckPeriod common.Timestamp) Status {
+func (p *Provider) Status(now, healthCheckPeriod common.Timestamp) (Status, string) {
 	if p.IsKilled {
-		return Killed
+		return Killed, Killed.String()
 	}
 	if p.IsShutDown {
-		return ShutDown
+		return ShutDown, ShutDown.String()
 	}
 	if p.LastHealthCheck <= (now - healthCheckPeriod) {
-		return Inactive
+		return Inactive, fmt.Sprintf("\tfailed health check, last check %v", p.LastHealthCheck)
 	}
-	return Active
+	return Active, ""
 }
 
 func (p *Provider) HealthCheck(now common.Timestamp) {

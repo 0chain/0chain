@@ -85,6 +85,25 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 	}, nil
 }
 
+func validatorTableToValidatorNode(val event.Validator) ValidationNode {
+	return ValidationNode{
+		Provider: provider.Provider{
+			LastHealthCheck: common.Timestamp(val.LastHealthCheck),
+			IsShutDown:      val.IsShutDown,
+			IsKilled:        val.IsKilled,
+		},
+		ID:      val.ValidatorID,
+		BaseURL: val.BaseUrl,
+		StakePoolSettings: stakepool.StakePoolSettings{
+			DelegateWallet:  val.DelegateWallet,
+			MinStake:        val.MinStake,
+			MaxStake:        val.MaxStake,
+			MaxNumDelegates: val.NumDelegates,
+			ServiceCharge:   val.ServiceCharge,
+		},
+	}
+}
+
 // Deprecated
 
 // GetBlobberHandler returns Blobber object from its individual stored value.
@@ -146,25 +165,23 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	return sn, err
 }
 
-func (ssc *StorageSmartContract) GetBlobbersStatus(
+func (ssc *StorageSmartContract) GetStatus(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
-	var blobberID = params.Get("blobber_id")
-	if blobberID == "" {
+	var providerID = params.Get("id")
+	if providerID == "" {
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
+	}
+	var providerType = params.Get("type")
+	if len(providerType) == 0 {
+		providerType = spenum.Blobber.String()
 	}
 
 	if balances.GetEventDB() == nil {
 		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
 	}
-
-	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
-	if err != nil {
-		return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
-	}
-	sn, err := blobberTableToStorageNode(*blobber)
 
 	var conf *Config
 	conf, err = ssc.getConfig(balances, false)
@@ -172,11 +189,30 @@ func (ssc *StorageSmartContract) GetBlobbersStatus(
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
-	status := sn.Status(
-		common.Timestamp(time.Now().Second()), common.Timestamp(conf.HealthCheckPeriod.Seconds()),
-	)
+	var status provider.StatusInfo
+	switch providerType {
+	case spenum.Blobber.String():
+		blobber, err := balances.GetEventDB().GetBlobber(providerID)
+		if err != nil {
+			return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
+		}
+		sn, err := blobberTableToStorageNode(*blobber)
+		if err != nil {
+			return nil, err
+		}
+		status.Status, status.Reason = sn.Status(common.Timestamp(time.Now().Second()), conf)
+	case spenum.Validator.String():
+		validator, err := balances.GetEventDB().GetValidatorByValidatorID(providerID)
+		if err != nil {
+			return nil, err
+		}
+		val := validatorTableToValidatorNode(validator)
+		status.Status, status.Reason = val.Status(common.Timestamp(time.Now().Second()), conf)
+	default:
+		return nil, common.NewErrBadRequest("invalid provider type %v", providerType)
+	}
 
-	return status.String(), nil
+	return status, nil
 }
 
 // GetBlobberCountHandler returns Blobber count from its individual stored value.

@@ -271,6 +271,10 @@ type ValidationNode struct {
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
+func (sn *ValidationNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {
+	return sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
+}
+
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey + "validator:" + sn.ID)
 }
@@ -443,6 +447,35 @@ type StorageNode struct {
 	//ChallengeLocation *partitions.PartitionLocation `json:"challenge_location"`
 	RewardPartition RewardPartitionLocation `json:"reward_partition"`
 	Information     Info                    `json:"info"`
+}
+
+func (sn *StorageNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {
+	status, reason := sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
+	if status == provider.Killed || status == provider.ShutDown {
+		return status, reason
+	}
+	if sn.Terms.WritePrice > conf.MaxWritePrice {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\twrite price %v, max write prive %v",
+			sn.Terms.WritePrice, conf.MaxWritePrice)
+	}
+	if sn.Terms.ReadPrice > conf.MaxReadPrice {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\tread price %v, max read prive %v",
+			sn.Terms.ReadPrice, conf.MaxReadPrice)
+	}
+	if sn.Terms.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\tchallenge completion time %v, max challenge completion time %v",
+			sn.Terms.ChallengeCompletionTime, conf.MaxChallengeCompletionTime)
+	}
+	if sn.Capacity < conf.MinBlobberCapacity {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\tcapacity %v, lsess than minimum blobber capcaity %v",
+			sn.Capacity, conf.MinBlobberCapacity)
+	}
+
+	return status, reason
 }
 
 // validate the blobber configurations
@@ -792,9 +825,8 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 
-	if blobber.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds())) != provider.Active {
-		return fmt.Errorf("blobber status %s is not active",
-			blobber.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds())).String())
+	if status, _ := blobber.Status(now, conf); status != provider.Active {
+		return fmt.Errorf("blobber status %s is not active", status.String())
 	}
 
 	// filter by max offer duration
