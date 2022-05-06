@@ -104,6 +104,10 @@ jobs:
         cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
         cd ../blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
     
+    - name: Init setup for blobbers
+      run: | 
+        cd blobber && ./docker.local/bin/blobber.init.setup.sh
+
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
