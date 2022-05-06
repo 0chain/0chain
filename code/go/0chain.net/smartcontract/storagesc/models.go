@@ -466,6 +466,10 @@ func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey + sn.ID)
 }
 
+func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + sn.BaseURL)
+}
+
 func (sn *StorageNode) Encode() []byte {
 	buff, _ := json.Marshal(sn)
 	return buff

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/datastore"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,6 +40,17 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 	return
 }
 
+func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
+	balances cstate.StateContextI) bool {
+	blobber := new(StorageNode)
+	blobber.BaseURL = blobberURL
+	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
 	balances cstate.StateContextI) (blobberChallLocation *BlobberChallengePartitionLocation, err error) {
 
@@ -75,6 +87,23 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
+	}
+
+	if savedBlobber.BaseURL != blobber.BaseURL {
+		//if updating url
+		if sc.hasBlobberUrl(blobber.BaseURL, balances) {
+			return fmt.Errorf("invalid blobber url update, already used")
+		}
+		// save url
+		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+		if err != nil {
+			return fmt.Errorf("saving blobber url: " + err.Error())
+		}
+		// remove old url
+		_, err = balances.DeleteTrieNode(savedBlobber.GetUrlKey(sc.ID))
+		if err != nil {
+			return fmt.Errorf("deleting blobber old url: " + err.Error())
+		}
 	}
 
 	blobber.LastHealthCheck = t.CreationDate
@@ -185,6 +214,13 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
+	}
+
+	// save url
+	_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+	if err != nil {
+		return "", common.NewError("add_or_update_blobber_failed",
+			"saving blobber url: "+err.Error())
 	}
 
 	return string(blobber.Encode()), nil
@@ -831,10 +867,13 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
-	// check for duplicates
 	_, err = sc.getBlobber(blobber.ID, balances)
 	if err == nil {
 		return sc.updateBlobber(t, conf, blobber, balances)
+	}
+
+	if sc.hasBlobberUrl(blobber.BaseURL, balances) {
+		return fmt.Errorf("invalid blobber url, already used")
 	}
 
 	//return fmt.Errorf("only owner can update blobber")

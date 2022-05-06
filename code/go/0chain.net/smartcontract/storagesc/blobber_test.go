@@ -27,7 +27,9 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 
 	var (
 		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob2  = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
 		b, err = ssc.getBlobber(blob.id, balances)
+		b2, _  = ssc.getBlobber(blob2.id, balances)
 	)
 	require.NoError(t, err)
 
@@ -60,6 +62,14 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ab.BaseURL, NEW_BASE_URL)
 	require.Equal(t, ab.Capacity, b.Capacity)
+	// can update URL
+
+	b2.BaseURL = NEW_BASE_URL
+	b.Capacity = b2.Capacity * 2
+	tp += 100
+	_, err = updateBlobber(t, b2, 0, tp, ssc, balances)
+	require.Error(t, err)
+
 }
 
 func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
