@@ -172,8 +172,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// set transaction information
-	blobber.ID = util.Hash(blobber.BaseURL)
-	blobber.ClientId = t.ClientID
+	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
 
 	// insert, update or remove blobber
@@ -833,14 +832,12 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check for duplicates
-	b, err := sc.getBlobber(blobber.ID, balances)
+	_, err = sc.getBlobber(blobber.ID, balances)
 	if err == nil {
-		//only owner can update blobber
-		if b.ClientId != t.ClientID {
-			return fmt.Errorf("only owner can update blobber")
-		}
 		return sc.updateBlobber(t, conf, blobber, balances)
 	}
+
+	//return fmt.Errorf("only owner can update blobber")
 
 	// check params
 	if err = blobber.validate(conf); err != nil {

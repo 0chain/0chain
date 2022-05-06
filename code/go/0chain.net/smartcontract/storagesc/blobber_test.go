@@ -48,7 +48,7 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ab)
 
-	// can't update URL
+	// can update URL
 	const NEW_BASE_URL = "https://new-base-url.com"
 	b.BaseURL = NEW_BASE_URL
 	b.Capacity = b.Capacity * 2
@@ -58,8 +58,8 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 
 	ab, err = ssc.getBlobber(b.ID, balances)
 	require.NoError(t, err)
-	require.NotEqual(t, ab.BaseURL, NEW_BASE_URL)
-	require.NotEqual(t, ab.Capacity, b.Capacity)
+	require.Equal(t, ab.BaseURL, NEW_BASE_URL)
+	require.Equal(t, ab.Capacity, b.Capacity)
 }
 
 func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {

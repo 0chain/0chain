@@ -429,7 +429,6 @@ type StorageNode struct {
 	BytesWritten            int64                  `json:"bytes_written"` // in bytes
 	DataRead                float64                `json:"data_read"`     // in GB
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
-	ClientId                string                 `json:"client_id"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB

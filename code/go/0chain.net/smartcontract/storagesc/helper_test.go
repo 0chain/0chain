@@ -43,10 +43,8 @@ func randString(n int) string {
 }
 
 type Client struct {
-	id     string // identifier
-	url    string
-	pk     string // public key
-	op     string
+	id     string                     // identifier
+	pk     string                     // public key
 	scheme encryption.SignatureScheme // pk/sk
 
 	// blobber
@@ -68,9 +66,7 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	client.scheme = scheme
 
 	client.pk = scheme.GetPublicKey()
-	client.op = encryption.Hash(client.pk)
-	client.url = getBlobberURL(client.op)
-	client.id = util.Hash(client.url)
+	client.id = encryption.Hash(client.pk)
 
 	balances.(*testBalances).balances[client.id] = balance
 	return
@@ -91,8 +87,7 @@ func getValidatorURL(id string) string {
 func (c *Client) addBlobRequest(t testing.TB) []byte {
 	var sn StorageNode
 	sn.ID = c.id
-	sn.BaseURL = c.url
-	sn.ClientId = c.op
+	sn.BaseURL = getBlobberURL(c.id)
 	sn.Terms = c.terms
 	sn.Capacity = c.cap
 	sn.Used = 0
@@ -193,9 +188,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob.scheme = scheme
 
 	blob.pk = scheme.GetPublicKey()
-	blob.op = encryption.Hash(blob.pk)
-	blob.url = getBlobberURL(blob.op)
-	blob.id = util.Hash(blob.url)
+	blob.id = encryption.Hash(blob.pk)
 
 	balances.(*testBalances).balances[blob.id] = balance
 
