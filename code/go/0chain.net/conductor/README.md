@@ -181,7 +181,7 @@ wait_rounds: 50
 (cd 0chain && ./docker.local/bin/start.conductor.sh view-change-3)
 ```
 
-## Running blobber tests
+## <a name="blobber"></a>Running blobber tests
 
 Blobber tests require more setup.
 
@@ -211,14 +211,14 @@ zwalletcli/
 (cd zwalletcli && make install)
 ```
 
-8. Patch 0dns
+8. Patch 0dns for the latest 0chain network configuration
 
 ```sh
 (cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
 (cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
 ```
 
-9. Patch blobbers
+9. Patch blobbers for the latest blobber tests
 
 ```sh
 (cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
@@ -231,7 +231,12 @@ zwalletcli/
 (cd blobber && ./docker.local/bin/blobber.init.setup.sh)
 ```
 
-11. Add `~/.zcn/config.yaml` as follows
+11. Build blobber base
+```sh
+(cd blobber && ./docker.local/bin/build.base.sh)
+```
+
+12. Add `~/.zcn/config.yaml` as follows
 
 ```yaml
 block_worker: http://127.0.0.1:9091
@@ -243,7 +248,7 @@ max_txn_query: 5
 query_sleep_time: 5
 ```
 
-12. Apply if on Ubuntu 18.04
+13. Apply if on Ubuntu 18.04
 
 https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
@@ -252,11 +257,11 @@ package required by docker-compose and used by docker. A docker process
 (a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
-13. Run blobber tests
+14. Run blobber tests
 
 ```sh
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2) (edited)
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2)
 ```
 
 ## Updating conductor tests
