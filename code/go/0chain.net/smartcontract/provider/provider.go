@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//go:generate msgp -v -io=false -tests=false
+//go:generate msgp -io=false -tests=false -v
 
 const healthCheckTime = 60 * 60
 

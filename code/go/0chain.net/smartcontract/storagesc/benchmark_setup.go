@@ -762,7 +762,7 @@ func getMockBlobberId(index int) string {
 }
 
 func getMockValidatorId(index int) string {
-	return encryption.Hash("mockValidator_" + strconv.Itoa(index))
+	return getMockBlobberId(index)
 }
 
 func getMockAllocationId(allocation int) string {
