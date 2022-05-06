@@ -157,7 +157,7 @@ func CreateAuthorizerParamPayload(delegateWalletID string) []byte {
 
 func CreateAuthorizerStakingPoolParamPayload(delegateWalletID string) []byte {
 	p := CreateAuthorizerStakingPoolParam(delegateWalletID)
-	encode, _ := p.Encode()
+	encode := p.Encode()
 	return encode
 }
 
