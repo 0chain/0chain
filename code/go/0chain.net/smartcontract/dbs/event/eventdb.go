@@ -49,6 +49,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
+		&Reward{},
+		&Authorizer{},
 	); err != nil {
 		return err
 	}

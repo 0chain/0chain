@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z BlobberChallengeAllocationNode) MarshalMsg(b []byte) (o []byte, err error) {
+func (z BlobberAllocationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "ID"
@@ -17,7 +17,7 @@ func (z BlobberChallengeAllocationNode) MarshalMsg(b []byte) (o []byte, err erro
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *BlobberChallengeAllocationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *BlobberAllocationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -53,7 +53,7 @@ func (z *BlobberChallengeAllocationNode) UnmarshalMsg(bts []byte) (o []byte, err
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z BlobberChallengeAllocationNode) Msgsize() (s int) {
+func (z BlobberAllocationNode) Msgsize() (s int) {
 	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID)
 	return
 }

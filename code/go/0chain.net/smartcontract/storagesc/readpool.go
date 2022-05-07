@@ -285,7 +285,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	// lock for allocation -> blobber (particular blobber locking)
 	if lr.BlobberID != "" {
-		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
+		if _, ok := alloc.BlobberAllocsMap[lr.BlobberID]; !ok {
 			return "", common.NewError("read_pool_lock_failed",
 				fmt.Sprintf("no such blobber %s in allocation %s",
 					lr.BlobberID, lr.AllocationID))
@@ -298,11 +298,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		// divide depending read price range for all blobbers of the
 		// allocation
 		var total float64 // total read price
-		for _, b := range alloc.BlobberDetails {
+		for _, b := range alloc.BlobberAllocs {
 			total += float64(b.Terms.ReadPrice)
 		}
 		// calculate (divide)
-		for _, b := range alloc.BlobberDetails {
+		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.ReadPrice) / total
 			bps.add(&blobberPool{
 				Balance:   state.Balance(float64(t.Value) * ratio),

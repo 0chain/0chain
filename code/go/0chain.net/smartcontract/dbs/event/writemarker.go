@@ -64,13 +64,22 @@ func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]Wri
 	}).Scan(&wm).Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID}).
 		Find(&wms)
-	return &wms, result.Error
+	return wms, result.Error
+}
+
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string) ([]WriteMarker, error) {
+	var wms []WriteMarker
+	result := edb.Store.Get().
+		Model(&WriteMarker{}).
+		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).
+		Find(&wms)
+	return wms, result.Error
 }
 
 func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {
