@@ -195,7 +195,7 @@ func Test_flow_reward(t *testing.T) {
 
 	var b1 *Client
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[0].BlobberID {
+		if b.id == alloc.BlobberAllocs[0].BlobberID {
 			b1 = b
 			break
 		}
@@ -236,7 +236,7 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		var readPoolFund = int64(len(alloc.BlobberDetails)) * 2 * 1e10
+		var readPoolFund = int64(len(alloc.BlobberAllocs)) * 2 * 1e10
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
@@ -315,7 +315,7 @@ func Test_flow_reward(t *testing.T) {
 		// read pool lock
 		tp += 100
 		tx = newTransaction(reader.id, ssc.ID,
-			int64(len(alloc.BlobberDetails))*2*x10, tp)
+			int64(len(alloc.BlobberAllocs))*2*x10, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
 			Duration:     20 * time.Minute,
@@ -352,7 +352,7 @@ func Test_flow_reward(t *testing.T) {
 
 	var b2 *Client
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[1].BlobberID {
+		if b.id == alloc.BlobberAllocs[1].BlobberID {
 			b2 = b
 			break
 		}
@@ -489,7 +489,7 @@ func Test_flow_reward(t *testing.T) {
 
 	var b3 *Client
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[2].BlobberID {
+		if b.id == alloc.BlobberAllocs[2].BlobberID {
 			b3 = b
 			break
 		}
@@ -654,7 +654,7 @@ func Test_flow_penalty(t *testing.T) {
 
 	var b1 *Client
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[0].BlobberID {
+		if b.id == alloc.BlobberAllocs[0].BlobberID {
 			b1 = b
 			break
 		}
@@ -672,7 +672,7 @@ func Test_flow_penalty(t *testing.T) {
 
 	var b4 *Client
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[3].BlobberID {
+		if b.id == alloc.BlobberAllocs[3].BlobberID {
 			b4 = b
 			break
 		}
@@ -831,7 +831,7 @@ func Test_flow_penalty(t *testing.T) {
 }
 
 func isAllocBlobber(id string, alloc *StorageAllocation) bool {
-	for _, d := range alloc.BlobberDetails {
+	for _, d := range alloc.BlobberAllocs {
 		if d.BlobberID == id {
 			return true
 		}
