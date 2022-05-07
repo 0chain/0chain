@@ -463,19 +463,17 @@ func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Con
 	if err != nil {
 		return nil, common.NewErrInternal("can't get allocation list", err.Error())
 	}
-	result := make([]*StorageAllocation, 0)
+	result := make([]*StorageAllocationBlobbers, len(allocations.List))
 	for _, allocationID := range allocations.List {
-		allocationObj := &StorageAllocation{}
+		allocationObj := &StorageAllocationBlobbers{}
 		allocationObj.ID = allocationID
 
 		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 		switch err {
 		case nil:
-			if balances.GetEventDB() != nil {
-				err = allocationObj.getBlobbers(balances)
-				if err != nil {
-					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-				}
+			err = allocationObj.getBlobbers(ssc, balances)
+			if err != nil {
+				return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 			}
 			result = append(result, allocationObj)
 		case util.ErrValueNotPresent:
@@ -492,6 +490,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	clientID := params.Get("client")
+
 	if balances.GetEventDB() == nil {
 		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
 	}
@@ -590,7 +589,7 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 	logging.Logger.Info("AllocationStatsHandler",
 		zap.Bool("is event db present", balances.GetEventDB() != nil))
 	allocationID := params.Get("allocation")
-	allocationObj := &StorageAllocation{}
+	allocationObj := &StorageAllocationBlobbers{}
 	allocationObj.ID = allocationID
 
 	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
@@ -598,11 +597,9 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
 
-	if balances.GetEventDB() != nil {
-		err = allocationObj.getBlobbers(balances)
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-		}
+	err = allocationObj.getBlobbers(ssc, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 	}
 
 	return allocationObj, nil
@@ -614,7 +611,6 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	if balances.GetEventDB() == nil {
 		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
 	}
-
 	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
@@ -764,13 +760,23 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 		return nil, common.NewErrNoResource("db not initialized")
 	}
 
-	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
-	if err != nil {
-		return nil, common.NewErrInternal("can't get write markers", err.Error())
+	filename := params.Get("filename")
+
+	if filename == "" {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers", err.Error())
+		}
+
+		return writeMarkers, nil
+	} else {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationFile(allocationID, filename)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers for file", err.Error())
+		}
+
+		return writeMarkers, nil
 	}
-
-	return writeMarkers, nil
-
 }
 
 func (ssc *StorageSmartContract) GetWrittenAmountHandler(
@@ -865,6 +871,12 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
+type BlobberOpenChallengesResponse struct {
+	BlobberID                string            `json:"blobber_id"`
+	ChallengeIDs             []string          `json:"challenge_ids"`
+	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"` // TODO: fix typo with Blobber and gosdk
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
@@ -874,26 +886,38 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
 	}
 
+	rsp := &BlobberOpenChallengesResponse{
+		BlobberID:    blobberID,
+		ChallengeIDs: []string{},
+	}
+
 	// return "200" with empty list, if no challenges are found
-	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	blobberChallenges := &BlobberChallenges{
+		BlobberID: blobberID,
+	}
+	err := blobberChallenges.load(balances, ssc.ID)
 	switch err {
-	case nil, util.ErrValueNotPresent:
-		return blobberChallengeObj, nil
+	case util.ErrValueNotPresent:
+		return rsp, nil
+	case nil:
+		lfb := balances.GetLatestFinalizedBlock()
+		if lfb == nil {
+			return nil, common.NewErrInternal("chain is not ready, could not get latest finalized block")
+		}
+
+		cct := getMaxChallengeCompletionTime()
+		ocs := blobberChallenges.GetOpenChallengesNoExpire(lfb.CreationDate, cct)
+		if len(ocs) > 0 {
+			rsp.ChallengeIDs = make([]string, len(ocs))
+			for i, oc := range ocs {
+				rsp.ChallengeIDs[i] = oc.ID
+			}
+		}
+
+		return rsp, nil
 	default:
 		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
 	}
-
-	// for k, v := range blobberChallengeObj.ChallengeMap {
-	// 	if v.Response != nil {
-	// 		delete(blobberChallengeObj.ChallengeMap, k)
-	// 	}
-	// }
-
-	// return populate or empty list of challenges
-	// don't return error, if no challenges (expected by blobbers)
-	//return &blobberChallengeObj, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
@@ -903,17 +927,16 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 		}
 	}()
 	blobberID := params.Get("blobber")
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = blobberID
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
+	blobberChallenges := &BlobberChallenges{}
+	blobberChallenges.BlobberID = blobberID
 
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
+	err := balances.GetTrieNode(blobberChallenges.GetKey(ssc.ID), blobberChallenges)
 	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
 	}
 
 	challengeID := params.Get("challenge")
-	if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
+	if _, ok := blobberChallenges.ChallengesMap[challengeID]; !ok {
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 
@@ -1046,4 +1069,31 @@ func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.
 
 func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate.StateContextI) (int64, error) {
 	return 0, fmt.Errorf("storageSmartContract is nil")
+}
+
+func (ssc *StorageSmartContract) GetCollectedRewardHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return 0, common.NewErrNoResource("db not initialized")
+	}
+
+	var (
+		startBlock, _ = strconv.Atoi(params.Get("start_block"))
+		endBlock, _   = strconv.Atoi(params.Get("end_block"))
+		clientID      = params.Get("client_id")
+	)
+
+	query := event.RewardQuery{
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		ClientID:   clientID,
+	}
+
+	collectedReward, err := balances.GetEventDB().GetRewardClaimedTotal(query)
+	if err != nil {
+		return 0, common.NewErrInternal("can't get rewards claimed", err.Error())
+	}
+
+	return map[string]int64{
+		"collected_reward": collectedReward,
+	}, nil
 }

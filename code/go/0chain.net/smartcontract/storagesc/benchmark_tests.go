@@ -752,9 +752,9 @@ func BenchmarkTests(
 						return "", nil
 					}
 				} else {
-					return "Challenges disabled in the config", nil
+					return "OpenChallenges disabled in the config", nil
 				}
-				return "Challenges generated", nil
+				return "OpenChallenges generated", nil
 			},
 			txn: &transaction.Transaction{
 				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),

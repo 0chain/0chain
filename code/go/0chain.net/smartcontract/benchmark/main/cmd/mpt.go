@@ -76,6 +76,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
+		nil,
 		data.EventDb,
 	)
 }
@@ -186,6 +187,7 @@ func setUpMpt(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
 		nil,
+		nil,
 	)
 
 	log.Println("created balances\t", time.Since(timer))
@@ -223,7 +225,6 @@ func setUpMpt(
 
 	var (
 		blobbers         []*storagesc.StorageNode
-		validators       []*storagesc.ValidationNode
 		miners, sharders []string
 	)
 
@@ -233,14 +234,6 @@ func setUpMpt(
 		timer = time.Now()
 		_ = storagesc.SetMockConfig(balances)
 		log.Println("created storage config\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		validators = storagesc.AddMockValidators(publicKeys, eventDb, balances)
-		log.Println("added validators\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
@@ -324,7 +317,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockChallenges(blobbers, validators, balances)
+		storagesc.AddMockChallenges(blobbers, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -434,7 +427,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		zcnsc.Setup(clients, publicKeys, balances)
+		zcnsc.Setup(eventDb, clients, publicKeys, balances)
 		log.Println("added zcnsc\t", time.Since(timer))
 	}()
 
