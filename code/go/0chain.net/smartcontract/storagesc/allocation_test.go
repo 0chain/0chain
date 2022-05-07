@@ -1555,7 +1555,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			},
 		}
 
-	assert.Equal(t, len(details), len(aresp.BlobberAllocs))
+		assert.Equal(t, len(details), len(aresp.BlobberAllocs))
 
 		// check out pools created and changed:
 		//  - write pool, should be created and filled with value of transaction
@@ -2372,11 +2372,3 @@ func Test_finalize_allocation(t *testing.T) {
 //		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
 //		require.Error(t, err) // expected error
 //	})
-
-		nar.Expiration += common.Timestamp(tp)
-		nar.Blobbers = pbl
-		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
-		require.Error(t, err) // expected error
-	})
-
-}
