@@ -343,7 +343,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(t.CreationDate), sa, balances, blobbers)
-	var bi []string
+	bi := make([]string, 0, len(blobberNodes))
 	for _, b := range blobberNodes {
 		bi = append(bi, b.ID)
 	}
@@ -397,8 +397,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances chainstate.StateContextI) ([]*blobberWithPool, error) {
 	blobbers := make([]*blobberWithPool, 0, len(inputBlobbers.Nodes))
-	pools := make(chan *blobberWithPool)
-	errs := make(chan error)
+	pools := make(chan *blobberWithPool, len(inputBlobbers.Nodes))
+	errs := make(chan error, len(inputBlobbers.Nodes))
 
 	for _, b := range inputBlobbers.Nodes {
 		go func(blob *StorageNode) {
