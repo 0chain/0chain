@@ -188,6 +188,7 @@ func (c *Chain) NewStateContext(
 		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
+		c.GetLatestFinalizedBlock,
 		eventDb,
 	)
 }

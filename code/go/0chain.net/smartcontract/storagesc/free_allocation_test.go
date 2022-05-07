@@ -723,7 +723,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return("", nil).Once()
-			sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
+			sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 				BlobberID:    blobber.ID,
 				AllocationID: p.allocationId,
 			})
