@@ -277,14 +277,6 @@ func getBalance(clientID string) state.Balance {
 
 	return balance
 }
-func getNonce(clientID string) int64 {
-	balance, err := httpclientutil.MakeClientNonceRequest(clientID, members.Sharders, confirmationQuorum)
-	if err != nil {
-		Logger.Fatal("Couldn't get client balance", zap.Error(err))
-	}
-
-	return balance
-}
 
 func clientIDForKey(key encryption.SignatureScheme) string {
 	publicKeyBytes, err := hex.DecodeString(key.GetPublicKey())
