@@ -39,8 +39,6 @@ const (
 	MinBlobberCapacity
 
 	ReadPoolMinLock
-	ReadPoolMinLockPeriod
-	ReadPoolMaxLockPeriod
 
 	WritePoolMinLock
 	WritePoolMinLockPeriod
@@ -131,8 +129,6 @@ var (
 		"min_blobber_capacity",
 
 		"readpool.min_lock",
-		"readpool.min_lock_period",
-		"readpool.max_lock_period",
 
 		"writepool.min_lock",
 		"writepool.min_lock_period",
@@ -227,8 +223,6 @@ var (
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
 		"readpool.min_lock":        {ReadPoolMinLock, smartcontract.Int64},
-		"readpool.min_lock_period": {ReadPoolMinLockPeriod, smartcontract.Duration},
-		"readpool.max_lock_period": {ReadPoolMaxLockPeriod, smartcontract.Duration},
 
 		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
@@ -465,16 +459,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
 		conf.MinOfferDuration = change
-	case ReadPoolMinLockPeriod:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
-		}
-		conf.ReadPool.MinLockPeriod = change
-	case ReadPoolMaxLockPeriod:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
-		}
-		conf.ReadPool.MaxLockPeriod = change
 	case WritePoolMinLockPeriod:
 		if conf.WritePool == nil {
 			conf.WritePool = &writePoolConfig{}
@@ -621,10 +605,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
 		return conf.ReadPool.MinLock
-	case ReadPoolMinLockPeriod:
-		return conf.ReadPool.MinLockPeriod
-	case ReadPoolMaxLockPeriod:
-		return conf.ReadPool.MaxLockPeriod
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
 	case WritePoolMinLockPeriod:
