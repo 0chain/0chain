@@ -855,9 +855,6 @@ func (sc *StorageSmartContract) extendAllocation(
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
 					err)
 			}
-			if err := emitUpdateBlobber(b, balances); err != nil {
-				return fmt.Errorf("emitting blobber %s, error:%v", b.ID, err)
-			}
 
 		}
 	}
