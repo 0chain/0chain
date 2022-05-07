@@ -970,3 +970,30 @@ func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate
 
 	return 0, fmt.Errorf("storageSmartContract is nil")
 }
+
+func (ssc *StorageSmartContract) GetCollectedRewardHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return 0, common.NewErrNoResource("db not initialized")
+	}
+
+	var (
+		startBlock, _ = strconv.Atoi(params.Get("start_block"))
+		endBlock, _   = strconv.Atoi(params.Get("end_block"))
+		clientID      = params.Get("client_id")
+	)
+
+	query := event.RewardQuery{
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		ClientID:   clientID,
+	}
+
+	collectedReward, err := balances.GetEventDB().GetRewardClaimedTotal(query)
+	if err != nil {
+		return 0, common.NewErrInternal("can't get rewards claimed", err.Error())
+	}
+
+	return map[string]int64{
+		"collected_reward": collectedReward,
+	}, nil
+}
