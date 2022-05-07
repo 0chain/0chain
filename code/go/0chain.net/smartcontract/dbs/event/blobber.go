@@ -9,9 +9,9 @@ import (
 )
 
 type Blobber struct {
-	gorm.Model `json:"gorm_._model"`
-	BlobberID  string `json:"id" gorm:"uniqueIndex" json:"blobber_id,omitempty"`
-	BaseURL    string `json:"base_url,omitempty"`
+	gorm.Model
+	BlobberID string `json:"id" gorm:"uniqueIndex"`
+	BaseURL   string `json:"url"`
 
 	//provider
 	LastHealthCheck int64 `json:"last_health_check"`
