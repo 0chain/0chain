@@ -470,18 +470,6 @@ func TestChangeBlobbers(t *testing.T) {
 				errMsg: "cannot find blobber blobber_non_existent in allocation",
 			}},
 		{
-			name: "add_remove_valid_blobber",
-			args: args{
-				numBlobbers:          6,
-				blobbersInAllocation: 5,
-				addBlobberID:         "blobber_5",
-				removeBlobberID:      "blobber_0",
-				dataShards:           5,
-			},
-			want: want{
-				err: false,
-			}},
-		{
 			name: "add_remove_valid_blobber_with_1_challenge_allocation",
 			args: args{
 				numBlobbers:                   6,
