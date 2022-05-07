@@ -49,19 +49,6 @@ func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	return true
 }
 
-func (sc *StorageSmartContract) getBlobberChallengePartitionLocation(blobberID string,
-	balances cstate.StateContextI) (blobberChallLocation *BlobberChallengePartitionLocation, err error) {
-
-	blobberChallLocation = new(BlobberChallengePartitionLocation)
-	blobberChallLocation.ID = blobberID
-	err = balances.GetTrieNode(blobberChallLocation.GetKey(sc.ID), blobberChallLocation)
-	if err != nil {
-		return nil, err
-	}
-
-	return
-}
-
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
