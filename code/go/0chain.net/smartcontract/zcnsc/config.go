@@ -107,8 +107,8 @@ func section(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func loadSettings() (conf *GlobalNode) {
-	conf = new(GlobalNode)
+func loadGlobalNode() (conf *ZCNSConfig) {
+	conf = new(ZCNSConfig)
 	conf.MinMintAmount = state.Balance(cfg.GetInt(section(MinMintAmount)))
 	conf.MinBurnAmount = state.Balance(cfg.GetInt64(section(MinBurnAmount)))
 	conf.MinStakeAmount = state.Balance(cfg.GetInt64(section(MinStakeAmount)))

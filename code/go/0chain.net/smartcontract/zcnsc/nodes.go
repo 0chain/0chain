@@ -23,8 +23,7 @@ import (
 
 // ------------- GlobalNode ------------------------
 
-type GlobalNode struct {
-	ID                 string         `json:"id"`
+type ZCNSConfig struct {
 	MinMintAmount      state.Balance  `json:"min_mint_amount"`
 	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
 	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
@@ -36,6 +35,11 @@ type GlobalNode struct {
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
 	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
+}
+
+type GlobalNode struct {
+	ID          string `json:"id"`
+	*ZCNSConfig `json:"faucet_config"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
