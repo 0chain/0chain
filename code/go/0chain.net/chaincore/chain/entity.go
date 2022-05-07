@@ -558,7 +558,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 		}
 	}
 
-	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil)
+	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(state)
 
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
