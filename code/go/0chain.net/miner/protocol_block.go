@@ -138,12 +138,6 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block, bState util.MerklePa
 	return brTxn
 }
 
-func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
-	ctxn := txn.Clone()
-	ctxn.OutputHash = ""
-	return ctxn
-}
-
 func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) error {
 	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return ErrNotTimeTolerant
@@ -651,11 +645,11 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			list := tii.futureTxns[txn.ClientID]
 			list = append(list, txn)
 			sort.SliceStable(list, func(i, j int) bool {
-				if list[i].Nonce == list[i].Nonce {
+				if list[i].Nonce == list[j].Nonce {
 					//if the same nonce order by fee
-					return list[i].Fee > list[i].Fee
+					return list[i].Fee > list[j].Fee
 				}
-				return list[i].Nonce < list[i].Nonce
+				return list[i].Nonce < list[j].Nonce
 			})
 			tii.futureTxns[txn.ClientID] = list
 			return false
@@ -886,7 +880,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
+		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round),
+			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
 				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
