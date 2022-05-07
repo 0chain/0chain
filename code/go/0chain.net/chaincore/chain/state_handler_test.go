@@ -1051,13 +1051,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		{
 			name: "Storagesc_/allocation_min_lock_Invalid_Config_500",
 			chain: func() *chain.Chain {
-				sn := storagesc.SortedBlobbers{}
-				blob, err := sn.MarshalMsg(nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				_ = util.SecureSerializableValue{Buffer: blob}
-
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 
@@ -1076,7 +1069,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 						Expiration                 common.Timestamp     `json:"expiration_date"`
 						Owner                      string               `json:"owner_id"`
 						OwnerPublicKey             string               `json:"owner_public_key"`
-						PreferredBlobbers          []string             `json:"preferred_blobbers"`
+						PreferredBlobbers          []string             `json:"blobbers"`
 						ReadPriceRange             storagesc.PriceRange `json:"read_price_range"`
 						WritePriceRange            storagesc.PriceRange `json:"write_price_range"`
 						MaxChallengeCompletionTime time.Duration        `json:"max_challenge_completion_time"`
@@ -1199,8 +1192,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		{
 			name: "Storagesc_/getblobbers_500",
 			chain: func() *chain.Chain {
-				_ = util.SecureSerializableValue{Buffer: []byte("}{")}
-
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 
