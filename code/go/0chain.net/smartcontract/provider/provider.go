@@ -7,8 +7,6 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
-const healthCheckTime = 60 * 60
-
 type Status int
 
 const (
