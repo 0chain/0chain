@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/state"
 	"encoding/json"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -44,7 +45,8 @@ func (ssc *StorageSmartContract) collectReward(
 			"can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.MintRewards(
+	var reward state.Balance
+	reward, err = sp.MintRewards(
 		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
 	if err != nil {
 		return "", common.NewErrorf("pay_reward_failed",
@@ -67,6 +69,12 @@ func (ssc *StorageSmartContract) collectReward(
 		},
 	})
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerId, string(data))
+
+	err = emitAddOrOverwriteReward(reward, providerId, prr, balances, txn)
+	if err != nil {
+		return "", common.NewErrorf("pay_reward_failed",
+			"emitting reward event: %v", err)
+	}
 
 	return "", nil
 }
