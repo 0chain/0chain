@@ -347,6 +347,7 @@ func TestCommitSettingChanges(t *testing.T) {
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"health_check_period":            "1h",
 
 					"free_allocation_settings.data_shards":                   "10",
 					"free_allocation_settings.parity_shards":                 "5",
@@ -496,6 +497,8 @@ func getConfField(conf Config, field string) interface{} {
 
 	case ExposeMpt:
 		return conf.ExposeMpt
+	case HealthCheckPeriod:
+		return conf.HealthCheckPeriod
 	default:
 		panic("unknown field: " + field)
 	}
