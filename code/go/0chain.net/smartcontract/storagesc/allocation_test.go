@@ -426,10 +426,11 @@ func TestChangeBlobbers(t *testing.T) {
 		if want.challengeEnabled {
 			bpLocation := &blobberPartitionsLocations{ID: arg.removeBlobberID}
 			err := bpLocation.load(balances, sc.ID)
+			require.NoError(t, err)
 			if want.blobberInChallenge < arg.blobberInChallenge {
-				require.Error(t, err)
+				require.Nil(t, bpLocation.ChallengeReadyPartitionLoc)
 			} else {
-				require.NoError(t, err)
+				require.NotNil(t, bpLocation.ChallengeReadyPartitionLoc)
 			}
 			for i := 0; i < arg.blobberInChallenge; i++ {
 				bcPart, err := partitionsChallengeReadyBlobbers(balances)

@@ -881,6 +881,10 @@ func removeAllocationFromBlobber(
 		return fmt.Errorf("could not remove allocation from blobber allocations partitions: %v", err)
 	}
 
+	if err := blobAllocsParts.Save(balances); err != nil {
+		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
+	}
+
 	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {
 		return fmt.Errorf("error getting size of challenge partition: %v", err)
