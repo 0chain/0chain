@@ -22,9 +22,6 @@ development:
     zcn: true
   txn_generation:
     wallets: 50
-    transactions: 70
-    pour_point: 100
-    pour_amount: 10000
     max_transactions: 0
     max_txn_fee: 1000
     min_txn_fee: 0
@@ -49,7 +46,6 @@ server_chain:
     max_block_size: 10
     max_block_cost: 10000 #equal to 100ms
     max_byte_size: 1638400
-    generators: 2
     min_generators: 2
     generators_percent: 0.2
     replicators: 0
