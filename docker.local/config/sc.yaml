@@ -219,7 +219,6 @@ smart_contracts:
       curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
-      generate_challenges: 9999 #exceeds limit, might be switched off
       add_validator: 100
       add_blobber: 100
       new_read_pool: 100

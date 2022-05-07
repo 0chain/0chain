@@ -353,7 +353,7 @@ func TestExtendAllocation(t *testing.T) {
 
 			if i < sa.DataShards+sa.ParityShards {
 				blobbers = append(blobbers, mockBlobber)
-				sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
+				sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 					BlobberID:     mockBlobber.ID,
 					MinLockDemand: zcnToBalance(mockMinLockDemmand),
 					Terms: Terms{
@@ -441,7 +441,7 @@ func TestExtendAllocation(t *testing.T) {
 			"InsertTrieNode", challengePoolKey(ssc.ID, sa.ID),
 			mock.MatchedBy(func(cp *challengePool) bool {
 				var size int64
-				for _, blobber := range sa.BlobberDetails {
+				for _, blobber := range sa.BlobberAllocs {
 					size += blobber.Stats.UsedSize
 				}
 				newFunds := sizeInGB(size) *
@@ -1164,7 +1164,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		},
 	}
 
-	assert.EqualValues(t, details, aresp.BlobberDetails)
+	assert.EqualValues(t, details, aresp.BlobberAllocs)
 
 	// check out pools created and changed:
 	//  - write pool, should be created and filled with value of transaction
@@ -1223,7 +1223,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	assert.Error(t, uar.validate(&conf, &alloc))
 
 	// 4. ok
-	alloc.BlobberDetails = []*BlobberAllocation{&BlobberAllocation{}}
+	alloc.BlobberAllocs = []*BlobberAllocation{&BlobberAllocation{}}
 	assert.NoError(t, uar.validate(&conf, &alloc))
 }
 
@@ -1484,7 +1484,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	assert.Equal(t, alloc.Expiration, cp.Expiration*3)
 
 	var tbs, mld int64
-	for _, d := range alloc.BlobberDetails {
+	for _, d := range alloc.BlobberAllocs {
 		tbs += d.Size
 		mld += int64(d.MinLockDemand)
 	}
@@ -1495,7 +1495,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		// expected min lock demand
 		emld int64
 	)
-	for _, d := range alloc.BlobberDetails {
+	for _, d := range alloc.BlobberAllocs {
 		emld += int64(
 			sizeInGB(d.Size) * d.Terms.MinLockDemand *
 				float64(d.Terms.WritePrice) *
@@ -1530,7 +1530,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
 
 	tbs, mld = 0, 0
-	for _, detail := range alloc.BlobberDetails {
+	for _, detail := range alloc.BlobberAllocs {
 		tbs += detail.Size
 		mld += int64(detail.MinLockDemand)
 	}
@@ -1566,7 +1566,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 	var b1 *Client
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[0].BlobberID {
+		if b.id == alloc.BlobberAllocs[0].BlobberID {
 			b1 = b
 			break
 		}
@@ -1701,7 +1701,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 	assert.True(t, alloc.Finalized)
 	assert.True(t,
-		alloc.BlobberDetails[0].MinLockDemand <= alloc.BlobberDetails[0].Spent,
+		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
 }
 
@@ -1780,7 +1780,7 @@ func Test_preferred_blobbers(t *testing.T) {
 	Preferred:
 		for _, url := range pbl {
 			var id = blobberIDByURL(url)
-			for _, d := range alloc.BlobberDetails {
+			for _, d := range alloc.BlobberAllocs {
 				if id == d.BlobberID {
 					continue Preferred // ok
 				}

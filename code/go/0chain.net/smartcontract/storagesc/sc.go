@@ -306,20 +306,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolUnlock(t, input, balances)
 	case "collect_reward":
 		resp, err = sc.collectReward(t, input, balances)
-
-	case "generate_challenges":
-		challengesEnabled := config.SmartContractConfig.GetBool(
-			"smart_contracts.storagesc.challenge_enabled")
-		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-			if err != nil {
-				return
-			}
-		} else {
-			return "Challenges disabled in the config", nil
-		}
-		return "Challenges generated", nil
-
 	case "generate_challenge":
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
@@ -329,9 +315,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 				return
 			}
 		} else {
-			return "Challenges disabled in the config", nil
+			return "OpenChallenges disabled in the config", nil
 		}
-		return "Challenges generated", nil
+		return "OpenChallenges generated", nil
 
 	case "challenge_response":
 		resp, err = sc.verifyChallenge(t, input, balances)

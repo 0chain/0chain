@@ -144,12 +144,12 @@ func TestCancelAllocationRequest(t *testing.T) {
 		},
 	}
 	var allocation = StorageAllocation{
-		DataShards:     1,
-		ParityShards:   1,
-		ID:             ownerId,
-		BlobberDetails: []*BlobberAllocation{},
-		Owner:          ownerId,
-		Expiration:     now,
+		DataShards:    1,
+		ParityShards:  1,
+		ID:            ownerId,
+		BlobberAllocs: []*BlobberAllocation{},
+		Owner:         ownerId,
+		Expiration:    now,
 		Stats: &StorageAllocationStats{
 			OpenChallenges: 3,
 		},
@@ -177,7 +177,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		})
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
-			allocation.BlobberDetails = append(allocation.BlobberDetails, &BlobberAllocation{
+			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
 				Terms: Terms{
 					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
@@ -191,7 +191,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 				Spent:         100,
 			})
 			challenges = append(challenges, []common.Timestamp{})
-			for j := 0; j < int(allocation.BlobberDetails[i].Stats.OpenChallenges); j++ {
+			for j := 0; j < int(allocation.BlobberAllocs[i].Stats.OpenChallenges); j++ {
 				var expires = now - common.Timestamp(float64(j)*float64(blobberYaml.challengeCompletionTime)/3.0)
 				challenges[i] = append(challenges[i], expires)
 			}
@@ -264,12 +264,12 @@ func TestFinalizeAllocation(t *testing.T) {
 		},
 	}
 	var allocation = StorageAllocation{
-		DataShards:     5,
-		ParityShards:   5,
-		ID:             ownerId,
-		BlobberDetails: []*BlobberAllocation{},
-		Owner:          ownerId,
-		Expiration:     now,
+		DataShards:    5,
+		ParityShards:  5,
+		ID:            ownerId,
+		BlobberAllocs: []*BlobberAllocation{},
+		Owner:         ownerId,
+		Expiration:    now,
 		Stats: &StorageAllocationStats{
 			OpenChallenges: 3,
 		},
@@ -297,7 +297,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		})
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
-			allocation.BlobberDetails = append(allocation.BlobberDetails, &BlobberAllocation{
+			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
 				Terms: Terms{
 					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
@@ -369,19 +369,19 @@ func testCancelAllocation(
 
 	require.True(t, len(challenges) <= len(blobbers))
 	for i, blobberChallenges := range challenges {
-		var bc = BlobberChallenge{
+		var bc = BlobberChallenges{
 			BlobberID: strconv.Itoa(i),
 		}
 
-		var ac = AllocationChallenge{
+		var ac = AllocationChallenges{
 			AllocationID: sAllocation.ID,
-			Challenges:   []*StorageChallenge{},
+			//OpenChallenges:   []*StorageChallenge{},
 		}
 		for _, created := range blobberChallenges {
-			ac.Challenges = append(ac.Challenges, &StorageChallenge{
-				AllocationID: sAllocation.ID,
-				BlobberID:    bc.BlobberID,
-				Created:      created,
+			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
+				//AllocationID: sAllocation.ID,
+				BlobberID: bc.BlobberID,
+				CreatedAt: created,
 			})
 		}
 		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
@@ -556,6 +556,7 @@ func setupMocksFinishAllocation(
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientBalance: zcnToBalance(3.1),
 		store:         make(map[string]util.MPTSerializable),
@@ -589,7 +590,7 @@ func setupMocksFinishAllocation(
 	newPool.AllocationID = sAllocation.ID
 	newPool.Blobbers = blobberPools{}
 	newPool.ExpireAt = now
-	for i := 0; i < len(sAllocation.BlobberDetails); i++ {
+	for i := 0; i < len(sAllocation.BlobberAllocs); i++ {
 		newPool.Blobbers.add(&blobberPool{
 			BlobberID: blobbers[i].ID,
 			Balance:   state.Balance(1),
@@ -670,8 +671,8 @@ func (f *formulaeFinalizeAllocation) _challengePool() int64 {
 }
 
 func (f *formulaeFinalizeAllocation) _minLockPayment(blobber int) int64 {
-	require.True(f.t, blobber < len(f.allocation.BlobberDetails))
-	var details = f.allocation.BlobberDetails[blobber]
+	require.True(f.t, blobber < len(f.allocation.BlobberAllocs))
+	var details = f.allocation.BlobberAllocs[blobber]
 	var minLock = int64(details.MinLockDemand)
 
 	var spent = int64(details.Spent)
@@ -728,10 +729,10 @@ func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int) i
 func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
 	var challengePool = float64(f._challengePool())
 
-	var used = float64(f.allocation.BlobberDetails[blobberIndex].Stats.UsedSize)
+	var used = float64(f.allocation.BlobberAllocs[blobberIndex].Stats.UsedSize)
 	var totalUsed = float64(f.allocation.UsedSize)
 	var abdUsed int64 = 0
-	for _, d := range f.allocation.BlobberDetails {
+	for _, d := range f.allocation.BlobberAllocs {
 		abdUsed += d.Stats.UsedSize
 	}
 	require.InDelta(f.t, totalUsed, abdUsed, errDelta)
@@ -746,7 +747,7 @@ func (f *formulaeFinalizeAllocation) setCancelPassRates() {
 	f._passRates = []float64{}
 	var deadline = f.now - toSeconds(blobberYaml.challengeCompletionTime)
 
-	for i, details := range f.allocation.BlobberDetails {
+	for i, details := range f.allocation.BlobberAllocs {
 		var successful = float64(details.Stats.SuccessChallenges)
 		var failed = float64(details.Stats.FailedChallenges)
 
@@ -771,7 +772,7 @@ func (f *formulaeFinalizeAllocation) setCancelPassRates() {
 func (f *formulaeFinalizeAllocation) setFinilizationPassRates() {
 	f._passRates = []float64{}
 
-	for _, details := range f.allocation.BlobberDetails {
+	for _, details := range f.allocation.BlobberAllocs {
 		var successful = float64(details.Stats.SuccessChallenges)
 		var failed = float64(details.Stats.FailedChallenges + details.Stats.OpenChallenges)
 		var total = successful + failed
@@ -809,6 +810,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,
