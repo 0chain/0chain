@@ -520,7 +520,7 @@ func (sc *StorageSmartContract) validateBlobbers(
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
 	}
 
-	sa.BlobberDetails = make([]*BlobberAllocation, 0)
+	sa.BlobberAllocs = make([]*BlobberAllocation, 0)
 	sa.Stats = &StorageAllocationStats{}
 
 	return list[:size], bSize, nil
