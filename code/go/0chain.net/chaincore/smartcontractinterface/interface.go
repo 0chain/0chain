@@ -33,6 +33,16 @@ type SmartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
+// IsTxnInputEmpty checks if the input data field is empty
+func (sct SmartContractTransactionData) IsTxnInputEmpty() (bool, error) {
+	fields := make(map[string]interface{})
+	if err := json.Unmarshal(sct.InputData, &fields); err != nil {
+		return false, err
+	}
+
+	return len(fields) == 0, nil
+}
+
 type SmartContractInterface interface {
 	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
 	GetRestPoints() map[string]SmartContractRestHandler

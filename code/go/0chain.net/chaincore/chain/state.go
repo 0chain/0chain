@@ -228,6 +228,16 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return nil, err
 		}
 
+		// checks if the transaction input field is empty
+		empty, err := scData.IsTxnInputEmpty()
+		if err != nil {
+			return nil, fmt.Errorf("could not decode transaction input json: %v", err)
+		}
+
+		if empty {
+			return nil, errors.New("empty transaction input")
+		}
+
 		t := time.Now()
 		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
 		switch err {
