@@ -1178,7 +1178,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenge:")
+				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenges:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
 				}

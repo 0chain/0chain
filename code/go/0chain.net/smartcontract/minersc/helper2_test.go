@@ -49,6 +49,7 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 func (sc *mockStateContext) EmitError(error)            {}
 func (sc *mockStateContext) GetEvents() []event.Event   { return nil }
 func (sc *mockStateContext) GetEventDB() *event.EventDb { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
