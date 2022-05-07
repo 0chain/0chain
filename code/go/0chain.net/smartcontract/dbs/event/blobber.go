@@ -15,12 +15,12 @@ type Blobber struct {
 
 	//provider
 	LastHealthCheck int64 `json:"last_health_check"`
-	IsKilled        bool  `json:"is_killed,omitempty"`
-	IsShutDown      bool  `json:"is_shut_down,omitempty"`
+	IsKilled        bool  `json:"is_killed"`
+	IsShutDown      bool  `json:"is_shut_down"`
 
 	// geolocation
-	Latitude  float64 `json:"latitude" json:"latitude,omitempty"`
-	Longitude float64 `json:"longitude" json:"longitude,omitempty"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 
 	// terms
 	ReadPrice               int64   `json:"read_price" json:"read_price,omitempty"`
