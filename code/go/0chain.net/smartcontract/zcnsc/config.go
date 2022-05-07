@@ -90,7 +90,6 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 		MaxFee:             fmt.Sprintf("%v", gn.MaxFee),
 		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
-		Cost:               fmt.Sprintf("%v", gn.Cost),
 		MaxDelegates:       fmt.Sprintf("%v", gn.MaxDelegates),
 	}
 
@@ -103,23 +102,23 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 	}
 }
 
-func section(section string) string {
+func postfix(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
 func loadGlobalNode() (conf *ZCNSConfig) {
 	conf = new(ZCNSConfig)
-	conf.MinMintAmount = state.Balance(cfg.GetInt(section(MinMintAmount)))
-	conf.MinBurnAmount = state.Balance(cfg.GetInt64(section(MinBurnAmount)))
-	conf.MinStakeAmount = state.Balance(cfg.GetInt64(section(MinStakeAmount)))
-	conf.PercentAuthorizers = cfg.GetFloat64(section(PercentAuthorizers))
-	conf.MinAuthorizers = cfg.GetInt64(section(MinAuthorizers))
-	conf.MinLockAmount = cfg.GetInt64(section(MinLockAmount))
-	conf.MaxFee = state.Balance(cfg.GetInt64(section(MaxFee)))
-	conf.BurnAddress = cfg.GetString(section(BurnAddress))
-	conf.OwnerId = cfg.GetString(section(OwnerID))
-	conf.Cost = cfg.GetStringMapInt(Cost)
-	conf.MaxDelegates = cfg.GetInt(section(MaxDelegates))
+	conf.MinMintAmount = state.Balance(cfg.GetInt(postfix(MinMintAmount)))
+	conf.MinBurnAmount = state.Balance(cfg.GetInt64(postfix(MinBurnAmount)))
+	conf.MinStakeAmount = state.Balance(cfg.GetInt64(postfix(MinStakeAmount)))
+	conf.PercentAuthorizers = cfg.GetFloat64(postfix(PercentAuthorizers))
+	conf.MinAuthorizers = cfg.GetInt64(postfix(MinAuthorizers))
+	conf.MinLockAmount = cfg.GetInt64(postfix(MinLockAmount))
+	conf.MaxFee = state.Balance(cfg.GetInt64(postfix(MaxFee)))
+	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
+	conf.OwnerId = cfg.GetString(postfix(OwnerID))
+	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
+	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
 
 	return conf
 }
