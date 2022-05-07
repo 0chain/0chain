@@ -37,7 +37,7 @@ func GetGlobalNode(ctx state.StateContextI) (*GlobalNode, error) {
 		if node.ZCNSConfig == nil {
 			node.ZCNSConfig = loadGlobalNode()
 		}
-		return node, err
+		return node, nil
 	default:
 		return nil, err
 	}
