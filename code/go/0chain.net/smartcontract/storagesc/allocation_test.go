@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -65,10 +66,12 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
+			ID:       mockBlobberId + strconv.Itoa(index),
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -278,10 +281,12 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
+			ID:       mockBlobberId + strconv.Itoa(index),
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -904,9 +909,11 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration:        200 * time.Second,
 				ChallengeCompletionTime: 15 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Used:            5 * GB,  //  5 GB
-			LastHealthCheck: 0,
+			Capacity: 20 * GB, // 20 GB
+			Used:     5 * GB,  //  5 GB
+			Provider: provider.Provider{
+				LastHealthCheck: 0,
+			},
 		},
 		&StorageNode{
 			ID:      "b2",
@@ -918,9 +925,11 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration:        250 * time.Second,
 				ChallengeCompletionTime: 10 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Used:            10 * GB, // 10 GB
-			LastHealthCheck: 0,
+			Capacity: 20 * GB, // 20 GB
+			Used:     10 * GB, // 10 GB
+			Provider: provider.Provider{
+				LastHealthCheck: 0,
+			},
 		},
 	}
 	return

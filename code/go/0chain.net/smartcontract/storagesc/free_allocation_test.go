@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -253,7 +254,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
 				ChallengeCompletionTime: mockChallengeCompletionTime,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
@@ -631,7 +634,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
 				ChallengeCompletionTime: mockChallengeCompletionTime,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}

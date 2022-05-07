@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -69,7 +70,9 @@ func TestNewAllocation(t *testing.T) {
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
 			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		},
-		LastHealthCheck: now - blobberHealthTime,
+		Provider: provider.Provider{
+			LastHealthCheck: now - blobberHealthTime,
+		},
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = int64(scYaml.MaxStake)
@@ -136,7 +139,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
 			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		},
-		LastHealthCheck: now - blobberHealthTime,
+		Provider: provider.Provider{
+			LastHealthCheck: now - blobberHealthTime,
+		},
 	}
 	var allocation = StorageAllocation{
 		DataShards:     1,
@@ -254,7 +259,9 @@ func TestFinalizeAllocation(t *testing.T) {
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
 			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		},
-		LastHealthCheck: now - blobberHealthTime,
+		Provider: provider.Provider{
+			LastHealthCheck: now - blobberHealthTime,
+		},
 	}
 	var allocation = StorageAllocation{
 		DataShards:     5,
