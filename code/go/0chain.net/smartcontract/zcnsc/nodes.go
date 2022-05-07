@@ -24,10 +24,10 @@ import (
 // ------------- GlobalNode ------------------------
 
 type ZCNSConfig struct {
-	MinMintAmount      state.Balance  `json:"min_mint_amount"`
-	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
-	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
-	MinLockAmount      int64          `json:"min_lock_amount"`
+	MinMintAmount      state.Balance  `json:"min_mint"`
+	MinBurnAmount      state.Balance  `json:"min_burn"`
+	MinStakeAmount     state.Balance  `json:"min_stake"`
+	MinLockAmount      int64          `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MaxFee             state.Balance  `json:"max_fee"`

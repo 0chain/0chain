@@ -20,12 +20,12 @@ const (
 )
 
 const (
-	MinMintAmount      = "min_mint_amount"
+	MinMintAmount      = "min_mint"
 	PercentAuthorizers = "percent_authorizers"
 	MinAuthorizers     = "min_authorizers"
-	MinBurnAmount      = "min_burn_amount"
-	MinStakeAmount     = "min_stake_amount"
-	MinLockAmount      = "min_lock_amount"
+	MinBurnAmount      = "min_burn"
+	MinStakeAmount     = "min_stake"
+	MinLockAmount      = "min_lock"
 	BurnAddress        = "burn_address"
 	MaxFee             = "max_fee"
 	OwnerID            = "owner_id"
