@@ -12,19 +12,22 @@ import (
 
 func TestConfigMap_Get(t *testing.T) {
 	cfg := &zcnsc.GlobalNode{
-		BurnAddress:        "0xBEEF",
-		MinMintAmount:      100,
-		PercentAuthorizers: 101,
-		MinAuthorizers:     102,
-		MinBurnAmount:      103,
-		MinStakeAmount:     104,
-		MaxFee:             105,
-		OwnerId:            "106",
-		Cost: map[string]int{
-			"mint":             100,
-			"burn":             100,
-			"DeleteAuthorizer": 100,
-			"AddAuthorizer":    100,
+		ID: "",
+		ZCNSConfig: &zcnsc.ZCNSConfig{
+			BurnAddress:        "0xBEEF",
+			MinMintAmount:      100,
+			PercentAuthorizers: 101,
+			MinAuthorizers:     102,
+			MinBurnAmount:      103,
+			MinStakeAmount:     104,
+			MaxFee:             105,
+			OwnerId:            "106",
+			Cost: map[string]int{
+				"mint":             100,
+				"burn":             100,
+				"DeleteAuthorizer": 100,
+				"AddAuthorizer":    100,
+			},
 		},
 	}
 
