@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"0chain.net/smartcontract/zcnsc"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/chain/state"
@@ -204,16 +202,16 @@ const (
 
 	FaucetOwner = SmartContract + FaucetSc + "owner_id"
 
-	ZcnOwner              = SmartContract + ZcnSc + zcnsc.OwnerID
-	ZcnMinMintAmount      = SmartContract + ZcnSc + zcnsc.MinMintAmount
-	ZcnMinBurnAmount      = SmartContract + ZcnSc + zcnsc.MinBurnAmount
-	ZcnMinStakeAmount     = SmartContract + ZcnSc + zcnsc.MinStakeAmount
-	ZcnMinLockAmount      = SmartContract + ZcnSc + zcnsc.MinLockAmount
-	ZcnMaxFee             = SmartContract + ZcnSc + zcnsc.MaxFee
-	ZcnPercentAuthorizers = SmartContract + ZcnSc + zcnsc.PercentAuthorizers
-	ZcnMinAuthorizers     = SmartContract + ZcnSc + zcnsc.MinAuthorizers
-	ZcnBurnAddress        = SmartContract + ZcnSc + zcnsc.BurnAddress
-	ZcnMaxDelegates       = SmartContract + ZcnSc + zcnsc.MaxDelegates
+	ZcnOwner              = SmartContract + ZcnSc + "owner_id"
+	ZcnMinMintAmount      = SmartContract + ZcnSc + "min_mint"
+	ZcnMinBurnAmount      = SmartContract + ZcnSc + "min_burn"
+	ZcnMinStakeAmount     = SmartContract + ZcnSc + "min_stake"
+	ZcnMinLockAmount      = SmartContract + ZcnSc + "min_lock"
+	ZcnMaxFee             = SmartContract + ZcnSc + "max_fee"
+	ZcnPercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
+	ZcnMinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
+	ZcnBurnAddress        = SmartContract + ZcnSc + "burn_address"
+	ZcnMaxDelegates       = SmartContract + ZcnSc + "max_delegates"
 
 	EventDbEnabled         = DbsEvents + "enabled"
 	EventDbName            = DbsEvents + "name"
