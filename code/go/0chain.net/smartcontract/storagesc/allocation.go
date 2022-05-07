@@ -546,7 +546,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	}
 
 	blobberCh := make(chan blobberResp, len(alloc.BlobberAllocs))
-	errorCh := make(chan error)
+	errorCh := make(chan error, 1)
 	var wg sync.WaitGroup
 	for i, details := range alloc.BlobberAllocs {
 		wg.Add(1)
