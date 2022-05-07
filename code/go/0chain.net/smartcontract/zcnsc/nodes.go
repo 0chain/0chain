@@ -39,7 +39,7 @@ type ZCNSConfig struct {
 
 type GlobalNode struct {
 	ID          string `json:"id"`
-	*ZCNSConfig `json:"faucet_config"`
+	*ZCNSConfig `json:"zcnsc_config"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
