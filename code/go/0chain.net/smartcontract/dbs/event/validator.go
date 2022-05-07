@@ -15,7 +15,7 @@ type Validator struct {
 	Stake       int64  `json:"stake" gorm:"index:stake"`
 
 	//provider
-	LastHealthCheck int64 `json:"last_health_check" json:"last_health_check,omitempty"`
+	LastHealthCheck int64 `json:"last_health_check"`
 	IsKilled        bool  `json:"is_killed,omitempty"`
 	IsShutDown      bool  `json:"is_shut_down,omitempty"`
 
