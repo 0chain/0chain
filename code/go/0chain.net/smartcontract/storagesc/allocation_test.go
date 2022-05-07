@@ -295,7 +295,7 @@ func TestChangeBlobbers(t *testing.T) {
 		txn.Hash = mockHash
 
 		if arg.blobberInChallenge > 0 {
-			bcPart, err = getBlobbersChallengeList(balances)
+			bcPart, err = partitionsChallengeReadyBlobbers(balances)
 			require.NoError(t, err)
 			defer func() {
 				err = bcPart.Save(balances)
@@ -315,17 +315,11 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 			}
 			if i < arg.blobberInChallenge {
-				bcLoc, err := bcPart.AddItem(balances, &BlobberChallengeNode{BlobberID: ba.BlobberID})
-				require.NoError(t, err)
-				bcPartitionLoc := &BlobberChallengePartitionLocation{
-					ID:                ba.BlobberID,
-					PartitionLocation: &partitions.PartitionLocation{Location: bcLoc},
-				}
-				_, err = balances.InsertTrieNode(bcPartitionLoc.GetKey(sc.ID), bcPartitionLoc)
+				_, err := bcPart.AddItem(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
 				require.NoError(t, err)
 
 				bcAllocations := arg.blobbersAllocationInChallenge[i]
-				bcAllocPart, err := getBlobbersChallengeAllocationList(ba.BlobberID, balances)
+				bcAllocPart, err := partitionsBlobberAllocations(ba.BlobberID, balances)
 				require.NoError(t, err)
 
 				for j := 0; j < bcAllocations; j++ {
@@ -333,10 +327,10 @@ func TestChangeBlobbers(t *testing.T) {
 					if j > 0 {
 						allocID += "_" + strconv.Itoa(j)
 					}
-					allocLoc, err := bcAllocPart.AddItem(balances, &BlobberChallengeAllocationNode{ID: allocID})
+					allocLoc, err := bcAllocPart.AddItem(balances, &BlobberAllocationNode{ID: allocID})
 					require.NoError(t, err)
 					if j == 0 {
-						ba.ChallengePartitionLoc = &partitions.PartitionLocation{Location: allocLoc}
+						ba.BlobberAllocationsPartitionLoc = &partitions.PartitionLocation{Location: allocLoc}
 					}
 				}
 				err = bcAllocPart.Save(balances)
@@ -363,17 +357,17 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 
 		alloc := &StorageAllocation{
-			ID:              mockAllocationID,
-			Owner:           mockOwner,
-			BlobberDetails:  blobberAllocation,
-			BlobberMap:      blobberMap,
-			Name:            mockAllocationName,
-			Size:            confMinAllocSize,
-			Expiration:      mockAllocationExpiry,
-			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
-			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
-			DataShards:      arg.dataShards,
-			ParityShards:    arg.parityShards,
+			ID:               mockAllocationID,
+			Owner:            mockOwner,
+			BlobberAllocs:    blobberAllocation,
+			BlobberAllocsMap: blobberMap,
+			Name:             mockAllocationName,
+			Size:             confMinAllocSize,
+			Expiration:       mockAllocationExpiry,
+			ReadPriceRange:   PriceRange{mockMinPrice, mockMaxPrice},
+			WritePriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
+			DataShards:       arg.dataShards,
+			ParityShards:     arg.parityShards,
 		}
 
 		if len(arg.addBlobberID) > 0 {
@@ -403,9 +397,9 @@ func TestChangeBlobbers(t *testing.T) {
 			totalBlobbers--
 		}
 		blobberNameMap := make(map[string]struct{}, totalBlobbers)
-		require.Equal(t, totalBlobbers, len(sa.BlobberDetails))
+		require.Equal(t, totalBlobbers, len(sa.BlobberAllocs))
 
-		for _, ba := range sa.BlobberDetails {
+		for _, ba := range sa.BlobberAllocs {
 			blobberNameMap[ba.BlobberID] = struct{}{}
 		}
 
@@ -423,14 +417,8 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 
 		if want.challengeEnabled {
-			_, err := sc.getBlobberChallengePartitionLocation(arg.removeBlobberID, balances)
-			if want.blobberInChallenge < arg.blobberInChallenge {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
 			for i := 0; i < arg.blobberInChallenge; i++ {
-				bcPart, err := getBlobbersChallengeList(balances)
+				bcPart, err := partitionsChallengeReadyBlobbers(balances)
 				require.NoError(t, err)
 
 				bcSize, err := bcPart.Size(balances)
@@ -439,7 +427,7 @@ func TestChangeBlobbers(t *testing.T) {
 
 				blobberID := "blobber_" + strconv.Itoa(i)
 
-				allocLoc, err := getBlobbersChallengeAllocationList(blobberID, balances)
+				allocLoc, err := partitionsBlobberAllocations(blobberID, balances)
 				require.NoError(t, err)
 
 				size, err := allocLoc.Size(balances)
@@ -1765,26 +1753,19 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			allocationLoc int
 		)
 
-		bcpartition, err := getBlobbersChallengeList(balances)
+		bcpartition, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		for i := 0; i < arg.numBlobbers; i++ {
 			blobberID := "blobber_" + strconv.Itoa(i)
-			blobLoc, err := bcpartition.AddItem(balances, &BlobberChallengeNode{BlobberID: blobberID})
+			_, err := bcpartition.AddItem(balances, &ChallengeReadyBlobber{BlobberID: blobberID})
 			require.NoError(t, err)
 
-			bcPartitionLoc := new(BlobberChallengePartitionLocation)
-
-			bcPartitionLoc.ID = blobberID
-			bcPartitionLoc.PartitionLocation = &partitions.PartitionLocation{Location: blobLoc}
-			_, err = balances.InsertTrieNode(bcPartitionLoc.GetKey(ssc.ID), bcPartitionLoc)
-			require.NoError(t, err)
-
-			bcAllocPartition, err := getBlobbersChallengeAllocationList(blobberID, balances)
+			bcAllocPartition, err := partitionsBlobberAllocations(blobberID, balances)
 			require.NoError(t, err)
 			for j := 0; j < arg.numAllocInChallenge; j++ {
 				allocID := "allocation_" + strconv.Itoa(j)
-				loc, err := bcAllocPartition.AddItem(balances, &BlobberChallengeAllocationNode{ID: allocID})
+				loc, err := bcAllocPartition.AddItem(balances, &BlobberAllocationNode{ID: allocID})
 				require.NoError(t, err)
 				if blobberID == arg.removeBlobberID && allocationID == arg.allocationID {
 					allocationLoc = loc
@@ -1801,7 +1782,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 
 	validate := func(want want, balances chainState.StateContextI) {
-		bcPart, err := getBlobbersChallengeList(balances)
+		bcPart, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		bcPartSize, err := bcPart.Size(balances)
@@ -1810,7 +1791,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 
 		for i, numAlloc := range want.numAllocationChallengePerBlobber {
 			blobber := "blobber_" + strconv.Itoa(i)
-			bcAllocChallenge, err := getBlobbersChallengeAllocationList(blobber, balances)
+			bcAllocChallenge, err := partitionsBlobberAllocations(blobber, balances)
 			require.NoError(t, err)
 			bcAllocSize, err := bcAllocChallenge.Size(balances)
 			require.NoError(t, err)
@@ -1858,7 +1839,8 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssc, balances, removeBlobberID, allocationID, allocationPartitionLoc := setup(tt.args)
-			err := removeBlobberAllocation(removeBlobberID, allocationID, allocationPartitionLoc, ssc, balances)
+			err := removeAllocationFromBlobber(ssc, removeBlobberID,
+				&partitions.PartitionLocation{Location: allocationPartitionLoc}, allocationID, balances)
 			require.NoError(t, err)
 			validate(tt.want, balances)
 		})
