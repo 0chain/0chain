@@ -767,7 +767,7 @@ func (sa *StorageAllocation) removeBlobber(
 ) ([]*StorageNode, error) {
 	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 	delete(sa.BlobberAllocsMap, blobberID)
 
@@ -812,16 +812,6 @@ func (sa *StorageAllocation) removeBlobber(
 		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
 
-	removedBlobber.Used -= sa.bSize()
-	_, err := balances.InsertTrieNode(removedBlobber.GetKey(ssc.ID), removedBlobber)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := emitUpdateBlobber(removedBlobber, balances); err != nil {
-		return nil, fmt.Errorf("emitting blobber %s, error: %v", removedBlobber.ID, err)
-	}
-
 	return blobbers, nil
 }
 
@@ -844,7 +834,7 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	_, found := sa.BlobberAllocsMap[addId]
 	if found {
-		return nil, fmt.Errorf("allocatino already has blobber %s", addId)
+		return nil, fmt.Errorf("allocation already has blobber %s", addId)
 	}
 
 	addedBlobber, err := ssc.getBlobber(addId, balances)
@@ -889,6 +879,10 @@ func removeAllocationFromBlobber(
 
 	if err := blobAllocsParts.RemoveItem(balances, allocPartLoc.Location, allocID); err != nil {
 		return fmt.Errorf("could not remove allocation from blobber allocations partitions: %v", err)
+	}
+
+	if err := blobAllocsParts.Save(balances); err != nil {
+		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
 	}
 
 	allocNum, err := blobAllocsParts.Size(balances)
