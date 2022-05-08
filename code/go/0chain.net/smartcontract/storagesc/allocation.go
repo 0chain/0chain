@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -296,6 +297,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 type blobberWithPool struct {
 	*StorageNode
 	Pool *stakePool
+	ind  int
 }
 
 // newAllocationRequest creates new allocation
@@ -409,20 +411,25 @@ func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances
 	pools := make(chan *blobberWithPool, len(inputBlobbers.Nodes))
 	errs := make(chan error, len(inputBlobbers.Nodes))
 
-	for _, b := range inputBlobbers.Nodes {
-		go func(blob *StorageNode) {
+	for i, b := range inputBlobbers.Nodes {
+		go func(blob *StorageNode, ind int) {
 			var sp *stakePool
 			var err error
 			if sp, err = sc.getStakePool(blob.ID, balances); err != nil {
 				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
 				return
 			}
-			pools <- &blobberWithPool{blob, sp}
-		}(b)
+			pools <- &blobberWithPool{blob, sp, ind}
+		}(b, i)
 	}
 
 	for {
 		if len(blobbers) == len(inputBlobbers.Nodes) {
+			//ensure ordering
+			sort.Slice(blobbers, func(i, j int) bool {
+				return blobbers[i].ind < blobbers[j].ind
+			})
+
 			return blobbers, nil
 		}
 
