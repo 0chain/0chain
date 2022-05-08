@@ -1,4 +1,4 @@
-name: CONDUCTOR_TEST
+name: Conductor VC Tests
 
 on:
   schedule:
@@ -22,6 +22,13 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+    
+    - name: Get Branch
+      id: get_branch
+      run: |
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
 
     - name: Docker Init Setup.
       run: |
@@ -70,6 +77,16 @@ jobs:
     - name: Running Fault Tolerance Tests.
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+
+    - name: Creating Artifact con-vc-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-vc-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-vc-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-vc-tests-logs.tar.gz
 
   conductor_byzantine_tests:
     name: CONDUCTOR-BYZANTINE-TESTS
@@ -126,6 +143,16 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.byzantine
 
+    - name: Creating Artifact con-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-byz-tests-logs.tar.gz
+
   conductor_view_change3_tests:
     name: CONDUCTOR-VIEW-CHANGE-3-TESTS
     runs-on: [self-hosted, conductor-test04]
@@ -181,30 +208,12 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change-3
 
-  # upload_artifacts:
-  #   name: UPLOAD-LOGS-AS-ARTIFACTS
-  #   runs-on: [self-hosted, conductor-test01]
-    
-  #   if: always()
-  #   needs: [conductor_vc_tests, conductor_byzantine_tests, conductor_view_change3_tests]
-    
-  #   steps:
-  #   - name: Creating Artifact con-tests-logs.tar.gz file.
-  #     run: |
-  #       find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+    - name: Creating Artifact con-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-vc3-tests-logs.tar.gz --null --files-from -
 
-  #   - name: Uploading artifact con-tests-logs.tar.gz file.
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: Conductor-test-logs
-  #       path: ./con-tests-logs.tar.gz
-      
-  #   - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-  #     run: |
-  #       tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-  #   - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: Conductor-test-logs
-  #       path: ./con-tests-backup-logs.tar.gz
+    - name: Uploading artifact con-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-vc3-tests-logs.tar.gz
