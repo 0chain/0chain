@@ -1039,18 +1039,21 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		return err
 	}
 
-	var costs []int
-	cost := 0
-	for _, txn := range b.Txns {
-		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
-		if err != nil {
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
-			break
+	//TODO delete it when cost don't need further debugging
+	if config.Development() {
+		var costs []int
+		cost := 0
+		for _, txn := range b.Txns {
+			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+			if err != nil {
+				logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+				break
+			}
+			costs = append(costs, c)
+			cost += c
 		}
-		costs = append(costs, c)
-		cost += c
+		logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))
 	}
-	logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))
 
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
