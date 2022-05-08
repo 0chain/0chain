@@ -225,10 +225,12 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
 
-	isViewchangeValue, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
-	isViewChange := err != nil && isViewchangeValue == true
+	isViewChange, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
+	if err != nil {
+		logging.Logger.Error("MinerSmartContract - setPhaseNode - Cannot read chain configuration", zap.Any("error", err))
+	}
 	// move phase condition
-	var movePhase = isViewChange &&
+	var movePhase = isViewChange == true &&
 		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
 
 	// move

@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
@@ -320,9 +321,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	isViewChangeValue, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
-	isViewChange := err != nil && isViewChangeValue == true
-	if isViewChange {
+	isViewChange, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
+	if err != nil {
+		logging.Logger.Error("MinerSmartContract - payFees - Cannot read chain configuration", zap.Any("error", err))
+		return "", err
+	}
+	if isViewChange == true {
 		// TODO: cache the phase node so if when there's no view change happens, we
 		// can avoid unnecessary MPT access
 		var pn *PhaseNode

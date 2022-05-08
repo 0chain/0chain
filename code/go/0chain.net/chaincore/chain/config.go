@@ -115,6 +115,9 @@ func NewConfigImpl(conf *ConfigData) *ConfigImpl {
 // direct access to 'chain' package. Instead they can read the configuration using
 // 'conf' package. example: conf.Configuration.ReadValue("BlockSize")
 func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
 	elements := reflect.ValueOf(c.conf).Elem()
 	i := 0
 	for ; i < elements.NumField(); i++ {
@@ -125,9 +128,6 @@ func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
 	if i == elements.NumField() {
 		return nil, errors.New(fmt.Sprintf("ConfigImpl - Read Value By Name. %v Is not a valid configuration name", name))
 	}
-
-	c.guard.RLock()
-	defer c.guard.RUnlock()
 
 	return elements.Field(i).Interface(), nil
 }

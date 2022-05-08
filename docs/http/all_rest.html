@@ -225,7 +225,7 @@
 </blockquote>
 <pre><code class="has-line-data" data-line-start="95" data-line-end="104" class="language-sh">func <span class="hljs-function"><span class="hljs-title">SetupSmartContracts</span></span>() {
     <span class="hljs-keyword">for</span> _, sc := range scs {
-        <span class="hljs-keyword">if</span> viper.GetBool(fmt.S<span class="hljs-built_in">printf</span>(<span class="hljs-string">"development.smart_contract.%v"</span>, sc.GetName())) {
+        <span class="hljs-keyword">if</span> viper.GetBool(fmt.S<span class="hljs-built_in">printf</span>(<span class="hljs-string">"server_chain.smart_contract.%v"</span>, sc.GetName())) {
             sc.InitSC()
             smartcontract.ContractMap[sc.GetAddress()] = sc
         }

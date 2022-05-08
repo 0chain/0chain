@@ -405,11 +405,7 @@ const DefaultSmartContractTimeout = time.Second
 func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration().ChainID)
-	//chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	chain.Config = NewConfigImpl(&ConfigData{})
-	config.Configuration().ChainConfig = chain.Config
 
-	chain.Config.FromViper()
 	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators()+1)
 	client.SetClientSignatureScheme(chain.ClientSignatureScheme())
 	return chain
@@ -420,6 +416,8 @@ func Provider() datastore.Entity {
 	c := &Chain{}
 	c.Config = NewConfigImpl(&ConfigData{})
 	config.Configuration().ChainConfig = c.Config
+
+	c.Config.FromViper()
 
 	c.Initialize()
 	c.Version = "1.0"

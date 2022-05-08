@@ -160,10 +160,13 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
 		return common.InvalidRequest("to client id must be a hexadecimal hash")
 	}
-	isFeeEnabledValue, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	isFeeEnabled := err != nil && isFeeEnabledValue == true
+	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
+	if err != nil {
+		logging.Logger.Error("Transaction - ValidateWrtTimeForBlock - Cannot read chain configuration.", zap.Any("error", err))
+		return err
+	}
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
-	if isFeeEnabled && t.Fee < 0 {
+	if isFeeEnabled == true && t.Fee < 0 {
 		return common.InvalidRequest("fee must be greater than or equal to zero")
 	}
 	err = config.ValidChain(t.ChainID)
@@ -205,9 +208,11 @@ func (t *Transaction) Validate(ctx context.Context) error {
 
 /*GetScore - score for write*/
 func (t *Transaction) GetScore() int64 {
-	isFeeEnabledValue, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	isFeeEnabled := err != nil && isFeeEnabledValue == true
-	if isFeeEnabled {
+	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
+	if err != nil {
+		logging.Logger.Error("Transaction - GetScore - Cannot read chain configuration", zap.Any("error", err))
+	}
+	if isFeeEnabled == true {
 		return t.Fee
 	}
 	return 0

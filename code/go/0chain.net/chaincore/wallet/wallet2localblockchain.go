@@ -9,6 +9,8 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*Register - register a wallet using the server side api */
@@ -44,9 +46,11 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 	txn.Value = value
 	txn.TransactionData = msg
 
-	isFeeEnabledValue, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	isFeeEnabled := err != nil && isFeeEnabledValue == true
-	if isFeeEnabled {
+	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
+	if err != nil {
+		logging.Logger.Error("Wallet - CreateSendTransaction - Cannot read chain configuration", zap.Any("error", err))
+	}
+	if isFeeEnabled == true {
 		txn.Fee = fee
 	}
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {
@@ -63,9 +67,11 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 	txn.Value = value
 	txn.TransactionData = msg
 
-	isFeeEnabledValue, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	isFeeEnabled := err != nil && isFeeEnabledValue == true
-	if isFeeEnabled {
+	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
+	if err != nil {
+		logging.Logger.Error("Wallet - CreateSCTransaction - Cannot read chain configuration", zap.Any("error", err))
+	}
+	if isFeeEnabled == true {
 		txn.Fee = fee
 	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
@@ -88,9 +94,11 @@ func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Trans
 	txn.TransactionData = msg
 	txn.TransactionType = transaction.TxnTypeData
 
-	isFeeEnabledValue, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	isFeeEnabled := err != nil && isFeeEnabledValue == true
-	if isFeeEnabled {
+	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
+	if err != nil {
+		logging.Logger.Error("Wallet - CreateDataTransaction - Cannot read chain configuration", zap.Any("error", err))
+	}
+	if isFeeEnabled == true {
 		txn.Fee = fee
 	}
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {
