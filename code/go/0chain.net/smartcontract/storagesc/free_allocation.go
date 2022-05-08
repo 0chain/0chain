@@ -295,7 +295,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
 	}
 
-	return string(resp), err
+	return resp, err
 }
 
 func (ssc *StorageSmartContract) updateFreeStorageRequest(
