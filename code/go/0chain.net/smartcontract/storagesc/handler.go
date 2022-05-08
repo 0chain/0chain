@@ -184,7 +184,6 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 ) (interface{}, error) {
 	if balances.GetEventDB() == nil {
 		return nil, common.NewErrInternal("events db is not initialised")
-		//return nil, errors.New("events db is not initialised")
 	}
 	blobbers, err := balances.GetEventDB().GetBlobbers()
 	if err != nil {
@@ -563,11 +562,19 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	var minLockDemand state.Balance
 
 	ids := append(req.Blobbers, blobbers...)
-	if len(ids) > req.ParityShards+req.DataShards {
-		ids = ids[:req.ParityShards+req.DataShards]
+	uniqueMap := make(map[string]bool)
+	for _, id := range ids {
+		uniqueMap[id] = true
+	}
+	unique := make([]string, 0, len(ids))
+	for id := range uniqueMap {
+		unique = append(unique, id)
+	}
+	if len(unique) > req.ParityShards+req.DataShards {
+		unique = unique[:req.ParityShards+req.DataShards]
 	}
 
-	nodes := ssc.getBlobbers(ids, balances)
+	nodes := ssc.getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
