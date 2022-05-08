@@ -102,7 +102,7 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"blobber_block_rewards","input":{}}`
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"blobber_block_rewards","input":{"round":%v}}`, b.Round)
 	brTxn.Fee = 0
 	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
 		panic(err)
@@ -116,7 +116,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transac
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round": "%d"}}`, b.Round)
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
 	brTxn.Fee = 0
 	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
 		panic(err)
