@@ -791,8 +791,10 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges")
 	}
-
-	return challenges, nil
+	return ChallengesInfo{
+		BlobberID:  blobberID,
+		Challenges: challenges,
+	}, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
