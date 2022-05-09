@@ -753,8 +753,8 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 
-	if status, _ := blobber.Status(now, conf); status != provider.Active {
-		return fmt.Errorf("blobber status %s is not active", status.String())
+	if status, reason := blobber.Status(now, conf); status != provider.Active {
+		return fmt.Errorf("blobber status %s is not active: %v", status.String(), reason)
 	}
 
 	// filter by max offer duration
