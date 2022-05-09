@@ -16,7 +16,7 @@ type Challenge struct {
 	CreatedAt      common.Timestamp `json:"created_at" gorm:"created_at"`
 	AllocationID   string           `json:"allocation_id" gorm:"allocation_id"`
 	BlobberID      string           `json:"blobber_id" gorm:"blobber_id"`
-	ValidatorsID   []string         `json:"validators_id" gorm:"validators_id"`
+	ValidatorsID   string           `json:"validators_id" gorm:"validators_id"`
 	Seed           int64            `json:"seed" gorm:"seed"`
 	AllocationRoot string           `json:"allocation_root" gorm:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"responded"`

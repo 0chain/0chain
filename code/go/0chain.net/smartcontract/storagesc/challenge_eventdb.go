@@ -2,7 +2,9 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"0chain.net/core/common"
 
@@ -13,9 +15,10 @@ import (
 )
 
 func storageChallengeToChallengeTable(ch *StorageChallengeInfo) *event.Challenge {
-	var validators []string
+	var validators string
 	for _, v := range ch.Validators {
-		validators = append(validators, v.ID)
+
+		validators += "," + v.ID
 	}
 	return &event.Challenge{
 		ChallengeID:    ch.ID,
@@ -29,7 +32,15 @@ func storageChallengeToChallengeTable(ch *StorageChallengeInfo) *event.Challenge
 	}
 }
 
-func challengeTableToStorageChallengeInfo(ch *event.Challenge) *StorageChallengeInfo {
+func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.StateContextI) (*StorageChallengeInfo, error) {
+	vIDs := strings.Split(ch.ValidatorsID, ",")
+	if len(vIDs) == 0 {
+		return nil, errors.New("no validators in challenge")
+	}
+	validators, err := getValidators(vIDs, balances.GetEventDB())
+	if err != nil {
+		return nil, err
+	}
 	return &StorageChallengeInfo{
 		ID:             ch.ChallengeID,
 		Created:        ch.CreatedAt,
@@ -38,7 +49,8 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge) *StorageChallenge
 		AllocationRoot: ch.AllocationRoot,
 		BlobberID:      ch.BlobberID,
 		Responded:      ch.Responded,
-	}
+		Validators:     validators,
+	}, nil
 }
 
 func emitAddChallenge(ch *StorageChallengeInfo, balances cstate.StateContextI) error {
@@ -75,7 +87,11 @@ func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
 	}
 
 	for _, ch := range challenges {
-		chs = append(chs, challengeTableToStorageChallengeInfo(ch))
+		challInfo, err := challengeTableToStorageChallengeInfo(ch, balances)
+		if err != nil {
+			return nil, err
+		}
+		chs = append(chs, challInfo)
 	}
 	return chs, nil
 }
@@ -88,5 +104,9 @@ func getChallengeForBlobber(blobberID, challengeID string,
 		return nil, err
 	}
 
-	return challengeTableToStorageChallengeInfo(challenge), nil
+	challInfo, err := challengeTableToStorageChallengeInfo(challenge, balances)
+	if err != nil {
+		return nil, err
+	}
+	return challInfo, nil
 }
