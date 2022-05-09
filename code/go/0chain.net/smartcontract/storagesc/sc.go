@@ -114,16 +114,6 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_pay_interests"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_pay_interests"), nil)
 	ssc.SmartContractExecutionStats["pay_reward"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "pay_reward (add/update/remove SC function)"), nil)
-	ssc.SmartContractExecutionStats["/get_block_by_hash"] = ssc.GetBlockByHashHandler
-	ssc.SmartContractExecutionStats["/get_blocks"] = ssc.GetBlocksHandler
-	ssc.SmartContract.RestHandlers["/writemarkers"] = ssc.GetWriteMarkerHandler
-	ssc.SmartContract.RestHandlers["/alloc_writen_size"] = ssc.GetWrittenAmountHandler
-	ssc.SmartContract.RestHandlers["/alloc_read_size"] = ssc.GetReadAmountHandler
-	ssc.SmartContract.RestHandlers["/alloc_write_marker_count"] = ssc.GetWriteMarkerCountHandler
-	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
-	ssc.SmartContract.RestHandlers["/collected_reward"] = ssc.GetCollectedRewardHandler
-	// blobber aggregated saved data
-	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }
 
 func (ssc *StorageSmartContract) GetName() string {

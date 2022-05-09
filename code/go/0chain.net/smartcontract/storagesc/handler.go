@@ -1,9 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"0chain.net/rest/restinterface"
 
@@ -552,6 +554,10 @@ func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, &block, nil)
 }
 
+type userPoolStat struct {
+	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat getUserStakePoolStat
 // Gets statistic for a user's stake pools
 //
@@ -591,6 +597,42 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	}
 
 	common.Respond(w, r, ups, nil)
+}
+
+func spStats(
+	blobber event.Blobber,
+	delegatePools []event.DelegatePool,
+) *stakePoolStat {
+	stat := new(stakePoolStat)
+	stat.ID = blobber.BlobberID
+	stat.UnstakeTotal = state.Balance(blobber.UnstakeTotal)
+	stat.Capacity = blobber.Capacity
+	stat.WritePrice = state.Balance(blobber.WritePrice)
+	stat.OffersTotal = state.Balance(blobber.OffersTotal)
+	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
+	stat.Settings = stakepool.StakePoolSettings{
+		DelegateWallet:  blobber.DelegateWallet,
+		MinStake:        state.Balance(blobber.MinStake),
+		MaxStake:        state.Balance(blobber.MaxStake),
+		MaxNumDelegates: blobber.NumDelegates,
+		ServiceCharge:   blobber.ServiceCharge,
+	}
+	stat.Rewards = state.Balance(blobber.Reward)
+	for _, dp := range delegatePools {
+		dpStats := delegatePoolStat{
+			ID:           dp.PoolID,
+			Balance:      state.Balance(dp.Balance),
+			DelegateID:   dp.DelegateID,
+			Rewards:      state.Balance(dp.Reward),
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			TotalReward:  state.Balance(dp.TotalReward),
+			TotalPenalty: state.Balance(dp.TotalPenalty),
+			RoundCreated: dp.RoundCreated,
+		}
+		stat.Balance += dpStats.Balance
+		stat.Delegate = append(stat.Delegate, dpStats)
+	}
+	return stat
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
@@ -1229,6 +1271,61 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 	}
 
 	common.Respond(w, r, transaction, nil)
+}
+
+type storageNodesResponse struct {
+	Nodes []storageNodeResponse
+}
+
+// StorageNode represents Blobber configurations.
+type storageNodeResponse struct {
+	StorageNode
+	TotalStake int64 `json:"total_stake"`
+}
+
+func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
+	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
+	if err != nil {
+		return storageNodeResponse{}, err
+	}
+	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
+	if err != nil {
+		return storageNodeResponse{}, err
+	}
+	return storageNodeResponse{
+		StorageNode: StorageNode{
+			ID:      blobber.BlobberID,
+			BaseURL: blobber.BaseURL,
+			Geolocation: StorageNodeGeolocation{
+				Latitude:  blobber.Latitude,
+				Longitude: blobber.Longitude,
+			},
+			Terms: Terms{
+				ReadPrice:               state.Balance(blobber.ReadPrice),
+				WritePrice:              state.Balance(blobber.WritePrice),
+				MinLockDemand:           blobber.MinLockDemand,
+				MaxOfferDuration:        maxOfferDuration,
+				ChallengeCompletionTime: challengeCompletionTime,
+			},
+			Capacity:        blobber.Capacity,
+			Used:            blobber.Used,
+			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			StakePoolSettings: stakepool.StakePoolSettings{
+				DelegateWallet:  blobber.DelegateWallet,
+				MinStake:        state.Balance(blobber.MinStake),
+				MaxStake:        state.Balance(blobber.MaxStake),
+				MaxNumDelegates: blobber.NumDelegates,
+				ServiceCharge:   blobber.ServiceCharge,
+			},
+			Information: Info{
+				Name:        blobber.Name,
+				WebsiteUrl:  blobber.WebsiteUrl,
+				LogoUrl:     blobber.LogoUrl,
+				Description: blobber.Description,
+			},
+		},
+		TotalStake: blobber.TotalStake,
+	}, nil
 }
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
