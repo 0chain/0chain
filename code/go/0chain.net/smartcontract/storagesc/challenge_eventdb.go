@@ -15,11 +15,11 @@ import (
 )
 
 func storageChallengeToChallengeTable(ch *StorageChallengeInfo) *event.Challenge {
-	var validators string
+	var validatorsArr []string
 	for _, v := range ch.Validators {
-
-		validators += "," + v.ID
+		validatorsArr = append(validatorsArr, v.ID)
 	}
+	validators := strings.Join(validatorsArr, ",")
 	return &event.Challenge{
 		ChallengeID:    ch.ID,
 		CreatedAt:      ch.Created,
