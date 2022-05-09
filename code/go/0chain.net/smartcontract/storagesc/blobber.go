@@ -80,14 +80,18 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			return fmt.Errorf("invalid blobber url update, already used")
 		}
 		// save url
-		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
-		if err != nil {
-			return fmt.Errorf("saving blobber url: " + err.Error())
+		if blobber.BaseURL != "" {
+			_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+			if err != nil {
+				return fmt.Errorf("saving blobber url: " + err.Error())
+			}
 		}
 		// remove old url
-		_, err = balances.DeleteTrieNode(savedBlobber.GetUrlKey(sc.ID))
-		if err != nil {
-			return fmt.Errorf("deleting blobber old url: " + err.Error())
+		if savedBlobber.BaseURL != "" {
+			_, err = balances.DeleteTrieNode(savedBlobber.GetUrlKey(sc.ID))
+			if err != nil {
+				return fmt.Errorf("deleting blobber old url: " + err.Error())
+			}
 		}
 	}
 
@@ -202,10 +206,12 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// save url
-	_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
-	if err != nil {
-		return "", common.NewError("add_or_update_blobber_failed",
-			"saving blobber url: "+err.Error())
+	if blobber.BaseURL != "" {
+		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+		if err != nil {
+			return "", common.NewError("add_or_update_blobber_failed",
+				"saving blobber url: "+err.Error())
+		}
 	}
 
 	return string(blobber.Encode()), nil

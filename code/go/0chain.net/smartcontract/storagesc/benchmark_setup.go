@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/datastore"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -476,6 +477,10 @@ func AddMockBlobbers(
 		if err != nil {
 			panic(err)
 		}
+		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sscId), &datastore.NOIDField{})
+		if err != nil {
+			panic(err)
+		}
 		if viper.GetBool(sc.EventDbEnabled) {
 
 			blobberDb := event.Blobber{
@@ -561,8 +566,8 @@ func AddMockValidators(
 				ValidatorID:    validator.ID,
 				BaseUrl:        validator.BaseURL,
 				DelegateWallet: validator.StakePoolSettings.DelegateWallet,
-				MinStake:       state.Balance(validator.StakePoolSettings.MaxStake),
-				MaxStake:       state.Balance(validator.StakePoolSettings.MaxStake),
+				MinStake:       validator.StakePoolSettings.MaxStake,
+				MaxStake:       validator.StakePoolSettings.MaxStake,
 				NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:  validator.StakePoolSettings.ServiceCharge,
 			}

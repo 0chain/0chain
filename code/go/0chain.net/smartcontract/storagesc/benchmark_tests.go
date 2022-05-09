@@ -68,7 +68,6 @@ func BenchmarkTests(
 	for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
 		blobbers = append(blobbers, getMockBlobberId(i))
 	}
-
 	var freeBlobbers []string
 	//		DataShards:                 conf.FreeAllocationSettings.DataShards,
 	//		ParityShards:               conf.FreeAllocationSettings.ParityShards,
@@ -345,7 +344,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: now + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     "d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577",
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
