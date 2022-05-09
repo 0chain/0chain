@@ -63,7 +63,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"write_price":               int64(sn.Terms.WritePrice),
 			"min_lock_demand":           sn.Terms.MinLockDemand,
 			"max_offer_duration":        sn.Terms.MaxOfferDuration.String(),
-			"challenge_completion_time": sn.Terms.ChallengeCompletionTime.String(),
+			"challenge_completion_time": int64(sn.Terms.ChallengeCompletionTime),
 			"capacity":                  sn.Capacity,
 			"used":                      sn.Used,
 			"last_health_check":         int64(sn.LastHealthCheck),
