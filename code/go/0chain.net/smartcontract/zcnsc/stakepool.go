@@ -15,6 +15,10 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
+//msgp:ignore unlockResponse stakePoolRequest
+
+//go:generate msgp -v -io=false -tests=false -unexported
+
 // unlock response
 type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
