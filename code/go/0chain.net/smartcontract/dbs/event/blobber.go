@@ -1,9 +1,10 @@
 package event
 
 import (
-	"0chain.net/smartcontract/dbs"
 	"errors"
 	"fmt"
+
+	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
 )
@@ -22,7 +23,7 @@ type Blobber struct {
 	WritePrice              int64   `json:"write_price"`
 	MinLockDemand           float64 `json:"min_lock_demand"`
 	MaxOfferDuration        string  `json:"max_offer_duration"`
-	ChallengeCompletionTime string  `json:"challenge_completion_time"`
+	ChallengeCompletionTime int64   `json:"challenge_completion_time"`
 
 	Capacity        int64 `json:"capacity"`          // total blobber capacity
 	Used            int64 `json:"used"`              // allocated capacity

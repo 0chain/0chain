@@ -486,7 +486,7 @@ func AddMockBlobbers(
 				WritePrice:              int64(blobber.Terms.WritePrice),
 				MinLockDemand:           blobber.Terms.MinLockDemand,
 				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
-				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
+				ChallengeCompletionTime: int64(blobber.Terms.ChallengeCompletionTime),
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),

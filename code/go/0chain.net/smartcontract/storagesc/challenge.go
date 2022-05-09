@@ -527,6 +527,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("verify_challenge_error", err.Error())
 		}
 
+		err = emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge_error", err.Error())
+		}
+
 		err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
@@ -597,6 +602,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		blobAlloc.Stats.LastestClosedChallengeTxn = challenge.ID
 		blobAlloc.Stats.FailedChallenges++
 		blobAlloc.Stats.OpenChallenges--
+
+		err = emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge_error", err.Error())
+		}
 
 		if err := allocChallenges.Save(balances, sc.ID); err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
@@ -675,6 +685,7 @@ type challengeOutput struct {
 	storageChallenge  *StorageChallenge
 	blobberChallenges *BlobberChallenges
 	allocChallenges   *AllocationChallenges
+	challInfo         *StorageChallengeInfo
 }
 
 type challengeBlobberSelection int
@@ -731,12 +742,13 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeBlobbersPartition *partitions.Partitions,
-	r *rand.Rand,
+	seed int64,
 	validators *partitions.Partitions,
 	txn *transaction.Transaction,
 	challengeID string,
 	balances cstate.StateContextI,
 ) (*challengeOutput, error) {
+	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(r.Intn(2))
 	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
 	if err != nil {
@@ -810,6 +822,17 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = txn.CreationDate
 
+	challInfo := &StorageChallengeInfo{
+		ID:             storageChallenge.ID,
+		Created:        storageChallenge.Created,
+		Validators:     selectedValidators,
+		RandomNumber:   seed,
+		AllocationID:   storageChallenge.AllocationID,
+		AllocationRoot: alloc.BlobberAllocsMap[blobberID].AllocationRoot,
+		BlobberID:      blobberID,
+		Responded:      false,
+	}
+
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
@@ -837,6 +860,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		storageChallenge:  storageChallenge,
 		allocChallenges:   allocChallenges,
 		blobberChallenges: blobbChallenges,
+		challInfo:         challInfo,
 	}, nil
 }
 
@@ -878,7 +902,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 
 	result, err := sc.populateGenerateChallenge(
 		challengeReadyParts,
-		rand.New(rand.NewSource(int64(seedSource))),
+		int64(seedSource),
 		validators,
 		t,
 		challengeID,
@@ -891,6 +915,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		result.storageChallenge,
 		result.allocChallenges,
 		result.blobberChallenges,
+		result.challInfo,
 		balances)
 	if err != nil {
 		return common.NewErrorf("adding_challenge_error",
@@ -904,6 +929,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	challenge *StorageChallenge,
 	allocChallenges *AllocationChallenges,
 	blobChallenges *BlobberChallenges,
+	challInfo *StorageChallengeInfo,
 	balances cstate.StateContextI) error {
 
 	if challenge.BlobberID == "" {
@@ -970,6 +996,12 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	if err := emitAddOrOverwriteAllocation(alloc, balances); err != nil {
 		return common.NewErrorf("add_challenge",
 			"saving allocation in db: %v", err)
+	}
+
+	err = emitAddChallenge(challInfo, balances)
+	if err != nil {
+		return common.NewError("add_challenge",
+			"error adding challenge to db: "+err.Error())
 	}
 
 	return nil
