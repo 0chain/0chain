@@ -77,7 +77,8 @@ func (a *Allocations) has(id string) (ok bool) {
 	return // false
 }
 
-func (an *Allocations) Encode() []byte { _ := json.Marshal(an)
+func (an *Allocations) Encode() []byte {
+	buff, _ := json.Marshal(an)
 	return buff
 }
 
@@ -102,13 +103,13 @@ type ChallengeResponse struct {
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
-// swagger:model AllocOpenChallenge
 type AllocOpenChallenge struct {
 	ID        string           `json:"id"`
 	CreatedAt common.Timestamp `json:"created_at"`
 	BlobberID string           `json:"blobber_id"` // blobber id
 }
 
+// swagger:model AllocationChallenges
 type AllocationChallenges struct {
 	AllocationID   string                `json:"allocation_id"`
 	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`

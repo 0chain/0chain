@@ -76,14 +76,7 @@ func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var zcnConfig *GlobalNode
-	if gn == nil {
-		zcnConfig = loadSettings()
-	} else {
-		zcnConfig = gn
-	}
-
-	common.Respond(w, r, zcnConfig.ToStringMap(), nil)
+	common.Respond(w, r, gn.ToStringMap(), nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer getAuthorizer

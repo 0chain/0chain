@@ -64,6 +64,7 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+"/alloc_written_size", srh.getWrittenAmountHandler)
 	http.HandleFunc(storage+"/alloc_read_size", srh.getReadAmountHandler)
 	http.HandleFunc(storage+"/alloc_write_marker_count", srh.getWriteMarkerCountHandler)
+	http.HandleFunc(storage+"/collected_reward", srh.getCollectedReward)
 }
 
 func GetRestNames() []string {
@@ -102,7 +103,55 @@ func GetRestNames() []string {
 		"/alloc_written_size",
 		"/alloc_read_size",
 		"/alloc_write_marker_count",
+		"/collected_reward",
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
+// statistic for all locked tokens of a challenge pool
+//
+// parameters:
+//    + name: start_block
+//      description: start block
+//      required: true
+//      in: query
+//      type: string
+//    + name: end_block
+//      description: end block
+//      required: true
+//      in: query
+//      type: string
+//    + name: client_id
+//      description: client id
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: challengePoolStat
+//  400:
+func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http.Request) {
+	var (
+		startBlock, _ = strconv.Atoi(r.URL.Query().Get("start_block"))
+		endBlock, _   = strconv.Atoi(r.URL.Query().Get("end_block"))
+		clientID      = r.URL.Query().Get("client_id")
+	)
+
+	query := event.RewardQuery{
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		ClientID:   clientID,
+	}
+
+	collectedReward, err := srh.GetEventDB().GetRewardClaimedTotal(query)
+	if err != nil {
+		common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+		return
+	}
+
+	common.Respond(w, r, map[string]int64{
+		"collected_reward": collectedReward,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadAmountHandler getReadAmountHandler
@@ -597,18 +646,17 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 //  500:
 func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber")
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = blobberID
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
+	blobberChallenges := &BlobberChallenges{}
+	blobberChallenges.BlobberID = blobberID
 
-	err := srh.GetTrieNode(blobberChallengeObj.GetKey(ADDRESS), blobberChallengeObj)
+	err := srh.GetTrieNode(blobberChallenges.GetKey(ADDRESS), blobberChallenges)
 	if err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge"))
+		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge"))
 		return
 	}
 
 	challengeID := r.URL.Query().Get("challenge")
-	if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
+	if _, ok := blobberChallenges.ChallengesMap[challengeID]; !ok {
 		common.Respond(w, r, nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param"))
 		return
 	}
@@ -617,11 +665,17 @@ func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Reque
 	challenge.ID = challengeID
 	err = srh.GetTrieNode(challenge.GetKey(ADDRESS), challenge)
 	if err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge"))
-		return
+		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge"))
 	}
 
 	common.Respond(w, r, challenge, nil)
+}
+
+// swagger:model BlobberOpenChallengesResponse
+type BlobberOpenChallengesResponse struct {
+	BlobberID                string            `json:"blobber_id"`
+	ChallengeIDs             []string          `json:"challenge_ids"`
+	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"` // TODO: fix typo with Blobber and gosdk
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges openchallenges
@@ -653,13 +707,35 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		return
 	}
 
+	rsp := &BlobberOpenChallengesResponse{
+		BlobberID:    blobberID,
+		ChallengeIDs: []string{},
+	}
+
 	// return "200" with empty list, if no challenges are found
-	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
-	err := srh.GetTrieNode(blobberChallengeObj.GetKey(ADDRESS), blobberChallengeObj)
+	blobberChallenges := &BlobberChallenges{
+		BlobberID: blobberID,
+	}
+	err := blobberChallenges.load(srh, ADDRESS)
+
 	switch err {
-	case nil, util.ErrValueNotPresent:
-		common.Respond(w, r, blobberChallengeObj, nil)
+	case util.ErrValueNotPresent:
+		common.Respond(w, r, rsp, nil)
+	case nil:
+		lfb := srh.GetLatestFinalizedBlock()
+		if lfb == nil {
+			common.Respond(w, r, nil, common.NewErrInternal("chain is not ready, could not get latest finalized block"))
+		}
+
+		cct := getMaxChallengeCompletionTime()
+		ocs := blobberChallenges.GetOpenChallengesNoExpire(lfb.CreationDate, cct)
+		if len(ocs) > 0 {
+			rsp.ChallengeIDs = make([]string, len(ocs))
+			for i, oc := range ocs {
+				rsp.ChallengeIDs[i] = oc.ID
+			}
+		}
+		common.Respond(w, r, rsp, nil)
 	default:
 		common.Respond(w, r, nil, common.NewErrInternal("fail to get blobber challenge", err.Error()))
 	}

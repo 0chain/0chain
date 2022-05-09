@@ -56,6 +56,7 @@ type ReadOnlyStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
 	GetEventDB() *event.EventDb
 	GetBlock() *block.Block
+	GetLatestFinalizedBlock() *block.Block
 }
 
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
