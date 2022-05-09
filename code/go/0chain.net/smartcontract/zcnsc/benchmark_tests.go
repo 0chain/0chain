@@ -1,15 +1,16 @@
 package zcnsc
 
 import (
+	"log"
+	"math/rand"
+	"strconv"
+	"testing"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/spf13/viper"
-	"log"
-	"math/rand"
-	"strconv"
-	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -94,14 +95,14 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				txn:      createTransaction(owner, ""),
 				input: (&smartcontract.StringMap{
 					Fields: map[string]string{
-						"min_mint_amount":     "2",
-						"min_burn_amount":     "3",
-						"min_stake_amount":    "1",
-						"min_lock_amount":     "4",
-						"min_authorizers":     "17",
-						"percent_authorizers": "73",
-						"max_fee":             "800",
-						"burn_address":        "7000000000000000000000000000000000000000000000000000000000000000",
+						MinMintAmount:      "2",
+						MinBurnAmount:      "3",
+						MinStakeAmount:     "1",
+						MinLockAmount:      "4",
+						MinAuthorizers:     "17",
+						PercentAuthorizers: "73",
+						MaxFee:             "800",
+						BurnAddress:        "7000000000000000000000000000000000000000000000000000000000000000",
 					},
 				}).Encode(),
 			},
