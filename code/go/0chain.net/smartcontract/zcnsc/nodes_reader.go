@@ -31,10 +31,13 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 
 func GetGlobalSavedNode(balances state.ReadOnlyStateContextI) (*GlobalNode, error) {
 	node := &GlobalNode{ID: ADDRESS}
-	err := balances.GetTrieNode(node.GetKey(), node)
+	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:
-		return node, err
+		if node.ZCNSConfig == nil {
+			node.ZCNSConfig = loadGlobalNode()
+		}
+		return node, nil
 	default:
 		return nil, err
 	}
