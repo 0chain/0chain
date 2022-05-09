@@ -789,6 +789,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("empty allocation")
 	}
 
+	allocBlobber, ok := alloc.BlobberAllocsMap[blobberID]
+	if !ok {
+		return nil, errors.New("invalid blobber for allocation")
+	}
+
 	var randValidators []ValidationPartitionNode
 	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
 		return nil, common.NewError("add_challenge",
@@ -828,7 +833,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		Validators:     selectedValidators,
 		RandomNumber:   seed,
 		AllocationID:   storageChallenge.AllocationID,
-		AllocationRoot: alloc.BlobberAllocsMap[blobberID].AllocationRoot,
+		AllocationRoot: allocBlobber.AllocationRoot,
 		BlobberID:      blobberID,
 		Responded:      false,
 	}

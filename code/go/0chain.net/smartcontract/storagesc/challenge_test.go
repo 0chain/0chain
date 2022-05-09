@@ -37,6 +37,8 @@ func TestAddChallenge(t *testing.T) {
 		challengesTS []common.Timestamp
 		newChallenge *StorageChallenge
 		cct          time.Duration
+		challInfo    *StorageChallengeInfo
+		ct           common.Timestamp
 	}
 
 	type args struct {
@@ -56,6 +58,7 @@ func TestAddChallenge(t *testing.T) {
 	var (
 		blobberID = "blobber_1"
 		allocID   = "alloc_1"
+		allocRoot = "alloc_root"
 	)
 
 	parepareSSCArgs := func(t *testing.T, p parameters) (*StorageSmartContract, args) {
@@ -120,7 +123,16 @@ func TestAddChallenge(t *testing.T) {
 				Created:         ts,
 			}
 
-			err = ssc.addChallenge(alloc, c, allocChallenges, blobChallenges, balances)
+			challInfo := &StorageChallengeInfo{
+				ID:             c.ID,
+				Created:        c.Created,
+				AllocationID:   c.AllocationID,
+				AllocationRoot: alloc.BlobberAllocsMap[blobberID].AllocationRoot,
+				BlobberID:      blobberID,
+				Responded:      false,
+			}
+
+			err = ssc.addChallenge(alloc, c, allocChallenges, blobChallenges, challInfo, balances)
 			require.NoError(t, err)
 		}
 
@@ -132,14 +144,24 @@ func TestAddChallenge(t *testing.T) {
 		}
 	}
 
-	newChallenge := func(ts common.Timestamp) *StorageChallenge {
-		return &StorageChallenge{
-			ID:              fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
-			AllocationID:    allocID,
-			BlobberID:       blobberID,
-			TotalValidators: 1,
-			Created:         ts,
+	newChallenge := func(ts common.Timestamp) (*StorageChallenge, *StorageChallengeInfo) {
+		if ts == -1 {
+			return &StorageChallenge{BlobberID: ""}, &StorageChallengeInfo{BlobberID: ""}
 		}
+		return &StorageChallenge{
+				ID:              fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
+				AllocationID:    allocID,
+				BlobberID:       blobberID,
+				TotalValidators: 1,
+				Created:         ts,
+			}, &StorageChallengeInfo{
+				ID:             fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
+				Created:        ts,
+				AllocationID:   allocID,
+				AllocationRoot: allocRoot,
+				BlobberID:      blobberID,
+				Responded:      false,
+			}
 	}
 
 	tests := []struct {
@@ -151,8 +173,8 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK",
 			parameters: parameters{
-				cct:          100 * time.Second,
-				newChallenge: newChallenge(common.Timestamp(10)),
+				cct: 100 * time.Second,
+				ct:  common.Timestamp(10),
 			},
 			want: want{
 				openChallengeNum: 1,
@@ -163,7 +185,7 @@ func TestAddChallenge(t *testing.T) {
 			parameters: parameters{
 				cct:          100 * time.Second,
 				challengesTS: []common.Timestamp{10, 20},
-				newChallenge: newChallenge(common.Timestamp(30)),
+				ct:           common.Timestamp(30),
 			},
 			want: want{
 				openChallengeNum: 3,
@@ -174,7 +196,7 @@ func TestAddChallenge(t *testing.T) {
 			parameters: parameters{
 				cct:          100 * time.Second,
 				challengesTS: []common.Timestamp{10, 20},
-				newChallenge: newChallenge(common.Timestamp(110)),
+				ct:           common.Timestamp(110),
 			},
 			want: want{
 				openChallengeNum: 2,
@@ -185,7 +207,7 @@ func TestAddChallenge(t *testing.T) {
 			parameters: parameters{
 				cct:          100 * time.Second,
 				challengesTS: []common.Timestamp{10, 20},
-				newChallenge: newChallenge(common.Timestamp(120)),
+				ct:           common.Timestamp(120),
 			},
 			want: want{
 				openChallengeNum: 1,
@@ -194,7 +216,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "Error challenge blobber ID is empty",
 			parameters: parameters{
-				newChallenge: &StorageChallenge{BlobberID: ""},
+				ct: common.Timestamp(-1),
 			},
 			want: want{
 				error:    true,
@@ -208,11 +230,12 @@ func TestAddChallenge(t *testing.T) {
 			ssc, args := parepareSSCArgs(t, tt.parameters)
 
 			// add new challenge
-			c := tt.parameters.newChallenge
+			c, challInfo := newChallenge(tt.parameters.ct)
 			err := ssc.addChallenge(args.alloc,
 				c,
 				args.allocChallenges,
 				args.blobChallenges,
+				challInfo,
 				args.balances)
 
 			if tt.want.error {
