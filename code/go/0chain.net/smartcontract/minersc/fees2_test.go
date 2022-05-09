@@ -268,6 +268,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		block: &block.Block{
 			UnverifiedBlockBody: block.UnverifiedBlockBody{

@@ -56,3 +56,8 @@ func SleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
 	}
 	return
 }
+
+// ToSeconds converts the time.Duration to Timestamp(time.Seconds)
+func ToSeconds(duration time.Duration) Timestamp {
+	return Timestamp(duration / time.Second)
+}

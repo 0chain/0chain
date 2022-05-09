@@ -151,6 +151,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContract.RestHandlers["/alloc_read_size"] = ssc.GetReadAmountHandler
 	ssc.SmartContract.RestHandlers["/alloc_write_marker_count"] = ssc.GetWriteMarkerCountHandler
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
+	ssc.SmartContract.RestHandlers["/collected_reward"] = ssc.GetCollectedRewardHandler
 	// blobber aggregated saved data
 	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }
@@ -295,20 +296,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolUnlock(t, input, balances)
 	case "collect_reward":
 		resp, err = sc.collectReward(t, input, balances)
-
-	case "generate_challenges":
-		challengesEnabled := config.SmartContractConfig.GetBool(
-			"smart_contracts.storagesc.challenge_enabled")
-		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-			if err != nil {
-				return
-			}
-		} else {
-			return "Challenges disabled in the config", nil
-		}
-		return "Challenges generated", nil
-
 	case "generate_challenge":
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
@@ -318,9 +305,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 				return
 			}
 		} else {
-			return "Challenges disabled in the config", nil
+			return "OpenChallenges disabled in the config", nil
 		}
-		return "Challenges generated", nil
+		return "OpenChallenges generated", nil
 
 	case "challenge_response":
 		resp, err = sc.verifyChallenge(t, input, balances)

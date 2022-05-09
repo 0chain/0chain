@@ -77,6 +77,7 @@ type StateContextI interface {
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
+	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(event.EventType, event.EventTag, string, string)
 	EmitError(error)
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
@@ -94,6 +95,7 @@ type StateContext struct {
 	events                        []event.Event
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
+	getLatestFinalizedBlock       func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
@@ -109,6 +111,7 @@ func NewStateContext(
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
+	getLatestFinalizedBlock func() *block.Block,
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -119,6 +122,7 @@ func NewStateContext(
 		txn:                           t,
 		getSharders:                   getSharderFunc,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
+		getLatestFinalizedBlock:       getLatestFinalizedBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		eventDb:                       eventDb,
@@ -329,4 +333,8 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 func (sc *StateContext) SetStateContext(s *state.State) error {
 	s.SetRound(sc.block.Round)
 	return s.SetTxnHash(sc.txn.Hash)
+}
+
+func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
+	return sc.getLatestFinalizedBlock()
 }

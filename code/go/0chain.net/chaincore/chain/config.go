@@ -468,6 +468,9 @@ type ConfigData struct {
 	MinTxnFee            int64         `json:"min_txn_fee"`             // Minimum txn fee allowed
 	PruneStateBelowCount int           `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange           int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
+
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"` // Maximum challenge completion time
+
 	// todo move BlocksToSharder out of ConfigData
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
 	VerificationTicketsTo int `json:"verification_tickets_to"` // send verification tickets to generator or all miners

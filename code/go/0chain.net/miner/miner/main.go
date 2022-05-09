@@ -224,7 +224,7 @@ func main() {
 	initN2NHandlers(mc)
 
 	initWorkers(ctx)
-	// Load previous MB and related DKG if any. Don't load the latest, since
+	// load previous MB and related DKG if any. Don't load the latest, since
 	// it can be promoted (not finalized).
 	mc.LoadMagicBlocksAndDKG(ctx)
 
