@@ -52,7 +52,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct commo
 	expiry := now - cct
 
 	result := edb.Store.Get().Model(&Challenge{}).
-		Where("blobber_id = ? AND responded = ? AND created_at <= ?",
+		Where("blobber_id = ? AND responded = ? AND created_at >= ?",
 			blobberID, false, expiry).Find(&chs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
