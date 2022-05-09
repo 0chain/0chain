@@ -689,7 +689,7 @@ type BlobberOpenChallengesResponse struct {
 //      type: string
 //
 // responses:
-//  200: BlobberChallenge
+//  200: BlobberOpenChallengesResponse
 //  400:
 //  404:
 //  500:
