@@ -1235,18 +1235,18 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 1.
 	t.Run("unexpected end of JSON input", func(t *testing.T) {
-		_, err = ssc.newAllocationRequest(&tx, nil, balances)
+		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
 		requireErrMsg(t, err, errMsg1)
 	})
 	t.Run("No client id in transaction", func(t *testing.T) {
 		tx.ClientID = ""
-		_, err = ssc.newAllocationRequest(&tx, nil, balances)
+		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
 		requireErrMsg(t, err, errMsg3)
 	})
 	// 3.
 	t.Run("invalid character", func(t *testing.T) {
 		tx.ClientID = clientID
-		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances)
+		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances, nil)
 		requireErrMsg(t, err, errMsg4)
 	})
 
@@ -1255,7 +1255,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg5)
 	})
 
@@ -1293,7 +1293,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg6)
 	})
 
@@ -1314,7 +1314,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg6)
 	})
 
@@ -1347,7 +1347,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 		require.NoError(t, err)
 
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg7)
 	})
 	// 8. not enough tokens
@@ -1389,7 +1389,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
 		tx.Value = 0
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg8)
 	})
 	// 9. no tokens to lock (client balance check)
@@ -1434,7 +1434,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
 		tx.Value = 400
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg9)
 
 	})
@@ -1482,7 +1482,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		balances.balances[clientID] = 1100
 
 		tx.Value = 400
-		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
 		// check response
@@ -1706,7 +1706,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	balances.(*testBalances).balances[clientID] = 1100
 
 	tx.Value = 400
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 	require.NoError(t, err)
 }
 

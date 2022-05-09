@@ -836,7 +836,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		}
 	}
 
-	_, err = ssc.newAllocationRequest(txn, input, ctx)
+	_, err = ssc.newAllocationRequest(txn, input, ctx, nil)
 	if err != nil {
 		return err
 	}

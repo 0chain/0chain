@@ -255,6 +255,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	t *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
+	timings map[string]time.Duration,
 ) (string, error) {
 	var conf *Config
 	var err error
@@ -263,7 +264,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 			"can't get config: %v", err)
 	}
 
-	resp, err := sc.newAllocationRequestInternal(t, input, conf, false, balances)
+	resp, err := sc.newAllocationRequestInternal(t, input, conf, false, balances, timings)
 	if err != nil {
 		return "", err
 	}
@@ -284,7 +285,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	conf *Config,
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
+	timings map[string]time.Duration,
 ) (resp string, err error) {
+	m := Timings{timings: timings, start: time.Now()}
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"getting blobber list: %v", err)
@@ -301,7 +304,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
-
+	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Blobbers provided are not enough to honour the allocation")
@@ -330,6 +333,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err != nil {
 		return "", err
 	}
+	m.tick("fetch_pools")
+
 	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(t.CreationDate), sa, balances, blobbers)
 	bi := make([]string, 0, len(blobberNodes))
 	for _, b := range blobberNodes {
@@ -363,6 +368,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
+	m.tick("add_offer")
 
 	sa.StartTime = t.CreationDate
 	sa.Tx = t.Hash
@@ -371,16 +377,31 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err = sc.createWritePool(t, sa, mintNewTokens, balances); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
+	m.tick("create_write_pool")
 
 	if err = sc.createChallengePool(t, sa, balances); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
+	m.tick("create_challenge_pool")
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
+	m.tick("add_allocation")
 
 	return resp, err
+}
+
+type Timings struct {
+	timings map[string]time.Duration
+	start   time.Time
+}
+
+func (t *Timings) tick(name string) {
+	if t.timings == nil {
+		return
+	}
+	t.timings[name] = time.Since(t.start)
 }
 
 func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances chainstate.StateContextI) ([]*blobberWithPool, error) {

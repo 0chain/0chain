@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/smartcontract"
 
@@ -34,8 +35,13 @@ type BenchTest struct {
 		[]byte,
 		cstate.StateContextI,
 	) (string, error)
-	txn   *transaction.Transaction
-	input []byte
+	txn     *transaction.Transaction
+	input   []byte
+	timings map[string]time.Duration
+}
+
+func (bt BenchTest) Timings() map[string]time.Duration {
+	return bt.timings
 }
 
 func (bt BenchTest) Name() string {
@@ -80,6 +86,15 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
+	timings := make(map[string]time.Duration)
+	newAllocationRequestF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.newAllocationRequest(t, r, b, timings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -140,7 +155,7 @@ func BenchmarkTests(
 		// data.Allocations
 		{
 			name:     "storage.new_allocation_request",
-			endpoint: ssc.newAllocationRequest,
+			endpoint: newAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -164,6 +179,7 @@ func BenchmarkTests(
 				}).encode()
 				return bytes
 			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.update_allocation_request",
