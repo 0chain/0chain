@@ -757,12 +757,6 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
-type BlobberOpenChallengesResponse struct {
-	BlobberID                string            `json:"blobber_id"`
-	ChallengeIDs             []string          `json:"challenge_ids"`
-	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"` // TODO: fix typo with Blobber and gosdk
-}
-
 type StorageChallengeInfo struct {
 	ID             string            `json:"id"`
 	Created        common.Timestamp  `json:"created"`
