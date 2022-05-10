@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -53,7 +52,7 @@ func (rbt *RestBenchTest) Run(balances cstate.StateContextI, b *testing.B) error
 		var prettyJSON bytes.Buffer
 		err := json.Indent(&prettyJSON, body, "", "\t")
 		require.NoError(b, err)
-		log.Println(rbt.Name()+" : ", string(prettyJSON.Bytes()))
+		fmt.Println(rbt.Name()+" : ", string(prettyJSON.Bytes()))
 		rbt.shownResult = true
 	}
 	if resp.StatusCode != http.StatusOK {

@@ -6,7 +6,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	bk "0chain.net/smartcontract/benchmark"
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -55,7 +54,7 @@ func (rbt *RestBenchTest) Run(balances cstate.StateContextI, b *testing.B) error
 		var prettyJSON bytes.Buffer
 		err := json.Indent(&prettyJSON, body, "", "\t")
 		require.NoError(b, err)
-		log.Println(rbt.Name()+" : ", string(prettyJSON.Bytes()))
+		fmt.Println(rbt.Name()+" : ", string(prettyJSON.Bytes()))
 		rbt.shownResult = true
 	}
 	if resp.StatusCode != http.StatusOK {
