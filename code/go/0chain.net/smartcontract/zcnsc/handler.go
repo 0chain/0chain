@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/chaincore/state"
 	"net/http"
 
 	"0chain.net/core/util"
@@ -96,11 +97,76 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id))
 		return
 	}
-	rtv, err := toAuthorizerResponse(ev)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
+	rtv := toAuthorizerResponse(ev)
 
 	common.Respond(w, r, rtv, nil)
+}
+
+type authorizerResponse struct {
+	AuthorizerID string `json:"id"`
+	URL          string `json:"url"`
+
+	// Configuration
+	Fee state.Balance `json:"fee"`
+
+	// Geolocation
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+
+	// Stats
+	LastHealthCheck int64 `json:"last_health_check"`
+
+	// stake_pool_settings
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       state.Balance `json:"min_stake"`
+	MaxStake       state.Balance `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
+}
+
+type authorizerNodesResponse struct {
+	Nodes []*authorizerNode `json:"nodes"`
+}
+
+type authorizerNode struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
+}
+
+func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
+	resp := &authorizerResponse{
+		AuthorizerID:    auth.AuthorizerID,
+		URL:             auth.URL,
+		Fee:             auth.Fee,
+		Latitude:        auth.Latitude,
+		Longitude:       auth.Longitude,
+		LastHealthCheck: auth.LastHealthCheck,
+		DelegateWallet:  auth.DelegateWallet,
+		MinStake:        auth.MinStake,
+		MaxStake:        auth.MaxStake,
+		NumDelegates:    auth.NumDelegates,
+		ServiceCharge:   auth.ServiceCharge,
+	}
+
+	return resp
+}
+
+func toNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
+	var (
+		resp       = &authorizerNodesResponse{}
+		authorizer event.Authorizer
+	)
+
+	for _, authorizer = range events {
+		resp.Nodes = append(resp.Nodes, ToNode(authorizer))
+	}
+
+	return resp
+}
+
+func ToNode(ev event.Authorizer) *authorizerNode {
+	return &authorizerNode{
+		ID:  ev.AuthorizerID,
+		URL: ev.URL,
+	}
 }

@@ -52,7 +52,7 @@ func (bt *restBenchTest) Run(balances cstate.StateContextI, b *testing.B) error 
 		var prettyJSON bytes.Buffer
 		err := json.Indent(&prettyJSON, body, "", "\t")
 		require.NoError(b, err)
-		fmt.Println(bt.Name()+" : ", string(prettyJSON.Bytes()))
+		fmt.Println(bt.Name()+" : ", prettyJSON.String())
 		bt.shownResult = true
 	}
 	if resp.StatusCode != http.StatusOK {
