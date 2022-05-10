@@ -42,7 +42,7 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 
 	var (
 		clientID = r.URL.Query().Get("client_id")
-		cp       *clientPools
+		cp       = new(clientPools)
 	)
 
 	// just return empty list if not found
