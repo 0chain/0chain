@@ -12,14 +12,14 @@ import (
 
 type Challenge struct {
 	gorm.Model
-	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"created_at,index:,unique,composite:open_challenge"`
-	AllocationID   string           `json:"allocation_id" gorm:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"blobber_id,index:,unique,composite:open_challenge"`
-	ValidatorsID   string           `json:"validators_id" gorm:"validators_id"`
-	Seed           int64            `json:"seed" gorm:"seed"`
-	AllocationRoot string           `json:"allocation_root" gorm:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"responded,index:,unique,composite:open_challenge"`
+	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id,unique"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge"`
+	AllocationID   string           `json:"allocation_id"`
+	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge"`
+	ValidatorsID   string           `json:"validators_id"`
+	Seed           int64            `json:"seed"`
+	AllocationRoot string           `json:"allocation_root"`
+	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge"`
 }
 
 func (ch *Challenge) exists(edb *EventDb) (bool, error) {
