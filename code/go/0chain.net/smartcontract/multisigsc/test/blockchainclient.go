@@ -204,10 +204,11 @@ func executeTransaction(from mptwallet.Wallet, toClientID string, value int64, t
 	var err error
 
 	for i := 0; i < executeRetries; i++ {
-		hash := postTransaction(from, toClientID, value, txnType, data)
+		hash := postTransaction(from, toClientID, value, from.Nonce+1, txnType, data)
 
 		t, err := confirmTransaction(hash)
 		if err == nil {
+			from.Nonce += 1
 			return t
 		}
 
@@ -220,7 +221,7 @@ func executeTransaction(from mptwallet.Wallet, toClientID string, value int64, t
 	return httpclientutil.Transaction{} // Never reached.
 }
 
-func postTransaction(from mptwallet.Wallet, toClientID string, value int64, txnType int, data string) string {
+func postTransaction(from mptwallet.Wallet, toClientID string, value int64, nonce int64, txnType int, data string) string {
 	txn := httpclientutil.Transaction{
 		ClientID:  from.ClientID,
 		PublicKey: from.PublicKey,
@@ -231,6 +232,7 @@ func postTransaction(from mptwallet.Wallet, toClientID string, value int64, txnT
 		Value:           value,
 		CreationDate:    common.Now(),
 		Fee:             feeSize,
+		Nonce:           nonce,
 
 		TransactionType: txnType,
 	}
