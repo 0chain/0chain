@@ -6,11 +6,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 )
+
+const NONCE_REFRESH_PERIOD = time.Minute
 
 /*Self represents the node of this instance */
 var Self = newSelfNode()
@@ -20,6 +23,27 @@ type SelfNode struct {
 	mx sync.RWMutex
 	*Node
 	signatureScheme encryption.SignatureScheme
+	nonce           int64
+	refreshTime     time.Time
+}
+
+func (sn *SelfNode) SetNonce(nonce int64) {
+	sn.mx.Lock()
+	sn.nonce = nonce
+	sn.refreshTime = time.Now()
+	sn.mx.Unlock()
+}
+
+//returns next time if nonce is not evicted, if it is 0 is returned and client should request it again from server
+//since we do not validate transaction confirmation it is the only way to prevent FutureTransactionError due to tx errors
+func (sn *SelfNode) GetNextNonce() int64 {
+	sn.mx.Lock()
+	defer sn.mx.Unlock()
+	if time.Since(sn.refreshTime) > NONCE_REFRESH_PERIOD {
+		return 0
+	}
+	sn.nonce = sn.nonce + 1
+	return sn.nonce
 }
 
 func newSelfNode() *SelfNode {
