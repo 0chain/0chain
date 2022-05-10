@@ -769,6 +769,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		lfb := srh.GetLatestFinalizedBlock()
 		if lfb == nil {
 			common.Respond(w, r, nil, common.NewErrInternal("chain is not ready, could not get latest finalized block"))
+			return
 		}
 
 		cct := getMaxChallengeCompletionTime()
