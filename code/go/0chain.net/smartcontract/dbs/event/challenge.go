@@ -13,13 +13,13 @@ import (
 type Challenge struct {
 	gorm.Model
 	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"created_at"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"created_at,uniqueIndex:open_challenge"`
 	AllocationID   string           `json:"allocation_id" gorm:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"blobber_id"`
+	BlobberID      string           `json:"blobber_id" gorm:"blobber_id,uniqueIndex:open_challenges"`
 	ValidatorsID   string           `json:"validators_id" gorm:"validators_id"`
 	Seed           int64            `json:"seed" gorm:"seed"`
 	AllocationRoot string           `json:"allocation_root" gorm:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"responded"`
+	Responded      bool             `json:"responded" gorm:"responded,uniqueIndex:open_challenge"`
 }
 
 func (ch *Challenge) exists(edb *EventDb) (bool, error) {
@@ -90,19 +90,9 @@ func (edb *EventDb) addChallenge(ch *Challenge) error {
 }
 
 func (edb *EventDb) updateChallenge(updates dbs.DbUpdates) error {
-	var challenge = Challenge{ChallengeID: updates.Id}
-	exists, err := challenge.exists(edb)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("challenge %v not in database cannot update",
-			challenge.ChallengeID)
-	}
-
 	result := edb.Store.Get().
 		Model(&Challenge{}).
-		Where(&Challenge{ChallengeID: challenge.ChallengeID}).
+		Where(&Challenge{ChallengeID: updates.Id}).
 		Updates(updates.Updates)
 	return result.Error
 }
