@@ -241,7 +241,7 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 	}
 
 	if alloc, err = ssc.getAllocation(allocationID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation")
 	}
 
 	if cp, err = ssc.getChallengePool(allocationID, balances); err != nil {

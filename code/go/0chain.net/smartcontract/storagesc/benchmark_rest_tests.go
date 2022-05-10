@@ -1,118 +1,114 @@
 package storagesc
 
 import (
-	"context"
-	"net/url"
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	bk "0chain.net/smartcontract/benchmark"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
-
-	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
-	"github.com/spf13/viper"
-
-	"0chain.net/chaincore/smartcontract"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/transaction"
-
-	cstate "0chain.net/chaincore/chain/state"
-	bk "0chain.net/smartcontract/benchmark"
 )
 
 type RestBenchTest struct {
-	name     string
-	endpoint func(
-		context.Context,
-		url.Values,
-		cstate.StateContextI,
-	) (interface{}, error)
-	params url.Values
+	name        string
+	params      map[string]string
+	shownResult bool
 }
 
-func (rbt RestBenchTest) Name() string {
-	return rbt.name
+func (rbt *RestBenchTest) Name() string {
+	return "storage_rest." + rbt.name
 }
 
-func (rbt RestBenchTest) Transaction() *transaction.Transaction {
+func (rbt *RestBenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{}
 }
 
-func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
-	_, err := rbt.endpoint(context.TODO(), rbt.params, balances)
-	return err
+func (rbt *RestBenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+	b.StopTimer()
+	req := httptest.NewRequest("GET", "http://localhost/v1/screst/"+ADDRESS+"/"+rbt.name, nil)
+	rec := httptest.NewRecorder()
+	if len(rbt.params) > 0 {
+		q := req.URL.Query()
+		for k, v := range rbt.params {
+			q.Add(k, v)
+		}
+		req.URL.RawQuery = q.Encode()
+	}
+	b.StartTimer()
+
+	http.DefaultServeMux.ServeHTTP(rec, req)
+
+	b.StopTimer()
+	resp := rec.Result()
+	if viper.GetBool(bk.ShowOutput) && !rbt.shownResult {
+		body, _ := io.ReadAll(resp.Body)
+		var prettyJSON bytes.Buffer
+		err := json.Indent(&prettyJSON, body, "", "\t")
+		require.NoError(b, err)
+		log.Println(rbt.Name()+" : ", string(prettyJSON.Bytes()))
+		rbt.shownResult = true
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("status code %v not ok: %v", resp.StatusCode, resp.Status)
+	}
+	b.StartTimer()
+
+	return nil
 }
 
 func BenchmarkRestTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
-	var ssc = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}
-	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
-	var tests = []RestBenchTest{
+	var tests = []*RestBenchTest{
 		{
-			name:     "storage_rest.getConfig",
-			endpoint: ssc.getConfigHandler,
+			name: "getConfig",
 		},
 		{
-			name:     "storage_rest.get_mpt_key.sc_config",
-			endpoint: ssc.GetMptKey,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("key", scConfigKey(ADDRESS))
-				return values
-			}(),
+			name: "latestreadmarker",
+			params: map[string]string{
+				"client":  data.Clients[0],
+				"blobber": getMockBlobberId(0),
+			},
+		},
+
+		{
+			name: "readmarkers",
+			params: map[string]string{
+				"allocation_id": getMockAllocationId(0),
+			},
 		},
 		{
-			name:     "storage_rest.latestreadmarker",
-			endpoint: ssc.LatestReadMarkerHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client", data.Clients[0])
-				values.Set("blobber", getMockBlobberId(0))
-				return values
-			}(),
+			name: "countreadmarkers",
+			params: map[string]string{
+				"allocation_id": getMockAllocationId(0),
+			},
 		},
 		{
-			name:     "storage_rest.readmarkers",
-			endpoint: ssc.GetReadMarkersHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("allocation_id", getMockAllocationId(0))
-				return values
-			}(),
+			name: "allocation",
+			params: map[string]string{
+				"allocation": getMockAllocationId(0),
+			},
 		},
 		{
-			name:     "storage_rest.countreadmarkers",
-			endpoint: ssc.GetReadMarkersCount,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("allocation_id", getMockAllocationId(0))
-				return values
-			}(),
+			name: "allocations",
+			params: map[string]string{
+				"client": data.Clients[0],
+			},
 		},
 		{
-			name:     "storage_rest.allocation",
-			endpoint: ssc.AllocationStatsHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("allocation", getMockAllocationId(0))
-				return values
-			}(),
-		},
-		{
-			name:     "storage_rest.allocations",
-			endpoint: ssc.GetAllocationsHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client", data.Clients[0])
-				return values
-			}(),
-		},
-		{
-			name:     "storage_rest.allocation_min_lock",
-			endpoint: ssc.GetAllocationMinLockHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
+			name: "allocation_min_lock",
+			params: func() map[string]string {
+				var values = make(map[string]string)
 				now := common.Timestamp(time.Now().Unix())
 				nar, _ := (&newAllocationRequest{
 					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
@@ -127,126 +123,89 @@ func BenchmarkRestTests(
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()
-				values.Set("allocation_data", string(nar))
+				values["allocation_data"] = string(nar)
 				return values
 			}(),
 		},
 		{
-			name:     "storage_rest.openchallenges",
-			endpoint: ssc.OpenChallengeHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("blobber", getMockBlobberId(0))
-				return values
-			}(),
+			name: "openchallenges",
+			params: map[string]string{
+				"blobber": getMockBlobberId(0),
+			},
 		},
 		{
-			name:     "storage_rest.getchallenge",
-			endpoint: ssc.GetChallengeHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("blobber", getMockBlobberId(0))
-				values.Set("challenge", getMockChallengeId(0, 0))
-				return values
-			}(),
+			name: "getchallenge",
+			params: map[string]string{
+				"blobber":   getMockBlobberId(0),
+				"challenge": getMockChallengeId(0, 0),
+			},
 		},
 		{
-			name:     "storage_rest.getblobbers",
-			endpoint: ssc.GetBlobbersHandler,
+			name: "getblobbers",
 		},
 		{
-			name:     "storage_rest.getBlobber",
-			endpoint: ssc.GetBlobberHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("blobber_id", getMockBlobberId(0))
-				return values
-			}(),
+			name: "getBlobber",
+			params: map[string]string{
+				"blobber_id": getMockBlobberId(0),
+			},
 		},
 		{
-			name:     "storage_rest.getReadPoolStat",
-			endpoint: ssc.getReadPoolStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client_id", data.Clients[0])
-				return values
-			}(),
+			name: "getReadPoolStat",
+			params: map[string]string{
+				"client_id": data.Clients[0],
+			},
 		},
 		{
-			name:     "storage_rest.getReadPoolAllocBlobberStat",
-			endpoint: ssc.getReadPoolAllocBlobberStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client_id", data.Clients[0])
-				values.Set("allocation_id", getMockAllocationId(0))
-				values.Set("blobber_id", getMockBlobberId(0))
-				return values
-			}(),
+			name: "getReadPoolAllocBlobberStat",
+			params: map[string]string{
+				"client_id":     data.Clients[0],
+				"allocation_id": getMockAllocationId(0),
+				"blobber_id":    getMockBlobberId(0),
+			},
 		},
 		{
-			name:     "storage_rest.getWriteMarkers",
-			endpoint: ssc.GetWriteMarkersHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("allocation_id", getMockAllocationId(0))
-				return values
-			}(),
+			name: "getWriteMarkers",
+			params: map[string]string{
+				"allocation_id": getMockAllocationId(0),
+			},
 		},
 		{
-			name:     "storage_rest.getWritePoolStat",
-			endpoint: ssc.getWritePoolStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client_id", data.Clients[0])
-				return values
-			}(),
+			name: "getWritePoolStat",
+			params: map[string]string{
+				"client_id": data.Clients[0],
+			},
 		},
 		{
-			name:     "storage_rest.getWritePoolAllocBlobberStat",
-			endpoint: ssc.getWritePoolAllocBlobberStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client_id", data.Clients[0])
-				values.Set("allocation_id", getMockAllocationId(0))
-				values.Set("blobber_id", getMockBlobberId(0))
-				return values
-			}(),
+			name: "getWritePoolAllocBlobberStat",
+			params: map[string]string{
+				"client_id":     data.Clients[0],
+				"allocation_id": getMockAllocationId(0),
+				"blobber_id":    getMockBlobberId(0),
+			},
 		},
 		{
-			name:     "storage_rest.getStakePoolStat",
-			endpoint: ssc.getStakePoolStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("blobber_id", getMockBlobberId(0))
-				return values
-			}(),
+			name: "getStakePoolStat",
+			params: map[string]string{
+				"blobber_id": getMockBlobberId(0),
+			},
 		},
 		{
-			name:     "storage_rest.getUserStakePoolStat",
-			endpoint: ssc.getUserStakePoolStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("client_id", data.Clients[0])
-				return values
-			}(),
+			name: "getUserStakePoolStat",
+			params: map[string]string{
+				"client_id": data.Clients[0],
+			},
 		},
 		{
-			name:     "storage_rest.getChallengePoolStat",
-			endpoint: ssc.getChallengePoolStatHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("allocation_id", getMockAllocationId(0))
-				return values
-			}(),
+			name: "getChallengePoolStat",
+			params: map[string]string{
+				"allocation_id": getMockAllocationId(0),
+			},
 		},
 		{
-			name:     "storage_rest.GetValidator",
-			endpoint: ssc.GetValidatorHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				values.Set("validator_id", getMockValidatorId(0))
-				return values
-			}(),
+			name: "get_validator",
+			params: map[string]string{
+				"validator_id": getMockValidatorId(0),
+			},
 		},
 	}
 	var testsI []bk.BenchTestI
@@ -256,5 +215,6 @@ func BenchmarkRestTests(
 	return bk.TestSuite{
 		Source:     bk.StorageRest,
 		Benchmarks: testsI,
+		ReadOnly:   true,
 	}
 }

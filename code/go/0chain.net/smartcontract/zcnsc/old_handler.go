@@ -68,7 +68,7 @@ func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ct
 
 	var zcnConfig *GlobalNode
 	if gn == nil {
-		zcnConfig = loadSettings()
+		//zcnConfig = loadSettings()
 	} else {
 		zcnConfig = gn
 	}

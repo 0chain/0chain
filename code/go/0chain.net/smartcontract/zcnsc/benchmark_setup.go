@@ -134,7 +134,8 @@ func createSmartContract() ZCNSmartContract {
 
 func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
-		ID: ADDRESS,
+		ID:         ADDRESS,
+		ZCNSConfig: &ZCNSConfig{},
 	}
 }
 

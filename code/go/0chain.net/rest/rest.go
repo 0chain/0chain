@@ -42,6 +42,10 @@ func (rh *RestHandler) GetBlock() *block.Block {
 	return rh.SCtx.GetBlock()
 }
 
+func (rh *RestHandler) GetLatestFinalizedBlock() *block.Block {
+	return rh.SCtx.GetLatestFinalizedBlock()
+}
+
 func (rh *RestHandler) SetupRestHandlers() {
 	if rh.GetEventDB() == nil {
 		logging.Logger.Warn("no event database, skipping REST handlers")

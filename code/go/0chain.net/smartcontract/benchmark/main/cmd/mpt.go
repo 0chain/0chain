@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -63,6 +64,7 @@ func getBalances(
 		PrevBlock: &block.Block{},
 	}
 	bk.Round = 2
+	bk.CreationDate = common.Timestamp(time.Now().Unix())
 	bk.MinerID = minersc.GetMockNodeId(0, minersc.NodeTypeMiner)
 	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, minersc.NodeTypeMiner))
 	magicBlock := &block.MagicBlock{}
@@ -75,7 +77,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
-		nil,
+		func() *block.Block { return bk },
 		data.EventDb,
 	)
 }
@@ -240,6 +242,14 @@ func setUpMpt(
 		defer wg.Done()
 		timer = time.Now()
 		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
+		log.Println("added blobbers\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
 	}()
 

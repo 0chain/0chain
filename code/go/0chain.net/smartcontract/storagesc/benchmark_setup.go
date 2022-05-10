@@ -225,6 +225,7 @@ func AddMockChallenges(
 		if err := blobPartitionsLocations.save(balances, ADDRESS); err != nil {
 			log.Fatal(err)
 		}
+
 	}
 
 	err = challengeReadyBlobbersPart.Save(balances)
@@ -408,6 +409,10 @@ func setupMockChallenges(
 	balances cstate.StateContextI,
 ) []*StorageChallenge {
 	ac.AllocationID = allocationId
+	blobberChallenges := BlobberChallenges{
+		BlobberID:     blobber.ID,
+		ChallengesMap: make(map[string]struct{}),
+	}
 	challenges := make([]*StorageChallenge, 0, challengesPerBlobber)
 	for i := 0; i < challengesPerBlobber; i++ {
 		challenge := &StorageChallenge{
@@ -422,6 +427,17 @@ func setupMockChallenges(
 		}
 		if ac.addChallenge(challenge) {
 			challenges = append(challenges, challenge)
+		}
+
+		blobberChallenges.OpenChallenges = append(blobberChallenges.OpenChallenges, BlobOpenChallenge{
+			ID:        challenge.ID,
+			CreatedAt: common.Timestamp(time.Now().Unix()),
+		})
+		if blobberChallenges.LatestCompletedChallenge == nil {
+			blobberChallenges.LatestCompletedChallenge = challenge
+		}
+		if err := blobberChallenges.save(balances, ADDRESS); err != nil {
+			log.Fatal(err)
 		}
 	}
 

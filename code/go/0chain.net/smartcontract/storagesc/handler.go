@@ -273,8 +273,10 @@ func (srh *StorageRestHandler) getWrittenAmountHandler(w http.ResponseWriter, r 
 func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
-		alloc        *StorageAllocation
-		cp           *challengePool
+		alloc        = &StorageAllocation{
+			ID: allocationID,
+		}
+		cp = &challengePool{}
 	)
 
 	if allocationID == "" {
@@ -324,7 +326,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 		clientID  = r.URL.Query().Get("client_id")
 		allocID   = r.URL.Query().Get("allocation_id")
 		blobberID = r.URL.Query().Get("blobber_id")
-		wp        *writePool
+		wp        = &writePool{}
 	)
 
 	if err := srh.GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
@@ -366,8 +368,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 //  200: allocationPoolsStat
 //  400:
 func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
-	var wp *writePool
-
+	var wp = &writePool{}
 	clientID := r.URL.Query().Get("client_id")
 	if err := srh.GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
@@ -405,7 +406,7 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 		clientID  = r.URL.Query().Get("client_id")
 		allocID   = r.URL.Query().Get("allocation_id")
 		blobberID = r.URL.Query().Get("blobber_id")
-		rp        *readPool
+		rp        = &readPool{}
 	)
 
 	if err := srh.GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
@@ -447,7 +448,7 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 //  200: allocationPoolsStat
 //  400:
 func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
-	var rp *readPool
+	var rp = &readPool{}
 
 	clientID := r.URL.Query().Get("client_id")
 	if err := srh.GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
@@ -465,7 +466,7 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 //  200: StringMap
 //  400:
 func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	var conf *Config
+	var conf = &Config{}
 	const cantGetConfigErrMsg = "can't get config"
 	err := srh.GetTrieNode(scConfigKey(ADDRESS), conf)
 
