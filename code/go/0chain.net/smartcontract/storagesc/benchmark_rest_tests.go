@@ -88,7 +88,7 @@ func BenchmarkRestTests(
 			},
 		},
 		{
-			name: "countreadmarkers",
+			name: "count_readmarkers",
 			params: map[string]string{
 				"allocation_id": getMockAllocationId(0),
 			},

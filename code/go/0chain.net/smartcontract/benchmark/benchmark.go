@@ -128,7 +128,7 @@ const (
 	ControlM                = Internal + "control_m"
 	ControlN                = Internal + "control_n"
 	MptRoot                 = Internal + "mpt_root"
-	ShowOutput              = Internal + "show_output"
+	ShowOutput              = Internal + ""
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"

@@ -26,6 +26,7 @@ options:
   verbose: true
   test_suites:
     - "storage_rest"
+    - "faucet_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
@@ -170,5 +171,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: true
+  show_output: false
 
