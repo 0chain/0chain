@@ -19,17 +19,15 @@ import (
 	"0chain.net/smartcontract"
 )
 
-//msgp:ignore AuthorizerNode
 //go:generate msgp -v -io=false -tests=false -unexported
 
 // ------------- GlobalNode ------------------------
 
-type GlobalNode struct {
-	ID                 string         `json:"id"`
-	MinMintAmount      state.Balance  `json:"min_mint_amount"`
-	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
-	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
-	MinLockAmount      int64          `json:"min_lock_amount"`
+type ZCNSConfig struct {
+	MinMintAmount      state.Balance  `json:"min_mint"`
+	MinBurnAmount      state.Balance  `json:"min_burn"`
+	MinStakeAmount     state.Balance  `json:"min_stake"`
+	MinLockAmount      int64          `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MaxFee             state.Balance  `json:"max_fee"`
@@ -37,6 +35,11 @@ type GlobalNode struct {
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
 	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
+}
+
+type GlobalNode struct {
+	ID          string `json:"id"`
+	*ZCNSConfig `json:"zcnsc_config"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
@@ -295,24 +298,6 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 	}
 
 	return nil
-}
-
-type authorizerNodeDecode AuthorizerNode
-
-func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
-	d := authorizerNodeDecode(*an)
-	return d.MarshalMsg(o)
-}
-
-func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	d := authorizerNodeDecode{}
-	o, err := d.UnmarshalMsg(data)
-	if err != nil {
-		return nil, err
-	}
-
-	*an = AuthorizerNode(d)
-	return o, nil
 }
 
 func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {

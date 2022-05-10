@@ -20,6 +20,7 @@ func makeTestState() *State {
 		TxnHashBytes: rHash,
 		Round:        1,
 		Balance:      5,
+		Nonce:        1,
 	}
 }
 
@@ -33,6 +34,7 @@ func TestState_GetHash(t *testing.T) {
 		TxnHashBytes []byte
 		Round        int64
 		Balance      Balance
+		Nonce        int64
 	}
 	tests := []struct {
 		name   string
@@ -55,6 +57,7 @@ func TestState_GetHash(t *testing.T) {
 				TxnHashBytes: tt.fields.TxnHashBytes,
 				Round:        tt.fields.Round,
 				Balance:      tt.fields.Balance,
+				Nonce:        tt.fields.Nonce,
 			}
 			if got := s.GetHash(); got != tt.want {
 				t.Errorf("GetHash() = %v, want %v", got, tt.want)
@@ -73,6 +76,7 @@ func TestState_GetHashBytes(t *testing.T) {
 		TxnHashBytes []byte
 		Round        int64
 		Balance      Balance
+		Nonce        int64
 	}
 	tests := []struct {
 		name   string
@@ -95,6 +99,7 @@ func TestState_GetHashBytes(t *testing.T) {
 				TxnHashBytes: tt.fields.TxnHashBytes,
 				Round:        tt.fields.Round,
 				Balance:      tt.fields.Balance,
+				Nonce:        tt.fields.Nonce,
 			}
 			if got := s.GetHashBytes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetHashBytes() = %v, want %v", got, tt.want)
@@ -113,6 +118,7 @@ func TestState_Encode(t *testing.T) {
 		TxnHashBytes []byte
 		Round        int64
 		Balance      Balance
+		Nonce        int64
 	}
 	tests := []struct {
 		name   string
@@ -132,6 +138,10 @@ func TestState_Encode(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				if err := binary.Write(buf, binary.LittleEndian, st.Nonce); err != nil {
+					t.Fatal(err)
+				}
+
 				return buf.Bytes()
 			}(),
 		},
@@ -146,6 +156,7 @@ func TestState_Encode(t *testing.T) {
 				TxnHashBytes: tt.fields.TxnHashBytes,
 				Round:        tt.fields.Round,
 				Balance:      tt.fields.Balance,
+				Nonce:        tt.fields.Nonce,
 			}
 			if got := s.Encode(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Encode() = %v, want %v", got, tt.want)
@@ -166,6 +177,7 @@ func TestState_Decode(t *testing.T) {
 		TxnHashBytes []byte
 		Round        int64
 		Balance      Balance
+		Nonce        int64
 	}
 	type args struct {
 		data []byte
@@ -194,6 +206,7 @@ func TestState_Decode(t *testing.T) {
 				TxnHashBytes: tt.fields.TxnHashBytes,
 				Round:        tt.fields.Round,
 				Balance:      tt.fields.Balance,
+				Nonce:        tt.fields.Nonce,
 			}
 			if err := s.Decode(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
@@ -213,6 +226,7 @@ func TestState_ComputeProperties(t *testing.T) {
 		TxnHashBytes []byte
 		Round        int64
 		Balance      Balance
+		Nonce        int64
 	}
 	tests := []struct {
 		name   string
@@ -225,6 +239,7 @@ func TestState_ComputeProperties(t *testing.T) {
 				TxnHashBytes: st.TxnHashBytes,
 				Round:        st.Round,
 				Balance:      st.Balance,
+				Nonce:        st.Nonce,
 			},
 			want: st,
 		},
@@ -239,6 +254,7 @@ func TestState_ComputeProperties(t *testing.T) {
 				TxnHashBytes: tt.fields.TxnHashBytes,
 				Round:        tt.fields.Round,
 				Balance:      tt.fields.Balance,
+				Nonce:        tt.fields.Nonce,
 			}
 
 			s.ComputeProperties()
@@ -257,10 +273,12 @@ func TestState_Set(t *testing.T) {
 		TxnHashBytes []byte
 		Round        int64
 		Balance      Balance
+		Nonce        int64
 	}
 	type args struct {
 		round   int64
 		txnHash string
+		nonce   int64
 	}
 	tests := []struct {
 		name    string
@@ -273,8 +291,9 @@ func TestState_Set(t *testing.T) {
 			name: "OK",
 			fields: fields{
 				Balance: 5,
+				Nonce:   1,
 			},
-			args: args{round: st.Round, txnHash: st.TxnHash},
+			args: args{round: st.Round, txnHash: st.TxnHash, nonce: st.Nonce},
 			want: st,
 		},
 		{
@@ -294,6 +313,7 @@ func TestState_Set(t *testing.T) {
 				TxnHashBytes: tt.fields.TxnHashBytes,
 				Round:        tt.fields.Round,
 				Balance:      tt.fields.Balance,
+				Nonce:        tt.fields.Nonce,
 			}
 
 			s.SetRound(tt.args.round)
