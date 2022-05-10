@@ -555,6 +555,7 @@ func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, &block, nil)
 }
 
+// swagger:model userPoolStat
 type userPoolStat struct {
 	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
 }
@@ -1274,6 +1275,7 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 	common.Respond(w, r, transaction, nil)
 }
 
+// swagger:model storageNodesResponse
 type storageNodesResponse struct {
 	Nodes []storageNodeResponse
 }
