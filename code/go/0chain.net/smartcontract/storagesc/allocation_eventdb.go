@@ -17,17 +17,6 @@ type StorageAllocationBlobbers struct {
 	Blobbers          []*StorageNode `json:"blobbers"`
 }
 
-func (ad *StorageAllocationBlobbers) getBlobbers(sc *StorageSmartContract, balances cstate.StateContextI) error {
-	for _, ba := range ad.BlobberAllocs {
-		blobber, err := sc.getBlobber(ba.BlobberID, balances)
-		if err != nil {
-			return err
-		}
-		ad.Blobbers = append(ad.Blobbers, blobber)
-	}
-	return nil
-}
-
 func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
 	storageNodes := make([]*StorageNode, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
@@ -228,20 +217,6 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocation, alloc.AllocationID, string(data))
 
 	return nil
-}
-
-func getStorageAllocationFromDb(id string, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
-	alloc, err := eventDb.GetAllocation(id)
-	if err != nil {
-		return nil, err
-	}
-
-	sa, err := allocationTableToStorageAllocationBlobbers(alloc, eventDb)
-	if err != nil {
-		return nil, err
-	}
-
-	return sa, nil
 }
 
 func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {
