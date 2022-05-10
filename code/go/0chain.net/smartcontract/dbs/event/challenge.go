@@ -13,13 +13,13 @@ import (
 type Challenge struct {
 	gorm.Model
 	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id,unique"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:3"`
 	AllocationID   string           `json:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge"`
+	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge,priority:1"`
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge"`
+	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge,priority:2"`
 }
 
 func (ch *Challenge) exists(edb *EventDb) (bool, error) {
