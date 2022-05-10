@@ -44,7 +44,7 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+"/getGroupShareOrSigns", mrh.getGroupShareOrSigns)
 	http.HandleFunc(miner+"/getMagicBlock", mrh.getMagicBlock)
 	http.HandleFunc(miner+"/getEvents", mrh.getEvents)
-	http.HandleFunc(miner+"/nodeStatHandler", mrh.getNodeStatHandler)
+	http.HandleFunc(miner+"/nodeStat", mrh.getNodeStatHandler)
 	http.HandleFunc(miner+"/nodePoolStat", mrh.getNodePoolStat)
 	http.HandleFunc(miner+"/configs", mrh.getConfigs)
 	http.HandleFunc(miner+"/get_miner_geolocations", mrh.getMinerGeolocationsHandler)
@@ -231,7 +231,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 	var (
 		id     = r.URL.Query().Get("id")
 		poolID = r.URL.Query().Get("pool_id")
-		sn     *MinerNode
+		sn     = NewMinerNode()
 	)
 	sn.ID = id
 	if err := mrh.GetTrieNode(sn.GetKey(), sn); err != nil {
@@ -678,7 +678,7 @@ func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, e
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
 	var (
 		clientID = r.URL.Query().Get("client_id")
-		un       *UserNode
+		un       = new(UserNode)
 	)
 	un.ID = clientID
 	if err := mrh.GetTrieNode(un.GetKey(), un); err != nil {
@@ -688,7 +688,8 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 
 	var ups = newUserPools()
 	for nodeID, poolIDs := range un.Pools {
-		var mn *MinerNode
+		var mn = NewMinerNode()
+		mn.ID = nodeID
 		if err := mrh.GetTrieNode(mn.GetKey(), mn); err != nil {
 			common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID)))
 			return
