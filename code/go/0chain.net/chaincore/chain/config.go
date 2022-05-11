@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -126,7 +125,7 @@ func (c *ConfigImpl) ReadValue(name string) (interface{}, error) {
 		}
 	}
 	if i == elements.NumField() {
-		return nil, errors.New(fmt.Sprintf("ConfigImpl - Read Value By Name. %v Is not a valid configuration name", name))
+		return nil, fmt.Errorf("ConfigImpl - Read Value By Name. %v Is not a valid configuration name", name)
 	}
 
 	return elements.Field(i).Interface(), nil
