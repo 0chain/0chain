@@ -438,11 +438,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				blobberChall, err := ssc.getBlobberChallenges(blobberID, balances)
 				require.NoError(b, err)
 				challInfo := &StorageChallengeResponse{
-					ID:           storageChall.ID,
-					Created:      storageChall.Created,
-					AllocationID: storageChall.AllocationID,
-					BlobberID:    storageChall.BlobberID,
-					Responded:    false,
+					StorageChallenge: storageChall,
 				}
 
 				err = ssc.addChallenge(
