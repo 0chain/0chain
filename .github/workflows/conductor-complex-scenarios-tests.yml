@@ -80,7 +80,7 @@ jobs:
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
     - name: Running No VC Fault Tolerance Tests.
-      if: ${{ github.event.inputs.view_change == 'true' }}
+      if: ${{ github.event.inputs.view_change == 'false' }}
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 
