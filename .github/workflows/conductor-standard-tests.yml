@@ -77,7 +77,7 @@ jobs:
     runs-on: [self-hosted, conductor-test01]
     
     if: always()
-    needs: [conductor_build]
+    needs: [conductor_standard_tests]
     
     steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
