@@ -37,7 +37,7 @@ func TestAddChallenge(t *testing.T) {
 		challengesTS []common.Timestamp
 		newChallenge *StorageChallenge
 		cct          time.Duration
-		challInfo    *StorageChallengeInfo
+		challInfo    *StorageChallengeResponse
 		ct           common.Timestamp
 	}
 
@@ -123,7 +123,7 @@ func TestAddChallenge(t *testing.T) {
 				Created:         ts,
 			}
 
-			challInfo := &StorageChallengeInfo{
+			challInfo := &StorageChallengeResponse{
 				ID:             c.ID,
 				Created:        c.Created,
 				AllocationID:   c.AllocationID,
@@ -144,9 +144,9 @@ func TestAddChallenge(t *testing.T) {
 		}
 	}
 
-	newChallenge := func(ts common.Timestamp) (*StorageChallenge, *StorageChallengeInfo) {
+	newChallenge := func(ts common.Timestamp) (*StorageChallenge, *StorageChallengeResponse) {
 		if ts == -1 {
-			return &StorageChallenge{BlobberID: ""}, &StorageChallengeInfo{BlobberID: ""}
+			return &StorageChallenge{BlobberID: ""}, &StorageChallengeResponse{BlobberID: ""}
 		}
 		return &StorageChallenge{
 				ID:              fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
@@ -154,7 +154,7 @@ func TestAddChallenge(t *testing.T) {
 				BlobberID:       blobberID,
 				TotalValidators: 1,
 				Created:         ts,
-			}, &StorageChallengeInfo{
+			}, &StorageChallengeResponse{
 				ID:             fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
 				Created:        ts,
 				AllocationID:   allocID,

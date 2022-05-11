@@ -757,7 +757,7 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
-type StorageChallengeInfo struct {
+type StorageChallengeResponse struct {
 	ID             string            `json:"id"`
 	Created        common.Timestamp  `json:"created"`
 	Validators     []*ValidationNode `json:"validators"`
@@ -768,9 +768,9 @@ type StorageChallengeInfo struct {
 	Responded      bool              `json:"responded"`
 }
 
-type ChallengesInfo struct {
-	BlobberID  string                  `json:"blobber_id"`
-	Challenges []*StorageChallengeInfo `json:"challenges"`
+type ChallengesResponse struct {
+	BlobberID  string                      `json:"blobber_id"`
+	Challenges []*StorageChallengeResponse `json:"challenges"`
 }
 
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -785,7 +785,7 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges")
 	}
-	return ChallengesInfo{
+	return ChallengesResponse{
 		BlobberID:  blobberID,
 		Challenges: challenges,
 	}, nil

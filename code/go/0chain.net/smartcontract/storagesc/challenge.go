@@ -685,7 +685,7 @@ type challengeOutput struct {
 	storageChallenge  *StorageChallenge
 	blobberChallenges *BlobberChallenges
 	allocChallenges   *AllocationChallenges
-	challInfo         *StorageChallengeInfo
+	challInfo         *StorageChallengeResponse
 }
 
 type challengeBlobberSelection int
@@ -827,7 +827,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = txn.CreationDate
 
-	challInfo := &StorageChallengeInfo{
+	challInfo := &StorageChallengeResponse{
 		ID:             storageChallenge.ID,
 		Created:        storageChallenge.Created,
 		Validators:     selectedValidators,
@@ -934,7 +934,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	challenge *StorageChallenge,
 	allocChallenges *AllocationChallenges,
 	blobChallenges *BlobberChallenges,
-	challInfo *StorageChallengeInfo,
+	challInfo *StorageChallengeResponse,
 	balances cstate.StateContextI) error {
 
 	if challenge.BlobberID == "" {

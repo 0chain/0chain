@@ -13,7 +13,7 @@ import (
 type Challenge struct {
 	gorm.Model
 	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id,unique"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:3"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:3,sort:asc"`
 	AllocationID   string           `json:"allocation_id"`
 	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge,priority:1"`
 	ValidatorsID   string           `json:"validators_id"`

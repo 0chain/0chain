@@ -14,25 +14,25 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func storageChallengeToChallengeTable(ch *StorageChallengeInfo) *event.Challenge {
-	var validatorsArr []string
+func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Challenge {
+	var validators = make([]string, 0, len(ch.Validators))
 	for _, v := range ch.Validators {
-		validatorsArr = append(validatorsArr, v.ID)
+		validators = append(validators, v.ID)
 	}
-	validators := strings.Join(validatorsArr, ",")
+	validatorsStr := strings.Join(validators, ",")
 	return &event.Challenge{
 		ChallengeID:    ch.ID,
 		CreatedAt:      ch.Created,
 		AllocationID:   ch.AllocationID,
 		BlobberID:      ch.BlobberID,
-		ValidatorsID:   validators,
+		ValidatorsID:   validatorsStr,
 		Seed:           ch.RandomNumber,
 		AllocationRoot: ch.AllocationRoot,
 		Responded:      ch.Responded,
 	}
 }
 
-func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.StateContextI) (*StorageChallengeInfo, error) {
+func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.StateContextI) (*StorageChallengeResponse, error) {
 	vIDs := strings.Split(ch.ValidatorsID, ",")
 	if len(vIDs) == 0 {
 		return nil, errors.New("no validators in challenge")
@@ -41,7 +41,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.S
 	if err != nil {
 		return nil, err
 	}
-	return &StorageChallengeInfo{
+	return &StorageChallengeResponse{
 		ID:             ch.ChallengeID,
 		Created:        ch.CreatedAt,
 		RandomNumber:   ch.Seed,
@@ -53,7 +53,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.S
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeInfo, balances cstate.StateContextI) error {
+func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) error {
 	data, err := json.Marshal(storageChallengeToChallengeTable(ch))
 	if err != nil {
 		return fmt.Errorf("marshalling challenge: %v", err)
@@ -77,9 +77,9 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 }
 
 func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
-	balances cstate.StateContextI) ([]*StorageChallengeInfo, error) {
+	balances cstate.StateContextI) ([]*StorageChallengeResponse, error) {
 
-	var chs []*StorageChallengeInfo
+	var chs []*StorageChallengeResponse
 	challenges, err := balances.GetEventDB().GetOpenChallengesForBlobber(blobberID,
 		balances.GetTransaction().CreationDate, cct)
 	if err != nil {
@@ -97,7 +97,7 @@ func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
 }
 
 func getChallengeForBlobber(blobberID, challengeID string,
-	balances cstate.StateContextI) (*StorageChallengeInfo, error) {
+	balances cstate.StateContextI) (*StorageChallengeResponse, error) {
 
 	challenge, err := balances.GetEventDB().GetChallengeForBlobber(blobberID, challengeID)
 	if err != nil {
