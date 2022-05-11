@@ -341,6 +341,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		bi = append(bi, b.ID)
 	}
 	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
+	m.tick("validate_blobbers")
 
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
