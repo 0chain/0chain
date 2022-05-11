@@ -91,6 +91,7 @@ jobs:
     if: always()
     needs: [fault_tolearance_tests]
 
+    steps:
     - name: Creating Artifact con-ft-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-ft-tests-logs.tar.gz --null --files-from -
@@ -172,7 +173,8 @@ jobs:
     
     if: always()
     needs: [conductor_byzantine_tests]
-
+    
+    steps:
     - name: Creating Artifact con-byz-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
