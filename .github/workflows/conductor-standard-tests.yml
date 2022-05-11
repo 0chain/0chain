@@ -65,6 +65,7 @@ jobs:
 
     - name: Running Standard Tests for Miners.
       run: |
+        ls -lha
         bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
