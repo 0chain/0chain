@@ -13,13 +13,13 @@ import (
 type Challenge struct {
 	gorm.Model
 	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id,unique"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:3,sort:asc"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:1"`
 	AllocationID   string           `json:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge,priority:1"`
+	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge,priority:2"`
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge,priority:2"`
+	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge,priority:3"`
 }
 
 func (ch *Challenge) exists(edb *EventDb) (bool, error) {
@@ -52,8 +52,8 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct commo
 	expiry := now - cct
 
 	result := edb.Store.Get().Model(&Challenge{}).
-		Where("blobber_id = ? AND responded = ? AND created_at >= ?",
-			blobberID, false, expiry).Find(&chs)
+		Where("created_at >= ? AND blobber_id = ? AND responded = ?",
+			blobberID, false, expiry).Order("created_at asc").Find(&chs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
