@@ -289,6 +289,15 @@ func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error)
 	return s.Balance, nil
 }
 
+//GetClientBalance - get the balance of the client
+func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
+	s, err := sc.getClientState(clientID)
+	if err != nil {
+		return 0, err
+	}
+	return s.Nonce, nil
+}
+
 func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
 	return sc.getSharders(b)
 }
