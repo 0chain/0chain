@@ -526,7 +526,7 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
+func getGlobalSettings(balances cstate.ReadOnlyStateContextI) (*GlobalSettings, error) {
 	gl := newGlobalSettings()
 
 	err := balances.GetTrieNode(GLOBALS_KEY, gl)

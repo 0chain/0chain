@@ -28,7 +28,7 @@ func NewMinerRestHandler(rh restinterface.RestHandlerI) *MinerRestHandler {
 func SetupRestHandler(rh restinterface.RestHandlerI) {
 	mrh := NewMinerRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+"/globalSettings", mrh.getGlobals)
+	http.HandleFunc(miner+"/globalSettings", mrh.getGlobalSettings)
 	http.HandleFunc(miner+"/getNodepool", mrh.getNodepool)
 	http.HandleFunc(miner+"/getUserPools", mrh.getUserPools)
 	http.HandleFunc(miner+"/getMinerList", mrh.getMinerList)
@@ -44,11 +44,11 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+"/getGroupShareOrSigns", mrh.getGroupShareOrSigns)
 	http.HandleFunc(miner+"/getMagicBlock", mrh.getMagicBlock)
 	http.HandleFunc(miner+"/getEvents", mrh.getEvents)
-	http.HandleFunc(miner+"/nodeStat", mrh.getNodeStatHandler)
+	http.HandleFunc(miner+"/nodeStat", mrh.getNodeStat)
 	http.HandleFunc(miner+"/nodePoolStat", mrh.getNodePoolStat)
 	http.HandleFunc(miner+"/configs", mrh.getConfigs)
-	http.HandleFunc(miner+"/get_miner_geolocations", mrh.getMinerGeolocationsHandler)
-	http.HandleFunc(miner+"/get_sharder_geolocations", mrh.getSharderGeolocationsHandler)
+	http.HandleFunc(miner+"/get_miner_geolocations", mrh.getMinerGeolocations)
+	http.HandleFunc(miner+"/get_sharder_geolocations", mrh.getSharderGeolocations)
 }
 
 func GetRestNames() []string {
@@ -101,7 +101,7 @@ func GetRestNames() []string {
 //  200: SharderGeolocation
 //  400:
 //  484:
-func (mrh *MinerRestHandler) getSharderGeolocationsHandler(w http.ResponseWriter, r *http.Request) {
+func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
 		offsetString = r.URL.Query().Get("offset")
 		limitString  = r.URL.Query().Get("limit")
@@ -157,7 +157,7 @@ func (mrh *MinerRestHandler) getSharderGeolocationsHandler(w http.ResponseWriter
 //  200: MinerGeolocation
 //  400:
 //  484:
-func (mrh *MinerRestHandler) getMinerGeolocationsHandler(w http.ResponseWriter, r *http.Request) {
+func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
 		offsetString = r.URL.Query().Get("offset")
 		limitString  = r.URL.Query().Get("limit")
@@ -241,10 +241,13 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 
 	if pool, ok := sn.Pending[poolID]; ok {
 		common.Respond(w, r, pool, nil)
+		return
 	} else if pool, ok = sn.Active[poolID]; ok {
 		common.Respond(w, r, pool, nil)
+		return
 	} else if pool, ok = sn.Deleting[poolID]; ok {
 		common.Respond(w, r, pool, nil)
+		return
 	}
 
 	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
@@ -264,7 +267,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 //  200: MinerNode
 //  400:
 //  484:
-func (mrh *MinerRestHandler) getNodeStatHandler(w http.ResponseWriter, r *http.Request) {
+func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id = r.URL.Query().Get("id")
 	)
@@ -274,6 +277,7 @@ func (mrh *MinerRestHandler) getNodeStatHandler(w http.ResponseWriter, r *http.R
 	}
 	if miner, err := mrh.GetEventDB().GetMiner(id); err == nil {
 		common.Respond(w, r, minerTableToMinerNode(miner), nil)
+		return
 	}
 	sharder, err := mrh.GetEventDB().GetSharder(id)
 	if err != nil {
@@ -740,10 +744,10 @@ func (mrh *MinerRestHandler) getNodepool(w http.ResponseWriter, r *http.Request)
 // responses:
 //  200: MinerGlobalSettings
 //  400:
-func (mrh *MinerRestHandler) getGlobals(w http.ResponseWriter, r *http.Request) {
-	var gl GlobalSettings
+func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Request) {
+	var gl = newGlobalSettings()
 
-	if err := mrh.GetTrieNode(GLOBALS_KEY, &gl); err != nil {
+	if err := mrh.GetTrieNode(GLOBALS_KEY, gl); err != nil {
 		if err != util.ErrValueNotPresent {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -751,6 +755,7 @@ func (mrh *MinerRestHandler) getGlobals(w http.ResponseWriter, r *http.Request) 
 		common.Respond(w, r, GlobalSettings{
 			Fields: getStringMapFromViper(),
 		}, nil)
+		return
 	}
 	common.Respond(w, r, gl, nil)
 }
