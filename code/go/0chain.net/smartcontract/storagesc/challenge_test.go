@@ -124,12 +124,8 @@ func TestAddChallenge(t *testing.T) {
 			}
 
 			challInfo := &StorageChallengeResponse{
-				ID:             c.ID,
-				Created:        c.Created,
-				AllocationID:   c.AllocationID,
-				AllocationRoot: alloc.BlobberAllocsMap[blobberID].AllocationRoot,
-				BlobberID:      blobberID,
-				Responded:      false,
+				StorageChallenge: c,
+				AllocationRoot:   alloc.BlobberAllocsMap[blobberID].AllocationRoot,
 			}
 
 			err = ssc.addChallenge(alloc, c, allocChallenges, blobChallenges, challInfo, balances)
@@ -146,22 +142,20 @@ func TestAddChallenge(t *testing.T) {
 
 	newChallenge := func(ts common.Timestamp) (*StorageChallenge, *StorageChallengeResponse) {
 		if ts == -1 {
-			return &StorageChallenge{BlobberID: ""}, &StorageChallengeResponse{BlobberID: ""}
+			ch := &StorageChallenge{BlobberID: ""}
+			return ch, &StorageChallengeResponse{StorageChallenge: ch}
 		}
-		return &StorageChallenge{
-				ID:              fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
-				AllocationID:    allocID,
-				BlobberID:       blobberID,
-				TotalValidators: 1,
-				Created:         ts,
-			}, &StorageChallengeResponse{
-				ID:             fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
-				Created:        ts,
-				AllocationID:   allocID,
-				AllocationRoot: allocRoot,
-				BlobberID:      blobberID,
-				Responded:      false,
-			}
+		ch := &StorageChallenge{
+			ID:              fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
+			AllocationID:    allocID,
+			BlobberID:       blobberID,
+			TotalValidators: 1,
+			Created:         ts,
+		}
+		return ch, &StorageChallengeResponse{
+			StorageChallenge: ch,
+			AllocationRoot:   allocRoot,
+		}
 	}
 
 	tests := []struct {
