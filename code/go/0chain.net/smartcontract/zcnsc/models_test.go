@@ -1,17 +1,17 @@
 package zcnsc_test
 
 import (
-	"0chain.net/core/encryption"
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
 
+	"0chain.net/core/encryption"
+
 	"0chain.net/chaincore/state"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -145,28 +145,6 @@ func Test_PublicKey(t *testing.T) {
 	err = expected.Decode(bytes)
 	require.NoError(t, err)
 	require.Equal(t, expected.PublicKey, pk.PublicKey)
-}
-
-func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
-	pool := &tokenpool.ZcnLockingPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      "id",
-				Balance: 100,
-			},
-		},
-		TokenLockInterface: &TokenLock{
-			StartTime: 0,
-			Duration:  0,
-			Owner:     "id",
-		},
-	}
-
-	target := &tokenpool.ZcnLockingPool{}
-
-	err := target.Decode(pool.Encode(), &TokenLock{})
-	require.NoError(t, err)
-	require.Equal(t, int(target.Balance), 100)
 }
 
 func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {

@@ -338,22 +338,23 @@ type HealthCheckCycleScan struct {
 
 //ConfigData - chain Configuration
 type ConfigData struct {
-	version              int64         `json:"-"`                       //version of config to track updates
-	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
-	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
-	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have
-	MaxBlockCost         int           `json:"max_block_cost"`          // multiplier of soft timeouts to restart a round
-	MaxByteSize          int64         `json:"max_byte_size"`           // Max number of bytes a block can have
-	MinGenerators        int           `json:"min_generators"`          // Min number of block generators.
-	GeneratorsPercent    float64       `json:"generators_percent"`      // Percentage of all miners
-	NumReplicators       int           `json:"num_replicators"`         // Number of sharders that can store the block
-	ThresholdByCount     int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
-	ThresholdByStake     int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
-	ValidationBatchSize  int           `json:"validation_size"`         // Batch size of txns for crypto verification
-	TxnMaxPayload        int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
-	MinTxnFee            int64         `json:"min_txn_fee"`             // Minimum txn fee allowed
-	PruneStateBelowCount int           `json:"prune_state_below_count"` // Prune state below these many rounds
-	RoundRange           int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
+	version                    int64         `json:"-"`                             //version of config to track updates
+	OwnerID                    datastore.Key `json:"owner_id"`                      // Client who created this chain
+	BlockSize                  int32         `json:"block_size"`                    // Number of transactions in a block
+	MinBlockSize               int32         `json:"min_block_size"`                // Number of transactions a block needs to have
+	MaxBlockCost               int           `json:"max_block_cost"`                // multiplier of soft timeouts to restart a round
+	MaxByteSize                int64         `json:"max_byte_size"`                 // Max number of bytes a block can have
+	MinGenerators              int           `json:"min_generators"`                // Min number of block generators.
+	GeneratorsPercent          float64       `json:"generators_percent"`            // Percentage of all miners
+	NumReplicators             int           `json:"num_replicators"`               // Number of sharders that can store the block
+	ThresholdByCount           int           `json:"threshold_by_count"`            // Threshold count for a block to be notarized
+	ThresholdByStake           int           `json:"threshold_by_stake"`            // Stake threshold for a block to be notarized
+	ValidationBatchSize        int           `json:"validation_size"`               // Batch size of txns for crypto verification
+	TxnMaxPayload              int           `json:"transaction_max_payload"`       // Max payload allowed in the transaction
+	MinTxnFee                  int64         `json:"min_txn_fee"`                   // Minimum txn fee allowed
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"` // Maximum challenge completion time
+	PruneStateBelowCount       int           `json:"prune_state_below_count"`       // Prune state below these many rounds
+	RoundRange                 int64         `json:"round_range"`                   // blocks are stored in separate directory for each range of rounds
 	// todo move BlocksToSharder out of ConfigData
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
 	VerificationTicketsTo int `json:"verification_tickets_to"` // send verification tickets to generator or all miners

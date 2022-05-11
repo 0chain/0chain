@@ -739,16 +739,14 @@ Run sharders test
 (cd 0chain && ./docker.local/bin/start.conductor.sh sharders)
 ```
 
-### Running view-change tests
+### Running complex scenario suites
 
-1. Set `view_change: true` on `0chain/docker.local/config.yaml`
-2. Run view-change tests
-
-```
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-2)
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-3)
-```
+1. These 2 scripts should be run with `view_change: false` in `0chain/docker.local/config.yaml`
+  1.1. `(cd 0chain && ./docker.local/bin/start.conductor.sh no-view-change.byzantine)`
+  1.2. `(cd 0chain && ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance)`
+2. Set `view_change: true` in `0chain/docker.local/config.yaml` for the following 2 scripts
+  2.1. `(cd 0chain && ./docker.local/bin/start.conductor.sh view-change.byzantine)`
+  2.2. `(cd 0chain && ./docker.local/bin/start.conductor.sh view-change.fault-tolerance*)`
 
 ### Running blobber tests
 
