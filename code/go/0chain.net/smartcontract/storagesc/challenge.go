@@ -828,14 +828,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.Created = txn.CreationDate
 
 	challInfo := &StorageChallengeResponse{
-		ID:             storageChallenge.ID,
-		Created:        storageChallenge.Created,
-		Validators:     selectedValidators,
-		RandomNumber:   seed,
-		AllocationID:   storageChallenge.AllocationID,
-		AllocationRoot: allocBlobber.AllocationRoot,
-		BlobberID:      blobberID,
-		Responded:      false,
+		StorageChallenge: storageChallenge,
+		Validators:       selectedValidators,
+		RandomNumber:     seed,
+		AllocationRoot:   allocBlobber.AllocationRoot,
 	}
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)

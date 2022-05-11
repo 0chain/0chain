@@ -42,13 +42,16 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.S
 		return nil, err
 	}
 	return &StorageChallengeResponse{
-		ID:             ch.ChallengeID,
-		Created:        ch.CreatedAt,
+		StorageChallenge: &StorageChallenge{
+			Created:         ch.CreatedAt,
+			ID:              ch.ChallengeID,
+			TotalValidators: 0,
+			AllocationID:    ch.AllocationID,
+			BlobberID:       ch.BlobberID,
+			Responded:       ch.Responded,
+		},
 		RandomNumber:   ch.Seed,
-		AllocationID:   ch.AllocationID,
 		AllocationRoot: ch.AllocationRoot,
-		BlobberID:      ch.BlobberID,
-		Responded:      ch.Responded,
 		Validators:     validators,
 	}, nil
 }

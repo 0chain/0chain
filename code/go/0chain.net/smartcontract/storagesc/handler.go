@@ -758,10 +758,10 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 }
 
 type StorageChallengeResponse struct {
-	StorageChallenge `json:",inline"`
-	Validators       []*ValidationNode `json:"validators"`
-	RandomNumber     int64             `json:"seed"`
-	AllocationRoot   string            `json:"allocation_root"`
+	*StorageChallenge `json:",inline"`
+	Validators        []*ValidationNode `json:"validators"`
+	RandomNumber      int64             `json:"seed"`
+	AllocationRoot    string            `json:"allocation_root"`
 }
 
 type ChallengesResponse struct {
