@@ -5,8 +5,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/docker.local/docker-compose-no-daemon.yml b/docker.local/docker-compose-no-daemon.yml
 new file mode 100644
---- /dev/null	(date 1616496721677)
-+++ b/docker.local/docker-compose-no-daemon.yml	(date 1616496721677)
+--- /dev/null	(date 1635930579)
++++ b/docker.local/docker-compose-no-daemon.yml	(date 1635930579)
 @@ -0,0 +1,42 @@
 +version: "3"
 +services:
@@ -57,8 +57,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/docker.local/docker-clean/docker-clean-compose.yml b/docker.local/docker-clean/docker-clean-compose.yml
 new file mode 100644
---- /dev/null	(date 1616496721677)
-+++ b/docker.local/docker-clean/docker-clean-compose.yml	(date 1616496721677)
+--- /dev/null	(date 1635930579)
++++ b/docker.local/docker-clean/docker-clean-compose.yml	(date 1635930579)
 @@ -0,0 +1,14 @@
 +version: "3"
 +services:
@@ -81,8 +81,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/docker.local/docker-clean/docker-clean.sh b/docker.local/docker-clean/docker-clean.sh
 new file mode 100644
---- /dev/null	(date 1616496721677)
-+++ b/docker.local/docker-clean/docker-clean.sh	(date 1616496721677)
+--- /dev/null	(date 1635930579)
++++ b/docker.local/docker-clean/docker-clean.sh	(date 1635930579)
 @@ -0,0 +1,10 @@
 +#!/bin/sh
 +
@@ -130,8 +130,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/docker.local/docker-clean/Dockerfile b/docker.local/docker-clean/Dockerfile
 new file mode 100644
---- /dev/null	(date 1616496721677)
-+++ b/docker.local/docker-clean/Dockerfile	(date 1616496721677)
+--- /dev/null	(date 1635930579)
++++ b/docker.local/docker-clean/Dockerfile	(date 1635930579)
 @@ -0,0 +1,7 @@
 +
 +#
@@ -147,8 +147,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/docker.local/bin/start-no-daemon.sh b/docker.local/bin/start-no-daemon.sh
 new file mode 100755
---- /dev/null	(date 1616496721677)
-+++ b/docker.local/bin/start-no-daemon.sh	(date 1616496721677)
+--- /dev/null	(date 1635930579)
++++ b/docker.local/bin/start-no-daemon.sh	(date 1635930579)
 @@ -0,0 +1,9 @@
 +#!/bin/sh
 +
@@ -166,8 +166,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/docker.local/bin/docker-clean.sh b/docker.local/bin/docker-clean.sh
 new file mode 100755
---- /dev/null	(date 1616496721677)
-+++ b/docker.local/bin/docker-clean.sh	(date 1616496721677)
+--- /dev/null	(date 1635930579)
++++ b/docker.local/bin/docker-clean.sh	(date 1635930579)
 @@ -0,0 +1,11 @@
 +#!/bin/sh
 +
