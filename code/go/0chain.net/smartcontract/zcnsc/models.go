@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AddAuthorizerPayload UpdateAuthorizerStakePoolPayload poolStat
+//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AddAuthorizerPayload UpdateAuthorizerStakePoolPayload poolStat AuthorizerSignature TokenLock
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 const (
@@ -222,8 +222,8 @@ type UpdateAuthorizerStakePoolPayload struct {
 	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
 }
 
-func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte, err error) {
-	data, err = json.Marshal(pk)
+func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte) {
+	data, _ = json.Marshal(pk)
 	return
 }
 

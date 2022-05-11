@@ -270,6 +270,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientStartBalance: zcnToBalance(startBalance),
 		store:              make(map[datastore.Key]util.MPTSerializable),
@@ -327,6 +328,7 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}
@@ -356,6 +358,7 @@ type mockStateContext struct {
 }
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block               { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (sc *mockStateContext) GetBlock() *block.Block                                    { return nil }
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
