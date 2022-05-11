@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -124,11 +125,20 @@ func readConfig(configFile string) (conf *config.Config) {
 
 func readConfigs(configFile, testsFile string) (conf *config.Config) {
 	conf = readConfig(configFile)
-	var tests = readConfig(testsFile)
-	conf.Tests = tests.Tests   // set
-	conf.Enable = tests.Enable // set
-	conf.Sets = tests.Sets     // set
+	matches, err := filepath.Glob(testsFile)
+	if err != nil {
+		panic(err)
+	}
+	for _, filename := range matches {
+		appendTests(conf, readConfig(filename))
+	}
 	return
+}
+
+func appendTests(conf *config.Config, tests *config.Config) {
+	conf.Tests = append(conf.Tests, tests.Tests...)
+	conf.Enable = append(conf.Enable, tests.Enable...)
+	conf.Sets = append(conf.Sets, tests.Sets...)
 }
 
 type reportTestCase struct {
