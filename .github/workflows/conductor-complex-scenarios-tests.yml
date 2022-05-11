@@ -84,7 +84,7 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 
-  upload_artifacts:
+  upload_artifacts_ft:
     name: UPLOAD-LOGS-AS-ARTIFACTS
     runs-on: [self-hosted, conductor-test02]
     
@@ -166,7 +166,7 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
-  upload_artifacts:
+  upload_artifacts_byz:
     name: UPLOAD-LOGS-AS-ARTIFACTS
     runs-on: [self-hosted, conductor-test03]
     
