@@ -1,4 +1,4 @@
-name: CONDUCTOR_BLOBBER_TEST
+name: Conductor Blobber Tests
 
 on:
   schedule:
@@ -12,7 +12,7 @@ on:
         required: true
 
 jobs:
-  conductor_build: 
+  conductor_blobbers_tests: 
     name: CONDUCTOR-BLOBBERS-TESTS
     runs-on: [self-hosted, conductor-test01]
     
@@ -27,6 +27,7 @@ jobs:
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
         echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
 
     - name: Git clone 0chain
       run: |
@@ -41,7 +42,7 @@ jobs:
     - name: Docker Network Setup.
       run: |
         cd 0chain
-        bash ./docker.local/bin/setup_network.sh || true
+        bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
@@ -108,6 +109,10 @@ jobs:
       run: | 
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
+    - name: Build blobber base
+      run: | 
+        cd blobber && ./docker.local/bin/build.base.sh
+        
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
@@ -133,8 +138,35 @@ jobs:
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
         cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
+
+  upload_artifacts:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test01]
     
+    if: always()
+    needs: [conductor_blobbers_tests]
+    
+    steps:
+    - name: Creating Artifact con-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-logs.tar.gz
+      
+    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
+    #   run: |
+    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
+
+    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-tests-backup-logs.tar.gz
+
     - name: Clean up job.
-      if: ${{ always() }}
       run: |
         rm -rf ./*
