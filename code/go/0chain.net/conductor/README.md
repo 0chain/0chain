@@ -226,18 +226,25 @@ zwalletcli/
 (cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
 ```
 
-10. Init setup for blobbers
+10. Build 0dns
+
+```sh
+(cd 0dns && ./docker.local/bin/init.sh)
+(cd 0dns && ./docker.local/bin/build.sh)
+```
+
+11. Init setup for blobbers
 
 ```sh
 (cd blobber && ./docker.local/bin/blobber.init.setup.sh)
 ```
 
-11. Build blobber base
+12. Build blobber base
 ```sh
 (cd blobber && ./docker.local/bin/build.base.sh)
 ```
 
-12. Add `~/.zcn/config.yaml` as follows
+13. Add `~/.zcn/config.yaml` as follows
 
 ```yaml
 block_worker: http://127.0.0.1:9091
@@ -249,7 +256,7 @@ max_txn_query: 5
 query_sleep_time: 5
 ```
 
-13. Apply if on Ubuntu 18.04
+14. Apply if on Ubuntu 18.04
 
 https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
@@ -258,7 +265,7 @@ package required by docker-compose and used by docker. A docker process
 (a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
-14. Run blobber tests
+15. Run blobber tests
 
 ```sh
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
