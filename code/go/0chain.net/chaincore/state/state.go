@@ -27,6 +27,7 @@ type State struct {
 	TxnHashBytes []byte  `json:"-" msgpack:"t"`
 	Round        int64   `json:"round" msgpack:"r"`
 	Balance      Balance `json:"balance" msgpack:"b"`
+	Nonce        int64   `json:"nonce" msgpack:"n"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
@@ -53,6 +54,9 @@ func (s *State) Encode() []byte {
 	if err := binary.Write(buf, binary.LittleEndian, s.Balance); err != nil {
 		panic(err)
 	}
+	if err := binary.Write(buf, binary.LittleEndian, s.Nonce); err != nil {
+		panic(err)
+	}
 	return buf.Bytes()
 }
 
@@ -61,6 +65,7 @@ func (s *State) Decode(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	var origin int64
 	var balance Balance
+	var nonce int64
 	s.TxnHashBytes = make([]byte, 32)
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {
 		return errors.New("invalid state")
@@ -71,8 +76,12 @@ func (s *State) Decode(data []byte) error {
 	if err := binary.Read(buf, binary.LittleEndian, &balance); err != nil {
 		return err
 	}
+	if err := binary.Read(buf, binary.LittleEndian, &nonce); err != nil {
+		return err
+	}
 	s.Round = origin
-	s.Balance = Balance(balance)
+	s.Balance = balance
+	s.Nonce = nonce
 	return nil
 }
 
