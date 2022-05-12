@@ -197,20 +197,13 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
-	gn := new(GlobalNode)
-	err := mrh.GetTrieNode(GlobalNodeKey, gn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		}
-
-	}
-	rtv, err := gn.getConfigMap()
+	gn, err := getGlobalNode(mrh)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
-
-	common.Respond(w, r, rtv, nil)
+	rtv, err := gn.getConfigMap()
+	common.Respond(w, r, rtv, err)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat

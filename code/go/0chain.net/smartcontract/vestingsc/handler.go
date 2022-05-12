@@ -81,12 +81,9 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 //  200: StringMap
 //  500:
 func (vrh *VestingRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	var conf = new(config)
-	err := vrh.GetTrieNode(scConfigKey(ADDRESS), conf)
+	conf, err := getConfigReadOnly(vrh)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get config", err.Error()))
-		return
 	}
-
 	common.Respond(w, r, conf.getConfigMap(), nil)
 }

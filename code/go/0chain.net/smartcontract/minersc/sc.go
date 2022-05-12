@@ -143,7 +143,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 }
 
 func getGlobalNode(
-	balances cstate.StateContextI,
+	balances cstate.ReadOnlyStateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
 	err = balances.GetTrieNode(GlobalNodeKey, gn)
