@@ -15,7 +15,6 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
@@ -35,7 +34,6 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 	bk.MinerRest:       minersc.BenchmarkRestTests,
 	bk.Faucet:          faucetsc.BenchmarkTests,
 	bk.FaucetRest:      faucetsc.BenchmarkRestTests,
-	bk.InterestPool:    interestpoolsc.BenchmarkTests,
 	bk.Vesting:         vestingsc.BenchmarkTests,
 	bk.VestingRest:     vestingsc.BenchmarkRestTests,
 	bk.MultiSig:        multisigsc.BenchmarkTests,

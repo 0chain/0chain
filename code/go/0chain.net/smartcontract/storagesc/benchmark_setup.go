@@ -225,7 +225,6 @@ func AddMockChallenges(
 		if err := blobPartitionsLocations.save(balances, ADDRESS); err != nil {
 			log.Fatal(err)
 		}
-
 	}
 
 	err = challengeReadyBlobbersPart.Save(balances)
@@ -436,9 +435,10 @@ func setupMockChallenges(
 		if blobberChallenges.LatestCompletedChallenge == nil {
 			blobberChallenges.LatestCompletedChallenge = challenge
 		}
-		if err := blobberChallenges.save(balances, ADDRESS); err != nil {
-			log.Fatal(err)
-		}
+	}
+
+	if err := blobberChallenges.save(balances, ADDRESS); err != nil {
+		log.Fatal(err)
 	}
 
 	return challenges
@@ -602,6 +602,7 @@ func AddMockValidators(
 
 func GetMockBlobberStakePools(
 	clients []string,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*stakePool {
 	sps := make([]*stakePool, 0, viper.GetInt(sc.NumBlobbers))
@@ -628,6 +629,22 @@ func GetMockBlobberStakePools(
 				usps[clientIndex].Pools[bId],
 				id,
 			)
+
+			if viper.GetBool(sc.EventDbEnabled) {
+				dp := event.DelegatePool{
+					PoolID:       id,
+					ProviderType: int(spenum.Blobber),
+					ProviderID:   bId,
+					DelegateID:   sp.Pools[id].DelegateID,
+					Balance:      int64(sp.Pools[id].Balance),
+					Reward:       0,
+					TotalReward:  0,
+					TotalPenalty: 0,
+					Status:       int(spenum.Active),
+					RoundCreated: 1,
+				}
+				_ = eventDb.Store.Get().Create(&dp)
+			}
 		}
 		sps = append(sps, sp)
 	}
@@ -718,6 +735,7 @@ func AddMockFreeStorageAssigners(
 
 func AddMockWriteRedeems(
 	clients, publicKeys []string,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
@@ -738,6 +756,27 @@ func AddMockWriteRedeems(
 			_, err := balances.InsertTrieNode(commitRead.GetKey(ADDRESS), commitRead)
 			if err != nil {
 				panic(err)
+			}
+			if viper.GetBool(sc.EventDbEnabled) {
+				readMarker := event.ReadMarker{
+					ClientID:      rm.ClientID,
+					BlobberID:     rm.BlobberID,
+					AllocationID:  rm.AllocationID,
+					TransactionID: "mock transaction id",
+					OwnerID:       rm.OwnerID,
+					ReadCounter:   rm.ReadCounter,
+					PayerID:       rm.PayerID,
+				}
+				_ = eventDb.Store.Get().Create(&readMarker)
+
+				writeMarker := event.WriteMarker{
+					ClientID:       rm.ClientID,
+					BlobberID:      rm.BlobberID,
+					AllocationID:   rm.AllocationID,
+					TransactionID:  "mock transaction id",
+					AllocationRoot: "mock allocation root",
+				}
+				_ = eventDb.Store.Get().Create(&writeMarker)
 			}
 		}
 	}

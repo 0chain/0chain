@@ -25,7 +25,17 @@ simulation:
 options:
   verbose: true
   test_suites:
+    - "storage"
+    - "storage_rest"
+    - "miner"
     - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
 
@@ -124,12 +134,6 @@ smart_contracts:
       miner_ratio: 40
       blobber_ratio: 50
       trigger_period: 30
-  interestpoolsc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
-    min_lock: 10
-    apr: 0.1
-    min_lock_period: 1m
-    max_mint: 1500000.0
   vestingsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 0.01

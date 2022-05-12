@@ -272,7 +272,7 @@ func setUpMpt(
 	wg.Wait()
 
 	timer = time.Now()
-	stakePools := storagesc.GetMockBlobberStakePools(clients, balances)
+	stakePools := storagesc.GetMockBlobberStakePools(clients, eventDb, balances)
 	log.Println("created blobber stake pools\t", time.Since(timer))
 
 	wg.Add(1)
@@ -384,7 +384,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
+		storagesc.AddMockWriteRedeems(clients, publicKeys, eventDb, balances)
 		log.Println("added read redeems\t", time.Since(timer))
 	}()
 	wg.Add(1)
