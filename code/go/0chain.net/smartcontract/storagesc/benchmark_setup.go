@@ -240,10 +240,10 @@ func AddMockChallenges(
 			panic(err)
 		}
 		for _, oc := range ch.OpenChallenges {
-			if _, ok := blobAlloc[oc.ID]; !ok {
-				blobAlloc[oc.ID] = make(map[string]bool)
+			if _, ok := blobAlloc[oc.BlobberID]; !ok {
+				blobAlloc[oc.BlobberID] = make(map[string]bool)
 			}
-			blobAlloc[oc.ID][ch.AllocationID] = true
+			blobAlloc[oc.BlobberID][ch.AllocationID] = true
 		}
 	}
 
