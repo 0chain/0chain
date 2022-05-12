@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 
 	"0chain.net/smartcontract/dbs"
@@ -20,20 +19,6 @@ type Challenge struct {
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge,priority:3"`
-}
-
-func (ch *Challenge) exists(edb *EventDb) (bool, error) {
-	err := edb.Get().
-		Model(&Challenge{}).
-		Where(&Challenge{ChallengeID: ch.ChallengeID}).
-		Take(ch).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to check challenge existence %v, error %v", ch, err)
-	}
-	return true, nil
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
