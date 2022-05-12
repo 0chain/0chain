@@ -325,7 +325,7 @@ func (rs *randomSelector) Save(balances state.StateContextI) error {
 
 func (rs *randomSelector) getPartition(state state.StateContextI, i int) (*partition, error) {
 	if i >= len(rs.Partitions) {
-		return nil, fmt.Errorf("partition id %v grater than numbr of partitions %v", i, len(rs.Partitions))
+		return nil, fmt.Errorf("partition id %v greater than number of partitions %v", i, len(rs.Partitions))
 	}
 	if rs.Partitions[i] != nil {
 		return rs.Partitions[i], nil
