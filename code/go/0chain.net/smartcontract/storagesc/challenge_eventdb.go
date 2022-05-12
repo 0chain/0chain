@@ -26,7 +26,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Chall
 		AllocationID:   ch.AllocationID,
 		BlobberID:      ch.BlobberID,
 		ValidatorsID:   validatorsStr,
-		Seed:           ch.RandomNumber,
+		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
 		Responded:      ch.Responded,
 	}
@@ -50,7 +50,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.S
 			BlobberID:       ch.BlobberID,
 			Responded:       ch.Responded,
 		},
-		RandomNumber:   ch.Seed,
+		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
 		Validators:     validators,
 	}, nil

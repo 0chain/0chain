@@ -830,7 +830,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	challInfo := &StorageChallengeResponse{
 		StorageChallenge: storageChallenge,
 		Validators:       selectedValidators,
-		RandomNumber:     seed,
+		Seed:             seed,
 		AllocationRoot:   allocBlobber.AllocationRoot,
 	}
 

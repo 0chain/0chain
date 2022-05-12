@@ -53,7 +53,7 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 	return vn, nil
 }
 
-func (edb *EventDb) GetValidatorsByID(ids []string) ([]Validator, error) {
+func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 	var validators []Validator
 	result := edb.Store.Get().Model(&Validator{}).Where("validator_id IN ?", ids).Find(&validators)
 

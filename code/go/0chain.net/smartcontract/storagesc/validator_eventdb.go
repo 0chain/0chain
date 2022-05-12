@@ -55,7 +55,7 @@ func emitAddOrOverwriteValidatorTable(vn *ValidationNode, balances cstate.StateC
 }
 
 func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode, error) {
-	validators, err := edb.GetValidatorsByID(validatorIDs)
+	validators, err := edb.GetValidatorsByIDs(validatorIDs)
 	if err != nil {
 		return nil, err
 	}

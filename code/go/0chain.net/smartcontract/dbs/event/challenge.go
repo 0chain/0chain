@@ -52,7 +52,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct commo
 	expiry := now - cct
 
 	result := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at >= ? AND blobber_id = ? AND responded = ?",
+		Where("created_at > ? AND blobber_id = ? AND responded = ?",
 			expiry, blobberID, false).Order("created_at asc").Find(&chs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
@@ -76,14 +76,6 @@ func (edb *EventDb) GetChallengeForBlobber(blobberID, challengeID string) (*Chal
 }
 
 func (edb *EventDb) addChallenge(ch *Challenge) error {
-	exists, err := ch.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return errors.New("challenge already exists in db. cannot add")
-	}
-
 	result := edb.Store.Get().Create(&ch)
 
 	return result.Error
