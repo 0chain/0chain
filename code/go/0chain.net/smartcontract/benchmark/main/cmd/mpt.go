@@ -190,6 +190,11 @@ func setUpMpt(
 		nil,
 	)
 
+	err = storagesc.InitPartitions(balances)
+	if err != nil {
+		panic(err)
+	}
+
 	log.Println("created balances\t", time.Since(timer))
 
 	var eventDb *event.EventDb
