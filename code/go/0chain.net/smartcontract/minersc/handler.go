@@ -745,19 +745,18 @@ func (mrh *MinerRestHandler) getNodepool(w http.ResponseWriter, r *http.Request)
 //  200: MinerGlobalSettings
 //  400:
 func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Request) {
-	var gl = newGlobalSettings()
+	globals, err := getGlobalSettings(mrh)
 
-	if err := mrh.GetTrieNode(GLOBALS_KEY, gl); err != nil {
+	if err != nil {
 		if err != util.ErrValueNotPresent {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
 		}
 		common.Respond(w, r, GlobalSettings{
 			Fields: getStringMapFromViper(),
 		}, nil)
 		return
 	}
-	common.Respond(w, r, gl, nil)
+	common.Respond(w, r, globals, nil)
 }
 
 // swagger:model eventList
