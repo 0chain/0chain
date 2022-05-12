@@ -42,7 +42,7 @@ jobs:
     - name: Docker Network Setup.
       run: |
         cd 0chain
-        bash ./docker.local/bin/setup_network.sh || true
+        bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 
@@ -66,6 +66,7 @@ func getBalances(
 		PrevBlock: &block.Block{},
 	}
 	bk.Round = 2
+	bk.CreationDate = common.Timestamp(time.Now().Unix())
 	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
 	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
 	magicBlock := &block.MagicBlock{}
@@ -78,7 +79,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
-		nil,
+		func() *block.Block { return bk },
 		data.EventDb,
 	)
 }
@@ -250,6 +251,14 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
+		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
+		log.Println("added blobbers\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
 		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
@@ -265,7 +274,7 @@ func setUpMpt(
 	wg.Wait()
 
 	timer = time.Now()
-	stakePools := storagesc.GetMockBlobberStakePools(clients, balances)
+	stakePools := storagesc.GetMockBlobberStakePools(clients, eventDb, balances)
 	log.Println("created blobber stake pools\t", time.Since(timer))
 
 	wg.Add(1)
@@ -377,7 +386,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
+		storagesc.AddMockWriteRedeems(clients, publicKeys, eventDb, balances)
 		log.Println("added read redeems\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -395,13 +404,6 @@ func setUpMpt(
 		log.Println("added faucet user nodes\t", time.Since(timer))
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		interestpoolsc.AddMockNodes(clients, balances)
-		log.Println("added user nodes\t", time.Since(timer))
-	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
