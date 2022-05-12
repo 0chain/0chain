@@ -110,3 +110,16 @@ func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStats
 		handler(w, r)
 	}
 }
+
+// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
+func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+
+	var state = crpc.Client().State()
+	if state.MagicBlock != nil {
+		var lfmb = GetServerChain().GetLatestFinalizedMagicBlockClone(ctx)
+		lfmb.Hash = revertString(lfmb.Hash)
+		return lfmb.GetSummary(), nil
+	}
+
+	return GetServerChain().GetLatestFinalizedMagicBlockClone(ctx), nil
+}

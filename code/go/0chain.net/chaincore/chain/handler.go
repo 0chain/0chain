@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -1747,14 +1746,4 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
-}
-
-// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlockClone(ctx); lfmb != nil {
-		return lfmb.GetSummary(), nil
-	}
-
-	return nil, errors.New("could not find latest finalized magic block")
 }

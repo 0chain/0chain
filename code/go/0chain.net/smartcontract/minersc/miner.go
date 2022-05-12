@@ -287,6 +287,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	}
 
 	if mn.Settings.DelegateWallet != t.ClientID {
+		logging.Logger.Debug("delegate wallet is not equal to one set in config", zap.String("delegate", t.ClientID), zap.String("config", mn.Settings.DelegateWallet))
 		return "", common.NewError("update_miner_settings", "access denied")
 	}
 
