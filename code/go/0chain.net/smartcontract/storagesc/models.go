@@ -1062,8 +1062,6 @@ List:
 	return list[:i]
 }
 
-type blobberVerificationFunction func(blobber *StorageNode) (kick bool, err string)
-
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
 	creationDate common.Timestamp, balances chainstate.StateContextI) (
