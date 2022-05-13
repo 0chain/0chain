@@ -1534,7 +1534,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
-	var passPayments float64 = 0.0
+	var passPayments = 0.0
 	for i, d := range alloc.BlobberAllocs {
 		var b = blobbers[i]
 		if b.ID != d.BlobberID {
