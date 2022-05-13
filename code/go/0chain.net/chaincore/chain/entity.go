@@ -99,7 +99,7 @@ type Chain struct {
 	//Chain config goes into this object
 	Config
 	BlocksToSharder int
-	restHandler     restinterface.RestHandlerI
+	RestHandler     restinterface.RestHandlerI
 
 	MagicBlockStorage round.RoundStorage `json:"-"`
 

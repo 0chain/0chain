@@ -42,13 +42,15 @@ func SetupSwagger() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
-	c.restHandler = restHandler
-	SetupSwagger()
-	c.restHandler.SetStateContext(c.getStateContextI())
-	if c.restHandler.GetEventDB() != nil {
-		c.restHandler.SetupRestHandlers()
-	} else {
-		logging.Logger.Warn("cannot find event database, REST API will not be supported")
+	if restHandler != nil {
+		c.RestHandler = restHandler
+		SetupSwagger()
+		c.RestHandler.SetStateContext(c.getStateContextI())
+		if c.RestHandler.GetEventDB() != nil {
+			c.RestHandler.SetupRestHandlers()
+		} else {
+			logging.Logger.Warn("cannot find event database, REST API will not be supported on this sharder")
+		}
 	}
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
