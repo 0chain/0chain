@@ -97,14 +97,18 @@ jobs:
   
     - name: 0dns Patching
       run: |
-        cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch || true
-        cd ../0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch || true
+        cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
     
     - name: Blobbers Patching
       run: |
-        cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
-        cd ../blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
+        cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
     
+    - name: Build 0dns
+      run: | 
+        cd 0dns
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.sh
+
     - name: Init setup for blobbers
       run: | 
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
