@@ -239,10 +239,10 @@ func AddMockChallenges(
 			panic(err)
 		}
 		for _, oc := range ch.OpenChallenges {
-			if _, ok := blobAlloc[oc.ID]; !ok {
-				blobAlloc[oc.ID] = make(map[string]bool)
+			if _, ok := blobAlloc[oc.BlobberID]; !ok {
+				blobAlloc[oc.BlobberID] = make(map[string]bool)
 			}
-			blobAlloc[oc.ID][ch.AllocationID] = true
+			blobAlloc[oc.BlobberID][ch.AllocationID] = true
 		}
 	}
 
@@ -502,7 +502,7 @@ func AddMockBlobbers(
 				WritePrice:              int64(blobber.Terms.WritePrice),
 				MinLockDemand:           blobber.Terms.MinLockDemand,
 				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
-				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
+				ChallengeCompletionTime: int64(blobber.Terms.ChallengeCompletionTime),
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),
