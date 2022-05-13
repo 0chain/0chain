@@ -98,7 +98,6 @@ func GetRestNames() []string {
 		"/getConfig",
 		"/getReadPoolStat",
 		"/getReadPoolAllocBlobberStat",
-		"/get_validator",
 		"/getWritePoolStat",
 		"/getWritePoolAllocBlobberStat",
 		"/getChallengePoolStat",
@@ -690,36 +689,28 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 //  500:
 func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber")
-	blobberChallenges := &BlobberChallenges{}
-	blobberChallenges.BlobberID = blobberID
-
-	err := srh.GetTrieNode(blobberChallenges.GetKey(ADDRESS), blobberChallenges)
-	if err != nil {
-		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge"))
-		return
-	}
 
 	challengeID := r.URL.Query().Get("challenge")
-	if _, ok := blobberChallenges.ChallengesMap[challengeID]; !ok {
-		common.Respond(w, r, nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param"))
-		return
-	}
-
-	challenge := new(StorageChallenge)
-	challenge.ID = challengeID
-	err = srh.GetTrieNode(challenge.GetKey(ADDRESS), challenge)
+	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh)
 	if err != nil {
-		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge"))
+		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 	}
 
 	common.Respond(w, r, challenge, nil)
 }
 
-// swagger:model BlobberOpenChallengesResponse
-type BlobberOpenChallengesResponse struct {
-	BlobberID                string            `json:"blobber_id"`
-	ChallengeIDs             []string          `json:"challenge_ids"`
-	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"` // TODO: fix typo with Blobber and gosdk
+// swagger:model StorageChallengeResponse
+type StorageChallengeResponse struct {
+	*StorageChallenge `json:",inline"`
+	Validators        []*ValidationNode `json:"validators"`
+	Seed              int64             `json:"seed"`
+	AllocationRoot    string            `json:"allocation_root"`
+}
+
+// swagger:model ChallengesResponse
+type ChallengesResponse struct {
+	BlobberID  string                      `json:"blobber_id"`
+	Challenges []*StorageChallengeResponse `json:"challenges"`
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges openchallenges
@@ -733,57 +724,28 @@ type BlobberOpenChallengesResponse struct {
 //      type: string
 //
 // responses:
-//  200: BlobberOpenChallengesResponse
+//  200: ChallengesResponse
 //  400:
 //  404:
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber")
-	if blobberID == "" {
-		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+
+	blobber, err := srh.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	// return "404", if blobber not registered
-	blobber := StorageNode{ID: blobberID}
-	if err := srh.GetTrieNode(blobber.GetKey(ADDRESS), &blobber); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), srh)
+	if err != nil {
+		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
 	}
-
-	rsp := &BlobberOpenChallengesResponse{
-		BlobberID:    blobberID,
-		ChallengeIDs: []string{},
-	}
-
-	// return "200" with empty list, if no challenges are found
-	blobberChallenges := &BlobberChallenges{
-		BlobberID: blobberID,
-	}
-	err := blobberChallenges.load(srh, ADDRESS)
-
-	switch err {
-	case util.ErrValueNotPresent:
-		common.Respond(w, r, rsp, nil)
-	case nil:
-		lfb := srh.GetLatestFinalizedBlock()
-		if lfb == nil {
-			common.Respond(w, r, nil, common.NewErrInternal("chain is not ready, could not get latest finalized block"))
-			return
-		}
-
-		cct := getMaxChallengeCompletionTime()
-		ocs := blobberChallenges.GetOpenChallengesNoExpire(lfb.CreationDate, cct)
-		if len(ocs) > 0 {
-			rsp.ChallengeIDs = make([]string, len(ocs))
-			for i, oc := range ocs {
-				rsp.ChallengeIDs[i] = oc.ID
-			}
-		}
-		common.Respond(w, r, rsp, nil)
-	default:
-		common.Respond(w, r, nil, common.NewErrInternal("fail to get blobber challenge", err.Error()))
-	}
+	common.Respond(w, r, ChallengesResponse{
+		BlobberID:  blobberID,
+		Challenges: challenges,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator get_validator
@@ -1292,7 +1254,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 	if err != nil {
 		return storageNodeResponse{}, err
 	}
-	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
+	challengeCompletionTime := time.Duration(blobber.ChallengeCompletionTime)
 	if err != nil {
 		return storageNodeResponse{}, err
 	}

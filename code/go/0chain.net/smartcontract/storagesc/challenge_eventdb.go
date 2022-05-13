@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"0chain.net/core/common"
 
@@ -32,7 +33,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Chall
 	}
 }
 
-func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.StateContextI) (*StorageChallengeResponse, error) {
+func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.ReadOnlyStateContextI) (*StorageChallengeResponse, error) {
 	vIDs := strings.Split(ch.ValidatorsID, ",")
 	if len(vIDs) == 0 {
 		return nil, errors.New("no validators in challenge")
@@ -80,11 +81,11 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 }
 
 func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
-	balances cstate.StateContextI) ([]*StorageChallengeResponse, error) {
+	balances cstate.ReadOnlyStateContextI) ([]*StorageChallengeResponse, error) {
 
 	var chs []*StorageChallengeResponse
 	challenges, err := balances.GetEventDB().GetOpenChallengesForBlobber(blobberID,
-		balances.GetTransaction().CreationDate, cct)
+		common.Timestamp(time.Now().Unix()), cct)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
 }
 
 func getChallengeForBlobber(blobberID, challengeID string,
-	balances cstate.StateContextI) (*StorageChallengeResponse, error) {
+	balances cstate.ReadOnlyStateContextI) (*StorageChallengeResponse, error) {
 
 	challenge, err := balances.GetEventDB().GetChallengeForBlobber(blobberID, challengeID)
 	if err != nil {
