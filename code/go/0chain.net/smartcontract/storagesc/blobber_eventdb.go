@@ -21,8 +21,8 @@ func emitAddOrOverwriteBlobber(
 		ReadPrice:               int64(sn.Terms.ReadPrice),
 		WritePrice:              int64(sn.Terms.WritePrice),
 		MinLockDemand:           sn.Terms.MinLockDemand,
-		MaxOfferDuration:        sn.Terms.MaxOfferDuration,
-		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime,
+		MaxOfferDuration:        sn.Terms.MaxOfferDuration.Nanoseconds(),
+		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.Nanoseconds(),
 
 		Capacity:        sn.Capacity,
 		Used:            sn.Used,
