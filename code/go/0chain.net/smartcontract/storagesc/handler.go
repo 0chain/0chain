@@ -39,6 +39,14 @@ type storageNodeResponse struct {
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
+	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
+	if err != nil {
+		return storageNodeResponse{}, err
+	}
+	challengeCompletionTime := time.Duration(blobber.ChallengeCompletionTime)
+	if err != nil {
+		return storageNodeResponse{}, err
+	}
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
@@ -890,78 +898,44 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
-type BlobberOpenChallengesResponse struct {
-	BlobberID                string            `json:"blobber_id"`
-	ChallengeIDs             []string          `json:"challenge_ids"`
-	LatestCompletedChallenge *StorageChallenge `json:"lastest_completed_challenge"` // TODO: fix typo with Blobber and gosdk
+type StorageChallengeResponse struct {
+	*StorageChallenge `json:",inline"`
+	Validators        []*ValidationNode `json:"validators"`
+	Seed              int64             `json:"seed"`
+	AllocationRoot    string            `json:"allocation_root"`
+}
+
+type ChallengesResponse struct {
+	BlobberID  string                      `json:"blobber_id"`
+	Challenges []*StorageChallengeResponse `json:"challenges"`
 }
 
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
-	// return "404", if blobber not registered
-	blobber := StorageNode{ID: blobberID}
-	if err := balances.GetTrieNode(blobber.GetKey(ssc.ID), &blobber); err != nil {
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
 	}
 
-	rsp := &BlobberOpenChallengesResponse{
-		BlobberID:    blobberID,
-		ChallengeIDs: []string{},
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), balances)
+	if err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges")
 	}
-
-	// return "200" with empty list, if no challenges are found
-	blobberChallenges := &BlobberChallenges{
-		BlobberID: blobberID,
-	}
-	err := blobberChallenges.load(balances, ssc.ID)
-	switch err {
-	case util.ErrValueNotPresent:
-		return rsp, nil
-	case nil:
-		lfb := balances.GetLatestFinalizedBlock()
-		if lfb == nil {
-			return nil, common.NewErrInternal("chain is not ready, could not get latest finalized block")
-		}
-
-		cct := getMaxChallengeCompletionTime()
-		ocs := blobberChallenges.GetOpenChallengesNoExpire(lfb.CreationDate, cct)
-		if len(ocs) > 0 {
-			rsp.ChallengeIDs = make([]string, len(ocs))
-			for i, oc := range ocs {
-				rsp.ChallengeIDs[i] = oc.ID
-			}
-		}
-
-		return rsp, nil
-	default:
-		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
-	}
+	return ChallengesResponse{
+		BlobberID:  blobberID,
+		Challenges: challenges,
+	}, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
-	defer func() {
-		if retErr != nil {
-			logging.Logger.Error("/getchallenge failed with error - " + retErr.Error())
-		}
-	}()
-	blobberID := params.Get("blobber")
-	blobberChallenges := &BlobberChallenges{}
-	blobberChallenges.BlobberID = blobberID
 
-	err := balances.GetTrieNode(blobberChallenges.GetKey(ssc.ID), blobberChallenges)
-	if err != nil {
-		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
-	}
+	blobberID := params.Get("blobber")
 
 	challengeID := params.Get("challenge")
-	if _, ok := blobberChallenges.ChallengesMap[challengeID]; !ok {
-		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
-	}
-
-	challenge, err := ssc.getStorageChallenge(challengeID, balances)
+	challenge, err := getChallengeForBlobber(blobberID, challengeID, balances)
 	if err != nil {
-		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge")
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge")
 	}
 
 	return challenge, nil

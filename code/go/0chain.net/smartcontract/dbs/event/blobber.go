@@ -9,6 +9,8 @@ import (
 
 	"github.com/guregu/null"
 
+	"0chain.net/smartcontract/dbs"
+
 	"gorm.io/gorm"
 )
 
