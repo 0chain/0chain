@@ -4,10 +4,15 @@ import (
 	"0chain.net/chaincore/chain/state"
 )
 
+type StateContextAccessor interface {
+	GetROStateContext() state.ReadOnlyStateContextI
+	GetCurrentRound() int64
+}
+
 type RestHandlerI interface {
-	state.ReadOnlyStateContextI
+	GetSC() state.ReadOnlyStateContextI
+	SetScAccessor(StateContextAccessor)
 	SetupRestHandlers()
-	SetStateContext(state.ReadOnlyStateContextI)
 }
 
 // swagger:model Int64Map

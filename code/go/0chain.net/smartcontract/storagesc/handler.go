@@ -143,8 +143,11 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		EndBlock:   endBlock,
 		ClientID:   clientID,
 	}
-
-	collectedReward, err := srh.GetEventDB().GetRewardClaimedTotal(query)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	collectedReward, err := edb.GetRewardClaimedTotal(query)
 	if err != nil {
 		common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
 		return
@@ -174,8 +177,11 @@ func (srh *StorageRestHandler) getWriteMarkerCountHandler(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("allocation_id is empty"))
 		return
 	}
-
-	total, err := srh.GetEventDB().GetWriteMarkerCount(allocationID)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	total, err := edb.GetWriteMarkerCount(allocationID)
 	common.Respond(w, r, map[string]int64{
 		"count": total,
 	}, err)
@@ -212,8 +218,11 @@ func (srh *StorageRestHandler) getReadAmountHandler(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("block_number is not valid"))
 		return
 	}
-
-	total, err := srh.GetEventDB().GetDataReadFromAllocationForLastNBlocks(int64(blockNumber), allocationIDString)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	total, err := edb.GetDataReadFromAllocationForLastNBlocks(int64(blockNumber), allocationIDString)
 	common.Respond(w, r, map[string]int64{"total": total}, err)
 }
 
@@ -248,8 +257,11 @@ func (srh *StorageRestHandler) getWrittenAmountHandler(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("block_number is not valid"))
 		return
 	}
-
-	total, err := srh.GetEventDB().GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	total, err := edb.GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
 
 	common.Respond(w, r, map[string]int64{
 		"total": total,
@@ -283,13 +295,13 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-
-	if err := srh.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
+	sctx := srh.GetSC()
+	if err := sctx.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
 
-	if err := srh.GetTrieNode(challengePoolKey(ADDRESS, allocationID), cp); err != nil {
+	if err := sctx.GetTrieNode(challengePoolKey(ADDRESS, allocationID), cp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool"))
 		return
 	}
@@ -328,7 +340,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 		wp        = &writePool{}
 	)
 
-	if err := srh.GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
+	if err := srh.GetSC().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
@@ -369,7 +381,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
 	var wp = &writePool{}
 	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
+	if err := srh.GetSC().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
@@ -408,7 +420,7 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 		rp        = &readPool{}
 	)
 
-	if err := srh.GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
+	if err := srh.GetSC().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
@@ -450,7 +462,7 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 	var rp = &readPool{}
 
 	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
+	if err := srh.GetSC().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
@@ -467,7 +479,7 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 	var conf = &Config{}
 	const cantGetConfigErrMsg = "can't get config"
-	err := srh.GetTrieNode(scConfigKey(ADDRESS), conf)
+	err := srh.GetSC().GetTrieNode(scConfigKey(ADDRESS), conf)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
@@ -516,7 +528,11 @@ func (_ *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	block, err := srh.GetEventDB().GetBlocks()
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	block, err := edb.GetBlocks()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
 		return
@@ -544,8 +560,11 @@ func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Req
 		common.Respond(w, r, nil, common.NewErrBadRequest("annot find valid block hash: "+hash))
 		return
 	}
-
-	block, err := srh.GetEventDB().GetBlocksByHash(hash)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	block, err := edb.GetBlocksByHash(hash)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
 		return
@@ -574,8 +593,11 @@ type userPoolStat struct {
 //  400:
 func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
-
-	pools, err := srh.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Blobber))
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	pools, err := edb.GetUserDelegatePools(clientID, int(spenum.Blobber))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
 		return
@@ -652,14 +674,17 @@ func spStats(
 //  500:
 func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber_id")
-
-	blobber, err := srh.GetEventDB().GetBlobber(blobberID)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("cannot find blobber: "+err.Error()))
 		return
 	}
 
-	delegatePools, err := srh.GetEventDB().GetDelegatePools(blobberID, int(spenum.Blobber))
+	delegatePools, err := edb.GetDelegatePools(blobberID, int(spenum.Blobber))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("cannot find user stake pool: "+err.Error()))
 		return
@@ -691,7 +716,7 @@ func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Reque
 	blobberID := r.URL.Query().Get("blobber")
 
 	challengeID := r.URL.Query().Get("challenge")
-	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh)
+	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetSC())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 	}
@@ -730,14 +755,18 @@ type ChallengesResponse struct {
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber")
-
-	blobber, err := srh.GetEventDB().GetBlobber(blobberID)
+	sctx := srh.GetSC()
+	edb := sctx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), srh)
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -772,8 +801,11 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrBadRequest("no validator id"))
 		return
 	}
-
-	validator, err := srh.GetEventDB().GetValidatorByValidatorID(validatorID)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	validator, err := edb.GetValidatorByValidatorID(validatorID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't find validator", err.Error()))
 		return
@@ -806,16 +838,19 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, nil, common.NewErrBadRequest("no allocation id"))
 		return
 	}
-
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
 	if filename == "" {
-		writeMarkers, err := srh.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+		writeMarkers, err := edb.GetWriteMarkersForAllocationID(allocationID)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers", err.Error()))
 			return
 		}
 		common.Respond(w, r, writeMarkers, nil)
 	} else {
-		writeMarkers, err := srh.GetEventDB().GetWriteMarkersForAllocationFile(allocationID, filename)
+		writeMarkers, err := edb.GetWriteMarkersForAllocationFile(allocationID, filename)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers for file", err.Error()))
 			return
@@ -852,8 +887,11 @@ func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *htt
 	if allocationID != "" {
 		query.AllocationID = allocationID
 	}
-
-	count, err := srh.GetEventDB().CountReadMarkersFromQuery(query)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	count, err := edb.CountReadMarkersFromQuery(query)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't count read markers", err.Error()))
 		return
@@ -940,8 +978,11 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 			return
 		}
 	}
-
-	readMarkers, err := srh.GetEventDB().GetReadMarkersFromQueryPaginated(query, offset, limit, isDescending)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	readMarkers, err := edb.GetReadMarkersFromQueryPaginated(query, offset, limit, isDescending)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get read markers", err.Error()))
 		return
@@ -979,7 +1020,7 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 		ClientID:  clientID,
 	}
 
-	err := srh.GetTrieNode(commitRead.GetKey(ADDRESS), commitRead)
+	err := srh.GetSC().GetTrieNode(commitRead.GetKey(ADDRESS), commitRead)
 	switch err {
 	case nil:
 		common.Respond(w, r, commitRead.ReadMarker, nil)
@@ -1019,8 +1060,11 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //  500:
 func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client")
-
-	allocations, err := getClientAllocationsFromDb(clientID, srh.GetEventDB())
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	allocations, err := getClientAllocationsFromDb(clientID, edb)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
 		return
@@ -1047,7 +1091,7 @@ func (srh *StorageRestHandler) getAllocationStats(w http.ResponseWriter, r *http
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = allocationID
 
-	err := srh.GetTrieNode(allocationObj.GetKey(ADDRESS), allocationObj)
+	err := srh.GetSC().GetTrieNode(allocationObj.GetKey(ADDRESS), allocationObj)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
@@ -1075,7 +1119,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("transaction_hash is empty"))
 		return
 	}
-	rtv, err := srh.GetEventDB().GetErrorByTransactionHash(transactionHash)
+	rtv, err := srh.GetSC().GetEventDB().GetErrorByTransactionHash(transactionHash)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1133,7 +1177,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	rtv, err := srh.GetEventDB().GetWriteMarkers(offset, limit, isDescending)
+	rtv, err := srh.GetSC().GetEventDB().GetWriteMarkers(offset, limit, isDescending)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1190,9 +1234,12 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		common.Respond(w, r, nil, common.NewErrBadRequest("limitString value was not valid:"+err.Error()))
 		return
 	}
-
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
 	if clientID != "" {
-		rtv, err := srh.GetEventDB().GetTransactionByClientId(clientID, offset, limit)
+		rtv, err := edb.GetTransactionByClientId(clientID, offset, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1202,7 +1249,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if blockHash != "" {
-		rtv, err := srh.GetEventDB().GetTransactionByBlockHash(blockHash, offset, limit)
+		rtv, err := edb.GetTransactionByBlockHash(blockHash, offset, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1228,7 +1275,11 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, err)
 		return
 	}
-	transaction, err := srh.GetEventDB().GetTransactionByHash(transactionHash)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	transaction, err := edb.GetTransactionByHash(transactionHash)
 	if err != nil {
 		err := common.NewErrInternal("cannot get transaction: " + err.Error())
 		common.Respond(w, r, nil, err)
@@ -1301,7 +1352,11 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 //  200: storageNodeResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
-	blobbers, err := srh.GetEventDB().GetBlobbers()
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobbers, err := edb.GetBlobbers()
 	if err != nil || len(blobbers) == 0 {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -1328,7 +1383,11 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 //  200: BlobberLatLong
 //  500:
 func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *http.Request) {
-	blobbers, err := srh.GetEventDB().GetAllBlobberLatLong()
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobbers, err := edb.GetAllBlobberLatLong()
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber geolocation" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -1345,7 +1404,12 @@ func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *h
 //  200: Int64Map
 //  500:
 func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *http.Request) {
-	blobbers, err := srh.GetEventDB().GetAllBlobberId()
+	sctx := srh.GetSC()
+	edb := sctx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobbers, err := edb.GetAllBlobberId()
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -1354,7 +1418,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 	var total int64
 	for _, blobber := range blobbers {
 		var sp *stakePool
-		sp, err := getStakePool(blobber, srh)
+		sp, err := getStakePool(blobber, sctx)
 		if err != nil {
 			err := common.NewErrInternal("cannot get stake pool" + err.Error())
 			common.Respond(w, r, nil, err)
@@ -1374,7 +1438,11 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 //  200: Int64Map
 //  400:
 func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Request) {
-	blobberCount, err := srh.GetEventDB().GetBlobberCount()
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobberCount, err := edb.GetBlobberCount()
 	if err != nil {
 		err := common.NewErrInternal("getting blobber count:" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -1407,8 +1475,11 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, err)
 		return
 	}
-
-	blobber, err := srh.GetEventDB().GetBlobber(blobberID)
+	edb := srh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		err := common.NewErrInternal("missing blobber" + blobberID)
 		common.Respond(w, r, nil, err)

@@ -42,11 +42,10 @@ func SetupSwagger() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
+	restHandler.SetScAccessor(c)
 	if restHandler != nil {
-		c.RestHandler = restHandler
 		SetupSwagger()
-		c.RestHandler.SetStateContext(c.GetStateContextI())
-		if c.RestHandler.GetEventDB() != nil {
+		if c.EventDb != nil {
 			c.RestHandler.SetupRestHandlers()
 		} else {
 			logging.Logger.Warn("cannot find event database, REST API will not be supported on this sharder")
@@ -57,6 +56,10 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
 	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
+}
+
+func (c *Chain) GetROStateContext() state.ReadOnlyStateContextI {
+	return c.GetStateContextI()
 }
 
 func (c *Chain) GetStateContextI() state.StateContextI {

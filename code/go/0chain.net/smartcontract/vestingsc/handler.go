@@ -46,7 +46,7 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 	)
 
 	// just return empty list if not found
-	if err := vrh.GetTrieNode(clientPoolsKey(ADDRESS, clientID), cp); err != nil {
+	if err := vrh.GetSC().GetTrieNode(clientPoolsKey(ADDRESS, clientID), cp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get or create client pools"))
 		return
 	}
@@ -66,7 +66,7 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 		vp     = new(vestingPool)
 	)
 
-	if err := vrh.GetTrieNode(poolID, vp); err != nil {
+	if err := vrh.GetSC().GetTrieNode(poolID, vp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pool"))
 		return
 	}
@@ -81,7 +81,7 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 //  200: StringMap
 //  500:
 func (vrh *VestingRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	conf, err := getConfigReadOnly(vrh)
+	conf, err := getConfigReadOnly(vrh.GetSC())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get config", err.Error()))
 	}

@@ -49,8 +49,11 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 		err    error
 		events []event.Authorizer
 	)
-
-	events, err = zrh.GetEventDB().GetAuthorizers()
+	edb := zrh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	events, err = edb.GetAuthorizers()
 	if err != nil {
 		common.Respond(w, r, nil, errors.Wrap(err, "getAuthorizerNodes DB error"))
 		return
@@ -71,7 +74,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 //  200: StringMap
 //  404:
 func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := GetGlobalNode(zrh)
+	gn, err := GetGlobalNode(zrh.GetSC())
 	if err != nil && err != util.ErrValueNotPresent {
 		common.Respond(w, r, nil, common.NewError("get config handler", err.Error()))
 		return
@@ -92,7 +95,11 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("no authorizer id entered"))
 		return
 	}
-	ev, err := zrh.GetEventDB().GetAuthorizer(id)
+	edb := zrh.GetSC().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	ev, err := edb.GetAuthorizer(id)
 	if err != nil {
 		common.Respond(w, r, nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id))
 		return
