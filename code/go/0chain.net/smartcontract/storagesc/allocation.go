@@ -297,7 +297,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 type blobberWithPool struct {
 	*StorageNode
 	Pool *stakePool
-	ind  int
+	idx  int
 }
 
 // newAllocationRequest creates new allocation
@@ -427,7 +427,7 @@ func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances
 		if len(blobbers) == len(inputBlobbers.Nodes) {
 			//ensure ordering
 			sort.Slice(blobbers, func(i, j int) bool {
-				return blobbers[i].ind < blobbers[j].ind
+				return blobbers[i].idx < blobbers[j].idx
 			})
 
 			return blobbers, nil
