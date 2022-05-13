@@ -45,7 +45,7 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	if restHandler != nil {
 		c.RestHandler = restHandler
 		SetupSwagger()
-		c.RestHandler.SetStateContext(c.getStateContextI())
+		c.RestHandler.SetStateContext(c.GetStateContextI())
 		if c.RestHandler.GetEventDB() != nil {
 			c.RestHandler.SetupRestHandlers()
 		} else {
@@ -59,7 +59,7 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
 }
 
-func (c *Chain) getStateContextI() state.StateContextI {
+func (c *Chain) GetStateContextI() state.StateContextI {
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.ClientState == nil {
 		logging.Logger.Error("empty latest finalized block or state")

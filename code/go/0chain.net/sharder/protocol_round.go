@@ -26,7 +26,9 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	if !ok && shouldNotFinalize(r) {
 		return false
 	}
-
+	if sc.RestHandler != nil {
+		sc.RestHandler.SetStateContext(sc.GetStateContextI())
+	}
 	sc.SetCurrentRound(r.GetRoundNumber())
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()
