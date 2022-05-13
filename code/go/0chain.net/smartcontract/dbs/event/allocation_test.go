@@ -1,23 +1,26 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
+	"os"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
-	"context"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"os"
-	"testing"
-	"time"
 )
 
 func init() {
 	logging.Logger = zap.NewNop()
 }
+
+const KB = 64 * 1024
 
 func TestAllocations(t *testing.T) {
 
@@ -222,7 +225,7 @@ func TestAllocations(t *testing.T) {
 			MovedToValidators:          sa.MovedToValidators,
 			TimeUnit:                   int64(sa.TimeUnit),
 			NumWrites:                  sa.Stats.NumWrites,
-			ReadSize:                   sa.Stats.ReadSize,
+			NumReads:                   sa.Stats.ReadSize / (64 * KB),
 			TotalChallenges:            sa.Stats.TotalChallenges,
 			OpenChallenges:             sa.Stats.OpenChallenges,
 			SuccessfulChallenges:       sa.Stats.SuccessChallenges,
@@ -249,7 +252,7 @@ func TestAllocations(t *testing.T) {
 	}
 	defer eventDb.Close()
 
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -363,7 +366,7 @@ func TestAllocations(t *testing.T) {
 		Data:        string(data),
 	}
 	eventDb.AddEvents(context.TODO(), []Event{eventAddSa})
-
+	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.DataShards, sa.DataShards)

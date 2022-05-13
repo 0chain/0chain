@@ -69,7 +69,7 @@ func TestBlobbers(t *testing.T) {
 			WritePrice:              int64(sn.Terms.WritePrice),
 			MinLockDemand:           sn.Terms.MinLockDemand,
 			MaxOfferDuration:        sn.Terms.MaxOfferDuration.String(),
-			ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
+			ChallengeCompletionTime: int64(sn.Terms.ChallengeCompletionTime),
 			Capacity:                sn.Capacity,
 			Used:                    sn.Used,
 			LastHealthCheck:         int64(sn.LastHealthCheck),
@@ -97,7 +97,7 @@ func TestBlobbers(t *testing.T) {
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 	defer eventDb.Close()
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
@@ -269,7 +269,7 @@ func TestBlobberExists(t *testing.T) {
 	if gotExists || err != nil {
 		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
 	}
-	err = eventDb.drop()
+	err = eventDb.Drop()
 	require.NoError(t, err)
 }
 
@@ -294,7 +294,7 @@ func TestBlobberIds(t *testing.T) {
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-	defer eventDb.drop()
+	defer eventDb.Drop()
 
 	setUpBlobbers(t, eventDb)
 
@@ -325,7 +325,7 @@ func TestBlobberLatLong(t *testing.T) {
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-	defer eventDb.drop()
+	defer eventDb.Drop()
 
 	setUpBlobbers(t, eventDb)
 
@@ -355,7 +355,7 @@ func TestBlobberGetCount(t *testing.T) {
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-	defer eventDb.drop()
+	defer eventDb.Drop()
 
 	gotCount, err := eventDb.GetBlobberCount()
 	require.NoError(t, err, "Error should not be present")

@@ -42,7 +42,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 	if err != nil {
 		return storageNodeResponse{}, err
 	}
-	challengeCompletionTime, err := time.ParseDuration(blobber.ChallengeCompletionTime)
+	challengeCompletionTime := time.Duration(blobber.ChallengeCompletionTime)
 	if err != nil {
 		return storageNodeResponse{}, err
 	}
@@ -343,19 +343,17 @@ func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Con
 	if err != nil {
 		return nil, common.NewErrInternal("can't get allocation list", err.Error())
 	}
-	result := make([]*StorageAllocation, 0)
+	result := make([]*StorageAllocationBlobbers, len(allocations.List))
 	for _, allocationID := range allocations.List {
-		allocationObj := &StorageAllocation{}
+		allocationObj := &StorageAllocationBlobbers{}
 		allocationObj.ID = allocationID
 
 		err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
 		switch err {
 		case nil:
-			if balances.GetEventDB() != nil {
-				err = allocationObj.getBlobbers(balances)
-				if err != nil {
-					return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-				}
+			err = allocationObj.getBlobbers(ssc, balances)
+			if err != nil {
+				return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 			}
 			result = append(result, allocationObj)
 		case util.ErrValueNotPresent:
@@ -372,6 +370,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	clientID := params.Get("client")
+
 	if balances.GetEventDB() == nil {
 		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
 	}
@@ -476,7 +475,7 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 	logging.Logger.Info("AllocationStatsHandler",
 		zap.Bool("is event db present", balances.GetEventDB() != nil))
 	allocationID := params.Get("allocation")
-	allocationObj := &StorageAllocation{}
+	allocationObj := &StorageAllocationBlobbers{}
 	allocationObj.ID = allocationID
 
 	err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID), allocationObj)
@@ -484,11 +483,9 @@ func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Co
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
 
-	if balances.GetEventDB() != nil {
-		err = allocationObj.getBlobbers(balances)
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
-		}
+	err = allocationObj.getBlobbers(ssc, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobber)
 	}
 
 	return allocationObj, nil
@@ -500,7 +497,6 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	if balances.GetEventDB() == nil {
 		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
 	}
-
 	allocation, err := getStorageAllocationFromDb(allocationID, balances.GetEventDB())
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
@@ -650,13 +646,90 @@ func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
 		return nil, common.NewErrNoResource("db not initialized")
 	}
 
-	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+	filename := params.Get("filename")
+
+	if filename == "" {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers", err.Error())
+		}
+
+		return writeMarkers, nil
+	} else {
+		writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationFile(allocationID, filename)
+		if err != nil {
+			return nil, common.NewErrInternal("can't get write markers for file", err.Error())
+		}
+
+		return writeMarkers, nil
+	}
+}
+
+func (ssc *StorageSmartContract) GetWrittenAmountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+	blockNumberString := params.Get("block_number")
+	allocationIDString := params.Get("allocation_id")
+	if blockNumberString == "" {
+		return nil, common.NewErrInternal("block_number is empty")
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
 	if err != nil {
-		return nil, common.NewErrInternal("can't get write markers", err.Error())
+		return nil, common.NewErrInternal("block_number is not valid")
 	}
 
-	return writeMarkers, nil
+	total, err := balances.GetEventDB().GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+	return map[string]int64{
+		"total": total,
+	}, err
+}
 
+func (ssc *StorageSmartContract) GetReadAmountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+	blockNumberString := params.Get("block_number")
+	allocationIDString := params.Get("allocation_id")
+	if blockNumberString == "" {
+		return nil, common.NewErrInternal("block_number is empty")
+	}
+	blockNumber, err := strconv.Atoi(blockNumberString)
+	if err != nil {
+		return nil, common.NewErrInternal("block_number is not valid")
+	}
+
+	total, err := balances.GetEventDB().GetDataReadFromAllocationForLastNBlocks(int64(blockNumber), allocationIDString)
+	return map[string]int64{
+		"total": total,
+	}, err
+}
+
+func (ssc *StorageSmartContract) GetWriteMarkerCountHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrNoResource("db not initialized")
+	}
+	allocationID := params.Get("allocation_id")
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation_id is empty")
+	}
+
+	total, err := balances.GetEventDB().GetWriteMarkerCount(allocationID)
+	return map[string]int64{
+		"count": total,
+	}, err
 }
 
 func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
@@ -684,61 +757,44 @@ func (ssc *StorageSmartContract) GetValidatorHandler(ctx context.Context,
 
 }
 
+type StorageChallengeResponse struct {
+	*StorageChallenge `json:",inline"`
+	Validators        []*ValidationNode `json:"validators"`
+	Seed              int64             `json:"seed"`
+	AllocationRoot    string            `json:"allocation_root"`
+}
+
+type ChallengesResponse struct {
+	BlobberID  string                      `json:"blobber_id"`
+	Challenges []*StorageChallengeResponse `json:"challenges"`
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
-	// return "404", if blobber not registered
-	blobber := StorageNode{ID: blobberID}
-	if err := balances.GetTrieNode(blobber.GetKey(ssc.ID), &blobber); err != nil {
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
 	}
 
-	// return "200" with empty list, if no challenges are found
-	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-		return blobberChallengeObj, nil
-	default:
-		return nil, common.NewErrInternal("fail to get blobber challenge", err.Error())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), balances)
+	if err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges")
 	}
-
-	// for k, v := range blobberChallengeObj.ChallengeMap {
-	// 	if v.Response != nil {
-	// 		delete(blobberChallengeObj.ChallengeMap, k)
-	// 	}
-	// }
-
-	// return populate or empty list of challenges
-	// don't return error, if no challenges (expected by blobbers)
-	//return &blobberChallengeObj, nil
+	return ChallengesResponse{
+		BlobberID:  blobberID,
+		Challenges: challenges,
+	}, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
-	defer func() {
-		if retErr != nil {
-			logging.Logger.Error("/getchallenge failed with error - " + retErr.Error())
-		}
-	}()
-	blobberID := params.Get("blobber")
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = blobberID
-	blobberChallengeObj.ChallengeIDs = make([]string, 0)
 
-	err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID), blobberChallengeObj)
-	if err != nil {
-		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
-	}
+	blobberID := params.Get("blobber")
 
 	challengeID := params.Get("challenge")
-	if _, ok := blobberChallengeObj.ChallengeIDMap[challengeID]; !ok {
-		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
-	}
-
-	challenge, err := ssc.getStorageChallenge(challengeID, balances)
+	challenge, err := getChallengeForBlobber(blobberID, challengeID, balances)
 	if err != nil {
-		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get storage challenge")
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge")
 	}
 
 	return challenge, nil
@@ -879,4 +935,31 @@ func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate
 	}
 
 	return 0, fmt.Errorf("storageSmartContract is nil")
+}
+
+func (ssc *StorageSmartContract) GetCollectedRewardHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
+	if balances.GetEventDB() == nil {
+		return 0, common.NewErrNoResource("db not initialized")
+	}
+
+	var (
+		startBlock, _ = strconv.Atoi(params.Get("start_block"))
+		endBlock, _   = strconv.Atoi(params.Get("end_block"))
+		clientID      = params.Get("client_id")
+	)
+
+	query := event.RewardQuery{
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		ClientID:   clientID,
+	}
+
+	collectedReward, err := balances.GetEventDB().GetRewardClaimedTotal(query)
+	if err != nil {
+		return 0, common.NewErrInternal("can't get rewards claimed", err.Error())
+	}
+
+	return map[string]int64{
+		"collected_reward": collectedReward,
+	}, nil
 }

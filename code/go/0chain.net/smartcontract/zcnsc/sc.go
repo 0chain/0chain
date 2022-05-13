@@ -7,6 +7,8 @@ import (
 	"math"
 	"net/url"
 
+	"0chain.net/core/util"
+
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -19,16 +21,16 @@ import (
 const (
 	ADDRESS                       = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
 	NAME                          = "zcnsc"
-	AddAuthorizerFunc             = "AddAuthorizer"
-	DeleteAuthorizerFunc          = "DeleteAuthorizer"
+	AddAuthorizerFunc             = "add-authorizer"
+	DeleteAuthorizerFunc          = "delete-authorizer"
 	UpdateGlobalConfigFunc        = "update-global-config"
 	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
 	MintFunc                      = "mint"
 	BurnFunc                      = "burn"
-	AddToDelegatePoolFunc         = "addToDelegatePool"
-	DeleteFromDelegatePoolFunc    = "deleteFromDelegatePool"
-	UpdateAuthorizerStakePoolFunc = "addUpdateStakePool"
-	CollectRewardsFunc            = "collectRewardsFunc"
+	AddToDelegatePoolFunc         = "add-to-delegate-pool"
+	DeleteFromDelegatePoolFunc    = "delete-from-delegate-pool"
+	UpdateAuthorizerStakePoolFunc = "update-authorizer-stake-pool"
+	CollectRewardsFunc            = "collect-rewards"
 )
 
 // ZCNSmartContract ...
@@ -122,12 +124,14 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 
 func (zcn *ZCNSmartContract) GetCost(_ *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
 	node, err := GetGlobalNode(balances)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return math.MaxInt32, err
 	}
+
 	if node.Cost == nil {
 		return math.MaxInt32, errors.New("can't get cost")
 	}
+
 	cost, ok := node.Cost[funcName]
 	if !ok {
 		return math.MaxInt32, errors.New("no cost given for " + funcName)

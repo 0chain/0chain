@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -41,6 +42,9 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		tb.mpts = newMptStore(t)
 	}
 
+	err := InitPartitions(tb)
+	require.NoError(t, err)
+
 	return
 }
 
@@ -75,6 +79,7 @@ func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, strin
 func (tb *testBalances) EmitError(error)                                           {}
 func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
+func (tb *testBalances) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 	datastore.Key, error) {
 

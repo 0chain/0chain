@@ -15,7 +15,7 @@ import (
 
 	"0chain.net/core/encryption"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -700,9 +700,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY,
-			mockSetValue(mockAllBlobbers)).Return(nil).Once()
-
 		ca := ClientAllocation{
 			ClientID:    p.marker.Recipient,
 			Allocations: &Allocations{},
@@ -726,7 +723,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return("", nil).Once()
-			sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
+			sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 				BlobberID:    blobber.ID,
 				AllocationID: p.allocationId,
 			})
@@ -737,9 +734,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
 
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
 			mockSetValue(&writePool{})).Return(nil).Once()

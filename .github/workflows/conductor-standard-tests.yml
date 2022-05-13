@@ -1,0 +1,104 @@
+name: Conductor Standard Tests
+
+on:
+  schedule:
+    # Runs everyday at 01:00 am
+    - cron: '0 1 * * * '
+  workflow_dispatch:
+
+env:
+  ZCHAIN_BUILDBASE: zchain_build_base
+  ZCHAIN_BUILDRUN: zchain_run_base
+
+jobs:
+  conductor_build: 
+    name: CONDUCTOR-BUILD
+    runs-on: [self-hosted, conductor-test01]
+    
+    steps:
+    - uses: actions/checkout@v1
+    
+    - name: Get Branch
+      id: get_branch
+      run: |
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: View Change Rounds
+      run: |
+        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+
+  conductor_standard_tests:
+    name: CONDUCTOR-STANDARD-TESTS
+    runs-on: [self-hosted, conductor-test01]
+    
+    needs:
+    - conductor_build
+
+    steps:
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+
+    - name: Running Standard Tests for Miners.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh miners
+
+    - name: Running Standard Tests for Sharders.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh sharders
+
+  upload_artifacts:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test01]
+    
+    if: always()
+    needs: [conductor_standard_tests]
+    
+    steps:
+    - name: Creating Artifact con-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-logs.tar.gz
+      
+    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
+    #   run: |
+    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
+
+    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-tests-backup-logs.tar.gz
+
+    - name: Clean up job.
+      run: |
+        rm -rf ./*

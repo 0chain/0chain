@@ -15,6 +15,7 @@ type Validator struct {
 	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
 	BaseUrl     string `json:"url" gorm:"index:url"`
 	Stake       int64  `json:"stake" gorm:"index:stake"`
+	PublicKey   string `json:"public_key" gorm:"public_key"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
@@ -43,13 +44,20 @@ func (vn *Validator) exists(edb *EventDb) (bool, error) {
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
 	var vn Validator
 
-	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(vn)
+	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(&vn)
 
 	if result.Error != nil {
 		return vn, fmt.Errorf("error retriving Validation node with ID %v; error: %v", validatorID, result.Error)
 	}
 
 	return vn, nil
+}
+
+func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
+	var validators []Validator
+	result := edb.Store.Get().Model(&Validator{}).Where("validator_id IN ?", ids).Find(&validators)
+
+	return validators, result.Error
 }
 
 func (edb *EventDb) overwriteValidator(vn Validator) error {

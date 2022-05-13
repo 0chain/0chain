@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/mocks"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -211,7 +211,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 30,
+			restpoints: 34,
 		},
 		{
 			name:       "interest",

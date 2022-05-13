@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"testing"
-	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -89,7 +88,7 @@ func BenchmarkTests(
 					AllocationID:    getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Timestamp:       now,
-					ReadSize:        64 * KB,
+					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
 					PayerID:         data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
@@ -198,7 +197,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
-				CreationDate: now,
+				CreationDate: now - 1,
 				Value:        viper.GetInt64(bk.StorageMinAllocSize) * 1e10,
 			},
 			input: func() []byte {
@@ -206,10 +205,10 @@ func BenchmarkTests(
 					ID:              getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
-					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+					Expiration:      1,
 					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
-					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbersPerAllocation) + 1),
+					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes
@@ -222,7 +221,8 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				CreationDate: common.Timestamp((time.Hour * 1000).Seconds()) + now,
+				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+				CreationDate: now + benchAllocationExpire + 1,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -240,7 +240,7 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				CreationDate: now + 1,
+				CreationDate: now - 1,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -256,7 +256,7 @@ func BenchmarkTests(
 			name:     "storage.add_free_storage_assigner",
 			endpoint: ssc.addFreeStorageAssigner,
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID: viper.GetString(bk.StorageOwner),
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&newFreeStorageAssignerInfo{
@@ -520,7 +520,7 @@ func BenchmarkTests(
 				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*10,
+				CreationDate: benchWritePoolExpire + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
@@ -556,14 +556,22 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
-				ClientID:     data.Clients[0],
+				Value: int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
+				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
+					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
-				CreationDate: now + common.Timestamp(viper.GetDuration(bk.StorageWritePoolMinLockPeriod))*10,
+				CreationDate: now + benchWritePoolExpire + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: getMockWritePoolId(0, 0, 0),
+					PoolID: getMockWritePoolId(
+						viper.GetInt(bk.NumAllocations)-1,
+						getMockOwnerFromAllocationIndex(
+							viper.GetInt(bk.NumAllocations)-1,
+							viper.GetInt(bk.NumActiveClients),
+						),
+						0,
+					),
 				})
 				return bytes
 			}(),
@@ -640,23 +648,26 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				var validationTickets []*ValidationTicket
-				vt := &ValidationTicket{
-					ChallengeID:  getMockChallengeId(0, 0),
-					BlobberID:    getMockBlobberId(0),
-					ValidatorID:  getMockValidatorId(0),
-					ValidatorKey: data.PublicKeys[0],
-					Result:       true,
-					Message:      "mock message",
-					MessageCode:  "mock message code",
-					Timestamp:    now,
-					Signature:    "",
+				const numberOfValidators = 4
+				for i := 0; i < numberOfValidators; i++ {
+					vt := &ValidationTicket{
+						ChallengeID:  getMockChallengeId(0, 0),
+						BlobberID:    getMockBlobberId(0),
+						ValidatorID:  getMockValidatorId(i),
+						ValidatorKey: data.PublicKeys[0],
+						Result:       true,
+						Message:      "mock message",
+						MessageCode:  "mock message code",
+						Timestamp:    now,
+						Signature:    "",
+					}
+					hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
+						vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
+					_ = sigScheme.SetPublicKey(data.PublicKeys[0])
+					sigScheme.SetPrivateKey(data.PrivateKeys[0])
+					vt.Signature, _ = sigScheme.Sign(hash)
+					validationTickets = append(validationTickets, vt)
 				}
-				validationTickets = append(validationTickets, vt)
-				hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
-					vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
-				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				vt.Signature, _ = sigScheme.Sign(hash)
 				bytes, _ := json.Marshal(&ChallengeResponse{
 					ID:                getMockChallengeId(0, 0),
 					ValidationTickets: validationTickets,
@@ -668,7 +679,7 @@ func BenchmarkTests(
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID: viper.GetString(bk.StorageOwner),
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -730,29 +741,6 @@ func BenchmarkTests(
 			}).Encode(),
 		},
 		{
-			name: "storage.generate_challenges",
-			endpoint: func(
-				txn *transaction.Transaction,
-				_ []byte,
-				balances cstate.StateContextI,
-			) (string, error) {
-				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
-				if challengesEnabled {
-					err := ssc.generateChallenges(txn, balances.GetBlock(), nil, balances)
-					if err != nil {
-						return "", nil
-					}
-				} else {
-					return "Challenges disabled in the config", nil
-				}
-				return "Challenges generated", nil
-			},
-			txn: &transaction.Transaction{
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
-			},
-			input: nil,
-		},
-		{
 			name: "storage.generate_challenge",
 			endpoint: func(
 				txn *transaction.Transaction,
@@ -766,9 +754,9 @@ func BenchmarkTests(
 						return "", nil
 					}
 				} else {
-					return "Challenges disabled in the config", nil
+					return "OpenChallenges disabled in the config", nil
 				}
-				return "Challenges generated", nil
+				return "OpenChallenges generated", nil
 			},
 			txn: &transaction.Transaction{
 				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),

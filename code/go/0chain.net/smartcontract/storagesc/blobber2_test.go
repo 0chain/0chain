@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	// "google.golang.org/grpc/benchmark/stats"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -38,8 +39,8 @@ const (
 )
 
 type mockReadMarker struct {
-	readSize  int64
-	timestamp common.Timestamp
+	readCounter int64
+	timestamp   common.Timestamp
 }
 type mockAllocation struct {
 	startTime  common.Timestamp
@@ -71,12 +72,16 @@ var (
 )
 
 func TestCommitBlobberRead(t *testing.T) {
+	var lastRead = mockReadMarker{
+		readCounter: 0,
+		timestamp:   0,
+	}
 
 	var now common.Timestamp = 100
 	var nowRound int64 = 10
 	var read = mockReadMarker{
-		readSize:  500 * 64 * KB,
-		timestamp: now,
+		readCounter: 500,
+		timestamp:   now,
 	}
 	var allocation = mockAllocation{
 		startTime:  5,
@@ -99,7 +104,7 @@ func TestCommitBlobberRead(t *testing.T) {
 
 	t.Run("test commit blobber read", func(t *testing.T) {
 		var err = testCommitBlobberRead(
-			t, blobberYaml, read, allocation, stakes, rPools,
+			t, blobberYaml, lastRead, read, allocation, stakes, rPools,
 		)
 		require.NoError(t, err)
 	})
@@ -110,16 +115,16 @@ func TestCommitBlobberRead(t *testing.T) {
 			{2.3, now * 3, 19.2, 3},
 		}
 		var err = testCommitBlobberRead(
-			t, blobberYaml, read, allocation, stakes, bRPools,
+			t, blobberYaml, lastRead, read, allocation, stakes, bRPools,
 		)
 		require.NoError(t, err)
 	})
 
 	t.Run(errFieldLength+" -> read counter", func(t *testing.T) {
 		var faultyRead = read
-		faultyRead.readSize = 0
+		faultyRead.readCounter = 0
 		var err = testCommitBlobberRead(
-			t, blobberYaml, faultyRead, allocation, stakes, rPools,
+			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPools,
 		)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
@@ -131,7 +136,7 @@ func TestCommitBlobberRead(t *testing.T) {
 		var faultyRead = read
 		faultyRead.timestamp = 0
 		var err = testCommitBlobberRead(
-			t, blobberYaml, faultyRead, allocation, stakes, rPools,
+			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPools,
 		)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
@@ -139,30 +144,34 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.True(t, strings.Contains(err.Error(), errFieldLength))
 	})
 
-	// t.Run(errPreviousMarker+" -> timestamp", func(t *testing.T) {
-	// 	var err = testCommitBlobberRead(
-	// 		t, blobberYaml, read, allocation, stakes, rPools,
-	// 	)
-	// 	require.Error(t, err)
-	// 	require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-	// 	require.True(t, strings.Contains(err.Error(), errReadMarker))
-	// 	require.True(t, strings.Contains(err.Error(), errPreviousMarker))
-	// })
+	t.Run(errPreviousMarker+" -> timestamp", func(t *testing.T) {
+		var faultyLastRead = lastRead
+		faultyLastRead.timestamp = read.timestamp + 1
+		var err = testCommitBlobberRead(
+			t, blobberYaml, faultyLastRead, read, allocation, stakes, rPools,
+		)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
+		require.True(t, strings.Contains(err.Error(), errReadMarker))
+		require.True(t, strings.Contains(err.Error(), errPreviousMarker))
+	})
 
-	// t.Run(errEarlyAllocation, func(t *testing.T) {
-	// 	var err = testCommitBlobberRead(
-	// 		t, blobberYaml, read, allocation, stakes, rPools,
-	// 	)
-	// 	require.Error(t, err)
-	// 	require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-	// 	require.True(t, strings.Contains(err.Error(), errReadMarker))
-	// })
+	t.Run(errEarlyAllocation, func(t *testing.T) {
+		var faultyLastRead = lastRead
+		faultyLastRead.readCounter = read.readCounter + 1
+		var err = testCommitBlobberRead(
+			t, blobberYaml, faultyLastRead, read, allocation, stakes, rPools,
+		)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
+		require.True(t, strings.Contains(err.Error(), errReadMarker))
+	})
 
 	t.Run(errEarlyAllocation, func(t *testing.T) {
 		var faultyRead = read
 		faultyRead.timestamp = allocation.startTime - 1
 		var err = testCommitBlobberRead(
-			t, blobberYaml, faultyRead, allocation, stakes, rPools,
+			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPools,
 		)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
@@ -174,7 +183,7 @@ func TestCommitBlobberRead(t *testing.T) {
 		faultyRead.timestamp = allocation.expiration +
 			toSeconds(blobberYaml.challengeCompletionTime) + 1
 		var err = testCommitBlobberRead(
-			t, blobberYaml, faultyRead, allocation, stakes, rPools,
+			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPools,
 		)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
@@ -189,7 +198,7 @@ func TestCommitBlobberRead(t *testing.T) {
 			{2.3, now - 1, 19.2, 1},
 		}
 		var err = testCommitBlobberRead(
-			t, blobberYaml, read, allocation, stakes, expiredReadPools,
+			t, blobberYaml, lastRead, read, allocation, stakes, expiredReadPools,
 		)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
@@ -203,7 +212,7 @@ func TestCommitBlobberRead(t *testing.T) {
 			{2.3, now - 1, 19.2, 1},
 		}
 		var err = testCommitBlobberRead(
-			t, blobberYaml, read, allocation, stakes, expiredReadPools,
+			t, blobberYaml, lastRead, read, allocation, stakes, expiredReadPools,
 		)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
@@ -215,6 +224,7 @@ func TestCommitBlobberRead(t *testing.T) {
 func testCommitBlobberRead(
 	t *testing.T,
 	blobberYaml mockBlobberYaml,
+	lastRead mockReadMarker,
 	read mockReadMarker,
 	allocation mockAllocation,
 	stakes []mockStakePool,
@@ -246,6 +256,7 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}
@@ -266,12 +277,22 @@ func testCommitBlobberRead(
 		},
 	}
 
+	var lastReadConnection = &ReadConnection{
+		ReadMarker: &ReadMarker{
+			ReadCounter: lastRead.readCounter,
+			BlobberID:   blobberId,
+			ClientID:    client.id,
+			Timestamp:   lastRead.timestamp,
+		},
+	}
+	lastReadConnection.ReadMarker.ClientID = clientId
+
 	var readConnection = &ReadConnection{
 		ReadMarker: &ReadMarker{
 			ClientPublicKey: client.pk,
-			ReadSize:        read.readSize,
-			BlobberID:       blobberId,
-			ClientID:        client.id,
+			ReadCounter:     read.readCounter,
+			BlobberID:       lastReadConnection.ReadMarker.BlobberID,
+			ClientID:        lastReadConnection.ReadMarker.ClientID,
 			Timestamp:       read.timestamp,
 			PayerID:         payerId,
 			AuthTicket:      nil,
@@ -283,14 +304,14 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 	var input = readConnection.Encode()
 
-	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), readConnection)
+	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
 	var storageAllocation = &StorageAllocation{
 		ID:                      allocationId,
 		StartTime:               allocation.startTime,
 		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		Expiration:              allocation.expiration,
-		BlobberDetails: []*BlobberAllocation{
+		BlobberAllocs: []*BlobberAllocation{
 			{
 				BlobberID: blobberId,
 				Terms: Terms{
@@ -406,6 +427,7 @@ func confirmCommitBlobberRead(
 
 type formulaeCommitBlobberRead struct {
 	blobberYaml mockBlobberYaml
+	lastRead    mockReadMarker
 	read        mockReadMarker
 	allocation  mockAllocation
 	stakes      []mockStakePool
@@ -413,7 +435,7 @@ type formulaeCommitBlobberRead struct {
 }
 
 func (f formulaeCommitBlobberRead) blobberReward() int64 {
-	var readSize = float64(f.read.readSize) / GB
+	var readSize = float64(f.read.readCounter*CHUNK_SIZE) / GB
 	var readPrice = float64(zcnToInt64(f.blobberYaml.readPrice))
 
 	return int64(readSize * readPrice)

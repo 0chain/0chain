@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/partitions"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -18,6 +16,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
 
 	"go.uber.org/zap"
 
@@ -381,36 +380,38 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 func genChall(t testing.TB, ssc *StorageSmartContract,
 	blobberID string, now int64, prevID, challID string, seed int64,
-	valids partitions.RandPartition, allocID string, blobber *StorageNode,
+	valids *partitions.Partitions, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
-	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
+	blobberChall, err := ssc.getBlobberChallenges(blobberID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		t.Fatal("unexpected error:", err)
 	}
+
 	if err == util.ErrValueNotPresent {
-		blobberChall = new(BlobberChallenge)
+		blobberChall = new(BlobberChallenges)
 		blobberChall.BlobberID = blobberID
 	}
 
-	allocChall, err := ssc.getAllocationChallenge(allocID, balances)
+	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		t.Fatal("unexpected error:", err)
 	}
 	if err == util.ErrValueNotPresent {
-		allocChall = new(AllocationChallenge)
+		allocChall = new(AllocationChallenges)
 		allocChall.AllocationID = allocID
 	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
+	var valSlice []ValidationPartitionNode
+	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)
 	storChall.TotalValidators = len(valSlice)
 
 	storChall.AllocationID = allocID
 	storChall.BlobberID = blobber.ID
 
-	require.True(t, blobberChall.addChallenge(storChall))
+	require.True(t, blobberChall.addChallenge(storChall.ID, common.Timestamp(10)))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
 

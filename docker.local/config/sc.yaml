@@ -24,6 +24,7 @@ smart_contracts:
       lock: 100
       unlock: 100
       updateVariables: 100
+
   minersc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # miners
@@ -67,9 +68,7 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
-    # cooldown_period is round unit to prevent from DDOS attack
     cooldown_period: 100
-
     cost:
       add_miner: 100
       add_sharder: 100
@@ -84,7 +83,7 @@ smart_contracts:
       update_settings: 100
       update_miner_settings: 100
       update_sharder_settings: 100
-      payFees: 100
+      payFees: 0
       feesPaid: 100
       mintedTokens: 100
       addToDelegatePool: 100
@@ -189,7 +188,6 @@ smart_contracts:
     # holders
     max_charge: 0.50
     # reward paid out every block
-    expose_mpt: true
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000
@@ -199,13 +197,16 @@ smart_contracts:
       miner_ratio: 40
       blobber_ratio: 50
       trigger_period: 30
+      blobber_capacity_ratio: 10
+      blobber_usage_ratio: 40
+    expose_mpt: true
     cost:
       update_settings: 100
       read_redeem: 100
       commit_connection: 100
       new_allocation_request: 3000
       update_allocation_request: 2500
-      finalize_allocation: 100
+      finalize_allocation: 9500
       cancel_allocation: 8400
       add_free_storage_assigner: 100
       free_allocation_request: 1500
@@ -218,7 +219,6 @@ smart_contracts:
       curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
-      generate_challenges: 9999 #exceeds limit, might be switched off
       add_validator: 100
       add_blobber: 100
       new_read_pool: 100
@@ -229,9 +229,10 @@ smart_contracts:
       stake_pool_lock: 100
       stake_pool_unlock: 100
       stake_pool_pay_interests: 100
-      commit_settings_changes: 100
+      commit_settings_changes: 0
       generate_challenge: 100
-      blobber_block_rewards: 100
+      blobber_block_rewards: 0
+      collect_reward: 100
   vestingsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 0.01
@@ -247,15 +248,18 @@ smart_contracts:
       delete: 100
       vestingsc-update-settings: 100
   zcnsc:
-    min_mint_amount: 1
-    percent_authorizers: 0.7
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_mint: 1
+    min_burn: 1
+    min_stake: 0
+    min_lock: 0
     min_authorizers: 1
-    min_burn_amount: 1
-    min_stake_amount: 0
+    percent_authorizers: 0.7
+    max_delegates: 10
     max_fee: 100
     burn_address: "0000000000000000000000000000000000000000000000000000000000000000"
     cost:
       mint: 100
       burn: 100
-      DeleteAuthorizer: 100
-      AddAuthorizer: 100
+      add-authorizer: 100
+      delete-authorizer: 100

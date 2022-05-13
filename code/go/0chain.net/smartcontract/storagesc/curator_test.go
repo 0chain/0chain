@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
