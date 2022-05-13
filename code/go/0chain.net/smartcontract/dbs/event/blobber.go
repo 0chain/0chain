@@ -8,9 +8,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 
 	"github.com/guregu/null"
-
-	"0chain.net/smartcontract/dbs"
-
 	"gorm.io/gorm"
 )
 

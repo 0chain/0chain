@@ -39,14 +39,6 @@ type storageNodeResponse struct {
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
-	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
-	if err != nil {
-		return storageNodeResponse{}, err
-	}
-	challengeCompletionTime := time.Duration(blobber.ChallengeCompletionTime)
-	if err != nil {
-		return storageNodeResponse{}, err
-	}
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
