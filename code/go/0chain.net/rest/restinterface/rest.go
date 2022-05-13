@@ -7,7 +7,7 @@ import (
 type RestHandlerI interface {
 	state.ReadOnlyStateContextI
 	SetupRestHandlers()
-	SetStateContext(i state.ReadOnlyStateContextI)
+	SetStateContext(state.ReadOnlyStateContextI)
 }
 
 // swagger:model Int64Map
