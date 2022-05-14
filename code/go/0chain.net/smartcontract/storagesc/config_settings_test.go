@@ -171,7 +171,6 @@ func TestUpdateSettings(t *testing.T) {
 					"block_reward.sharder_ratio":          "80.0",
 					"block_reward.miner_ratio":            "20.0",
 					"block_reward.blobber_capacity_ratio": "20.0",
-					"block_reward.blobber_usage_ratio":    "80.0",
 
 					"expose_mpt": "false",
 				},
