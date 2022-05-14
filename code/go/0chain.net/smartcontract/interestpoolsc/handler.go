@@ -44,7 +44,7 @@ func GetRestNames() []string {
 //  200: StringMap
 //  500:
 func (irh *InterestPoolRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(irh)
+	gn, err := getGlobalNode(irh.GetSC())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get global node", err.Error()))
 		return
@@ -74,7 +74,7 @@ func (irh *InterestPoolRestHandler) getConfig(w http.ResponseWriter, r *http.Req
 //  200: InterestPoolGlobalNode
 //  500:
 func (irh *InterestPoolRestHandler) getLockConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(irh)
+	gn, err := getGlobalNode(irh.GetSC())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get global node", err.Error()))
 		return
@@ -91,7 +91,7 @@ func (irh *InterestPoolRestHandler) getLockConfig(w http.ResponseWriter, r *http
 //  500:
 func (irh *InterestPoolRestHandler) getPoolsStats(w http.ResponseWriter, r *http.Request) {
 	var un = new(UserNode)
-	err := irh.GetTrieNode(un.getKey(ADDRESS), un)
+	err := irh.GetSC().GetTrieNode(un.getKey(ADDRESS), un)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't user node", err.Error()))
 		return
