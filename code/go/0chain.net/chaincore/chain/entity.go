@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/rest/restinterface"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/storagesc"
 	"github.com/herumi/bls/ffi/go/bls"
@@ -99,7 +97,6 @@ type Chain struct {
 	//Chain config goes into this object
 	Config
 	BlocksToSharder int
-	RestHandler     restinterface.RestHandlerI
 
 	MagicBlockStorage round.RoundStorage `json:"-"`
 

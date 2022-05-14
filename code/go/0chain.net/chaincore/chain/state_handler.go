@@ -46,7 +46,7 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 		restHandler.SetScAccessor(c)
 		SetupSwagger()
 		if c.EventDb != nil {
-			c.RestHandler.SetupRestHandlers()
+			restHandler.SetupRestHandlers()
 		} else {
 			logging.Logger.Warn("cannot find event database, REST API will not be supported on this sharder")
 		}
