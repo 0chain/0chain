@@ -328,8 +328,8 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 }
 
 type stakePoolRequest struct {
-	BlobberID string `json:"blobber_id,omitempty"`
-	PoolID    string `json:"pool_id,omitempty"`
+	BlobberWallet string `json:"blobber_wallet,omitempty"`
+	PoolID        string `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
@@ -369,7 +369,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	}
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spr.BlobberWallet, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
@@ -380,24 +380,24 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			conf.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Blobber, spr.BlobberID, spenum.Active, balances)
+	err = sp.LockPool(t, spenum.Blobber, spr.BlobberWallet, spenum.Active, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool digging error: %v", err)
 	}
 
-	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
+	if err = sp.save(ssc.ID, spr.BlobberWallet, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"saving stake pool: %v", err)
 	}
 
 	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: spr.BlobberID,
+		Id: spr.BlobberWallet,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
 	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberWallet, string(data))
 
 	return
 }
@@ -414,7 +414,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"can't decode request: %v", err)
 	}
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spr.BlobberWallet, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
@@ -429,37 +429,37 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	// as 'unstake' and returns maximal time to wait to unlock the pool
 	if !unstake {
 		// save the pool and return special result
-		if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
+		if err = sp.save(ssc.ID, spr.BlobberWallet, balances); err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
 		data, _ := json.Marshal(dbs.DbUpdates{
-			Id: spr.BlobberID,
+			Id: spr.BlobberWallet,
 			Updates: map[string]interface{}{
 				"total_stake": int64(sp.stake()),
 			},
 		})
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberWallet, string(data))
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.BlobberID, spr.PoolID, balances)
+	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.BlobberWallet, spr.PoolID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
 
 	// save the pool
-	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
+	if err = sp.save(ssc.ID, spr.BlobberWallet, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
 	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: spr.BlobberID,
+		Id: spr.BlobberWallet,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
 	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberWallet, string(data))
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

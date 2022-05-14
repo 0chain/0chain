@@ -43,9 +43,10 @@ func randString(n int) string {
 }
 
 type Client struct {
-	id     string                     // identifier
-	pk     string                     // public key
-	scheme encryption.SignatureScheme // pk/sk
+	id             string                     // identifier
+	pk             string                     // public key
+	scheme         encryption.SignatureScheme // pk/sk
+	delegateWallet string
 
 	// blobber
 	terms Terms
@@ -68,7 +69,11 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	client.pk = scheme.GetPublicKey()
 	client.id = encryption.Hash(client.pk)
 
-	balances.(*testBalances).balances[client.id] = balance
+	var delegateWalletScheme = encryption.NewBLS0ChainScheme()
+	delegateWalletScheme.GenerateKeys() //nolint
+	client.delegateWallet = encryption.Hash(delegateWalletScheme.GetPublicKey())
+
+	balances.(*testBalances).balances[client.delegateWallet] = balance
 	return
 }
 
@@ -92,6 +97,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Capacity = c.cap
 	sn.Used = 0
 	sn.LastHealthCheck = 0
+	sn.StakePoolSettings.DelegateWallet = c.delegateWallet
 	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
@@ -101,7 +107,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 
 func (c *Client) stakeLockRequest(t testing.TB) []byte {
 	var spr stakePoolRequest
-	spr.BlobberID = c.id
+	spr.BlobberWallet = c.delegateWallet
 	return mustEncode(t, &spr)
 }
 
@@ -128,7 +134,7 @@ func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 func (c *Client) callAddBlobber(t testing.TB, ssc *StorageSmartContract,
 	now int64, balances chainState.StateContextI) (resp string, err error) {
 
-	var tx = newTransaction(c.id, ADDRESS,
+	var tx = newTransaction(c.delegateWallet, ADDRESS,
 		int64(float64(c.terms.WritePrice)*sizeInGB(c.cap)), now)
 	balances.(*testBalances).setTransaction(t, tx)
 	var input = c.addBlobRequest(t)
@@ -138,7 +144,7 @@ func (c *Client) callAddBlobber(t testing.TB, ssc *StorageSmartContract,
 func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	now int64, balances chainState.StateContextI) (resp string, err error) {
 
-	var tx = newTransaction(c.id, ADDRESS, 0, now)
+	var tx = newTransaction(c.delegateWallet, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
 	blobber := new(StorageNode)
 	blobber.ID = c.id
@@ -154,7 +160,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value, now int64,
 
 	var (
 		input = blob.Encode()
-		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+		tx    = newTransaction(blob.StakePoolSettings.DelegateWallet, ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.addBlobber(tx, input, balances)
@@ -178,25 +184,15 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	terms Terms, balance state.Balance, balances chainState.StateContextI) (
 	blob *Client) {
 
-	var scheme = encryption.NewBLS0ChainScheme()
-	scheme.GenerateKeys() //nolint
-
-	blob = new(Client)
+	blob = newClient(balance, balances)
 	blob.terms = terms
 	blob.cap = cap
-	blob.balance = balance
-	blob.scheme = scheme
-
-	blob.pk = scheme.GetPublicKey()
-	blob.id = encryption.Hash(blob.pk)
-
-	balances.(*testBalances).balances[blob.id] = balance
 
 	var _, err = blob.callAddBlobber(t, ssc, now, balances)
 	require.NoError(t, err)
 
 	// add stake for the blobber as blobber owner
-	var tx = newTransaction(blob.id, ADDRESS,
+	var tx = newTransaction(blob.delegateWallet, ADDRESS,
 		int64(float64(terms.WritePrice)*sizeInGB(cap)), now)
 	balances.(*testBalances).setTransaction(t, tx)
 	_, err = ssc.stakePoolLock(tx, blob.stakeLockRequest(t), balances)
@@ -211,7 +207,7 @@ func addValidator(t testing.TB, ssc *StorageSmartContract, now int64,
 	var scheme = encryption.NewBLS0ChainScheme()
 	scheme.GenerateKeys() //nolint
 
-	valid = new(Client)
+	valid = new(Client) // todo:
 	valid.scheme = scheme
 
 	valid.pk = scheme.GetPublicKey()

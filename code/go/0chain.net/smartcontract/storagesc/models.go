@@ -371,6 +371,9 @@ type StorageNode struct {
 
 // validate the blobber configurations
 func (sn *StorageNode) validate(conf *Config) (err error) {
+	if sn.StakePoolSettings.DelegateWallet == "" || sn.ID == sn.StakePoolSettings.DelegateWallet {
+		return errors.New("DelegateWallet should differ from operational wallet")
+	}
 	if err = sn.Terms.validate(conf); err != nil {
 		return
 	}
@@ -395,7 +398,7 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+	return datastore.Key(globalKey + sn.StakePoolSettings.DelegateWallet)
 }
 
 func (sn *StorageNode) Encode() []byte {

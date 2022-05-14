@@ -30,7 +30,7 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 
 	var (
 		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
-		b, err = ssc.getBlobber(blob.id, balances)
+		b, err = ssc.getBlobber(blob.delegateWallet, balances)
 	)
 	require.NoError(t, err)
 

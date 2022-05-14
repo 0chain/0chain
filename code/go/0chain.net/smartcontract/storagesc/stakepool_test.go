@@ -145,8 +145,8 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	_, err := ctx.InsertTrieNode(scConfigKey(ssc.ID), scYaml)
 	require.NoError(t, err)
 	var spr = &stakePoolRequest{
-		BlobberID: blobberId,
-		PoolID:    "paula",
+		BlobberWallet: blobberId,
+		PoolID:        "paula",
 	}
 	input, err := json.Marshal(spr)
 	require.NoError(t, err)

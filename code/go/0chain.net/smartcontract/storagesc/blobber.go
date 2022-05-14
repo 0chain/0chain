@@ -37,11 +37,11 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 	}
 }
 
-func (sc *StorageSmartContract) getBlobber(blobberID string,
+func (sc *StorageSmartContract) getBlobber(blobberWallet string,
 	balances cstate.StateContextI) (blobber *StorageNode, err error) {
 
 	blobber = new(StorageNode)
-	blobber.ID = blobberID
+	blobber.StakePoolSettings.DelegateWallet = blobberWallet
 	err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// get saved blobber
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
+	savedBlobber, err := sc.getBlobber(blobber.StakePoolSettings.DelegateWallet, balances)
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
@@ -91,7 +91,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	// update stake pool settings
 	var sp *stakePool
-	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(blobber.StakePoolSettings.DelegateWallet, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
@@ -129,7 +129,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	blobber *StorageNode, blobbers *StorageNodes, balances cstate.StateContextI,
 ) (err error) {
 	// get saved blobber
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
+	savedBlobber, err := sc.getBlobber(blobber.StakePoolSettings.DelegateWallet, balances)
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
@@ -182,7 +182,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// set transaction information
-	blobber.ID = t.ClientID
+	blobber.StakePoolSettings.DelegateWallet = t.ClientID
 	blobber.PublicKey = t.PublicKey
 
 	// insert, update or remove blobber
@@ -231,13 +231,13 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	}
 
 	var blobber *StorageNode
-	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
+	if blobber, err = sc.getBlobber(updatedBlobber.StakePoolSettings.DelegateWallet, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get the blobber: "+err.Error())
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(updatedBlobber.StakePoolSettings.DelegateWallet, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get related stake pool: "+err.Error())
 	}
