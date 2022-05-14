@@ -890,6 +890,7 @@ func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *htt
 	edb := srh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	count, err := edb.CountReadMarkersFromQuery(query)
 	if err != nil {

@@ -17,12 +17,18 @@ type RestHandler struct {
 }
 
 func NewRestHandler(scAccessor restinterface.StateContextAccessor, sCtx state.ReadOnlyStateContextI) restinterface.RestHandlerI {
+	if scAccessor == nil && sCtx == nil {
+		return nil
+	}
 	rh := RestHandler{
 		scAccessor: scAccessor,
 		sCtx:       sCtx,
 	}
-	if scAccessor != nil && sCtx == nil {
-		sCtx = rh.scAccessor.GetROStateContext()
+	if sCtx == nil {
+		rh.sCtx = rh.scAccessor.GetROStateContext()
+		if rh.sCtx == nil {
+			return nil
+		}
 	}
 	return &rh
 }
@@ -30,7 +36,10 @@ func NewRestHandler(scAccessor restinterface.StateContextAccessor, sCtx state.Re
 func (rh *RestHandler) GetSC() state.ReadOnlyStateContextI {
 	if rh.scAccessor != nil &&
 		(rh.sCtx == nil || rh.scAccessor.GetCurrentRound() != rh.sCtx.GetBlock().Round) {
-		rh.sCtx = rh.scAccessor.GetROStateContext()
+		newStx := rh.scAccessor.GetROStateContext()
+		if newStx != nil {
+			rh.sCtx = newStx
+		}
 	}
 	return rh.sCtx
 }
