@@ -798,11 +798,12 @@ func (ssc *StorageSmartContract) updateSettings(
 	}
 
 	for key, value := range newChanges.Fields {
-		_, ok := updateChanges.Fields[key]
-		if !ok {
-			return "", common.NewError("update_settings, unsupported key", key)
-		}
 		updateChanges.Fields[key] = value
+	}
+
+	err = conf.update(*updateChanges)
+	if err != nil {
+		return "", common.NewError("update_settings, updating settings", err.Error())
 	}
 
 	_, err = balances.InsertTrieNode(settingChangesKey, updateChanges)
