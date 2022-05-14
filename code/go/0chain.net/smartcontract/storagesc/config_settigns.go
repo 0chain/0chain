@@ -798,6 +798,10 @@ func (ssc *StorageSmartContract) updateSettings(
 	}
 
 	for key, value := range newChanges.Fields {
+		_, ok := updateChanges.Fields[key]
+		if !ok {
+			return "", common.NewError("update_settings, unsupported key", key)
+		}
 		updateChanges.Fields[key] = value
 	}
 
