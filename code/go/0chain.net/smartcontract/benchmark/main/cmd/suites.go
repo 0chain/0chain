@@ -27,6 +27,17 @@ type suiteResults struct {
 	results []benchmarkResults
 }
 
+type stateContextAccessor struct {
+	sctx cstate.ReadOnlyStateContextI
+}
+
+func (sca *stateContextAccessor) GetROStateContext() cstate.ReadOnlyStateContextI {
+	return sca.sctx
+}
+func (sca *stateContextAccessor) GetCurrentRound() int64 {
+	return 1
+}
+
 func runSuites(
 	suites []benchmark.TestSuite,
 	mpt *util.MerklePatriciaTrie,
@@ -42,7 +53,7 @@ func runSuites(
 		data,
 	)
 	restSetup := rest.RestHandler{}
-	restSetup.SetStateContext(readOnlyBalances)
+	restSetup.SetScAccessor(&stateContextAccessor{readOnlyBalances})
 	restSetup.SetupRestHandlers()
 
 	for _, suite := range suites {

@@ -17,7 +17,8 @@ type RestHandler struct {
 }
 
 func (rh *RestHandler) GetSC() state.ReadOnlyStateContextI {
-	if rh.scAccessor.GetCurrentRound() != rh.sCtx.GetBlock().Round {
+	if rh.scAccessor != nil &&
+		(rh.sCtx == nil || rh.scAccessor.GetCurrentRound() != rh.sCtx.GetBlock().Round) {
 		rh.sCtx = rh.scAccessor.GetROStateContext()
 	}
 	return rh.sCtx
