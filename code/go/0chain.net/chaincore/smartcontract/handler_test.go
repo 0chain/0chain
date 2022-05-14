@@ -65,9 +65,7 @@ func TestExecuteRestAPI(t *testing.T) {
 
 	var mockCtx = &mocks.ReadOnlyStateContextI{}
 	mockCtx.On("GetEventDB").Return(&event.EventDb{})
-	restHandler := rest.RestHandler{
-		SCtx: mockCtx,
-	}
+	restHandler := rest.NewRestHandler(nil, mockCtx)
 	restHandler.SetupRestHandlers()
 
 	gn := &faucetsc.GlobalNode{}
