@@ -28,10 +28,10 @@ type suiteResults struct {
 }
 
 type stateContextAccessor struct {
-	sctx cstate.ReadOnlyStateContextI
+	sctx cstate.QueryStateContextI
 }
 
-func (sca *stateContextAccessor) GetROStateContext() cstate.ReadOnlyStateContextI {
+func (sca *stateContextAccessor) GetROStateContext() cstate.QueryStateContextI {
 	return sca.sctx
 }
 func (sca *stateContextAccessor) GetCurrentRound() int64 {

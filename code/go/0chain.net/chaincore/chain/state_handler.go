@@ -58,7 +58,7 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
 }
 
-func (c *Chain) GetROStateContext() state.ReadOnlyStateContextI {
+func (c *Chain) GetROStateContext() state.QueryStateContextI {
 	return c.GetStateContextI()
 }
 

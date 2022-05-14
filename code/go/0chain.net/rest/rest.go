@@ -13,10 +13,10 @@ import (
 
 type RestHandler struct {
 	scAccessor restinterface.StateContextAccessor
-	sCtx       state.ReadOnlyStateContextI
+	sCtx       state.QueryStateContextI
 }
 
-func NewRestHandler(scAccessor restinterface.StateContextAccessor, sCtx state.ReadOnlyStateContextI) restinterface.RestHandlerI {
+func NewRestHandler(scAccessor restinterface.StateContextAccessor, sCtx state.QueryStateContextI) restinterface.RestHandlerI {
 	if scAccessor == nil && sCtx == nil {
 		return nil
 	}
@@ -33,7 +33,7 @@ func NewRestHandler(scAccessor restinterface.StateContextAccessor, sCtx state.Re
 	return &rh
 }
 
-func (rh *RestHandler) GetSC() state.ReadOnlyStateContextI {
+func (rh *RestHandler) GetSC() state.QueryStateContextI {
 	if rh.scAccessor != nil &&
 		(rh.sCtx == nil || rh.scAccessor.GetCurrentRound() != rh.sCtx.GetBlock().Round) {
 		newStx := rh.scAccessor.GetROStateContext()

@@ -265,7 +265,7 @@ func getConfiguredConfig() (conf *config, err error) {
 }
 
 func getConfigReadOnly(
-	balances chainstate.ReadOnlyStateContextI,
+	balances chainstate.CommonStateContextI,
 ) (conf *config, err error) {
 	conf = new(config)
 	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)

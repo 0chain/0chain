@@ -210,7 +210,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	}
 }
 
-func getGlobalNode(balances c_state.ReadOnlyStateContextI) (*GlobalNode, error) {
+func getGlobalNode(balances c_state.CommonStateContextI) (*GlobalNode, error) {
 	gn := newGlobalNode()
 	err := balances.GetTrieNode(gn.getKey(), gn)
 	switch err {

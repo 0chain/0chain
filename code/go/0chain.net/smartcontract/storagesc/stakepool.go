@@ -296,7 +296,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 }
 
 func getStakePool(
-	blobberID datastore.Key, balances chainstate.ReadOnlyStateContextI,
+	blobberID datastore.Key, balances chainstate.CommonStateContextI,
 ) (sp *stakePool, err error) {
 	sp = newStakePool()
 	err = balances.GetTrieNode(stakePoolKey(ADDRESS, blobberID), sp)

@@ -51,18 +51,22 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
-//go:generate mockery --case underscore --name=ReadOnlyStateContextI --output=./mocks
-type ReadOnlyStateContextI interface {
+type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
-	GetEventDB() *event.EventDb
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
+}
+
+//go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
+type QueryStateContextI interface {
+	CommonStateContextI
+	GetEventDB() *event.EventDb
 }
 
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
-	ReadOnlyStateContextI
+	QueryStateContextI
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints

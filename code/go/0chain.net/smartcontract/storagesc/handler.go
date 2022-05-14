@@ -716,7 +716,7 @@ func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Reque
 	blobberID := r.URL.Query().Get("blobber")
 
 	challengeID := r.URL.Query().Get("challenge")
-	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetSC())
+	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetSC().GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 	}
@@ -766,7 +766,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx)
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return

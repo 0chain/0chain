@@ -14,7 +14,7 @@ import (
 )
 
 func doesMinerExist(pkey datastore.Key,
-	balances cstate.ReadOnlyStateContextI) bool {
+	balances cstate.CommonStateContextI) bool {
 
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)

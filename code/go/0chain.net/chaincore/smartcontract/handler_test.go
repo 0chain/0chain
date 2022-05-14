@@ -63,7 +63,7 @@ func TestExecuteRestAPI(t *testing.T) {
 	t.Skip("Needs reworking as ExecuteRestAPI does not exist anymore, but should still test endpoints can be reached")
 	t.Parallel()
 
-	var mockCtx = &mocks.ReadOnlyStateContextI{}
+	var mockCtx = &mocks.QueryStateContextI{}
 	mockCtx.On("GetEventDB").Return(&event.EventDb{})
 	restHandler := rest.NewRestHandler(nil, mockCtx)
 	restHandler.SetupRestHandlers()

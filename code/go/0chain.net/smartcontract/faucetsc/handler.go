@@ -158,7 +158,7 @@ func (frh *FaucetscRestHandler) getPersonalPeriodicLimit(w http.ResponseWriter, 
 	common.Respond(w, r, resp, nil)
 }
 
-func getGlobalNode(sctx state.ReadOnlyStateContextI) (GlobalNode, error) {
+func getGlobalNode(sctx state.QueryStateContextI) (GlobalNode, error) {
 	gn := GlobalNode{ID: ADDRESS}
 	err := sctx.GetTrieNode(gn.GetKey(), &gn)
 	if err != nil {

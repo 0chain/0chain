@@ -5,12 +5,12 @@ import (
 )
 
 type StateContextAccessor interface {
-	GetROStateContext() state.ReadOnlyStateContextI
+	GetROStateContext() state.QueryStateContextI
 	GetCurrentRound() int64
 }
 
 type RestHandlerI interface {
-	GetSC() state.ReadOnlyStateContextI
+	GetSC() state.QueryStateContextI
 	SetScAccessor(StateContextAccessor)
 	SetupRestHandlers()
 }
