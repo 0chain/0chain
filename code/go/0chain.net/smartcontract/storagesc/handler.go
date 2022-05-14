@@ -146,6 +146,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 	edb := srh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	collectedReward, err := edb.GetRewardClaimedTotal(query)
 	if err != nil {
@@ -180,6 +181,7 @@ func (srh *StorageRestHandler) getWriteMarkerCountHandler(w http.ResponseWriter,
 	edb := srh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	total, err := edb.GetWriteMarkerCount(allocationID)
 	common.Respond(w, r, map[string]int64{
@@ -221,6 +223,7 @@ func (srh *StorageRestHandler) getReadAmountHandler(w http.ResponseWriter, r *ht
 	edb := srh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	total, err := edb.GetDataReadFromAllocationForLastNBlocks(int64(blockNumber), allocationIDString)
 	common.Respond(w, r, map[string]int64{"total": total}, err)
@@ -260,6 +263,7 @@ func (srh *StorageRestHandler) getWrittenAmountHandler(w http.ResponseWriter, r 
 	edb := srh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	total, err := edb.GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
 
@@ -531,6 +535,7 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	edb := srh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	block, err := edb.GetBlocks()
 	if err != nil {

@@ -84,6 +84,7 @@ func (vrh *VestingRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 	conf, err := getConfigReadOnly(vrh.GetSC())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get config", err.Error()))
+		return
 	}
 	common.Respond(w, r, conf.getConfigMap(), nil)
 }

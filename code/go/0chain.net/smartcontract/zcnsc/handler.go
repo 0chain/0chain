@@ -52,6 +52,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 	edb := zrh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	events, err = edb.GetAuthorizers()
 	if err != nil {
@@ -98,6 +99,7 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 	edb := zrh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	ev, err := edb.GetAuthorizer(id)
 	if err != nil {

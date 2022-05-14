@@ -9,6 +9,7 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
+	"go.uber.org/zap"
 )
 
 type RestHandler struct {
@@ -40,6 +41,10 @@ func (rh *RestHandler) GetSC() state.QueryStateContextI {
 		if newStx != nil {
 			rh.sCtx = newStx
 		}
+		logging.Logger.Info("piers GetSC", zap.Int64("old round",
+			rh.scAccessor.GetCurrentRound()),
+			zap.Int64("new round", rh.sCtx.GetBlock().Round),
+		)
 	}
 	return rh.sCtx
 }
@@ -49,10 +54,6 @@ func (rh *RestHandler) SetScAccessor(sca restinterface.StateContextAccessor) {
 }
 
 func (rh *RestHandler) SetupRestHandlers() {
-	if rh.GetSC().GetEventDB() == nil {
-		logging.Logger.Warn("no event database, skipping REST handlers")
-		return
-	}
 	storagesc.SetupRestHandler(rh)
 	minersc.SetupRestHandler(rh)
 	faucetsc.SetupRestHandler(rh)
