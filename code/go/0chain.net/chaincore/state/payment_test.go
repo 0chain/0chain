@@ -14,15 +14,15 @@ func TestNewMint(t *testing.T) {
 	t.Parallel()
 
 	var (
-		minter             = "minter"
-		toClientID         = "to client id"
-		amount     Balance = 5
+		minter           = "minter"
+		toClientID       = "to client id"
+		amount     int64 = 5
 	)
 
 	type args struct {
 		minter   datastore.Key
 		Receiver datastore.Key
-		amount   Balance
+		amount   int64
 	}
 	tests := []struct {
 		name string
@@ -67,7 +67,7 @@ func TestMint_Encode(t *testing.T) {
 	type fields struct {
 		Minter     datastore.Key
 		ToClientID datastore.Key
-		Amount     Balance
+		Amount     int64
 	}
 	tests := []struct {
 		name   string
@@ -109,7 +109,7 @@ func TestMint_Decode(t *testing.T) {
 	type fields struct {
 		Minter     datastore.Key
 		ToClientID datastore.Key
-		Amount     Balance
+		Amount     int64
 	}
 	type args struct {
 		input []byte

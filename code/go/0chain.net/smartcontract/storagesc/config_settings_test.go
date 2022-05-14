@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/block"
+	"0chain.net/pkg/tokens"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/block"
 
 	"0chain.net/smartcontract"
 
@@ -289,12 +289,12 @@ func TestCommitSettingChanges(t *testing.T) {
 						}
 					case smartcontract.StateBalance:
 						{
-							expected, err := strconv.ParseFloat(value, 64)
-							expected = x10 * expected
+							valuef, err := strconv.ParseFloat(value, 64)
+							expected := tokens.ZCNToSAS(valuef)
 							require.NoError(t, err)
-							actual, ok := setting.(state.Balance)
+							actual, ok := setting.(int64)
 							require.True(t, ok)
-							if state.Balance(expected) != actual {
+							if expected != actual {
 								return false
 							}
 						}

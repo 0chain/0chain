@@ -26,11 +26,7 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ID)
 	// string "Used"
 	o = append(o, 0xa4, 0x55, 0x73, 0x65, 0x64)
-	o, err = z.Used.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Used")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Used)
 	// string "StartTime"
 	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69, 0x6d, 0x65)
 	o = msgp.AppendTime(o, z.StartTime)
@@ -79,7 +75,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Used":
-			bts, err = z.Used.UnmarshalMsg(bts)
+			z.Used, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Used")
 				return
@@ -110,12 +106,12 @@ func (z *GlobalNode) Msgsize() (s int) {
 	} else {
 		s += z.FaucetConfig.Msgsize()
 	}
-	s += 3 + msgp.StringPrefixSize + len(z.ID) + 5 + z.Used.Msgsize() + 10 + msgp.TimeSize
+	s += 3 + msgp.StringPrefixSize + len(z.ID) + 5 + msgp.Int64Size + 10 + msgp.TimeSize
 	return
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *UserNode) MarshalMsg(b []byte) (o []byte, err error) {
+func (z UserNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
 	// string "ID"
@@ -126,11 +122,7 @@ func (z *UserNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendTime(o, z.StartTime)
 	// string "Used"
 	o = append(o, 0xa4, 0x55, 0x73, 0x65, 0x64)
-	o, err = z.Used.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Used")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Used)
 	return
 }
 
@@ -165,7 +157,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Used":
-			bts, err = z.Used.UnmarshalMsg(bts)
+			z.Used, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Used")
 				return
@@ -183,7 +175,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *UserNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.TimeSize + 5 + z.Used.Msgsize()
+func (z UserNode) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.TimeSize + 5 + msgp.Int64Size
 	return
 }

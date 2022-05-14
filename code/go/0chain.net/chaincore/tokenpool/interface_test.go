@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"0chain.net/chaincore/state"
 )
 
 func TestTokenPoolTransferResponse_Encode(t *testing.T) {
@@ -30,7 +28,7 @@ func TestTokenPoolTransferResponse_Encode(t *testing.T) {
 		TxnHash    string
 		FromPool   string
 		ToPool     string
-		Value      state.Balance
+		Value      int64
 		FromClient string
 		ToClient   string
 	}
@@ -85,7 +83,7 @@ func TestTokenPoolTransferResponse_Decode(t *testing.T) {
 		TxnHash    string
 		FromPool   string
 		ToPool     string
-		Value      state.Balance
+		Value      int64
 		FromClient string
 		ToClient   string
 	}

@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/chaincore/smartcontract"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -102,7 +104,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	if err == util.ErrValueNotPresent {
 		return "", common.NewError("failed locking tokens", "you have no tokens to your name")
 	}
-	if state.Balance(t.Value) > balance {
+	if t.Value > balance {
 		return "", common.NewError("failed locking tokens", "lock amount is greater than balance")
 	}
 	if npr.Duration > YEAR {
@@ -122,7 +124,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 			return "", common.NewErrorf("failed locking tokens", "could not add transfer: %v", err)
 		}
 		pool.APR = gn.APR
-		pool.TokensEarned = state.Balance(
+		pool.TokensEarned = int64(
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
 		)
 		if err := balances.AddMint(&state.Mint{
@@ -199,8 +201,8 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 		var conf = config.SmartContractConfig
 		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
 		gn.APR = conf.GetFloat64(pfx + "apr")
-		gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
-		gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+		gn.MinLock = conf.GetInt64(pfx + "min_lock")
+		gn.MaxMint = tokens.ZCNToSAS(conf.GetFloat64(pfx + "max_mint"))
 		gn.OwnerId = conf.GetString(pfx + "owner_id")
 		gn.Cost = conf.GetStringMapInt(pfx + "cost")
 		if funcName != "updateVariables" {

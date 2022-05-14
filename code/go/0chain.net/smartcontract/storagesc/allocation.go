@@ -17,7 +17,6 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -657,8 +656,8 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(
 
 // allocation period used to calculate weighted average prices
 type allocPeriod struct {
-	read   state.Balance    // read price
-	write  state.Balance    // write price
+	read   int64            // read price
+	write  int64            // write price
 	period common.Timestamp // period (duration)
 	size   int64            // size for period
 }
@@ -668,7 +667,7 @@ func (ap *allocPeriod) weight() float64 {
 }
 
 // returns weighted average read and write prices
-func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite state.Balance) {
+func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite int64) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
 		ws       = apw + npw                // weights sum
@@ -678,20 +677,20 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite state.Balance) {
 	rp = (float64(ap.read) * apw) + (float64(np.read) * npw)
 	wp = (float64(ap.write) * apw) + (float64(np.write) * npw)
 
-	avgRead = state.Balance(rp / ws)
-	avgWrite = state.Balance(wp / ws)
+	avgRead = int64(rp / ws)
+	avgWrite = int64(wp / ws)
 	return
 }
 
-func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
-	psize, sizeDiff int64) (avg Terms) {
+func weightedAverage(prev, next *Terms, tx, pExp, expDiff common.Timestamp,
+	pSize, sizeDiff int64) (avg Terms) {
 
 	// allocation periods
 	var left, added allocPeriod
 	left.read, left.write = prev.ReadPrice, prev.WritePrice   // } prices
 	added.read, added.write = next.ReadPrice, next.WritePrice // }
-	left.size, added.size = psize, psize+sizeDiff             // sizes
-	left.period, added.period = pexp-tx, pexp+expDiff-tx      // periods
+	left.size, added.size = pSize, pSize+sizeDiff             // sizes
+	left.period, added.period = pExp-tx, pExp+expDiff-tx      // periods
 	// join
 	avg.ReadPrice, avg.WritePrice = left.join(&added)
 
@@ -741,7 +740,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 				}
 				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
 				if err != nil {
-					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
+					logging.Logger.Error("moveToWritePool failed", zap.Error(err))
 				}
 				changed = true
 			}
@@ -1480,14 +1479,14 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
-		var paid state.Balance = 0
+		var paid int64 = 0
 		if lack := d.MinLockDemand - d.Spent; lack > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {
 					pay = aps[apIndex].Balance
 				}
-				aps[apIndex].Balance -= state.Balance(pay)
+				aps[apIndex].Balance -= pay
 				if aps[apIndex].Balance == 0 {
 					apIndex++
 				}
@@ -1551,8 +1550,8 @@ func (sc *StorageSmartContract) finishAllocation(
 				return common.NewError("fini_alloc_failed",
 					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			d.Spent += state.Balance(reward)
-			d.FinalReward += state.Balance(reward)
+			d.Spent += int64(reward)
+			d.FinalReward += int64(reward)
 			passPayments += reward
 		}
 
@@ -1582,7 +1581,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
 	}
-	cp.Balance -= state.Balance(passPayments)
+	cp.Balance -= int64(passPayments)
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
 

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -95,7 +97,7 @@ func TestLock(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, resp.Txn_hash, txHash)
 		require.EqualValues(t, resp.To_pool, txHash)
-		require.EqualValues(t, resp.Value, zcnToBalance(flags.tokens))
+		require.EqualValues(t, resp.Value, tokens.ZCNToSAS(flags.tokens))
 		require.EqualValues(t, resp.From_client, clientId)
 		require.EqualValues(t, resp.To_client, storageScId)
 		require.Len(t, userNode.Pools, 1)
@@ -105,7 +107,7 @@ func TestLock(t *testing.T) {
 			lockFlags: flags,
 		}
 		require.EqualValues(t, userPool.TokensEarned, f.tokensEarned())
-		require.EqualValues(t, globalNode.SimpleGlobalNode.TotalMinted, f.tokensEarned()+zcnToBalance(startMinted))
+		require.EqualValues(t, globalNode.SimpleGlobalNode.TotalMinted, f.tokensEarned()+tokens.ZCNToSAS(startMinted))
 	})
 
 	t.Run(errInsufficientFunds, func(t *testing.T) {
@@ -116,7 +118,7 @@ func TestLock(t *testing.T) {
 		_, _, globalNode, err = testLock(t, flags.tokens, flags.duration, clientStartZCN, startMinted)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLock+errInsufficientFunds)
-		require.EqualValues(t, globalNode.SimpleGlobalNode.TotalMinted, zcnToBalance(startMinted))
+		require.EqualValues(t, globalNode.SimpleGlobalNode.TotalMinted, tokens.ZCNToSAS(startMinted))
 	})
 
 	t.Run(errNoTokens, func(t *testing.T) {
@@ -195,9 +197,9 @@ func TestUnlock(t *testing.T) {
 		require.Len(t, userNode.Pools, 0)
 		require.EqualValues(t, storageScId, transfer.ClientID)
 		require.EqualValues(t, clientId, transfer.ToClientID)
-		require.EqualValues(t, zcnToBalance(flags.tokens), transfer.Amount)
+		require.EqualValues(t, tokens.ZCNToSAS(flags.tokens), transfer.Amount)
 		require.EqualValues(t, resp.From_Pool, txHash)
-		require.EqualValues(t, resp.Value, zcnToBalance(flags.tokens))
+		require.EqualValues(t, resp.Value, tokens.ZCNToSAS(flags.tokens))
 		require.EqualValues(t, resp.To_Client, clientId)
 		require.EqualValues(t, resp.From_Client, storageScId)
 	})
@@ -244,7 +246,7 @@ func TestUnlock(t *testing.T) {
 
 }
 
-func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance float64, alredyMinted float64) (
+func testLock(t *testing.T, tkns float64, duration time.Duration, startBalance float64, alredyMinted float64) (
 	*lockResponse, *UserNode, *GlobalNode, error) {
 	var input = lockInput(t, duration)
 	var userNode = newUserNode(clientId)
@@ -258,7 +260,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 		ClientID:     clientId,
 		ToClientID:   storageScId,
 		CreationDate: startTime,
-		Value:        int64(zcnToBalance(tokens)),
+		Value:        tokens.ZCNToSAS(tkns),
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
@@ -272,15 +274,15 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			nil,
 			nil,
 		),
-		clientStartBalance: zcnToBalance(startBalance),
+		clientStartBalance: tokens.ZCNToSAS(startBalance),
 		store:              make(map[datastore.Key]util.MPTSerializable),
 	}
 	var globalNode = &GlobalNode{
 		ID: storageScId,
 		SimpleGlobalNode: &SimpleGlobalNode{
-			MaxMint:     zcnToBalance(scYml.maxMint),
-			TotalMinted: zcnToBalance(alredyMinted),
-			MinLock:     state.Balance(scYml.minLock),
+			MaxMint:     tokens.ZCNToSAS(scYml.maxMint),
+			TotalMinted: tokens.ZCNToSAS(alredyMinted),
+			MinLock:     int64(scYml.minLock),
 			APR:         scYml.apr,
 		},
 		MinLockPeriod: scYml.minLockPeriod,
@@ -349,11 +351,9 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 	return response, newUserNode, transfers[0], nil
 }
 
-const x10 = 10 * 1000 * 1000 * 1000
-
 type mockStateContext struct {
 	ctx                cstate.StateContext
-	clientStartBalance state.Balance
+	clientStartBalance int64
 	store              map[datastore.Key]util.MPTSerializable
 }
 
@@ -376,7 +376,7 @@ func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, s
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
 func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (int64, error) {
 	if sc.clientStartBalance == 0 {
 		return 0, util.ErrValueNotPresent
 	}
@@ -412,10 +412,6 @@ func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
 }
 
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
-}
-
 //	const txnData = "{\"name\":\"lock\",\"input\":{\"duration\":\"10h0m\"}}"
 func lockInput(t *testing.T, duration time.Duration) []byte {
 	var txnData = "{\"name\":\"lock\",\"input\":{\"duration\":\""
@@ -441,11 +437,11 @@ type formulae struct {
 }
 
 // interest earned from a waller lock cli command
-func (f formulae) tokensEarned() state.Balance {
-	var amount = float64(zcnToBalance(f.lockFlags.tokens))
+func (f formulae) tokensEarned() int64 {
+	var amount = float64(tokens.ZCNToSAS(f.lockFlags.tokens))
 	var apr = f.sc.apr
 	var duration = float64(f.lockFlags.duration)
 	var year = float64(YEAR)
 
-	return state.Balance(amount * apr * duration / year)
+	return int64(amount * apr * duration / year)
 }

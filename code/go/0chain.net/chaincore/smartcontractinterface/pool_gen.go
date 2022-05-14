@@ -15,32 +15,16 @@ func (z *PoolStats) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.DelegateID)
 	// string "High"
 	o = append(o, 0xa4, 0x48, 0x69, 0x67, 0x68)
-	o, err = z.High.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "High")
-		return
-	}
+	o = msgp.AppendInt64(o, z.High)
 	// string "Low"
 	o = append(o, 0xa3, 0x4c, 0x6f, 0x77)
-	o, err = z.Low.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Low")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Low)
 	// string "InterestPaid"
 	o = append(o, 0xac, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x65, 0x73, 0x74, 0x50, 0x61, 0x69, 0x64)
-	o, err = z.InterestPaid.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "InterestPaid")
-		return
-	}
+	o = msgp.AppendInt64(o, z.InterestPaid)
 	// string "RewardPaid"
 	o = append(o, 0xaa, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x50, 0x61, 0x69, 0x64)
-	o, err = z.RewardPaid.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "RewardPaid")
-		return
-	}
+	o = msgp.AppendInt64(o, z.RewardPaid)
 	// string "NumRounds"
 	o = append(o, 0xa9, 0x4e, 0x75, 0x6d, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x73)
 	o = msgp.AppendInt64(o, z.NumRounds)
@@ -75,25 +59,25 @@ func (z *PoolStats) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "High":
-			bts, err = z.High.UnmarshalMsg(bts)
+			z.High, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "High")
 				return
 			}
 		case "Low":
-			bts, err = z.Low.UnmarshalMsg(bts)
+			z.Low, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Low")
 				return
 			}
 		case "InterestPaid":
-			bts, err = z.InterestPaid.UnmarshalMsg(bts)
+			z.InterestPaid, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "InterestPaid")
 				return
 			}
 		case "RewardPaid":
-			bts, err = z.RewardPaid.UnmarshalMsg(bts)
+			z.RewardPaid, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "RewardPaid")
 				return
@@ -124,6 +108,6 @@ func (z *PoolStats) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *PoolStats) Msgsize() (s int) {
-	s = 1 + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 5 + z.High.Msgsize() + 4 + z.Low.Msgsize() + 13 + z.InterestPaid.Msgsize() + 11 + z.RewardPaid.Msgsize() + 10 + msgp.Int64Size + 7 + msgp.StringPrefixSize + len(z.Status)
+	s = 1 + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 5 + msgp.Int64Size + 4 + msgp.Int64Size + 13 + msgp.Int64Size + 11 + msgp.Int64Size + 10 + msgp.Int64Size + 7 + msgp.StringPrefixSize + len(z.Status)
 	return
 }

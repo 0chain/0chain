@@ -20,7 +20,7 @@ import (
 //
 
 type testBalances struct {
-	balances  map[datastore.Key]state.Balance
+	balances  map[datastore.Key]int64
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
@@ -32,7 +32,7 @@ type testBalances struct {
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	tb = &testBalances{
-		balances: make(map[datastore.Key]state.Balance),
+		balances: make(map[datastore.Key]int64),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 		txn:      new(transaction.Transaction),
 		block:    new(block.Block),
@@ -104,7 +104,7 @@ func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
-	b state.Balance, err error) {
+	b int64, err error) {
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {

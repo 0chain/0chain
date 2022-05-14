@@ -366,7 +366,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	var (
 		// mb reward -- mint for the mb
-		blockReward = state.Balance(
+		blockReward = int64(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
 		minerr, sharderr = gn.splitByShareRatio(blockReward)
@@ -441,7 +441,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) sumFee(b *block.Block,
-	updateStats bool) state.Balance {
+	updateStats bool) int64 {
 
 	var totalMaxFee int64
 	var feeStats metrics.Counter
@@ -455,10 +455,10 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	if updateStats && feeStats != nil {
 		feeStats.Inc(totalMaxFee)
 	}
-	return state.Balance(totalMaxFee)
+	return totalMaxFee
 }
 
-func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
+func (msc *MinerSmartContract) mintStakeHolders(value int64,
 	node *MinerNode, gn *GlobalNode, isSharder bool,
 	balances cstate.StateContextI) (resp string, err error) {
 
@@ -481,7 +481,7 @@ func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
 	for _, pool := range node.orderedActivePools() {
 		var (
 			ratio    = float64(pool.Balance) / float64(totalStaked)
-			userMint = state.Balance(float64(value) * ratio)
+			userMint = int64(float64(value) * ratio)
 		)
 
 		Logger.Info("mint delegate",
@@ -506,7 +506,7 @@ func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
 	return resp, nil
 }
 
-func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
+func (msc *MinerSmartContract) payStakeHolders(value int64,
 	node *MinerNode, isSharder bool,
 	balances cstate.StateContextI) (resp string, err error) {
 
@@ -525,7 +525,7 @@ func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
 	for _, pool := range node.orderedActivePools() {
 		var (
 			ratio   = float64(pool.Balance) / float64(totalStaked)
-			userFee = state.Balance(float64(value) * ratio)
+			userFee = int64(float64(value) * ratio)
 		)
 
 		Logger.Info("pay delegate",
@@ -579,7 +579,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 }
 
 // pay fees and mint sharders
-func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
+func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint int64,
 	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -590,18 +590,18 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 
 	// fess and mint
 	var (
-		partf = state.Balance(float64(fee) / float64(len(sharders)))
-		partm = state.Balance(float64(mint) / float64(len(sharders)))
+		partf = int64(float64(fee) / float64(len(sharders)))
+		partm = int64(float64(mint) / float64(len(sharders)))
 	)
 
 	// part for every sharder
 	for _, sh := range sharders {
 		var sresp string
 		if sh.numActiveDelegates() > 0 {
-			var delegateBr = state.Balance(float64(partm) * (1 - sh.ServiceCharge))
-			var delegateFees = state.Balance(float64(partf) * (1 - sh.ServiceCharge))
-			var sharderBR = state.Balance(float64(partm) * sh.ServiceCharge)
-			var sharderFees = state.Balance(float64(partf) * sh.ServiceCharge)
+			var delegateBr = int64(float64(partm) * (1 - sh.ServiceCharge))
+			var delegateFees = int64(float64(partf) * (1 - sh.ServiceCharge))
+			var sharderBR = int64(float64(partm) * sh.ServiceCharge)
+			var sharderFees = int64(float64(partf) * sh.ServiceCharge)
 
 			sresp, err = msc.payNode(sharderBR, sharderFees, sh, gn, balances)
 			if err != nil {
@@ -640,7 +640,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 	return
 }
 
-func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
+func (msc *MinerSmartContract) payNode(reward, fee int64, mn *MinerNode,
 	gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 

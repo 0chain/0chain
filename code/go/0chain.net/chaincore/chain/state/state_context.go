@@ -61,7 +61,7 @@ type StateContextI interface {
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
-	GetClientBalance(clientID datastore.Key) (state.Balance, error)
+	GetClientBalance(clientID datastore.Key) (int64, error)
 	SetStateContext(st *state.State) error                       // cannot use in smart contracts or REST endpoints
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error // Can use in REST endpoints
 	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
@@ -233,7 +233,7 @@ func (sc *StateContext) GetEventDB() *event.EventDb {
 
 //Validate - implement interface
 func (sc *StateContext) Validate() error {
-	var amount state.Balance
+	var amount int64
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
 			amount += transfer.Amount
@@ -246,9 +246,9 @@ func (sc *StateContext) Validate() error {
 			return state.ErrInvalidTransfer
 		}
 	}
-	totalValue := state.Balance(sc.txn.Value)
+	totalValue := sc.txn.Value
 	if config.DevConfiguration.IsFeeEnabled {
-		totalValue += state.Balance(sc.txn.Fee)
+		totalValue += sc.txn.Fee
 	}
 	if amount > totalValue {
 		return state.ErrInvalidTransfer
@@ -281,7 +281,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 }
 
 //GetClientBalance - get the balance of the client
-func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error) {
+func (sc *StateContext) GetClientBalance(clientID string) (int64, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
 		return 0, err
@@ -289,7 +289,7 @@ func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error)
 	return s.Balance, nil
 }
 
-//GetClientBalance - get the balance of the client
+//GetClientNonce - get the nonce of the client
 func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {

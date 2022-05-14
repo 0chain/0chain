@@ -8,7 +8,6 @@ import (
 	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 
@@ -21,13 +20,13 @@ import (
 //
 
 func (rp *readPool) allocTotal(allocID string,
-	now int64) state.Balance {
+	now int64) int64 {
 
 	return rp.Pools.allocTotal(allocID, now)
 }
 
 func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
-	now int64) state.Balance {
+	now int64) int64 {
 
 	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
 }

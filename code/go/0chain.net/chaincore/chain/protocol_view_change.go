@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -18,7 +20,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -248,8 +249,8 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.DelegateWallet = viper.GetString("delegate_wallet")
 	mn.ServiceCharge = viper.GetFloat64("service_charge")
 	mn.NumberOfDelegates = viper.GetInt("number_of_delegates")
-	mn.MinStake = state.Balance(viper.GetFloat64("min_stake") * 1e10)
-	mn.MaxStake = state.Balance(viper.GetFloat64("max_stake") * 1e10)
+	mn.MinStake = tokens.ZCNToSAS(viper.GetFloat64("min_stake"))
+	mn.MaxStake = tokens.ZCNToSAS(viper.GetFloat64("max_stake"))
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
 		Latitude:  viper.GetFloat64("latitude"), // are these good to be added in 0chain.yaml?
 		Longitude: viper.GetFloat64("longitude"),

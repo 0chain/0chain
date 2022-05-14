@@ -263,7 +263,7 @@ func TestGetSmartContract(t *testing.T) {
 func makeTestStateContextIMock() *mocks.StateContextI {
 	stateContextI := mocks.StateContextI{}
 	stateContextI.On("GetClientBalance", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) state.Balance {
+		func(_ datastore.Key) int64 {
 			return 5
 		},
 		func(_ datastore.Key) error {

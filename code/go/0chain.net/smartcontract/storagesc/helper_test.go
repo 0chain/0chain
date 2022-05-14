@@ -9,7 +9,6 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -52,10 +51,10 @@ type Client struct {
 	cap   int64
 
 	// user or blobber
-	balance state.Balance
+	balance int64
 }
 
-func newClient(balance state.Balance, balances chainState.StateContextI) (
+func newClient(balance int64, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -175,7 +174,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value, now int64,
 
 // addBlobber to SC
 func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
-	terms Terms, balance state.Balance, balances chainState.StateContextI) (
+	terms Terms, balance int64, balances chainState.StateContextI) (
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -431,7 +430,7 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 	return
 }
 
-func stakePoolTotal(sp *stakePool) (total state.Balance) {
+func stakePoolTotal(sp *stakePool) (total int64) {
 	for _, id := range sp.OrderedPoolIds() {
 		total += sp.Pools[id].Balance
 	}

@@ -6,7 +6,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
@@ -63,7 +62,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		PublicKey:         sn.PublicKey,
 		ShortName:         sn.ShortName,
 		BuildTag:          sn.BuildTag,
-		TotalStaked:       state.Balance(sn.TotalStaked),
+		TotalStaked:       sn.TotalStaked,
 		Delete:            sn.Delete,
 		DelegateWallet:    sn.DelegateWallet,
 		ServiceCharge:     sn.ServiceCharge,

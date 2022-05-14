@@ -128,7 +128,7 @@ func (t testWallet) newProposal(proposalID string, toClientID string, value int6
 	transfer := state.Transfer{
 		ClientID:   t.groupClientID,
 		ToClientID: toClientID,
-		Amount:     state.Balance(value),
+		Amount:     value,
 	}
 
 	votes := make(map[string]multisigsc.Vote)

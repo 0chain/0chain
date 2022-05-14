@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
@@ -18,7 +20,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -218,16 +219,16 @@ type GlobalNode struct {
 	XPercent     float64 `json:"x_percent"`
 	LastRound    int64   `json:"last_round"`
 	// MaxStake boundary of SC.
-	MaxStake state.Balance `json:"max_stake"`
+	MaxStake int64 `json:"max_stake"`
 	// MinStake boundary of SC.
-	MinStake state.Balance `json:"min_stake"`
+	MinStake int64 `json:"min_stake"`
 
 	// Reward rate.
 	RewardRate float64 `json:"reward_rate"`
 	// ShareRatio is miner/block sharders rewards ratio.
 	ShareRatio float64 `json:"share_ratio"`
 	// BlockReward
-	BlockReward state.Balance `json:"block_reward"`
+	BlockReward int64 `json:"block_reward"`
 	// MaxCharge can be set by a generator.
 	MaxCharge float64 `json:"max_charge"` // %
 	// Epoch is number of rounds to decline interests and rewards.
@@ -235,7 +236,7 @@ type GlobalNode struct {
 	// RewardDeclineRate is ratio of epoch rewards declining.
 	RewardDeclineRate float64 `json:"reward_decline_rate"`
 	// MaxMint is minting boundary for SC.
-	MaxMint state.Balance `json:"max_mint"`
+	MaxMint int64 `json:"max_mint"`
 
 	// PrevMagicBlock keeps previous magic block to make Miner SC more stable.
 	// In case latestFinalizedMagicBlock of a miner works incorrect. We are
@@ -243,7 +244,7 @@ type GlobalNode struct {
 	PrevMagicBlock *block.MagicBlock `json:"prev_magic_block"`
 
 	// Minted tokens by SC.
-	Minted state.Balance `json:"minted"`
+	Minted int64 `json:"minted"`
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
@@ -254,8 +255,8 @@ type GlobalNode struct {
 
 func (gn *GlobalNode) readConfig() {
 	const pfx = "smart_contracts.minersc."
-	gn.MinStake = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MinStake]) * 1e10)
-	gn.MaxStake = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxStake]) * 1e10)
+	gn.MinStake = tokens.ZCNToSAS(config.SmartContractConfig.GetFloat64(pfx + SettingName[MinStake]))
+	gn.MaxStake = tokens.ZCNToSAS(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxStake]))
 	gn.MaxN = config.SmartContractConfig.GetInt(pfx + SettingName[MaxN])
 	gn.MinN = config.SmartContractConfig.GetInt(pfx + SettingName[MinN])
 	gn.TPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent])
@@ -267,11 +268,11 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
 	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
 	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
-	gn.BlockReward = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[BlockReward]) * 1e10)
+	gn.BlockReward = tokens.ZCNToSAS(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
 	gn.MaxCharge = config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
 	gn.Epoch = config.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
-	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
+	gn.MaxMint = tokens.ZCNToSAS(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
 	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
 	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
@@ -313,11 +314,11 @@ func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 			return out, err
 		}
 		if info.ConfigType == smartcontract.StateBalance {
-			sbSetting, ok := iSetting.(state.Balance)
+			sbSetting, ok := iSetting.(int64)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
-			iSetting = float64(sbSetting) / x10
+			iSetting = tokens.SASToZCN(sbSetting)
 		}
 		out.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
@@ -556,10 +557,10 @@ func (gn *GlobalNode) epochDecline() {
 }
 
 // calculate miner/block sharders fees
-func (gn *GlobalNode) splitByShareRatio(fees state.Balance) (
-	miner, sharders state.Balance) {
+func (gn *GlobalNode) splitByShareRatio(fees int64) (
+	miner, sharders int64) {
 
-	miner = state.Balance(float64(fees) * gn.ShareRatio)
+	miner = int64(float64(fees) * gn.ShareRatio)
 	sharders = fees - miner
 	return
 }
@@ -646,11 +647,11 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 
 type Stat struct {
 	// for miner (totals)
-	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
-	GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
+	GeneratorRewards int64 `json:"generator_rewards,omitempty"`
+	GeneratorFees    int64 `json:"generator_fees,omitempty"`
 	// for sharder (totals)
-	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
-	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
+	SharderRewards int64 `json:"sharder_rewards,omitempty"`
+	SharderFees    int64 `json:"sharder_fees,omitempty"`
 }
 
 type SimpleNodeGeolocation struct {
@@ -682,9 +683,9 @@ type SimpleNode struct {
 	// NumberOfDelegates is max allowed number of delegate pools.
 	NumberOfDelegates int `json:"number_of_delegates"`
 	// MinStake allowed by node.
-	MinStake state.Balance `json:"min_stake"`
+	MinStake int64 `json:"min_stake"`
 	// MaxStake allowed by node.
-	MaxStake state.Balance `json:"max_stake"`
+	MaxStake int64 `json:"max_stake"`
 
 	// Stat contains node statistic.
 	Stat Stat `json:"stat"`
@@ -760,13 +761,13 @@ func (ps *poolStat) encode() []byte {
 }
 
 type delegatePoolStat struct {
-	ID           string        `json:"id"`            // pool ID
-	Balance      state.Balance `json:"balance"`       //
-	InterestPaid state.Balance `json:"interest_paid"` //
-	RewardPaid   state.Balance `json:"reward_paid"`   //
-	Status       string        `json:"status"`        //
-	High         state.Balance `json:"high"`          // }
-	Low          state.Balance `json:"low"`           // }
+	ID           string `json:"id"`            // pool ID
+	Balance      int64  `json:"balance"`       //
+	InterestPaid int64  `json:"interest_paid"` //
+	RewardPaid   int64  `json:"reward_paid"`   //
+	Status       string `json:"status"`        //
+	High         int64  `json:"high"`          // }
+	Low          int64  `json:"low"`           // }
 }
 
 func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {

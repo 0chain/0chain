@@ -22,7 +22,6 @@ import (
 	"0chain.net/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 )
@@ -55,8 +54,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 				Longitude: blobber.Longitude,
 			},
 			Terms: Terms{
-				ReadPrice:               state.Balance(blobber.ReadPrice),
-				WritePrice:              state.Balance(blobber.WritePrice),
+				ReadPrice:               blobber.ReadPrice,
+				WritePrice:              blobber.WritePrice,
 				MinLockDemand:           blobber.MinLockDemand,
 				MaxOfferDuration:        maxOfferDuration,
 				ChallengeCompletionTime: challengeCompletionTime,
@@ -66,8 +65,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
 			StakePoolSettings: stakepool.StakePoolSettings{
 				DelegateWallet:  blobber.DelegateWallet,
-				MinStake:        state.Balance(blobber.MinStake),
-				MaxStake:        state.Balance(blobber.MaxStake),
+				MinStake:        blobber.MinStake,
+				MaxStake:        blobber.MaxStake,
 				MaxNumDelegates: blobber.NumDelegates,
 				ServiceCharge:   blobber.ServiceCharge,
 			},
@@ -453,7 +452,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	}
 
 	var gbSize = sizeInGB(bSize)
-	var minLockDemand state.Balance
+	var minLockDemand int64
 	for _, b := range blobberNodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(creationDate))
@@ -830,28 +829,28 @@ func spStats(
 ) *stakePoolStat {
 	stat := new(stakePoolStat)
 	stat.ID = blobber.BlobberID
-	stat.UnstakeTotal = state.Balance(blobber.UnstakeTotal)
+	stat.UnStakeTotal = blobber.UnstakeTotal
 	stat.Capacity = blobber.Capacity
-	stat.WritePrice = state.Balance(blobber.WritePrice)
-	stat.OffersTotal = state.Balance(blobber.OffersTotal)
+	stat.WritePrice = blobber.WritePrice
+	stat.OffersTotal = blobber.OffersTotal
 	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
 	stat.Settings = stakepool.StakePoolSettings{
 		DelegateWallet:  blobber.DelegateWallet,
-		MinStake:        state.Balance(blobber.MinStake),
-		MaxStake:        state.Balance(blobber.MaxStake),
+		MinStake:        blobber.MinStake,
+		MaxStake:        blobber.MaxStake,
 		MaxNumDelegates: blobber.NumDelegates,
 		ServiceCharge:   blobber.ServiceCharge,
 	}
-	stat.Rewards = state.Balance(blobber.Reward)
+	stat.Rewards = blobber.Reward
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
-			Balance:      state.Balance(dp.Balance),
+			Balance:      dp.Balance,
 			DelegateID:   dp.DelegateID,
-			Rewards:      state.Balance(dp.Reward),
+			Rewards:      dp.Reward,
 			Status:       spenum.PoolStatus(dp.Status).String(),
-			TotalReward:  state.Balance(dp.TotalReward),
-			TotalPenalty: state.Balance(dp.TotalPenalty),
+			TotalReward:  dp.TotalReward,
+			TotalPenalty: dp.TotalPenalty,
 			RoundCreated: dp.RoundCreated,
 		}
 		stat.Balance += dpStats.Balance
@@ -885,11 +884,11 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 	for _, pool := range pools {
 		var dps = delegatePoolStat{
 			ID:           pool.PoolID,
-			Balance:      state.Balance(pool.Balance),
+			Balance:      pool.Balance,
 			DelegateID:   pool.DelegateID,
-			Rewards:      state.Balance(pool.Reward),
-			TotalPenalty: state.Balance(pool.TotalPenalty),
-			TotalReward:  state.Balance(pool.TotalReward),
+			Rewards:      pool.Reward,
+			TotalPenalty: pool.TotalPenalty,
+			TotalReward:  pool.TotalReward,
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
 		}

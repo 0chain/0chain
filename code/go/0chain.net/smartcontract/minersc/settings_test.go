@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	chainstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/smartcontract"
-
-	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -21,8 +21,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-const x10 float64 = 10 * 1000 * 1000 * 1000
 
 const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 
@@ -123,12 +121,12 @@ func TestUpdateSettings(t *testing.T) {
 						}
 					case smartcontract.StateBalance:
 						{
-							expected, err := strconv.ParseFloat(value, 64)
-							expected = x10 * expected
+							valuef, err := strconv.ParseFloat(value, 64)
 							require.NoError(t, err)
-							actual, ok := setting.(state.Balance)
+							expected := tokens.ZCNToSAS(valuef)
+							actual, ok := setting.(int64)
 							require.True(t, ok)
-							if state.Balance(expected) != actual {
+							if expected != actual {
 								return false
 							}
 						}
@@ -141,7 +139,7 @@ func TestUpdateSettings(t *testing.T) {
 		return args{
 			msc:      msc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			gn:       &GlobalNode{OwnerId: owner},
 			balances: balances,
 		}

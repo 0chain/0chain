@@ -6,7 +6,6 @@ import (
 	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
@@ -89,8 +88,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.StakePoolSettings{
 				DelegateWallet:  b.DelegateWallet,
-				MinStake:        state.Balance(b.MinStake),
-				MaxStake:        state.Balance(b.MaxStake),
+				MinStake:        b.MinStake,
+				MaxStake:        b.MaxStake,
 				MaxNumDelegates: b.NumDelegates,
 				ServiceCharge:   b.ServiceCharge,
 			},
@@ -102,7 +101,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
 			Size:          b.Used,
 			Terms:         terms,
-			MinLockDemand: state.Balance(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
+			MinLockDemand: int64(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation

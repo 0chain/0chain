@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
 	"encoding/json"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -45,7 +44,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"can't get related stake pool: %v", err)
 	}
 
-	var reward state.Balance
+	var reward int64
 	reward, err = sp.MintRewards(
 		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
 	if err != nil {

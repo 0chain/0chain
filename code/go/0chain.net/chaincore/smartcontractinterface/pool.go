@@ -3,7 +3,6 @@ package smartcontractinterface
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 )
 
@@ -11,16 +10,16 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type PoolStats struct {
-	DelegateID   string        `json:"delegate_id"`
-	High         state.Balance `json:"high"` // } interests and rewards
-	Low          state.Balance `json:"low"`  // }
-	InterestPaid state.Balance `json:"interest_paid"`
-	RewardPaid   state.Balance `json:"reward_paid"`
-	NumRounds    int64         `json:"number_rounds"`
-	Status       string        `json:"status"`
+	DelegateID   string `json:"delegate_id"`
+	High         int64  `json:"high"` // } interests and rewards
+	Low          int64  `json:"low"`  // }
+	InterestPaid int64  `json:"interest_paid"`
+	RewardPaid   int64  `json:"reward_paid"`
+	NumRounds    int64  `json:"number_rounds"`
+	Status       string `json:"status"`
 }
 
-func (ps *PoolStats) AddInterests(value state.Balance) {
+func (ps *PoolStats) AddInterests(value int64) {
 	ps.InterestPaid += value
 	if ps.Low < 0 {
 		ps.Low = value
@@ -32,7 +31,7 @@ func (ps *PoolStats) AddInterests(value state.Balance) {
 	}
 }
 
-func (ps *PoolStats) AddRewards(value state.Balance) {
+func (ps *PoolStats) AddRewards(value int64) {
 	ps.RewardPaid += value
 	if ps.Low < 0 {
 		ps.Low = value
@@ -67,7 +66,7 @@ func (dp *DelegatePool) Encode() []byte {
 	return buff
 }
 
-func (dp *DelegatePool) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
+func (dp *DelegatePool) Decode(input []byte, tokenLock tokenpool.TokenLockInterface) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -84,7 +83,7 @@ func (dp *DelegatePool) Decode(input []byte, tokenlock tokenpool.TokenLockInterf
 	}
 	p, ok := objMap["pool"]
 	if ok {
-		err = dp.ZcnLockingPool.Decode(*p, tokenlock)
+		err = dp.ZcnLockingPool.Decode(*p, tokenLock)
 		if err != nil {
 			return err
 		}

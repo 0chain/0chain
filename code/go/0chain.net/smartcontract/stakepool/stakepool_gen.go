@@ -12,18 +12,10 @@ func (z *DelegatePool) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 5
 	// string "Balance"
 	o = append(o, 0x85, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
-	o, err = z.Balance.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Balance")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Balance)
 	// string "Reward"
 	o = append(o, 0xa6, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
-	o, err = z.Reward.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Reward")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Reward)
 	// string "Status"
 	o = append(o, 0xa6, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73)
 	o, err = z.Status.MarshalMsg(o)
@@ -59,13 +51,13 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "Balance":
-			bts, err = z.Balance.UnmarshalMsg(bts)
+			z.Balance, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Balance")
 				return
 			}
 		case "Reward":
-			bts, err = z.Reward.UnmarshalMsg(bts)
+			z.Reward, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Reward")
 				return
@@ -102,7 +94,7 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DelegatePool) Msgsize() (s int) {
-	s = 1 + 8 + z.Balance.Msgsize() + 7 + z.Reward.Msgsize() + 7 + z.Status.Msgsize() + 13 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.DelegateID)
+	s = 1 + 8 + msgp.Int64Size + 7 + msgp.Int64Size + 7 + z.Status.Msgsize() + 13 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.DelegateID)
 	return
 }
 
@@ -133,11 +125,7 @@ func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "Reward"
 	o = append(o, 0xa6, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
-	o, err = z.Reward.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Reward")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Reward)
 	// string "Settings"
 	o = append(o, 0xa8, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
 	o, err = z.Settings.MarshalMsg(o)
@@ -215,7 +203,7 @@ func (z *StakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				z.Pools[za0001] = za0002
 			}
 		case "Reward":
-			bts, err = z.Reward.UnmarshalMsg(bts)
+			z.Reward, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Reward")
 				return
@@ -258,7 +246,7 @@ func (z *StakePool) Msgsize() (s int) {
 			}
 		}
 	}
-	s += 7 + z.Reward.Msgsize() + 9 + z.Settings.Msgsize() + 7 + z.Minter.Msgsize()
+	s += 7 + msgp.Int64Size + 9 + z.Settings.Msgsize() + 7 + z.Minter.Msgsize()
 	return
 }
 
@@ -271,18 +259,10 @@ func (z *StakePoolSettings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.DelegateWallet)
 	// string "MinStake"
 	o = append(o, 0xa8, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.MinStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MinStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MinStake)
 	// string "MaxStake"
 	o = append(o, 0xa8, 0x4d, 0x61, 0x78, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.MaxStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MaxStake)
 	// string "MaxNumDelegates"
 	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.MaxNumDelegates)
@@ -317,13 +297,13 @@ func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinStake":
-			bts, err = z.MinStake.UnmarshalMsg(bts)
+			z.MinStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinStake")
 				return
 			}
 		case "MaxStake":
-			bts, err = z.MaxStake.UnmarshalMsg(bts)
+			z.MaxStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxStake")
 				return
@@ -354,6 +334,6 @@ func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StakePoolSettings) Msgsize() (s int) {
-	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 16 + msgp.IntSize + 14 + msgp.Float64Size
+	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + msgp.Int64Size + 9 + msgp.Int64Size + 16 + msgp.IntSize + 14 + msgp.Float64Size
 	return
 }

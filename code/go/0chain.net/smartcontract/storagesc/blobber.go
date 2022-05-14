@@ -14,7 +14,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -415,7 +414,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
-		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
+		value    = int64(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
@@ -545,7 +544,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		move  state.Balance
+		move  int64
 	)
 
 	// the details will be saved in caller with allocation object (the details

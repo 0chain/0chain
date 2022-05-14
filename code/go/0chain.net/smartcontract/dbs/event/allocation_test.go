@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
@@ -34,9 +33,9 @@ func TestAllocations(t *testing.T) {
 		// DelegateWallet for pool owner.
 		DelegateWallet string `json:"delegate_wallet"`
 		// MinStake allowed.
-		MinStake state.Balance `json:"min_stake"`
+		MinStake int64 `json:"min_stake"`
 		// MaxStake allowed.
-		MaxStake state.Balance `json:"max_stake"`
+		MaxStake int64 `json:"max_stake"`
 		// NumDelegates maximum allowed.
 		NumDelegates int `json:"num_delegates"`
 		// ServiceCharge of the blobber. The blobber gets this % (actually, value in
@@ -47,10 +46,10 @@ func TestAllocations(t *testing.T) {
 
 	type Terms struct {
 		// ReadPrice is price for reading. Token / GB (no time unit).
-		ReadPrice state.Balance `json:"read_price"`
+		ReadPrice int64 `json:"read_price"`
 		// WritePrice is price for reading. Token / GB / time unit. Also,
 		// it used to calculate min_lock_demand value.
-		WritePrice state.Balance `json:"write_price"`
+		WritePrice int64 `json:"write_price"`
 		// MinLockDemand in number in [0; 1] range. It represents part of
 		// allocation should be locked for the blobber rewards even if
 		// user never write something to the blobber.
@@ -62,8 +61,8 @@ func TestAllocations(t *testing.T) {
 	}
 
 	type PriceRange struct {
-		Min state.Balance `json:"min"`
-		Max state.Balance `json:"max"`
+		Min int64 `json:"min"`
+		Max int64 `json:"max"`
 	}
 
 	type StorageNode struct {
@@ -110,18 +109,18 @@ func TestAllocations(t *testing.T) {
 		Stats           *StorageAllocationStats `json:"stats"`
 		Terms           Terms                   `json:"terms"`
 		// MinLockDemand for the allocation in tokens.
-		MinLockDemand state.Balance `json:"min_lock_demand"`
-		Spent         state.Balance `json:"spent"`
+		MinLockDemand int64 `json:"min_lock_demand"`
+		Spent         int64 `json:"spent"`
 		// Penalty o the blobber for the allocation in tokens.
-		Penalty state.Balance `json:"penalty"`
+		Penalty int64 `json:"penalty"`
 		// ReadReward of the blobber.
-		ReadReward state.Balance `json:"read_reward"`
+		ReadReward int64 `json:"read_reward"`
 		// Returned back to write pool on challenge failed.
-		Returned state.Balance `json:"returned"`
+		Returned int64 `json:"returned"`
 		// ChallengeReward of the blobber.
-		ChallengeReward            state.Balance `json:"challenge_reward"`
-		FinalReward                state.Balance `json:"final_reward"`
-		ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
+		ChallengeReward            int64 `json:"challenge_reward"`
+		FinalReward                int64 `json:"final_reward"`
+		ChallengePoolIntegralValue int64 `json:"challenge_pool_integral_value"`
 	}
 
 	type StorageAllocation struct {
@@ -168,13 +167,13 @@ func TestAllocations(t *testing.T) {
 		UsedSize int64 `json:"-"`
 
 		// MovedToChallenge is number of tokens moved to challenge pool.
-		MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
+		MovedToChallenge int64 `json:"moved_to_challenge,omitempty"`
 		// MovedBack is number of tokens moved from challenge pool to
 		// related write pool (the Back) if a data has deleted.
-		MovedBack state.Balance `json:"moved_back,omitempty"`
+		MovedBack int64 `json:"moved_back,omitempty"`
 		// MovedToValidators is total number of tokens moved to validators
 		// of the allocation.
-		MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
+		MovedToValidators int64 `json:"moved_to_validators,omitempty"`
 
 		// TimeUnit configured in Storage SC when the allocation created. It can't
 		// be changed for this allocation anymore. Even using expire allocation.

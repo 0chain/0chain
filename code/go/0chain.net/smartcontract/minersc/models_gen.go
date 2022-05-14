@@ -341,18 +341,10 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt64(o, z.LastRound)
 	// string "MaxStake"
 	o = append(o, 0xa8, 0x4d, 0x61, 0x78, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.MaxStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MaxStake)
 	// string "MinStake"
 	o = append(o, 0xa8, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.MinStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MinStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MinStake)
 	// string "RewardRate"
 	o = append(o, 0xaa, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x61, 0x74, 0x65)
 	o = msgp.AppendFloat64(o, z.RewardRate)
@@ -361,11 +353,7 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendFloat64(o, z.ShareRatio)
 	// string "BlockReward"
 	o = append(o, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
-	o, err = z.BlockReward.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "BlockReward")
-		return
-	}
+	o = msgp.AppendInt64(o, z.BlockReward)
 	// string "MaxCharge"
 	o = append(o, 0xa9, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
 	o = msgp.AppendFloat64(o, z.MaxCharge)
@@ -377,11 +365,7 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendFloat64(o, z.RewardDeclineRate)
 	// string "MaxMint"
 	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
-	o, err = z.MaxMint.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxMint")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MaxMint)
 	// string "PrevMagicBlock"
 	o = append(o, 0xae, 0x50, 0x72, 0x65, 0x76, 0x4d, 0x61, 0x67, 0x69, 0x63, 0x42, 0x6c, 0x6f, 0x63, 0x6b)
 	if z.PrevMagicBlock == nil {
@@ -395,11 +379,7 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "Minted"
 	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
-	o, err = z.Minted.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Minted")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Minted)
 	// string "RewardRoundFrequency"
 	o = append(o, 0xb4, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x46, 0x72, 0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x79)
 	o = msgp.AppendInt64(o, z.RewardRoundFrequency)
@@ -504,13 +484,13 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MaxStake":
-			bts, err = z.MaxStake.UnmarshalMsg(bts)
+			z.MaxStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxStake")
 				return
 			}
 		case "MinStake":
-			bts, err = z.MinStake.UnmarshalMsg(bts)
+			z.MinStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinStake")
 				return
@@ -528,7 +508,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "BlockReward":
-			bts, err = z.BlockReward.UnmarshalMsg(bts)
+			z.BlockReward, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "BlockReward")
 				return
@@ -552,7 +532,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MaxMint":
-			bts, err = z.MaxMint.UnmarshalMsg(bts)
+			z.MaxMint, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxMint")
 				return
@@ -575,7 +555,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 			}
 		case "Minted":
-			bts, err = z.Minted.UnmarshalMsg(bts)
+			z.Minted, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Minted")
 				return
@@ -642,13 +622,13 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + msgp.Int64Size + 9 + msgp.Int64Size + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + msgp.Int64Size + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + msgp.Int64Size + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {
 		s += z.PrevMagicBlock.Msgsize()
 	}
-	s += 7 + z.Minted.Msgsize() + 21 + msgp.Int64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 15 + msgp.Int64Size + 5 + msgp.MapHeaderSize
+	s += 7 + msgp.Int64Size + 21 + msgp.Int64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 15 + msgp.Int64Size + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002
@@ -851,18 +831,10 @@ func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt(o, z.NumberOfDelegates)
 	// string "MinStake"
 	o = append(o, 0xa8, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.MinStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MinStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MinStake)
 	// string "MaxStake"
 	o = append(o, 0xa8, 0x4d, 0x61, 0x78, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.MaxStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MaxStake)
 	// string "Stat"
 	o = append(o, 0xa4, 0x53, 0x74, 0x61, 0x74)
 	o, err = z.Stat.MarshalMsg(o)
@@ -1018,13 +990,13 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinStake":
-			bts, err = z.MinStake.UnmarshalMsg(bts)
+			z.MinStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinStake")
 				return
 			}
 		case "MaxStake":
-			bts, err = z.MaxStake.UnmarshalMsg(bts)
+			z.MaxStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxStake")
 				return
@@ -1071,7 +1043,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + msgp.Int64Size + 7 + msgp.BoolSize + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 14 + msgp.Float64Size + 18 + msgp.IntSize + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 5 + z.Stat.Msgsize() + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
+	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + msgp.Int64Size + 7 + msgp.BoolSize + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 14 + msgp.Float64Size + 18 + msgp.IntSize + 9 + msgp.Int64Size + 9 + msgp.Int64Size + 5 + z.Stat.Msgsize() + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
 	return
 }
 
@@ -1230,32 +1202,16 @@ func (z *Stat) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 4
 	// string "GeneratorRewards"
 	o = append(o, 0x84, 0xb0, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73)
-	o, err = z.GeneratorRewards.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "GeneratorRewards")
-		return
-	}
+	o = msgp.AppendInt64(o, z.GeneratorRewards)
 	// string "GeneratorFees"
 	o = append(o, 0xad, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x46, 0x65, 0x65, 0x73)
-	o, err = z.GeneratorFees.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "GeneratorFees")
-		return
-	}
+	o = msgp.AppendInt64(o, z.GeneratorFees)
 	// string "SharderRewards"
 	o = append(o, 0xae, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73)
-	o, err = z.SharderRewards.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "SharderRewards")
-		return
-	}
+	o = msgp.AppendInt64(o, z.SharderRewards)
 	// string "SharderFees"
 	o = append(o, 0xab, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x46, 0x65, 0x65, 0x73)
-	o, err = z.SharderFees.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "SharderFees")
-		return
-	}
+	o = msgp.AppendInt64(o, z.SharderFees)
 	return
 }
 
@@ -1278,25 +1234,25 @@ func (z *Stat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "GeneratorRewards":
-			bts, err = z.GeneratorRewards.UnmarshalMsg(bts)
+			z.GeneratorRewards, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "GeneratorRewards")
 				return
 			}
 		case "GeneratorFees":
-			bts, err = z.GeneratorFees.UnmarshalMsg(bts)
+			z.GeneratorFees, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "GeneratorFees")
 				return
 			}
 		case "SharderRewards":
-			bts, err = z.SharderRewards.UnmarshalMsg(bts)
+			z.SharderRewards, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "SharderRewards")
 				return
 			}
 		case "SharderFees":
-			bts, err = z.SharderFees.UnmarshalMsg(bts)
+			z.SharderFees, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "SharderFees")
 				return
@@ -1315,7 +1271,7 @@ func (z *Stat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Stat) Msgsize() (s int) {
-	s = 1 + 17 + z.GeneratorRewards.Msgsize() + 14 + z.GeneratorFees.Msgsize() + 15 + z.SharderRewards.Msgsize() + 12 + z.SharderFees.Msgsize()
+	s = 1 + 17 + msgp.Int64Size + 14 + msgp.Int64Size + 15 + msgp.Int64Size + 12 + msgp.Int64Size
 	return
 }
 

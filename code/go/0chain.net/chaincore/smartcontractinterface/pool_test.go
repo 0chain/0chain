@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/minersc"
 )
@@ -30,15 +29,15 @@ func TestPoolStats_AddInterests(t *testing.T) {
 
 	type fields struct {
 		DelegateID   string
-		High         state.Balance
-		Low          state.Balance
-		InterestPaid state.Balance
-		RewardPaid   state.Balance
+		High         int64
+		Low          int64
+		InterestPaid int64
+		RewardPaid   int64
 		NumRounds    int64
 		Status       string
 	}
 	type args struct {
-		value state.Balance
+		value int64
 	}
 	tests := []struct {
 		name   string
@@ -87,15 +86,15 @@ func TestPoolStats_AddRewards(t *testing.T) {
 
 	type fields struct {
 		DelegateID   string
-		High         state.Balance
-		Low          state.Balance
-		InterestPaid state.Balance
-		RewardPaid   state.Balance
+		High         int64
+		Low          int64
+		InterestPaid int64
+		RewardPaid   int64
 		NumRounds    int64
 		Status       string
 	}
 	type args struct {
-		value state.Balance
+		value int64
 	}
 	tests := []struct {
 		name   string
@@ -150,10 +149,10 @@ func TestPoolStats_Encode(t *testing.T) {
 
 	type fields struct {
 		DelegateID   string
-		High         state.Balance
-		Low          state.Balance
-		InterestPaid state.Balance
-		RewardPaid   state.Balance
+		High         int64
+		Low          int64
+		InterestPaid int64
+		RewardPaid   int64
 		NumRounds    int64
 		Status       string
 	}
@@ -200,10 +199,10 @@ func TestPoolStats_Decode(t *testing.T) {
 
 	type fields struct {
 		DelegateID   string
-		High         state.Balance
-		Low          state.Balance
-		InterestPaid state.Balance
-		RewardPaid   state.Balance
+		High         int64
+		Low          int64
+		InterestPaid int64
+		RewardPaid   int64
 		NumRounds    int64
 		Status       string
 	}

@@ -5,8 +5,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/state"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 )
@@ -17,7 +15,7 @@ func (sp *StakePool) UnlockPool(
 	providerId datastore.Key,
 	poolId datastore.Key,
 	balances cstate.StateContextI,
-) (state.Balance, error) {
+) (int64, error) {
 	var usp *UserStakePools
 	usp, err := getOrCreateUserStakePool(providerType, clientID, balances)
 	if err != nil {

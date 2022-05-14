@@ -72,8 +72,8 @@ func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI)
 // The readPoolRedeem represents part of response of read markers redeeming.
 // A Blobber uses this response for internal read pools cache.
 type readPoolRedeem struct {
-	PoolID  string        `json:"pool_id"` // read pool ID
-	Balance state.Balance `json:"balance"` // balance reduction
+	PoolID  string `json:"pool_id"` // read pool ID
+	Balance int64  `json:"balance"` // balance reduction
 }
 
 func toJson(val interface{}) string {
@@ -85,7 +85,7 @@ func toJson(val interface{}) string {
 }
 
 func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
-	sp *stakePool, now common.Timestamp, value state.Balance,
+	sp *stakePool, now common.Timestamp, value int64,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	var cut = rp.blobberCut(allocID, blobID, now)
@@ -97,7 +97,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
-	var moved state.Balance = 0
+	var moved int64 = 0
 	var torm []*allocationPool // to remove later (empty allocation pools)
 	for _, ap := range cut {
 		if value == moved {
@@ -109,7 +109,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		}
 		var (
 			bp   = ap.Blobbers[bi]
-			move state.Balance
+			move int64
 		)
 		if value >= bp.Balance {
 			move, bp.Balance = bp.Balance, 0
@@ -117,7 +117,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			move, bp.Balance = value, bp.Balance-value
 		}
 
-		ap.Balance -= state.Balance(value)
+		ap.Balance -= value
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
@@ -291,12 +291,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
+			Balance:   t.Value,
 			BlobberID: lr.BlobberID,
 		})
 	} else {
-		// divide depending read price range for all blobbers of the
-		// allocation
+		// divide depending on the read price range for all blobbers of the allocation
 		var total float64 // total read price
 		for _, b := range alloc.BlobberAllocs {
 			total += float64(b.Terms.ReadPrice)
@@ -305,7 +304,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.ReadPrice) / total
 			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
+				Balance:   int64(float64(t.Value) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}
@@ -330,11 +329,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     state.Balance(t.Value),
+			Amount:     t.Value,
 		}); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
-		ap.Balance = state.Balance(t.Value)
+		ap.Balance = t.Value
 		ap.ID = t.Hash
 	}
 
@@ -451,7 +450,7 @@ func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		clientID = datastore.Key(params.Get("client_id"))
+		clientID = params.Get("client_id")
 		rp       *readPool
 	)
 

@@ -3,7 +3,6 @@ package storagesc
 import (
 	"testing"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +13,7 @@ import (
 // test extension
 //
 
-func (aps allocationPools) gimmeAll() (total state.Balance) {
+func (aps allocationPools) gimmeAll() (total int64) {
 	for _, ap := range aps {
 		total += ap.Balance
 	}
@@ -22,7 +21,7 @@ func (aps allocationPools) gimmeAll() (total state.Balance) {
 }
 
 func (aps allocationPools) allocTotal(allocID string, now int64) (
-	total state.Balance) {
+	total int64) {
 
 	for _, ap := range aps {
 		if ap.ExpireAt < common.Timestamp(now) {
@@ -36,7 +35,7 @@ func (aps allocationPools) allocTotal(allocID string, now int64) (
 }
 
 func (aps allocationPools) allocBlobberTotal(allocID, blobberID string,
-	now int64) (total state.Balance) {
+	now int64) (total int64) {
 
 	for _, ap := range aps {
 		if ap.ExpireAt < common.Timestamp(now) {

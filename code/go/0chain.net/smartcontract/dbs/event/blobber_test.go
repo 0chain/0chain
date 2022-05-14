@@ -13,7 +13,6 @@ import (
 
 	"0chain.net/core/logging"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/require"
@@ -33,18 +32,18 @@ func TestBlobbers(t *testing.T) {
 		Longitude float64 `json:"longitude"`
 	}
 	type Terms struct {
-		ReadPrice               state.Balance `json:"read_price"`
-		WritePrice              state.Balance `json:"write_price"`
+		ReadPrice               int64         `json:"read_price"`
+		WritePrice              int64         `json:"write_price"`
 		MinLockDemand           float64       `json:"min_lock_demand"`
 		MaxOfferDuration        time.Duration `json:"max_offer_duration"`
 		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	}
 	type stakePoolSettings struct {
-		DelegateWallet string        `json:"delegate_wallet"`
-		MinStake       state.Balance `json:"min_stake"`
-		MaxStake       state.Balance `json:"max_stake"`
-		NumDelegates   int           `json:"num_delegates"`
-		ServiceCharge  float64       `json:"service_charge"`
+		DelegateWallet string  `json:"delegate_wallet"`
+		MinStake       int64   `json:"min_stake"`
+		MaxStake       int64   `json:"max_stake"`
+		NumDelegates   int     `json:"num_delegates"`
+		ServiceCharge  float64 `json:"service_charge"`
 	}
 	type StorageNode struct {
 		ID              string                 `json:"id"`
@@ -65,8 +64,8 @@ func TestBlobbers(t *testing.T) {
 			BaseURL:                 sn.BaseURL,
 			Latitude:                sn.Geolocation.Latitude,
 			Longitude:               sn.Geolocation.Longitude,
-			ReadPrice:               int64(sn.Terms.ReadPrice),
-			WritePrice:              int64(sn.Terms.WritePrice),
+			ReadPrice:               sn.Terms.ReadPrice,
+			WritePrice:              sn.Terms.WritePrice,
 			MinLockDemand:           sn.Terms.MinLockDemand,
 			MaxOfferDuration:        sn.Terms.MaxOfferDuration.String(),
 			ChallengeCompletionTime: int64(sn.Terms.ChallengeCompletionTime),
@@ -74,8 +73,8 @@ func TestBlobbers(t *testing.T) {
 			Used:                    sn.Used,
 			LastHealthCheck:         int64(sn.LastHealthCheck),
 			DelegateWallet:          sn.StakePoolSettings.DelegateWallet,
-			MinStake:                int64(sn.StakePoolSettings.MaxStake),
-			MaxStake:                int64(sn.StakePoolSettings.MaxStake),
+			MinStake:                sn.StakePoolSettings.MaxStake,
+			MaxStake:                sn.StakePoolSettings.MaxStake,
 			NumDelegates:            sn.StakePoolSettings.NumDelegates,
 			ServiceCharge:           sn.StakePoolSettings.ServiceCharge,
 			SavedData:               sn.SavedData,
@@ -110,8 +109,8 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  23,
 		},
 		Terms: Terms{
-			ReadPrice:               state.Balance(29),
-			WritePrice:              state.Balance(31),
+			ReadPrice:               29,
+			WritePrice:              31,
 			MinLockDemand:           37.0,
 			MaxOfferDuration:        39 * time.Minute,
 			ChallengeCompletionTime: 41 * time.Minute,
@@ -122,8 +121,8 @@ func TestBlobbers(t *testing.T) {
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       state.Balance(53),
-			MaxStake:       state.Balance(57),
+			MinStake:       53,
+			MaxStake:       57,
 			NumDelegates:   59,
 			ServiceCharge:  61.0,
 		},
@@ -181,8 +180,8 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  93,
 		},
 		Terms: Terms{
-			ReadPrice:               state.Balance(97),
-			WritePrice:              state.Balance(101),
+			ReadPrice:               97,
+			WritePrice:              101,
 			MinLockDemand:           103.0,
 			MaxOfferDuration:        107 * time.Minute,
 			ChallengeCompletionTime: 113 * time.Minute,
@@ -193,8 +192,8 @@ func TestBlobbers(t *testing.T) {
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       state.Balance(137),
-			MaxStake:       state.Balance(139),
+			MinStake:       137,
+			MaxStake:       139,
 			NumDelegates:   143,
 			ServiceCharge:  149.0,
 		},

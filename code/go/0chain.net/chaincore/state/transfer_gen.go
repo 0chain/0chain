@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *Transfer) MarshalMsg(b []byte) (o []byte, err error) {
+func (z Transfer) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
 	// string "ClientID"
@@ -18,11 +18,7 @@ func (z *Transfer) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ToClientID)
 	// string "Amount"
 	o = append(o, 0xa6, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.Amount.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Amount")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Amount)
 	return
 }
 
@@ -57,7 +53,7 @@ func (z *Transfer) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Amount":
-			bts, err = z.Amount.UnmarshalMsg(bts)
+			z.Amount, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Amount")
 				return
@@ -75,7 +71,7 @@ func (z *Transfer) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *Transfer) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientID) + 11 + msgp.StringPrefixSize + len(z.ToClientID) + 7 + z.Amount.Msgsize()
+func (z Transfer) Msgsize() (s int) {
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientID) + 11 + msgp.StringPrefixSize + len(z.ToClientID) + 7 + msgp.Int64Size
 	return
 }

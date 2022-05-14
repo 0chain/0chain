@@ -15,7 +15,6 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -251,10 +250,10 @@ type ValidatorNodes struct {
 // but any existing offer will use terms of offer signing time.
 type Terms struct {
 	// ReadPrice is price for reading. Token / GB (no time unit).
-	ReadPrice state.Balance `json:"read_price"`
+	ReadPrice int64 `json:"read_price"`
 	// WritePrice is price for reading. Token / GB / time unit. Also,
 	// it used to calculate min_lock_demand value.
-	WritePrice state.Balance `json:"write_price"`
+	WritePrice int64 `json:"write_price"`
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
@@ -268,10 +267,10 @@ type Terms struct {
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
+func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl int64) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return state.Balance(mldf * rdtu)                           //
+	return int64(mldf * rdtu)                                   //
 }
 
 // validate a received terms
@@ -462,26 +461,26 @@ type BlobberAllocation struct {
 	// size and expiration and new terms size and expiration.
 	Terms Terms `json:"terms"`
 	// MinLockDemand for the allocation in tokens.
-	MinLockDemand state.Balance `json:"min_lock_demand"`
+	MinLockDemand int64 `json:"min_lock_demand"`
 	// Spent is number of tokens sent from write pool to challenge pool
 	// for this blobber. It's used to calculate min lock demand left
 	// for this blobber. For a case, where a client uses > 1 parity shards
 	// and don't sends a data to one of blobbers, the blobber should
 	// receive its min_lock_demand tokens. Thus, we can't use shared
 	// (for allocation) min_lock_demand and spent.
-	Spent state.Balance `json:"spent"`
+	Spent int64 `json:"spent"`
 	// Penalty o the blobber for the allocation in tokens.
-	Penalty state.Balance `json:"penalty"`
+	Penalty int64 `json:"penalty"`
 	// ReadReward of the blobber.
-	ReadReward state.Balance `json:"read_reward"`
+	ReadReward int64 `json:"read_reward"`
 	// Returned back to write pool on challenge failed.
-	Returned state.Balance `json:"returned"`
+	Returned int64 `json:"returned"`
 	// ChallengeReward of the blobber.
-	ChallengeReward state.Balance `json:"challenge_reward"`
+	ChallengeReward int64 `json:"challenge_reward"`
 	// FinalReward is number of tokens moved to the blobber on finalization.
 	// It can be greater than zero, if user didn't spent the min lock demand
 	// during the allocation.
-	FinalReward state.Balance `json:"final_reward"`
+	FinalReward int64 `json:"final_reward"`
 
 	// ChallengePoolIntegralValue represents integral price * size * dt for this
 	// blobber. Since, a user can upload and delete file, and a challenge
@@ -549,7 +548,7 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
+	ChallengePoolIntegralValue int64 `json:"challenge_pool_integral_value"`
 	// BlobberAllocationsPartitionLoc indicates the partition location for the allocation that
 	// saved in blobber allocations partitions.
 	BlobberAllocationsPartitionLoc *partitions.PartitionLocation `json:"blobber_allocs_partition_loc"`
@@ -596,24 +595,24 @@ func newBlobberAllocation(
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move state.Balance) {
+	rdtu float64) (move int64) {
 
-	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+	move = int64(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue += move
 	return
 }
 
-func (d *BlobberAllocation) Offer() state.Balance {
-	return state.Balance(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
+func (d *BlobberAllocation) Offer() int64 {
+	return int64(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
 }
 
 // The upload used after commitBlobberConnection (size < 0) to calculate
 // internal integral value. The size argument expected to be positive (not
 // negative).
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
-	rdtu float64) (move state.Balance) {
+	rdtu float64) (move int64) {
 
-	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+	move = int64(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue -= move
 	return
 }
@@ -623,16 +622,16 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // challenge (doesn't matter rewards or penalty). The RDTU should be based on
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
-func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move state.Balance) {
-	move = state.Balance((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
+func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move int64) {
+	move = int64((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 	d.ChallengePoolIntegralValue -= move
 	return
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.
 type PriceRange struct {
-	Min state.Balance `json:"min"`
-	Max state.Balance `json:"max"`
+	Min int64 `json:"min"`
+	Max int64 `json:"max"`
 }
 
 // isValid price range.
@@ -641,7 +640,7 @@ func (pr *PriceRange) isValid() bool {
 }
 
 // isMatch given price
-func (pr *PriceRange) isMatch(price state.Balance) bool {
+func (pr *PriceRange) isMatch(price int64) bool {
 	return pr.Min <= price && price <= pr.Max
 }
 
@@ -691,13 +690,13 @@ type StorageAllocation struct {
 	UsedSize int64 `json:"-" msg:"-"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
+	MovedToChallenge int64 `json:"moved_to_challenge,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack state.Balance `json:"moved_back,omitempty"`
+	MovedBack int64 `json:"moved_back,omitempty"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
-	MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
+	MovedToValidators int64 `json:"moved_to_validators,omitempty"`
 
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
@@ -926,7 +925,7 @@ type StorageAllocationDecode StorageAllocation
 // client doesn't send a data to a blobber (or blobbers) then this blobbers
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
-func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
+func (sa *StorageAllocation) restMinLockDemand() (rest int64) {
 	for _, details := range sa.BlobberAllocs {
 		if details.MinLockDemand > details.Spent {
 			rest += details.MinLockDemand - details.Spent
@@ -1213,7 +1212,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp) (
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
 func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
-	oterms []Terms) (values []state.Balance) {
+	oterms []Terms) (values []int64) {
 
 	// odr -- old duration remaining
 	// ndr -- new duration remaining
@@ -1224,7 +1223,7 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 		ndrtu = sa.durationInTimeUnits(ndr)
 	)
 
-	values = make([]state.Balance, 0, len(sa.BlobberAllocs))
+	values = make([]int64, 0, len(sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
 
@@ -1252,7 +1251,7 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 
 		diff = b - a // value difference
 
-		values = append(values, state.Balance(diff))
+		values = append(values, int64(diff))
 	}
 
 	return

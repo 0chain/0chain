@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -35,7 +37,7 @@ func (sc *mockStateContext) Validate() error                                    
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error)   { return 0, nil }
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (int64, error)           { return 0, nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
@@ -89,12 +91,12 @@ func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
 }
 
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
+func zcnToBalance(token float64) int64 {
+	return tokens.ZCNToSAS(token)
 }
 
 func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
-	var delegates = [][]float64{}
+	var delegates [][]float64
 	delegates = append(delegates, minerDelegates)
 	delegates = append(delegates, sharderDelegates...)
 	require.True(t, len(cNodes) <= len(delegates))
@@ -106,7 +108,7 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 			count++
 			node.Active[strconv.Itoa(j)] = &sci.DelegatePool{
 				PoolStats: &sci.PoolStats{
-					DelegateID: datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j)),
+					DelegateID: delegateId + " " + strconv.Itoa(i*maxDelegates+j),
 				},
 				ZcnLockingPool: &tokenpool.ZcnLockingPool{
 					ZcnPool: tokenpool.ZcnPool{

@@ -3,13 +3,14 @@ package minersc
 import (
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	sc "0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
@@ -93,8 +94,8 @@ func BenchmarkTests(
 					PublicKey:         "miner's public key",
 					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
 					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					MinStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMinStake)),
+					MaxStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMaxStake)),
 					N2NHost:           "new n2n_host",
 					Host:              "new host",
 					Port:              1234,
@@ -111,8 +112,8 @@ func BenchmarkTests(
 					PublicKey:         "sharder's public key",
 					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
 					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					MinStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMinStake)),
+					MaxStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMaxStake)),
 					N2NHost:           "new n2n_host",
 					Host:              "new host",
 					Port:              1234,
@@ -248,8 +249,8 @@ func BenchmarkTests(
 					ID:                GetMockNodeId(0, NodeTypeMiner),
 					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
 					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					MinStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMinStake)),
+					MaxStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMaxStake)),
 				},
 			}).Encode(),
 		},
@@ -264,8 +265,8 @@ func BenchmarkTests(
 					ID:                GetMockNodeId(0, NodeTypeSharder),
 					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
 					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
-					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-					MaxStake:          state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					MinStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMinStake)),
+					MaxStake:          tokens.ZCNToSAS(viper.GetFloat64(bk.MinerMaxStake)),
 				},
 			}).Encode(),
 		},

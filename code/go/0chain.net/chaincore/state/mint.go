@@ -12,10 +12,10 @@ var ErrInvalidMint = common.NewError("invalid_mint", "invalid minter")
 type Mint struct {
 	Minter     datastore.Key `json:"minter"`
 	ToClientID datastore.Key `json:"to"`
-	Amount     Balance       `json:"amount"`
+	Amount     int64         `json:"amount"`
 }
 
-func NewMint(minter, toClientID datastore.Key, amount Balance) *Mint {
+func NewMint(minter, toClientID datastore.Key, amount int64) *Mint {
 	m := &Mint{Minter: minter, ToClientID: toClientID, Amount: amount}
 	return m
 }

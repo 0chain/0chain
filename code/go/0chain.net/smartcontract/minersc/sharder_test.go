@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
@@ -19,9 +21,8 @@ import (
 
 func TestDeleteSharder(t *testing.T) {
 	const (
-		mockDeletedSharderId               = "mock deleted sharder id"
-		mockRoundNumber                    = 5
-		x10                  state.Balance = 10 * 1000 * 1000 * 1000
+		mockDeletedSharderId = "mock deleted sharder id"
+		mockRoundNumber      = 5
 	)
 	type parameters struct {
 		pendingPools []int
@@ -52,11 +53,11 @@ func TestDeleteSharder(t *testing.T) {
 			id := "pending pool " + strconv.Itoa(i)
 			delegateId := "delegate " + strconv.Itoa(i)
 			mn.Pending[id] = sci.NewDelegatePool()
-			mn.Pending[id].SetBalance(state.Balance(amount) * x10)
+			mn.Pending[id].SetBalance(tokens.ZCNToSAS(float64(amount)))
 			balances.On("AddTransfer", &state.Transfer{
 				ClientID:   msc.ID,
 				ToClientID: delegateId,
-				Amount:     state.Balance(amount) * x10,
+				Amount:     tokens.ZCNToSAS(float64(amount)),
 			}).Return(nil).Once()
 			mn.Pending[id].ID = id
 			mn.Pending[id].TokenLockInterface = &ViewChangeLock{}

@@ -6,7 +6,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -64,7 +63,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		PublicKey:         mn.PublicKey,
 		ShortName:         mn.ShortName,
 		BuildTag:          mn.BuildTag,
-		TotalStaked:       state.Balance(mn.TotalStaked),
+		TotalStaked:       mn.TotalStaked,
 		Delete:            mn.Delete,
 		DelegateWallet:    mn.DelegateWallet,
 		ServiceCharge:     mn.ServiceCharge,

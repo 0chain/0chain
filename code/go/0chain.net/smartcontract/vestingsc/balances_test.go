@@ -16,7 +16,7 @@ import (
 //
 
 type testBalances struct {
-	balances  map[datastore.Key]state.Balance
+	balances  map[datastore.Key]int64
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
@@ -24,12 +24,12 @@ type testBalances struct {
 
 func newTestBalances() *testBalances {
 	return &testBalances{
-		balances: make(map[datastore.Key]state.Balance),
+		balances: make(map[datastore.Key]int64),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) { //nolint
+func (tb *testBalances) setBalance(key datastore.Key, b int64) { //nolint
 	tb.balances[key] = b
 }
 
@@ -69,7 +69,7 @@ func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
-	b state.Balance, err error) {
+	b int64, err error) {
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {

@@ -27,11 +27,7 @@ func (z *interestPoolDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendFloat64(o, z.APR)
 	// string "TokensEarned"
 	o = append(o, 0xac, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x45, 0x61, 0x72, 0x6e, 0x65, 0x64)
-	o, err = z.TokensEarned.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TokensEarned")
-		return
-	}
+	o = msgp.AppendInt64(o, z.TokensEarned)
 	return
 }
 
@@ -77,7 +73,7 @@ func (z *interestPoolDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "TokensEarned":
-			bts, err = z.TokensEarned.UnmarshalMsg(bts)
+			z.TokensEarned, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TokensEarned")
 				return
@@ -102,6 +98,6 @@ func (z *interestPoolDecode) Msgsize() (s int) {
 	} else {
 		s += z.ZcnLockingPool.Msgsize()
 	}
-	s += 4 + msgp.Float64Size + 13 + z.TokensEarned.Msgsize()
+	s += 4 + msgp.Float64Size + 13 + msgp.Int64Size
 	return
 }

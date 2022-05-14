@@ -12,25 +12,13 @@ func (z *SimpleGlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 6
 	// string "MaxMint"
 	o = append(o, 0x86, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
-	o, err = z.MaxMint.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxMint")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MaxMint)
 	// string "TotalMinted"
 	o = append(o, 0xab, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
-	o, err = z.TotalMinted.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TotalMinted")
-		return
-	}
+	o = msgp.AppendInt64(o, z.TotalMinted)
 	// string "MinLock"
 	o = append(o, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
-	o, err = z.MinLock.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MinLock")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MinLock)
 	// string "APR"
 	o = append(o, 0xa3, 0x41, 0x50, 0x52)
 	o = msgp.AppendFloat64(o, z.APR)
@@ -72,19 +60,19 @@ func (z *SimpleGlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "MaxMint":
-			bts, err = z.MaxMint.UnmarshalMsg(bts)
+			z.MaxMint, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxMint")
 				return
 			}
 		case "TotalMinted":
-			bts, err = z.TotalMinted.UnmarshalMsg(bts)
+			z.TotalMinted, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalMinted")
 				return
 			}
 		case "MinLock":
-			bts, err = z.MinLock.UnmarshalMsg(bts)
+			z.MinLock, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLock")
 				return
@@ -145,7 +133,7 @@ func (z *SimpleGlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleGlobalNode) Msgsize() (s int) {
-	s = 1 + 8 + z.MaxMint.Msgsize() + 12 + z.TotalMinted.Msgsize() + 8 + z.MinLock.Msgsize() + 4 + msgp.Float64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 8 + msgp.Int64Size + 12 + msgp.Int64Size + 8 + msgp.Int64Size + 4 + msgp.Float64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

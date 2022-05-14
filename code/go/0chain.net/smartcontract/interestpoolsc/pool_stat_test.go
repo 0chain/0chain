@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
@@ -153,8 +152,8 @@ func Test_poolStat_encode(t *testing.T) {
 		TimeLeft     time.Duration
 		Locked       bool
 		APR          float64
-		TokensEarned state.Balance
-		Balance      state.Balance
+		TokensEarned int64
+		Balance      int64
 	}
 	tests := []struct {
 		name   string
@@ -214,12 +213,12 @@ func Test_poolStat_decode(t *testing.T) {
 	type fields struct {
 		ID           datastore.Key
 		StartTime    common.Timestamp
-		Duartion     time.Duration
+		Duration     time.Duration
 		TimeLeft     time.Duration
 		Locked       bool
 		APR          float64
-		TokensEarned state.Balance
-		Balance      state.Balance
+		TokensEarned int64
+		Balance      int64
 	}
 	type args struct {
 		input []byte
@@ -269,7 +268,7 @@ func Test_poolStat_decode(t *testing.T) {
 			ps := &poolStat{
 				ID:           tt.fields.ID,
 				StartTime:    tt.fields.StartTime,
-				Duartion:     tt.fields.Duartion,
+				Duartion:     tt.fields.Duration,
 				TimeLeft:     tt.fields.TimeLeft,
 				Locked:       tt.fields.Locked,
 				APR:          tt.fields.APR,

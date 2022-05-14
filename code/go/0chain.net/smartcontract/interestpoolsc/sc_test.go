@@ -14,7 +14,6 @@ import (
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
-	bState "0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
@@ -293,10 +292,10 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 				t.Errorf("lock() got = %v, want %v", got, tt.want)
 			}
 			if tt.shouldBeOk {
-				amount := float64(bState.Balance(tt.args.t.Value))
+				amount := float64(tt.args.t.Value)
 				apr := tt.args.gn.APR
 				dur := float64(3 * time.Second)
-				balance := bState.Balance(tt.args.t.Value) + bState.Balance(amount*apr*dur/float64(YEAR))
+				balance := tt.args.t.Value + int64(amount*apr*dur/float64(YEAR))
 				stateBalance, err := tt.args.balances.GetClientBalance(tt.args.t.ToClientID)
 				if err != nil {
 					t.Errorf("can not fetch balance for %v", tt.args.t.ToClientID)
@@ -720,7 +719,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				FromClient: txn.ClientID,
 				ToPool:     txn.Hash,
 				ToClient:   txn.ToClientID,
-				Value:      bState.Balance(txn.Value),
+				Value:      txn.Value,
 			}).Encode()),
 		},
 		{

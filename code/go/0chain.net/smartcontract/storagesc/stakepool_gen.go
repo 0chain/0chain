@@ -19,18 +19,10 @@ func (z *stakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "TotalOffers"
 	o = append(o, 0xab, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x73)
-	o, err = z.TotalOffers.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TotalOffers")
-		return
-	}
+	o = msgp.AppendInt64(o, z.TotalOffers)
 	// string "TotalUnStake"
 	o = append(o, 0xac, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x55, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.TotalUnStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TotalUnStake")
-		return
-	}
+	o = msgp.AppendInt64(o, z.TotalUnStake)
 	return
 }
 
@@ -59,13 +51,13 @@ func (z *stakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "TotalOffers":
-			bts, err = z.TotalOffers.UnmarshalMsg(bts)
+			z.TotalOffers, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalOffers")
 				return
 			}
 		case "TotalUnStake":
-			bts, err = z.TotalUnStake.UnmarshalMsg(bts)
+			z.TotalUnStake, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalUnStake")
 				return
@@ -84,6 +76,6 @@ func (z *stakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *stakePool) Msgsize() (s int) {
-	s = 1 + 10 + z.StakePool.Msgsize() + 12 + z.TotalOffers.Msgsize() + 13 + z.TotalUnStake.Msgsize()
+	s = 1 + 10 + z.StakePool.Msgsize() + 12 + msgp.Int64Size + 13 + msgp.Int64Size
 	return
 }

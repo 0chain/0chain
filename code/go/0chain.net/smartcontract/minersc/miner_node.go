@@ -10,7 +10,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/datastore"
 )
@@ -47,10 +46,10 @@ func (mn *MinerNode) GetKey() datastore.Key {
 }
 
 // calculate service charge from fees
-func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
-	charge, rest state.Balance) {
+func (mn *MinerNode) splitByServiceCharge(fees int64) (
+	charge, rest int64) {
 
-	charge = state.Balance(float64(fees) * mn.ServiceCharge)
+	charge = int64(float64(fees) * mn.ServiceCharge)
 	rest = fees - charge
 	return
 }

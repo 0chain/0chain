@@ -478,7 +478,7 @@ func TestMakeGetRequest(t *testing.T) {
 func TestMakeClientBalanceRequest(t *testing.T) {
 	t.Parallel()
 
-	balance := state.Balance(5)
+	var balance int64 = 5
 	makeValidServer := func() string {
 		validServer := httptest.NewServer(
 			http.HandlerFunc(
@@ -524,7 +524,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        state.Balance
+		want        int64
 		makeServers []makeServer
 		wantErr     bool
 	}{

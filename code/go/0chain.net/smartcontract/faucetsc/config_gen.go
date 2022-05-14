@@ -12,32 +12,16 @@ func (z *FaucetConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 8
 	// string "PourAmount"
 	o = append(o, 0x88, 0xaa, 0x50, 0x6f, 0x75, 0x72, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.PourAmount.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "PourAmount")
-		return
-	}
+	o = msgp.AppendInt64(o, z.PourAmount)
 	// string "MaxPourAmount"
 	o = append(o, 0xad, 0x4d, 0x61, 0x78, 0x50, 0x6f, 0x75, 0x72, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.MaxPourAmount.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxPourAmount")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MaxPourAmount)
 	// string "PeriodicLimit"
 	o = append(o, 0xad, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64, 0x69, 0x63, 0x4c, 0x69, 0x6d, 0x69, 0x74)
-	o, err = z.PeriodicLimit.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "PeriodicLimit")
-		return
-	}
+	o = msgp.AppendInt64(o, z.PeriodicLimit)
 	// string "GlobalLimit"
 	o = append(o, 0xab, 0x47, 0x6c, 0x6f, 0x62, 0x61, 0x6c, 0x4c, 0x69, 0x6d, 0x69, 0x74)
-	o, err = z.GlobalLimit.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "GlobalLimit")
-		return
-	}
+	o = msgp.AppendInt64(o, z.GlobalLimit)
 	// string "IndividualReset"
 	o = append(o, 0xaf, 0x49, 0x6e, 0x64, 0x69, 0x76, 0x69, 0x64, 0x75, 0x61, 0x6c, 0x52, 0x65, 0x73, 0x65, 0x74)
 	o = msgp.AppendDuration(o, z.IndividualReset)
@@ -82,25 +66,25 @@ func (z *FaucetConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "PourAmount":
-			bts, err = z.PourAmount.UnmarshalMsg(bts)
+			z.PourAmount, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "PourAmount")
 				return
 			}
 		case "MaxPourAmount":
-			bts, err = z.MaxPourAmount.UnmarshalMsg(bts)
+			z.MaxPourAmount, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxPourAmount")
 				return
 			}
 		case "PeriodicLimit":
-			bts, err = z.PeriodicLimit.UnmarshalMsg(bts)
+			z.PeriodicLimit, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "PeriodicLimit")
 				return
 			}
 		case "GlobalLimit":
-			bts, err = z.GlobalLimit.UnmarshalMsg(bts)
+			z.GlobalLimit, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "GlobalLimit")
 				return
@@ -167,7 +151,7 @@ func (z *FaucetConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *FaucetConfig) Msgsize() (s int) {
-	s = 1 + 11 + z.PourAmount.Msgsize() + 14 + z.MaxPourAmount.Msgsize() + 14 + z.PeriodicLimit.Msgsize() + 12 + z.GlobalLimit.Msgsize() + 16 + msgp.DurationSize + 12 + msgp.DurationSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 11 + msgp.Int64Size + 14 + msgp.Int64Size + 14 + msgp.Int64Size + 12 + msgp.Int64Size + 16 + msgp.DurationSize + 12 + msgp.DurationSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

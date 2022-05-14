@@ -16,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
@@ -134,7 +133,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 			nil,
 		),
-		clientBalance: state.Balance(clientBalance),
+		clientBalance: clientBalance,
 		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{

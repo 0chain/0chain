@@ -265,7 +265,7 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (state.Balance, error) {
+func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (int64, error) {
 	s, err := MakeClientStateRequest(clientID, urls, consensus)
 	if err != nil {
 		return 0, err

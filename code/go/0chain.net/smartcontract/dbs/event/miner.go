@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
@@ -21,16 +20,16 @@ type Miner struct {
 	PublicKey         string
 	ShortName         string
 	BuildTag          string
-	TotalStaked       state.Balance
+	TotalStaked       int64
 	Delete            bool
 	DelegateWallet    string
 	ServiceCharge     float64
 	NumberOfDelegates int
-	MinStake          state.Balance
-	MaxStake          state.Balance
+	MinStake          int64
+	MaxStake          int64
 	LastHealthCheck   common.Timestamp
-	Rewards           state.Balance
-	Fees              state.Balance
+	Rewards           int64
+	Fees              int64
 	Active            bool
 	Longitude         float64
 	Latitude          float64
@@ -61,7 +60,7 @@ type MinerQuery struct {
 	PublicKey         null.String
 	ShortName         null.String
 	BuildTag          null.String
-	TotalStaked       state.Balance
+	TotalStaked       int64
 	Delete            null.Bool
 	DelegateWallet    null.String
 	ServiceCharge     null.Float

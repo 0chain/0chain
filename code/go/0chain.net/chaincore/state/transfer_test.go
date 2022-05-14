@@ -15,12 +15,12 @@ func TestNewTransfer(t *testing.T) {
 
 	fromClientID := "from client id"
 	toClientID := "to client id"
-	amount := Balance(5)
+	amount := int64(5)
 
 	type args struct {
 		fromClientID datastore.Key
 		toClientID   datastore.Key
-		amount       Balance
+		amount       int64
 	}
 	tests := []struct {
 		name string
@@ -61,7 +61,7 @@ func TestTransfer_Encode(t *testing.T) {
 	type fields struct {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
-		Amount     Balance
+		Amount     int64
 	}
 	tests := []struct {
 		name   string
@@ -103,7 +103,7 @@ func TestTransfer_Decode(t *testing.T) {
 	type fields struct {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
-		Amount     Balance
+		Amount     int64
 	}
 	type args struct {
 		input []byte

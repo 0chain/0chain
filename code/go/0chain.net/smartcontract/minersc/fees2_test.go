@@ -11,7 +11,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -65,7 +64,7 @@ type runtimeValues struct {
 	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
-	minted         state.Balance
+	minted         int64
 	fees           []int64
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *TokenPool) MarshalMsg(b []byte) (o []byte, err error) {
+func (z TokenPool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 2
 	// string "ID"
@@ -15,11 +15,7 @@ func (z *TokenPool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ID)
 	// string "Balance"
 	o = append(o, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
-	o, err = z.Balance.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Balance")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Balance)
 	return
 }
 
@@ -48,7 +44,7 @@ func (z *TokenPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Balance":
-			bts, err = z.Balance.UnmarshalMsg(bts)
+			z.Balance, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Balance")
 				return
@@ -66,8 +62,8 @@ func (z *TokenPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *TokenPool) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize()
+func (z TokenPool) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.Int64Size
 	return
 }
 
@@ -86,11 +82,7 @@ func (z *TokenPoolTransferResponse) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ToPool)
 	// string "Value"
 	o = append(o, 0xa5, 0x56, 0x61, 0x6c, 0x75, 0x65)
-	o, err = z.Value.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Value")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Value)
 	// string "FromClient"
 	o = append(o, 0xaa, 0x46, 0x72, 0x6f, 0x6d, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74)
 	o = msgp.AppendString(o, z.FromClient)
@@ -137,7 +129,7 @@ func (z *TokenPoolTransferResponse) UnmarshalMsg(bts []byte) (o []byte, err erro
 				return
 			}
 		case "Value":
-			bts, err = z.Value.UnmarshalMsg(bts)
+			z.Value, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Value")
 				return
@@ -168,6 +160,6 @@ func (z *TokenPoolTransferResponse) UnmarshalMsg(bts []byte) (o []byte, err erro
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *TokenPoolTransferResponse) Msgsize() (s int) {
-	s = 1 + 8 + msgp.StringPrefixSize + len(z.TxnHash) + 9 + msgp.StringPrefixSize + len(z.FromPool) + 7 + msgp.StringPrefixSize + len(z.ToPool) + 6 + z.Value.Msgsize() + 11 + msgp.StringPrefixSize + len(z.FromClient) + 9 + msgp.StringPrefixSize + len(z.ToClient)
+	s = 1 + 8 + msgp.StringPrefixSize + len(z.TxnHash) + 9 + msgp.StringPrefixSize + len(z.FromPool) + 7 + msgp.StringPrefixSize + len(z.ToPool) + 6 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.FromClient) + 9 + msgp.StringPrefixSize + len(z.ToClient)
 	return
 }
