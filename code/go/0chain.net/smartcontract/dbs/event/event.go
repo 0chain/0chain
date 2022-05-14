@@ -129,5 +129,10 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
