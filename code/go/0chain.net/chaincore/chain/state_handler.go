@@ -42,8 +42,8 @@ func SetupSwagger() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	c := GetServerChain()
-	restHandler.SetScAccessor(c)
 	if restHandler != nil {
+		restHandler.SetScAccessor(c)
 		SetupSwagger()
 		if c.EventDb != nil {
 			c.RestHandler.SetupRestHandlers()
