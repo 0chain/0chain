@@ -176,6 +176,10 @@ func TestUpdateSettings(t *testing.T) {
 					"expose_mpt": "false",
 				},
 			},
+			want: want{
+				error: true,
+				msg: "",
+			},
 		},
 	}
 	for _, test := range testCases {
