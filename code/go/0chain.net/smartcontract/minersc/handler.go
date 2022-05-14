@@ -1,9 +1,7 @@
 package minersc
 
 import (
-	"0chain.net/core/logging"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 
@@ -28,7 +26,6 @@ func NewMinerRestHandler(rh restinterface.RestHandlerI) *MinerRestHandler {
 }
 
 func SetupRestHandler(rh restinterface.RestHandlerI) {
-	logging.Logger.Info("piers minersc SetupRestHandler")
 	mrh := NewMinerRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
 	http.HandleFunc(miner+"/globalSettings", mrh.getGlobalSettings)
@@ -651,12 +648,9 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
 	)
-	logging.Logger.Info("piers getMinerList start")
 	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
 	if err != nil {
 		common.Respond(w, r, nil, err)
-		logging.Logger.Info("piers getMinerList error",
-			zap.Error(err))
 		return
 	}
 
@@ -665,8 +659,6 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid: "+err.Error()))
-			logging.Logger.Info("piers getMinerList error",
-				zap.Error(err))
 			return
 		}
 		filter.Active = null.BoolFrom(active)
@@ -674,15 +666,11 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	edb := mrh.GetSC().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		logging.Logger.Info("piers getMinerList error",
-			zap.Error(common.NewErrInternal("no db connection")))
 		return
 	}
 	miners, err := edb.GetMinersWithFiltersAndPagination(filter, offset, limit)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
-		logging.Logger.Info("piers getMinerList error",
-			zap.Error(common.NewErrInternal("can't get miners list", err.Error())))
 		return
 	}
 	minersArr := make([]MinerNode, len(miners))
@@ -692,8 +680,6 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, restinterface.InterfaceMap{
 		"Nodes": minersArr,
 	}, nil)
-	logging.Logger.Info("piers getMinerList end",
-		zap.Any("miners", minersArr))
 }
 
 func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	state "0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

@@ -56,7 +56,6 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
 	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
-	logging.Logger.Info("piers SetupStateHandlers end")
 }
 
 func (c *Chain) GetROStateContext() state.QueryStateContextI {

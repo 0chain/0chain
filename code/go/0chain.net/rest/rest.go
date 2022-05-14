@@ -2,14 +2,12 @@ package rest
 
 import (
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
 	"0chain.net/rest/restinterface"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"go.uber.org/zap"
 )
 
 type RestHandler struct {
@@ -41,10 +39,6 @@ func (rh *RestHandler) GetSC() state.QueryStateContextI {
 		if newStx != nil {
 			rh.sCtx = newStx
 		}
-		logging.Logger.Info("piers GetSC", zap.Int64("old round",
-			rh.scAccessor.GetCurrentRound()),
-			zap.Int64("new round", rh.sCtx.GetBlock().Round),
-		)
 	}
 	return rh.sCtx
 }
