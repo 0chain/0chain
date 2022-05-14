@@ -109,6 +109,7 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
+// swagger:model authorizerResponse
 type authorizerResponse struct {
 	AuthorizerID string `json:"id"`
 	URL          string `json:"url"`
@@ -131,6 +132,7 @@ type authorizerResponse struct {
 	ServiceCharge  float64       `json:"service_charge"`
 }
 
+// swagger:model authorizerNodesResponse
 type authorizerNodesResponse struct {
 	Nodes []*authorizerNode `json:"nodes"`
 }
