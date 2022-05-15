@@ -47,11 +47,42 @@ func GetRestNames() []string {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getConfig getConfig
-// faucet smart contract configuration settings
+// swagger:model stringResponse
+// in: body
+type _ string
+
+// swagger:model configResponse
+// in: body
+type _ struct {
+	FaucetConfig
+	PourAmount      int64  `json:"pour_amount"`
+	MaxPourAmount   int64  `json:"max_pour_amount"`
+	PeriodicLimit   int64  `json:"periodic_limit"`
+	GlobalLimit     int64  `json:"global_limit"`
+	Cost            map[string]int `json:"-"`
+}
+
+type _ struct {
+	Used    state.Balance `json:"tokens_poured"`
+	Start   time.Time     `json:"start_time"`
+	Restart string        `json:"time_left"`
+	// any quantity that is represented as an integer in the lowest denomination
+	//
+	//
+	Allowed state.Balance `json:"tokens_allowed"`
+}
+// swagger:route GET /v1/screst/{smartContractAddress}/getConfig faucetSmartContract FaucetConfig
 //
+// Returns config for the vesting smart contract
+//
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
-//  200: StringMap
+//  200: configResponse
 //  404:
 func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetSC())
@@ -86,11 +117,18 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount pourAmount
-// pour amount
+// swagger:route GET /v1/screst/{smartContractAddress}/pourAmount faucetSmartContract PourAmount
+// Returns Pour amount per request for global limits
+//
+// parameters:
+//  + name: smartContractAddress
+//    in: path
+//    description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//    required: true
+//    type: string
 //
 // responses:
-//  200: Balance
+//  200: stringResponse
 //  404:
 func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetSC())
@@ -101,8 +139,15 @@ func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit globalPeriodicLimit
-// list minersc config settings
+// swagger:route GET /v1/screst/{smartContractAddress}/globalPeriodicLimit faucetSmartContract globalPeriodicLimit
+// Returns global limits
+//
+// parameters:
+//  + name: smartContractAddress
+//    in: path
+//    description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//    required: true
+//    type: string
 //
 // responses:
 //  200: periodicResponse
@@ -125,8 +170,15 @@ func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r 
 	common.Respond(w, r, resp, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit personalPeriodicLimit
-// list minersc config settings
+// swagger:route GET /v1/screst/{smartContractAddress}/personalPeriodicLimit faucetSmartContract personalPeriodicLimit
+// Returns limits for client
+//
+// parameters:
+//  + name: smartContractAddress
+//    in: path
+//    description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//    required: true
+//    type: string
 //
 // responses:
 //  200: periodicResponse

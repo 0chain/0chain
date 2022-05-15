@@ -198,9 +198,15 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 	common.Respond(w, r, geolocations, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs configs
-// list minersc config settings
+// swagger:route GET /v1/screst/{smartContractAddress}/configs minerSmartContract configs
+// Returns config for the vesting smart contract
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: StringMap
 //  400:
@@ -215,12 +221,24 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 	common.Respond(w, r, rtv, err)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
-// lists sharders
+// swagger:route GET /v1/screst/{smartContractAddress}/nodePoolStat minerSmartContract nodePoolStat
+// Returns statistic for pool node
 //
 // parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
+// parameters:
 //    + name: id
-//      description: offset
+//      description: offset <br>example: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
+//      in: query
+//      type: string
+//      required: true
+// parameters:
+//    + name: pool_id
+//      description: pool id <br>example: b7b2d3a7cad627e24a1279e84917ba390bc2b2d6bcbedae62a7c989828f0e1ed
 //      in: query
 //      type: string
 //      required: true
@@ -255,12 +273,18 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStatHandler nodeStatHandler
-// lists sharders
+// swagger:route GET /v1/screst/{smartContractAddress}/nodeStatHandler minerSmartContract nodeStatHandler
+// Returns statistic for node
 //
 // parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
+// parameters:
 //    + name: id
-//      description: id
+//      description: <br>example: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
 //      in: query
 //      type: string
 //      required: true
@@ -394,7 +418,7 @@ func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http
 	common.Respond(w, r, sos, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList getDkgList
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList minerSmartContract getDkgList
 // gets dkg miners list
 //
 // responses:
@@ -410,9 +434,15 @@ func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, mpks, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList getDkgList
-// gets dkg miners list
+// swagger:route GET /v1/screst/{smartContractAddress}/getDkgList minerSmartContract getDkgList
+// Returns the list DKG in the current VC
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: DKGMinerNodes
 //  500:
@@ -425,9 +455,15 @@ func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) 
 	common.Respond(w, r, dkgMinersList, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase getPhase
-// get phase nodes
+// swagger:route GET /v1/screst/{smartContractAddress}/getPhase minerSmartContract getPhase
+// Returns the current phase
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: PhaseNode
 //  400:
@@ -440,9 +476,15 @@ func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, pn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList getSharderKeepList
-// get total sharder stake
+// swagger:route GET /v1/screst/{smartContractAddress}/getSharderKeepList minerSmartContract getSharderKeepList
+// Returns a list of registered sharders in the contribute phase in the current VC
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: MinerNodes
 //  500:

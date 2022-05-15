@@ -37,9 +37,15 @@ func GetRestNames() []string {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getConfig getConfig
-// get interest pool configuration settings
+// swagger:route GET /v1/screst/{smartContractAddress}/getConfig interestSmartContract getInterestConfig
+// Returns config for the interest pool smart contract
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: StringMap
 //  500:
@@ -67,9 +73,15 @@ func (irh *InterestPoolRestHandler) getConfig(w http.ResponseWriter, r *http.Req
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getLockConfig getLockConfig
-// get lock configuration
+// swagger:route GET /v1/screst/{smartContractAddress}/getLockConfig interestSmartContract getLockConfig
+// Returns config for the interest lock pool smart contract
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: InterestPoolGlobalNode
 //  500:
@@ -82,13 +94,18 @@ func (irh *InterestPoolRestHandler) getLockConfig(w http.ResponseWriter, r *http
 	common.Respond(w, r, gn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolsStats getPoolsStats
-// get pool stats
+// swagger:route GET /v1/screst/{smartContractAddress}/getPoolsStats interestSmartContract getPoolsStats
+// Returns pool stats for the interest pool smart contract
 //
+// parameters:
+// + name: smartContractAddress
+//   in: path
+//   description: The address of smart contract. <br>example: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3
+//   required: true
+//   type: string
 // responses:
 //  200: poolStat
 //  400:
-//  500:
 func (irh *InterestPoolRestHandler) getPoolsStats(w http.ResponseWriter, r *http.Request) {
 	var un = new(UserNode)
 	err := irh.GetSC().GetTrieNode(un.getKey(ADDRESS), un)

@@ -41,6 +41,7 @@ var (
 	}
 )
 
+
 type FaucetConfig struct {
 	PourAmount      state.Balance  `json:"pour_amount"`
 	MaxPourAmount   state.Balance  `json:"max_pour_amount"`
@@ -49,6 +50,7 @@ type FaucetConfig struct {
 	IndividualReset time.Duration  `json:"individual_reset"`
 	GlobalReset     time.Duration  `json:"global_rest"`
 	OwnerId         string         `json:"owner_id"`
+	// hidden: true
 	Cost            map[string]int `json:"cost"`
 }
 

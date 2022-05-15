@@ -17,12 +17,15 @@ import (
 )
 
 //go:generate msgp -io=false -tests=false -v
-
 // swagger:model periodicResponse
+// in: body
 type periodicResponse struct {
-	Used    state.Balance `json:"tokens_poured"`
+	Used    state.Balance `json:"tokens_poured" description:"\"some description\""`
 	Start   time.Time     `json:"start_time"`
 	Restart string        `json:"time_left"`
+	// any quantity that is represented as an integer in the lowest denomination
+	//
+	//
 	Allowed state.Balance `json:"tokens_allowed"`
 }
 
