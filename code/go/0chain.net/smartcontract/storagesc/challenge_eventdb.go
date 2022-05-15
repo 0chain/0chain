@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"0chain.net/core/common"
 
@@ -84,7 +85,7 @@ func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
 
 	var chs []*StorageChallengeResponse
 	challenges, err := balances.GetEventDB().GetOpenChallengesForBlobber(blobberID,
-		balances.GetTransaction().CreationDate, cct)
+		common.Timestamp(time.Now().Unix()), cct)
 	if err != nil {
 		return nil, err
 	}
