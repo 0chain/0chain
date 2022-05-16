@@ -81,6 +81,53 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	}
 }
 
+var globalSetupVRFSspam *vrfsspam
+var VRFSSpamFlag bool
+
+type vrfsspam struct {
+	Vrfs          *round.VRFShare
+	Miners        *node.Pool
+	sendSpamMutex sync.RWMutex
+}
+
+func SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
+	setup := globalSetupVRFSspam
+
+	if setup == nil || setup.Miners == nil {
+		return // not requested or not initialized via SendVRFShare() yet
+	}
+
+	setup.sendSpamMutex.Lock()
+	defer setup.sendSpamMutex.Unlock()
+
+	if vrfs != nil {
+		logging.Logger.Info("sendVRFSSpam() invoked by actual SendVRFShare()")
+		if setup.Vrfs != nil {
+			logging.Logger.Info("sendVRFSSpam() nothing to do")
+			return
+		}
+		// first send
+		setup.Vrfs = vrfs
+		logging.Logger.Info("sendVRFSSpam() first send ", zap.Int64("Round", setup.Vrfs.Round))
+		setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
+	}
+
+	var (
+		v   = &round.VRFShare{}
+		err error
+	)
+	v.RoundTimeoutCount = r.GetTimeoutCount()
+	r := mc.StartNextRound(ctx, vrfs.Round)
+	v.Round = r.Round
+	v.Share, err = mc.GetBlsShare(ctx, r.Round)
+
+	v.SetParty(node.Self.Underlying())
+	setup.Vrfs = v
+
+	logging.Logger.Info("sendVRFSSpam() subsequent send ", zap.Int64("Round", setup.Vrfs.Round))
+	setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
+}
+
 func sendBadTimeoutVRFSIfNeeded(vrfs *round.VRFShare, mb *block.MagicBlock) {
 	state := crpc.Client().State()
 	cfg := state.BadTimeoutVRFS
