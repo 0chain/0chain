@@ -16,10 +16,6 @@ import (
 	"0chain.net/core/util"
 )
 
-const (
-	floatToBalance = 10 * 1000 * 1000 * 1000
-)
-
 //msgp:ignore freeStorageAllocationInput newFreeStorageAssignerInfo
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
