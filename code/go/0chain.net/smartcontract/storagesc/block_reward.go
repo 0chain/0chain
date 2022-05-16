@@ -145,9 +145,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, qsp := range stakePools {
 		weightRatio := weight[i] / totalWeight
 		if weightRatio > 0 && weightRatio <= 1 {
-			reward := bbr * weightRatio
+			reward := int64(bbr * weightRatio)
 			logging.Logger.Info("blobber_block_rewards_pass",
-				zap.Float64("reward", reward),
+				zap.Int64("reward", reward),
 				zap.String("blobber id", qualifyingBlobberIds[i]),
 				zap.Int64("round", balances.GetBlock().Round),
 				zap.String("block_hash", balances.GetBlock().Hash))

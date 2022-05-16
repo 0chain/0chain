@@ -50,7 +50,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 			sp := newStakePool()
 			sp.Settings.DelegateWallet = bID
-			sp.Settings.ServiceCharge = p.serviceCharge[i]
+			sp.Settings.ServiceChargeRatio = p.serviceCharge[i]
 			for j, bal := range p.delegatesBal[i] {
 				dp := new(stakepool.DelegatePool)
 				dp.Balance = bal

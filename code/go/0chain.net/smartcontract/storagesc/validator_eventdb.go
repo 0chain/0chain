@@ -23,7 +23,7 @@ func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator {
 		MinStake:       vn.StakePoolSettings.MinStake,
 		MaxStake:       vn.StakePoolSettings.MaxStake,
 		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceCharge,
+		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
 	}
 }
 
@@ -33,11 +33,11 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
 		StakePoolSettings: stakepool.Settings{
-			DelegateWallet:  v.DelegateWallet,
-			MinStake:        v.MinStake,
-			MaxStake:        v.MaxStake,
-			MaxNumDelegates: v.NumDelegates,
-			ServiceCharge:   v.ServiceCharge,
+			DelegateWallet:     v.DelegateWallet,
+			MinStake:           v.MinStake,
+			MaxStake:           v.MaxStake,
+			MaxNumDelegates:    v.NumDelegates,
+			ServiceChargeRatio: v.ServiceCharge,
 		},
 	}
 }

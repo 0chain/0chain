@@ -116,7 +116,7 @@ func (z *Settings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt(o, z.MaxNumDelegates)
 	// string "ServiceCharge"
 	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
-	o = msgp.AppendFloat64(o, z.ServiceCharge)
+	o = msgp.AppendFloat64(o, z.ServiceChargeRatio)
 	return
 }
 
@@ -163,7 +163,7 @@ func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "ServiceCharge":
-			z.ServiceCharge, bts, err = msgp.ReadFloat64Bytes(bts)
+			z.ServiceChargeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ServiceCharge")
 				return

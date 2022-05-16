@@ -31,11 +31,14 @@ type StakePool struct {
 }
 
 type Settings struct {
-	DelegateWallet  string  `json:"delegate_wallet"`
-	MinStake        int64   `json:"min_stake"`
-	MaxStake        int64   `json:"max_stake"`
-	MaxNumDelegates int     `json:"num_delegates"`
-	ServiceCharge   float64 `json:"service_charge"`
+	DelegateWallet string `json:"delegate_wallet"`
+	// MinStake unit is SAS
+	MinStake int64 `json:"min_stake"`
+	// MaxStake unit is SAS
+	MaxStake        int64 `json:"max_stake"`
+	MaxNumDelegates int   `json:"num_delegates"`
+	// ServiceChargeRatio is the ratio. So 0.3 means 30% retained so 70% to delegator
+	ServiceChargeRatio float64 `json:"service_charge"`
 }
 
 type DelegatePool struct {
@@ -168,7 +171,7 @@ func (sp *StakePool) MintRewards(
 }
 
 func (sp *StakePool) DistributeRewards(
-	value float64,
+	value int64,
 	providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
@@ -178,9 +181,9 @@ func (sp *StakePool) DistributeRewards(
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
 
-	serviceCharge := sp.Settings.ServiceCharge * value
-	if int64(serviceCharge) > 0 {
-		reward := int64(serviceCharge)
+	serviceCharge := int64(sp.Settings.ServiceChargeRatio * float64(value))
+	if serviceCharge > 0 {
+		reward := serviceCharge
 		sp.Reward += reward
 		spUpdate.Reward = reward
 	}
@@ -194,14 +197,24 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	valueLeft := value - serviceCharge
-	var stake = float64(sp.stake())
+	var stake = sp.stake()
 	if stake == 0 {
 		return fmt.Errorf("no stake")
 	}
 
+	valueLeftBal := valueLeft
 	for id, pool := range sp.Pools {
-		ratio := float64(pool.Balance) / stake
-		reward := int64(valueLeft * ratio)
+		if valueLeftBal <= 0 {
+			continue
+		}
+		ratio := float64(pool.Balance) / float64(stake)
+		reward := int64(float64(valueLeft) * ratio)
+		if valueLeftBal-reward < 0 {
+			reward = valueLeftBal
+			valueLeftBal = 0
+		} else {
+			valueLeftBal -= reward
+		}
 		pool.Reward += reward
 		spUpdate.DelegateRewards[id] = reward
 	}

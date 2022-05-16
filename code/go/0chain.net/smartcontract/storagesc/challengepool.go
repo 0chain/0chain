@@ -117,25 +117,25 @@ func (cp *challengePool) moveToWritePool(
 }
 
 func (cp *challengePool) moveToValidators(sscKey string, reward float64,
-	validatos []datastore.Key,
-	vsps []*stakePool,
+	validators []datastore.Key,
+	vSPs []*stakePool,
 	balances cstate.StateContextI,
 ) error {
-	if len(validatos) == 0 || reward == 0.0 {
+	if len(validators) == 0 || reward == 0.0 {
 		return nil // nothing to move, or nothing to move to
 	}
 
-	var oneReward = reward / float64(len(validatos))
+	var oneReward = reward / float64(len(validators))
 
-	for i, sp := range vsps {
+	for i, sp := range vSPs {
 		if float64(cp.Balance) < oneReward {
 			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
-		err := sp.DistributeRewards(oneReward, validatos[i], spenum.Validator, balances)
+		err := sp.DistributeRewards(int64(oneReward), validators[i], spenum.Validator, balances)
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
-				validatos[i], err)
+				validators[i], err)
 		}
 	}
 	cp.ZcnPool.Balance -= int64(reward)

@@ -126,11 +126,11 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&UpdateAuthorizerStakePoolPayload{
 					StakePoolSettings: stakepool.Settings{
-						DelegateWallet:  data.Clients[0],
-						MinStake:        tokens.ZCNToSAS(1.1),
-						MaxStake:        tokens.ZCNToSAS(103),
-						MaxNumDelegates: 7,
-						ServiceCharge:   0.17,
+						DelegateWallet:     data.Clients[0],
+						MinStake:           tokens.ZCNToSAS(1.1),
+						MaxStake:           tokens.ZCNToSAS(103),
+						MaxNumDelegates:    7,
+						ServiceChargeRatio: 0.17,
 					},
 				}).Encode(),
 			},

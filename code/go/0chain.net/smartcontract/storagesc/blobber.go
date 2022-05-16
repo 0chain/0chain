@@ -100,7 +100,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
-	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
+	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
