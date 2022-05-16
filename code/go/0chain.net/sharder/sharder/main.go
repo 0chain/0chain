@@ -16,8 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/rest"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -409,7 +407,8 @@ func initHandlers(c chain.Chainer) {
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()
-	chain.SetupStateHandlers(&rest.RestHandler{})
+	chain.SetupScRestApiHandlers()
+	chain.SetupStateHandlers()
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()

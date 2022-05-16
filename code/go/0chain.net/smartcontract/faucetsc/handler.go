@@ -54,7 +54,7 @@ func GetRestNames() []string {
 //  200: StringMap
 //  404:
 func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(frh.GetSC())
+	gn, err := getGlobalNode(frh.GetStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
 		return
@@ -93,7 +93,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 //  200: Balance
 //  404:
 func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(frh.GetSC())
+	gn, err := getGlobalNode(frh.GetStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
 		return
@@ -108,7 +108,7 @@ func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Req
 //  200: periodicResponse
 //  404:
 func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(frh.GetSC())
+	gn, err := getGlobalNode(frh.GetStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
 		return
@@ -132,7 +132,7 @@ func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r 
 //  200: periodicResponse
 //  404:
 func (frh *FaucetscRestHandler) getPersonalPeriodicLimit(w http.ResponseWriter, r *http.Request) {
-	sctx := frh.GetSC()
+	sctx := frh.GetStateContext()
 	gn, err := getGlobalNode(sctx)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noClient))

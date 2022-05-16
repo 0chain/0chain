@@ -27,15 +27,12 @@ type suiteResults struct {
 	results []benchmarkResults
 }
 
-type stateContextAccessor struct {
-	sctx cstate.QueryStateContextI
+type chainer struct {
+	qsc cstate.QueryStateContextI
 }
 
-func (sca *stateContextAccessor) GetROStateContext() cstate.QueryStateContextI {
-	return sca.sctx
-}
-func (sca *stateContextAccessor) GetCurrentRound() int64 {
-	return 1
+func (ch *chainer) GetQueryStateContext() cstate.QueryStateContextI {
+	return ch.qsc
 }
 
 func runSuites(
@@ -52,8 +49,11 @@ func runSuites(
 		extractMpt(mpt, root),
 		data,
 	)
-	restSetup := rest.RestHandler{}
-	restSetup.SetScAccessor(&stateContextAccessor{readOnlyBalances})
+	restSetup := rest.RestHandler{
+		QueryChainer: &chainer{
+			qsc: readOnlyBalances,
+		},
+	}
 	restSetup.SetupRestHandlers()
 
 	for _, suite := range suites {

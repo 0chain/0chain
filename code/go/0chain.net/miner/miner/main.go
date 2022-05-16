@@ -1,7 +1,6 @@
 package main
 
 import (
-	"0chain.net/rest"
 	"bufio"
 	"context"
 	"errors"
@@ -436,7 +435,7 @@ func initHandlers(c chain.Chainer) {
 	block.SetupHandlers()
 	miner.SetupHandlers()
 	diagnostics.SetupHandlers()
-	chain.SetupStateHandlers(&rest.RestHandler{})
+	chain.SetupStateHandlers()
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()

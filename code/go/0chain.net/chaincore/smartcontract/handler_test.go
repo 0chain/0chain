@@ -2,7 +2,6 @@ package smartcontract_test
 
 import (
 	"0chain.net/rest"
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,6 +22,7 @@ import (
 
 	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
+	restmocks "0chain.net/rest/mocks"
 
 	"0chain.net/chaincore/config"
 	. "0chain.net/chaincore/smartcontract"
@@ -63,9 +63,9 @@ func TestExecuteRestAPI(t *testing.T) {
 	t.Skip("Needs reworking as ExecuteRestAPI does not exist anymore, but should still test endpoints can be reached")
 	t.Parallel()
 
-	var mockCtx = &mocks.QueryStateContextI{}
-	mockCtx.On("GetEventDB").Return(&event.EventDb{})
-	restHandler := rest.NewRestHandler(nil, mockCtx)
+	var mockChainer = &restmocks.QueryChainer{}
+	mockChainer.On("GetQueryStateContext").Return(&mocks.QueryStateContextI{})
+	restHandler := rest.NewRestHandler(mockChainer)
 	restHandler.SetupRestHandlers()
 
 	gn := &faucetsc.GlobalNode{}

@@ -13,8 +13,6 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/rest/restinterface"
-
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -39,18 +37,20 @@ func SetupSwagger() {
 	http.Handle("/docs1", sh1)
 }
 
-/*SetupStateHandlers - setup handlers to manage state */
-func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
+func SetupScRestApiHandlers() {
 	c := GetServerChain()
-	if restHandler != nil {
-		restHandler.SetScAccessor(c)
-		SetupSwagger()
-		if c.EventDb != nil {
-			restHandler.SetupRestHandlers()
-		} else {
-			logging.Logger.Warn("cannot find event database, REST API will not be supported on this sharder")
-		}
+	restHandler := rest.NewRestHandler(c)
+	SetupSwagger()
+	if c.EventDb != nil {
+		restHandler.SetupRestHandlers()
+	} else {
+		logging.Logger.Warn("cannot find event database, REST API will not be supported on this sharder")
 	}
+}
+
+/*SetupStateHandlers - setup handlers to manage state */
+func SetupStateHandlers() {
+	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
@@ -58,7 +58,7 @@ func SetupStateHandlers(restHandler restinterface.RestHandlerI) {
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
 }
 
-func (c *Chain) GetROStateContext() state.QueryStateContextI {
+func (c *Chain) GetQueryStateContext() state.QueryStateContextI {
 	return c.GetStateContextI()
 }
 

@@ -4,14 +4,8 @@ import (
 	"0chain.net/chaincore/chain/state"
 )
 
-type StateContextAccessor interface {
-	GetROStateContext() state.QueryStateContextI
-	GetCurrentRound() int64
-}
-
 type RestHandlerI interface {
-	GetSC() state.QueryStateContextI
-	SetScAccessor(StateContextAccessor)
+	GetStateContext() state.QueryStateContextI
 	SetupRestHandlers()
 }
 

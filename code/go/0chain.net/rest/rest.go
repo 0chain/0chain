@@ -10,41 +10,26 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 )
 
+// TODO: implement the GetReadonlyStateContext for *Chain
+type QueryChainer interface {
+	GetQueryStateContext() state.QueryStateContextI
+}
+
 type RestHandler struct {
-	scAccessor restinterface.StateContextAccessor
-	sCtx       state.QueryStateContextI
+	QueryChainer
 }
 
-func NewRestHandler(scAccessor restinterface.StateContextAccessor, sCtx state.QueryStateContextI) restinterface.RestHandlerI {
-	if scAccessor == nil && sCtx == nil {
-		return nil
-	}
-	rh := RestHandler{
-		scAccessor: scAccessor,
-		sCtx:       sCtx,
-	}
-	if sCtx == nil {
-		rh.sCtx = rh.scAccessor.GetROStateContext()
-		if rh.sCtx == nil {
-			return nil
-		}
-	}
-	return &rh
+func NewRestHandler(c QueryChainer) restinterface.RestHandlerI {
+	return &RestHandler{QueryChainer: c}
 }
 
-func (rh *RestHandler) GetSC() state.QueryStateContextI {
-	if rh.scAccessor != nil &&
-		(rh.sCtx == nil || rh.scAccessor.GetCurrentRound() != rh.sCtx.GetBlock().Round) {
-		newStx := rh.scAccessor.GetROStateContext()
-		if newStx != nil {
-			rh.sCtx = newStx
-		}
-	}
-	return rh.sCtx
+func (rh *RestHandler) GetStateContext() state.QueryStateContextI {
+	return rh.GetQueryStateContext()
 }
 
-func (rh *RestHandler) SetScAccessor(sca restinterface.StateContextAccessor) {
-	rh.scAccessor = sca
+// RestHandlerI wraps the method to access the latest read only state context
+type RestHandlerI interface {
+	GetStateContext() state.QueryStateContextI
 }
 
 func (rh *RestHandler) SetupRestHandlers() {

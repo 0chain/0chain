@@ -28,6 +28,7 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 		if lfmb.Hash == nodeLFMBHash {
 			return nil, common.ErrNotModified
 		}
+
 		return lfmb, nil
 	}
 }
