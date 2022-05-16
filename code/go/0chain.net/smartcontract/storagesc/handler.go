@@ -1097,6 +1097,7 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 	edb := srh.GetStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	allocation, err := edb.GetAllocation(allocationID)
 	if err != nil {
