@@ -44,7 +44,7 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+"/errors", srh.getErrors)
 	http.HandleFunc(storage+"/allocations", srh.getAllocations)
 	http.HandleFunc(storage+"/allocation_min_lock", srh.getAllocationMinLock)
-	http.HandleFunc(storage+"/allocation", srh.getAllocationStats)
+	http.HandleFunc(storage+"/allocation", srh.getAllocation)
 	http.HandleFunc(storage+"/latestreadmarker", srh.getLatestReadMarker)
 	http.HandleFunc(storage+"/readmarkers", srh.getReadMarkers)
 	http.HandleFunc(storage+"/count_readmarkers", srh.getReadMarkersCount)
@@ -1092,7 +1092,7 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 //  200: StorageAllocation
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAllocationStats(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Request) {
 	allocationID := r.URL.Query().Get("allocation")
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = allocationID
