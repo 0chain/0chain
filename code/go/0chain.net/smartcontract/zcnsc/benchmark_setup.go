@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -15,7 +17,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 )
@@ -36,12 +37,12 @@ func Setup(eventDb *event.EventDb, clients, publicKeys []string, balances cstate
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
-	gn.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	gn.MinStakeAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount)
 	gn.MinLockAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinLockAmount)
-	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
-	gn.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
+	gn.MinMintAmount = int64(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
+	gn.MaxFee = config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee)
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.ZcnMinAuthorizers)
-	gn.MinBurnAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	gn.MinBurnAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount)
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)
@@ -157,8 +158,8 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 func getMockStakePoolSettings(wallet string) stakepool.StakePoolSettings {
 	return stakepool.StakePoolSettings{
 		DelegateWallet:  wallet,
-		MinStake:        state.Balance(1 * 1e10),
-		MaxStake:        state.Balance(100 * 1e10),
+		MinStake:        tokens.ZCNToSAS(1),
+		MaxStake:        tokens.ZCNToSAS(100),
 		MaxNumDelegates: 10,
 		ServiceCharge:   0.1,
 	}

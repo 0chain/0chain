@@ -23,8 +23,8 @@ import (
 type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
 	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance state.Balance `json:"balance"`
+	Unstake bool  `json:"unstake"` // max time to wait to unstake
+	Balance int64 `json:"balance"`
 }
 
 type stakePoolRequest struct {
@@ -182,7 +182,7 @@ func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *G
 	return nil
 }
 
-func (gn *GlobalNode) validateStakeRange(min, max state.Balance) (err error) {
+func (gn *GlobalNode) validateStakeRange(min, max int64) (err error) {
 	if min < gn.MinStakeAmount {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min, gn.MinStakeAmount)
 	}

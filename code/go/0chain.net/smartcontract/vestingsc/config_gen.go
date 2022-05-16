@@ -40,11 +40,7 @@ func (z *config) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 7
 	// string "MinLock"
 	o = append(o, 0x87, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
-	o, err = z.MinLock.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MinLock")
-		return
-	}
+	o = msgp.AppendInt64(o, z.MinLock)
 	// string "MinDuration"
 	o = append(o, 0xab, 0x4d, 0x69, 0x6e, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendDuration(o, z.MinDuration)
@@ -95,7 +91,7 @@ func (z *config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "MinLock":
-			bts, err = z.MinLock.UnmarshalMsg(bts)
+			z.MinLock, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLock")
 				return
@@ -174,7 +170,7 @@ func (z *config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *config) Msgsize() (s int) {
-	s = 1 + 8 + z.MinLock.Msgsize() + 12 + msgp.DurationSize + 12 + msgp.DurationSize + 16 + msgp.IntSize + 21 + msgp.IntSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 8 + msgp.Int64Size + 12 + msgp.DurationSize + 12 + msgp.DurationSize + 16 + msgp.IntSize + 21 + msgp.IntSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

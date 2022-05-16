@@ -15,18 +15,10 @@ func (z *destination) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ID)
 	// string "Amount"
 	o = append(o, 0xa6, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o, err = z.Amount.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Amount")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Amount)
 	// string "Vested"
 	o = append(o, 0xa6, 0x56, 0x65, 0x73, 0x74, 0x65, 0x64)
-	o, err = z.Vested.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Vested")
-		return
-	}
+	o = msgp.AppendInt64(o, z.Vested)
 	// string "Last"
 	o = append(o, 0xa4, 0x4c, 0x61, 0x73, 0x74)
 	o, err = z.Last.MarshalMsg(o)
@@ -69,13 +61,13 @@ func (z *destination) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Amount":
-			bts, err = z.Amount.UnmarshalMsg(bts)
+			z.Amount, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Amount")
 				return
 			}
 		case "Vested":
-			bts, err = z.Vested.UnmarshalMsg(bts)
+			z.Vested, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Vested")
 				return
@@ -106,7 +98,7 @@ func (z *destination) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *destination) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 7 + z.Amount.Msgsize() + 7 + z.Vested.Msgsize() + 5 + z.Last.Msgsize() + 5 + z.Move.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 7 + msgp.Int64Size + 7 + msgp.Int64Size + 5 + z.Last.Msgsize() + 5 + z.Move.Msgsize()
 	return
 }
 

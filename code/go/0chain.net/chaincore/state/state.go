@@ -14,8 +14,6 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
-type Balance int64
-
 //State - state that needs consensus within the blockchain.
 type State struct {
 	/* Note: origin is way to parallelize state pruning with state saving. That is, when a leaf node is deleted and added later, but the pruning logic of

@@ -18,18 +18,10 @@ func (z *BlobberRewardNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt(o, z.SuccessChallenges)
 	// string "WritePrice"
 	o = append(o, 0xaa, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65)
-	o, err = z.WritePrice.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "WritePrice")
-		return
-	}
+	o = msgp.AppendInt64(o, z.WritePrice)
 	// string "ReadPrice"
 	o = append(o, 0xa9, 0x52, 0x65, 0x61, 0x64, 0x50, 0x72, 0x69, 0x63, 0x65)
-	o, err = z.ReadPrice.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "ReadPrice")
-		return
-	}
+	o = msgp.AppendInt64(o, z.ReadPrice)
 	// string "TotalData"
 	o = append(o, 0xa9, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x44, 0x61, 0x74, 0x61)
 	o = msgp.AppendFloat64(o, z.TotalData)
@@ -70,13 +62,13 @@ func (z *BlobberRewardNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "WritePrice":
-			bts, err = z.WritePrice.UnmarshalMsg(bts)
+			z.WritePrice, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "WritePrice")
 				return
 			}
 		case "ReadPrice":
-			bts, err = z.ReadPrice.UnmarshalMsg(bts)
+			z.ReadPrice, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ReadPrice")
 				return
@@ -107,6 +99,6 @@ func (z *BlobberRewardNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *BlobberRewardNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 18 + msgp.IntSize + 11 + z.WritePrice.Msgsize() + 10 + z.ReadPrice.Msgsize() + 10 + msgp.Float64Size + 9 + msgp.Float64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 18 + msgp.IntSize + 11 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.Float64Size + 9 + msgp.Float64Size
 	return
 }

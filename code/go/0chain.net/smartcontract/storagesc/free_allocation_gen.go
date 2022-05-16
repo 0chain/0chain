@@ -19,25 +19,13 @@ func (z *freeStorageAssigner) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.PublicKey)
 	// string "IndividualLimit"
 	o = append(o, 0xaf, 0x49, 0x6e, 0x64, 0x69, 0x76, 0x69, 0x64, 0x75, 0x61, 0x6c, 0x4c, 0x69, 0x6d, 0x69, 0x74)
-	o, err = z.IndividualLimit.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "IndividualLimit")
-		return
-	}
+	o = msgp.AppendInt64(o, z.IndividualLimit)
 	// string "TotalLimit"
 	o = append(o, 0xaa, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x4c, 0x69, 0x6d, 0x69, 0x74)
-	o, err = z.TotalLimit.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TotalLimit")
-		return
-	}
+	o = msgp.AppendInt64(o, z.TotalLimit)
 	// string "CurrentRedeemed"
 	o = append(o, 0xaf, 0x43, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x64, 0x65, 0x65, 0x6d, 0x65, 0x64)
-	o, err = z.CurrentRedeemed.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "CurrentRedeemed")
-		return
-	}
+	o = msgp.AppendInt64(o, z.CurrentRedeemed)
 	// string "RedeemedTimestamps"
 	o = append(o, 0xb2, 0x52, 0x65, 0x64, 0x65, 0x65, 0x6d, 0x65, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.RedeemedTimestamps)))
@@ -82,19 +70,19 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "IndividualLimit":
-			bts, err = z.IndividualLimit.UnmarshalMsg(bts)
+			z.IndividualLimit, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "IndividualLimit")
 				return
 			}
 		case "TotalLimit":
-			bts, err = z.TotalLimit.UnmarshalMsg(bts)
+			z.TotalLimit, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalLimit")
 				return
 			}
 		case "CurrentRedeemed":
-			bts, err = z.CurrentRedeemed.UnmarshalMsg(bts)
+			z.CurrentRedeemed, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "CurrentRedeemed")
 				return
@@ -132,7 +120,7 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *freeStorageAssigner) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientId) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 16 + z.IndividualLimit.Msgsize() + 11 + z.TotalLimit.Msgsize() + 16 + z.CurrentRedeemed.Msgsize() + 19 + msgp.ArrayHeaderSize
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientId) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 16 + msgp.Int64Size + 11 + msgp.Int64Size + 16 + msgp.Int64Size + 19 + msgp.ArrayHeaderSize
 	for za0001 := range z.RedeemedTimestamps {
 		s += z.RedeemedTimestamps[za0001].Msgsize()
 	}
