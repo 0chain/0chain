@@ -44,11 +44,6 @@ func (ssc *MinerSmartContract) collectReward(
 		}
 	}
 
-	if providerID != txn.ClientID {
-		return "", common.NewErrorf("collect_reward_failed",
-			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
-	}
-
 	var provider *MinerNode
 	switch prr.ProviderType {
 	case spenum.Miner:
@@ -61,6 +56,12 @@ func (ssc *MinerSmartContract) collectReward(
 	if err != nil {
 		return "", common.NewError("collect_reward_failed", err.Error())
 	}
+
+	if providerID != txn.ClientID && provider.Settings.DelegateWallet != txn.ClientID {
+		return "", common.NewErrorf("collect_reward_failed",
+			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
+	}
+
 	minted, err := provider.StakePool.MintRewards(
 		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
