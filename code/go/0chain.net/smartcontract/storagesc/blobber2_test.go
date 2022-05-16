@@ -366,7 +366,7 @@ func testCommitBlobberRead(
 	var sPool = stakePool{
 		StakePool: stakepool.StakePool{
 			Pools: make(map[string]*stakepool.DelegatePool),
-			Settings: stakepool.StakePoolSettings{
+			Settings: stakepool.Settings{
 				ServiceCharge:  blobberYaml.serviceCharge,
 				DelegateWallet: delegateWallet,
 			},

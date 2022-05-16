@@ -794,8 +794,8 @@ func getMockBlobberTerms() Terms {
 	}
 }
 
-func getMockStakePoolSettings(blobber string) stakepool.StakePoolSettings {
-	return stakepool.StakePoolSettings{
+func getMockStakePoolSettings(blobber string) stakepool.Settings {
+	return stakepool.Settings{
 		DelegateWallet:  blobber,
 		MinStake:        tokens.ZCNToSAS(viper.GetFloat64(sc.StorageMinStake)),
 		MaxStake:        tokens.ZCNToSAS(viper.GetFloat64(sc.StorageMaxStake)),

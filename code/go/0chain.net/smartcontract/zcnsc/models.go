@@ -218,7 +218,7 @@ func (bp *BurnPayload) Decode(input []byte) error {
 // ------- UpdateAuthorizerStakePoolPayload ------------
 
 type UpdateAuthorizerStakePoolPayload struct {
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
 
 func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte) {
@@ -234,9 +234,9 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 // ------- AddAuthorizerPayload ------------
 
 type AddAuthorizerPayload struct {
-	PublicKey         string                      `json:"public_key"`
-	URL               string                      `json:"url"`
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"` // Used to initially create stake pool
+	PublicKey         string             `json:"public_key"`
+	URL               string             `json:"url"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"` // Used to initially create stake pool
 }
 
 func (pk *AddAuthorizerPayload) Encode() (data []byte, err error) {

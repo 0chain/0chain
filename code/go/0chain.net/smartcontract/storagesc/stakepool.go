@@ -24,7 +24,7 @@ import (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 func validateStakePoolSettings(
-	sps stakepool.StakePoolSettings,
+	sps stakepool.Settings,
 	conf *Config,
 ) error {
 	err := conf.validateStakeRange(sps.MinStake, sps.MaxStake)
@@ -274,7 +274,7 @@ type stakePoolStat struct {
 	Rewards int64 `json:"rewards"`
 
 	// Settings of the stake pool
-	Settings stakepool.StakePoolSettings `json:"settings"`
+	Settings stakepool.Settings `json:"settings"`
 }
 
 //
@@ -302,7 +302,7 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 	conf *Config,
 	providerId datastore.Key,
 	providerType spenum.Provider,
-	settings stakepool.StakePoolSettings,
+	settings stakepool.Settings,
 	balances chainstate.StateContextI,
 ) (*stakePool, error) {
 	if err := validateStakePoolSettings(settings, conf); err != nil {

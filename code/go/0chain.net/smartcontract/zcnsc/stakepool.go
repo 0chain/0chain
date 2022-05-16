@@ -119,7 +119,7 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
 	authorizerID datastore.Key,
-	settings stakepool.StakePoolSettings,
+	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
@@ -167,7 +167,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *GlobalNode) error {
+func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
 	err := conf.validateStakeRange(poolSettings.MinStake, poolSettings.MaxStake)
 	if err != nil {
 		return err

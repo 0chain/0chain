@@ -63,7 +63,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 			Capacity:        blobber.Capacity,
 			Used:            blobber.Used,
 			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-			StakePoolSettings: stakepool.StakePoolSettings{
+			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:  blobber.DelegateWallet,
 				MinStake:        blobber.MinStake,
 				MaxStake:        blobber.MaxStake,
@@ -834,7 +834,7 @@ func spStats(
 	stat.WritePrice = blobber.WritePrice
 	stat.OffersTotal = blobber.OffersTotal
 	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
-	stat.Settings = stakepool.StakePoolSettings{
+	stat.Settings = stakepool.Settings{
 		DelegateWallet:  blobber.DelegateWallet,
 		MinStake:        blobber.MinStake,
 		MaxStake:        blobber.MaxStake,

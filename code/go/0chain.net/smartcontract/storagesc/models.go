@@ -211,10 +211,10 @@ func (sc *StorageChallenge) Save(state chainstate.StateContextI, scAddress strin
 }
 
 type ValidationNode struct {
-	ID                string                      `json:"id"`
-	BaseURL           string                      `json:"url"`
-	PublicKey         string                      `json:"-" msg:"-"`
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	ID                string             `json:"id"`
+	BaseURL           string             `json:"url"`
+	PublicKey         string             `json:"-" msg:"-"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
@@ -363,9 +363,9 @@ type StorageNode struct {
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
-	RewardPartition   RewardPartitionLocation     `json:"reward_partition"`
-	Information       Info                        `json:"info"`
+	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
+	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
+	Information       Info                    `json:"info"`
 }
 
 // validate the blobber configurations

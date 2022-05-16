@@ -26,11 +26,11 @@ func stakePoolKey(p spenum.Provider, id string) datastore.Key {
 type StakePool struct {
 	Pools    map[string]*DelegatePool `json:"pools"`
 	Reward   int64                    `json:"rewards"`
-	Settings StakePoolSettings        `json:"settings"`
+	Settings Settings                 `json:"settings"`
 	Minter   cstate.ApprovedMinter    `json:"minter"`
 }
 
-type StakePoolSettings struct {
+type Settings struct {
 	DelegateWallet  string  `json:"delegate_wallet"`
 	MinStake        int64   `json:"min_stake"`
 	MaxStake        int64   `json:"max_stake"`

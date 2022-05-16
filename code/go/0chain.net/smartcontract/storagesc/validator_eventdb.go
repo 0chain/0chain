@@ -32,7 +32,7 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 		ID:        v.ValidatorID,
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
-		StakePoolSettings: stakepool.StakePoolSettings{
+		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:  v.DelegateWallet,
 			MinStake:        v.MinStake,
 			MaxStake:        v.MaxStake,

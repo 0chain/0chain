@@ -125,7 +125,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				endpoint: sc.UpdateAuthorizerStakePool,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&UpdateAuthorizerStakePoolPayload{
-					StakePoolSettings: stakepool.StakePoolSettings{
+					StakePoolSettings: stakepool.Settings{
 						DelegateWallet:  data.Clients[0],
 						MinStake:        tokens.ZCNToSAS(1.1),
 						MaxStake:        tokens.ZCNToSAS(103),

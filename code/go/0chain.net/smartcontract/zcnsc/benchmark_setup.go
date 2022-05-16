@@ -155,8 +155,8 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 }
 
 // todo get from sc.yaml
-func getMockStakePoolSettings(wallet string) stakepool.StakePoolSettings {
-	return stakepool.StakePoolSettings{
+func getMockStakePoolSettings(wallet string) stakepool.Settings {
+	return stakepool.Settings{
 		DelegateWallet:  wallet,
 		MinStake:        tokens.ZCNToSAS(1),
 		MaxStake:        tokens.ZCNToSAS(100),

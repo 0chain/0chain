@@ -326,8 +326,8 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
-	key_hash := encryption.Hash(key)
-	byteKey, err := sc.state.Delete(util.Path(key_hash))
+	keyHash := encryption.Hash(key)
+	byteKey, err := sc.state.Delete(util.Path(keyHash))
 	return datastore.Key(byteKey), err
 }
 

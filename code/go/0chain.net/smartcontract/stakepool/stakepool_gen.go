@@ -251,7 +251,7 @@ func (z *StakePool) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *StakePoolSettings) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *Settings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 5
 	// string "DelegateWallet"
@@ -273,7 +273,7 @@ func (z *StakePoolSettings) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -333,7 +333,7 @@ func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *StakePoolSettings) Msgsize() (s int) {
+func (z *Settings) Msgsize() (s int) {
 	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + msgp.Int64Size + 9 + msgp.Int64Size + 16 + msgp.IntSize + 14 + msgp.Float64Size
 	return
 }

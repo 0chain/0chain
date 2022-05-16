@@ -61,25 +61,25 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 		case Settings[PourAmount]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert zcn %v to sas", key, value)
+				return fmt.Errorf("key %s, unable to convert zcn %v to state.balance", key, value)
 			}
 			gn.PourAmount = tokens.ZCNToSAS(fAmount)
 		case Settings[MaxPourAmount]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert zcn %v to sas", key, value)
+				return fmt.Errorf("key %s, unable to convert zcn %v to state.balance", key, value)
 			}
 			gn.MaxPourAmount = tokens.ZCNToSAS(fAmount)
 		case Settings[PeriodicLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert zcn %v to sas", key, value)
+				return fmt.Errorf("key %s, unable to convert zcn %v to state.balance", key, value)
 			}
 			gn.PeriodicLimit = tokens.ZCNToSAS(fAmount)
 		case Settings[GlobalLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert zcn %v to sas", key, value)
+				return fmt.Errorf("key %s, unable to convert zcn %v to state.balance", key, value)
 			}
 			gn.GlobalLimit = tokens.ZCNToSAS(fAmount)
 		case Settings[IndividualReset]:
