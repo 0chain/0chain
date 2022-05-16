@@ -89,7 +89,7 @@ func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractT
 func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) (int, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj == nil {
-		return 0, errors.New("EstimateTransactionCost - invalid Client ID")
+		return 0, errors.New("estimate transaction cost - invalid to client id")
 	}
 	return contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
 }

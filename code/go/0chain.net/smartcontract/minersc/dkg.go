@@ -228,6 +228,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	isViewChange, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
 	if err != nil {
 		logging.Logger.Error("MinerSmartContract - setPhaseNode - Cannot read chain configuration", zap.Any("error", err))
+		return err
 	}
 	// move phase condition
 	var movePhase = isViewChange == true &&

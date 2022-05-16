@@ -48,7 +48,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 
 	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
 	if err != nil {
-		logging.Logger.Error("Wallet - CreateSendTransaction - Cannot read chain configuration", zap.Any("error", err))
+		logging.Logger.Error("wallet - create send transaction - cannot read chain configuration", zap.Error(err))
 	}
 	if isFeeEnabled == true {
 		txn.Fee = fee
@@ -69,7 +69,7 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 
 	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
 	if err != nil {
-		logging.Logger.Error("Wallet - CreateSCTransaction - Cannot read chain configuration", zap.Any("error", err))
+		logging.Logger.Error("wallet - create sc transaction - cannot read chain configuration", zap.Error(err))
 	}
 	if isFeeEnabled == true {
 		txn.Fee = fee
@@ -96,7 +96,7 @@ func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Trans
 
 	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
 	if err != nil {
-		logging.Logger.Error("Wallet - CreateDataTransaction - Cannot read chain configuration", zap.Any("error", err))
+		logging.Logger.Error("wallet - create data transaction - cannot read chain configuration", zap.Error(err))
 	}
 	if isFeeEnabled == true {
 		txn.Fee = fee
