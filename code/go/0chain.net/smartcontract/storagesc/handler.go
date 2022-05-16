@@ -1094,15 +1094,20 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 //  500:
 func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Request) {
 	allocationID := r.URL.Query().Get("allocation")
-	allocationObj := &StorageAllocation{}
-	allocationObj.ID = allocationID
-
-	err := srh.GetStateContext().GetTrieNode(allocationObj.GetKey(ADDRESS), allocationObj)
+	edb := srh.GetStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	allocation, err := edb.GetAllocation(allocationID)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
-		return
 	}
-	common.Respond(w, r, allocationObj, nil)
+	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+	}
+
+	common.Respond(w, r, sa, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors errors
@@ -1125,7 +1130,11 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("transaction_hash is empty"))
 		return
 	}
-	rtv, err := srh.GetStateContext().GetEventDB().GetErrorByTransactionHash(transactionHash)
+	edb := srh.GetStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	rtv, err := edb.GetErrorByTransactionHash(transactionHash)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1182,8 +1191,11 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 		common.Respond(w, r, nil, common.NewErrBadRequest("is_descending value was not valid: "+err.Error()))
 		return
 	}
-
-	rtv, err := srh.GetStateContext().GetEventDB().GetWriteMarkers(offset, limit, isDescending)
+	edb := srh.GetStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	rtv, err := edb.GetWriteMarkers(offset, limit, isDescending)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
