@@ -1479,7 +1479,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, 400, wp.allocUntil(aresp.ID, aresp.Until()))
+	assert.Equal(t, int64(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
 	_, err = ssc.getStakePool("b1", balances)
 	require.NoError(t, err)

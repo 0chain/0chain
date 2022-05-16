@@ -164,7 +164,7 @@ func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {
 	err = json.Unmarshal(bytes, target)
 	require.NoError(t, err)
 
-	require.Equal(t, 222, target.Config.Fee)
+	require.Equal(t, int64(222), target.Config.Fee)
 }
 
 func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
@@ -183,7 +183,7 @@ func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
 	err := json.Unmarshal(source.Encode(), target)
 
 	require.NoError(t, err)
-	require.Equal(t, 222, target.Config.Fee)
+	require.Equal(t, int64(222), target.Config.Fee)
 }
 
 func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
@@ -196,7 +196,7 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 	target := &AuthorizerNode{}
 	err := target.Decode(source.Encode())
 	require.NoError(t, err)
-	require.Equal(t, 222, target.Config.Fee)
+	require.Equal(t, int64(222), target.Config.Fee)
 }
 
 func Test_AuthorizerNodeSerialization(t *testing.T) {
@@ -245,7 +245,7 @@ func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	require.Equal(t, "", target.URL)
 	require.Equal(t, "", target.PublicKey)
 	require.Equal(t, "12345678", target.ID)
-	require.Equal(t, 999, target.Config.Fee)
+	require.Equal(t, int64(999), target.Config.Fee)
 }
 
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, error) {
