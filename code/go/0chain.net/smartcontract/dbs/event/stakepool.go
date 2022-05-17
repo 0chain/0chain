@@ -8,8 +8,12 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
-func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
+type providerAggregateStats struct {
+	Reward      int64 `json:"reward"`
+	TotalReward int64 `json:"total_reward"`
+}
 
+func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 	if spu.Reward != 0 {
 		err := edb.rewardProvider(spu)
 		if err != nil {
@@ -58,7 +62,24 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
 		update.Updates["reward"] = validator.Reward + spu.Reward
 		update.Updates["total_service_charge"] = validator.TotalReward + spu.Reward
 		return edb.updateValidator(*update)
+	case spenum.Miner:
+		miner, err := edb.minerAggregateStats(spu.ProviderId)
+		if err != nil {
+			return err
+		}
+		update.Updates["reward"] = miner.Reward + spu.Reward
+		update.Updates["total_service_charge"] = miner.TotalReward + spu.Reward
+		return edb.updateMiner(*update)
+	case spenum.Sharder:
+		sharder, err := edb.sharderAggregateStats(spu.ProviderId)
+		if err != nil {
+			return err
+		}
+		update.Updates["reward"] = sharder.Reward + spu.Reward
+		update.Updates["total_service_charge"] = sharder.TotalReward + spu.Reward
+		return edb.updateSharder(*update)
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}
+
 }

@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/smartcontract/stakepool"
+
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
@@ -334,7 +336,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Minersc_/getUserPools_No_User_Node_500",
+			name: "Minersc_/getUserPools_No_User_Node_400",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -367,7 +369,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Minersc_/getSharderList_Decoding_User_Node_Err_500",
@@ -574,10 +576,9 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/getUserPools_Fail_Retrieving_Miners_Node_404",
+			name: "Minersc_/getUserPools_Fail_Retrieving_Miners_Node_400",
 			chain: func() *chain.Chain {
-				un := minersc.UserNode{
-					ID: clientID,
+				un := stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						"key": {},
 					},
@@ -617,15 +618,14 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Minersc_/getUserPools_Decoding_Miners_Node_Err_500",
+			name: "Minersc_/getUserPools_Decoding_Miners_Node_Err_400",
 			chain: func() *chain.Chain {
 				minerID := "miner id"
 
-				un := minersc.UserNode{
-					ID: clientID,
+				un := stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						minerID: {},
 					},
@@ -671,7 +671,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:  "Minersc_/getMpksList_Empty_Miners_Mpks_404",
