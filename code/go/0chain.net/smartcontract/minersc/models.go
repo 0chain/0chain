@@ -17,9 +17,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -644,15 +642,6 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	return
 }
 
-type Stat struct {
-	// for miner (totals)
-	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
-	GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
-	// for sharder (totals)
-	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
-	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
-}
-
 type SimpleNodeGeolocation struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -672,22 +661,6 @@ type SimpleNode struct {
 	Delete      bool                  `json:"delete"`
 
 	// settings and statistic
-
-	// DelegateWallet grabs node rewards (excluding stake rewards) and
-	// controls the node setting. If the DelegateWallet hasn't been provided,
-	// then node ID used (for genesis nodes, for example).
-	DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
-	// ServiceChange is % that miner node grabs where it's generator.
-	ServiceCharge float64 `json:"service_charge"` // %
-	// NumberOfDelegates is max allowed number of delegate pools.
-	NumberOfDelegates int `json:"number_of_delegates"`
-	// MinStake allowed by node.
-	MinStake state.Balance `json:"min_stake"`
-	// MaxStake allowed by node.
-	MaxStake state.Balance `json:"max_stake"`
-
-	// Stat contains node statistic.
-	Stat Stat `json:"stat"`
 
 	// NodeType used for delegate pools statistic.
 	NodeType NodeType `json:"node_type,omitempty"`
@@ -760,98 +733,11 @@ func (ps *poolStat) encode() []byte {
 }
 
 type delegatePoolStat struct {
-	ID           string        `json:"id"`            // pool ID
-	Balance      state.Balance `json:"balance"`       //
-	InterestPaid state.Balance `json:"interest_paid"` //
-	RewardPaid   state.Balance `json:"reward_paid"`   //
-	Status       string        `json:"status"`        //
-	High         state.Balance `json:"high"`          // }
-	Low          state.Balance `json:"low"`           // }
-}
-
-func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {
-	dps = new(delegatePoolStat)
-	dps.ID = dp.ID
-	dps.Balance = dp.Balance
-	dps.InterestPaid = dp.InterestPaid
-	dps.RewardPaid = dp.RewardPaid
-	dps.Status = dp.Status
-	dps.High = dp.High
-	dps.Low = dp.Low
-	return
-}
-
-// A userPools represents response for user pools requests.
-type userPools struct {
-	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
-}
-
-func newUserPools() (ups *userPools) {
-	ups = new(userPools)
-	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
-	return
-}
-
-// UserNode keeps references to all user's pools.
-type UserNode struct {
-	ID    string              `json:"id"`       // client ID
-	Pools map[string][]string `json:"pool_map"` // node_id -> [pool_id]
-}
-
-func NewUserNode() *UserNode {
-	return &UserNode{Pools: make(map[datastore.Key][]datastore.Key)}
-}
-
-func (un *UserNode) save(balances cstate.StateContextI) (err error) {
-
-	if len(un.Pools) > 0 {
-		if _, err = balances.InsertTrieNode(un.GetKey(), un); err != nil {
-			return fmt.Errorf("saving user node: %v", err)
-		}
-	} else {
-		if _, err = balances.DeleteTrieNode(un.GetKey()); err != nil {
-			return fmt.Errorf("deleting user node: %v", err)
-		}
-	}
-
-	return
-}
-
-func (un *UserNode) deletePool(nodeId, id datastore.Key) error {
-	for i, pool := range un.Pools[nodeId] {
-		if id == pool {
-			un.Pools[nodeId][i] = un.Pools[nodeId][len(un.Pools[nodeId])-1]
-			un.Pools[nodeId][len(un.Pools[nodeId])-1] = ""
-			un.Pools[nodeId] = un.Pools[nodeId][:len(un.Pools[nodeId])-1]
-			if len(un.Pools[nodeId]) == 0 {
-				delete(un.Pools, nodeId)
-			}
-
-			return nil
-		}
-	}
-	return fmt.Errorf("remove pool failed, cannot find pool %s in user's node %s", id, nodeId)
-}
-
-func (un *UserNode) Encode() []byte {
-	buff, _ := json.Marshal(un)
-	return buff
-}
-
-func (un *UserNode) Decode(input []byte) error {
-	return json.Unmarshal(input, un)
-}
-
-func (un *UserNode) GetKey() datastore.Key {
-	return ADDRESS + un.ID
-}
-
-func (un *UserNode) GetHash() string {
-	return util.ToHex(un.GetHashBytes())
-}
-
-func (un *UserNode) GetHashBytes() []byte {
-	return encryption.RawHash(un.Encode())
+	ID         datastore.Key `json:"id"`
+	Balance    state.Balance `json:"balance"`
+	Reward     state.Balance `json:"reward"`      // uncollected reread
+	RewardPaid state.Balance `json:"reward_paid"` // total reward all time
+	Status     string        `json:"status"`
 }
 
 type deletePool struct {
@@ -886,49 +772,6 @@ func (pn *PhaseNode) Encode() []byte {
 
 func (pn *PhaseNode) Decode(input []byte) error {
 	return json.Unmarshal(input, pn)
-}
-
-func HasPool(pools map[string]*sci.DelegatePool, poolID datastore.Key) bool {
-	pool := pools[poolID]
-	return pool != nil
-}
-
-func AddPool(pools map[string]*sci.DelegatePool, pool *sci.DelegatePool) error {
-	if HasPool(pools, pool.ID) {
-		return common.NewError("can't add pool", "miner node already has pool")
-	}
-	pools[pool.ID] = pool
-	return nil
-}
-
-func DeletePool(pools map[string]*sci.DelegatePool, poolID datastore.Key) error {
-	if HasPool(pools, poolID) {
-		return common.NewError("can't delete pool", "pool doesn't exist")
-	}
-	delete(pools, poolID)
-	return nil
-}
-
-func DecodeDelegatePools(pools map[string]*sci.DelegatePool,
-	poolsBytes json.RawMessage, tokenlock tokenpool.TokenLockInterface) error {
-
-	var rawMessagesPools map[string]json.RawMessage
-	err := json.Unmarshal(poolsBytes, &rawMessagesPools)
-	if err != nil {
-		return err
-	}
-	for _, raw := range rawMessagesPools {
-		tempPool := sci.NewDelegatePool()
-		err = tempPool.Decode(raw, tokenlock)
-		if err != nil {
-			return err
-		}
-		err = AddPool(pools, tempPool)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 type DKGMinerNodes struct {

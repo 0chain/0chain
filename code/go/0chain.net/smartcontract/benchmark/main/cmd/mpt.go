@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
@@ -65,8 +67,8 @@ func getBalances(
 	}
 	bk.Round = 2
 	bk.CreationDate = common.Timestamp(time.Now().Unix())
-	bk.MinerID = minersc.GetMockNodeId(0, minersc.NodeTypeMiner)
-	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, minersc.NodeTypeMiner))
+	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
+	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
@@ -257,7 +259,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, eventDb, balances)
+		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
 
@@ -265,7 +267,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, eventDb, balances)
+		sharders = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
