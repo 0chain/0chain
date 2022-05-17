@@ -86,7 +86,7 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 		sp := NewStakePool()
 		sp.Settings = getMockStakePoolSettings(clients[i])
 		for j := 0; j < numDelegates; j++ {
-			did := getMockAuthoriserStakePoolId(clients[i], j)
+			did := getMockAuthorizerStakePoolId(clients[i], j)
 			sp.Pools[did] = getMockDelegatePool(clients[j])
 
 			if usps[j] == nil {
@@ -150,16 +150,16 @@ func getMockDelegatePool(id string) *stakepool.DelegatePool {
 	}
 }
 
-func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
-	return encryption.Hash(authoriser + "pool" + strconv.Itoa(stake))
+func getMockAuthorizerStakePoolId(authorizer string, stake int) string {
+	return encryption.Hash(authorizer + "pool" + strconv.Itoa(stake))
 }
 
 // todo get from sc.yaml
 func getMockStakePoolSettings(wallet string) stakepool.StakePoolSettings {
 	return stakepool.StakePoolSettings{
 		DelegateWallet:  wallet,
-		MinStake:        currency.Coin(1 * 1e10),
-		MaxStake:        currency.Coin(100 * 1e10),
+		MinStake:        currency.ParseZCN(1),
+		MaxStake:        currency.ParseZCN(100),
 		MaxNumDelegates: 10,
 		ServiceCharge:   0.1,
 	}

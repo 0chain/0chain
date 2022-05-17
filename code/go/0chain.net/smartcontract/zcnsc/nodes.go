@@ -51,13 +51,13 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinMintAmount = currency.Coin(amount * 1e10)
+			gn.MinMintAmount = currency.ParseZCN(amount)
 		case MinBurnAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinBurnAmount = currency.Coin(amount * 1e10)
+			gn.MinBurnAmount = currency.ParseZCN(amount)
 		case BurnAddress:
 			if value == "" {
 				return fmt.Errorf("key %s is empty", key)
@@ -78,13 +78,13 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinStakeAmount = currency.Coin(amount * 1e10)
+			gn.MinStakeAmount = currency.ParseZCN(amount)
 		case MaxFee:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MaxFee = currency.Coin(amount * 1e10)
+			gn.MaxFee = currency.ParseZCN(amount)
 		case OwnerID:
 			gn.OwnerId = value
 		case Cost:

@@ -41,7 +41,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// check burn amount
-	if currency.Coin(trans.Value*1e10) < gn.MinBurnAmount {
+	if currency.ParseZCN(float64(trans.Value)) < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
 			"amount (value) requested (%v) is lower than min burn amount (%v), %s",
 			trans.Value,

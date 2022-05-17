@@ -127,8 +127,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input: (&UpdateAuthorizerStakePoolPayload{
 					StakePoolSettings: stakepool.StakePoolSettings{
 						DelegateWallet:  data.Clients[0],
-						MinStake:        currency.Coin(1.1 * 1e10),
-						MaxStake:        currency.Coin(103 * 1e10),
+						MinStake:        currency.ParseZCN(1.1),
+						MaxStake:        currency.ParseZCN(103),
 						MaxNumDelegates: 7,
 						ServiceCharge:   0.17,
 					},
@@ -140,7 +140,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&stakepool.CollectRewardRequest{
 					ProviderType: spenum.Authorizer,
-					PoolId:       getMockAuthoriserStakePoolId(data.Clients[0], 0),
+					PoolId:       getMockAuthorizerStakePoolId(data.Clients[0], 0),
 				}).Encode(),
 			},
 			{
@@ -156,7 +156,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				endpoint: sc.DeleteFromDelegatePool,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&stakePoolRequest{
-					PoolID:       getMockAuthoriserStakePoolId(data.Clients[0], 0),
+					PoolID:       getMockAuthorizerStakePoolId(data.Clients[0], 0),
 					AuthorizerID: data.Clients[0],
 				}).encode(),
 			},

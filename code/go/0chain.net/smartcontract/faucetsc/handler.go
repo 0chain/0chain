@@ -86,10 +86,10 @@ func (fc *FaucetSmartContract) getConfigHandler(
 	}
 
 	fields := map[string]string{
-		Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
-		Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
-		Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
-		Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
+		Settings[PourAmount]:      fmt.Sprintf("%v", faucetConfig.PourAmount.ToZCN()),
+		Settings[MaxPourAmount]:   fmt.Sprintf("%v", faucetConfig.MaxPourAmount.ToZCN()),
+		Settings[PeriodicLimit]:   fmt.Sprintf("%v", faucetConfig.PeriodicLimit.ToZCN()),
+		Settings[GlobalLimit]:     fmt.Sprintf("%v", faucetConfig.GlobalLimit.ToZCN()),
 		Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
 		Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
 		Settings[OwnerId]:         fmt.Sprintf("%v", faucetConfig.OwnerId),

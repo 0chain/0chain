@@ -29,7 +29,7 @@ func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {
 	return nil
 }
 
-// Verify that the signature on the transfer is correct.
+// VerifySignature Verify that the signature on the transfer is correct.
 func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 	if !encryption.IsValidSignatureScheme(st.SchemeName) {
 		return common.NewError("invalid_signature_scheme", "invalid signature scheme")

@@ -125,7 +125,7 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	require.Equal(t, currency.Coin(11), globalNode.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = currency.Coin(100 * 1e10)
+	node.MinStakeAmount = currency.ParseZCN(100)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)

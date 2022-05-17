@@ -106,8 +106,8 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.Settings.DelegateWallet = delegateWallet
 	mn.Settings.ServiceCharge = minerServiceCharge
 	mn.Settings.MaxNumDelegates = 10
-	mn.Settings.MinStake = 1e10
-	mn.Settings.MaxStake = 100e10
+	mn.Settings.MinStake = currency.ParseZCN(1)
+	mn.Settings.MaxStake = currency.ParseZCN(100)
 	return mustEncode(t, mn)
 }
 
