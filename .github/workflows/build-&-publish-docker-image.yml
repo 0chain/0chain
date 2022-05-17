@@ -180,7 +180,7 @@ jobs:
           custom_go_sdk_version: staging
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@mn-sps
+        uses: 0chain/actions/run-system-tests@master
         with:
           system_tests_branch: master
           network: ${{ env.NETWORK_URL }}
