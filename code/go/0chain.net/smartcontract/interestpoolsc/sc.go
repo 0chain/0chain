@@ -210,27 +210,6 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	}
 }
 
-func getGlobalNode(balances c_state.CommonStateContextI) (*GlobalNode, error) {
-	gn := newGlobalNode()
-	err := balances.GetTrieNode(gn.getKey(), gn)
-	switch err {
-	case nil:
-		return gn, nil
-	case util.ErrValueNotPresent:
-		const pfx = "smart_contracts.interestpoolsc."
-		var conf = config.SmartContractConfig
-		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
-		gn.APR = conf.GetFloat64(pfx + "apr")
-		gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
-		gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
-		gn.OwnerId = conf.GetString(pfx + "owner_id")
-		gn.Cost = conf.GetStringMapInt(pfx + "cost")
-		return gn, nil
-	default:
-		return nil, err
-	}
-}
-
 func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	un, err := ip.getUserNode(t.ClientID, balances)
 	if err != nil {
