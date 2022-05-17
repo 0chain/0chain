@@ -31,6 +31,7 @@ type Sharder struct {
 	MaxStake          state.Balance
 	LastHealthCheck   common.Timestamp
 	Rewards           state.Balance
+	TotalReward       state.Balance
 	Fees              state.Balance
 	Active            bool
 	Longitude         float64
@@ -112,6 +113,20 @@ func (edb *EventDb) addSharder(sharder Sharder) error {
 	result := edb.Store.Get().Create(&sharder)
 
 	return result.Error
+}
+
+func (edb *EventDb) sharderAggregateStats(id string) (*providerAggregateStats, error) {
+	var sharder providerAggregateStats
+	result := edb.Store.Get().
+		Model(&Sharder{}).
+		Where(&Sharder{SharderID: id}).
+		First(&sharder)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving sharder %v, error %v",
+			id, result.Error)
+	}
+
+	return &sharder, nil
 }
 
 func (edb *EventDb) overwriteSharder(sharder Sharder) error {
