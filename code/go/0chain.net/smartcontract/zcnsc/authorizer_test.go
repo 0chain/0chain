@@ -122,17 +122,17 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 	globalNode, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, tokens.Balance(11), globalNode.MinStakeAmount)
+	require.Equal(t, tokens.SAS(11), globalNode.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = tokens.Balance(100 * 1e10)
+	node.MinStakeAmount = tokens.SAS(100 * 1e10)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
 	globalNode, err = GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, tokens.Balance(100*1e10), globalNode.MinStakeAmount)
+	require.Equal(t, tokens.SAS(100*1e10), globalNode.MinStakeAmount)
 }
 
 func Test_Should_FailWithoutInputData(t *testing.T) {
@@ -196,7 +196,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	require.NotNil(t, node)
 
 	cfg := &AuthorizerConfig{
-		Fee: tokens.Balance(111),
+		Fee: tokens.SAS(111),
 	}
 
 	err := node.UpdateConfig(cfg)
@@ -207,7 +207,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	// Get node and check its setting
 	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node.Config)
-	require.Equal(t, tokens.Balance(111), node.Config.Fee)
+	require.Equal(t, tokens.SAS(111), node.Config.Fee)
 }
 
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {

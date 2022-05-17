@@ -15,13 +15,13 @@ var ErrInvalidTransfer = common.NewError("invalid_transfer", "invalid transfer o
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {
-	ClientID   string         `json:"from"`
-	ToClientID string         `json:"to"`
-	Amount     tokens.Balance `json:"amount"`
+	ClientID   string     `json:"from"`
+	ToClientID string     `json:"to"`
+	Amount     tokens.SAS `json:"amount"`
 }
 
 //NewTransfer - create a new transfer
-func NewTransfer(fromClientID, toClientID datastore.Key, amount tokens.Balance) *Transfer {
+func NewTransfer(fromClientID, toClientID datastore.Key, amount tokens.SAS) *Transfer {
 	t := &Transfer{ClientID: fromClientID, ToClientID: toClientID, Amount: amount}
 	return t
 }

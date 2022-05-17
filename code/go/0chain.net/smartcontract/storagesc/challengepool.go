@@ -81,7 +81,7 @@ func (cp *challengePool) moveToWritePool(
 	blobID string,
 	until common.Timestamp,
 	wp *writePool,
-	value tokens.Balance,
+	value tokens.SAS,
 ) (err error) {
 
 	if value == 0 {
@@ -140,7 +140,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward float64,
 				validatos[i], err)
 		}
 	}
-	cp.ZcnPool.Balance -= tokens.Balance(reward)
+	cp.ZcnPool.Balance -= tokens.SAS(reward)
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 
 type challengePoolStat struct {
 	ID         string           `json:"id"`
-	Balance    tokens.Balance   `json:"balance"`
+	Balance    tokens.SAS       `json:"balance"`
 	StartTime  common.Timestamp `json:"start_time"`
 	Expiration common.Timestamp `json:"expiration"`
 	Finalized  bool             `json:"finalized"`

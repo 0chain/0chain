@@ -270,7 +270,7 @@ func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 	return httpclientutil.Transaction{}, e
 }
 
-func getBalance(clientID string) tokens.Balance {
+func getBalance(clientID string) tokens.SAS {
 	balance, err := httpclientutil.MakeClientBalanceRequest(clientID, members.Sharders, confirmationQuorum)
 	if err != nil {
 		Logger.Fatal("Couldn't get client balance", zap.Error(err))

@@ -292,9 +292,9 @@ func TestCommitSettingChanges(t *testing.T) {
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
 							require.NoError(t, err)
-							actual, ok := setting.(tokens.Balance)
+							actual, ok := setting.(tokens.SAS)
 							require.True(t, ok)
-							if tokens.Balance(expected) != actual {
+							if tokens.SAS(expected) != actual {
 								return false
 							}
 						}

@@ -334,7 +334,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	var (
 		// mb reward -- mint for the mb
-		blockReward = tokens.Balance(
+		blockReward = tokens.SAS(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
 		minerr, sharderr = gn.splitByShareRatio(blockReward)
@@ -385,7 +385,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) sumFee(b *block.Block,
-	updateStats bool) tokens.Balance {
+	updateStats bool) tokens.SAS {
 
 	var totalMaxFee int64
 	var feeStats metrics.Counter
@@ -399,7 +399,7 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	if updateStats && feeStats != nil {
 		feeStats.Inc(totalMaxFee)
 	}
-	return tokens.Balance(totalMaxFee)
+	return tokens.SAS(totalMaxFee)
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
@@ -434,7 +434,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
-	fee, mint tokens.Balance, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
+	fee, mint tokens.SAS, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
 ) error {
 	var err error
 	var sharders []*MinerNode

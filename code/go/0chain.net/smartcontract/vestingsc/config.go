@@ -66,7 +66,7 @@ func scConfigKey(scKey string) datastore.Key {
 
 // config represents SC configurations ('vestingsc:' from sc.yaml)
 type config struct {
-	MinLock              tokens.Balance `json:"min_lock"`
+	MinLock              tokens.SAS     `json:"min_lock"`
 	MinDuration          time.Duration  `json:"min_duration"`
 	MaxDuration          time.Duration  `json:"max_duration"`
 	MaxDestinations      int            `json:"max_destinations"`
@@ -110,10 +110,10 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 		switch key {
 		case Settings[MinLock]:
 			if sbValue, err := strconv.ParseFloat(value, 64); err != nil {
-				return fmt.Errorf("value %v cannot be converted to state.Balance, "+
+				return fmt.Errorf("value %v cannot be converted to tokens.SAS, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MinLock = tokens.Balance(sbValue * 1e10)
+				c.MinLock = tokens.SAS(sbValue * 1e10)
 			}
 		case Settings[MinDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
@@ -250,7 +250,7 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
-	conf.MinLock = tokens.Balance(scconf.GetFloat64(prefix+"min_lock") * 1e10)
+	conf.MinLock = tokens.SAS(scconf.GetFloat64(prefix+"min_lock") * 1e10)
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")

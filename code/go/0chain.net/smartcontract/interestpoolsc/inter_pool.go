@@ -13,8 +13,8 @@ import (
 
 type interestPool struct {
 	*tokenpool.ZcnLockingPool `json:"pool"`
-	APR                       float64        `json:"apr"`
-	TokensEarned              tokens.Balance `json:"tokens_earned"`
+	APR                       float64    `json:"apr"`
+	TokensEarned              tokens.SAS `json:"tokens_earned"`
 }
 
 func newInterestPool() *interestPool {
@@ -43,7 +43,7 @@ func (ip *interestPool) decode(input []byte) error {
 	}
 	ie, ok := objMap["tokens_earned"]
 	if ok {
-		var earned tokens.Balance
+		var earned tokens.SAS
 		err = json.Unmarshal(*ie, &earned)
 		if err != nil {
 			return err

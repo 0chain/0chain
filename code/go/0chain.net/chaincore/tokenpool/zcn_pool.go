@@ -26,11 +26,11 @@ func (p *ZcnPool) Decode(input []byte) error {
 	return err
 }
 
-func (p *ZcnPool) GetBalance() tokens.Balance {
+func (p *ZcnPool) GetBalance() tokens.SAS {
 	return p.Balance
 }
 
-func (p *ZcnPool) SetBalance(value tokens.Balance) {
+func (p *ZcnPool) SetBalance(value tokens.SAS) {
 	p.Balance = value
 }
 
@@ -44,17 +44,17 @@ func (p *ZcnPool) DigPool(id string, txn *transaction.Transaction) (*state.Trans
 	}
 
 	p.TokenPool.ID = id // Transaction Hash
-	p.TokenPool.Balance = tokens.Balance(txn.Value)
+	p.TokenPool.Balance = tokens.SAS(txn.Value)
 
 	tpr := &TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,       // transaction hash
 		FromClient: txn.ClientID,   // authorizer node id
 		ToPool:     p.ID,           // transaction hash
 		ToClient:   txn.ToClientID, // smart contracts address
-		Value:      tokens.Balance(txn.Value),
+		Value:      tokens.SAS(txn.Value),
 	}
 
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.Balance(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.SAS(txn.Value))
 	return transfer, string(tpr.Encode()), nil
 }
 
@@ -62,14 +62,14 @@ func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, strin
 	if txn.Value <= 0 {
 		return nil, "", common.NewError("filling pool failed", "insufficient funds")
 	}
-	p.Balance += tokens.Balance(txn.Value)
-	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: tokens.Balance(txn.Value)}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.Balance(txn.Value))
+	p.Balance += tokens.SAS(txn.Value)
+	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: tokens.SAS(txn.Value)}
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.SAS(txn.Value))
 	return transfer, string(tpr.Encode()), nil
 }
 
 // TransferTo ZcnPool to ZcnPool transfer
-func (p *ZcnPool) TransferTo(op TokenPoolI, value tokens.Balance, _ interface{}) (*state.Transfer, string, error) {
+func (p *ZcnPool) TransferTo(op TokenPoolI, value tokens.SAS, _ interface{}) (*state.Transfer, string, error) {
 	if value > p.Balance {
 		return nil, "", common.NewError("pool-to-pool transfer failed", "value exceeds balance")
 	}
@@ -79,7 +79,7 @@ func (p *ZcnPool) TransferTo(op TokenPoolI, value tokens.Balance, _ interface{})
 	return nil, string(tpr.Encode()), nil
 }
 
-func (p *ZcnPool) DrainPool(fromClientID, toClientID string, value tokens.Balance, _ interface{}) (*state.Transfer, string, error) {
+func (p *ZcnPool) DrainPool(fromClientID, toClientID string, value tokens.SAS, _ interface{}) (*state.Transfer, string, error) {
 	if value > p.Balance {
 		return nil, "", common.NewError("draining pool failed", "value exceeds balance")
 	}

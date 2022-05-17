@@ -21,13 +21,13 @@ import (
 //
 
 func (rp *readPool) allocTotal(allocID string,
-	now int64) tokens.Balance {
+	now int64) tokens.SAS {
 
 	return rp.Pools.allocTotal(allocID, now)
 }
 
 func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
-	now int64) tokens.Balance {
+	now int64) tokens.SAS {
 
 	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
 }

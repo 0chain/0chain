@@ -294,10 +294,10 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 				t.Errorf("lock() got = %v, want %v", got, tt.want)
 			}
 			if tt.shouldBeOk {
-				amount := float64(tokens.Balance(tt.args.t.Value))
+				amount := float64(tokens.SAS(tt.args.t.Value))
 				apr := tt.args.gn.APR
 				dur := float64(3 * time.Second)
-				balance := tokens.Balance(tt.args.t.Value) + tokens.Balance(amount*apr*dur/float64(YEAR))
+				balance := tokens.SAS(tt.args.t.Value) + tokens.SAS(amount*apr*dur/float64(YEAR))
 				stateBalance, err := tt.args.balances.GetClientBalance(tt.args.t.ToClientID)
 				if err != nil {
 					t.Errorf("can not fetch balance for %v", tt.args.t.ToClientID)
@@ -721,7 +721,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				FromClient: txn.ClientID,
 				ToPool:     txn.Hash,
 				ToClient:   txn.ToClientID,
-				Value:      tokens.Balance(txn.Value),
+				Value:      tokens.SAS(txn.Value),
 			}).Encode()),
 		},
 		{

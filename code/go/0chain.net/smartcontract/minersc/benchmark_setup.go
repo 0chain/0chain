@@ -57,8 +57,8 @@ func AddMockNodes(
 		newNode.PublicKey = "mockPublicKey"
 		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.Settings.MinStake = tokens.Balance(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.Settings.MaxStake = tokens.Balance(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
+		newNode.Settings.MinStake = tokens.SAS(viper.GetInt64(benchmark.MinerMinStake))
+		newNode.Settings.MaxStake = tokens.SAS(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = newNode.ID
 

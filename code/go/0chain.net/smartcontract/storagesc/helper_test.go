@@ -53,10 +53,10 @@ type Client struct {
 	cap   int64
 
 	// user or blobber
-	balance tokens.Balance
+	balance tokens.SAS
 }
 
-func newClient(balance tokens.Balance, balances chainState.StateContextI) (
+func newClient(balance tokens.SAS, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -176,7 +176,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value, now int64,
 
 // addBlobber to SC
 func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
-	terms Terms, balance tokens.Balance, balances chainState.StateContextI) (
+	terms Terms, balance tokens.SAS, balances chainState.StateContextI) (
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -432,7 +432,7 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 	return
 }
 
-func stakePoolTotal(sp *stakePool) (total tokens.Balance) {
+func stakePoolTotal(sp *stakePool) (total tokens.SAS) {
 	for _, id := range sp.OrderedPoolIds() {
 		total += sp.Pools[id].Balance
 	}

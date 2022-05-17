@@ -17,7 +17,7 @@ func (sp *StakePool) UnlockClientStakePool(
 	providerId datastore.Key,
 	poolId datastore.Key,
 	balances cstate.StateContextI,
-) (tokens.Balance, error) {
+) (tokens.SAS, error) {
 	var usp *UserStakePools
 	usp, err := getOrCreateUserStakePool(providerType, clientID, balances)
 	if err != nil {
@@ -40,7 +40,7 @@ func (sp *StakePool) UnlockPool(
 	poolId datastore.Key,
 	usp *UserStakePools,
 	balances cstate.StateContextI,
-) (tokens.Balance, error) {
+) (tokens.SAS, error) {
 	foundProvider := usp.FindProvider(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
 		return 0, fmt.Errorf("user %v does not own stake pool %v", clientID, poolId)

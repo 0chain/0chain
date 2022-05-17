@@ -40,7 +40,7 @@ func Test_interestPool_encode(t *testing.T) {
 	type fields struct {
 		ZcnLockingPool *tokenpool.ZcnLockingPool
 		APR            float64
-		TokensEarned   tokens.Balance
+		TokensEarned   tokens.SAS
 	}
 	tests := []struct {
 		name   string
@@ -75,7 +75,7 @@ func Test_interestPool_decode(t *testing.T) {
 	type fields struct {
 		ZcnLockingPool *tokenpool.ZcnLockingPool
 		APR            float64
-		TokensEarned   tokens.Balance
+		TokensEarned   tokens.SAS
 	}
 	type args struct {
 		input []byte

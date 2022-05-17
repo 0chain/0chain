@@ -154,8 +154,8 @@ func Test_poolStat_encode(t *testing.T) {
 		TimeLeft     time.Duration
 		Locked       bool
 		APR          float64
-		TokensEarned tokens.Balance
-		Balance      tokens.Balance
+		TokensEarned tokens.SAS
+		Balance      tokens.SAS
 	}
 	tests := []struct {
 		name   string
@@ -219,8 +219,8 @@ func Test_poolStat_decode(t *testing.T) {
 		TimeLeft     time.Duration
 		Locked       bool
 		APR          float64
-		TokensEarned tokens.Balance
-		Balance      tokens.Balance
+		TokensEarned tokens.SAS
+		Balance      tokens.SAS
 	}
 	type args struct {
 		input []byte

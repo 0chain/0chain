@@ -135,7 +135,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 			nil,
 		),
-		clientBalance: tokens.Balance(clientBalance),
+		clientBalance: tokens.SAS(clientBalance),
 		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{

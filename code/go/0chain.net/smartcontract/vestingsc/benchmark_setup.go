@@ -32,7 +32,7 @@ func AddMockClientPools(
 func AddMockConfig(balances cstate.StateContextI) {
 	var conf config
 	conf.OwnerId = viper.GetString(benchmark.VestingPoolOwner)
-	conf.MinLock = tokens.Balance(viper.GetFloat64(benchmark.VestingMinLock) * 1e10)
+	conf.MinLock = tokens.SAS(viper.GetFloat64(benchmark.VestingMinLock) * 1e10)
 	conf.MinDuration = viper.GetDuration(benchmark.VestingMinDuration)
 	conf.MaxDuration = viper.GetDuration(benchmark.VestingMaxDuration)
 	conf.MaxDestinations = viper.GetInt(benchmark.VestingMaxDestinations)

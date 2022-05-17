@@ -16,8 +16,8 @@ type InitStates struct {
 
 // InitState is a clients initial state in the genesis block.
 type InitState struct {
-	ID     datastore.Key  `yaml:"id"`
-	Tokens tokens.Balance `yaml:"tokens"`
+	ID     datastore.Key `yaml:"id"`
+	Tokens tokens.SAS    `yaml:"tokens"`
 }
 
 // NewInitStates is used to return a new InitStates.

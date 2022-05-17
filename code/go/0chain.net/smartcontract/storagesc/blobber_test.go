@@ -85,7 +85,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	)
 
 	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
-		terms Terms, balacne tokens.Balance, balances chainState.StateContextI) (
+		terms Terms, balacne tokens.SAS, balances chainState.StateContextI) (
 		err error) {
 
 		var blob = newClient(0, balances)
@@ -748,13 +748,6 @@ func Test_flow_penalty(t *testing.T) {
 		var (
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
-
-			//until = alloc.Until()
-			// last loop balances (previous balance)
-			//spl = sp.stake()
-			//wpl = wp.allocUntil(allocID, until)
-			//cpl = cp.Balance
-			//b4l = balances.balances[b4.id]
 		)
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
@@ -785,45 +778,6 @@ func Test_flow_penalty(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, "Challenge Failed by Blobber", resp)
 			continue
-
-			//TODO: unreachable code below
-			//
-			//inspectCPIV(t, ssc, allocID, balances)
-			//
-			//// check out pools, blobbers, validators balances
-			//wp, err = ssc.getWritePool(client.id, balances)
-			//require.NoError(t, err)
-			//
-			//// write pool balance should grow (stake -> write_pool)
-			//require.True(t, wpl < wp.allocUntil(allocID, until))
-			//wpl = wp.allocUntil(allocID, until)
-			//
-			//// challenge pool should be reduced (validators reward)
-			//cp, err = ssc.getChallengePool(allocID, balances)
-			//require.NoError(t, err)
-			//
-			//// challenge pool tokens should be moved to blobber and validators
-			//assert.True(t, cp.Balance < cpl)
-			//cpl = cp.Balance
-			//
-			//// offer pool should be reduced (blobber slash)
-			//sp, err = ssc.getStakePool(b4.id, balances)
-			//require.NoError(t, err)
-			//assert.True(t, sp.stake() < spl)
-			//spl = sp.stake()
-			//
-			//// no rewards for the blobber
-			//assert.True(t, b4l == balances.balances[b4.id])
-			//b4l = balances.balances[b4.id]
-			//
-			//// validators reward
-			//for _, val := range valids {
-			//	_, err = ssc.getStakePool(val.id, balances)
-			//	require.NoError(t, err)
-			//}
-			//
-			//// next stage
-			//prevID = challID
 		}
 
 	})
@@ -1332,7 +1286,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tp += 1
 		var b = addBlobber(t, ssc, bcap, tp, terms,
-			tokens.Balance(float64(terms.WritePrice)*sizeInGB(bcap)), balances)
+			tokens.SAS(float64(terms.WritePrice)*sizeInGB(bcap)), balances)
 		blobs = append(blobs, b)
 
 		terms.ReadPrice++

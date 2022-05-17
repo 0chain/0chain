@@ -156,7 +156,7 @@ func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {
 	target := &AuthorizerNode{}
 	source := &PartialState{
 		Config: &AuthorizerConfig{
-			Fee: tokens.Balance(222),
+			Fee: tokens.SAS(222),
 		},
 	}
 
@@ -166,7 +166,7 @@ func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {
 	err = json.Unmarshal(bytes, target)
 	require.NoError(t, err)
 
-	require.Equal(t, tokens.Balance(222), target.Config.Fee)
+	require.Equal(t, tokens.SAS(222), target.Config.Fee)
 }
 
 func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
@@ -177,7 +177,7 @@ func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
 
 	source := &AuthorizerNode{
 		Config: &AuthorizerConfig{
-			Fee: tokens.Balance(222),
+			Fee: tokens.SAS(222),
 		},
 	}
 
@@ -185,20 +185,20 @@ func Test_AuthorizerPartialDownSizeSerialization(t *testing.T) {
 	err := json.Unmarshal(source.Encode(), target)
 
 	require.NoError(t, err)
-	require.Equal(t, tokens.Balance(222), target.Config.Fee)
+	require.Equal(t, tokens.SAS(222), target.Config.Fee)
 }
 
 func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 	source := &AuthorizerNode{
 		Config: &AuthorizerConfig{
-			Fee: tokens.Balance(222),
+			Fee: tokens.SAS(222),
 		},
 	}
 
 	target := &AuthorizerNode{}
 	err := target.Decode(source.Encode())
 	require.NoError(t, err)
-	require.Equal(t, tokens.Balance(222), target.Config.Fee)
+	require.Equal(t, tokens.SAS(222), target.Config.Fee)
 }
 
 func Test_AuthorizerNodeSerialization(t *testing.T) {
@@ -219,7 +219,7 @@ func Test_AuthorizerNodeSerialization(t *testing.T) {
 
 func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	type AuthorizerConfigSource struct {
-		Fee tokens.Balance `json:"fee"`
+		Fee tokens.SAS `json:"fee"`
 	}
 
 	type AuthorizerNodeSource struct {
@@ -230,7 +230,7 @@ func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	source := &AuthorizerNodeSource{
 		ID: "12345678",
 		Config: &AuthorizerConfigSource{
-			Fee: tokens.Balance(999),
+			Fee: tokens.SAS(999),
 		},
 	}
 	target := &AuthorizerNode{}
@@ -247,7 +247,7 @@ func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 	require.Equal(t, "", target.URL)
 	require.Equal(t, "", target.PublicKey)
 	require.Equal(t, "12345678", target.ID)
-	require.Equal(t, tokens.Balance(999), target.Config.Fee)
+	require.Equal(t, tokens.SAS(999), target.Config.Fee)
 }
 
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *GlobalNode, error) {

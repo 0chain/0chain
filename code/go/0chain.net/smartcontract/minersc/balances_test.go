@@ -17,7 +17,7 @@ import (
 )
 
 type testBalances struct {
-	balances      map[datastore.Key]tokens.Balance
+	balances      map[datastore.Key]tokens.SAS
 	txn           *transaction.Transaction
 	transfers     []*state.Transfer
 	tree          map[datastore.Key]util.MPTSerializable
@@ -28,16 +28,16 @@ type testBalances struct {
 
 func newTestBalances() *testBalances {
 	return &testBalances{
-		balances: make(map[datastore.Key]tokens.Balance),
+		balances: make(map[datastore.Key]tokens.SAS),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
 func (tb *testBalances) zeroize() { //nolint
-	tb.balances = make(map[string]tokens.Balance)
+	tb.balances = make(map[string]tokens.SAS)
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b tokens.Balance) { //nolint
+func (tb *testBalances) setBalance(key datastore.Key, b tokens.SAS) { //nolint
 	tb.balances[key] = b
 }
 
@@ -96,7 +96,7 @@ func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
-	b tokens.Balance, err error) {
+	b tokens.SAS, err error) {
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {

@@ -41,7 +41,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// check burn amount
-	if tokens.Balance(trans.Value*1e10) < gn.MinBurnAmount {
+	if tokens.SAS(trans.Value*1e10) < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
 			"amount (value) requested (%v) is lower than min burn amount (%v), %s",
 			trans.Value,
@@ -101,7 +101,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// burn the tokens
-	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, tokens.Balance(trans.Value)))
+	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, tokens.SAS(trans.Value)))
 	if err != nil {
 		return "", err
 	}

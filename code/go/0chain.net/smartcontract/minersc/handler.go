@@ -59,9 +59,9 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 	for _, pool := range minerPools {
 		dp := delegatePoolStat{
 			ID:         pool.PoolID,
-			Balance:    tokens.Balance(pool.Balance),
-			Reward:     tokens.Balance(pool.Reward),
-			RewardPaid: tokens.Balance(pool.TotalReward),
+			Balance:    tokens.SAS(pool.Balance),
+			Reward:     tokens.SAS(pool.Reward),
+			RewardPaid: tokens.SAS(pool.TotalReward),
 			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
@@ -70,9 +70,9 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 	for _, pool := range sharderPools {
 		dp := delegatePoolStat{
 			ID:         pool.PoolID,
-			Balance:    tokens.Balance(pool.Balance),
-			Reward:     tokens.Balance(pool.Reward),
-			RewardPaid: tokens.Balance(pool.TotalReward),
+			Balance:    tokens.SAS(pool.Balance),
+			Reward:     tokens.SAS(pool.Reward),
+			RewardPaid: tokens.SAS(pool.TotalReward),
 			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)

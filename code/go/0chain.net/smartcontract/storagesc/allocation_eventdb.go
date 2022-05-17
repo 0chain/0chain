@@ -90,8 +90,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.StakePoolSettings{
 				DelegateWallet:  b.DelegateWallet,
-				MinStake:        tokens.Balance(b.MinStake),
-				MaxStake:        tokens.Balance(b.MaxStake),
+				MinStake:        tokens.SAS(b.MinStake),
+				MaxStake:        tokens.SAS(b.MaxStake),
 				MaxNumDelegates: b.NumDelegates,
 				ServiceCharge:   b.ServiceCharge,
 			},
@@ -103,7 +103,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
 			Size:          b.Used,
 			Terms:         terms,
-			MinLockDemand: tokens.Balance(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
+			MinLockDemand: tokens.SAS(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation

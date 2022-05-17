@@ -9,9 +9,9 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type SimpleGlobalNode struct {
-	MaxMint     tokens.Balance `json:"max_mint"`
-	TotalMinted tokens.Balance `json:"total_minted"`
-	MinLock     tokens.Balance `json:"min_lock"`
+	MaxMint     tokens.SAS     `json:"max_mint"`
+	TotalMinted tokens.SAS     `json:"total_minted"`
+	MinLock     tokens.SAS     `json:"min_lock"`
 	APR         float64        `json:"apr"`
 	OwnerId     string         `json:"owner_id"`
 	Cost        map[string]int `json:"cost"`

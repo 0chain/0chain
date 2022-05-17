@@ -11,9 +11,9 @@ import (
 
 func TestSimpleGlobalNode_Encode(t *testing.T) {
 	type fields struct {
-		MaxMint     tokens.Balance
-		TotalMinted tokens.Balance
-		MinLock     tokens.Balance
+		MaxMint     tokens.SAS
+		TotalMinted tokens.SAS
+		MinLock     tokens.SAS
 		APR         float64
 		OwnerId     datastore.Key
 	}
@@ -68,9 +68,9 @@ func TestSimpleGlobalNode_Encode(t *testing.T) {
 
 func TestSimpleGlobalNode_Decode(t *testing.T) {
 	type fields struct {
-		MaxMint     tokens.Balance
-		TotalMinted tokens.Balance
-		MinLock     tokens.Balance
+		MaxMint     tokens.SAS
+		TotalMinted tokens.SAS
+		MinLock     tokens.SAS
 		APR         float64
 		OwnerId     datastore.Key
 	}

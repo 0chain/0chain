@@ -104,8 +104,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -127,8 +127,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -274,8 +274,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -295,8 +295,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),

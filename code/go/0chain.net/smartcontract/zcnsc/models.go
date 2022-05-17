@@ -43,7 +43,7 @@ type AuthorizerSignature struct {
 
 type MintPayload struct {
 	EthereumTxnID     string                 `json:"ethereum_txn_id"`
-	Amount            tokens.Balance         `json:"amount"`
+	Amount            tokens.SAS             `json:"amount"`
 	Nonce             int64                  `json:"nonce"`
 	Signatures        []*AuthorizerSignature `json:"signatures"`
 	ReceivingClientID string                 `json:"receiving_client_id"`
@@ -105,7 +105,7 @@ func (mp *MintPayload) Decode(input []byte) error {
 		if err != nil {
 			return err
 		}
-		mp.Amount = tokens.Balance(*value)
+		mp.Amount = tokens.SAS(*value)
 	}
 
 	id, ok = objMap[fieldReceivingClientId]

@@ -658,8 +658,8 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(
 
 // allocation period used to calculate weighted average prices
 type allocPeriod struct {
-	read   tokens.Balance   // read price
-	write  tokens.Balance   // write price
+	read   tokens.SAS       // read price
+	write  tokens.SAS       // write price
 	period common.Timestamp // period (duration)
 	size   int64            // size for period
 }
@@ -669,7 +669,7 @@ func (ap *allocPeriod) weight() float64 {
 }
 
 // returns weighted average read and write prices
-func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite tokens.Balance) {
+func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite tokens.SAS) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
 		ws       = apw + npw                // weights sum
@@ -679,8 +679,8 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite tokens.Balance) 
 	rp = (float64(ap.read) * apw) + (float64(np.read) * npw)
 	wp = (float64(ap.write) * apw) + (float64(np.write) * npw)
 
-	avgRead = tokens.Balance(rp / ws)
-	avgWrite = tokens.Balance(wp / ws)
+	avgRead = tokens.SAS(rp / ws)
+	avgWrite = tokens.SAS(wp / ws)
 	return
 }
 
@@ -1481,14 +1481,14 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
-		var paid tokens.Balance = 0
+		var paid tokens.SAS = 0
 		if lack := d.MinLockDemand - d.Spent; lack > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {
 					pay = aps[apIndex].Balance
 				}
-				aps[apIndex].Balance -= tokens.Balance(pay)
+				aps[apIndex].Balance -= tokens.SAS(pay)
 				if aps[apIndex].Balance == 0 {
 					apIndex++
 				}
@@ -1552,8 +1552,8 @@ func (sc *StorageSmartContract) finishAllocation(
 				return common.NewError("fini_alloc_failed",
 					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			d.Spent += tokens.Balance(reward)
-			d.FinalReward += tokens.Balance(reward)
+			d.Spent += tokens.SAS(reward)
+			d.FinalReward += tokens.SAS(reward)
 			passPayments += reward
 		}
 
@@ -1583,7 +1583,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
 	}
-	cp.Balance -= tokens.Balance(passPayments)
+	cp.Balance -= tokens.SAS(passPayments)
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
 

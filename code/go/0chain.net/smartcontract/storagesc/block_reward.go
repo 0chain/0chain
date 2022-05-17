@@ -184,7 +184,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 }
 
 func getBlockReward(
-	br tokens.Balance,
+	br tokens.SAS,
 	currentRound,
 	brChangePeriod int64,
 	brChangeRatio,

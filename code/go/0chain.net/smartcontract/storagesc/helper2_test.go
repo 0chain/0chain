@@ -19,7 +19,7 @@ import (
 
 type mockStateContext struct {
 	ctx           cstate.StateContext
-	clientBalance tokens.Balance
+	clientBalance tokens.SAS
 	store         map[datastore.Key]util.MPTSerializable
 }
 
@@ -60,7 +60,7 @@ func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)          
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (tokens.Balance, error) {
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (tokens.SAS, error) {
 	return sc.clientBalance, nil
 }
 
@@ -117,6 +117,6 @@ func zcnToInt64(token float64) int64 {
 	return int64(token * float64(x10))
 }
 
-func zcnToBalance(token float64) tokens.Balance {
-	return tokens.Balance(token * float64(x10))
+func zcnToBalance(token float64) tokens.SAS {
+	return tokens.SAS(token * float64(x10))
 }

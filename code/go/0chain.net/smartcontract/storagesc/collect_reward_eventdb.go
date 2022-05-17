@@ -11,7 +11,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 )
 
-func emitAddOrOverwriteReward(amount tokens.Balance, providerID string, prr stakepool.CollectRewardRequest, balances cstate.StateContextI, t *transaction.Transaction) error {
+func emitAddOrOverwriteReward(amount tokens.SAS, providerID string, prr stakepool.CollectRewardRequest, balances cstate.StateContextI, t *transaction.Transaction) error {
 	data, err := json.Marshal(event.Reward{
 		Amount:       int64(amount),
 		BlockNumber:  balances.GetBlock().Round,

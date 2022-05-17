@@ -12,7 +12,7 @@ import (
 func FundMockFaucetSmartContract(pMpt *util.MerklePatriciaTrie) {
 	is := &state.State{}
 	_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	is.Balance = tokens.Balance(viper.GetInt64(benchmark.StartTokens))
+	is.Balance = tokens.SAS(viper.GetInt64(benchmark.StartTokens))
 	_, _ = pMpt.Insert(util.Path(ADDRESS), is)
 }
 

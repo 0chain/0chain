@@ -544,7 +544,7 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens tokens.Balance) util.MPTSerializable {
+func (c *Chain) getInitialState(tokens tokens.SAS) util.MPTSerializable {
 	balance := &state.State{}
 	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	balance.Balance = tokens

@@ -267,7 +267,7 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (tokens.Balance, error) {
+func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (tokens.SAS, error) {
 	s, err := MakeClientStateRequest(clientID, urls, consensus)
 	if err != nil {
 		return 0, err

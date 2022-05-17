@@ -81,7 +81,7 @@ func (gn *GlobalNode) set(key string, value string) error {
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
-		gn.MinLock = tokens.Balance(fValue * 1e10)
+		gn.MinLock = tokens.SAS(fValue * 1e10)
 	case Settings[Apr]:
 		gn.APR, err = strconv.ParseFloat(value, 64)
 		if err != nil {
@@ -99,7 +99,7 @@ func (gn *GlobalNode) set(key string, value string) error {
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
-		gn.MaxMint = tokens.Balance(fValue * 1e10)
+		gn.MaxMint = tokens.SAS(fValue * 1e10)
 	case Settings[OwnerId]:
 		if _, err := hex.DecodeString(value); err != nil {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)

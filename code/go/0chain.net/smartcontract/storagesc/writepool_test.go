@@ -21,7 +21,7 @@ import (
 //
 
 func (wp *writePool) allocTotal(allocID string,
-	now int64) tokens.Balance {
+	now int64) tokens.SAS {
 
 	return wp.Pools.allocTotal(allocID, now)
 }

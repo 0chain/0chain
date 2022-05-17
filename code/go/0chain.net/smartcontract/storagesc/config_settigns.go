@@ -309,7 +309,7 @@ func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 		}
 		iSetting := conf.get(info.setting)
 		if info.configType == smartcontract.StateBalance {
-			sbSetting, ok := iSetting.(tokens.Balance)
+			sbSetting, ok := iSetting.(tokens.SAS)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
@@ -343,7 +343,7 @@ func (conf *Config) setInt(key string, change int) error {
 	return nil
 }
 
-func (conf *Config) setBalance(key string, change tokens.Balance) error {
+func (conf *Config) setBalance(key string, change tokens.SAS) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
@@ -520,7 +520,7 @@ func (conf *Config) set(key string, change string) error {
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := conf.setBalance(key, tokens.Balance(value*x10)); err != nil {
+			if err := conf.setBalance(key, tokens.SAS(value*x10)); err != nil {
 				return err
 			}
 		} else {

@@ -67,9 +67,9 @@ func freeStorageAssignerKey(sscKey, clientId string) datastore.Key {
 type freeStorageAssigner struct {
 	ClientId           string             `json:"client_id"`
 	PublicKey          string             `json:"public_key"`
-	IndividualLimit    tokens.Balance     `json:"individual_limit"`
-	TotalLimit         tokens.Balance     `json:"total_limit"`
-	CurrentRedeemed    tokens.Balance     `json:"current_redeemed"`
+	IndividualLimit    tokens.SAS         `json:"individual_limit"`
+	TotalLimit         tokens.SAS         `json:"total_limit"`
+	CurrentRedeemed    tokens.SAS         `json:"current_redeemed"`
 	RedeemedTimestamps []common.Timestamp `json:"redeemed_timestamps"`
 }
 
@@ -93,7 +93,7 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
-	value tokens.Balance,
+	value tokens.SAS,
 	balances cstate.StateContextI,
 ) error {
 	if marker.Timestamp >= now {
@@ -150,13 +150,13 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	var newTotalLimit = tokens.Balance(assignerInfo.TotalLimit * floatToBalance)
+	var newTotalLimit = tokens.SAS(assignerInfo.TotalLimit * floatToBalance)
 	if newTotalLimit > conf.MaxTotalFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
-	var newIndividualLimit = tokens.Balance(assignerInfo.IndividualLimit * floatToBalance)
+	var newIndividualLimit = tokens.SAS(assignerInfo.IndividualLimit * floatToBalance)
 	if newIndividualLimit > conf.MaxIndividualFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"individual allocation token limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
@@ -235,7 +235,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, tokens.Balance(txn.Value), balances); err != nil {
+	if err := assigner.validate(marker, txn.CreationDate, tokens.SAS(txn.Value), balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
@@ -258,7 +258,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	assigner.CurrentRedeemed += tokens.Balance(txn.Value)
+	assigner.CurrentRedeemed += tokens.SAS(txn.Value)
 	readPoolTokens := int64(float64(txn.Value) * conf.FreeAllocationSettings.ReadPoolFraction)
 	txn.Value -= readPoolTokens
 
@@ -327,7 +327,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, tokens.Balance(txn.Value), balances); err != nil {
+	if err := assigner.validate(marker, txn.CreationDate, tokens.SAS(txn.Value), balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"marker verification failed: %v", err)
 	}
@@ -349,7 +349,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		return "", common.NewErrorf("update_free_storage_request", err.Error())
 	}
 
-	assigner.CurrentRedeemed += tokens.Balance(txn.Value)
+	assigner.CurrentRedeemed += tokens.SAS(txn.Value)
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)

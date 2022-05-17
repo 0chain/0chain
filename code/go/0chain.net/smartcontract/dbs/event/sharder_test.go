@@ -28,10 +28,10 @@ func TestSharders(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 
 	type Stat struct {
-		GeneratorRewards tokens.Balance `json:"generator_rewards,omitempty"`
-		GeneratorFees    tokens.Balance `json:"generator_fees,omitempty"`
-		SharderRewards   tokens.Balance `json:"sharder_rewards,omitempty"`
-		SharderFees      tokens.Balance `json:"sharder_fees,omitempty"`
+		GeneratorRewards tokens.SAS `json:"generator_rewards,omitempty"`
+		GeneratorFees    tokens.SAS `json:"generator_fees,omitempty"`
+		SharderRewards   tokens.SAS `json:"sharder_rewards,omitempty"`
+		SharderFees      tokens.SAS `json:"sharder_fees,omitempty"`
 	}
 
 	type NodeType int
@@ -59,9 +59,9 @@ func TestSharders(t *testing.T) {
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
 		// MinStake allowed by node.
-		MinStake tokens.Balance `json:"min_stake"`
+		MinStake tokens.SAS `json:"min_stake"`
 		// MaxStake allowed by node.
-		MaxStake tokens.Balance `json:"max_stake"`
+		MaxStake tokens.SAS `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -87,7 +87,7 @@ func TestSharders(t *testing.T) {
 			PublicKey:         sn.PublicKey,
 			ShortName:         sn.ShortName,
 			BuildTag:          sn.BuildTag,
-			TotalStaked:       tokens.Balance(sn.TotalStaked),
+			TotalStaked:       tokens.SAS(sn.TotalStaked),
 			Delete:            sn.Delete,
 			DelegateWallet:    sn.DelegateWallet,
 			ServiceCharge:     sn.ServiceCharge,

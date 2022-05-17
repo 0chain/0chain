@@ -46,8 +46,8 @@ func TestValidatorNode(t *testing.T) {
 		Stake:       100,
 
 		DelegateWallet: "delegate wallet",
-		MinStake:       tokens.Balance(53),
-		MaxStake:       tokens.Balance(57),
+		MinStake:       tokens.SAS(53),
+		MaxStake:       tokens.SAS(57),
 		NumDelegates:   59,
 		ServiceCharge:  61.0,
 	}

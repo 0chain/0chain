@@ -15,7 +15,7 @@ import (
 // test extension
 //
 
-func (aps allocationPools) gimmeAll() (total tokens.Balance) {
+func (aps allocationPools) gimmeAll() (total tokens.SAS) {
 	for _, ap := range aps {
 		total += ap.Balance
 	}
@@ -23,7 +23,7 @@ func (aps allocationPools) gimmeAll() (total tokens.Balance) {
 }
 
 func (aps allocationPools) allocTotal(allocID string, now int64) (
-	total tokens.Balance) {
+	total tokens.SAS) {
 
 	for _, ap := range aps {
 		if ap.ExpireAt < common.Timestamp(now) {
@@ -37,7 +37,7 @@ func (aps allocationPools) allocTotal(allocID string, now int64) (
 }
 
 func (aps allocationPools) allocBlobberTotal(allocID, blobberID string,
-	now int64) (total tokens.Balance) {
+	now int64) (total tokens.SAS) {
 
 	for _, ap := range aps {
 		if ap.ExpireAt < common.Timestamp(now) {

@@ -109,13 +109,13 @@ func postfix(section string) string {
 
 func loadGlobalNode() (conf *ZCNSConfig) {
 	conf = new(ZCNSConfig)
-	conf.MinMintAmount = tokens.Balance(cfg.GetInt(postfix(MinMintAmount)))
-	conf.MinBurnAmount = tokens.Balance(cfg.GetInt64(postfix(MinBurnAmount)))
-	conf.MinStakeAmount = tokens.Balance(cfg.GetInt64(postfix(MinStakeAmount)))
+	conf.MinMintAmount = tokens.SAS(cfg.GetInt(postfix(MinMintAmount)))
+	conf.MinBurnAmount = tokens.SAS(cfg.GetInt64(postfix(MinBurnAmount)))
+	conf.MinStakeAmount = tokens.SAS(cfg.GetInt64(postfix(MinStakeAmount)))
 	conf.PercentAuthorizers = cfg.GetFloat64(postfix(PercentAuthorizers))
 	conf.MinAuthorizers = cfg.GetInt64(postfix(MinAuthorizers))
 	conf.MinLockAmount = cfg.GetInt64(postfix(MinLockAmount))
-	conf.MaxFee = tokens.Balance(cfg.GetInt64(postfix(MaxFee)))
+	conf.MaxFee = tokens.SAS(cfg.GetInt64(postfix(MaxFee)))
 	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))

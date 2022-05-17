@@ -12,48 +12,48 @@ import (
 
 type Allocation struct {
 	gorm.Model
-	AllocationID               string         `json:"allocation_id" gorm:"uniqueIndex"`
-	AllocationName             string         `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
-	TransactionID              string         `json:"transaction_id"`
-	DataShards                 int            `json:"data_shards"`
-	ParityShards               int            `json:"parity_shards"`
-	Size                       int64          `json:"size"`
-	Expiration                 int64          `json:"expiration"`
-	Terms                      string         `json:"terms"`
-	Owner                      string         `json:"owner"`
-	OwnerPublicKey             string         `json:"owner_public_key"`
-	IsImmutable                bool           `json:"is_immutable"`
-	ReadPriceMin               tokens.Balance `json:"read_price_min"`
-	ReadPriceMax               tokens.Balance `json:"read_price_max"`
-	WritePriceMin              tokens.Balance `json:"write_price_min"`
-	WritePriceMax              tokens.Balance `json:"write_price_max"`
-	MaxChallengeCompletionTime int64          `json:"max_challenge_completion_time"`
-	ChallengeCompletionTime    int64          `json:"challenge_completion_time"`
-	StartTime                  int64          `json:"start_time"`
-	Finalized                  bool           `json:"finalized"`
-	Cancelled                  bool           `json:"cancelled"`
-	UsedSize                   int64          `json:"used_size"`
-	MovedToChallenge           tokens.Balance `json:"moved_to_challenge"`
-	MovedBack                  tokens.Balance `json:"moved_back"`
-	MovedToValidators          tokens.Balance `json:"moved_to_validators"`
-	TimeUnit                   int64          `json:"time_unit"`
-	NumWrites                  int64          `json:"num_writes"`
-	NumReads                   int64          `json:"num_reads"`
-	TotalChallenges            int64          `json:"total_challenges"`
-	OpenChallenges             int64          `json:"open_challenges"`
-	SuccessfulChallenges       int64          `json:"successful_challenges"`
-	FailedChallenges           int64          `json:"failed_challenges"`
-	LatestClosedChallengeTxn   string         `json:"latest_closed_challenge_txn"`
+	AllocationID               string     `json:"allocation_id" gorm:"uniqueIndex"`
+	AllocationName             string     `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
+	TransactionID              string     `json:"transaction_id"`
+	DataShards                 int        `json:"data_shards"`
+	ParityShards               int        `json:"parity_shards"`
+	Size                       int64      `json:"size"`
+	Expiration                 int64      `json:"expiration"`
+	Terms                      string     `json:"terms"`
+	Owner                      string     `json:"owner"`
+	OwnerPublicKey             string     `json:"owner_public_key"`
+	IsImmutable                bool       `json:"is_immutable"`
+	ReadPriceMin               tokens.SAS `json:"read_price_min"`
+	ReadPriceMax               tokens.SAS `json:"read_price_max"`
+	WritePriceMin              tokens.SAS `json:"write_price_min"`
+	WritePriceMax              tokens.SAS `json:"write_price_max"`
+	MaxChallengeCompletionTime int64      `json:"max_challenge_completion_time"`
+	ChallengeCompletionTime    int64      `json:"challenge_completion_time"`
+	StartTime                  int64      `json:"start_time"`
+	Finalized                  bool       `json:"finalized"`
+	Cancelled                  bool       `json:"cancelled"`
+	UsedSize                   int64      `json:"used_size"`
+	MovedToChallenge           tokens.SAS `json:"moved_to_challenge"`
+	MovedBack                  tokens.SAS `json:"moved_back"`
+	MovedToValidators          tokens.SAS `json:"moved_to_validators"`
+	TimeUnit                   int64      `json:"time_unit"`
+	NumWrites                  int64      `json:"num_writes"`
+	NumReads                   int64      `json:"num_reads"`
+	TotalChallenges            int64      `json:"total_challenges"`
+	OpenChallenges             int64      `json:"open_challenges"`
+	SuccessfulChallenges       int64      `json:"successful_challenges"`
+	FailedChallenges           int64      `json:"failed_challenges"`
+	LatestClosedChallengeTxn   string     `json:"latest_closed_challenge_txn"`
 }
 
 type AllocationTerm struct {
 	BlobberID    string `json:"blobber_id"`
 	AllocationID string `json:"allocation_id"`
 	// ReadPrice is price for reading. Token / GB (no time unit).
-	ReadPrice tokens.Balance `json:"read_price"`
+	ReadPrice tokens.SAS `json:"read_price"`
 	// WritePrice is price for reading. Token / GB / time unit. Also,
 	// it used to calculate min_lock_demand value.
-	WritePrice tokens.Balance `json:"write_price"`
+	WritePrice tokens.SAS `json:"write_price"`
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.

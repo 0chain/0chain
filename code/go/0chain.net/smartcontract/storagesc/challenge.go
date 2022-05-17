@@ -147,12 +147,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 			return fmt.Errorf("can't get allocation's write pool: %v", err)
 		}
 		var until = alloc.Until()
-		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, tokens.Balance(back))
+		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, tokens.SAS(back))
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
-		alloc.MovedBack += tokens.Balance(back)
-		blobAlloc.Returned += tokens.Balance(back)
+		alloc.MovedBack += tokens.SAS(back)
+		blobAlloc.Returned += tokens.SAS(back)
 		// save the write pool
 		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 			return fmt.Errorf("can't save allocation's write pool: %v", err)
@@ -169,7 +169,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
-	blobAlloc.ChallengeReward += tokens.Balance(blobberReward)
+	blobAlloc.ChallengeReward += tokens.SAS(blobberReward)
 
 	// validators' stake pools
 	var vsps []*stakePool
@@ -181,7 +181,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += tokens.Balance(validatorsReward)
+	alloc.MovedToValidators += tokens.SAS(validatorsReward)
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -291,7 +291,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += tokens.Balance(validatorsReward)
+	alloc.MovedToValidators += tokens.SAS(validatorsReward)
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -300,18 +300,18 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// move back to write pool
 	var until = alloc.Until()
-	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, tokens.Balance(move))
+	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, tokens.SAS(move))
 	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}
-	alloc.MovedBack += tokens.Balance(move)
-	blobAlloc.Returned += tokens.Balance(move)
+	alloc.MovedBack += tokens.SAS(move)
+	blobAlloc.Returned += tokens.SAS(move)
 
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 && move > 0 &&
-		tokens.Balance(conf.BlobberSlash*move) > 0 {
+		tokens.SAS(conf.BlobberSlash*move) > 0 {
 
-		var slash = tokens.Balance(conf.BlobberSlash * move)
+		var slash = tokens.SAS(conf.BlobberSlash * move)
 
 		// load stake pool
 		var sp *stakePool
@@ -319,7 +319,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
-		var move tokens.Balance
+		var move tokens.SAS
 		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, wp, blobAlloc.Offer(), slash, balances)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)

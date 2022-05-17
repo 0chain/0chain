@@ -22,17 +22,17 @@ type Miner struct {
 	PublicKey         string
 	ShortName         string
 	BuildTag          string
-	TotalStaked       tokens.Balance
+	TotalStaked       tokens.SAS
 	Delete            bool
 	DelegateWallet    string
 	ServiceCharge     float64
 	NumberOfDelegates int
-	MinStake          tokens.Balance
-	MaxStake          tokens.Balance
+	MinStake          tokens.SAS
+	MaxStake          tokens.SAS
 	LastHealthCheck   common.Timestamp
-	Rewards           tokens.Balance
-	TotalReward       tokens.Balance
-	Fees              tokens.Balance
+	Rewards           tokens.SAS
+	TotalReward       tokens.SAS
+	Fees              tokens.SAS
 	Active            bool
 	Longitude         float64
 	Latitude          float64
@@ -77,7 +77,7 @@ type MinerQuery struct {
 	PublicKey         null.String
 	ShortName         null.String
 	BuildTag          null.String
-	TotalStaked       tokens.Balance
+	TotalStaked       tokens.SAS
 	Delete            null.Bool
 	DelegateWallet    null.String
 	ServiceCharge     null.Float

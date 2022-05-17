@@ -169,7 +169,7 @@ func (gn *GlobalNode) setInt(key string, change int) error {
 	return nil
 }
 
-func (gn *GlobalNode) setBalance(key string, change tokens.Balance) error {
+func (gn *GlobalNode) setBalance(key string, change tokens.SAS) error {
 	switch Settings[key].Setting {
 	case MaxMint:
 		gn.MaxMint = change
@@ -256,7 +256,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := gn.setBalance(key, tokens.Balance(value*x10)); err != nil {
+			if err := gn.setBalance(key, tokens.SAS(value*x10)); err != nil {
 				return err
 			}
 		} else {

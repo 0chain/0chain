@@ -29,8 +29,8 @@ const (
 
 const x10 = 10 * 1000 * 1000 * 1000
 
-func zcnToBalance(token float64) tokens.Balance {
-	return tokens.Balance(token * float64(x10))
+func zcnToBalance(token float64) tokens.SAS {
+	return tokens.SAS(token * float64(x10))
 }
 
 type mockStateContext struct {

@@ -278,8 +278,8 @@ func TestAddChallenge(t *testing.T) {
 
 func TestBlobberReward(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
-	var challengePoolIntegralValue = tokens.Balance(73000000)
-	var challengePoolBalance = tokens.Balance(700000)
+	var challengePoolIntegralValue = tokens.SAS(73000000)
+	var challengePoolBalance = tokens.SAS(700000)
 	var partial = 0.9
 	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
@@ -322,7 +322,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
-		var challengePoolBalance = tokens.Balance(0)
+		var challengePoolBalance = tokens.SAS(0)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -350,8 +350,8 @@ func TestBlobberReward(t *testing.T) {
 
 func TestBlobberPenalty(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
-	var challengePoolIntegralValue = tokens.Balance(73000000)
-	var challengePoolBalance = tokens.Balance(700000)
+	var challengePoolIntegralValue = tokens.SAS(73000000)
+	var challengePoolBalance = tokens.SAS(700000)
 	var partial = 0.9
 	var preiviousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
@@ -413,7 +413,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
-		var challengePoolBalance = tokens.Balance(0)
+		var challengePoolBalance = tokens.SAS(0)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
@@ -432,7 +432,7 @@ func testBlobberPenalty(
 	validatorStakes [][]int64,
 	wpBalances []int64,
 	otherWritePools int,
-	challengePoolIntegralValue, challengePoolBalance tokens.Balance,
+	challengePoolIntegralValue, challengePoolBalance tokens.SAS,
 	partial float64,
 	size int64,
 	previous, thisChallange, thisExpires, now common.Timestamp,
@@ -489,7 +489,7 @@ func testBlobberReward(
 	validatorStakes [][]int64,
 	wpBalances []int64,
 	otherWritePools int,
-	challengePoolIntegralValue, challengePoolBalance tokens.Balance,
+	challengePoolIntegralValue, challengePoolBalance tokens.SAS,
 	partial float64,
 	previous, thisChallange, thisExpires, now common.Timestamp,
 ) (err error) {
@@ -546,7 +546,7 @@ func setupChallengeMocks(
 	validatorStakes [][]int64,
 	wpBalances []int64,
 	otherWritePools int,
-	challengePoolIntegralValue, challengePoolBalance tokens.Balance,
+	challengePoolIntegralValue, challengePoolBalance tokens.SAS,
 	thisChallange, thisExpires, now common.Timestamp,
 	size int64,
 ) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
@@ -620,7 +620,7 @@ func setupChallengeMocks(
 	}
 	for _, balance := range wpBalances {
 		var newPool = &allocationPool{}
-		newPool.Balance = tokens.Balance(balance)
+		newPool.Balance = tokens.SAS(balance)
 		newPool.AllocationID = allocation.ID
 		newPool.Blobbers = blobberPools{}
 		newPool.Blobbers.add(&blobberPool{BlobberID: blobberId})
@@ -639,7 +639,7 @@ func setupChallengeMocks(
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
 		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
-		sp.Pools["paula"+id].Balance = tokens.Balance(stake)
+		sp.Pools["paula"+id].Balance = tokens.SAS(stake)
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
@@ -651,7 +651,7 @@ func setupChallengeMocks(
 		sPool.Settings.ServiceCharge = validatorYamls[i].serviceCharge
 		for j, stake := range validatorStakes[i] {
 			var pool = &stakepool.DelegatePool{}
-			pool.Balance = tokens.Balance(stake)
+			pool.Balance = tokens.SAS(stake)
 			var id = validator + " delegate " + strconv.Itoa(j)
 			sPool.Pools[id] = pool
 		}

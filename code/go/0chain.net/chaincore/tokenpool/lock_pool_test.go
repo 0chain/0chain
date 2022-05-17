@@ -208,7 +208,7 @@ func TestZcnLockingPool_GetBalance(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   tokens.Balance
+		want   tokens.SAS
 	}{
 		{
 			name: "OK",
@@ -284,7 +284,7 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	p.Balance += tokens.Balance(txn.Value)
+	p.Balance += tokens.SAS(txn.Value)
 	p.ID = "pool id"
 
 	tpr := &tokenpool.TokenPoolTransferResponse{
@@ -292,9 +292,9 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 		FromClient: txn.ClientID,
 		ToPool:     p.ID,
 		ToClient:   txn.ToClientID,
-		Value:      tokens.Balance(txn.Value),
+		Value:      tokens.SAS(txn.Value),
 	}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.Balance(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.SAS(txn.Value))
 
 	type fields struct {
 		ZcnPool            tokenpool.ZcnPool
@@ -369,7 +369,7 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 		}
 		fromClientID = "from client id"
 		toClientID   = "to client id"
-		value        = tokens.Balance(4)
+		value        = tokens.SAS(4)
 
 		tpr = &tokenpool.TokenPoolTransferResponse{
 			FromClient: fromClientID,
@@ -387,7 +387,7 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 	type args struct {
 		fromClientID string
 		toClientID   string
-		value        tokens.Balance
+		value        tokens.SAS
 		entity       interface{}
 	}
 	tests := []struct {

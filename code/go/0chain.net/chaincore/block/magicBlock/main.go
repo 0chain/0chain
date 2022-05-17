@@ -296,7 +296,7 @@ func generateStates(artifacts *cmdMagicBlock) {
 	for _, miner := range artifacts.block.Miners.Nodes {
 		s := state.InitState{
 			ID:     miner.ID,
-			Tokens: tokens.Balance(defaultTokenSize),
+			Tokens: tokens.SAS(defaultTokenSize),
 		}
 
 		states.States = append(states.States, s)

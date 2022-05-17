@@ -125,7 +125,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 	for _, b := range alloc.BlobberAllocs {
 		var ratio = float64(b.Terms.WritePrice) / total
 		bps.add(&blobberPool{
-			Balance:   tokens.Balance(float64(value) * ratio),
+			Balance:   tokens.SAS(float64(value) * ratio),
 			BlobberID: b.BlobberID,
 		})
 	}
@@ -133,7 +133,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
-	value tokens.Balance) {
+	value tokens.SAS) {
 
 	return wp.Pools.allocUntil(allocID, until)
 }
@@ -297,7 +297,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   tokens.Balance(t.Value),
+			Balance:   tokens.SAS(t.Value),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -311,7 +311,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.WritePrice) / total
 			bps.add(&blobberPool{
-				Balance:   tokens.Balance(float64(t.Value) * ratio),
+				Balance:   tokens.SAS(float64(t.Value) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}

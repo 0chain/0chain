@@ -63,7 +63,7 @@ type StateContextI interface {
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
-	GetClientBalance(clientID datastore.Key) (tokens.Balance, error)
+	GetClientBalance(clientID datastore.Key) (tokens.SAS, error)
 	SetStateContext(st *state.State) error                       // cannot use in smart contracts or REST endpoints
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error // Can use in REST endpoints
 	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
@@ -235,7 +235,7 @@ func (sc *StateContext) GetEventDB() *event.EventDb {
 
 //Validate - implement interface
 func (sc *StateContext) Validate() error {
-	var amount tokens.Balance
+	var amount tokens.SAS
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
 			amount += transfer.Amount
@@ -248,9 +248,9 @@ func (sc *StateContext) Validate() error {
 			return state.ErrInvalidTransfer
 		}
 	}
-	totalValue := tokens.Balance(sc.txn.Value)
+	totalValue := tokens.SAS(sc.txn.Value)
 	if config.DevConfiguration.IsFeeEnabled {
-		totalValue += tokens.Balance(sc.txn.Fee)
+		totalValue += tokens.SAS(sc.txn.Fee)
 	}
 	if amount > totalValue {
 		return state.ErrInvalidTransfer
@@ -283,7 +283,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 }
 
 //GetClientBalance - get the balance of the client
-func (sc *StateContext) GetClientBalance(clientID string) (tokens.Balance, error) {
+func (sc *StateContext) GetClientBalance(clientID string) (tokens.SAS, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
 		return 0, err

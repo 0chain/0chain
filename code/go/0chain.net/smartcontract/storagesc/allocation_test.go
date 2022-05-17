@@ -629,12 +629,12 @@ func TestExtendAllocation(t *testing.T) {
 		if txn.Value > 0 {
 			balances.On(
 				"GetClientBalance", txn.ClientID,
-			).Return(tokens.Balance(txn.Value+1), nil).Once()
+			).Return(tokens.SAS(txn.Value+1), nil).Once()
 			balances.On(
 				"AddTransfer", &state.Transfer{
 					ClientID:   txn.ClientID,
 					ToClientID: txn.ToClientID,
-					Amount:     tokens.Balance(txn.Value),
+					Amount:     tokens.SAS(txn.Value),
 				},
 			).Return(nil).Once()
 		}
@@ -707,7 +707,7 @@ func TestExtendAllocation(t *testing.T) {
 				for _, blobber := range blobbers {
 					ap.Blobbers.add(&blobberPool{
 						BlobberID: blobber.ID,
-						Balance:   ap.Balance / tokens.Balance(bCount*args.poolCount[i]),
+						Balance:   ap.Balance / tokens.SAS(bCount*args.poolCount[i]),
 					})
 				}
 				wp.Pools.add(&ap)
@@ -755,7 +755,7 @@ func TestExtendAllocation(t *testing.T) {
 				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
 					float64(sa.durationInTimeUnits(args.request.Expiration))
-				return cp.Balance/10 == tokens.Balance(newFunds/10) // ignore type cast errors
+				return cp.Balance/10 == tokens.SAS(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
 
@@ -1479,7 +1479,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, tokens.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
+	assert.Equal(t, tokens.SAS(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
 	_, err = ssc.getStakePool("b1", balances)
 	require.NoError(t, err)
@@ -1884,8 +1884,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		var blob *StorageNode
 		blob, err = ssc.getBlobber(b.id, balances)
 		require.NoError(t, err)
-		blob.Terms.WritePrice = tokens.Balance(1.8 * x10)
-		blob.Terms.ReadPrice = tokens.Balance(0.8 * x10)
+		blob.Terms.WritePrice = tokens.SAS(1.8 * x10)
+		blob.Terms.ReadPrice = tokens.SAS(0.8 * x10)
 		_, err = updateBlobber(t, blob, 0, tp, ssc, balances)
 		require.NoError(t, err)
 	}

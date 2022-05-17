@@ -11,10 +11,10 @@ import (
 
 func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, txn.ToClientID, tokens.Balance(txn.Value)),
+		txn.ClientID, txn.ToClientID, tokens.SAS(txn.Value)),
 	)
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, minersc.ADDRESS, tokens.Balance(txn.Fee)),
+		txn.ClientID, minersc.ADDRESS, tokens.SAS(txn.Fee)),
 	)
 
 	clientState := balances.GetState()
@@ -50,7 +50,7 @@ func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI
 
 func mockMint(
 	to []byte,
-	amount tokens.Balance,
+	amount tokens.SAS,
 	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {
@@ -66,7 +66,7 @@ func mockMint(
 
 func mockTransferAmount(
 	from, to []byte,
-	amount tokens.Balance,
+	amount tokens.SAS,
 	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {

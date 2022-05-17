@@ -416,7 +416,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
-		value    = tokens.Balance(float64(details.Terms.ReadPrice) * sizeRead)
+		value    = tokens.SAS(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
@@ -546,7 +546,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		move  tokens.Balance
+		move  tokens.SAS
 	)
 
 	// the details will be saved in caller with allocation object (the details

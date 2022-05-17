@@ -68,7 +68,7 @@ type runtimeValues struct {
 	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
-	minted         tokens.Balance
+	minted         tokens.SAS
 	fees           []int64
 }
 

@@ -116,7 +116,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 					PublicKey: data.PublicKeys[0],
 					URL:       "http://localhost:3030",
 					Config: &AuthorizerConfig{
-						Fee: tokens.Balance(viper.GetInt(benchmark.ZcnMaxFee) / 2),
+						Fee: tokens.SAS(viper.GetInt(benchmark.ZcnMaxFee) / 2),
 					},
 				}).Encode(),
 			},
@@ -127,8 +127,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input: (&UpdateAuthorizerStakePoolPayload{
 					StakePoolSettings: stakepool.StakePoolSettings{
 						DelegateWallet:  data.Clients[0],
-						MinStake:        tokens.Balance(1.1 * 1e10),
-						MaxStake:        tokens.Balance(103 * 1e10),
+						MinStake:        tokens.SAS(1.1 * 1e10),
+						MaxStake:        tokens.SAS(103 * 1e10),
 						MaxNumDelegates: 7,
 						ServiceCharge:   0.17,
 					},

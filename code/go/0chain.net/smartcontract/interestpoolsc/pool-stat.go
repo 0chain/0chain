@@ -36,8 +36,8 @@ type poolStat struct {
 	TimeLeft     time.Duration    `json:"time_left"`
 	Locked       bool             `json:"locked"`
 	APR          float64          `json:"apr"`
-	TokensEarned tokens.Balance   `json:"tokens_earned"`
-	Balance      tokens.Balance   `json:"balance"`
+	TokensEarned tokens.SAS       `json:"tokens_earned"`
+	Balance      tokens.SAS       `json:"balance"`
 }
 
 func (ps *poolStat) encode() []byte {

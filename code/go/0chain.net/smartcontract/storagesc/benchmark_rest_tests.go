@@ -123,8 +123,8 @@ func BenchmarkRestTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					PreferredBlobbers:          []string{},
-					ReadPriceRange:             PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, tokens.SAS(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, tokens.SAS(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()

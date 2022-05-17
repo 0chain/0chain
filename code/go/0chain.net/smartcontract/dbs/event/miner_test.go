@@ -29,11 +29,11 @@ func TestMiners(t *testing.T) {
 
 	type Stat struct {
 		// for miner (totals)
-		GeneratorRewards tokens.Balance `json:"generator_rewards,omitempty"`
-		GeneratorFees    tokens.Balance `json:"generator_fees,omitempty"`
+		GeneratorRewards tokens.SAS `json:"generator_rewards,omitempty"`
+		GeneratorFees    tokens.SAS `json:"generator_fees,omitempty"`
 		// for sharder (totals)
-		SharderRewards tokens.Balance `json:"sharder_rewards,omitempty"`
-		SharderFees    tokens.Balance `json:"sharder_fees,omitempty"`
+		SharderRewards tokens.SAS `json:"sharder_rewards,omitempty"`
+		SharderFees    tokens.SAS `json:"sharder_fees,omitempty"`
 	}
 
 	type NodeType int
@@ -61,9 +61,9 @@ func TestMiners(t *testing.T) {
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
 		// MinStake allowed by node.
-		MinStake tokens.Balance `json:"min_stake"`
+		MinStake tokens.SAS `json:"min_stake"`
 		// MaxStake allowed by node.
-		MaxStake tokens.Balance `json:"max_stake"`
+		MaxStake tokens.SAS `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -89,7 +89,7 @@ func TestMiners(t *testing.T) {
 			PublicKey:         mn.PublicKey,
 			ShortName:         mn.ShortName,
 			BuildTag:          mn.BuildTag,
-			TotalStaked:       tokens.Balance(mn.TotalStaked),
+			TotalStaked:       tokens.SAS(mn.TotalStaked),
 			Delete:            mn.Delete,
 			DelegateWallet:    mn.DelegateWallet,
 			ServiceCharge:     mn.ServiceCharge,

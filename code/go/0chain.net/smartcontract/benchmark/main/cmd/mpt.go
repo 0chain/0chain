@@ -495,7 +495,7 @@ func addMockClients(
 		}
 		is := &state.State{}
 		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = tokens.Balance(viper.GetInt64(benchmark.StartTokens))
+		is.Balance = tokens.SAS(viper.GetInt64(benchmark.StartTokens))
 		_, err = pMpt.Insert(util.Path(clientID), is)
 		if err != nil {
 			panic(err)

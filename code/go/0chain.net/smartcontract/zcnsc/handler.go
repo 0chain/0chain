@@ -21,7 +21,7 @@ type authorizerResponse struct {
 	URL          string `json:"url"`
 
 	// Configuration
-	Fee tokens.Balance `json:"fee"`
+	Fee tokens.SAS `json:"fee"`
 
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
@@ -31,11 +31,11 @@ type authorizerResponse struct {
 	LastHealthCheck int64 `json:"last_health_check"`
 
 	// stake_pool_settings
-	DelegateWallet string         `json:"delegate_wallet"`
-	MinStake       tokens.Balance `json:"min_stake"`
-	MaxStake       tokens.Balance `json:"max_stake"`
-	NumDelegates   int            `json:"num_delegates"`
-	ServiceCharge  float64        `json:"service_charge"`
+	DelegateWallet string     `json:"delegate_wallet"`
+	MinStake       tokens.SAS `json:"min_stake"`
+	MaxStake       tokens.SAS `json:"max_stake"`
+	NumDelegates   int        `json:"num_delegates"`
+	ServiceCharge  float64    `json:"service_charge"`
 }
 
 type authorizerNodesResponse struct {

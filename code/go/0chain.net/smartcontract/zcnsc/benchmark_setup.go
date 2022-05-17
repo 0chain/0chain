@@ -37,12 +37,12 @@ func Setup(eventDb *event.EventDb, clients, publicKeys []string, balances cstate
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
-	gn.MinStakeAmount = tokens.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	gn.MinStakeAmount = tokens.SAS(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
 	gn.MinLockAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinLockAmount)
-	gn.MinMintAmount = tokens.Balance(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
-	gn.MaxFee = tokens.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
+	gn.MinMintAmount = tokens.SAS(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
+	gn.MaxFee = tokens.SAS(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.ZcnMinAuthorizers)
-	gn.MinBurnAmount = tokens.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	gn.MinBurnAmount = tokens.SAS(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)
@@ -158,8 +158,8 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 func getMockStakePoolSettings(wallet string) stakepool.StakePoolSettings {
 	return stakepool.StakePoolSettings{
 		DelegateWallet:  wallet,
-		MinStake:        tokens.Balance(1 * 1e10),
-		MaxStake:        tokens.Balance(100 * 1e10),
+		MinStake:        tokens.SAS(1 * 1e10),
+		MaxStake:        tokens.SAS(100 * 1e10),
 		MaxNumDelegates: 10,
 		ServiceCharge:   0.1,
 	}
