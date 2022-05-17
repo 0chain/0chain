@@ -153,7 +153,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		}
 		alloc.MovedBack += currency.Coin(back)
 		blobAlloc.Returned += currency.Coin(back)
-		// save the write pool
+		// save write pool
 		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 			return fmt.Errorf("can't save allocation's write pool: %v", err)
 		}
@@ -164,7 +164,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
+	err = sp.DistributeRewards(currency.Coin(blobberReward), blobAlloc.BlobberID, spenum.Blobber, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}

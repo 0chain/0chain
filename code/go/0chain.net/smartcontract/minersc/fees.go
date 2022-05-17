@@ -337,19 +337,17 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		blockReward = currency.Coin(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
-		minerr, sharderr = gn.splitByShareRatio(blockReward)
+		minerReward, sharderReward = gn.splitByShareRatio(blockReward)
 		// fees         -- total fees for the mb
-		fees             = msc.sumFee(mb, true)
-		minerf, sharderf = gn.splitByShareRatio(fees)
+		fees                 = msc.sumFee(mb, true)
+		minerFee, sharderFee = gn.splitByShareRatio(fees)
 	)
-	if err := mn.StakePool.DistributeRewards(
-		float64(minerr+minerf), mn.ID, spenum.Miner, balances,
-	); err != nil {
+	if err := mn.StakePool.DistributeRewards(minerReward+minerFee, mn.ID, spenum.Miner, balances); err != nil {
 		return "", err
 	}
 
 	// pay and mint rest for mb sharders
-	if err := msc.payShardersAndDelegates(sharderf, sharderr, mb, gn, balances); err != nil {
+	if err := msc.payShardersAndDelegates(sharderFee, sharderReward, mb, gn, balances); err != nil {
 		return "", err
 	}
 
@@ -384,8 +382,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	return resp, nil
 }
 
-func (msc *MinerSmartContract) sumFee(b *block.Block,
-	updateStats bool) currency.Coin {
+func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) currency.Coin {
 
 	var totalMaxFee int64
 	var feeStats metrics.Counter
@@ -444,14 +441,14 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 	// fess and mint
 	var (
-		partf = float64(fee) / float64(len(sharders))
-		partm = float64(mint) / float64(len(sharders))
+		partFee  = float64(fee) / float64(len(sharders))
+		partMint = float64(mint) / float64(len(sharders))
 	)
 
 	// part for every sharder
 	for _, sh := range sharders {
 		if err = sh.StakePool.DistributeRewards(
-			partf+partm, sh.ID, spenum.Sharder, balances,
+			currency.Coin(partFee+partMint), sh.ID, spenum.Sharder, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)

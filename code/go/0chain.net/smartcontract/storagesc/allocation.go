@@ -1501,7 +1501,7 @@ func (sc *StorageSmartContract) finishAllocation(
 					"ammount was short by %v", d.BlobberID, lack)
 			}
 
-			err = sps[i].DistributeRewards(float64(paid), d.BlobberID, spenum.Blobber, balances)
+			err = sps[i].DistributeRewards(paid, d.BlobberID, spenum.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
 					"%v from alocation poosl %v, minlock demand %v spent %v error %v",
@@ -1547,7 +1547,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				ratio  = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				reward = float64(cp.Balance) * ratio * passRates[i]
 			)
-			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, balances)
+			err = sps[i].DistributeRewards(currency.Coin(reward), b.ID, spenum.Blobber, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())

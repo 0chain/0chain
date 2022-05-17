@@ -181,7 +181,7 @@ func (sp *StakePool) MintRewards(
 }
 
 func (sp *StakePool) DistributeRewards(
-	value float64,
+	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
@@ -193,7 +193,7 @@ func (sp *StakePool) DistributeRewards(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		sp.Reward += currency.Coin(value)
+		sp.Reward += value
 		spUpdate.Reward = int64(value)
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
@@ -201,26 +201,33 @@ func (sp *StakePool) DistributeRewards(
 		return nil
 	}
 
-	serviceCharge := sp.Settings.ServiceCharge * value
-	if currency.Coin(serviceCharge) > 0 {
-		reward := currency.Coin(serviceCharge)
+	serviceCharge := currency.Coin(sp.Settings.ServiceCharge * float64(value))
+	if serviceCharge > 0 {
+		reward := serviceCharge
 		sp.Reward += reward
 		spUpdate.Reward = int64(reward)
 	}
 
-	if currency.Coin(value-serviceCharge) == 0 {
+	valueLeft := value - serviceCharge
+	if valueLeft == 0 {
 		return nil
 	}
 
-	valueLeft := value - serviceCharge
 	var stake = float64(sp.stake())
 	if stake == 0 {
 		return fmt.Errorf("no stake")
 	}
 
+	valueLeftBal := valueLeft
 	for id, pool := range sp.Pools {
 		ratio := float64(pool.Balance) / stake
-		reward := currency.Coin(valueLeft * ratio)
+		reward := currency.Coin(valueLeft.Float64() * ratio)
+		if valueLeftBal-reward <= 0 {
+			reward = valueLeftBal
+			valueLeftBal = 0
+		} else {
+			valueLeftBal -= reward
+		}
 		pool.Reward += reward
 		spUpdate.DelegateRewards[id] = int64(reward)
 	}

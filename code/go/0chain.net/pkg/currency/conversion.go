@@ -23,3 +23,11 @@ func (c Coin) ToZCN() float64 {
 	val, _ := decimal.NewFromInt(int64(c)).Div(decimal.NewFromInt(int64(ZCN))).Float64()
 	return val
 }
+
+func (c Coin) Int64() int64 {
+	return int64(c)
+}
+
+func (c Coin) Float64() float64 {
+	return float64(c)
+}
