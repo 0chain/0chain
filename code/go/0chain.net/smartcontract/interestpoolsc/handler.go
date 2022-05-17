@@ -1,53 +1,23 @@
 package interestpoolsc
 
 import (
+	"context"
 	"fmt"
-	"net/http"
+	"net/url"
 	"strings"
 	"time"
-
-	"0chain.net/rest/restinterface"
 
 	"0chain.net/smartcontract"
 
 	"0chain.net/core/common"
+
+	c_state "0chain.net/chaincore/chain/state"
 )
 
-type InterestPoolRestHandler struct {
-	restinterface.RestHandlerI
-}
-
-func NewInterestPoolRestHandler(rh restinterface.RestHandlerI) *InterestPoolRestHandler {
-	return &InterestPoolRestHandler{rh}
-}
-
-func SetupRestHandler(rh restinterface.RestHandlerI) {
-	frh := NewInterestPoolRestHandler(rh)
-	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+"/getPoolsStats", frh.getPoolsStats)
-	http.HandleFunc(miner+"/getLockConfig", frh.getLockConfig)
-	http.HandleFunc(miner+"/getConfig", frh.getConfig)
-}
-
-func GetRestNames() []string {
-	return []string{
-		"/getPoolsStats",
-		"/getLockConfig",
-		"/getConfig",
-	}
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getConfig getConfig
-// get interest pool configuration settings
-//
-// responses:
-//  200: StringMap
-//  500:
-func (irh *InterestPoolRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(irh.GetStateContext())
+func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
+	gn, err := ip.getGlobalNode(balances, "funcName")
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("can't get global node", err.Error()))
-		return
+		return nil, err
 	}
 
 	fields := map[string]string{
@@ -62,60 +32,34 @@ func (irh *InterestPoolRestHandler) getConfig(w http.ResponseWriter, r *http.Req
 		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", gn.Cost[strings.ToLower(key)])
 	}
 
-	common.Respond(w, r, &smartcontract.StringMap{
+	return &smartcontract.StringMap{
 		Fields: fields,
-	}, nil)
+	}, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getLockConfig getLockConfig
-// get lock configuration
-//
-// responses:
-//  200: InterestPoolGlobalNode
-//  500:
-func (irh *InterestPoolRestHandler) getLockConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(irh.GetStateContext())
+func (ip *InterestPoolSmartContract) getPoolsStats(_ context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	un, err := ip.getUserNode(params.Get("client_id"), balances)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("can't get global node", err.Error()))
-		return
-	}
-	common.Respond(w, r, gn, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolsStats getPoolsStats
-// get pool stats
-//
-// responses:
-//  200: poolStat
-//  400:
-//  500:
-func (irh *InterestPoolRestHandler) getPoolsStats(w http.ResponseWriter, r *http.Request) {
-	var un = new(UserNode)
-	err := irh.GetStateContext().GetTrieNode(un.getKey(ADDRESS), un)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("can't user node", err.Error()))
-		return
+		return nil, common.NewErrInternal("can't user node", err.Error())
 	}
 
 	if len(un.Pools) == 0 {
-		common.Respond(w, r, nil, common.NewErrNoResource("can't find user node"))
-		return
+		return nil, common.NewErrNoResource("can't find user node")
 	}
 
 	t := time.Now()
 	stats := &poolStats{}
 	for _, pool := range un.Pools {
-		stat, err := getPoolStats(pool, t)
+		stat, err := ip.getPoolStats(pool, t)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("can't get pool stats", err.Error()))
-			return
+			return nil, common.NewErrInternal("can't get pool stats", err.Error())
 		}
 		stats.addStat(stat)
 	}
-	common.Respond(w, r, stats, nil)
+	return stats, nil
 }
 
-func getPoolStats(pool *interestPool, t time.Time) (*poolStat, error) {
+func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Time) (*poolStat, error) {
 	stat := &poolStat{}
 	statBytes := pool.LockStats(t)
 	err := stat.decode(statBytes)
@@ -128,4 +72,8 @@ func getPoolStats(pool *interestPool, t time.Time) (*poolStat, error) {
 	stat.APR = pool.APR
 	stat.TokensEarned = pool.TokensEarned
 	return stat, nil
+}
+
+func (ip *InterestPoolSmartContract) getLockConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
+	return ip.getGlobalNode(balances, "updateVariables")
 }
