@@ -4,16 +4,16 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/core/datastore"
+	"0chain.net/pkg/tokens"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/core/datastore"
 )
 
 func TestSimpleGlobalNode_Encode(t *testing.T) {
 	type fields struct {
-		MaxMint     state.Balance
-		TotalMinted state.Balance
-		MinLock     state.Balance
+		MaxMint     tokens.Balance
+		TotalMinted tokens.Balance
+		MinLock     tokens.Balance
 		APR         float64
 		OwnerId     datastore.Key
 	}
@@ -68,9 +68,9 @@ func TestSimpleGlobalNode_Encode(t *testing.T) {
 
 func TestSimpleGlobalNode_Decode(t *testing.T) {
 	type fields struct {
-		MaxMint     state.Balance
-		TotalMinted state.Balance
-		MinLock     state.Balance
+		MaxMint     tokens.Balance
+		TotalMinted tokens.Balance
+		MinLock     tokens.Balance
 		APR         float64
 		OwnerId     datastore.Key
 	}

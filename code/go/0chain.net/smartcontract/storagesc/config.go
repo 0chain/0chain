@@ -7,11 +7,12 @@ import (
 	"net/url"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
@@ -50,14 +51,14 @@ type writePoolConfig struct {
 }
 
 type blockReward struct {
-	BlockReward             state.Balance `json:"block_reward"`
-	BlockRewardChangePeriod int64         `json:"block_reward_change_period"`
-	BlockRewardChangeRatio  float64       `json:"block_reward_change_ratio"`
-	QualifyingStake         state.Balance `json:"qualifying_stake"`
-	SharderWeight           float64       `json:"sharder_weight"`
-	MinerWeight             float64       `json:"miner_weight"`
-	BlobberWeight           float64       `json:"blobber_weight"`
-	TriggerPeriod           int64         `json:"trigger_period"`
+	BlockReward             tokens.Balance `json:"block_reward"`
+	BlockRewardChangePeriod int64          `json:"block_reward_change_period"`
+	BlockRewardChangeRatio  float64        `json:"block_reward_change_ratio"`
+	QualifyingStake         tokens.Balance `json:"qualifying_stake"`
+	SharderWeight           float64        `json:"sharder_weight"`
+	MinerWeight             float64        `json:"miner_weight"`
+	BlobberWeight           float64        `json:"blobber_weight"`
+	TriggerPeriod           int64          `json:"trigger_period"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
@@ -81,9 +82,9 @@ type Config struct {
 	// configuration.
 	TimeUnit time.Duration `json:"time_unit"`
 	// MaxMint is max minting.
-	MaxMint state.Balance `json:"max_mint"`
+	MaxMint tokens.Balance `json:"max_mint"`
 	// Minted tokens by entire SC.
-	Minted state.Balance `json:"minted"`
+	Minted tokens.Balance `json:"minted"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
@@ -113,10 +114,10 @@ type Config struct {
 	// price limits for blobbers
 
 	// MaxReadPrice allowed for a blobber.
-	MaxReadPrice state.Balance `json:"max_read_price"`
+	MaxReadPrice tokens.Balance `json:"max_read_price"`
 	// MaxWrtiePrice
-	MaxWritePrice state.Balance `json:"max_write_price"`
-	MinWritePrice state.Balance `json:"min_write_price"`
+	MaxWritePrice tokens.Balance `json:"max_write_price"`
+	MinWritePrice tokens.Balance `json:"min_write_price"`
 
 	// allocation cancellation
 
@@ -129,8 +130,8 @@ type Config struct {
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
 
 	// free allocations
-	MaxTotalFreeAllocation      state.Balance          `json:"max_total_free_allocation"`
-	MaxIndividualFreeAllocation state.Balance          `json:"max_individual_free_allocation"`
+	MaxTotalFreeAllocation      tokens.Balance         `json:"max_total_free_allocation"`
+	MaxIndividualFreeAllocation tokens.Balance         `json:"max_individual_free_allocation"`
 	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings"`
 
 	// challenges generating
@@ -148,9 +149,9 @@ type Config struct {
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
-	MinStake state.Balance `json:"min_stake"`
+	MinStake tokens.Balance `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake state.Balance `json:"max_stake"`
+	MaxStake tokens.Balance `json:"max_stake"`
 
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
@@ -320,7 +321,7 @@ func (sc *Config) validate() (err error) {
 	return
 }
 
-func (conf *Config) validateStakeRange(min, max state.Balance) (err error) {
+func (conf *Config) validateStakeRange(min, max tokens.Balance) (err error) {
 	if min < conf.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
@@ -359,9 +360,9 @@ func getConfiguredConfig() (conf *Config, err error) {
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint = state.Balance(scc.GetFloat64(pfx+"max_mint") * 1e10)
-	conf.MinStake = state.Balance(scc.GetFloat64(pfx+"min_stake") * 1e10)
-	conf.MaxStake = state.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)
+	conf.MaxMint = tokens.Balance(scc.GetFloat64(pfx+"max_mint") * 1e10)
+	conf.MinStake = tokens.Balance(scc.GetFloat64(pfx+"min_stake") * 1e10)
+	conf.MaxStake = tokens.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
@@ -369,11 +370,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
-	conf.MaxReadPrice = state.Balance(
+	conf.MaxReadPrice = tokens.Balance(
 		scc.GetFloat64(pfx+"max_read_price") * 1e10)
-	conf.MinWritePrice = state.Balance(
+	conf.MinWritePrice = tokens.Balance(
 		scc.GetFloat64(pfx+"min_write_price") * 1e10)
-	conf.MaxWritePrice = state.Balance(
+	conf.MaxWritePrice = tokens.Balance(
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
@@ -393,20 +394,20 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
 
-	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
-	conf.MaxIndividualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation = tokens.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
+	conf.MaxIndividualFreeAllocation = tokens.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
 	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
-		Max: state.Balance(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
+		Min: tokens.Balance(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
+		Max: tokens.Balance(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
-		Max: state.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
+		Min: tokens.Balance(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
+		Max: tokens.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
@@ -429,10 +430,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	conf.BlockReward = new(blockReward)
-	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.BlockReward = tokens.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
 	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
 	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
-	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
+	conf.BlockReward.QualifyingStake = tokens.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
 
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(

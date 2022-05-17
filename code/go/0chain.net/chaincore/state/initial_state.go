@@ -2,9 +2,11 @@ package state
 
 import (
 	"0chain.net/core/datastore"
+	"0chain.net/pkg/tokens"
+
+	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 // InitStates is a slice of InitState used for all the initial states in the genesis block.
@@ -14,8 +16,8 @@ type InitStates struct {
 
 // InitState is a clients initial state in the genesis block.
 type InitState struct {
-	ID     datastore.Key `yaml:"id"`
-	Tokens Balance       `yaml:"tokens"`
+	ID     datastore.Key  `yaml:"id"`
+	Tokens tokens.Balance `yaml:"tokens"`
 }
 
 // NewInitStates is used to return a new InitStates.

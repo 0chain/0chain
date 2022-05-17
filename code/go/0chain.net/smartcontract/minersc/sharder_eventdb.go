@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
@@ -67,7 +68,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		PublicKey:         sn.PublicKey,
 		ShortName:         sn.ShortName,
 		BuildTag:          sn.BuildTag,
-		TotalStaked:       state.Balance(sn.TotalStaked),
+		TotalStaked:       tokens.Balance(sn.TotalStaked),
 		Delete:            sn.Delete,
 		DelegateWallet:    sn.Settings.DelegateWallet,
 		ServiceCharge:     sn.Settings.ServiceCharge,

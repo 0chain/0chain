@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/core/common"
 	"github.com/spf13/viper"
 
@@ -122,8 +123,8 @@ func BenchmarkRestTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					PreferredBlobbers:          []string{},
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()

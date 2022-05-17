@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/pkg/tokens"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -59,9 +59,9 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 	for _, pool := range minerPools {
 		dp := delegatePoolStat{
 			ID:         pool.PoolID,
-			Balance:    state.Balance(pool.Balance),
-			Reward:     state.Balance(pool.Reward),
-			RewardPaid: state.Balance(pool.TotalReward),
+			Balance:    tokens.Balance(pool.Balance),
+			Reward:     tokens.Balance(pool.Reward),
+			RewardPaid: tokens.Balance(pool.TotalReward),
 			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
@@ -70,9 +70,9 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(
 	for _, pool := range sharderPools {
 		dp := delegatePoolStat{
 			ID:         pool.PoolID,
-			Balance:    state.Balance(pool.Balance),
-			Reward:     state.Balance(pool.Reward),
-			RewardPaid: state.Balance(pool.TotalReward),
+			Balance:    tokens.Balance(pool.Balance),
+			Reward:     tokens.Balance(pool.Reward),
+			RewardPaid: tokens.Balance(pool.TotalReward),
 			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)

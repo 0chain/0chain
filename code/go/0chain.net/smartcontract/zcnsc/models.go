@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -42,7 +43,7 @@ type AuthorizerSignature struct {
 
 type MintPayload struct {
 	EthereumTxnID     string                 `json:"ethereum_txn_id"`
-	Amount            state.Balance          `json:"amount"`
+	Amount            tokens.Balance         `json:"amount"`
 	Nonce             int64                  `json:"nonce"`
 	Signatures        []*AuthorizerSignature `json:"signatures"`
 	ReceivingClientID string                 `json:"receiving_client_id"`
@@ -104,7 +105,7 @@ func (mp *MintPayload) Decode(input []byte) error {
 		if err != nil {
 			return err
 		}
-		mp.Amount = state.Balance(*value)
+		mp.Amount = tokens.Balance(*value)
 	}
 
 	id, ok = objMap[fieldReceivingClientId]

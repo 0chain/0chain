@@ -7,6 +7,8 @@ import (
 	"log"
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
@@ -14,7 +16,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/encryption"
 	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
@@ -149,8 +150,8 @@ func BenchmarkTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					PreferredBlobbers:          []string{},
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()
@@ -181,8 +182,8 @@ func BenchmarkTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					PreferredBlobbers:          blobberUrls[:8],
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, tokens.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()

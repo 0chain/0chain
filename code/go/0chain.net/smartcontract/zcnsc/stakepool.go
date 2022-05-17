@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/pkg/tokens"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -23,8 +25,8 @@ import (
 type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
 	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance state.Balance `json:"balance"`
+	Unstake bool           `json:"unstake"` // max time to wait to unstake
+	Balance tokens.Balance `json:"balance"`
 }
 
 type stakePoolRequest struct {
@@ -182,7 +184,7 @@ func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *G
 	return nil
 }
 
-func (gn *GlobalNode) validateStakeRange(min, max state.Balance) (err error) {
+func (gn *GlobalNode) validateStakeRange(min, max tokens.Balance) (err error) {
 	if min < gn.MinStakeAmount {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min, gn.MinStakeAmount)
 	}

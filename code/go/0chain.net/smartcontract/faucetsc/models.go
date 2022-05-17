@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/core/common"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -19,17 +20,17 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type periodicResponse struct {
-	Used    state.Balance `json:"tokens_poured"`
-	Start   time.Time     `json:"start_time"`
-	Restart string        `json:"time_left"`
-	Allowed state.Balance `json:"tokens_allowed"`
+	Used    tokens.Balance `json:"tokens_poured"`
+	Start   time.Time      `json:"start_time"`
+	Restart string         `json:"time_left"`
+	Allowed tokens.Balance `json:"tokens_allowed"`
 }
 
 type GlobalNode struct {
 	*FaucetConfig `json:"faucet_config"`
-	ID            string        `json:"id"`
-	Used          state.Balance `json:"used"`
-	StartTime     time.Time     `json:"start_time"`
+	ID            string         `json:"id"`
+	Used          tokens.Balance `json:"used"`
+	StartTime     time.Time      `json:"start_time"`
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
@@ -62,25 +63,25 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.PourAmount = state.Balance(fAmount * 1e10)
+			gn.PourAmount = tokens.Balance(fAmount * 1e10)
 		case Settings[MaxPourAmount]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.MaxPourAmount = state.Balance(fAmount * 1e10)
+			gn.MaxPourAmount = tokens.Balance(fAmount * 1e10)
 		case Settings[PeriodicLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.PeriodicLimit = state.Balance(fAmount * 1e10)
+			gn.PeriodicLimit = tokens.Balance(fAmount * 1e10)
 		case Settings[GlobalLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.GlobalLimit = state.Balance(fAmount * 1e10)
+			gn.GlobalLimit = tokens.Balance(fAmount * 1e10)
 		case Settings[IndividualReset]:
 			ir, err := time.ParseDuration(value)
 			if err != nil {
@@ -156,9 +157,9 @@ func (gn *GlobalNode) validate() error {
 }
 
 type UserNode struct {
-	ID        string        `json:"id"`
-	StartTime time.Time     `json:"start_time"`
-	Used      state.Balance `json:"used"`
+	ID        string         `json:"id"`
+	StartTime time.Time      `json:"start_time"`
+	Used      tokens.Balance `json:"used"`
 }
 
 func (un *UserNode) GetKey(globalKey string) datastore.Key {

@@ -3,6 +3,8 @@ package state
 import (
 	"encoding/json"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
@@ -10,12 +12,12 @@ import (
 var ErrInvalidMint = common.NewError("invalid_mint", "invalid minter")
 
 type Mint struct {
-	Minter     datastore.Key `json:"minter"`
-	ToClientID datastore.Key `json:"to"`
-	Amount     Balance       `json:"amount"`
+	Minter     datastore.Key  `json:"minter"`
+	ToClientID datastore.Key  `json:"to"`
+	Amount     tokens.Balance `json:"amount"`
 }
 
-func NewMint(minter, toClientID datastore.Key, amount Balance) *Mint {
+func NewMint(minter, toClientID datastore.Key, amount tokens.Balance) *Mint {
 	m := &Mint{Minter: minter, ToClientID: toClientID, Amount: amount}
 	return m
 }

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	chainstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/smartcontract"
-
-	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -126,9 +126,9 @@ func TestUpdateSettings(t *testing.T) {
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
 							require.NoError(t, err)
-							actual, ok := setting.(state.Balance)
+							actual, ok := setting.(tokens.Balance)
 							require.True(t, ok)
-							if state.Balance(expected) != actual {
+							if tokens.Balance(expected) != actual {
 								return false
 							}
 						}

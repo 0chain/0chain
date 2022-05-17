@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -115,7 +116,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 					PublicKey: data.PublicKeys[0],
 					URL:       "http://localhost:3030",
 					Config: &AuthorizerConfig{
-						Fee: state.Balance(viper.GetInt(benchmark.ZcnMaxFee) / 2),
+						Fee: tokens.Balance(viper.GetInt(benchmark.ZcnMaxFee) / 2),
 					},
 				}).Encode(),
 			},
@@ -126,8 +127,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input: (&UpdateAuthorizerStakePoolPayload{
 					StakePoolSettings: stakepool.StakePoolSettings{
 						DelegateWallet:  data.Clients[0],
-						MinStake:        state.Balance(1.1 * 1e10),
-						MaxStake:        state.Balance(103 * 1e10),
+						MinStake:        tokens.Balance(1.1 * 1e10),
+						MaxStake:        tokens.Balance(103 * 1e10),
 						MaxNumDelegates: 7,
 						ServiceCharge:   0.17,
 					},

@@ -15,7 +15,6 @@ code/coverage.txt
 !bin/
 !docker.local/bin/
 !docker.aws/bin/
-**/pkg/
 **github.com/
 **golang.org/
 **/go/sign

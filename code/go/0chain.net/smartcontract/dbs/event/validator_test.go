@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
@@ -45,8 +46,8 @@ func TestValidatorNode(t *testing.T) {
 		Stake:       100,
 
 		DelegateWallet: "delegate wallet",
-		MinStake:       state.Balance(53),
-		MaxStake:       state.Balance(57),
+		MinStake:       tokens.Balance(53),
+		MaxStake:       tokens.Balance(57),
 		NumDelegates:   59,
 		ServiceCharge:  61.0,
 	}

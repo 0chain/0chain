@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
@@ -153,8 +154,8 @@ func Test_poolStat_encode(t *testing.T) {
 		TimeLeft     time.Duration
 		Locked       bool
 		APR          float64
-		TokensEarned state.Balance
-		Balance      state.Balance
+		TokensEarned tokens.Balance
+		Balance      tokens.Balance
 	}
 	tests := []struct {
 		name   string
@@ -218,8 +219,8 @@ func Test_poolStat_decode(t *testing.T) {
 		TimeLeft     time.Duration
 		Locked       bool
 		APR          float64
-		TokensEarned state.Balance
-		Balance      state.Balance
+		TokensEarned tokens.Balance
+		Balance      tokens.Balance
 	}
 	type args struct {
 		input []byte

@@ -3,11 +3,11 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
-
-	"0chain.net/chaincore/state"
 )
 
 type Validator struct {
@@ -18,11 +18,11 @@ type Validator struct {
 	PublicKey   string `json:"public_key" gorm:"public_key"`
 
 	// StakePoolSettings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       state.Balance `json:"min_stake"`
-	MaxStake       state.Balance `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	DelegateWallet string         `json:"delegate_wallet"`
+	MinStake       tokens.Balance `json:"min_stake"`
+	MaxStake       tokens.Balance `json:"max_stake"`
+	NumDelegates   int            `json:"num_delegates"`
+	ServiceCharge  float64        `json:"service_charge"`
 
 	Reward      int64 `json:"reward"`
 	TotalReward int64 `json:"total_reward"`

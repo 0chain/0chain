@@ -13,6 +13,8 @@ import (
 	"sync"
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -478,7 +480,7 @@ func TestMakeGetRequest(t *testing.T) {
 func TestMakeClientBalanceRequest(t *testing.T) {
 	t.Parallel()
 
-	balance := state.Balance(5)
+	balance := tokens.Balance(5)
 	makeValidServer := func() string {
 		validServer := httptest.NewServer(
 			http.HandlerFunc(
@@ -524,7 +526,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        state.Balance
+		want        tokens.Balance
 		makeServers []makeServer
 		wantErr     bool
 	}{

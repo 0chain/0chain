@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"golang.org/x/net/context"
 
 	"go.uber.org/zap"
 
 	"0chain.net/core/logging"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/require"
@@ -33,18 +34,18 @@ func TestBlobbers(t *testing.T) {
 		Longitude float64 `json:"longitude"`
 	}
 	type Terms struct {
-		ReadPrice               state.Balance `json:"read_price"`
-		WritePrice              state.Balance `json:"write_price"`
-		MinLockDemand           float64       `json:"min_lock_demand"`
-		MaxOfferDuration        time.Duration `json:"max_offer_duration"`
-		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+		ReadPrice               tokens.Balance `json:"read_price"`
+		WritePrice              tokens.Balance `json:"write_price"`
+		MinLockDemand           float64        `json:"min_lock_demand"`
+		MaxOfferDuration        time.Duration  `json:"max_offer_duration"`
+		ChallengeCompletionTime time.Duration  `json:"challenge_completion_time"`
 	}
 	type stakePoolSettings struct {
-		DelegateWallet string        `json:"delegate_wallet"`
-		MinStake       state.Balance `json:"min_stake"`
-		MaxStake       state.Balance `json:"max_stake"`
-		NumDelegates   int           `json:"num_delegates"`
-		ServiceCharge  float64       `json:"service_charge"`
+		DelegateWallet string         `json:"delegate_wallet"`
+		MinStake       tokens.Balance `json:"min_stake"`
+		MaxStake       tokens.Balance `json:"max_stake"`
+		NumDelegates   int            `json:"num_delegates"`
+		ServiceCharge  float64        `json:"service_charge"`
 	}
 	type StorageNode struct {
 		ID              string                 `json:"id"`
@@ -110,8 +111,8 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  23,
 		},
 		Terms: Terms{
-			ReadPrice:               state.Balance(29),
-			WritePrice:              state.Balance(31),
+			ReadPrice:               tokens.Balance(29),
+			WritePrice:              tokens.Balance(31),
 			MinLockDemand:           37.0,
 			MaxOfferDuration:        39 * time.Minute,
 			ChallengeCompletionTime: 41 * time.Minute,
@@ -122,8 +123,8 @@ func TestBlobbers(t *testing.T) {
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       state.Balance(53),
-			MaxStake:       state.Balance(57),
+			MinStake:       tokens.Balance(53),
+			MaxStake:       tokens.Balance(57),
 			NumDelegates:   59,
 			ServiceCharge:  61.0,
 		},
@@ -181,8 +182,8 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  93,
 		},
 		Terms: Terms{
-			ReadPrice:               state.Balance(97),
-			WritePrice:              state.Balance(101),
+			ReadPrice:               tokens.Balance(97),
+			WritePrice:              tokens.Balance(101),
 			MinLockDemand:           103.0,
 			MaxOfferDuration:        107 * time.Minute,
 			ChallengeCompletionTime: 113 * time.Minute,
@@ -193,8 +194,8 @@ func TestBlobbers(t *testing.T) {
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       state.Balance(137),
-			MaxStake:       state.Balance(139),
+			MinStake:       tokens.Balance(137),
+			MaxStake:       tokens.Balance(139),
 			NumDelegates:   143,
 			ServiceCharge:  149.0,
 		},

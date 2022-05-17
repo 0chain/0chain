@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/pkg/tokens"
+
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 )
@@ -22,17 +23,17 @@ type Sharder struct {
 	PublicKey         string
 	ShortName         string
 	BuildTag          string
-	TotalStaked       state.Balance
+	TotalStaked       tokens.Balance
 	Delete            bool
 	DelegateWallet    string
 	ServiceCharge     float64
 	NumberOfDelegates int
-	MinStake          state.Balance
-	MaxStake          state.Balance
+	MinStake          tokens.Balance
+	MaxStake          tokens.Balance
 	LastHealthCheck   common.Timestamp
-	Rewards           state.Balance
-	TotalReward       state.Balance
-	Fees              state.Balance
+	Rewards           tokens.Balance
+	TotalReward       tokens.Balance
+	Fees              tokens.Balance
 	Active            bool
 	Longitude         float64
 	Latitude          float64

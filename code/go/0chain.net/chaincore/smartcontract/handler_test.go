@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
@@ -263,7 +265,7 @@ func TestGetSmartContract(t *testing.T) {
 func makeTestStateContextIMock() *mocks.StateContextI {
 	stateContextI := mocks.StateContextI{}
 	stateContextI.On("GetClientBalance", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) state.Balance {
+		func(_ datastore.Key) tokens.Balance {
 			return 5
 		},
 		func(_ datastore.Key) error {

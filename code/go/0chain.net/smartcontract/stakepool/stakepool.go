@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -26,22 +28,22 @@ func stakePoolKey(p spenum.Provider, id string) datastore.Key {
 // StakePool holds delegate information for an 0chain providers
 type StakePool struct {
 	Pools    map[string]*DelegatePool `json:"pools"`
-	Reward   state.Balance            `json:"rewards"`
+	Reward   tokens.Balance           `json:"rewards"`
 	Settings StakePoolSettings        `json:"settings"`
 	Minter   cstate.ApprovedMinter    `json:"minter"`
 }
 
 type StakePoolSettings struct {
-	DelegateWallet  string        `json:"delegate_wallet"`
-	MinStake        state.Balance `json:"min_stake"`
-	MaxStake        state.Balance `json:"max_stake"`
-	MaxNumDelegates int           `json:"num_delegates"`
-	ServiceCharge   float64       `json:"service_charge"`
+	DelegateWallet  string         `json:"delegate_wallet"`
+	MinStake        tokens.Balance `json:"min_stake"`
+	MaxStake        tokens.Balance `json:"max_stake"`
+	MaxNumDelegates int            `json:"num_delegates"`
+	ServiceCharge   float64        `json:"service_charge"`
 }
 
 type DelegatePool struct {
-	Balance      state.Balance     `json:"balance"`
-	Reward       state.Balance     `json:"reward"`
+	Balance      tokens.Balance    `json:"balance"`
+	Reward       tokens.Balance    `json:"reward"`
 	Status       spenum.PoolStatus `json:"status"`
 	RoundCreated int64             `json:"round_created"` // used for cool down
 	DelegateID   string            `json:"delegate_id"`
@@ -97,7 +99,7 @@ func (sp *StakePool) Save(
 	return err
 }
 
-func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (state.Balance, error) {
+func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (tokens.Balance, error) {
 	minter, err := cstate.GetMinter(sp.Minter)
 	if err != nil {
 		return 0, err
@@ -120,8 +122,8 @@ func (sp *StakePool) MintRewards(
 	providerType spenum.Provider,
 	usp *UserStakePools,
 	balances cstate.StateContextI,
-) (state.Balance, error) {
-	var reward state.Balance
+) (tokens.Balance, error) {
+	var reward tokens.Balance
 	var err error
 	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
 		reward, err = sp.MintServiceCharge(balances)
@@ -191,7 +193,7 @@ func (sp *StakePool) DistributeRewards(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		sp.Reward += state.Balance(value)
+		sp.Reward += tokens.Balance(value)
 		spUpdate.Reward = int64(value)
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
@@ -200,13 +202,13 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	serviceCharge := sp.Settings.ServiceCharge * value
-	if state.Balance(serviceCharge) > 0 {
-		reward := state.Balance(serviceCharge)
+	if tokens.Balance(serviceCharge) > 0 {
+		reward := tokens.Balance(serviceCharge)
 		sp.Reward += reward
 		spUpdate.Reward = int64(reward)
 	}
 
-	if state.Balance(value-serviceCharge) == 0 {
+	if tokens.Balance(value-serviceCharge) == 0 {
 		return nil
 	}
 
@@ -218,7 +220,7 @@ func (sp *StakePool) DistributeRewards(
 
 	for id, pool := range sp.Pools {
 		ratio := float64(pool.Balance) / stake
-		reward := state.Balance(valueLeft * ratio)
+		reward := tokens.Balance(valueLeft * ratio)
 		pool.Reward += reward
 		spUpdate.DelegateRewards[id] = int64(reward)
 	}
@@ -228,7 +230,7 @@ func (sp *StakePool) DistributeRewards(
 	return nil
 }
 
-func (sp *StakePool) stake() (stake state.Balance) {
+func (sp *StakePool) stake() (stake tokens.Balance) {
 	for _, pool := range sp.Pools {
 		stake += pool.Balance
 	}

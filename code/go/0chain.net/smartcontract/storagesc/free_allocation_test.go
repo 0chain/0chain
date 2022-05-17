@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -382,7 +384,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + state.Balance(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + tokens.Balance(txn.Value),
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -390,7 +392,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("AddMint", &state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     state.Balance(writePoolLocked),
+			Amount:     tokens.Balance(writePoolLocked),
 		}).Return(nil).Once()
 
 		balances.On("InsertTrieNode",
@@ -398,7 +400,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.MatchedBy(func(wp *writePool) bool {
 				pool, found := wp.Pools.get(mockTransactionHash)
 				require.True(t, found)
-				return pool.Balance == state.Balance(writePoolLocked) &&
+				return pool.Balance == tokens.Balance(writePoolLocked) &&
 					pool.ID == mockTransactionHash &&
 					pool.AllocationID == mockTransactionHash &&
 					len(pool.Blobbers) == mockNumBlobbers &&
@@ -433,7 +435,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"AddMint", &state.Mint{
 				Minter:     ADDRESS,
 				ToClientID: ADDRESS,
-				Amount:     state.Balance(readPoolLocked),
+				Amount:     tokens.Balance(readPoolLocked),
 			},
 		).Return(nil).Once()
 
@@ -455,7 +457,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.MatchedBy(func(rp *readPool) bool {
 				pool, found := rp.Pools.get(mockTransactionHash)
 				require.True(t, found)
-				return pool.Balance == state.Balance(readPoolLocked) &&
+				return pool.Balance == tokens.Balance(readPoolLocked) &&
 					pool.ID == mockTransactionHash &&
 					pool.AllocationID == mockTransactionHash &&
 					pool.ExpireAt == txn.CreationDate+toSeconds(conf.FreeAllocationSettings.Duration)
@@ -754,7 +756,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + state.Balance(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + tokens.Balance(txn.Value),
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()

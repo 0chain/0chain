@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -23,9 +25,9 @@ import (
 func TestDeleteSharder(t *testing.T) {
 	t.Skip("delete_sharder is unused and to be reworked as kill_provider")
 	const (
-		mockDeletedSharderId               = "mock deleted sharder id"
-		mockRoundNumber                    = 5
-		x10                  state.Balance = 10 * 1000 * 1000 * 1000
+		mockDeletedSharderId                = "mock deleted sharder id"
+		mockRoundNumber                     = 5
+		x10                  tokens.Balance = 10 * 1000 * 1000 * 1000
 	)
 	type parameters struct {
 		pendingPools []int
@@ -57,7 +59,7 @@ func TestDeleteSharder(t *testing.T) {
 			delegateId := "delegate " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
 			dp.Status = spenum.Pending
-			dp.Balance = state.Balance(amount) * x10
+			dp.Balance = tokens.Balance(amount) * x10
 			dp.DelegateID = delegateId
 			balances.On("AddTransfer", &state.Transfer{
 				ClientID:   msc.ID,

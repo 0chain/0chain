@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/pkg/tokens"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -80,7 +81,7 @@ func (cp *challengePool) moveToWritePool(
 	blobID string,
 	until common.Timestamp,
 	wp *writePool,
-	value state.Balance,
+	value tokens.Balance,
 ) (err error) {
 
 	if value == 0 {
@@ -139,7 +140,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward float64,
 				validatos[i], err)
 		}
 	}
-	cp.ZcnPool.Balance -= state.Balance(reward)
+	cp.ZcnPool.Balance -= tokens.Balance(reward)
 	return nil
 }
 
@@ -159,7 +160,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 
 type challengePoolStat struct {
 	ID         string           `json:"id"`
-	Balance    state.Balance    `json:"balance"`
+	Balance    tokens.Balance   `json:"balance"`
 	StartTime  common.Timestamp `json:"start_time"`
 	Expiration common.Timestamp `json:"expiration"`
 	Finalized  bool             `json:"finalized"`

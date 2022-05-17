@@ -4,8 +4,9 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/pkg/tokens"
+
 	c_state "0chain.net/chaincore/chain/state"
-	cstate "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/partitions"
 )
@@ -17,8 +18,8 @@ const blobberRewardsPartitionSize = 5
 type BlobberRewardNode struct {
 	ID                string         `json:"id"`
 	SuccessChallenges int            `json:"success_challenges"`
-	WritePrice        cstate.Balance `json:"write_price"`
-	ReadPrice         cstate.Balance `json:"read_price"`
+	WritePrice        tokens.Balance `json:"write_price"`
+	ReadPrice         tokens.Balance `json:"read_price"`
 	TotalData         float64        `json:"total_data"`
 	DataRead          float64        `json:"data_read"`
 }

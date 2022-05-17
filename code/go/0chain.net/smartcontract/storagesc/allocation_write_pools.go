@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/pkg/tokens"
+
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 )
 
@@ -52,14 +53,14 @@ func (awp *allocationWritePools) moveToChallenge(
 	allocID, blobID string,
 	cp *challengePool,
 	now common.Timestamp,
-	value state.Balance,
+	value tokens.Balance,
 ) (err error) {
 	return awp.allocationPools.moveToChallenge(allocID, blobID, cp, now, value)
 }
 
 func (aps allocationWritePools) allocUntil(
 	allocID string, until common.Timestamp,
-) (value state.Balance) {
+) (value tokens.Balance) {
 	return aps.allocationPools.allocUntil(allocID, until)
 }
 
