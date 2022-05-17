@@ -42,7 +42,7 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 
 	var (
 		clientID = r.URL.Query().Get("client_id")
-		cp       = new(clientPools)
+		cp       *clientPools
 		err      error
 	)
 
@@ -64,7 +64,7 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Request) {
 	var (
 		poolID = r.URL.Query().Get("pool_id")
-		vp     = new(vestingPool)
+		vp     *vestingPool
 		err    error
 	)
 

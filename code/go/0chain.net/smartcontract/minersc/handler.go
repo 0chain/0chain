@@ -236,7 +236,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		id     = r.URL.Query().Get("id")
 		poolID = r.URL.Query().Get("pool_id")
 		status = r.URL.Query().Get("status")
-		sn     = NewMinerNode()
+		sn     *MinerNode
 		err    error
 	)
 
