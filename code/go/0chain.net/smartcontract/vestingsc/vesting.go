@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/json"
 	"errors"
@@ -521,8 +522,20 @@ type info struct {
 // helpers
 //
 
-func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
-	balances chainstate.StateContextI) (vp *vestingPool, err error) {
+func getPool(
+	poolID datastore.Key,
+	balances chainstate.CommonStateContextI,
+) (vp *vestingPool, err error) {
+	var vsc = VestingSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}
+	return vsc.getPool(poolID, balances)
+}
+
+func (vsc *VestingSmartContract) getPool(
+	poolID datastore.Key,
+	balances chainstate.CommonStateContextI,
+) (vp *vestingPool, err error) {
 
 	vp = newVestingPool()
 	err = balances.GetTrieNode(poolID, vp)
