@@ -99,12 +99,12 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	if gn.PourAmount > smartContractBalance {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
 	}
-	if currency.Coin(gn.PourAmount)+un.Used > gn.PeriodicLimit {
+	if gn.PourAmount+un.Used > gn.PeriodicLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
 				t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
 	}
-	if currency.Coin(gn.PourAmount)+gn.Used > gn.GlobalLimit {
+	if gn.PourAmount+gn.Used > gn.GlobalLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
 				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
