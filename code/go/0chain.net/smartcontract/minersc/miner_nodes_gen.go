@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *VCPoolLockNodes) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *MinerNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "Nodes"
@@ -28,7 +28,7 @@ func (z *VCPoolLockNodes) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *VCPoolLockNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *MinerNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -55,7 +55,7 @@ func (z *VCPoolLockNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			if cap(z.Nodes) >= int(zb0002) {
 				z.Nodes = (z.Nodes)[:zb0002]
 			} else {
-				z.Nodes = make([]*minerNodeDecode, zb0002)
+				z.Nodes = make([]*MinerNode, zb0002)
 			}
 			for za0001 := range z.Nodes {
 				if msgp.IsNil(bts) {
@@ -66,7 +66,7 @@ func (z *VCPoolLockNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					z.Nodes[za0001] = nil
 				} else {
 					if z.Nodes[za0001] == nil {
-						z.Nodes[za0001] = new(minerNodeDecode)
+						z.Nodes[za0001] = new(MinerNode)
 					}
 					bts, err = z.Nodes[za0001].UnmarshalMsg(bts)
 					if err != nil {
@@ -88,7 +88,7 @@ func (z *VCPoolLockNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *VCPoolLockNodes) Msgsize() (s int) {
+func (z *MinerNodes) Msgsize() (s int) {
 	s = 1 + 6 + msgp.ArrayHeaderSize
 	for za0001 := range z.Nodes {
 		if z.Nodes[za0001] == nil {
