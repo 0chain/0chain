@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 
 	"0chain.net/smartcontract/multisigsc"
@@ -22,8 +21,6 @@ import (
 
 	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
-	restmocks "0chain.net/rest/mocks"
-
 	"0chain.net/chaincore/config"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -57,90 +54,6 @@ func init() {
 
 	setupsc.SetupSmartContracts()
 	logging.InitLogging("testing", "")
-}
-
-func TestExecuteRestAPI(t *testing.T) {
-	t.Skip("Needs reworking as ExecuteRestAPI does not exist anymore, but should still test endpoints can be reached")
-	t.Parallel()
-
-	var mockChainer = &restmocks.QueryChainer{}
-	mockChainer.On("GetQueryStateContext").Return(&mocks.QueryStateContextI{})
-	restHandler := rest.NewRestHandler(mockChainer)
-	restHandler.SetupRestHandlers()
-
-	gn := &faucetsc.GlobalNode{}
-	blob, err := gn.MarshalMsg(nil)
-	require.NoError(t, err)
-
-	sc := mocks.StateContextI{}
-	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(nil).Run(
-		func(args mock.Arguments) {
-			v := args.Get(1).(*faucetsc.GlobalNode)
-			_, err := v.UnmarshalMsg(blob)
-			require.NoError(t, err)
-		})
-
-	type args struct {
-		ctx      context.Context
-		scAdress string
-		restpath string
-		params   url.Values
-		balances chstate.StateContextI
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    interface{}
-		wantErr bool
-	}{
-		{
-			name: "Unregistered_SC_ERR",
-			args: args{
-				scAdress: storagesc.ADDRESS,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Unknown_REST_Path_ERR",
-			args: args{
-				restpath: "unknown path",
-				scAdress: faucetsc.ADDRESS,
-			},
-			wantErr: true,
-		},
-		{
-			name: "OK",
-			args: args{
-				restpath: "/pourAmount",
-				scAdress: faucetsc.ADDRESS,
-				balances: &sc,
-			},
-			want:    "Pour amount per request: 0",
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			restpath := "/v1/screst/" + tt.args.scAdress + tt.args.restpath
-			payload := ""
-			req := httptest.NewRequest("GET", restpath, strings.NewReader(payload))
-			w := httptest.NewRecorder()
-			http.DefaultServeMux.ServeHTTP(w, req)
-
-			//got, err := ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExecuteRestAPI() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			//if !reflect.DeepEqual(got, tt.want) {
-			//	t.Errorf("ExecuteRestAPI() got = %v, want %v", got, tt.want)
-			//}
-		})
-	}
 }
 
 func TestExecuteStats(t *testing.T) {
