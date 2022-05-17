@@ -1,6 +1,10 @@
 package minersc
 
 import (
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,8 +13,6 @@ import (
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/guregu/null"
-
-	"0chain.net/chaincore/smartcontract"
 
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -233,25 +235,24 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 	var (
 		id     = r.URL.Query().Get("id")
 		poolID = r.URL.Query().Get("pool_id")
+		status = r.URL.Query().Get("status")
 		sn     = NewMinerNode()
+		err    error
 	)
-	sn.ID = id
-	if err := mrh.GetStateContext().GetTrieNode(sn.GetKey(), sn); err != nil {
-		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "cannot get miner node"))
+
+	if sn, err = getMinerNode(id, mrh.GetStateContext()); err != nil {
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
+		return
+	}
+	if poolID == "" {
+		common.Respond(w, r, sn.GetNodePools(status), nil)
 		return
 	}
 
-	if pool, ok := sn.Pending[poolID]; ok {
-		common.Respond(w, r, pool, nil)
-		return
-	} else if pool, ok = sn.Active[poolID]; ok {
-		common.Respond(w, r, pool, nil)
-		return
-	} else if pool, ok = sn.Deleting[poolID]; ok {
+	if pool, ok := sn.Pools[poolID]; ok {
 		common.Respond(w, r, pool, nil)
 		return
 	}
-
 	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 }
 
@@ -699,6 +700,10 @@ func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, e
 	return
 }
 
+type userPools struct {
+	Pools map[string][]*delegatePoolStat `json:"pools"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools getUserPools
 //  user oriented pools requests handler
 //
@@ -714,37 +719,49 @@ func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, e
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
-	var (
-		clientID = r.URL.Query().Get("client_id")
-		un       = new(UserNode)
-	)
-	un.ID = clientID
-	sctx := mrh.GetStateContext()
-	if err := sctx.GetTrieNode(un.GetKey(), un); err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("can't get user node", err.Error()))
+	clientID := r.URL.Query().Get("client_id")
+
+	balances := mrh.GetStateContext()
+
+	if balances.GetEventDB() == nil {
+		common.Respond(w, r, nil, errors.New("no event database found"))
 		return
 	}
 
-	var ups = newUserPools()
-	for nodeID, poolIDs := range un.Pools {
-		var mn = NewMinerNode()
-		mn.ID = nodeID
-		if err := sctx.GetTrieNode(mn.GetKey(), mn); err != nil {
-			common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID)))
-			return
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	if err != nil {
+		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
+		return
+	}
+
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	if err != nil {
+		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
+		return
+	}
+
+	ups := new(userPools)
+	ups.Pools = make(map[string][]*delegatePoolStat, len(minerPools)+len(sharderPools))
+	for _, pool := range minerPools {
+		dp := delegatePoolStat{
+			ID:         pool.PoolID,
+			Balance:    state.Balance(pool.Balance),
+			Reward:     state.Balance(pool.Reward),
+			RewardPaid: state.Balance(pool.TotalReward),
+			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
-		if ups.Pools[mn.NodeType.String()] == nil {
-			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+	}
+
+	for _, pool := range sharderPools {
+		dp := delegatePoolStat{
+			ID:         pool.PoolID,
+			Balance:    state.Balance(pool.Balance),
+			Reward:     state.Balance(pool.Reward),
+			RewardPaid: state.Balance(pool.TotalReward),
+			Status:     spenum.PoolStatus(pool.Status).String(),
 		}
-		for _, id := range poolIDs {
-			var dp, ok = mn.Pending[id]
-			if ok {
-				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
-			}
-			if dp, ok = mn.Active[id]; ok {
-				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
-			}
-		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
 
 	common.Respond(w, r, ups, nil)
@@ -759,16 +776,19 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 //  484:
 func (mrh *MinerRestHandler) getNodepool(w http.ResponseWriter, r *http.Request) {
 	regMiner := NewMinerNode()
-	err := regMiner.decodeFromValues(r.URL.Query())
+
+	err := regMiner.decodeFromValues(r.URL.Query().Get("id"), r.URL.Query().Get("n2n_host"))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("can't decode miner from passed params", err.Error()))
 		return
 	}
 	if !doesMinerExist(regMiner.GetKey(), mrh.GetStateContext()) {
-		common.Respond(w, r, nil, common.NewErrNoResource("unknown miner"))
+		common.Respond(w, r, "", common.NewErrNoResource("unknown miner"))
 		return
 	}
-	npi := (&smartcontract.BCContext{}).GetNodepoolInfo()
+	npi := MinerSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}.bcContext.GetNodepoolInfo()
 
 	common.Respond(w, r, npi, nil)
 }

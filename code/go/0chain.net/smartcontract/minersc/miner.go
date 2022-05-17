@@ -332,7 +332,7 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 }
 
 // getMinerNode
-func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
 
 	mn := NewMinerNode()
 	mn.ID = id

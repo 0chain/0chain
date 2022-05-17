@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -70,7 +71,7 @@ func BenchmarkRestTests(
 		{
 			name: "getNodepool",
 			params: map[string]string{
-				"id":       GetMockNodeId(0, NodeTypeMiner),
+				"id":       GetMockNodeId(0, spenum.Miner),
 				"n2n_host": "n2n_host",
 			},
 		},
@@ -110,14 +111,14 @@ func BenchmarkRestTests(
 		{
 			name: "nodeStat",
 			params: map[string]string{
-				"id": GetMockNodeId(0, NodeTypeMiner),
+				"id": GetMockNodeId(0, spenum.Miner),
 			},
 		},
 		{
 			name: "nodePoolStat",
 			params: map[string]string{
-				"id":      GetMockNodeId(0, NodeTypeMiner),
-				"pool_id": getMinerDelegatePoolId(0, 0, NodeTypeMiner),
+				"id":      GetMockNodeId(0, spenum.Miner),
+				"pool_id": getMinerDelegatePoolId(0, 0, spenum.Miner),
 			},
 		},
 		{
