@@ -251,7 +251,7 @@ func (sc *StateContext) Validate() error {
 	totalValue := state.Balance(sc.txn.Value)
 	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
 	if err != nil {
-		logging.Logger.Error("StateContext - Validate - Cannot read chain configuration", zap.Any("error", err))
+		logging.Logger.Error("statecontext - validate - cannot read chain configuration", zap.Error(err))
 		return err
 	}
 	if isFeeEnabled == true {

@@ -289,7 +289,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	isViewChange, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
 	if err != nil {
-		logging.Logger.Error("MinerSmartContract - payFees - Cannot read chain configuration", zap.Any("error", err))
+		logging.Logger.Error("payfees - cannot read chain configuration", zap.Error(err))
 		return "", err
 	}
 	if isViewChange == true {

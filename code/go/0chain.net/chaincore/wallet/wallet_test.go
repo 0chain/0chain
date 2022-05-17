@@ -2,16 +2,19 @@ package wallet
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"0chain.net/core/logging"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -33,6 +36,7 @@ const (
 )
 
 func init() {
+	config.Configuration().ChainConfig = &TestConfigReader{Fields: map[string]interface{}{}}
 	logging.InitLogging("development", "")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
@@ -292,4 +296,27 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 	if err := os.RemoveAll("/tmp/txn/data/"); err != nil {
 		t.Fatal(err)
 	}
+}
+
+type TestConfigReader struct {
+	Fields map[string]interface{}
+	mu     sync.Mutex
+}
+
+func (cr *TestConfigReader) ReadValue(name string) (interface{}, error) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	v, found := cr.Fields[name]
+	if !found {
+		return nil, errors.New("chain config - read config - invalid configuration name")
+	}
+	return v, nil
+}
+
+func (cr *TestConfigReader) WriteValue(name string, val interface{}) {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	cr.Fields[name] = val
 }
