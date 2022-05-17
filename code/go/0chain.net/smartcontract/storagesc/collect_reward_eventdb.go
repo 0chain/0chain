@@ -6,12 +6,12 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 )
 
-func emitAddOrOverwriteReward(amount tokens.SAS, providerID string, prr stakepool.CollectRewardRequest, balances cstate.StateContextI, t *transaction.Transaction) error {
+func emitAddOrOverwriteReward(amount currency.Coin, providerID string, prr stakepool.CollectRewardRequest, balances cstate.StateContextI, t *transaction.Transaction) error {
 	data, err := json.Marshal(event.Reward{
 		Amount:       int64(amount),
 		BlockNumber:  balances.GetBlock().Round,

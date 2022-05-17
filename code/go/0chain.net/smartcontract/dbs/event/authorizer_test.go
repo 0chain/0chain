@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
@@ -47,8 +47,8 @@ func TestAuthorizers(t *testing.T) {
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
 		DelegateWallet:  "delegate wallet",
-		MinStake:        tokens.SAS(53),
-		MaxStake:        tokens.SAS(57),
+		MinStake:        currency.Coin(53),
+		MaxStake:        currency.Coin(57),
 		NumDelegates:    59,
 		ServiceCharge:   61.0,
 	}
@@ -60,8 +60,8 @@ func TestAuthorizers(t *testing.T) {
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
 		DelegateWallet:  "delegate wallet",
-		MinStake:        tokens.SAS(52),
-		MaxStake:        tokens.SAS(57),
+		MinStake:        currency.Coin(52),
+		MaxStake:        currency.Coin(57),
 		NumDelegates:    60,
 		ServiceCharge:   50.0,
 	}

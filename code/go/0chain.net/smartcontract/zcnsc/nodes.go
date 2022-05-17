@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
@@ -25,13 +25,13 @@ import (
 // ------------- GlobalNode ------------------------
 
 type ZCNSConfig struct {
-	MinMintAmount      tokens.SAS     `json:"min_mint"`
-	MinBurnAmount      tokens.SAS     `json:"min_burn"`
-	MinStakeAmount     tokens.SAS     `json:"min_stake"`
+	MinMintAmount      currency.Coin  `json:"min_mint"`
+	MinBurnAmount      currency.Coin  `json:"min_burn"`
+	MinStakeAmount     currency.Coin  `json:"min_stake"`
 	MinLockAmount      int64          `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
-	MaxFee             tokens.SAS     `json:"max_fee"`
+	MaxFee             currency.Coin  `json:"max_fee"`
 	BurnAddress        string         `json:"burn_address"`
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
@@ -49,15 +49,15 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 		case MinMintAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to tokens.SAS", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinMintAmount = tokens.SAS(amount * 1e10)
+			gn.MinMintAmount = currency.Coin(amount * 1e10)
 		case MinBurnAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to tokens.SAS", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinBurnAmount = tokens.SAS(amount * 1e10)
+			gn.MinBurnAmount = currency.Coin(amount * 1e10)
 		case BurnAddress:
 			if value == "" {
 				return fmt.Errorf("key %s is empty", key)
@@ -76,15 +76,15 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 		case MinStakeAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to tokens.SAS", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinStakeAmount = tokens.SAS(amount * 1e10)
+			gn.MinStakeAmount = currency.Coin(amount * 1e10)
 		case MaxFee:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to tokens.SAS", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MaxFee = tokens.SAS(amount * 1e10)
+			gn.MaxFee = currency.Coin(amount * 1e10)
 		case OwnerID:
 			gn.OwnerId = value
 		case Cost:
@@ -103,7 +103,7 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
 			}
 		default:
-			return fmt.Errorf("key %s, unable to convert %v to tokens.SAS", key, value)
+			return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 		}
 	}
 
@@ -197,7 +197,7 @@ func (gn *GlobalNode) Save(balances cstate.StateContextI) (err error) {
 // ----- AuthorizerConfig --------------------
 
 type AuthorizerConfig struct {
-	Fee tokens.SAS `json:"fee"`
+	Fee currency.Coin `json:"fee"`
 }
 
 func (c *AuthorizerConfig) Decode(input []byte) (err error) {

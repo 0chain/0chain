@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -23,11 +23,11 @@ type State struct {
 	having the origin (round in the blockchain) part of the state ensures that the same logical leaf has a new hash and avoid this issue. We are getting
 	parallelism without explicit locks with this approach.
 	*/
-	TxnHash      string     `json:"txn" msgpack:"-"`
-	TxnHashBytes []byte     `json:"-" msgpack:"t"`
-	Round        int64      `json:"round" msgpack:"r"`
-	Balance      tokens.SAS `json:"balance" msgpack:"b"`
-	Nonce        int64      `json:"nonce" msgpack:"n"`
+	TxnHash      string        `json:"txn" msgpack:"-"`
+	TxnHashBytes []byte        `json:"-" msgpack:"t"`
+	Round        int64         `json:"round" msgpack:"r"`
+	Balance      currency.Coin `json:"balance" msgpack:"b"`
+	Nonce        int64         `json:"nonce" msgpack:"n"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
@@ -64,7 +64,7 @@ func (s *State) Encode() []byte {
 func (s *State) Decode(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	var origin int64
-	var balance tokens.SAS
+	var balance currency.Coin
 	var nonce int64
 	s.TxnHashBytes = make([]byte, 32)
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {

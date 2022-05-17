@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -208,7 +208,7 @@ func TestZcnLockingPool_GetBalance(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   tokens.SAS
+		want   currency.Coin
 	}{
 		{
 			name: "OK",
@@ -284,7 +284,7 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	p.Balance += tokens.SAS(txn.Value)
+	p.Balance += currency.Coin(txn.Value)
 	p.ID = "pool id"
 
 	tpr := &tokenpool.TokenPoolTransferResponse{
@@ -292,9 +292,9 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 		FromClient: txn.ClientID,
 		ToPool:     p.ID,
 		ToClient:   txn.ToClientID,
-		Value:      tokens.SAS(txn.Value),
+		Value:      currency.Coin(txn.Value),
 	}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, tokens.SAS(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
 
 	type fields struct {
 		ZcnPool            tokenpool.ZcnPool
@@ -369,7 +369,7 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 		}
 		fromClientID = "from client id"
 		toClientID   = "to client id"
-		value        = tokens.SAS(4)
+		value        = currency.Coin(4)
 
 		tpr = &tokenpool.TokenPoolTransferResponse{
 			FromClient: fromClientID,
@@ -387,7 +387,7 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 	type args struct {
 		fromClientID string
 		toClientID   string
-		value        tokens.SAS
+		value        currency.Coin
 		entity       interface{}
 	}
 	tests := []struct {

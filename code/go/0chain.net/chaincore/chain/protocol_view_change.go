@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"go.uber.org/zap"
 
@@ -249,8 +249,8 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Settings.DelegateWallet = viper.GetString("delegate_wallet")
 	mn.Settings.ServiceCharge = viper.GetFloat64("service_charge")
 	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
-	mn.Settings.MinStake = tokens.SAS(viper.GetFloat64("min_stake") * 1e10)
-	mn.Settings.MaxStake = tokens.SAS(viper.GetFloat64("max_stake") * 1e10)
+	mn.Settings.MinStake = currency.Coin(viper.GetFloat64("min_stake") * 1e10)
+	mn.Settings.MaxStake = currency.Coin(viper.GetFloat64("max_stake") * 1e10)
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
 		Latitude:  viper.GetFloat64("latitude"),
 		Longitude: viper.GetFloat64("longitude"),

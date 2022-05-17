@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"github.com/stretchr/testify/assert"
 
@@ -35,7 +35,7 @@ func TestState_GetHash(t *testing.T) {
 		TxnHash      string
 		TxnHashBytes []byte
 		Round        int64
-		Balance      tokens.SAS
+		Balance      currency.Coin
 		Nonce        int64
 	}
 	tests := []struct {
@@ -77,7 +77,7 @@ func TestState_GetHashBytes(t *testing.T) {
 		TxnHash      string
 		TxnHashBytes []byte
 		Round        int64
-		Balance      tokens.SAS
+		Balance      currency.Coin
 		Nonce        int64
 	}
 	tests := []struct {
@@ -119,7 +119,7 @@ func TestState_Encode(t *testing.T) {
 		TxnHash      string
 		TxnHashBytes []byte
 		Round        int64
-		Balance      tokens.SAS
+		Balance      currency.Coin
 		Nonce        int64
 	}
 	tests := []struct {
@@ -178,7 +178,7 @@ func TestState_Decode(t *testing.T) {
 		TxnHash      string
 		TxnHashBytes []byte
 		Round        int64
-		Balance      tokens.SAS
+		Balance      currency.Coin
 		Nonce        int64
 	}
 	type args struct {
@@ -227,7 +227,7 @@ func TestState_ComputeProperties(t *testing.T) {
 		TxnHash      string
 		TxnHashBytes []byte
 		Round        int64
-		Balance      tokens.SAS
+		Balance      currency.Coin
 		Nonce        int64
 	}
 	tests := []struct {
@@ -274,7 +274,7 @@ func TestState_Set(t *testing.T) {
 		TxnHash      string
 		TxnHashBytes []byte
 		Round        int64
-		Balance      tokens.SAS
+		Balance      currency.Coin
 		Nonce        int64
 	}
 	type args struct {

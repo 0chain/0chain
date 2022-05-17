@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 	// "context"
 	"encoding/json"
 	// "net/url"
@@ -21,13 +21,13 @@ import (
 //
 
 func (rp *readPool) allocTotal(allocID string,
-	now int64) tokens.SAS {
+	now int64) currency.Coin {
 
 	return rp.Pools.allocTotal(allocID, now)
 }
 
 func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
-	now int64) tokens.SAS {
+	now int64) currency.Coin {
 
 	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
 }

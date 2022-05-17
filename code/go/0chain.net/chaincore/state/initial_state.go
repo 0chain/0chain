@@ -2,7 +2,7 @@ package state
 
 import (
 	"0chain.net/core/datastore"
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"io/ioutil"
 
@@ -17,7 +17,7 @@ type InitStates struct {
 // InitState is a clients initial state in the genesis block.
 type InitState struct {
 	ID     datastore.Key `yaml:"id"`
-	Tokens tokens.SAS    `yaml:"tokens"`
+	Tokens currency.Coin `yaml:"tokens"`
 }
 
 // NewInitStates is used to return a new InitStates.

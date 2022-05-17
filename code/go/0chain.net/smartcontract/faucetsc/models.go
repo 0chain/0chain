@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/common"
 
@@ -20,17 +20,17 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type periodicResponse struct {
-	Used    tokens.SAS `json:"tokens_poured"`
-	Start   time.Time  `json:"start_time"`
-	Restart string     `json:"time_left"`
-	Allowed tokens.SAS `json:"tokens_allowed"`
+	Used    currency.Coin `json:"tokens_poured"`
+	Start   time.Time     `json:"start_time"`
+	Restart string        `json:"time_left"`
+	Allowed currency.Coin `json:"tokens_allowed"`
 }
 
 type GlobalNode struct {
 	*FaucetConfig `json:"faucet_config"`
-	ID            string     `json:"id"`
-	Used          tokens.SAS `json:"used"`
-	StartTime     time.Time  `json:"start_time"`
+	ID            string        `json:"id"`
+	Used          currency.Coin `json:"used"`
+	StartTime     time.Time     `json:"start_time"`
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
@@ -63,25 +63,25 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.PourAmount = tokens.SAS(fAmount * 1e10)
+			gn.PourAmount = currency.Coin(fAmount * 1e10)
 		case Settings[MaxPourAmount]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.MaxPourAmount = tokens.SAS(fAmount * 1e10)
+			gn.MaxPourAmount = currency.Coin(fAmount * 1e10)
 		case Settings[PeriodicLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.PeriodicLimit = tokens.SAS(fAmount * 1e10)
+			gn.PeriodicLimit = currency.Coin(fAmount * 1e10)
 		case Settings[GlobalLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.GlobalLimit = tokens.SAS(fAmount * 1e10)
+			gn.GlobalLimit = currency.Coin(fAmount * 1e10)
 		case Settings[IndividualReset]:
 			ir, err := time.ParseDuration(value)
 			if err != nil {
@@ -157,9 +157,9 @@ func (gn *GlobalNode) validate() error {
 }
 
 type UserNode struct {
-	ID        string     `json:"id"`
-	StartTime time.Time  `json:"start_time"`
-	Used      tokens.SAS `json:"used"`
+	ID        string        `json:"id"`
+	StartTime time.Time     `json:"start_time"`
+	Used      currency.Coin `json:"used"`
 }
 
 func (un *UserNode) GetKey(globalKey string) datastore.Key {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
 
@@ -309,7 +309,7 @@ func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 		}
 		iSetting := conf.get(info.setting)
 		if info.configType == smartcontract.StateBalance {
-			sbSetting, ok := iSetting.(tokens.SAS)
+			sbSetting, ok := iSetting.(currency.Coin)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
@@ -343,7 +343,7 @@ func (conf *Config) setInt(key string, change int) error {
 	return nil
 }
 
-func (conf *Config) setBalance(key string, change tokens.SAS) error {
+func (conf *Config) setBalance(key string, change currency.Coin) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
@@ -520,7 +520,7 @@ func (conf *Config) set(key string, change string) error {
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := conf.setBalance(key, tokens.SAS(value*x10)); err != nil {
+			if err := conf.setBalance(key, currency.Coin(value*x10)); err != nil {
 				return err
 			}
 		} else {

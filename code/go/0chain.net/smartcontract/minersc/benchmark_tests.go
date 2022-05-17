@@ -3,7 +3,7 @@ package minersc
 import (
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -104,8 +104,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -127,8 +127,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -274,8 +274,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -295,8 +295,8 @@ func BenchmarkTests(
 					Settings: stakepool.StakePoolSettings{
 						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        tokens.SAS(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        tokens.SAS(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+						MinStake:        currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:        currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),

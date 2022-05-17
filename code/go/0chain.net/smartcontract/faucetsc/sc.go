@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/smartcontract"
 
@@ -99,17 +99,17 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	if gn.PourAmount > smartContractBalance {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
 	}
-	if tokens.SAS(gn.PourAmount)+un.Used > gn.PeriodicLimit {
+	if currency.Coin(gn.PourAmount)+un.Used > gn.PeriodicLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
 				t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
 	}
-	if tokens.SAS(gn.PourAmount)+gn.Used > gn.GlobalLimit {
+	if currency.Coin(gn.PourAmount)+gn.Used > gn.GlobalLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
 				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
 	}
-	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", tokens.SAS(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", tokens.SAS(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
+	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", currency.Coin(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", currency.Coin(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
 }
 
@@ -155,7 +155,7 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 	if ok {
 		var pourAmount = gn.PourAmount
 		if t.Value > 0 && t.Value < int64(gn.MaxPourAmount) {
-			pourAmount = tokens.SAS(t.Value)
+			pourAmount = currency.Coin(t.Value)
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
@@ -183,9 +183,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	if err != nil {
 		return "", err
 	}
-	if clientBalance >= tokens.SAS(t.Value) {
+	if clientBalance >= currency.Coin(t.Value) {
 		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
-		transfer := state.NewTransfer(t.ClientID, t.ToClientID, tokens.SAS(t.Value))
+		transfer := state.NewTransfer(t.ClientID, t.ToClientID, currency.Coin(t.Value))
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", err
 		}

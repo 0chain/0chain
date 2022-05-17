@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract"
 
@@ -59,9 +59,9 @@ func (sr *stopRequest) decode(b []byte) error {
 //
 
 type destination struct {
-	ID     string     `json:"id"`     // destination ID
-	Amount tokens.SAS `json:"amount"` // amount to vest for the destination (initial)
-	Vested tokens.SAS `json:"vested"` // tokens already vested
+	ID     string        `json:"id"`     // destination ID
+	Amount currency.Coin `json:"amount"` // amount to vest for the destination (initial)
+	Vested currency.Coin `json:"vested"` // tokens already vested
 	// Last tokens transfer time. The Last is for statistic and represent
 	// last destination vesting (unlock / trigger).
 	Last common.Timestamp `json:"last"`
@@ -74,7 +74,7 @@ type destination struct {
 }
 
 // tokens left for this destination
-func (d *destination) left() (left tokens.SAS) {
+func (d *destination) left() (left currency.Coin) {
 	return d.Amount - d.Vested
 }
 
@@ -90,7 +90,7 @@ func (d *destination) period(now common.Timestamp) (period common.Timestamp) {
 }
 
 // move updates last vesting period
-func (d *destination) move(now common.Timestamp, moved tokens.SAS) {
+func (d *destination) move(now common.Timestamp, moved currency.Coin) {
 	d.Last = now
 	if moved > 0 {
 		d.Move = now
@@ -104,7 +104,7 @@ func (d *destination) move(now common.Timestamp, moved tokens.SAS) {
 // end. Also, the now must be greater or equal to start time of related
 // vesting pool.
 func (d *destination) unlock(now, end common.Timestamp, dry bool) (
-	amount tokens.SAS) {
+	amount currency.Coin) {
 
 	var (
 		full   = d.full(end)   // full time range left
@@ -120,7 +120,7 @@ func (d *destination) unlock(now, end common.Timestamp, dry bool) (
 		ratio = float64(period) / float64(full)
 	}
 
-	amount = tokens.SAS(float64(left) * ratio)
+	amount = currency.Coin(float64(left) * ratio)
 
 	if !dry {
 		d.move(now, amount)
@@ -250,7 +250,7 @@ func (vp *vestingPool) Decode(b []byte) error {
 func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 	err error) {
 
-	var balance tokens.SAS
+	var balance currency.Coin
 	balance, err = balances.GetClientBalance(t.ClientID)
 
 	if err != nil && err != util.ErrValueNotPresent {
@@ -261,7 +261,7 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 		return errors.New("no tokens to lock")
 	}
 
-	if tokens.SAS(t.Value) > balance {
+	if currency.Coin(t.Value) > balance {
 		return errors.New("lock amount is greater than balance")
 	}
 
@@ -269,7 +269,7 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 }
 
 // required starting pool amount
-func (vp *vestingPool) want() (want tokens.SAS) {
+func (vp *vestingPool) want() (want currency.Coin) {
 	for _, d := range vp.Destinations {
 		want += d.Amount
 	}
@@ -294,7 +294,7 @@ func (vp *vestingPool) fill(t *transaction.Transaction,
 
 // the tokens transfer
 func (vp *vestingPool) moveToDest(vscKey, destID datastore.Key,
-	value tokens.SAS, balances chainstate.StateContextI) (
+	value currency.Coin, balances chainstate.StateContextI) (
 	resp string, err error) {
 
 	var transfer *state.Transfer
@@ -358,8 +358,8 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 }
 
 // excess returns amount of tokens over the vesting pool requires
-func (vp *vestingPool) excess() (amount tokens.SAS) {
-	var need tokens.SAS
+func (vp *vestingPool) excess() (amount currency.Coin) {
+	var need currency.Coin
 	for _, d := range vp.Destinations {
 		need += d.left()
 	}
@@ -501,16 +501,16 @@ func (vp *vestingPool) info(now common.Timestamp) (i *info) {
 
 type destInfo struct {
 	ID     datastore.Key    `json:"id"`     // identifier
-	Wanted tokens.SAS       `json:"wanted"` // wanted amount for entire period
-	Earned tokens.SAS       `json:"earned"` // can unlock
-	Vested tokens.SAS       `json:"vested"` // tokens already vested
+	Wanted currency.Coin    `json:"wanted"` // wanted amount for entire period
+	Earned currency.Coin    `json:"earned"` // can unlock
+	Vested currency.Coin    `json:"vested"` // tokens already vested
 	Last   common.Timestamp `json:"last"`   // last time unlocked
 }
 
 type info struct {
 	ID           datastore.Key    `json:"pool_id"`      // pool ID
-	Balance      tokens.SAS       `json:"balance"`      // real pool balance
-	Left         tokens.SAS       `json:"left"`         // owner can unlock
+	Balance      currency.Coin    `json:"balance"`      // real pool balance
+	Left         currency.Coin    `json:"left"`         // owner can unlock
 	Description  string           `json:"description"`  // description
 	StartTime    common.Timestamp `json:"start_time"`   // from
 	ExpireAt     common.Timestamp `json:"expire_at"`    // until
@@ -566,12 +566,12 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	var vp = newVestingPoolFromReqeust(t.ClientID, &ar)
 	vp.ID = poolKey(vsc.ID, t.Hash) // set ID by this transaction
 
-	if tokens.SAS(t.Value) < vp.want() {
+	if currency.Coin(t.Value) < vp.want() {
 		return "", common.NewError("create_vesting_pool_failed",
 			"not enough tokens to create pool provided")
 	}
 
-	if tokens.SAS(t.Value) < conf.MinLock {
+	if currency.Coin(t.Value) < conf.MinLock {
 		return "", common.NewError("create_vesting_pool_failed",
 			"insufficient amount to lock")
 	}

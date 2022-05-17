@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -66,7 +66,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		PublicKey:         mn.PublicKey,
 		ShortName:         mn.ShortName,
 		BuildTag:          mn.BuildTag,
-		TotalStaked:       tokens.SAS(mn.TotalStaked),
+		TotalStaked:       currency.Coin(mn.TotalStaked),
 		Delete:            mn.Delete,
 		DelegateWallet:    mn.Settings.DelegateWallet,
 		ServiceCharge:     mn.Settings.ServiceCharge,

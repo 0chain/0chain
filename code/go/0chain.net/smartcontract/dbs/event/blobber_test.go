@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"golang.org/x/net/context"
 
@@ -34,18 +34,18 @@ func TestBlobbers(t *testing.T) {
 		Longitude float64 `json:"longitude"`
 	}
 	type Terms struct {
-		ReadPrice               tokens.SAS    `json:"read_price"`
-		WritePrice              tokens.SAS    `json:"write_price"`
+		ReadPrice               currency.Coin `json:"read_price"`
+		WritePrice              currency.Coin `json:"write_price"`
 		MinLockDemand           float64       `json:"min_lock_demand"`
 		MaxOfferDuration        time.Duration `json:"max_offer_duration"`
 		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	}
 	type stakePoolSettings struct {
-		DelegateWallet string     `json:"delegate_wallet"`
-		MinStake       tokens.SAS `json:"min_stake"`
-		MaxStake       tokens.SAS `json:"max_stake"`
-		NumDelegates   int        `json:"num_delegates"`
-		ServiceCharge  float64    `json:"service_charge"`
+		DelegateWallet string        `json:"delegate_wallet"`
+		MinStake       currency.Coin `json:"min_stake"`
+		MaxStake       currency.Coin `json:"max_stake"`
+		NumDelegates   int           `json:"num_delegates"`
+		ServiceCharge  float64       `json:"service_charge"`
 	}
 	type StorageNode struct {
 		ID              string                 `json:"id"`
@@ -111,8 +111,8 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  23,
 		},
 		Terms: Terms{
-			ReadPrice:               tokens.SAS(29),
-			WritePrice:              tokens.SAS(31),
+			ReadPrice:               currency.Coin(29),
+			WritePrice:              currency.Coin(31),
 			MinLockDemand:           37.0,
 			MaxOfferDuration:        39 * time.Minute,
 			ChallengeCompletionTime: 41 * time.Minute,
@@ -123,8 +123,8 @@ func TestBlobbers(t *testing.T) {
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       tokens.SAS(53),
-			MaxStake:       tokens.SAS(57),
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
 			NumDelegates:   59,
 			ServiceCharge:  61.0,
 		},
@@ -182,8 +182,8 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  93,
 		},
 		Terms: Terms{
-			ReadPrice:               tokens.SAS(97),
-			WritePrice:              tokens.SAS(101),
+			ReadPrice:               currency.Coin(97),
+			WritePrice:              currency.Coin(101),
 			MinLockDemand:           103.0,
 			MaxOfferDuration:        107 * time.Minute,
 			ChallengeCompletionTime: 113 * time.Minute,
@@ -194,8 +194,8 @@ func TestBlobbers(t *testing.T) {
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       tokens.SAS(137),
-			MaxStake:       tokens.SAS(139),
+			MinStake:       currency.Coin(137),
+			MaxStake:       currency.Coin(139),
 			NumDelegates:   143,
 			ServiceCharge:  149.0,
 		},

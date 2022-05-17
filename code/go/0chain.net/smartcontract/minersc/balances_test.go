@@ -3,7 +3,7 @@ package minersc
 import (
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -17,7 +17,7 @@ import (
 )
 
 type testBalances struct {
-	balances      map[datastore.Key]tokens.SAS
+	balances      map[datastore.Key]currency.Coin
 	txn           *transaction.Transaction
 	transfers     []*state.Transfer
 	tree          map[datastore.Key]util.MPTSerializable
@@ -28,16 +28,16 @@ type testBalances struct {
 
 func newTestBalances() *testBalances {
 	return &testBalances{
-		balances: make(map[datastore.Key]tokens.SAS),
+		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
 func (tb *testBalances) zeroize() { //nolint
-	tb.balances = make(map[string]tokens.SAS)
+	tb.balances = make(map[string]currency.Coin)
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b tokens.SAS) { //nolint
+func (tb *testBalances) setBalance(key datastore.Key, b currency.Coin) { //nolint
 	tb.balances[key] = b
 }
 
@@ -96,7 +96,7 @@ func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
-	b tokens.SAS, err error) {
+	b currency.Coin, err error) {
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {

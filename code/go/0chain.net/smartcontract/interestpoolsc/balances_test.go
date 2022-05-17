@@ -3,7 +3,7 @@ package interestpoolsc
 import (
 	"fmt"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -19,7 +19,7 @@ import (
 // testBalance implements state.StateContextI  intended for using
 // fake test balance structure
 type testBalances struct {
-	balances      map[datastore.Key]tokens.SAS
+	balances      map[datastore.Key]currency.Coin
 	txn           *transaction.Transaction
 	transfers     []*state.Transfer
 	tree          map[datastore.Key]util.MPTSerializable
@@ -28,7 +28,7 @@ type testBalances struct {
 	lfmb          *block.Block
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b tokens.SAS) {
+func (tb *testBalances) setBalance(key datastore.Key, b currency.Coin) {
 	tb.balances[key] = b
 }
 
@@ -78,7 +78,7 @@ func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
-	b tokens.SAS, err error) {
+	b currency.Coin, err error) {
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {

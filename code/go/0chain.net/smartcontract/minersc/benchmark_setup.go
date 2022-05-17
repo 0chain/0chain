@@ -3,7 +3,7 @@ package minersc
 import (
 	"strconv"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -57,8 +57,8 @@ func AddMockNodes(
 		newNode.PublicKey = "mockPublicKey"
 		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.Settings.MinStake = tokens.SAS(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.Settings.MaxStake = tokens.SAS(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
+		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
+		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = newNode.ID
 

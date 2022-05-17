@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 )
 
 type ConfigType int
@@ -29,7 +29,7 @@ const (
 //go:generate msgp -io=false -tests=false -v
 
 var ConfigTypeName = []string{
-	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "tokens.SAS", "Cost", "datastore.Key", "[]string",
+	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "currency.Coin", "Cost", "datastore.Key", "[]string",
 }
 
 type StringMap struct {
@@ -82,7 +82,7 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		return input, nil
 	case StateBalance:
 		value, err := strconv.ParseInt(input, 10, 64)
-		return tokens.SAS(value), err
+		return currency.Coin(value), err
 	case Strings:
 		return strings.Split(input, ","), nil
 	default:

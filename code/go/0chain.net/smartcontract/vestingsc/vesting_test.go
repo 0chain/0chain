@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -136,8 +136,8 @@ func Test_vestingPool(t *testing.T) {
 		&destInfo{ID: "one", Wanted: 10, Earned: 5, Vested: 0, Last: 10},
 		&destInfo{ID: "two", Wanted: 20, Earned: 10, Vested: 0, Last: 10},
 	}, inf.Destinations) // TODO
-	assert.Equal(t, tokens.SAS(40), inf.Balance)
-	assert.Equal(t, tokens.SAS(10), inf.Left)
+	assert.Equal(t, currency.Coin(40), inf.Balance)
+	assert.Equal(t, currency.Coin(10), inf.Left)
 }
 
 func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
@@ -229,7 +229,7 @@ func TestVestingSmartContract_add(t *testing.T) {
 	require.NoError(t, deco.Decode([]byte(resp)))
 	assert.NotZero(t, deco.ID)
 	assert.Equal(t, client.id, deco.ClientID)
-	assert.Equal(t, tokens.SAS(800e10), deco.Balance)
+	assert.Equal(t, currency.Coin(800e10), deco.Balance)
 
 	// 7. client pools
 	var cp *clientPools
@@ -376,7 +376,7 @@ func TestVestingSmartContract_stop(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, tokens.SAS(8e12), got.Balance)
+	assert.Equal(t, currency.Coin(8e12), got.Balance)
 
 }
 
@@ -441,7 +441,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, tokens.SAS(30), got.Balance)
+	assert.Equal(t, currency.Coin(30), got.Balance)
 }
 
 func TestVestingSmartContract_trigger(t *testing.T) {
@@ -508,7 +508,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, tokens.SAS(29000), got.Balance)
+	assert.Equal(t, currency.Coin(29000), got.Balance)
 }
 
 func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {

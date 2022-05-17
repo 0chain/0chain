@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/util"
@@ -20,18 +20,18 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	balances := newTestBalances(t, true)
 	type params struct {
 		numBlobbers       int
-		wp                []tokens.SAS
-		rp                []tokens.SAS
+		wp                []currency.Coin
+		rp                []currency.Coin
 		totalData         []float64
 		dataRead          []float64
 		successChallenges []int
-		delegatesBal      [][]tokens.SAS
+		delegatesBal      [][]currency.Coin
 		serviceCharge     []float64
 	}
 
 	type result struct {
-		blobberRewards          []tokens.SAS
-		blobberDelegatesRewards [][]tokens.SAS
+		blobberRewards          []currency.Coin
+		blobberDelegatesRewards [][]currency.Coin
 	}
 
 	setupRewards := func(t *testing.T, p params, sc *StorageSmartContract) {
@@ -97,34 +97,34 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			name: "1_blobber",
 			params: params{
 				numBlobbers:       1,
-				wp:                []tokens.SAS{2},
-				rp:                []tokens.SAS{1},
+				wp:                []currency.Coin{2},
+				rp:                []currency.Coin{1},
 				totalData:         []float64{10},
 				dataRead:          []float64{2},
 				successChallenges: []int{10},
-				delegatesBal:      [][]tokens.SAS{{1, 0, 3}},
+				delegatesBal:      [][]currency.Coin{{1, 0, 3}},
 				serviceCharge:     []float64{.1},
 			},
 			result: result{
-				blobberRewards:          []tokens.SAS{50},
-				blobberDelegatesRewards: [][]tokens.SAS{{112, 0, 337}},
+				blobberRewards:          []currency.Coin{50},
+				blobberDelegatesRewards: [][]currency.Coin{{112, 0, 337}},
 			},
 		},
 		{
 			name: "2_blobber",
 			params: params{
 				numBlobbers:       2,
-				wp:                []tokens.SAS{3, 1},
-				rp:                []tokens.SAS{1, 0},
+				wp:                []currency.Coin{3, 1},
+				rp:                []currency.Coin{1, 0},
 				totalData:         []float64{10, 50},
 				dataRead:          []float64{2, 15},
 				successChallenges: []int{5, 2},
-				delegatesBal:      [][]tokens.SAS{{1, 0, 3}, {1, 6, 3}},
+				delegatesBal:      [][]currency.Coin{{1, 0, 3}, {1, 6, 3}},
 				serviceCharge:     []float64{.1, .1},
 			},
 			result: result{
-				blobberRewards:          []tokens.SAS{15, 34},
-				blobberDelegatesRewards: [][]tokens.SAS{{35, 0, 107}, {30, 183, 91}},
+				blobberRewards:          []currency.Coin{15, 34},
+				blobberDelegatesRewards: [][]currency.Coin{{35, 0, 107}, {30, 183, 91}},
 			},
 		},
 	}
@@ -168,8 +168,8 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 		br := BlobberRewardNode{
 			ID:                strconv.Itoa(i),
 			SuccessChallenges: i,
-			WritePrice:        tokens.SAS(i),
-			ReadPrice:         tokens.SAS(i),
+			WritePrice:        currency.Coin(i),
+			ReadPrice:         currency.Coin(i),
 			TotalData:         float64(i * 100),
 			DataRead:          float64(i),
 		}

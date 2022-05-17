@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/logging"
@@ -122,17 +122,17 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 	globalNode, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, tokens.SAS(11), globalNode.MinStakeAmount)
+	require.Equal(t, currency.Coin(11), globalNode.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = tokens.SAS(100 * 1e10)
+	node.MinStakeAmount = currency.Coin(100 * 1e10)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
 	globalNode, err = GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, tokens.SAS(100*1e10), globalNode.MinStakeAmount)
+	require.Equal(t, currency.Coin(100*1e10), globalNode.MinStakeAmount)
 }
 
 func Test_Should_FailWithoutInputData(t *testing.T) {
@@ -196,7 +196,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	require.NotNil(t, node)
 
 	cfg := &AuthorizerConfig{
-		Fee: tokens.SAS(111),
+		Fee: currency.Coin(111),
 	}
 
 	err := node.UpdateConfig(cfg)
@@ -207,7 +207,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	// Get node and check its setting
 	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node.Config)
-	require.Equal(t, tokens.SAS(111), node.Config.Fee)
+	require.Equal(t, currency.Coin(111), node.Config.Fee)
 }
 
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {

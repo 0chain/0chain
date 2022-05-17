@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"github.com/stretchr/testify/assert"
 
@@ -16,15 +16,15 @@ func TestNewMint(t *testing.T) {
 	t.Parallel()
 
 	var (
-		minter                = "minter"
-		toClientID            = "to client id"
-		amount     tokens.SAS = 5
+		minter                   = "minter"
+		toClientID               = "to client id"
+		amount     currency.Coin = 5
 	)
 
 	type args struct {
 		minter   datastore.Key
 		Receiver datastore.Key
-		amount   tokens.SAS
+		amount   currency.Coin
 	}
 	tests := []struct {
 		name string
@@ -69,7 +69,7 @@ func TestMint_Encode(t *testing.T) {
 	type fields struct {
 		Minter     datastore.Key
 		ToClientID datastore.Key
-		Amount     tokens.SAS
+		Amount     currency.Coin
 	}
 	tests := []struct {
 		name   string
@@ -111,7 +111,7 @@ func TestMint_Decode(t *testing.T) {
 	type fields struct {
 		Minter     datastore.Key
 		ToClientID datastore.Key
-		Amount     tokens.SAS
+		Amount     currency.Coin
 	}
 	type args struct {
 		input []byte

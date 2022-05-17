@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -183,7 +183,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 					OpenChallenges:    int64(i + 1),
 					SuccessChallenges: int64(i),
 				},
-				MinLockDemand: 200 + tokens.SAS(minLockDemand),
+				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
 			})
 			challenges = append(challenges, []common.Timestamp{})
@@ -198,7 +198,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var thisExpires = common.Timestamp(222)
 
 	var blobberOffer = int64(123000)
-	var wpBalance tokens.SAS = 777777
+	var wpBalance currency.Coin = 777777
 	var otherWritePools = 0
 
 	t.Run("cancel allocation", func(t *testing.T) {
@@ -301,7 +301,7 @@ func TestFinalizeAllocation(t *testing.T) {
 					OpenChallenges:    int64(i + 1),
 					SuccessChallenges: int64(i),
 				},
-				MinLockDemand: 200 + tokens.SAS(minLockDemand),
+				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
 			})
 		}
@@ -310,7 +310,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	var thisExpires = common.Timestamp(222)
 
 	var blobberOffer = int64(123000)
-	var wpBalance tokens.SAS = 777777
+	var wpBalance currency.Coin = 777777
 	var otherWritePools = 4
 
 	t.Run("finalize allocation", func(t *testing.T) {
@@ -341,7 +341,7 @@ func testCancelAllocation(
 	challengePoolBalance int64,
 	challenges [][]common.Timestamp,
 	blobberOffer int64,
-	wpBalance tokens.SAS,
+	wpBalance currency.Coin,
 	thisExpires, now common.Timestamp,
 ) error {
 	var f = formulaeFinalizeAllocation{
@@ -358,7 +358,7 @@ func testCancelAllocation(
 
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
 		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
-		tokens.SAS(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
+		currency.Coin(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
 	)
 
 	require.True(t, len(challenges) <= len(blobbers))
@@ -423,7 +423,7 @@ func testFinalizeAllocation(
 	otherWritePools int,
 	challengePoolBalance int64,
 	blobberOffer int64,
-	wpBalance tokens.SAS,
+	wpBalance currency.Coin,
 	thisExpires, now common.Timestamp,
 ) error {
 
@@ -440,7 +440,7 @@ func testFinalizeAllocation(
 
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
 		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
-		tokens.SAS(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
+		currency.Coin(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
 	)
 
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
@@ -481,7 +481,7 @@ func confirmFinalizeAllocation(
 	challengePool challengePool,
 	allocationWritePool writePool,
 	allocation StorageAllocation,
-	wpStartBalance tokens.SAS,
+	wpStartBalance currency.Coin,
 	sps []*stakePool,
 	ctx cstate.StateContextI,
 ) {
@@ -526,9 +526,9 @@ func setupMocksFinishAllocation(
 	bStakes [][]mockStakePool,
 	scYaml Config,
 	otherWritePools int,
-	challengePoolBalance tokens.SAS,
+	challengePoolBalance currency.Coin,
 	blobberOffer int64,
-	wpBalance tokens.SAS,
+	wpBalance currency.Coin,
 	thisExpires, now common.Timestamp,
 ) (*StorageSmartContract, *transaction.Transaction, []byte, cstate.StateContextI) {
 	var err error
@@ -580,14 +580,14 @@ func setupMocksFinishAllocation(
 	}
 	var newPool = &allocationPool{}
 	newPool.ID = "first_mock_write_pool"
-	newPool.Balance = tokens.SAS(wpBalance)
+	newPool.Balance = currency.Coin(wpBalance)
 	newPool.AllocationID = sAllocation.ID
 	newPool.Blobbers = blobberPools{}
 	newPool.ExpireAt = now
 	for i := 0; i < len(sAllocation.BlobberAllocs); i++ {
 		newPool.Blobbers.add(&blobberPool{
 			BlobberID: blobbers[i].ID,
-			Balance:   tokens.SAS(1),
+			Balance:   currency.Coin(1),
 		})
 	}
 
@@ -831,7 +831,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	for i, blobber := range blobbers {
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
-		stakePool.Pools["paula"].Balance = tokens.SAS(stakes[i])
+		stakePool.Pools["paula"].Balance = currency.Coin(stakes[i])
 		require.NoError(t, stakePool.save(ssc.ID, blobber.ID, ctx))
 	}
 

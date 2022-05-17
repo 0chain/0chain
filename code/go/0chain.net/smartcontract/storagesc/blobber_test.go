@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -85,7 +85,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	)
 
 	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
-		terms Terms, balacne tokens.SAS, balances chainState.StateContextI) (
+		terms Terms, balacne currency.Coin, balances chainState.StateContextI) (
 		err error) {
 
 		var blob = newClient(0, balances)
@@ -1286,7 +1286,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tp += 1
 		var b = addBlobber(t, ssc, bcap, tp, terms,
-			tokens.SAS(float64(terms.WritePrice)*sizeInGB(bcap)), balances)
+			currency.Coin(float64(terms.WritePrice)*sizeInGB(bcap)), balances)
 		blobs = append(blobs, b)
 
 		terms.ReadPrice++

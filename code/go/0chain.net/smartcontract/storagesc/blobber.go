@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
@@ -416,7 +416,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
-		value    = tokens.SAS(float64(details.Terms.ReadPrice) * sizeRead)
+		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
@@ -546,7 +546,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		move  tokens.SAS
+		move  currency.Coin
 	)
 
 	// the details will be saved in caller with allocation object (the details

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -22,17 +22,17 @@ type Miner struct {
 	PublicKey         string
 	ShortName         string
 	BuildTag          string
-	TotalStaked       tokens.SAS
+	TotalStaked       currency.Coin
 	Delete            bool
 	DelegateWallet    string
 	ServiceCharge     float64
 	NumberOfDelegates int
-	MinStake          tokens.SAS
-	MaxStake          tokens.SAS
+	MinStake          currency.Coin
+	MaxStake          currency.Coin
 	LastHealthCheck   common.Timestamp
-	Rewards           tokens.SAS
-	TotalReward       tokens.SAS
-	Fees              tokens.SAS
+	Rewards           currency.Coin
+	TotalReward       currency.Coin
+	Fees              currency.Coin
 	Active            bool
 	Longitude         float64
 	Latitude          float64
@@ -77,7 +77,7 @@ type MinerQuery struct {
 	PublicKey         null.String
 	ShortName         null.String
 	BuildTag          null.String
-	TotalStaked       tokens.SAS
+	TotalStaked       currency.Coin
 	Delete            null.Bool
 	DelegateWallet    null.String
 	ServiceCharge     null.Float

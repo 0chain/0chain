@@ -3,7 +3,7 @@ package tokenpool
 import (
 	"encoding/json"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -28,11 +28,11 @@ func (p *ZcnLockingPool) Decode(input []byte, tokenlock TokenLockInterface) erro
 	return err
 }
 
-func (p *ZcnLockingPool) GetBalance() tokens.SAS {
+func (p *ZcnLockingPool) GetBalance() currency.Coin {
 	return p.Balance
 }
 
-func (p *ZcnLockingPool) SetBalance(value tokens.SAS) {
+func (p *ZcnLockingPool) SetBalance(value currency.Coin) {
 	p.Balance = value
 }
 
@@ -48,14 +48,14 @@ func (p *ZcnLockingPool) FillPool(txn *transaction.Transaction) (*state.Transfer
 	return p.ZcnPool.FillPool(txn)
 }
 
-func (p *ZcnLockingPool) TransferTo(op TokenPoolI, value tokens.SAS, entity interface{}) (*state.Transfer, string, error) {
+func (p *ZcnLockingPool) TransferTo(op TokenPoolI, value currency.Coin, entity interface{}) (*state.Transfer, string, error) {
 	if p.IsLocked(entity) {
 		return nil, "", common.NewError("pool-to-pool transfer failed", "pool is still locked")
 	}
 	return p.ZcnPool.TransferTo(op, value, entity)
 }
 
-func (p *ZcnLockingPool) DrainPool(fromClientID, toClientID string, value tokens.SAS, entity interface{}) (*state.Transfer, string, error) {
+func (p *ZcnLockingPool) DrainPool(fromClientID, toClientID string, value currency.Coin, entity interface{}) (*state.Transfer, string, error) {
 	if p.IsLocked(entity) {
 		return nil, "", common.NewError("draining pool failed", "pool is still locked")
 	}

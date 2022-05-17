@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"github.com/stretchr/testify/assert"
 
@@ -17,12 +17,12 @@ func TestNewTransfer(t *testing.T) {
 
 	fromClientID := "from client id"
 	toClientID := "to client id"
-	amount := tokens.SAS(5)
+	amount := currency.Coin(5)
 
 	type args struct {
 		fromClientID datastore.Key
 		toClientID   datastore.Key
-		amount       tokens.SAS
+		amount       currency.Coin
 	}
 	tests := []struct {
 		name string
@@ -63,7 +63,7 @@ func TestTransfer_Encode(t *testing.T) {
 	type fields struct {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
-		Amount     tokens.SAS
+		Amount     currency.Coin
 	}
 	tests := []struct {
 		name   string
@@ -105,7 +105,7 @@ func TestTransfer_Decode(t *testing.T) {
 	type fields struct {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
-		Amount     tokens.SAS
+		Amount     currency.Coin
 	}
 	type args struct {
 		input []byte

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -81,7 +81,7 @@ func (gn *GlobalNode) set(key string, value string) error {
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
-		gn.MinLock = tokens.SAS(fValue * 1e10)
+		gn.MinLock = currency.Coin(fValue * 1e10)
 	case Settings[Apr]:
 		gn.APR, err = strconv.ParseFloat(value, 64)
 		if err != nil {
@@ -99,7 +99,7 @@ func (gn *GlobalNode) set(key string, value string) error {
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
-		gn.MaxMint = tokens.SAS(fValue * 1e10)
+		gn.MaxMint = currency.Coin(fValue * 1e10)
 	case Settings[OwnerId]:
 		if _, err := hex.DecodeString(value); err != nil {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)

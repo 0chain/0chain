@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -74,8 +74,8 @@ func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI)
 // The readPoolRedeem represents part of response of read markers redeeming.
 // A Blobber uses this response for internal read pools cache.
 type readPoolRedeem struct {
-	PoolID  string     `json:"pool_id"` // read pool ID
-	Balance tokens.SAS `json:"balance"` // balance reduction
+	PoolID  string        `json:"pool_id"` // read pool ID
+	Balance currency.Coin `json:"balance"` // balance reduction
 }
 
 func toJson(val interface{}) string {
@@ -87,7 +87,7 @@ func toJson(val interface{}) string {
 }
 
 func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
-	sp *stakePool, now common.Timestamp, value tokens.SAS,
+	sp *stakePool, now common.Timestamp, value currency.Coin,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	var cut = rp.blobberCut(allocID, blobID, now)
@@ -99,7 +99,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
-	var moved tokens.SAS = 0
+	var moved currency.Coin = 0
 	var torm []*allocationPool // to remove later (empty allocation pools)
 	for _, ap := range cut {
 		if value == moved {
@@ -111,7 +111,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		}
 		var (
 			bp   = ap.Blobbers[bi]
-			move tokens.SAS
+			move currency.Coin
 		)
 		if value >= bp.Balance {
 			move, bp.Balance = bp.Balance, 0
@@ -119,7 +119,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			move, bp.Balance = value, bp.Balance-value
 		}
 
-		ap.Balance -= tokens.SAS(value)
+		ap.Balance -= currency.Coin(value)
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
@@ -293,7 +293,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   tokens.SAS(t.Value),
+			Balance:   currency.Coin(t.Value),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -307,7 +307,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.ReadPrice) / total
 			bps.add(&blobberPool{
-				Balance:   tokens.SAS(float64(t.Value) * ratio),
+				Balance:   currency.Coin(float64(t.Value) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}
@@ -332,11 +332,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     tokens.SAS(t.Value),
+			Amount:     currency.Coin(t.Value),
 		}); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
-		ap.Balance = tokens.SAS(t.Value)
+		ap.Balance = currency.Coin(t.Value)
 		ap.ID = t.Hash
 	}
 

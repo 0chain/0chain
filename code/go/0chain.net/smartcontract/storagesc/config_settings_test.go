@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/chaincore/block"
 
@@ -292,9 +292,9 @@ func TestCommitSettingChanges(t *testing.T) {
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
 							require.NoError(t, err)
-							actual, ok := setting.(tokens.SAS)
+							actual, ok := setting.(currency.Coin)
 							require.True(t, ok)
-							if tokens.SAS(expected) != actual {
+							if currency.Coin(expected) != actual {
 								return false
 							}
 						}

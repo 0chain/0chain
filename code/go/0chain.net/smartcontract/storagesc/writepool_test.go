@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 	// "context"
 	"encoding/json"
 	// "net/url"
@@ -21,7 +21,7 @@ import (
 //
 
 func (wp *writePool) allocTotal(allocID string,
-	now int64) tokens.SAS {
+	now int64) currency.Coin {
 
 	return wp.Pools.allocTotal(allocID, now)
 }

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -184,7 +184,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 }
 
 func getBlockReward(
-	br tokens.SAS,
+	br currency.Coin,
 	currentRound,
 	brChangePeriod int64,
 	brChangeRatio,

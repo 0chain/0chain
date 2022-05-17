@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/storagesc"
@@ -544,7 +544,7 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens tokens.SAS) util.MPTSerializable {
+func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 	balance := &state.State{}
 	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	balance.Balance = tokens

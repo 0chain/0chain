@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract"
 	"github.com/stretchr/testify/require"
@@ -294,10 +294,10 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 				t.Errorf("lock() got = %v, want %v", got, tt.want)
 			}
 			if tt.shouldBeOk {
-				amount := float64(tokens.SAS(tt.args.t.Value))
+				amount := float64(currency.Coin(tt.args.t.Value))
 				apr := tt.args.gn.APR
 				dur := float64(3 * time.Second)
-				balance := tokens.SAS(tt.args.t.Value) + tokens.SAS(amount*apr*dur/float64(YEAR))
+				balance := currency.Coin(tt.args.t.Value) + currency.Coin(amount*apr*dur/float64(YEAR))
 				stateBalance, err := tt.args.balances.GetClientBalance(tt.args.t.ToClientID)
 				if err != nil {
 					t.Errorf("can not fetch balance for %v", tt.args.t.ToClientID)
@@ -721,7 +721,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				FromClient: txn.ClientID,
 				ToPool:     txn.Hash,
 				ToClient:   txn.ToClientID,
-				Value:      tokens.SAS(txn.Value),
+				Value:      currency.Coin(txn.Value),
 			}).Encode()),
 		},
 		{

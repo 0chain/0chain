@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -68,7 +68,7 @@ type runtimeValues struct {
 	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
-	minted         tokens.SAS
+	minted         currency.Coin
 	fees           []int64
 }
 

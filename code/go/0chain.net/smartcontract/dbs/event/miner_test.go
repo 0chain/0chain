@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
@@ -29,11 +29,11 @@ func TestMiners(t *testing.T) {
 
 	type Stat struct {
 		// for miner (totals)
-		GeneratorRewards tokens.SAS `json:"generator_rewards,omitempty"`
-		GeneratorFees    tokens.SAS `json:"generator_fees,omitempty"`
+		GeneratorRewards currency.Coin `json:"generator_rewards,omitempty"`
+		GeneratorFees    currency.Coin `json:"generator_fees,omitempty"`
 		// for sharder (totals)
-		SharderRewards tokens.SAS `json:"sharder_rewards,omitempty"`
-		SharderFees    tokens.SAS `json:"sharder_fees,omitempty"`
+		SharderRewards currency.Coin `json:"sharder_rewards,omitempty"`
+		SharderFees    currency.Coin `json:"sharder_fees,omitempty"`
 	}
 
 	type NodeType int
@@ -61,9 +61,9 @@ func TestMiners(t *testing.T) {
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
 		// MinStake allowed by node.
-		MinStake tokens.SAS `json:"min_stake"`
+		MinStake currency.Coin `json:"min_stake"`
 		// MaxStake allowed by node.
-		MaxStake tokens.SAS `json:"max_stake"`
+		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -89,7 +89,7 @@ func TestMiners(t *testing.T) {
 			PublicKey:         mn.PublicKey,
 			ShortName:         mn.ShortName,
 			BuildTag:          mn.BuildTag,
-			TotalStaked:       tokens.SAS(mn.TotalStaked),
+			TotalStaked:       currency.Coin(mn.TotalStaked),
 			Delete:            mn.Delete,
 			DelegateWallet:    mn.DelegateWallet,
 			ServiceCharge:     mn.ServiceCharge,

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"go.uber.org/zap"
 
@@ -270,7 +270,7 @@ func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 	return httpclientutil.Transaction{}, e
 }
 
-func getBalance(clientID string) tokens.SAS {
+func getBalance(clientID string) currency.Coin {
 	balance, err := httpclientutil.MakeClientBalanceRequest(clientID, members.Sharders, confirmationQuorum)
 	if err != nil {
 		Logger.Fatal("Couldn't get client balance", zap.Error(err))

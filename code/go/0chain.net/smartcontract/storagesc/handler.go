@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"go.uber.org/zap"
 
@@ -56,8 +56,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 				Longitude: blobber.Longitude,
 			},
 			Terms: Terms{
-				ReadPrice:               tokens.SAS(blobber.ReadPrice),
-				WritePrice:              tokens.SAS(blobber.WritePrice),
+				ReadPrice:               currency.Coin(blobber.ReadPrice),
+				WritePrice:              currency.Coin(blobber.WritePrice),
 				MinLockDemand:           blobber.MinLockDemand,
 				MaxOfferDuration:        maxOfferDuration,
 				ChallengeCompletionTime: challengeCompletionTime,
@@ -67,8 +67,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
 			StakePoolSettings: stakepool.StakePoolSettings{
 				DelegateWallet:  blobber.DelegateWallet,
-				MinStake:        tokens.SAS(blobber.MinStake),
-				MaxStake:        tokens.SAS(blobber.MaxStake),
+				MinStake:        currency.Coin(blobber.MinStake),
+				MaxStake:        currency.Coin(blobber.MaxStake),
 				MaxNumDelegates: blobber.NumDelegates,
 				ServiceCharge:   blobber.ServiceCharge,
 			},
@@ -454,7 +454,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	}
 
 	var gbSize = sizeInGB(bSize)
-	var minLockDemand tokens.SAS
+	var minLockDemand currency.Coin
 	for _, b := range blobberNodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(creationDate))
@@ -831,28 +831,28 @@ func spStats(
 ) *stakePoolStat {
 	stat := new(stakePoolStat)
 	stat.ID = blobber.BlobberID
-	stat.UnstakeTotal = tokens.SAS(blobber.UnstakeTotal)
+	stat.UnstakeTotal = currency.Coin(blobber.UnstakeTotal)
 	stat.Capacity = blobber.Capacity
-	stat.WritePrice = tokens.SAS(blobber.WritePrice)
-	stat.OffersTotal = tokens.SAS(blobber.OffersTotal)
+	stat.WritePrice = currency.Coin(blobber.WritePrice)
+	stat.OffersTotal = currency.Coin(blobber.OffersTotal)
 	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
 	stat.Settings = stakepool.StakePoolSettings{
 		DelegateWallet:  blobber.DelegateWallet,
-		MinStake:        tokens.SAS(blobber.MinStake),
-		MaxStake:        tokens.SAS(blobber.MaxStake),
+		MinStake:        currency.Coin(blobber.MinStake),
+		MaxStake:        currency.Coin(blobber.MaxStake),
 		MaxNumDelegates: blobber.NumDelegates,
 		ServiceCharge:   blobber.ServiceCharge,
 	}
-	stat.Rewards = tokens.SAS(blobber.Reward)
+	stat.Rewards = currency.Coin(blobber.Reward)
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
-			Balance:      tokens.SAS(dp.Balance),
+			Balance:      currency.Coin(dp.Balance),
 			DelegateID:   dp.DelegateID,
-			Rewards:      tokens.SAS(dp.Reward),
+			Rewards:      currency.Coin(dp.Reward),
 			Status:       spenum.PoolStatus(dp.Status).String(),
-			TotalReward:  tokens.SAS(dp.TotalReward),
-			TotalPenalty: tokens.SAS(dp.TotalPenalty),
+			TotalReward:  currency.Coin(dp.TotalReward),
+			TotalPenalty: currency.Coin(dp.TotalPenalty),
 			RoundCreated: dp.RoundCreated,
 		}
 		stat.Balance += dpStats.Balance
@@ -886,11 +886,11 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
 	for _, pool := range pools {
 		var dps = delegatePoolStat{
 			ID:           pool.PoolID,
-			Balance:      tokens.SAS(pool.Balance),
+			Balance:      currency.Coin(pool.Balance),
 			DelegateID:   pool.DelegateID,
-			Rewards:      tokens.SAS(pool.Reward),
-			TotalPenalty: tokens.SAS(pool.TotalPenalty),
-			TotalReward:  tokens.SAS(pool.TotalReward),
+			Rewards:      currency.Coin(pool.Reward),
+			TotalPenalty: currency.Coin(pool.TotalPenalty),
+			TotalReward:  currency.Coin(pool.TotalReward),
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
 		}

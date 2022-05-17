@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -16,12 +16,12 @@ import (
 const blobberRewardsPartitionSize = 5
 
 type BlobberRewardNode struct {
-	ID                string     `json:"id"`
-	SuccessChallenges int        `json:"success_challenges"`
-	WritePrice        tokens.SAS `json:"write_price"`
-	ReadPrice         tokens.SAS `json:"read_price"`
-	TotalData         float64    `json:"total_data"`
-	DataRead          float64    `json:"data_read"`
+	ID                string        `json:"id"`
+	SuccessChallenges int           `json:"success_challenges"`
+	WritePrice        currency.Coin `json:"write_price"`
+	ReadPrice         currency.Coin `json:"read_price"`
+	TotalData         float64       `json:"total_data"`
+	DataRead          float64       `json:"data_read"`
 }
 
 func (bn *BlobberRewardNode) GetID() string {

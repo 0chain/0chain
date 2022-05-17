@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -42,10 +42,10 @@ type Client struct {
 	id      string                     // identifier
 	pk      string                     // public key
 	scheme  encryption.SignatureScheme // pk/sk
-	balance tokens.SAS                 // user or blobber
+	balance currency.Coin              // user or blobber
 }
 
-func newClient(balance tokens.SAS, balances chainstate.StateContextI) (
+func newClient(balance currency.Coin, balances chainstate.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -71,7 +71,7 @@ func mustEncode(t *testing.T, val interface{}) (b []byte) {
 	return
 }
 
-func newTransaction(f, t datastore.Key, val tokens.SAS,
+func newTransaction(f, t datastore.Key, val currency.Coin,
 	now common.Timestamp) (tx *transaction.Transaction) {
 
 	tx = new(transaction.Transaction)
@@ -91,7 +91,7 @@ func newTestVestingSC() (vsc *VestingSmartContract) {
 }
 
 func (c *Client) add(t *testing.T, vsc *VestingSmartContract,
-	ar *addRequest, value tokens.SAS, now common.Timestamp,
+	ar *addRequest, value currency.Coin, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	var tx = newTransaction(c.id, ADDRESS, value, now)

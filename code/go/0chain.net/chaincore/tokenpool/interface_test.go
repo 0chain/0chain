@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +30,7 @@ func TestTokenPoolTransferResponse_Encode(t *testing.T) {
 		TxnHash    string
 		FromPool   string
 		ToPool     string
-		Value      tokens.SAS
+		Value      currency.Coin
 		FromClient string
 		ToClient   string
 	}
@@ -85,7 +85,7 @@ func TestTokenPoolTransferResponse_Decode(t *testing.T) {
 		TxnHash    string
 		FromPool   string
 		ToPool     string
-		Value      tokens.SAS
+		Value      currency.Coin
 		FromClient string
 		ToClient   string
 	}

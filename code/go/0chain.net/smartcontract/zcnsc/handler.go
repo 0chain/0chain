@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	cState "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -21,7 +21,7 @@ type authorizerResponse struct {
 	URL          string `json:"url"`
 
 	// Configuration
-	Fee tokens.SAS `json:"fee"`
+	Fee currency.Coin `json:"fee"`
 
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
@@ -31,11 +31,11 @@ type authorizerResponse struct {
 	LastHealthCheck int64 `json:"last_health_check"`
 
 	// stake_pool_settings
-	DelegateWallet string     `json:"delegate_wallet"`
-	MinStake       tokens.SAS `json:"min_stake"`
-	MaxStake       tokens.SAS `json:"max_stake"`
-	NumDelegates   int        `json:"num_delegates"`
-	ServiceCharge  float64    `json:"service_charge"`
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
 }
 
 type authorizerNodesResponse struct {

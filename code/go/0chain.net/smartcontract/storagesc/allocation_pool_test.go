@@ -3,7 +3,7 @@ package storagesc
 import (
 	"testing"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/core/common"
 
@@ -15,7 +15,7 @@ import (
 // test extension
 //
 
-func (aps allocationPools) gimmeAll() (total tokens.SAS) {
+func (aps allocationPools) gimmeAll() (total currency.Coin) {
 	for _, ap := range aps {
 		total += ap.Balance
 	}
@@ -23,7 +23,7 @@ func (aps allocationPools) gimmeAll() (total tokens.SAS) {
 }
 
 func (aps allocationPools) allocTotal(allocID string, now int64) (
-	total tokens.SAS) {
+	total currency.Coin) {
 
 	for _, ap := range aps {
 		if ap.ExpireAt < common.Timestamp(now) {
@@ -37,7 +37,7 @@ func (aps allocationPools) allocTotal(allocID string, now int64) (
 }
 
 func (aps allocationPools) allocBlobberTotal(allocID, blobberID string,
-	now int64) (total tokens.SAS) {
+	now int64) (total currency.Coin) {
 
 	for _, ap := range aps {
 		if ap.ExpireAt < common.Timestamp(now) {

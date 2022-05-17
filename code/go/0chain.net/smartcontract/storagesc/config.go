@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"0chain.net/pkg/tokens"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract"
 
@@ -51,14 +51,14 @@ type writePoolConfig struct {
 }
 
 type blockReward struct {
-	BlockReward             tokens.SAS `json:"block_reward"`
-	BlockRewardChangePeriod int64      `json:"block_reward_change_period"`
-	BlockRewardChangeRatio  float64    `json:"block_reward_change_ratio"`
-	QualifyingStake         tokens.SAS `json:"qualifying_stake"`
-	SharderWeight           float64    `json:"sharder_weight"`
-	MinerWeight             float64    `json:"miner_weight"`
-	BlobberWeight           float64    `json:"blobber_weight"`
-	TriggerPeriod           int64      `json:"trigger_period"`
+	BlockReward             currency.Coin `json:"block_reward"`
+	BlockRewardChangePeriod int64         `json:"block_reward_change_period"`
+	BlockRewardChangeRatio  float64       `json:"block_reward_change_ratio"`
+	QualifyingStake         currency.Coin `json:"qualifying_stake"`
+	SharderWeight           float64       `json:"sharder_weight"`
+	MinerWeight             float64       `json:"miner_weight"`
+	BlobberWeight           float64       `json:"blobber_weight"`
+	TriggerPeriod           int64         `json:"trigger_period"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
@@ -82,9 +82,9 @@ type Config struct {
 	// configuration.
 	TimeUnit time.Duration `json:"time_unit"`
 	// MaxMint is max minting.
-	MaxMint tokens.SAS `json:"max_mint"`
+	MaxMint currency.Coin `json:"max_mint"`
 	// Minted tokens by entire SC.
-	Minted tokens.SAS `json:"minted"`
+	Minted currency.Coin `json:"minted"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
@@ -114,10 +114,10 @@ type Config struct {
 	// price limits for blobbers
 
 	// MaxReadPrice allowed for a blobber.
-	MaxReadPrice tokens.SAS `json:"max_read_price"`
+	MaxReadPrice currency.Coin `json:"max_read_price"`
 	// MaxWrtiePrice
-	MaxWritePrice tokens.SAS `json:"max_write_price"`
-	MinWritePrice tokens.SAS `json:"min_write_price"`
+	MaxWritePrice currency.Coin `json:"max_write_price"`
+	MinWritePrice currency.Coin `json:"min_write_price"`
 
 	// allocation cancellation
 
@@ -130,8 +130,8 @@ type Config struct {
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
 
 	// free allocations
-	MaxTotalFreeAllocation      tokens.SAS             `json:"max_total_free_allocation"`
-	MaxIndividualFreeAllocation tokens.SAS             `json:"max_individual_free_allocation"`
+	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation"`
+	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation"`
 	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings"`
 
 	// challenges generating
@@ -149,9 +149,9 @@ type Config struct {
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
-	MinStake tokens.SAS `json:"min_stake"`
+	MinStake currency.Coin `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake tokens.SAS `json:"max_stake"`
+	MaxStake currency.Coin `json:"max_stake"`
 
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
@@ -321,7 +321,7 @@ func (sc *Config) validate() (err error) {
 	return
 }
 
-func (conf *Config) validateStakeRange(min, max tokens.SAS) (err error) {
+func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 	if min < conf.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
@@ -360,9 +360,9 @@ func getConfiguredConfig() (conf *Config, err error) {
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint = tokens.SAS(scc.GetFloat64(pfx+"max_mint") * 1e10)
-	conf.MinStake = tokens.SAS(scc.GetFloat64(pfx+"min_stake") * 1e10)
-	conf.MaxStake = tokens.SAS(scc.GetFloat64(pfx+"max_stake") * 1e10)
+	conf.MaxMint = currency.Coin(scc.GetFloat64(pfx+"max_mint") * 1e10)
+	conf.MinStake = currency.Coin(scc.GetFloat64(pfx+"min_stake") * 1e10)
+	conf.MaxStake = currency.Coin(scc.GetFloat64(pfx+"max_stake") * 1e10)
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
@@ -370,11 +370,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
-	conf.MaxReadPrice = tokens.SAS(
+	conf.MaxReadPrice = currency.Coin(
 		scc.GetFloat64(pfx+"max_read_price") * 1e10)
-	conf.MinWritePrice = tokens.SAS(
+	conf.MinWritePrice = currency.Coin(
 		scc.GetFloat64(pfx+"min_write_price") * 1e10)
-	conf.MaxWritePrice = tokens.SAS(
+	conf.MaxWritePrice = currency.Coin(
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
@@ -394,20 +394,20 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
 
-	conf.MaxTotalFreeAllocation = tokens.SAS(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
-	conf.MaxIndividualFreeAllocation = tokens.SAS(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
+	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
 	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: tokens.SAS(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
-		Max: tokens.SAS(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
+		Min: currency.Coin(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
+		Max: currency.Coin(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: tokens.SAS(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
-		Max: tokens.SAS(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
+		Min: currency.Coin(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
+		Max: currency.Coin(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
@@ -430,10 +430,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	conf.BlockReward = new(blockReward)
-	conf.BlockReward.BlockReward = tokens.SAS(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.BlockReward = currency.Coin(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
 	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
 	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
-	conf.BlockReward.QualifyingStake = tokens.SAS(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
+	conf.BlockReward.QualifyingStake = currency.Coin(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
 
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(
