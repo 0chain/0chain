@@ -2,10 +2,6 @@ package storagesc
 
 import (
 	"fmt"
-	"math/rand"
-	"sort"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
