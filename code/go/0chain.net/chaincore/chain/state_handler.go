@@ -13,10 +13,6 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
-
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
