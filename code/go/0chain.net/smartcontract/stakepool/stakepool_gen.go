@@ -114,8 +114,8 @@ func (z *Settings) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxNumDelegates"
 	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.MaxNumDelegates)
-	// string "ServiceCharge"
-	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
+	// string "ServiceChargeRatio"
+	o = append(o, 0xb2, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65, 0x52, 0x61, 0x74, 0x69, 0x6f)
 	o = msgp.AppendFloat64(o, z.ServiceChargeRatio)
 	return
 }
@@ -162,10 +162,10 @@ func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxNumDelegates")
 				return
 			}
-		case "ServiceCharge":
+		case "ServiceChargeRatio":
 			z.ServiceChargeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "ServiceCharge")
+				err = msgp.WrapError(err, "ServiceChargeRatio")
 				return
 			}
 		default:
@@ -182,7 +182,7 @@ func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Settings) Msgsize() (s int) {
-	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + msgp.Int64Size + 9 + msgp.Int64Size + 16 + msgp.IntSize + 14 + msgp.Float64Size
+	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + msgp.Int64Size + 9 + msgp.Int64Size + 16 + msgp.IntSize + 19 + msgp.Float64Size
 	return
 }
 
