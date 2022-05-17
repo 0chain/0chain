@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
@@ -313,13 +315,14 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var miner = &MinerNode{
 		SimpleNode: &SimpleNode{
-			ID:             minerID,
-			TotalStaked:    100,
-			ServiceCharge:  zChainYaml.ServiceCharge,
-			DelegateWallet: minerID,
+			ID:          minerID,
+			TotalStaked: 100,
 		},
-		Active: make(map[string]*sci.DelegatePool),
+		StakePool: stakepool.NewStakePool(),
 	}
+	miner.Settings.ServiceCharge = zChainYaml.ServiceCharge
+	miner.Settings.DelegateWallet = minerID
+	miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
 	}
@@ -329,15 +332,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var sharders []*MinerNode
 	for i := 0; i < numberOfSharders; i++ {
-		sharders = append(sharders, &MinerNode{
+		sharder := &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID:             sharderIDs[i],
-				TotalStaked:    100,
-				ServiceCharge:  zChainYaml.ServiceCharge,
-				DelegateWallet: sharderIDs[i],
+				ID:          sharderIDs[i],
+				TotalStaked: 100,
 			},
-			Active: make(map[string]*sci.DelegatePool),
-		})
+			StakePool: stakepool.NewStakePool(),
+		}
+		miner.Settings.ServiceCharge = zChainYaml.ServiceCharge
+		miner.Settings.DelegateWallet = minerID
+		miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
+		sharders = append(sharders, sharder)
 	}
 
 	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
@@ -370,7 +375,12 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		return err
 	}
 
-	confirmResults(t, *globalNode, runtime, f, ctx)
+	require.NoError(t, err)
+
+	mn, err := getMinerNode(txn.ClientID, ctx)
+	require.NoError(t, err)
+
+	confirmResults(t, *globalNode, runtime, f, mn, ctx)
 
 	return err
 }
