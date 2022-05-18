@@ -20,12 +20,15 @@ func (el *EventList) AddEvent(event Event) {
 }
 
 func (el *EventList) GetHash() []byte {
-	var data []byte
-	sort.Slice(el, func(i, j int) bool {
-		return (*el)[i].Hash < (*el)[j].Hash
-	})
+	var hashes []string
 	for _, event := range *el {
-		data = append(data, []byte(event.Hash)...)
+		hashes = append(hashes, event.Hash)
+	}
+	sort.Strings(hashes)
+
+	var data []byte
+	for _, hash := range hashes {
+		data = append(data, []byte(hash)...)
 	}
 	return encryption.RawHash(data)
 }

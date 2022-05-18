@@ -70,7 +70,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	)
 
 	for {
-
 		events := append(events, <-edb.eventsChannel...)
 		for _, event := range events {
 			if err := edb.addEvent(event); err != nil {
@@ -121,7 +120,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				)
 				events = EventList{}
 			}
-
 		}
 	}
 }
