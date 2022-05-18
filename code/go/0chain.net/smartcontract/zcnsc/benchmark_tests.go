@@ -63,6 +63,15 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 	sc := createSmartContract()
 
 	indexOfNewAuth := len(data.Clients) - 1
+	minStake, err := currency.ParseZCN(1.1)
+	if err != nil {
+		panic(err)
+	}
+
+	maxStake, err := currency.ParseZCN(103)
+	if err != nil {
+		panic(err)
+	}
 
 	return createTestSuite(
 		[]benchTest{
@@ -127,8 +136,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input: (&UpdateAuthorizerStakePoolPayload{
 					StakePoolSettings: stakepool.StakePoolSettings{
 						DelegateWallet:  data.Clients[0],
-						MinStake:        currency.ParseZCN(1.1),
-						MaxStake:        currency.ParseZCN(103),
+						MinStake:        minStake,
+						MaxStake:        maxStake,
 						MaxNumDelegates: 7,
 						ServiceCharge:   0.17,
 					},

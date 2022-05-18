@@ -19,7 +19,7 @@ type StakePoolId struct {
 
 type StakePoolReward struct {
 	StakePoolId
-	Reward          int64            `json:"reward"`
+	Reward          uint64           `json:"reward"`
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 }
 

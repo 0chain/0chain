@@ -9,8 +9,8 @@ import (
 )
 
 type providerAggregateStats struct {
-	Reward      int64 `json:"reward"`
-	TotalReward int64 `json:"total_reward"`
+	Reward      uint64 `json:"reward"`
+	TotalReward uint64 `json:"total_reward"`
 }
 
 func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {

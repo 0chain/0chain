@@ -79,10 +79,10 @@ func TestStakePoolLock(t *testing.T) {
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
 
-		StakePool: &stakePoolConfig{
-			MinLock: int64(zcnToBalance(0.1)),
-		},
+		StakePool: &stakePoolConfig{},
 	}
+	scYaml.StakePool.MinLock, err = currency.ParseZCN(0.1)
+	require.NoError(t, err)
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		var value = scYaml.StakePool.MinLock - 1
@@ -104,7 +104,7 @@ func TestStakePoolLock(t *testing.T) {
 	})
 }
 
-func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []mockStakePool) error {
+func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegates []mockStakePool) error {
 	var f = formulaeStakePoolLock{
 		value:         value,
 		clientBalance: clientBalance,
@@ -115,12 +115,12 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 
 		ClientID:     clientId,
 		ToClientID:   storageScId,
-		Value:        value,
+		Value:        value.Int64(),
 		CreationDate: creationDate,
 	}
 	var ctx = &mockStateContext{
@@ -135,7 +135,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 			nil,
 		),
-		clientBalance: currency.Coin(clientBalance),
+		clientBalance: clientBalance,
 		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
@@ -204,8 +204,8 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 }
 
 type formulaeStakePoolLock struct {
-	value         int64
-	clientBalance int64
+	value         currency.Coin
+	clientBalance currency.Coin
 	delegates     []mockStakePool
 	scYaml        Config
 	now           common.Timestamp

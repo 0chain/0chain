@@ -236,7 +236,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
 			ReadPool: &readPoolConfig{
-				MinLock:       zcnToInt64(mockMinLock),
+				MinLock:       mockMinLock,
 				MinLockPeriod: mockMinLockPeriod,
 				MaxLockPeriod: mockMaxLockPeriod,
 			},

@@ -156,11 +156,19 @@ func getMockAuthorizerStakePoolId(authorizer string, stake int) string {
 
 // todo get from sc.yaml
 func getMockStakePoolSettings(wallet string) stakepool.StakePoolSettings {
-	return stakepool.StakePoolSettings{
+	var err error
+	sp := stakepool.StakePoolSettings{
 		DelegateWallet:  wallet,
-		MinStake:        currency.ParseZCN(1),
-		MaxStake:        currency.ParseZCN(100),
 		MaxNumDelegates: 10,
 		ServiceCharge:   0.1,
 	}
+	sp.MinStake, err = currency.ParseZCN(1)
+	if err != nil {
+		panic(err)
+	}
+	sp.MaxStake, err = currency.ParseZCN(100)
+	if err != nil {
+		panic(err)
+	}
+	return sp
 }

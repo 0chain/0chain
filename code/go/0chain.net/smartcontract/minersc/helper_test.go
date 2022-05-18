@@ -95,7 +95,10 @@ const minerServiceCharge = 0.5
 
 // add_miner or add_sharder transaction data
 func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
-	var mn = NewMinerNode()
+	var (
+		mn  = NewMinerNode()
+		err error
+	)
 	mn.ID = c.id
 	mn.N2NHost = "http://" + c.id + ":9081/api/v1"
 	mn.Host = c.id + ".host.miners"
@@ -106,8 +109,10 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.Settings.DelegateWallet = delegateWallet
 	mn.Settings.ServiceCharge = minerServiceCharge
 	mn.Settings.MaxNumDelegates = 10
-	mn.Settings.MinStake = currency.ParseZCN(1)
-	mn.Settings.MaxStake = currency.ParseZCN(100)
+	mn.Settings.MinStake, err = currency.ParseZCN(1)
+	require.NoError(t, err)
+	mn.Settings.MaxStake, err = currency.ParseZCN(100)
+	require.NoError(t, err)
 	return mustEncode(t, mn)
 }
 

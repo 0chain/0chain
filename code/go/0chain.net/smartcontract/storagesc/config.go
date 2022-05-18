@@ -35,11 +35,11 @@ type freeAllocationSettings struct {
 }
 
 type stakePoolConfig struct {
-	MinLock int64 `json:"min_lock"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type readPoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
+	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
@@ -357,12 +357,23 @@ func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
 
 	conf = new(Config)
-	var scc = config.SmartContractConfig
+	var (
+		scc = config.SmartContractConfig
+	)
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint = currency.ParseZCN(scc.GetFloat64(pfx + "max_mint"))
-	conf.MinStake = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
-	conf.MaxStake = currency.ParseZCN(scc.GetFloat64(pfx + "max_stake"))
+	conf.MaxMint, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_mint"))
+	if err != nil {
+		return
+	}
+	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
+	if err != nil {
+		return
+	}
+	conf.MaxStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_stake"))
+	if err != nil {
+		return
+	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
@@ -370,12 +381,24 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
-	conf.MaxReadPrice = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
-	conf.MinWritePrice = currency.ParseZCN(scc.GetFloat64(pfx + "min_write_price"))
-	conf.MaxWritePrice = currency.ParseZCN(scc.GetFloat64(pfx + "max_write_price"))
+	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
+	if err != nil {
+		return
+	}
+	conf.MinWritePrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_write_price"))
+	if err != nil {
+		return
+	}
+	conf.MaxWritePrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_write_price"))
+	if err != nil {
+		return
+	}
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = int64(currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock")))
+	conf.ReadPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
 	conf.ReadPool.MinLockPeriod = scc.GetDuration(pfx + "readpool.min_lock_period")
 	conf.ReadPool.MaxLockPeriod = scc.GetDuration(pfx + "readpool.max_lock_period")
 	// write pool
@@ -385,22 +408,38 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.WritePool.MaxLockPeriod = scc.GetDuration(pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock = int64(currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock")))
-
-	conf.MaxTotalFreeAllocation = currency.ParseZCN(scc.GetFloat64(pfx + "max_total_free_allocation"))
-	conf.MaxIndividualFreeAllocation = currency.ParseZCN(scc.GetFloat64(pfx + "max_individual_free_allocation"))
+	conf.StakePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock"))
+	if err != nil {
+		return
+	}
+	conf.MaxTotalFreeAllocation, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_total_free_allocation"))
+	if err != nil {
+		return
+	}
+	conf.MaxIndividualFreeAllocation, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_individual_free_allocation"))
+	if err != nil {
+		return
+	}
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
-	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: currency.ParseZCN(scc.GetFloat64(fas + "read_price_range.min")),
-		Max: currency.ParseZCN(scc.GetFloat64(fas + "read_price_range.max")),
+	conf.FreeAllocationSettings.ReadPriceRange.Min, err = currency.ParseZCN(scc.GetFloat64(fas + "read_price_range.min"))
+	if err != nil {
+		return
 	}
-	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: currency.ParseZCN(scc.GetFloat64(fas + "write_price_range.min")),
-		Max: currency.ParseZCN(scc.GetFloat64(fas + "write_price_range.max")),
+	conf.FreeAllocationSettings.ReadPriceRange.Max, err = currency.ParseZCN(scc.GetFloat64(fas + "read_price_range.max"))
+	if err != nil {
+		return
+	}
+	conf.FreeAllocationSettings.WritePriceRange.Min, err = currency.ParseZCN(scc.GetFloat64(fas + "write_price_range.min"))
+	if err != nil {
+		return
+	}
+	conf.FreeAllocationSettings.WritePriceRange.Max, err = currency.ParseZCN(scc.GetFloat64(fas + "write_price_range.max"))
+	if err != nil {
+		return
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
@@ -423,10 +462,16 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	conf.BlockReward = new(blockReward)
-	conf.BlockReward.BlockReward = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.block_reward"))
+	conf.BlockReward.BlockReward, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.block_reward"))
+	if err != nil {
+		return
+	}
 	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
 	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
-	conf.BlockReward.QualifyingStake = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.qualifying_stake"))
+	conf.BlockReward.QualifyingStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.qualifying_stake"))
+	if err != nil {
+		return
+	}
 
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(

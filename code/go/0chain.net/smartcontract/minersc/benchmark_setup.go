@@ -57,16 +57,31 @@ func AddMockNodes(
 		newNode.PublicKey = "mockPublicKey"
 		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.Settings.MinStake = currency.ParseZCN(viper.GetFloat64(benchmark.MinerMinStake))
-		newNode.Settings.MaxStake = currency.ParseZCN(viper.GetFloat64(benchmark.MinerMaxStake))
+		newNode.Settings.MinStake, err = currency.ParseZCN(viper.GetFloat64(benchmark.MinerMinStake))
+		if err != nil {
+			panic(err)
+		}
+		newNode.Settings.MaxStake, err = currency.ParseZCN(viper.GetFloat64(benchmark.MinerMaxStake))
+		if err != nil {
+			panic(err)
+		}
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = newNode.ID
 
+		bal, err := currency.ParseZCN(100)
+		if err != nil {
+			panic(err)
+		}
+
+		reward, err := currency.ParseZCN(0.3)
+		if err != nil {
+			panic(err)
+		}
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
 			pool := stakepool.DelegatePool{
-				Balance:    currency.ParseZCN(100),
-				Reward:     currency.ParseZCN(0.3),
+				Balance:    bal,
+				Reward:     reward,
 				DelegateID: clients[dId],
 			}
 			if i < numActive {
@@ -77,7 +92,7 @@ func AddMockNodes(
 				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			}
 		}
-		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
+		_, err = balances.InsertTrieNode(newNode.GetKey(), newNode)
 		if err != nil {
 			panic(err)
 		}

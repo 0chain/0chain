@@ -74,89 +74,33 @@ func TestCoin_ToZCN(t *testing.T) {
 	}
 }
 
-func TestParseMZCN(t *testing.T) {
-	type args struct {
-		c float64
-	}
-	tests := []struct {
-		name string
-		args args
-		want Coin
-	}{
-		{
-			name: "less than 7 decimal",
-			args: args{c: 1.12},
-			want: Coin(11200000),
-		},
-		{
-			name: "more than 7 decimal",
-			args: args{c: 1.126854884758765},
-			want: Coin(11268548),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ParseMZCN(tt.args.c); got != tt.want {
-				require.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
-func TestParseUZCN(t *testing.T) {
-	type args struct {
-		c float64
-	}
-	tests := []struct {
-		name string
-		args args
-		want Coin
-	}{
-		{
-			name: "less than 4 decimal",
-			args: args{c: 1.12},
-			want: Coin(11200),
-		},
-		{
-			name: "more than 4 decimal",
-			args: args{c: 1.12868578},
-			want: Coin(11286),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ParseUZCN(tt.args.c); got != tt.want {
-				require.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
 func TestParseZCN(t *testing.T) {
 	type args struct {
-		c float64
+		z float64
 	}
 	tests := []struct {
-		name string
-		args args
-		want Coin
+		name    string
+		args    args
+		want    Coin
+		wantErr bool
 	}{
 		{
-			name: "less than 10 decimal",
-			args: args{c: 1.12},
-			want: Coin(11200000000),
+			name: "less than 10 decimal places",
+			args: args{z: 1.2},
+			want: 12000000000,
 		},
 		{
-			name: "more than 10 decimal",
-			args: args{c: 1.1211119076897},
-			want: Coin(11211119076),
+			name:    "more than 10 decimal places",
+			args:    args{z: 1.23465934064596734},
+			want:    0,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ParseZCN(tt.args.c); got != tt.want {
-				require.Equal(t, tt.want, got)
-			}
+			got, err := ParseZCN(tt.args.z)
+			require.Equal(t, tt.wantErr, err != nil)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

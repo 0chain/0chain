@@ -2,7 +2,7 @@ package currency
 
 //go:generate msgp -io=false -tests=false -v
 //Coin - any quantity that is represented as an integer in the lowest denomination
-type Coin int64
+type Coin uint64
 
 const (
 	SAS  Coin = 1

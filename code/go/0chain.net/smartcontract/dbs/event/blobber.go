@@ -60,8 +60,8 @@ type BlobberLatLong struct {
 }
 
 type blobberAggregateStats struct {
-	Reward             int64 `json:"reward"`
-	TotalServiceCharge int64 `json:"total_service_charge"`
+	Reward             uint64 `json:"reward"`
+	TotalServiceCharge uint64 `json:"total_service_charge"`
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {

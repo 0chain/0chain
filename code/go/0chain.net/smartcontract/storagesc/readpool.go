@@ -251,7 +251,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	if t.Value < conf.MinLock {
+	if currency.Coin(t.Value) < conf.MinLock {
 		return "", common.NewError("read_pool_lock_failed",
 			"insufficient amount to lock")
 	}

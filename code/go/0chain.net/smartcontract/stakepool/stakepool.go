@@ -194,7 +194,7 @@ func (sp *StakePool) DistributeRewards(
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
 		sp.Reward += value
-		spUpdate.Reward = int64(value)
+		spUpdate.Reward = uint64(value)
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}
@@ -205,7 +205,7 @@ func (sp *StakePool) DistributeRewards(
 	if serviceCharge > 0 {
 		reward := serviceCharge
 		sp.Reward += reward
-		spUpdate.Reward = int64(reward)
+		spUpdate.Reward = uint64(reward)
 	}
 
 	valueLeft := value - serviceCharge
