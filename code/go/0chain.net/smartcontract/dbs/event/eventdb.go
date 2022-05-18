@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/core/common"
 	"time"
 
 	"0chain.net/smartcontract/dbs"
@@ -15,11 +16,12 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:         db,
-		eventsChannel: make(chan EventList, 1000000),
+		Store:          db,
+		eventsChannel:  make(chan EventList, 1000000),
+		processChannel: make(chan EventList, 5),
 	}
-	go eventDb.addEventsWorker()
-	go eventDb.processRoundWorker()
+	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.processRoundWorker(common.GetRootContext())
 
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err

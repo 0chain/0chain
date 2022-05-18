@@ -60,7 +60,7 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 	edb.eventsChannel <- events
 }
 
-func (edb *EventDb) addEventsWorker() {
+func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var (
 		currentRound  int64 = 1
 		roundEventMap map[string]bool
@@ -114,7 +114,7 @@ func (edb *EventDb) addEventsWorker() {
 	}
 }
 
-func (edb *EventDb) processRoundWorker() {
+func (edb *EventDb) processRoundWorker(ctx context.Context) {
 	for {
 		events := <-edb.processChannel
 		for _, event := range events {
