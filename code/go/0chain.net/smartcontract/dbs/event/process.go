@@ -62,14 +62,16 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var (
-		currentRound  int64 = 1
-		roundEventMap map[string]bool
-		roundEvents   EventList
-		switchedOff   = false
+		currentRound        int64 = 1
+		roundEventMap       map[string]bool
+		roundEvents, events EventList
+		switchedOff         = false
+		err                 error
 	)
 
 	for {
-		events := <-edb.eventsChannel
+
+		events := append(events, <-edb.eventsChannel...)
 		for _, event := range events {
 			if err := edb.addEvent(event); err != nil {
 				logging.Logger.Error("saving event", zap.Error(err))
@@ -110,6 +112,16 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			roundEventMap = make(map[string]bool)
 			roundEvents = EventList{}
 			currentRound++
+
+			events, err = edb.GetEvents(ctx, currentRound) // todo need to fix GetEvents
+			if err != nil {
+				logging.Logger.Error("getting events for",
+					zap.Int64("round2", currentRound),
+					zap.Error(err),
+				)
+				events = EventList{}
+			}
+
 		}
 	}
 }
