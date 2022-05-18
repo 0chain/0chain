@@ -23,7 +23,7 @@ type mockStateContext struct {
 	block                      *block.Block
 	store                      map[datastore.Key]util.MPTSerializable
 	sharders                   []string
-	events                     []event.Event
+	events                     event.EventList
 	LastestFinalizedMagicBlock *block.Block
 }
 
@@ -46,10 +46,10 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 		Data:        data,
 	})
 }
-func (sc *mockStateContext) EmitError(error)            {}
-func (sc *mockStateContext) GetEvents() []event.Event   { return nil }
-func (sc *mockStateContext) GetEventDB() *event.EventDb { return nil }
-func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
+func (sc *mockStateContext) EmitError(error)                       {}
+func (sc *mockStateContext) GetEvents() event.EventList            { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb            { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }

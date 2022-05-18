@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"fmt"
-
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -54,6 +53,7 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
+	TagEndBlock
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -61,28 +61,78 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	var (
+		currentRound  int64 = 1
+		roundEventMap map[string]bool
+		roundEvents   EventList
+		switchedOff   = false
+	)
+
 	for {
 		events := <-edb.eventsChannel
-		edb.addEvents(ctx, events)
 		for _, event := range events {
-			var err error = nil
-			switch EventType(event.Type) {
-			case TypeStats:
-				err = edb.addStat(event)
-			case TypeError:
-				err = edb.addError(Error{
-					TransactionID: event.TxHash,
-					Error:         event.Data,
-				})
-			default:
+			if err := edb.addEvent(event); err != nil {
+				logging.Logger.Error("saving event", zap.Error(err))
+				continue
 			}
-			if err != nil {
-				logging.Logger.Error(
-					"event could not be processed",
-					zap.Any("event", event),
-					zap.Error(err),
-				)
+			if switchedOff {
+				continue
 			}
+			if event.BlockNumber != currentRound {
+				continue
+			}
+			if _, ok := roundEventMap[event.Hash]; ok {
+				continue
+			}
+
+			roundEventMap[event.Hash] = true
+			roundEvents.AddEvent(event)
+
+			if event.Tag != int(TagEndBlock) {
+				continue
+			}
+
+			var roundEnd RoundEnd
+			if err := json.Unmarshal([]byte(event.Data), &roundEnd); err != nil {
+				logging.Logger.Error("unmarshal end round", zap.Error(err))
+				switchedOff = true
+				continue
+			}
+			if len(roundEventMap) != roundEnd.EventCount {
+				switchedOff = true
+				continue
+			}
+			if string(roundEnd.Hash) != string(roundEvents.GetHash()) {
+				switchedOff = true
+				continue
+			}
+			edb.proccessRound(roundEvents)
+			roundEventMap = make(map[string]bool)
+			roundEvents = EventList{}
+			currentRound++
+		}
+	}
+}
+
+func (edb *EventDb) proccessRound(events EventList) {
+	for _, event := range events {
+		var err error = nil
+		switch EventType(event.Type) {
+		case TypeStats:
+			err = edb.addStat(event)
+		case TypeError:
+			err = edb.addError(Error{
+				TransactionID: event.TxHash,
+				Error:         event.Data,
+			})
+		default:
+		}
+		if err != nil {
+			logging.Logger.Error(
+				"event could not be processed",
+				zap.Any("event", event),
+				zap.Error(err),
+			)
 		}
 	}
 }

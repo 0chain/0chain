@@ -78,7 +78,7 @@ type StateContextI interface {
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(event.EventType, event.EventTag, string, string)
 	EmitError(error)
-	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
+	GetEvents() event.EventList // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 }
 
@@ -90,7 +90,7 @@ type StateContext struct {
 	transfers                     []*state.Transfer
 	signedTransfers               []*state.SignedTransfer
 	mints                         []*state.Mint
-	events                        []event.Event
+	events                        event.EventList
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
 	getLatestFinalizedBlock       func() *block.Block
@@ -202,7 +202,7 @@ func (sc *StateContext) GetMints() []*state.Mint {
 func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	sc.events = append(sc.events, event.Event{
+	sc.events.AddEvent(event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
 		Type:        int(eventType),
@@ -213,7 +213,7 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 }
 
 func (sc *StateContext) EmitError(err error) {
-	sc.events = []event.Event{
+	sc.events = event.EventList{
 		{
 			BlockNumber: sc.block.Round,
 			TxHash:      sc.txn.Hash,
@@ -223,7 +223,7 @@ func (sc *StateContext) EmitError(err error) {
 	}
 }
 
-func (sc *StateContext) GetEvents() []event.Event {
+func (sc *StateContext) GetEvents() event.EventList {
 	return sc.events
 }
 

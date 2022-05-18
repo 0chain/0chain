@@ -374,7 +374,7 @@ func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, erro
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
-func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (sc *mockStateContext) GetEvents() event.EventList                                { return nil }
 func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {

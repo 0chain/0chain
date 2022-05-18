@@ -70,7 +70,7 @@ func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 }
 func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (tb *testBalances) EmitError(error)                                           {}
-func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
+func (tb *testBalances) GetEvents() event.EventList                                { return nil }
 func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }

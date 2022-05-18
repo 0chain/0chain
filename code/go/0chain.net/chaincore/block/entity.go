@@ -150,7 +150,7 @@ type Block struct {
 	ChainID   datastore.Key `json:"chain_id"`
 	RoundRank int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
 	PrevBlock *Block        `json:"-" msgpack:"-"`
-	Events    []event.Event
+	Events    event.EventList
 
 	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
@@ -784,7 +784,7 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error)
+	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (event.EventList, error)
 	GetEventDb() *event.EventDb
 }
 
@@ -891,7 +891,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	bState := CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
 
 	beginStateRoot := bState.GetRoot()
-	b.Events = []event.Event{}
+	b.Events = event.EventList{}
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			if err := txn.ComputeClientID(); err != nil {
@@ -1004,7 +1004,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	bState := CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
 
 	beginState := b.ClientState.GetRoot()
-	b.Events = []event.Event{}
+	b.Events = event.EventList{}
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			if err := txn.ComputeClientID(); err != nil {

@@ -143,7 +143,7 @@ func (c *Chain) ExecuteSmartContract(
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error) {
+func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (event.EventList, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return c.updateState(ctx, b, bState, txn)
@@ -195,7 +195,7 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
+func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events event.EventList, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {

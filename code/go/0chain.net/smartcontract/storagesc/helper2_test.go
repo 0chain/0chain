@@ -52,7 +52,7 @@ func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 
 func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (sc *mockStateContext) EmitError(error)                                           {}
-func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (sc *mockStateContext) GetEvents() event.EventList                                { return nil }
 func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 {}
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }

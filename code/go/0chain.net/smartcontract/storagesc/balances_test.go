@@ -77,7 +77,7 @@ func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer            
 func (tb *testBalances) GetEventDB() *event.EventDb                                { return nil }
 func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (tb *testBalances) EmitError(error)                                           {}
-func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
+func (tb *testBalances) GetEvents() event.EventList                                { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (tb *testBalances) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (tb *testBalances) DeleteTrieNode(key datastore.Key) (

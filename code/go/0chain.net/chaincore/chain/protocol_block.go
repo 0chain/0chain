@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -347,9 +348,28 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		go func(events []event.Event) {
-			c.GetEventDb().AddEvents(ctx, events)
-		}(fb.Events)
+		data, err := json.Marshal(event.RoundEnd{
+			EventCount: len(fb.Events) + 1,
+			Hash:       fb.Events.GetHash(),
+		})
+		if err != nil {
+			logging.Logger.Error("finalize block - marshal round end event",
+				zap.Int64("round", fb.Round),
+				zap.Int64("mb_starting_round", fb.StartingRound),
+				zap.Error(err))
+		} else {
+			fb.Events.AddEvent(event.Event{
+				BlockNumber: fb.Round,
+				TxHash:      "",
+				Type:        int(event.TypeStats),
+				Tag:         int(event.TagEndBlock),
+				Index:       "end of block",
+				Data:        string(data),
+			})
+			go func(events event.EventList) {
+				c.GetEventDb().AddEvents(ctx, events)
+			}(fb.Events)
+		}
 		fb.Events = nil
 	}
 

@@ -1,7 +1,10 @@
 package event
 
 import (
+	"0chain.net/core/encryption"
 	"errors"
+	"fmt"
+	"strconv"
 
 	"golang.org/x/net/context"
 
@@ -10,12 +13,24 @@ import (
 
 type Event struct {
 	gorm.Model
+	Hash        string `json:"hash" gorm:"uniqueIndex"`
 	BlockNumber int64  `json:"block_number" gorm:"index:idx_event"`
 	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
 	Type        int    `json:"type" gorm:"index:idx_event"`
 	Tag         int    `json:"tag" gorm:"index:idx_event"`
 	Index       string `json:"index" gorm:"index:idx_event"`
 	Data        string `json:"data"`
+}
+
+func (ev *Event) GetHashBytes() []byte {
+	var data string
+	data = strconv.FormatInt(ev.BlockNumber, 10) +
+		ev.TxHash +
+		strconv.Itoa(ev.Type) +
+		strconv.Itoa(ev.Tag) +
+		ev.Index
+	ev.Hash = string(encryption.RawHash(data))
+	return []byte(ev.Hash)
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, error) {
@@ -61,6 +76,32 @@ func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
 	if edb.Store != nil && len(events) > 0 {
 		edb.Store.Get().WithContext(ctx).Create(&events)
 	}
+}
+
+func (edb *EventDb) addEvent(event Event) error {
+	exists, err := event.exists(edb)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	result := edb.Store.Get().Create(&event)
+	return result.Error
+}
+
+func (ev *Event) exists(edb *EventDb) (bool, error) {
+	var count int64
+	result := edb.Get().
+		Model(&Event{}).
+		Where(&Event{Hash: ev.Hash}).
+		Count(&count)
+	if result.Error != nil {
+		return false, fmt.Errorf("error searching for Validator %v, error %v",
+			ev.Hash, result.Error)
+	}
+	return count > 0, nil
 }
 
 func (edb *EventDb) Drop() error {

@@ -443,7 +443,7 @@ func (msc *MinerSmartContract) GetEventsHandler(
 	}
 
 	return struct {
-		Events []event.Event `json:"events"`
+		Events event.EventList `json:"events"`
 	}{
 		Events: events,
 	}, nil
