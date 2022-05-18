@@ -60,7 +60,7 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 	edb.eventsChannel <- events
 }
 
-func (edb *EventDb) addEventsWorker(ctx context.Context) {
+func (edb *EventDb) addEventsWorker() {
 	var (
 		currentRound  int64 = 1
 		roundEventMap map[string]bool
@@ -106,7 +106,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				switchedOff = true
 				continue
 			}
-			edb.proccessRound(roundEvents)
+			edb.processChannel <- roundEvents
 			roundEventMap = make(map[string]bool)
 			roundEvents = EventList{}
 			currentRound++
@@ -114,27 +114,31 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) proccessRound(events EventList) {
-	for _, event := range events {
-		var err error = nil
-		switch EventType(event.Type) {
-		case TypeStats:
-			err = edb.addStat(event)
-		case TypeError:
-			err = edb.addError(Error{
-				TransactionID: event.TxHash,
-				Error:         event.Data,
-			})
-		default:
-		}
-		if err != nil {
-			logging.Logger.Error(
-				"event could not be processed",
-				zap.Any("event", event),
-				zap.Error(err),
-			)
+func (edb *EventDb) processRoundWorker() {
+	for {
+		events := <-edb.processChannel
+		for _, event := range events {
+			var err error = nil
+			switch EventType(event.Type) {
+			case TypeStats:
+				err = edb.addStat(event)
+			case TypeError:
+				err = edb.addError(Error{
+					TransactionID: event.TxHash,
+					Error:         event.Data,
+				})
+			default:
+			}
+			if err != nil {
+				logging.Logger.Error(
+					"event could not be processed",
+					zap.Any("event", event),
+					zap.Error(err),
+				)
+			}
 		}
 	}
+
 }
 
 func (edb *EventDb) addStat(event Event) error {

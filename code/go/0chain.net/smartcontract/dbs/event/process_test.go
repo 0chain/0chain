@@ -9,6 +9,10 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
+func TestAddEventsWorker(t *testing.T) {
+
+}
+
 func TestAddEvents(t *testing.T) {
 	access := dbs.DbAccess{
 		Enabled:         true,

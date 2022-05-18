@@ -19,10 +19,6 @@ func (el *EventList) AddEvent(event Event) {
 	*el = append(*el, event)
 }
 
-func compareHash(eventMap map[string]bool) {
-
-}
-
 func (el *EventList) GetHash() []byte {
 	var data []byte
 	sort.Slice(el, func(i, j int) bool {
