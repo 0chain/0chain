@@ -320,6 +320,8 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.updateChallenge(updates)
+	case TagEndBlock:
+		return nil
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
