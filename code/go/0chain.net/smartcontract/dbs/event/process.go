@@ -92,17 +92,17 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				continue
 			}
 
-			var roundEnd RoundEnd
-			if err := json.Unmarshal([]byte(event.Data), &roundEnd); err != nil {
+			var roundEndEvent RoundEnd
+			if err := json.Unmarshal([]byte(event.Data), &roundEndEvent); err != nil {
 				logging.Logger.Error("unmarshal end round", zap.Error(err))
 				switchedOff = true
 				continue
 			}
-			if len(roundEventMap) != roundEnd.EventCount {
+			if len(roundEvents) != roundEndEvent.EventCount {
 				switchedOff = true
 				continue
 			}
-			if string(roundEnd.Hash) != string(roundEvents.GetHash()) {
+			if string(roundEndEvent.Hash) != string(roundEvents.GetHash()) {
 				switchedOff = true
 				continue
 			}
