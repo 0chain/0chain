@@ -13,7 +13,7 @@ type BlockStoreCustom struct {
 }
 
 var (
-	_ blockstore.BlockStore = (*BlockStoreCustom)(nil)
+	_ blockstore.BlockStoreI = (*BlockStoreCustom)(nil)
 )
 
 func NewBlockStoreMock() *BlockStoreCustom {

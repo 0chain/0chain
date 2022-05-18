@@ -33,7 +33,7 @@ type (
 
 var (
 	// Make sure FSBlockStore implements BlockStore.
-	_ BlockStore = (*FSBlockStore)(nil)
+	_ BlockStoreI = (*FSBlockStore)(nil)
 )
 
 // NewFSBlockStore - return a new fs block store.

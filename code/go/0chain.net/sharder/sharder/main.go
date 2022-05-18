@@ -493,16 +493,6 @@ func setupBlockStorageProvider(mConf blockstore.MinioConfiguration, workdir stri
 	switch blockStorageProvider {
 	case "", "blockstore.FSBlockStore":
 		blockstore.SetupStore(fsbs)
-	case "blockstore.BlockDBStore":
-		blockstore.SetupStore(blockstore.NewBlockDBStore(fsbs))
-	case "blockstore.MultiBlockstore":
-		var bs = []blockstore.BlockStore{
-			fsbs,
-			blockstore.NewBlockDBStore(
-				blockstore.NewFSBlockStore(filepath.Join(workdir, "data/blocksdb"), mClient),
-			),
-		}
-		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
 	default:
 		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
 	}
