@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -20,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/utils"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -49,16 +51,18 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		good, bad []*node.Node
 	)
 
+	isSpammer := false
+	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Spammers != nil {
+		isSpammer = utils.IsSpammer(state.RoundHasFinalized.Spammers, node.Self.Underlying())
+	}
+
+	if isSpammer {
+		mc.SendVRFSSpam(ctx, vrfs)
+		return
+	}
+
 	// not possible to send bad VRFS and bad round timeout at the same time
 	switch {
-	case VRFSSpamFlag && globalSetupVRFSspam == nil:
-		// first run, set up VRFS Spam mode
-		setup := &vrfsspam{}
-		mb := mc.GetMagicBlock(vrfs.Round)
-		setup.Miners = mb.Miners
-		globalSetupVRFSspam = setup
-		SendVRFSSpam(ctx, vrfs)
-		return
 	case state.VRFS != nil:
 		badVRFS = getBadVRFS(vrfs)
 		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
@@ -81,24 +85,32 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	}
 }
 
-var globalSetupVRFSspam *vrfsspam
 var VRFSSpamFlag bool
+var sendSpamMutex sync.RWMutex
+
+var globalVrfsSpamSetup *vrfsspam
 
 type vrfsspam struct {
-	Vrfs          *round.VRFShare
-	Miners        *node.Pool
-	sendSpamMutex sync.RWMutex
+	Vrfs      *round.VRFShare
+	Miners    *node.Pool
+	completed bool
 }
 
-func SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
-	setup := globalSetupVRFSspam
+func (mc *Chain) SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
+	sendSpamMutex.Lock()
+	defer sendSpamMutex.Unlock()
 
-	if setup == nil || setup.Miners == nil {
-		return // not requested or not initialized via SendVRFShare() yet
+	if globalVrfsSpamSetup == nil {
+		globalVrfsSpamSetup = &vrfsspam{}
 	}
 
-	setup.sendSpamMutex.Lock()
-	defer setup.sendSpamMutex.Unlock()
+	setup := globalVrfsSpamSetup
+	mb := mc.GetMagicBlock(vrfs.Round)
+	setup.Miners = mb.Miners
+
+	if setup.Miners == nil {
+		return
+	}
 
 	if vrfs != nil {
 		logging.Logger.Info("sendVRFSSpam() invoked by actual SendVRFShare()")
@@ -106,26 +118,50 @@ func SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
 			logging.Logger.Info("sendVRFSSpam() nothing to do")
 			return
 		}
-		// first send
+
 		setup.Vrfs = vrfs
 		logging.Logger.Info("sendVRFSSpam() first send ", zap.Int64("Round", setup.Vrfs.Round))
-		setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
+		setup.Miners.SendAll(ctx, RoundVRFSender(setup.Vrfs))
+	}
+
+	log.Printf("Completed %v", setup.completed)
+
+	// spam with next round VRF only once
+	if setup.completed {
+		return
 	}
 
 	var (
 		v   = &round.VRFShare{}
 		err error
 	)
+	currentRoundId := mc.GetCurrentRound()
+	currentRound := mc.GetMinerRound(currentRoundId)
+
+	if err := configureRoundHasFinalizedTest(int(vrfs.Round)); err != nil {
+		log.Fatalf("Conductor: RoundHasFinalized: error while configuring test case: %v", err)
+		return
+	}
+
+	r := mc.StartNextRound(ctx, currentRound)
 	v.RoundTimeoutCount = r.GetTimeoutCount()
-	r := mc.StartNextRound(ctx, vrfs.Round)
-	v.Round = r.Round
+	v.Round = r.GetRoundNumber()
 	v.Share, err = mc.GetBlsShare(ctx, r.Round)
+
+	if err != nil {
+		return
+	}
 
 	v.SetParty(node.Self.Underlying())
 	setup.Vrfs = v
 
 	logging.Logger.Info("sendVRFSSpam() subsequent send ", zap.Int64("Round", setup.Vrfs.Round))
-	setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
+	setup.Miners.SendAll(ctx, RoundVRFSender(setup.Vrfs))
+	setup.completed = true
+}
+
+func configureRoundHasFinalizedTest(roundID int) error {
+	return crpc.Client().ConfigureTestCase([]byte(strconv.Itoa(roundID)))
 }
 
 func sendBadTimeoutVRFSIfNeeded(vrfs *round.VRFShare, mb *block.MagicBlock) {
@@ -162,36 +198,6 @@ func getMinersByRatio(mb *block.MagicBlock, ratio float64) []*node.Node {
 	}
 
 	return res
-}
-
-var globalSetupVRFSspam *vrfsspam
-var VRFSSpamFlag bool
-
-type vrfsspam struct {
-	Vrfs   *round.VRFShare
-	Miners *node.Pool
-}
-
-func SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
-	// todo: mutex?
-	setup := globalSetupVRFSspam
-	if setup == nil || setup.Miners == nil {
-		return // not requested or not initialized via SendVRFShare() yet
-	}
-	if vrfs != nil {
-		logging.Logger.Info("sendVRFSSpam() invoked by actual SendVRFShare()")
-		if setup.Vrfs != nil {
-			logging.Logger.Info("sendVRFSSpam() nothing to do")
-			return
-		}
-		// first send
-		setup.Vrfs = vrfs
-		logging.Logger.Info("sendVRFSSpam() first send ", zap.Int64("Round", setup.Vrfs.Round))
-		setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
-	}
-	setup.Vrfs.Round++
-	logging.Logger.Info("sendVRFSSpam() subsequent send ", zap.Int64("Round", setup.Vrfs.Round))
-	setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
 }
 
 func getBadBVTHash(ctx context.Context, b *block.Block) (

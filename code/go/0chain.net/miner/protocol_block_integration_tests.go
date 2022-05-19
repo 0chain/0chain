@@ -22,8 +22,8 @@ import (
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"github.com/0chain/common/core/logging"
 	"0chain.net/smartcontract/storagesc"
+	"github.com/0chain/common/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -97,7 +97,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 	addResultIfAdversarialValidatorTest(b)
 
-	if isTestingOnUpdateFinalizedBlock(b.Round) {
+	if isTestingOnUpdateFinalizedBlock(b.Round) || isTestingRoundHasFinalized() {
 		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
@@ -138,6 +138,12 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 			}
 		}
 	}
+}
+
+func isTestingRoundHasFinalized() bool {
+	state := crpc.Client().State()
+
+	return state.RoundHasFinalized != nil
 }
 
 func isTestingOnUpdateFinalizedBlock(round int64) bool {

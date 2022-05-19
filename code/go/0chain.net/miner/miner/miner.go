@@ -479,9 +479,7 @@ func initN2NHandlers(c *miner.Chain) {
 	miner.SetupM2SRequestors()
 	miner.SetupM2MRequestors()
 
-	if applyAdversarialMode() != "vrfs_spam" {
-		miner.SetupX2MResponders()
-	}
+	miner.SetupX2MResponders()
 	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
