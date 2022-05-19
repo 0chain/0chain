@@ -42,9 +42,6 @@ func Test_config_validate(t *testing.T) {
 		config config
 		err    string
 	}{
-		// min lock
-		{config{-1, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
-		{config{0, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
 		// min duration
 		{config{1, s(-1), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
 		{config{1, s(0), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
