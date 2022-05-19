@@ -67,6 +67,10 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+"/alloc_read_size", srh.getReadAmountHandler)
 	http.HandleFunc(storage+"/alloc_write_marker_count", srh.getWriteMarkerCountHandler)
 	http.HandleFunc(storage+"/collected_reward", srh.getCollectedReward)
+
+	http.HandleFunc(storage+"/blobber_ids", srh.getBlobberIdsByUrls)
+	http.HandleFunc(storage+"/alloc_blobbers", srh.getAllocationBlobbers)
+	http.HandleFunc(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers)
 }
 
 func GetRestNames() []string {
@@ -105,7 +109,56 @@ func GetRestNames() []string {
 		"/alloc_read_size",
 		"/alloc_write_marker_count",
 		"/collected_reward",
+		"/blobber_ids",
+		"/alloc_blobbers",
+		"/free_alloc_blobbers",
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers alloc_blobbers
+// returns list of all blobbers alive that match the allocation request.
+//
+// parameters:
+//    + name: start_block
+//      description: start block
+//      required: true
+//      in: query
+//      type: string
+//    + name: end_block
+//      description: end block
+//      required: true
+//      in: query
+//      type: string
+//    + name: client_id
+//      description: client id
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: challengePoolStat
+//  400:
+func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	var err error
+	allocData := r.URL.Query().Get("allocation_data")
+	var request newAllocationRequest
+	if err := request.decode([]byte(allocData)); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
+	}
+
+	blobberIDs, err := ssc.getBlobbersForRequest(request, balances)
+
+	if err != nil {
+		common.Respond(w, r, "", err)
+	}
+
+	common.Respond(w, r, blobberIDs, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
@@ -1319,15 +1372,7 @@ type storageNodeResponse struct {
 	TotalStake int64 `json:"total_stake"`
 }
 
-func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, error) {
-	maxOfferDuration, err := time.ParseDuration(blobber.MaxOfferDuration)
-	if err != nil {
-		return storageNodeResponse{}, err
-	}
-	challengeCompletionTime := time.Duration(blobber.ChallengeCompletionTime)
-	if err != nil {
-		return storageNodeResponse{}, err
-	}
+func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
@@ -1340,8 +1385,8 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 				ReadPrice:               state.Balance(blobber.ReadPrice),
 				WritePrice:              state.Balance(blobber.WritePrice),
 				MinLockDemand:           blobber.MinLockDemand,
-				MaxOfferDuration:        maxOfferDuration,
-				ChallengeCompletionTime: challengeCompletionTime,
+				MaxOfferDuration:        time.Duration(blobber.MaxOfferDuration),
+				ChallengeCompletionTime: time.Duration(blobber.ChallengeCompletionTime),
 			},
 			Capacity:        blobber.Capacity,
 			Used:            blobber.Used,
@@ -1361,7 +1406,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (storageNodeResponse, erro
 			},
 		},
 		TotalStake: blobber.TotalStake,
-	}, nil
+	}
 }
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
@@ -1384,12 +1429,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 	var sns storageNodesResponse
 	for _, blobber := range blobbers {
-		sn, err := blobberTableToStorageNode(blobber)
-		if err != nil {
-			err := common.NewErrInternal("parsing blobber" + blobber.BlobberID)
-			common.Respond(w, r, nil, err)
-			return
-		}
+		sn := blobberTableToStorageNode(blobber)
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 	common.Respond(w, r, sns, nil)
@@ -1505,12 +1545,7 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sn, err := blobberTableToStorageNode(*blobber)
-	if err != nil {
-		err := common.NewErrInternal("parsing blobber" + blobberID)
-		common.Respond(w, r, nil, err)
-		return
-	}
+	sn := blobberTableToStorageNode(*blobber)
 	common.Respond(w, r, sn, nil)
 }
 

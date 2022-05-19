@@ -1,25 +1,18 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
-	"context"
-	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"go.uber.org/zap"
-	"net/url"
-
-	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/stakepool"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
