@@ -1,9 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 
 	"0chain.net/pkg/currency"
 
@@ -87,7 +89,9 @@ func (sp *stakePool) Decode(input []byte) error {
 func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
+	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
+	logging.Logger.Debug("after stake pool save", zap.String("root", r))
+
 	return
 }
 

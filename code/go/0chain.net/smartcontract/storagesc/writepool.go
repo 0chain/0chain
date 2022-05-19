@@ -1,10 +1,12 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"net/url"
 
 	"0chain.net/pkg/currency"
@@ -60,7 +62,9 @@ func (wp *writePool) Decode(p []byte) error {
 func (wp *writePool) save(sscKey, clientID string,
 	balances chainState.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(writePoolKey(sscKey, clientID), wp)
+	r, err := balances.InsertTrieNode(writePoolKey(sscKey, clientID), wp)
+	logging.Logger.Debug("write pool safe", zap.String("root", r))
+
 	return
 }
 

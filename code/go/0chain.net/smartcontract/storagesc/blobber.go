@@ -76,6 +76,10 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
+	logging.Logger.Debug("update_blobber_settings", zap.Duration("ChallengeCompletionTime", blobber.Terms.ChallengeCompletionTime),
+		zap.Duration("MaxOfferDuration", blobber.Terms.MaxOfferDuration), zap.Int64("ReadPrice", int64(blobber.Terms.ReadPrice)),
+		zap.Int64("WritePrice", int64(blobber.Terms.WritePrice)), zap.Float64("MaxOfferDuration", blobber.Terms.MinLockDemand))
+
 	blobber.LastHealthCheck = t.CreationDate
 	blobber.Used = savedBlobber.Used
 	blobber.SavedData = savedBlobber.SavedData
@@ -224,6 +228,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 		return "", common.NewError("update_blobber_settings_failed",
 			"failed to get blobber list: "+err.Error())
 	}
+	logging.Logger.Debug("update_blobber_settings", zap.String("input", string(input)))
 
 	var updatedBlobber = new(StorageNode)
 	if err = updatedBlobber.Decode(input); err != nil {
