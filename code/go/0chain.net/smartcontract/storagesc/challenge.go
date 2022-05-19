@@ -129,16 +129,23 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev)
 		dtu  = alloc.durationInTimeUnits(tp - prev)
-		move = float64(blobAlloc.challenge(dtu, rdtu))
+		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
 	// part of this tokens goes to related validators
-	var validatorsReward = conf.ValidatorReward * move
+	var validatorsReward currency.Coin
+	validatorsReward, err = currency.Float64ToCoin(conf.ValidatorReward * float64(move))
+	if err != nil {
+		return err
+	}
 	move -= validatorsReward
 
 	// for a case of a partial verification
-	blobberReward := move * partial // blobber (partial) reward
-	back := move - blobberReward    // return back to write pool
+	blobberReward, err := currency.Float64ToCoin(float64(move) * partial) // blobber (partial) reward
+	if err != nil {
+		return err
+	}
+	back := move - blobberReward // return back to write pool
 
 	if back > 0 {
 		// move back to write pool
@@ -147,7 +154,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 			return fmt.Errorf("can't get allocation's write pool: %v", err)
 		}
 		var until = alloc.Until()
-		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, currency.Coin(back))
+		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, back)
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
@@ -273,28 +280,28 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev)
 		dtu  = alloc.durationInTimeUnits(tp - prev)
-		move = float64(blobAlloc.challenge(dtu, rdtu))
+		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
-	// part of this tokens goes to related validators
-	var validatorsReward = conf.ValidatorReward * move
+	// part of the tokens goes to related validators
+	validatorsReward, err := currency.Float64ToCoin(conf.ValidatorReward * float64(move))
 	move -= validatorsReward
 
 	// validators' stake pools
-	var vsps []*stakePool
-	if vsps, err = sc.validatorsStakePools(validators, balances); err != nil {
+	var vSPs []*stakePool
+	if vSPs, err = sc.validatorsStakePools(validators, balances); err != nil {
 		return
 	}
 
 	// validators reward
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += currency.Coin(validatorsReward)
+	alloc.MovedToValidators += validatorsReward
 
 	// save validators' stake pools
-	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
+	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
 		return
 	}
 
@@ -307,11 +314,14 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	alloc.MovedBack += currency.Coin(move)
 	blobAlloc.Returned += currency.Coin(move)
 
+	slash, err := currency.Float64ToCoin(conf.BlobberSlash * float64(move))
+	if err != nil {
+		return err
+	}
+
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 && move > 0 &&
-		currency.Coin(conf.BlobberSlash*move) > 0 {
-
-		var slash = currency.Coin(conf.BlobberSlash * move)
+		slash > 0 {
 
 		// load stake pool
 		var sp *stakePool
