@@ -844,9 +844,18 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	var changed bool
 
 	for i, ch := range changes {
+		_, err = ch.Int64()
+		if err != nil {
+			return err
+		}
 		var blobID = alloc.BlobberAllocs[i].BlobberID
-		err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
-		changed = true
+		switch {
+		case ch > 0:
+			err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
+			changed = true
+		default:
+			// no changes for the blobber
+		}
 		if err != nil {
 			return fmt.Errorf("adjust_challenge_pool: %v", err)
 		}
