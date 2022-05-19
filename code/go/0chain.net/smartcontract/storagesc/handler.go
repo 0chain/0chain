@@ -562,9 +562,9 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	var minLockDemand state.Balance
 
 	ids := append(req.Blobbers, blobbers...)
-	uniqueMap := make(map[string]bool)
+	uniqueMap := make(map[string]struct{})
 	for _, id := range ids {
-		uniqueMap[id] = true
+		uniqueMap[id] = struct{}{}
 	}
 	unique := make([]string, 0, len(ids))
 	for id := range uniqueMap {

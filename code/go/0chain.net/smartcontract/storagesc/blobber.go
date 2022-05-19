@@ -51,7 +51,7 @@ func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	conf *Config, blobber *StorageNode,
+	conf *Config, blobber *StorageNode, savedBlobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
@@ -68,8 +68,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("invalid blobber params: %v", err)
 	}
 
-	// get saved blobber
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
@@ -256,13 +254,12 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
+	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
+		return "", common.NewError("update_blobber_settings_failed", err.Error())
+	}
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
-
-	if err = sc.updateBlobber(t, conf, blobber, balances); err != nil {
-		return "", common.NewError("update_blobber_settings_failed", err.Error())
-	}
 
 	// save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
@@ -838,9 +835,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
-	_, err = sc.getBlobber(blobber.ID, balances)
+	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err == nil {
-		return sc.updateBlobber(t, conf, blobber, balances)
+		return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
 	}
 
 	if sc.hasBlobberUrl(blobber.BaseURL, balances) {

@@ -210,7 +210,7 @@ func printResults(results []suiteResults) {
 				)
 			} else {
 				fmt.Printf(
-					"%s,%f %s%s%s%s%s\n",
+					"%s,%f %s%s%s%s\n",
 					bkResult.test.Name(),
 					takenMs,
 					statusColor,
