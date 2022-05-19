@@ -845,28 +845,8 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	for i, ch := range changes {
 		var blobID = alloc.BlobberAllocs[i].BlobberID
-		switch {
-		case ch > 0:
-			err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
-			changed = true
-		case ch < 0:
-			// only if the challenge pool has the tokens; all the tokens
-			// can be moved back already, or moved to a blobber due to
-			// challenge process
-			if cp.Balance >= -ch {
-				wp, err := awp.getOwnerWP()
-				if err != nil {
-					return fmt.Errorf("adjust_challenge_pool: %v", err)
-				}
-				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
-				if err != nil {
-					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
-				}
-				changed = true
-			}
-		default:
-			// no changes for the blobber
-		}
+		err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
+		changed = true
 		if err != nil {
 			return fmt.Errorf("adjust_challenge_pool: %v", err)
 		}

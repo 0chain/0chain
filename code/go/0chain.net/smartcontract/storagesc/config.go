@@ -198,21 +198,10 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("negative min_alloc_duration: %v",
 			sc.MinAllocDuration)
 	}
-	if sc.MaxMint < 0 {
-		return fmt.Errorf("negative max_mint: %v", sc.MaxMint)
-	}
 	if sc.MinAllocSize < 0 {
 		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
 	}
-	if sc.MaxReadPrice < 0 {
-		return fmt.Errorf("negative max_read_price: %v", sc.MaxReadPrice)
-	}
-	if sc.MaxWritePrice < 0 {
-		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
-	}
-	if sc.MinWritePrice < 0 {
-		return fmt.Errorf("negative min_write_price: %v", sc.MaxWritePrice)
-	}
+
 	if sc.MaxWritePrice < sc.MinWritePrice {
 		return fmt.Errorf("max wirte price %v must be more than min_write_price: %v",
 			sc.MaxWritePrice, sc.MinWritePrice)
