@@ -183,12 +183,6 @@ func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
 	case len(ar.Destinations) > conf.MaxDestinations:
 		return errors.New("too many destinations")
 	}
-
-	for _, d := range ar.Destinations {
-		if d.Amount < 0 {
-			return fmt.Errorf("negative amount for %q: %d", d.ID, d.Amount)
-		}
-	}
 	return
 }
 
