@@ -127,7 +127,7 @@ func (sp *stakePool) empty(
 	// If insufficient funds in stake pool left after unlock,
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
-	if sp.stake()-sp.TotalOffers-dp.Balance < 0 {
+	if sp.stake() < sp.TotalOffers+dp.Balance {
 		if dp.Status != spenum.Unstaking {
 			sp.TotalUnStake += dp.Balance
 			dp.Status = spenum.Unstaking

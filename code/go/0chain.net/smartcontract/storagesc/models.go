@@ -278,12 +278,6 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.ReadPrice < 0 {
-		return errors.New("negative read_price")
-	}
-	if t.WritePrice < 0 {
-		return errors.New("negative write_price")
-	}
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
 		return errors.New("invalid min_lock_demand")
 	}
