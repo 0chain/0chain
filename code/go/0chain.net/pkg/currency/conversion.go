@@ -4,8 +4,6 @@ import (
 	"errors"
 	"math"
 
-	"0chain.net/smartcontract/stakepool"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -134,36 +132,4 @@ func Float64ToCoin(a float64) (Coin, error) {
 		return 0, ErrFloat64UnderflowsUint64
 	}
 	return Coin(a), nil
-}
-
-func EquallyDistributeRewards(coins Coin, delegates []*stakepool.DelegatePool,
-	spUpdate *stakepool.StakePoolReward) error {
-
-	share := coins / Coin(len(delegates))
-	c, err := coins.Int64()
-	if err != nil {
-		return err
-	}
-	if share == 0 {
-		for i := int64(0); i < c; i++ {
-			delegates[i].Reward++
-			spUpdate.DelegateRewards[delegates[i].DelegateID]++
-		}
-		return nil
-	}
-
-	for i := range delegates {
-		delegates[i].Reward += share
-		spUpdate.DelegateRewards[delegates[i].DelegateID] += int64(share)
-	}
-
-	r := c % int64(len(delegates))
-	if r > 0 {
-		for i := int64(0); i < r; i++ {
-			delegates[i].Reward++
-			spUpdate.DelegateRewards[delegates[i].DelegateID]++
-		}
-	}
-
-	return nil
 }

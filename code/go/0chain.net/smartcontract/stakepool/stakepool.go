@@ -259,7 +259,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	if valueBalance > 0 {
-		err = currency.EquallyDistributeRewards(valueBalance, dp, spUpdate)
+		err = equallyDistributeRewards(valueBalance, dp, spUpdate)
 		if err != nil {
 			return err
 		}
@@ -275,4 +275,36 @@ func (sp *StakePool) stake() (stake currency.Coin) {
 		stake += pool.Balance
 	}
 	return
+}
+
+func equallyDistributeRewards(coins currency.Coin, delegates []*DelegatePool,
+	spUpdate *StakePoolReward) error {
+
+	share := coins / currency.Coin(len(delegates))
+	c, err := coins.Int64()
+	if err != nil {
+		return err
+	}
+	if share == 0 {
+		for i := int64(0); i < c; i++ {
+			delegates[i].Reward++
+			spUpdate.DelegateRewards[delegates[i].DelegateID]++
+		}
+		return nil
+	}
+
+	for i := range delegates {
+		delegates[i].Reward += share
+		spUpdate.DelegateRewards[delegates[i].DelegateID] += int64(share)
+	}
+
+	r := c % int64(len(delegates))
+	if r > 0 {
+		for i := int64(0); i < r; i++ {
+			delegates[i].Reward++
+			spUpdate.DelegateRewards[delegates[i].DelegateID]++
+		}
+	}
+
+	return nil
 }
