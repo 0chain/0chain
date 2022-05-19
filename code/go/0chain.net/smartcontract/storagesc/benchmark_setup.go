@@ -474,7 +474,7 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		blobber := &StorageNode{
 			ID:      id,
-			BaseURL: id + ".com",
+			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
 				Longitude: longitudeStep*float64(i) - maxLongitude,
@@ -822,6 +822,10 @@ func getMockValidatorStakePoolId(blobber, stake int) string {
 
 func getMockBlobberId(index int) string {
 	return encryption.Hash("mockBlobber_" + strconv.Itoa(index))
+}
+
+func getMockBlobberUrl(index int) string {
+	return getMockBlobberId(index) + ".com"
 }
 
 func getMockValidatorId(index int) string {

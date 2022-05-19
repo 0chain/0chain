@@ -7,11 +7,13 @@ import (
 	"0chain.net/core/common"
 	bk "0chain.net/smartcontract/benchmark"
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -66,7 +68,7 @@ func (rbt *RestBenchTest) Run(balances cstate.StateContextI, b *testing.B) error
 }
 
 func BenchmarkRestTests(
-	data bk.BenchData, _ bk.SignatureScheme,
+	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
 	var tests = []*RestBenchTest{
 		{
@@ -106,24 +108,24 @@ func BenchmarkRestTests(
 		},
 		{
 			name: "allocation_min_lock",
-			params: func() map[string]string {
-				var values = make(map[string]string)
-				now := common.Timestamp(time.Now().Unix())
-				nar, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					Blobbers:                   []string{},
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-				}).encode()
-				values["allocation_data"] = string(nar)
-				return values
-			}(),
+			params: map[string]string{
+				"allocation_data": func() string {
+					now := common.Timestamp(time.Now().Unix())
+					nar, _ := (&newAllocationRequest{
+						DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+						ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+						Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
+						Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+						Owner:                      data.Clients[0],
+						OwnerPublicKey:             data.PublicKeys[0],
+						Blobbers:                   []string{},
+						ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+						WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+						MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+					}).encode()
+					return string(nar)
+				}(),
+			},
 		},
 		{
 			name: "openchallenges",
@@ -206,26 +208,87 @@ func BenchmarkRestTests(
 			},
 		},
 		{
-			name:     "storage_rest.GetAllocBlobber",
-			endpoint: ssc.GetAllocationBlobbersHandler,
-			params: func() url.Values {
-				var values url.Values = make(map[string][]string)
-				now := common.Timestamp(time.Now().Unix())
-				nar, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					Blobbers:                   []string{},
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-				}).encode()
-				values.Set("allocation_data", string(nar))
-				return values
-			}(),
+			name: "alloc_blobbers",
+			params: map[string]string{
+				"allocation_data": func() string {
+					now := common.Timestamp(time.Now().Unix())
+					nar, _ := (&newAllocationRequest{
+						DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+						ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+						Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
+						Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+						Owner:                      data.Clients[0],
+						OwnerPublicKey:             data.PublicKeys[0],
+						Blobbers:                   []string{},
+						ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+						WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+						MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+					}).encode()
+					return string(nar)
+				}(),
+			},
+		},
+		{
+			name: "blobber_ids",
+			params: map[string]string{
+				"blobber_urls": func() string {
+					var urls []string
+					for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
+						urls = append(urls, getMockValidatorId(i))
+					}
+					urlBytes, err := json.Marshal(urls)
+					if err != nil {
+						log.Fatal(err)
+					}
+					return string(urlBytes)
+				}(),
+			},
+		},
+		{
+			name: "free_alloc_blobbers",
+			params: map[string]string{
+				"free_allocation_data": func() string {
+					var request = struct {
+						Recipient  string           `json:"recipient"`
+						FreeTokens float64          `json:"free_tokens"`
+						Timestamp  common.Timestamp `json:"timestamp"`
+					}{
+						data.Clients[0],
+						viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
+						1,
+					}
+					responseBytes, err := json.Marshal(&request)
+					if err != nil {
+						panic(err)
+					}
+					err = sigScheme.SetPublicKey(data.PublicKeys[0])
+					if err != nil {
+						panic(err)
+					}
+					sigScheme.SetPrivateKey(data.PrivateKeys[0])
+					signature, err := sigScheme.Sign(hex.EncodeToString(responseBytes))
+					if err != nil {
+						panic(err)
+					}
+					fsmBytes, _ := json.Marshal(&freeStorageMarker{
+						Assigner:   data.Clients[0],
+						Recipient:  request.Recipient,
+						FreeTokens: request.FreeTokens,
+						Timestamp:  request.Timestamp,
+						Signature:  signature,
+					})
+					var freeBlobbers []string
+					for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
+						freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
+					}
+					bytes, _ := json.Marshal(&freeStorageAllocationInput{
+						RecipientPublicKey: data.PublicKeys[1],
+						Marker:             string(fsmBytes),
+						Blobbers:           freeBlobbers,
+					})
+					return string(bytes)
+				}(),
+			},
 		},
 	}
 	var testsI []bk.BenchTestI
