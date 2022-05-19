@@ -373,11 +373,6 @@ func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error 
 			node.Settings.MinStake, gn.MinStake)
 	}
 
-	if node.Settings.MinStake < 0 || node.Settings.MaxStake < 0 {
-		return common.NewErrorf(opcode,
-			"invalid negative min_stake: %v or max_stake: %v", node.Settings.MinStake, node.Settings.MaxStake)
-	}
-
 	if node.Settings.MinStake > node.Settings.MaxStake {
 		return common.NewErrorf(opcode,
 			"invalid node request results in min_stake greater than max_stake: %v > %v", node.Settings.MinStake, node.Settings.MaxStake)
