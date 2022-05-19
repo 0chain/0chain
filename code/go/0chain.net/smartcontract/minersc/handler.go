@@ -1,7 +1,7 @@
 package minersc
 
 import (
-	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
@@ -775,21 +775,7 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getNodepool(w http.ResponseWriter, r *http.Request) {
-	regMiner := NewMinerNode()
-
-	err := regMiner.decodeFromValues(r.URL.Query().Get("id"), r.URL.Query().Get("n2n_host"))
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("can't decode miner from passed params", err.Error()))
-		return
-	}
-	if !doesMinerExist(regMiner.GetKey(), mrh.GetStateContext()) {
-		common.Respond(w, r, "", common.NewErrNoResource("unknown miner"))
-		return
-	}
-	npi := MinerSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.bcContext.GetNodepoolInfo()
-
+	npi := (&smartcontract.BCContext{}).GetNodepoolInfo()
 	common.Respond(w, r, npi, nil)
 }
 

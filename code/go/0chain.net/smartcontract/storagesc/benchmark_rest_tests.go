@@ -234,7 +234,7 @@ func BenchmarkRestTests(
 				"blobber_urls": func() string {
 					var urls []string
 					for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
-						urls = append(urls, getMockValidatorId(i))
+						urls = append(urls, getMockBlobberUrl(i))
 					}
 					urlBytes, err := json.Marshal(urls)
 					if err != nil {

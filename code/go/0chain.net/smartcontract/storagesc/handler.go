@@ -279,9 +279,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 
 	var creationDate = time.Now()
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-	//if err = sa.validate(creationDate, conf); err != nil {
-	//	return nil, fmt.Errorf("invalid request: %v", err)
-	//}
+
 	// number of blobbers required
 	var numberOfBlobbers = sa.DataShards + sa.ParityShards
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {

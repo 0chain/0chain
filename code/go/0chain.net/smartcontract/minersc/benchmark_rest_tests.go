@@ -70,10 +70,6 @@ func BenchmarkRestTests(
 	var tests = []*RestBenchTest{
 		{
 			name: "getNodepool",
-			params: map[string]string{
-				"id":       GetMockNodeId(0, spenum.Miner),
-				"n2n_host": "n2n_host",
-			},
 		},
 		{
 			name: "getUserPools",
