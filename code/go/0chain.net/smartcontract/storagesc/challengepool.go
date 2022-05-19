@@ -2,16 +2,10 @@ package storagesc
 
 import (
 	"0chain.net/core/logging"
-	"context"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go.uber.org/zap"
-	"net/url"
-
-	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
