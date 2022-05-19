@@ -35,8 +35,9 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 }
 
 type freeStorageAllocationInput struct {
-	RecipientPublicKey string `json:"recipient_public_key"`
-	Marker             string `json:"marker"`
+	RecipientPublicKey string   `json:"recipient_public_key"`
+	Marker             string   `json:"marker"`
+	Blobbers           []string `json:"blobbers"`
 }
 
 func (frm *freeStorageAllocationInput) decode(b []byte) error {
@@ -249,6 +250,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
 		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
+		Blobbers:                   inputObj.Blobbers,
 	}
 
 	arBytes, err := request.encode()
@@ -293,7 +295,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
 	}
 
-	return string(resp), err
+	return resp, err
 }
 
 func (ssc *StorageSmartContract) updateFreeStorageRequest(
