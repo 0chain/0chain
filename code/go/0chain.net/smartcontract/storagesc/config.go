@@ -210,12 +210,6 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
 			sc.StakePool.MinLock)
 	}
-	if sc.MaxTotalFreeAllocation < 0 {
-		return fmt.Errorf("negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
-	}
-	if sc.MaxIndividualFreeAllocation < 0 {
-		return fmt.Errorf("negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
-	}
 
 	if sc.FreeAllocationSettings.DataShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
@@ -270,9 +264,7 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
 			sc.ChallengeGenerationRate)
 	}
-	if sc.MinStake < 0 {
-		return fmt.Errorf("negative min_stake: %v", sc.MinStake)
-	}
+
 	if sc.MaxStake < sc.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", sc.MinStake,
 			sc.MaxStake)
@@ -287,14 +279,7 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
 			sc.MaxCharge)
 	}
-	if sc.BlockReward.BlockReward < 0 {
-		return fmt.Errorf("negative block_reward.block_reward: %v",
-			sc.BlockReward.BlockReward)
-	}
-	if sc.BlockReward.QualifyingStake < 0 {
-		return fmt.Errorf("negative block_reward.qualifying_stake: %v",
-			sc.BlockReward.QualifyingStake)
-	}
+
 	if sc.BlockReward.SharderWeight < 0 {
 		return fmt.Errorf("negative block_reward.sharder_weight: %v",
 			sc.BlockReward.SharderWeight)
