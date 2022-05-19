@@ -49,6 +49,14 @@ func BenchmarkRestTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
+	maxRPrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxReadPrice))
+	if err != nil {
+		panic(err)
+	}
+	maxWPrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxWritePrice))
+	if err != nil {
+		panic(err)
+	}
 	var tests = []RestBenchTest{
 		{
 			name:     "storage_rest.getConfig",
@@ -116,15 +124,15 @@ func BenchmarkRestTests(
 				var values url.Values = make(map[string][]string)
 				now := common.Timestamp(time.Now().Unix())
 				nar, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					Blobbers:                   []string{},
-					ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					DataShards:      viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+					ParityShards:    viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+					Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
+					Expiration:      2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+					Owner:           data.Clients[0],
+					OwnerPublicKey:  data.PublicKeys[0],
+					Blobbers:        []string{},
+					ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 				}).encode()
@@ -263,8 +271,8 @@ func BenchmarkRestTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					Blobbers:                   []string{},
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, maxRPrice},
+					WritePriceRange:            PriceRange{0, maxWPrice},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 				}).encode()
 				values.Set("allocation_data", string(nar))
