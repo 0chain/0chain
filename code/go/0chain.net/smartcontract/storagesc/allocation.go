@@ -1600,7 +1600,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
 		var paid currency.Coin = 0
-		if lack := d.MinLockDemand - d.Spent; lack > 0 {
+		if lack := d.MinLockDemand - d.Spent; int64(lack) > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {

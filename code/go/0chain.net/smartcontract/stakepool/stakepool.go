@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"0chain.net/pkg/currency"
 
@@ -233,7 +234,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	for id, pool := range sp.Pools {
-		if valueBalance <= 0 {
+		if valueBalance == 0 {
 			break
 		}
 		ratio := float64(pool.Balance) / float64(stake)
@@ -241,7 +242,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		if valueBalance-reward <= 0 {
+		if reward > valueBalance {
 			reward = valueBalance
 			valueBalance = 0
 		} else {
@@ -253,12 +254,17 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 	}
-	var dp []*DelegatePool
-	for _, v := range sp.Pools {
-		dp = append(dp, v)
-	}
 
 	if valueBalance > 0 {
+		var dp []*DelegatePool
+		for dID, v := range sp.Pools {
+			v.DelegateID = dID
+			dp = append(dp, v)
+		}
+		sort.Slice(dp, func(i, j int) bool {
+			return strings.Compare(dp[i].DelegateID, dp[j].DelegateID) == -1
+		})
+
 		err = equallyDistributeRewards(valueBalance, dp, spUpdate)
 		if err != nil {
 			return err

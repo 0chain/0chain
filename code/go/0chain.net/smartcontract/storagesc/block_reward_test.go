@@ -54,9 +54,11 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			sp.Settings.DelegateWallet = bID
 			sp.Settings.ServiceChargeRatio = p.serviceCharge[i]
 			for j, bal := range p.delegatesBal[i] {
+				dID := "delegate" + strconv.Itoa(j)
 				dp := new(stakepool.DelegatePool)
 				dp.Balance = bal
-				sp.Pools["delegate"+strconv.Itoa(j)] = dp
+				dp.DelegateID = dID
+				sp.Pools[dID] = dp
 			}
 			_, err = balances.InsertTrieNode(stakePoolKey(sc.ID, bID), sp)
 			require.NoError(t, err)
@@ -107,7 +109,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			},
 			result: result{
 				blobberRewards:          []currency.Coin{50},
-				blobberDelegatesRewards: [][]currency.Coin{{112, 0, 337}},
+				blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
 			},
 		},
 		{
@@ -124,7 +126,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			},
 			result: result{
 				blobberRewards:          []currency.Coin{15, 34},
-				blobberDelegatesRewards: [][]currency.Coin{{35, 0, 107}, {30, 183, 91}},
+				blobberDelegatesRewards: [][]currency.Coin{{37, 0, 108}, {31, 184, 91}},
 			},
 		},
 	}
