@@ -36,7 +36,7 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
-        bash ./docker.local/bin/setup_network.sh || true
+        bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
@@ -80,19 +80,31 @@ jobs:
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
     - name: Running No VC Fault Tolerance Tests.
-      if: ${{ github.event.inputs.view_change == 'true' }}
+      if: ${{ github.event.inputs.view_change == 'false' }}
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 
-    - name: Creating Artifact con-vc-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-vc-tests-logs.tar.gz --null --files-from -
+  upload_artifacts_ft:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test02]
+    
+    if: always()
+    needs: [fault_tolearance_tests]
 
-    - name: Uploading artifact con-vc-tests-logs.tar.gz file.
+    steps:
+    - name: Creating Artifact con-ft-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-ft-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-ft-tests-logs.tar.gz file.
       uses: actions/upload-artifact@v2
       with:
         name: Conductor-test-logs
-        path: ./con-vc-tests-logs.tar.gz
+        path: ./con-ft-tests-logs.tar.gz
+    
+    - name: Cleanup
+      run: |
+        rm -rf ./*
 
   conductor_byzantine_tests:
     name: CONDUCTOR-BYZANTINE-TESTS
@@ -107,7 +119,7 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
-        bash ./docker.local/bin/setup_network.sh || true
+        bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
@@ -155,7 +167,15 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
-    - name: Creating Artifact con-tests-logs.tar.gz file.
+  upload_artifacts_byz:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test03]
+    
+    if: always()
+    needs: [conductor_byzantine_tests]
+    
+    steps:
+    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
 
@@ -164,3 +184,7 @@ jobs:
       with:
         name: Conductor-test-logs
         path: ./con-byz-tests-logs.tar.gz
+
+    - name: Cleanup
+      run: |
+        rm -rf ./*

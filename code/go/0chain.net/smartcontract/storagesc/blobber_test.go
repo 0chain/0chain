@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -602,14 +601,13 @@ func Test_flow_reward(t *testing.T) {
 			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			// todo fix validator delegates so that this does not error
-			require.Error(t, err)
 			if i == 0 {
-				require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
+				require.NoError(t, err)
+				require.Equal(t, resp, "challenge passed by blobber")
 			} else {
-				require.True(t, strings.Contains(err.Error(), "can't add to ongoing partition list"))
+				require.Error(t, err)
+				require.Zero(t, resp)
 			}
-			require.Zero(t, resp)
 		}
 
 	})
@@ -775,10 +773,8 @@ func Test_flow_penalty(t *testing.T) {
 			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			// todo fix validator delegates so that this does not error
-			require.Error(t, err)
-			require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
-			require.Zero(t, resp)
+			require.NoError(t, err)
+			require.EqualValues(t, "Challenge Failed by Blobber", resp)
 			continue
 
 			//TODO: unreachable code below

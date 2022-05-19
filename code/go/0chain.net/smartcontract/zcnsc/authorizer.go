@@ -216,12 +216,12 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "can't decode request: %v", err)
 	}
 
-	usp, err := stakepool.GetUserStakePool(prr.ProviderType, tran.ClientID, ctx)
+	usp, err := stakepool.GetUserStakePools(prr.ProviderType, tran.ClientID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.Find(prr.PoolId)
+	providerId := usp.FindProvider(prr.PoolId)
 	if len(providerId) == 0 {
 		return "", common.NewErrorf(code, "user %v does not own stake pool %v", tran.ClientID, prr.PoolId)
 	}

@@ -31,7 +31,7 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
-        bash ./docker.local/bin/setup_network.sh || true
+        bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
@@ -76,7 +76,7 @@ jobs:
     runs-on: [self-hosted, conductor-test01]
     
     if: always()
-    needs: [conductor_build]
+    needs: [conductor_standard_tests]
     
     steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.

@@ -8,7 +8,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 
 	"github.com/guregu/null"
-
 	"gorm.io/gorm"
 )
 
@@ -22,11 +21,11 @@ type Blobber struct {
 	Longitude float64 `json:"longitude"`
 
 	// terms
-	ReadPrice               int64         `json:"read_price"`
-	WritePrice              int64         `json:"write_price"`
-	MinLockDemand           float64       `json:"min_lock_demand"`
-	MaxOfferDuration        time.Duration `json:"max_offer_duration"`
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+	ReadPrice               int64   `json:"read_price"`
+	WritePrice              int64   `json:"write_price"`
+	MinLockDemand           float64 `json:"min_lock_demand"`
+	MaxOfferDuration        int64   `json:"max_offer_duration"`
+	ChallengeCompletionTime int64   `json:"challenge_completion_time"`
 
 	Capacity        int64 `json:"capacity"`          // total blobber capacity
 	Used            int64 `json:"used"`              // allocated capacity
