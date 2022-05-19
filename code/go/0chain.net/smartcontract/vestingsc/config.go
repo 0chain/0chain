@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/transaction"
@@ -21,7 +23,6 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -65,7 +66,7 @@ func scConfigKey(scKey string) datastore.Key {
 
 // config represents SC configurations ('vestingsc:' from sc.yaml)
 type config struct {
-	MinLock              state.Balance  `json:"min_lock"`
+	MinLock              currency.Coin  `json:"min_lock"`
 	MinDuration          time.Duration  `json:"min_duration"`
 	MaxDuration          time.Duration  `json:"max_duration"`
 	MaxDestinations      int            `json:"max_destinations"`
@@ -109,10 +110,10 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 		switch key {
 		case Settings[MinLock]:
 			if sbValue, err := strconv.ParseFloat(value, 64); err != nil {
-				return fmt.Errorf("value %v cannot be converted to state.Balance, "+
+				return fmt.Errorf("value %v cannot be converted to currency.Coin, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MinLock = state.Balance(sbValue * 1e10)
+				c.MinLock = currency.Coin(sbValue * 1e10)
 			}
 		case Settings[MinDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
@@ -249,7 +250,7 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
-	conf.MinLock = state.Balance(scconf.GetFloat64(prefix+"min_lock") * 1e10)
+	conf.MinLock = currency.Coin(scconf.GetFloat64(prefix+"min_lock") * 1e10)
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")

@@ -1,13 +1,15 @@
 package cmd
 
 import (
-	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"0chain.net/core/common"
+	"0chain.net/pkg/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -493,7 +495,7 @@ func addMockClients(
 		}
 		is := &state.State{}
 		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
+		is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
 		_, err = pMpt.Insert(util.Path(clientID), is)
 		if err != nil {
 			panic(err)

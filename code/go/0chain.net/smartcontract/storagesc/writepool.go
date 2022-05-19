@@ -1,13 +1,15 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"net/url"
+
+	"0chain.net/core/logging"
+	"0chain.net/pkg/currency"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -127,7 +129,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 	for _, b := range alloc.BlobberAllocs {
 		var ratio = float64(b.Terms.WritePrice) / total
 		bps.add(&blobberPool{
-			Balance:   state.Balance(float64(value) * ratio),
+			Balance:   currency.Coin(float64(value) * ratio),
 			BlobberID: b.BlobberID,
 		})
 	}
@@ -135,7 +137,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
-	value state.Balance) {
+	value currency.Coin) {
 
 	return wp.Pools.allocUntil(allocID, until)
 }
@@ -299,7 +301,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
+			Balance:   currency.Coin(t.Value),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -313,7 +315,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.WritePrice) / total
 			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
+				Balance:   currency.Coin(float64(t.Value) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}

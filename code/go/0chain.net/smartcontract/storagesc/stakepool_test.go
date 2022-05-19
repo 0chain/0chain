@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
@@ -16,7 +18,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
@@ -134,7 +135,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 			nil,
 		),
-		clientBalance: state.Balance(clientBalance),
+		clientBalance: currency.Coin(clientBalance),
 		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{

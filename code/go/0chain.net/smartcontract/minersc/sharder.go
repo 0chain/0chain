@@ -44,7 +44,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", common.NewError("update_sharder_settings", "access denied")
 	}
 
-	sn.Settings.ServiceCharge = update.Settings.ServiceCharge
+	sn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
 	sn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
 	sn.Settings.MinStake = update.Settings.MinStake
 	sn.Settings.MaxStake = update.Settings.MaxStake
@@ -100,7 +100,7 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("pkey", newSharder.PublicKey),
 		zap.Any("mscID", msc.ID),
 		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
-		zap.Float64("service_charge", newSharder.Settings.ServiceCharge),
+		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
 		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newSharder.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newSharder.Settings.MaxStake)))

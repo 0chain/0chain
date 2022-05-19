@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -265,7 +267,7 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (state.Balance, error) {
+func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (currency.Coin, error) {
 	s, err := MakeClientStateRequest(clientID, urls, consensus)
 	if err != nil {
 		return 0, err

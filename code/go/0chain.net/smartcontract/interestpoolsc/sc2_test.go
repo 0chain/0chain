@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -280,7 +282,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 		SimpleGlobalNode: &SimpleGlobalNode{
 			MaxMint:     zcnToBalance(scYml.maxMint),
 			TotalMinted: zcnToBalance(alredyMinted),
-			MinLock:     state.Balance(scYml.minLock),
+			MinLock:     currency.Coin(scYml.minLock),
 			APR:         scYml.apr,
 		},
 		MinLockPeriod: scYml.minLockPeriod,
@@ -353,7 +355,7 @@ const x10 = 10 * 1000 * 1000 * 1000
 
 type mockStateContext struct {
 	ctx                cstate.StateContext
-	clientStartBalance state.Balance
+	clientStartBalance currency.Coin
 	store              map[datastore.Key]util.MPTSerializable
 }
 
@@ -376,7 +378,7 @@ func (sc *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, s
 func (sc *mockStateContext) EmitError(error)                                           {}
 func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
 func (sc *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
 	if sc.clientStartBalance == 0 {
 		return 0, util.ErrValueNotPresent
 	}
@@ -412,8 +414,8 @@ func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
 }
 
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
+func zcnToBalance(token float64) currency.Coin {
+	return currency.Coin(token * float64(x10))
 }
 
 //	const txnData = "{\"name\":\"lock\",\"input\":{\"duration\":\"10h0m\"}}"
@@ -441,11 +443,11 @@ type formulae struct {
 }
 
 // interest earned from a waller lock cli command
-func (f formulae) tokensEarned() state.Balance {
+func (f formulae) tokensEarned() currency.Coin {
 	var amount = float64(zcnToBalance(f.lockFlags.tokens))
 	var apr = f.sc.apr
 	var duration = float64(f.lockFlags.duration)
 	var year = float64(YEAR)
 
-	return state.Balance(amount * apr * duration / year)
+	return currency.Coin(amount * apr * duration / year)
 }

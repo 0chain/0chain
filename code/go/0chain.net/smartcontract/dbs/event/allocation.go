@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/pkg/currency"
+
 	"gorm.io/gorm"
 )
 
@@ -22,19 +23,19 @@ type Allocation struct {
 	Owner                      string        `json:"owner"`
 	OwnerPublicKey             string        `json:"owner_public_key"`
 	IsImmutable                bool          `json:"is_immutable"`
-	ReadPriceMin               state.Balance `json:"read_price_min"`
-	ReadPriceMax               state.Balance `json:"read_price_max"`
-	WritePriceMin              state.Balance `json:"write_price_min"`
-	WritePriceMax              state.Balance `json:"write_price_max"`
+	ReadPriceMin               currency.Coin `json:"read_price_min"`
+	ReadPriceMax               currency.Coin `json:"read_price_max"`
+	WritePriceMin              currency.Coin `json:"write_price_min"`
+	WritePriceMax              currency.Coin `json:"write_price_max"`
 	MaxChallengeCompletionTime int64         `json:"max_challenge_completion_time"`
 	ChallengeCompletionTime    int64         `json:"challenge_completion_time"`
 	StartTime                  int64         `json:"start_time"`
 	Finalized                  bool          `json:"finalized"`
 	Cancelled                  bool          `json:"cancelled"`
 	UsedSize                   int64         `json:"used_size"`
-	MovedToChallenge           state.Balance `json:"moved_to_challenge"`
-	MovedBack                  state.Balance `json:"moved_back"`
-	MovedToValidators          state.Balance `json:"moved_to_validators"`
+	MovedToChallenge           currency.Coin `json:"moved_to_challenge"`
+	MovedBack                  currency.Coin `json:"moved_back"`
+	MovedToValidators          currency.Coin `json:"moved_to_validators"`
 	TimeUnit                   int64         `json:"time_unit"`
 	NumWrites                  int64         `json:"num_writes"`
 	NumReads                   int64         `json:"num_reads"`
@@ -49,10 +50,10 @@ type AllocationTerm struct {
 	BlobberID    string `json:"blobber_id"`
 	AllocationID string `json:"allocation_id"`
 	// ReadPrice is price for reading. Token / GB (no time unit).
-	ReadPrice state.Balance `json:"read_price"`
+	ReadPrice currency.Coin `json:"read_price"`
 	// WritePrice is price for reading. Token / GB / time unit. Also,
 	// it used to calculate min_lock_demand value.
-	WritePrice state.Balance `json:"write_price"`
+	WritePrice currency.Coin `json:"write_price"`
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.

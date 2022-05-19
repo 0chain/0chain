@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/url"
 
+	"0chain.net/pkg/currency"
+
 	cState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
@@ -20,7 +21,7 @@ type authorizerResponse struct {
 	URL          string `json:"url"`
 
 	// Configuration
-	Fee state.Balance `json:"fee"`
+	Fee currency.Coin `json:"fee"`
 
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
@@ -31,8 +32,8 @@ type authorizerResponse struct {
 
 	// stake_pool_settings
 	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       state.Balance `json:"min_stake"`
-	MaxStake       state.Balance `json:"max_stake"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 }

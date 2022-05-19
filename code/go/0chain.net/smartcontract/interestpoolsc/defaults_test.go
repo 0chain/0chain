@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -40,7 +41,7 @@ func testPoolRequest(d time.Duration) []byte {
 
 // TEST FUNCTION
 // testGlobalNode function creates global node instance using incoming parameters
-func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr float64, minLockP time.Duration, ownerId datastore.Key) *GlobalNode {
+func testGlobalNode(id string, maxMint, totalMint, minLock currency.Coin, apr float64, minLockP time.Duration, ownerId datastore.Key) *GlobalNode {
 	var gn = &GlobalNode{ID: id}
 	gn.SimpleGlobalNode = &SimpleGlobalNode{
 		MaxMint:     maxMint,
@@ -59,9 +60,9 @@ func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr fl
 func testGlobalNodeStringTime(id string, maxMint, totalMint, minLock, apr float64, minLockP string, ownerId string) *GlobalNode {
 	var gn = &GlobalNode{ID: id}
 	gn.SimpleGlobalNode = &SimpleGlobalNode{
-		MaxMint:     state.Balance(maxMint * 1e10),
-		TotalMinted: state.Balance(totalMint * 1e10),
-		MinLock:     state.Balance(minLock * 1e10),
+		MaxMint:     currency.Coin(maxMint * 1e10),
+		TotalMinted: currency.Coin(totalMint * 1e10),
+		MinLock:     currency.Coin(minLock * 1e10),
 		APR:         apr,
 		OwnerId:     ownerId,
 		Cost:        map[string]int{},
@@ -127,13 +128,13 @@ func testTxnForUnlock(client string, value int64) *transaction.Transaction {
 // testBalance function creates a new instance of testBalances using incoming parameters
 func testBalance(client string, value int64) *testBalances {
 	t := &testBalances{
-		balances: make(map[datastore.Key]state.Balance),
+		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 		txn:      testTxn(clientID1, 10),
 	}
 	if client != "" {
 		t.txn = testTxn(client, value)
-		t.setBalance(client, state.Balance(value))
+		t.setBalance(client, currency.Coin(value))
 	}
 
 	return t
@@ -141,13 +142,13 @@ func testBalance(client string, value int64) *testBalances {
 
 func testBalanceUnlock(client string, value int64) *testBalances {
 	t := &testBalances{
-		balances: make(map[datastore.Key]state.Balance),
+		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 		txn:      testTxnForUnlock(client, 10),
 	}
 	if client != "" {
 		t.txn = testTxnForUnlock(client, value)
-		t.setBalance(client, state.Balance(value))
+		t.setBalance(client, currency.Coin(value))
 	}
 
 	return t
@@ -175,7 +176,7 @@ func testInterestPool(sec time.Duration, balance int) *interestPool {
 		ZcnPool: tokenpool.ZcnPool{
 			TokenPool: tokenpool.TokenPool{
 				ID:      "new_test_pool_state",
-				Balance: state.Balance(balance),
+				Balance: currency.Coin(balance),
 			},
 		},
 		TokenLockInterface: &TokenLock{
@@ -208,7 +209,7 @@ func testTokenPoolTransferResponse(txn *transaction.Transaction) string {
 	tpr := &tokenpool.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     txn.Hash,
-		Value:      state.Balance(txn.Value),
+		Value:      currency.Coin(txn.Value),
 		FromClient: txn.ClientID,
 		ToClient:   txn.ToClientID,
 	}
@@ -224,8 +225,8 @@ func testConfiguredGlobalNode() *GlobalNode {
 	var conf = config.SmartContractConfig
 	gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
 	gn.APR = conf.GetFloat64(pfx + "apr")
-	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
-	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	gn.MinLock = currency.Coin(conf.GetInt64(pfx + "min_lock"))
+	gn.MaxMint = currency.Coin(conf.GetFloat64(pfx+"max_mint") * 1e10)
 	gn.Cost = map[string]int{"1": 1, "2": 2, "3": 3}
 	return gn
 }

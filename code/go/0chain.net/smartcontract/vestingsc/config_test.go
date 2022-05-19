@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract"
 	"github.com/stretchr/testify/mock"
@@ -136,7 +137,7 @@ func TestUpdateConfig(t *testing.T) {
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
 			fValue, _ := strconv.ParseFloat(value, 64)
-			conf.MinLock = state.Balance(fValue * 1e10)
+			conf.MinLock = currency.Coin(fValue * 1e10)
 		}
 		if value, ok := p.input[Settings[MinDuration]]; ok {
 			minDur, _ := time.ParseDuration(value)

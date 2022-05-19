@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -52,10 +53,10 @@ type Client struct {
 	cap   int64
 
 	// user or blobber
-	balance state.Balance
+	balance currency.Coin
 }
 
-func newClient(balance state.Balance, balances chainState.StateContextI) (
+func newClient(balance currency.Coin, balances chainState.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -95,7 +96,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
-	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
+	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	return mustEncode(t, &sn)
 }
 
@@ -175,7 +176,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value, now int64,
 
 // addBlobber to SC
 func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
-	terms Terms, balance state.Balance, balances chainState.StateContextI) (
+	terms Terms, balance currency.Coin, balances chainState.StateContextI) (
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -434,7 +435,7 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 	return
 }
 
-func stakePoolTotal(sp *stakePool) (total state.Balance) {
+func stakePoolTotal(sp *stakePool) (total currency.Coin) {
 	for _, id := range sp.OrderedPoolIds() {
 		total += sp.Pools[id].Balance
 	}

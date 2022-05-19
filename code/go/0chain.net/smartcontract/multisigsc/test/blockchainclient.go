@@ -8,10 +8,11 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -269,7 +270,7 @@ func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 	return httpclientutil.Transaction{}, e
 }
 
-func getBalance(clientID string) state.Balance {
+func getBalance(clientID string) currency.Coin {
 	balance, err := httpclientutil.MakeClientBalanceRequest(clientID, members.Sharders, confirmationQuorum)
 	if err != nil {
 		Logger.Fatal("Couldn't get client balance", zap.Error(err))
