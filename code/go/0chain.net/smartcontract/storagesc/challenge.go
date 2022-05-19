@@ -285,6 +285,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// part of the tokens goes to related validators
 	validatorsReward, err := currency.Float64ToCoin(conf.ValidatorReward * float64(move))
+	if err != nil {
+		return err
+	}
 	move -= validatorsReward
 
 	// validators' stake pools

@@ -253,9 +253,6 @@ func (sc *StateContext) Validate() error {
 				return state.ErrInvalidTransfer
 			}
 		}
-		if transfer.Amount < 0 {
-			return state.ErrInvalidTransfer
-		}
 	}
 	totalValue := currency.Coin(sc.txn.Value)
 	if config.DevConfiguration.IsFeeEnabled {
