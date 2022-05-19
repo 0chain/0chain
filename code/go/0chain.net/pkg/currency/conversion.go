@@ -118,6 +118,16 @@ func (c Coin) AddCoin(b Coin) (Coin, error) {
 	return sum, nil
 }
 
+func (c Coin) DivideCurrency(a int64) (oCur, bal Coin, err error) {
+	d, err := Int64ToCoin(a)
+	if err != nil {
+		return
+	}
+	oCur = c / d
+	bal = c % d
+	return
+}
+
 // Int64ToCoin converts an int64 to a uint64 Coin, returning an error if the int64 value underflows uint64
 func Int64ToCoin(a int64) (Coin, error) {
 	if a < 0 {
@@ -132,4 +142,11 @@ func Float64ToCoin(a float64) (Coin, error) {
 		return 0, ErrFloat64UnderflowsUint64
 	}
 	return Coin(a), nil
+}
+
+func Min(a, b Coin) (c Coin) {
+	if a < b {
+		return a
+	}
+	return b
 }
