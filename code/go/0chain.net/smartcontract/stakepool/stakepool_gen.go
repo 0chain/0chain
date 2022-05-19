@@ -263,7 +263,7 @@ func (z *StakePool) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *StakePoolSettings) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *Settings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 5
 	// string "DelegateWallet"
@@ -288,12 +288,12 @@ func (z *StakePoolSettings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt(o, z.MaxNumDelegates)
 	// string "ServiceCharge"
 	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
-	o = msgp.AppendFloat64(o, z.ServiceCharge)
+	o = msgp.AppendFloat64(o, z.ServiceChargeRatio)
 	return
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -335,7 +335,7 @@ func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "ServiceCharge":
-			z.ServiceCharge, bts, err = msgp.ReadFloat64Bytes(bts)
+			z.ServiceChargeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ServiceCharge")
 				return
@@ -353,7 +353,7 @@ func (z *StakePoolSettings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *StakePoolSettings) Msgsize() (s int) {
+func (z *Settings) Msgsize() (s int) {
 	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 16 + msgp.IntSize + 14 + msgp.Float64Size
 	return
 }

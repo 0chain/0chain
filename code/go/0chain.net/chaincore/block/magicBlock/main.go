@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
@@ -294,7 +296,7 @@ func generateStates(artifacts *cmdMagicBlock) {
 	for _, miner := range artifacts.block.Miners.Nodes {
 		s := state.InitState{
 			ID:     miner.ID,
-			Tokens: state.Balance(defaultTokenSize),
+			Tokens: currency.Coin(defaultTokenSize),
 		}
 
 		states.States = append(states.States, s)

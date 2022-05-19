@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
+	"time"
+
+	"encoding/hex"
+	"encoding/json"
+	"log"
+
 	"0chain.net/core/common"
 	"0chain.net/rest/restinterface"
 	bk "0chain.net/smartcontract/benchmark"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/spf13/viper"
-	"log"
-	"time"
 )
 
 func BenchmarkRestTests(
@@ -120,8 +121,8 @@ func BenchmarkRestTests(
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-							WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+							ReadPriceRange:             PriceRange{0, viper.GetInt64(bk.StorageMaxReadPrice) * 1e10},
+							WritePriceRange:            PriceRange{0, viper.GetInt64(bk.StorageMaxWritePrice) * 1e10},
 							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)
@@ -277,8 +278,8 @@ func BenchmarkRestTests(
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-							WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+							ReadPriceRange:             PriceRange{0, viper.GetInt64(bk.StorageMaxReadPrice) * 1e10},
+							WritePriceRange:            PriceRange{0, viper.GetInt64(bk.StorageMaxWritePrice) * 1e10},
 							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)

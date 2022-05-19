@@ -3,6 +3,8 @@ package storagesc
 import (
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/block"
@@ -17,7 +19,7 @@ import (
 
 type mockStateContext struct {
 	ctx           cstate.StateContext
-	clientBalance state.Balance
+	clientBalance currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
 }
 
@@ -58,7 +60,7 @@ func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)          
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
 	return sc.clientBalance, nil
 }
 
@@ -115,6 +117,6 @@ func zcnToInt64(token float64) int64 {
 	return int64(token * float64(x10))
 }
 
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
+func zcnToBalance(token float64) currency.Coin {
+	return currency.Coin(token * float64(x10))
 }

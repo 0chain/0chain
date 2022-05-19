@@ -1,14 +1,14 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/smartcontract"
 	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/pkg/currency"
+	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -169,7 +169,7 @@ func (gn *GlobalNode) setInt(key string, change int) error {
 	return nil
 }
 
-func (gn *GlobalNode) setBalance(key string, change state.Balance) error {
+func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
 	switch Settings[key].Setting {
 	case MaxMint:
 		gn.MaxMint = change
@@ -256,7 +256,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := gn.setBalance(key, state.Balance(value*x10)); err != nil {
+			if err := gn.setBalance(key, currency.Coin(value*x10)); err != nil {
 				return err
 			}
 		} else {

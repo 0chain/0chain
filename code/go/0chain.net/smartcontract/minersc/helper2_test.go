@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -27,16 +29,18 @@ type mockStateContext struct {
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                       {}
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                      { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction                { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer             { return nil }
-func (sc *mockStateContext) Validate() error                                         { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme          { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)               {}
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)   { return "", nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) { return 0, nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock            { return nil }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     {}
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer           { return nil }
+func (sc *mockStateContext) Validate() error                                       { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme        { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             {}
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
+func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
+	return 0, nil
+}
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
@@ -46,10 +50,10 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 		Data:        data,
 	})
 }
-func (sc *mockStateContext) EmitError(error)            {}
-func (sc *mockStateContext) GetEvents() []event.Event   { return nil }
-func (sc *mockStateContext) GetEventDB() *event.EventDb { return nil }
-func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
+func (sc *mockStateContext) EmitError(error)                       {}
+func (sc *mockStateContext) GetEvents() []event.Event              { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb            { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
@@ -97,8 +101,8 @@ func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
 }
 
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
+func zcnToBalance(token float64) currency.Coin {
+	return currency.Coin(token * float64(x10))
 }
 
 func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {

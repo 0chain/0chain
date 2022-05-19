@@ -33,7 +33,7 @@ func emitAddOrOverwriteBlobber(
 		MinStake:       int64(sn.StakePoolSettings.MinStake),
 		MaxStake:       int64(sn.StakePoolSettings.MaxStake),
 		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
+		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 
 		OffersTotal:  int64(sp.TotalOffers),
 		UnstakeTotal: int64(sp.TotalUnStake),
@@ -71,7 +71,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"min_stake":                 int64(sn.StakePoolSettings.MinStake),
 			"max_stake":                 int64(sn.StakePoolSettings.MaxStake),
 			"num_delegates":             sn.StakePoolSettings.MaxNumDelegates,
-			"service_charge":            sn.StakePoolSettings.ServiceCharge,
+			"service_charge":            sn.StakePoolSettings.ServiceChargeRatio,
 			"saved_data":                sn.SavedData,
 		},
 	})

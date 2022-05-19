@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/pkg/currency"
+
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
@@ -80,7 +81,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	)
 
 	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
-		terms Terms, balacne state.Balance, balances chainState.StateContextI) (
+		terms Terms, balacne currency.Coin, balances chainState.StateContextI) (
 		err error) {
 
 		var blob = newClient(0, balances)

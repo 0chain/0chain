@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -18,12 +20,12 @@ type DelegatePool struct {
 	ProviderID   string `json:"provider_id"`
 	DelegateID   string `json:"delegate_id"`
 
-	Balance      int64 `json:"balance"`
-	Reward       int64 `json:"reward"`       // unclaimed reward
-	TotalReward  int64 `json:"total_reward"` // total reward paid to pool
-	TotalPenalty int64 `json:"total_penalty"`
-	Status       int   `json:"status"`
-	RoundCreated int64 `json:"round_created"`
+	Balance      currency.Coin `json:"balance"`
+	Reward       currency.Coin `json:"reward"`       // unclaimed reward
+	TotalReward  currency.Coin `json:"total_reward"` // total reward paid to pool
+	TotalPenalty currency.Coin `json:"total_penalty"`
+	Status       int           `json:"status"`
+	RoundCreated int64         `json:"round_created"`
 }
 
 func (edb *EventDb) overwriteDelegatePool(sp DelegatePool) error {

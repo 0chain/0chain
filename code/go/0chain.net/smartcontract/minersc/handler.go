@@ -9,7 +9,13 @@ import (
 	"net/http"
 	"strconv"
 
+<<<<<<< HEAD
 	"0chain.net/rest/restinterface"
+=======
+	"0chain.net/pkg/currency"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+>>>>>>> d1d39794b (- Currency coin implemented)
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/guregu/null"
@@ -53,8 +59,58 @@ type MinerRestHandler struct {
 	restinterface.RestHandlerI
 }
 
+<<<<<<< HEAD
 func NewMinerRestHandler(rh restinterface.RestHandlerI) *MinerRestHandler {
 	return &MinerRestHandler{rh}
+=======
+// user oriented pools requests handler
+func (msc *MinerSmartContract) GetUserPoolsHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	clientID := params.Get("client_id")
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	if err != nil {
+		return nil, errors.New("blobber not found in event database")
+	}
+
+	ups := new(userPools)
+	ups.Pools = make(map[string][]*delegatePoolStat, len(minerPools)+len(sharderPools))
+	for _, pool := range minerPools {
+		dp := delegatePoolStat{
+			ID:         pool.PoolID,
+			Balance:    currency.Coin(pool.Balance),
+			Reward:     currency.Coin(pool.Reward),
+			RewardPaid: currency.Coin(pool.TotalReward),
+			Status:     spenum.PoolStatus(pool.Status).String(),
+		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+	}
+
+	for _, pool := range sharderPools {
+		dp := delegatePoolStat{
+			ID:         pool.PoolID,
+			Balance:    currency.Coin(pool.Balance),
+			Reward:     currency.Coin(pool.Reward),
+			RewardPaid: currency.Coin(pool.TotalReward),
+			Status:     spenum.PoolStatus(pool.Status).String(),
+		}
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+	}
+
+	return ups, nil
+>>>>>>> d1d39794b (- Currency coin implemented)
 }
 
 func SetupRestHandler(rh restinterface.RestHandlerI) {

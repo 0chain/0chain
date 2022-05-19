@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -332,7 +334,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	var (
 		// mb reward -- mint for the mb
-		blockReward = state.Balance(
+		blockReward = currency.Coin(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
 		minerr, sharderr = gn.splitByShareRatio(blockReward)
@@ -383,7 +385,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) sumFee(b *block.Block,
-	updateStats bool) state.Balance {
+	updateStats bool) currency.Coin {
 
 	var totalMaxFee int64
 	var feeStats metrics.Counter
@@ -397,7 +399,7 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	if updateStats && feeStats != nil {
 		feeStats.Inc(totalMaxFee)
 	}
-	return state.Balance(totalMaxFee)
+	return currency.Coin(totalMaxFee)
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
@@ -432,7 +434,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
-	fee, mint state.Balance, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
+	fee, mint currency.Coin, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
 ) error {
 	var err error
 	var sharders []*MinerNode

@@ -1,14 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/pkg/currency"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
 
+	"0chain.net/core/logging"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -78,7 +80,7 @@ func (cp *challengePool) moveToWritePool(
 	blobID string,
 	until common.Timestamp,
 	wp *writePool,
-	value state.Balance,
+	value currency.Coin,
 ) (err error) {
 
 	if value == 0 {
@@ -137,7 +139,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward float64,
 				validatos[i], err)
 		}
 	}
-	cp.ZcnPool.Balance -= state.Balance(reward)
+	cp.ZcnPool.Balance -= currency.Coin(reward)
 	return nil
 }
 
@@ -158,7 +160,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 // swagger:model challengePoolStat
 type challengePoolStat struct {
 	ID         string           `json:"id"`
-	Balance    state.Balance    `json:"balance"`
+	Balance    currency.Coin    `json:"balance"`
 	StartTime  common.Timestamp `json:"start_time"`
 	Expiration common.Timestamp `json:"expiration"`
 	Finalized  bool             `json:"finalized"`

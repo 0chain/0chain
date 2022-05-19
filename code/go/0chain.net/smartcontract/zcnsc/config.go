@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/pkg/currency"
+
 	"0chain.net/core/common"
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract"
 	"github.com/pkg/errors"
@@ -108,13 +109,13 @@ func postfix(section string) string {
 
 func loadGlobalNode() (conf *ZCNSConfig) {
 	conf = new(ZCNSConfig)
-	conf.MinMintAmount = state.Balance(cfg.GetInt(postfix(MinMintAmount)))
-	conf.MinBurnAmount = state.Balance(cfg.GetInt64(postfix(MinBurnAmount)))
-	conf.MinStakeAmount = state.Balance(cfg.GetInt64(postfix(MinStakeAmount)))
+	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
+	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))
+	conf.MinStakeAmount = currency.Coin(cfg.GetInt64(postfix(MinStakeAmount)))
 	conf.PercentAuthorizers = cfg.GetFloat64(postfix(PercentAuthorizers))
 	conf.MinAuthorizers = cfg.GetInt64(postfix(MinAuthorizers))
 	conf.MinLockAmount = cfg.GetInt64(postfix(MinLockAmount))
-	conf.MaxFee = state.Balance(cfg.GetInt64(postfix(MaxFee)))
+	conf.MaxFee = currency.Coin(cfg.GetInt64(postfix(MaxFee)))
 	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
