@@ -42,6 +42,7 @@ func TestNewAllocation(t *testing.T) {
 		MinAllocDuration:           5 * time.Minute,
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		MaxStake:                   zcnToBalance(100.0),
+		MaxBlobbersPerAllocation:   10,
 	}
 	var blobberYaml = mockBlobberYaml{
 		readPrice:               0.01,
@@ -59,7 +60,8 @@ func TestNewAllocation(t *testing.T) {
 		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
-		PreferredBlobbers:          []string{"mockBaseUrl1", "mockBaseUrl3"},
+		Blobbers: []string{"0", "1", "2", "3",
+			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
 		Capacity: 536870912,
@@ -87,14 +89,12 @@ func TestNewAllocation(t *testing.T) {
 
 	t.Run("new allocation random blobbers", func(t *testing.T) {
 		request := request
-		request.DiversifyBlobbers = false
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
 	})
 
 	t.Run("new allocation diverse blobbers", func(t *testing.T) {
 		request := request
-		request.DiversifyBlobbers = true
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
 	})
@@ -822,11 +822,6 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	input, err := json.Marshal(request)
 	require.NoError(t, err)
 
-	var blobberList = new(StorageNodes)
-	blobberList.Nodes = blobbers
-	_, err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
-	require.NoError(t, err)
-
 	for i, blobber := range blobbers {
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
@@ -840,17 +835,24 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
 
+	for _, blobber := range blobbers {
+		// save the blobber
+		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		if err != nil {
+			require.NoError(t, err)
+		}
+	}
+
 	_, err = ssc.newAllocationRequest(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 
-	allBlobbersList, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
 	var individualBlobbers = SortedBlobbers{}
-	for _, blobber := range allBlobbersList.Nodes {
+	for _, id := range request.Blobbers {
 		var b *StorageNode
-		b, err = ssc.getBlobber(blobber.ID, ctx)
+		b, err = ssc.getBlobber(id, ctx)
 		if err != nil && err.Error() == errValueNotPresent {
 			continue
 		}
@@ -859,7 +861,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	}
 
 	var newStakePools = []*stakePool{}
-	for _, blobber := range allBlobbersList.Nodes {
+	for _, blobber := range individualBlobbers {
 		var sp, err = ssc.getStakePool(blobber.ID, ctx)
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
@@ -868,7 +870,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	wp, err = ssc.getWritePool(clientId, ctx)
 	require.NoError(t, err)
 
-	confirmTestNewAllocation(t, f, allBlobbersList.Nodes, individualBlobbers, newStakePools, *wp, ctx)
+	confirmTestNewAllocation(t, f, individualBlobbers, newStakePools, *wp, ctx)
 
 	return nil
 }
@@ -923,7 +925,7 @@ func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
-	blobbers1, blobbers2 SortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
+	blobbers SortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
 ) {
 	var transfers = ctx.GetTransfers()
 	require.Len(t, transfers, 1)
@@ -945,7 +947,7 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 	}
 
 	var countUsedBlobbers = 0
-	for _, blobber := range blobbers1 {
+	for _, blobber := range blobbers {
 		b, ok := f.blobbers.get(blobber.ID)
 		require.True(t, ok)
 		if blobber.Used > b.Used {
@@ -955,8 +957,8 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 	}
 	require.EqualValues(t, f.blobbersUsed(), countUsedBlobbers)
 
-	require.EqualValues(t, f.blobbersUsed(), len(blobbers2))
-	for _, blobber := range blobbers2 {
+	require.EqualValues(t, f.blobbersUsed(), len(blobbers))
+	for _, blobber := range blobbers {
 		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
 	}
 }

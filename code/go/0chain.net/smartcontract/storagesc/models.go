@@ -1,11 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"math/bits"
+	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -988,7 +988,7 @@ func (sa *StorageAllocation) getAllocationPools(
 	return &awp, nil
 }
 
-func (sa *StorageAllocation) validate(now common.Timestamp,
+func (sa *StorageAllocation) validate(now time.Time,
 	conf *Config) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
@@ -1000,7 +1000,7 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 	if sa.Size < conf.MinAllocSize {
 		return errors.New("insufficient allocation size")
 	}
-	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+	dur := common.ToTime(sa.Expiration).Sub(now)
 	if dur < conf.MinAllocDuration {
 		return errors.New("insufficient allocation duration")
 	}
@@ -1065,91 +1065,25 @@ List:
 	return list[:i]
 }
 
-func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (diversified []*StorageNode) {
-	if !sa.DiverseBlobbers {
-		return list
-	}
+// validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
+func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
+	creationDate common.Timestamp, balances chainstate.StateContextI) (
+	[]*blobberWithPool, []string) {
 
-	if len(list) <= size {
-		return list
-	}
-
-	// thanks to @shenwei356
-	combinations := func(set []int, n int) (subsets [][]int) {
-		length := uint(len(set))
-
-		if n > len(set) {
-			n = len(set)
+	var (
+		errors   = make([]string, 0, len(blobbers))
+		filtered = make([]*blobberWithPool, 0, len(blobbers))
+	)
+	for _, b := range blobbers {
+		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
+		if err != nil {
+			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
+			errors = append(errors, err.Error())
+			continue
 		}
-
-		for subsetBits := 1; subsetBits < (1 << length); subsetBits++ {
-			if n > 0 && bits.OnesCount(uint(subsetBits)) != n {
-				continue
-			}
-
-			var subset []int
-
-			for object := uint(0); object < length; object++ {
-				if (subsetBits>>object)&1 == 1 {
-					subset = append(subset, set[object])
-				}
-			}
-			subsets = append(subsets, subset)
-		}
-		return
+		filtered = append(filtered, b)
 	}
-
-	// thanks to @cdipaolo
-	distance := func(geoloc1, geoloc2 StorageNodeGeolocation) float64 {
-		hsin := func(theta float64) float64 {
-			return math.Pow(math.Sin(theta/2), 2)
-		}
-
-		var la1, lo1, la2, lo2 float64
-		la1 = geoloc1.Latitude * math.Pi / 180
-		lo1 = geoloc1.Longitude * math.Pi / 180
-		la2 = geoloc2.Latitude * math.Pi / 180
-		lo2 = geoloc2.Longitude * math.Pi / 180
-
-		h := hsin(la2-la1) + math.Cos(la1)*math.Cos(la2)*hsin(lo2-lo1)
-
-		return math.Asin(math.Sqrt(h))
-	}
-
-	var maxD float64 // distance
-	var maxDIndex int
-
-	// create [1, ..., N] slice
-	n := make([]int, len(list))
-	for i := range n {
-		n[i] = i
-	}
-
-	// get all combinations of s "size" elements from n "nodes"
-	combs := combinations(n, size)
-
-	// find out the max distance among combs of nodes
-	for i, comb := range combs {
-		var d float64 // distance
-
-		// calculate distance for the combination
-		combPairs := combinations(comb, 2)
-		for _, combPair := range combPairs {
-			d += distance(list[combPair[0]].Geolocation, list[combPair[1]].Geolocation)
-		}
-
-		// update the max distance value
-		if d > maxD {
-			maxD = d
-			maxDIndex = i
-		}
-	}
-
-	for _, v := range combs[maxDIndex] {
-		diversified = append(diversified, list[v])
-	}
-
-	return
+	return filtered, errors
 }
 
 // Until returns allocation expiration.
