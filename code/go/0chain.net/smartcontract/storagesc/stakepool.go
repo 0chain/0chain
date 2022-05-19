@@ -288,7 +288,7 @@ type stakePoolStat struct {
 
 // getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
-	balances chainstate.StateContextI) (sp *stakePool, err error) {
+	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
 
 	sp = newStakePool()
 	err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID), sp)

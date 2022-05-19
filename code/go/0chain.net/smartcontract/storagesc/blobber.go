@@ -24,7 +24,7 @@ const (
 	blobberHealthTime = 60 * 60 // 1 Hour
 )
 
-func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
+func getBlobbersList(balances cstate.CommonStateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
 	err := balances.GetTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
 	switch err {
@@ -37,17 +37,26 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 	}
 }
 
-func (sc *StorageSmartContract) getBlobber(blobberID string,
-	balances cstate.StateContextI) (blobber *StorageNode, err error) {
+func (_ *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
+	return getBlobbersList(balances)
+}
+
+func getBlobber(blobberID string,
+	balances cstate.CommonStateContextI) (blobber *StorageNode, err error) {
 
 	blobber = new(StorageNode)
 	blobber.ID = blobberID
-	err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
+	err = balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
 	}
 
 	return
+}
+
+func (_ *StorageSmartContract) getBlobber(blobberID string,
+	balances cstate.CommonStateContextI) (blobber *StorageNode, err error) {
+	return getBlobber(blobberID, balances)
 }
 
 // update existing blobber, or reborn a deleted one

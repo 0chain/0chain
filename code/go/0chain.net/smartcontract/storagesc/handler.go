@@ -737,8 +737,19 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 // responses:
 //  200: Int64Map
 //  400:
-func (_ *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, nil, common.NewErrInternal("not implemented yet"))
+func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
+	storageNodes, err := getBlobbersList(srh.GetStateContext())
+	if err != nil {
+		common.Respond(w, r, 0, fmt.Errorf("error from getBlobbersList in GetTotalData: %v", err))
+		return
+	}
+
+	var totalSavedData int64
+	for _, sn := range storageNodes.Nodes {
+		totalSavedData += sn.SavedData
+	}
+
+	common.Respond(w, r, totalSavedData, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
@@ -1278,29 +1289,21 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	var request newAllocationRequest
 	if err = request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
+		return
 	}
-
-	var allBlobbersList *StorageNodes
-	allBlobbersList, err = ssc.getBlobbersList(balances)
+	balances := srh.GetStateContext()
+	edb := balances.GetEventDB()
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances)
 	if err != nil {
-		return "", common.NewErrInternal("can't get blobbers list", err.Error())
+		common.Respond(w, r, "", err)
+		return
 	}
-	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewErrInternal("can't get blobbers list",
-			"no blobbers found")
-	}
-
+	blobbers := getBlobbersByIDs(blobberIDs, balances)
 	var sa = request.storageAllocation()
 
-	blobberNodes, bSize, err := ssc.selectBlobbers(
-		creationDate, *allBlobbersList, sa, creationDate.Unix(), balances)
-	if err != nil {
-		return "", common.NewErrInternal("selecting blobbers", err.Error())
-	}
-
-	var gbSize = sizeInGB(bSize)
+	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand state.Balance
-	for _, b := range blobberNodes {
+	for _, b := range blobbers {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
 	}
@@ -1309,7 +1312,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		"min_lock_demand": minLockDemand,
 	}
 
-	return response, nil
+	common.Respond(w, r, response, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations allocations
