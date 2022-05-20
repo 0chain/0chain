@@ -195,3 +195,54 @@ integration_tests:
   # lock_interval used by nodes to request server to connect to blockchain
   # after start
   lock_interval: 1s
+
+storage:
+  # Start mode will delete all the data in volumepath, will initialize meta records,
+  # Repair mode will recreate meta records and restore missing blocks(should also check if block is in cold storage).
+  mode: start # normal or repair or recover(metadata recovery)
+  block_movement_interval: 720h # time.Duration
+
+  bolt:
+    block_meta_record_path: "/meta/bmr.db"
+    query_meta_record_path: "/meta/qmr.db"
+  cache:
+    write_policy: "write_through" # write_through, write_back
+    replacement_policy: "lru"
+    poll_interval: 1 # In hour
+    block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
+    volumes:
+      - path: "/path/to/cache/blocks"
+        size: 500 * 1024 * 1024
+  disk:
+    strategy: "some strategy"
+    block_moves_in: 720 # In hour; Blocks older than 720 hours will be moved to cold storage is cold storage is enabled
+    volumes:
+      - path: "/path/to/hot/blocks"
+        recovery: false
+        size_to_maintain: 1 # In GB
+        inodes_to_maintain: 5 # In percent
+        allowed_block_numbers: 10^3
+        allowed_block_size: 500 * 1024 * 1024 # 500GB
+      - path: "/path/to/hot/blocks"
+        recovery: false
+        size_to_maintain: 1 # In GB
+        inodes_to_maintain: 5 # In percent
+        allowed_block_numbers: 10^3
+        allowed_block_size: 500 * 1024 * 1024 # 500GB
+  cold:
+    # storage that provides minio interface 
+    delete_local: true
+    strategy: "some cold strategy"
+    cloud_storages:
+      - storage_service_url: ""
+        access_id: ""
+        secret_access_key: ""
+        bucket_name: ""
+        allowed_bock_numbers: 10^15 # Can be any numbers
+        allowed_block_size: 10^10 # In GB
+      - storage_service_url: ""
+        access_id: ""
+        secret_access_key: ""
+        bucket_name: ""
+        allowed_bock_numbers: 10^15 # Can be any numbers
+        allowed_block_size: 10^5 # In GB
