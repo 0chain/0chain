@@ -1,80 +1,396 @@
 package blockstore
 
 import (
-	"github.com/minio/minio-go"
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"sync"
+	"time"
+
+	"0chain.net/core/logging"
+	"0chain.net/core/viper"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-type (
-	MinioClient interface {
-		// FPutObject creates an object in a bucket, with contents from file at filePath
-		FPutObject(bucketName string, hash string, filePath string, options minio.PutObjectOptions) (int64, error)
-
-		// FGetObject downloads contents of an object to a local file.
-		FGetObject(bucketName string, objectName string, filePath string, options minio.GetObjectOptions) error
-
-		// StatObject verifies if object exists and you have permission to access.
-		StatObject(bucketName string, hash string, opts minio.StatObjectOptions) (minio.ObjectInfo, error)
-
-		// BucketName returns bucket name.
-		BucketName() string
-
-		// DeleteLocal returns true if local files need to remove in uploading stage.
-		DeleteLocal() bool
-
-		// MakeBucket creates a new bucket with bucketName.
-		MakeBucket(bucketName string, location string) error
-
-		// BucketExists verify if bucket exists and you have permission to access it.
-		BucketExists(bucketName string) (bool, error)
-	}
-
-	minioClient struct {
-		*minio.Client
-		bucketName  string
-		deleteLocal bool
-	}
-
-	MinioConfiguration struct {
-		StorageServiceURL string
-		AccessKeyID       string
-		SecretAccessKey   string
-		BucketName        string
-		BucketLocation    string
-		DeleteLocal       bool
-		Secure            bool // Secure defines using ssl
-	}
+const (
+	Timeout = time.Minute
 )
 
-var (
-	// Make sure minioClient implements MinioClient.
-	_ MinioClient = (*minioClient)(nil)
-)
+var coldStoragesMap map[string]*minioClient
 
-// CreateMinioClientFromConfig creates MinioClient from passed config.
-func CreateMinioClientFromConfig(config MinioConfiguration) (MinioClient, error) {
-	mc, err := minio.New(
-		config.StorageServiceURL,
-		config.AccessKeyID,
-		config.SecretAccessKey,
-		config.Secure,
-	)
+type selectedColdStorage struct {
+	coldStorage coldStorageProvider
+	prevInd     int
+	err         error
+}
+
+// coldTier manages all the cold storages with the coldStorageProvider interface
+// Currently only minio compatible server is supported.
+// We can obviously extend this to magnetic tapes(a much slower, cheaper and durable)
+// storage, blobber, etc.
+type coldTier struct { //Cold tier
+	// Strategy: How to select next storage to store cold blocks.
+	Strategy     string
+	ColdStorages []coldStorageProvider
+	// SelectedStorageChan will provide channel for selected storage
+	// as per strategy
+	SelectedStorageChan <-chan selectedColdStorage
+	// SelectNextStorage will select storage based on strategy and put
+	// the selected storage in SelectedStorageChan channel
+	SelectNextStorage func(coldStorageProviders []coldStorageProvider, prevInd int)
+	// PrevInd is index of previously selected storage
+	PrevInd int
+	// DeleteLocal: Either to delete local file
+	DeleteLocal bool
+
+	// Mu: Mutex used to select storage or remove storage from the list
+	Mu *sync.Mutex
+}
+
+func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
+	mc, ok := coldStoragesMap[coldPath]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Invalid cold path %v", coldPath))
+	}
+
+	data, err := mc.getBlock(hash)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.NopCloser(bytes.NewReader(data)), nil
+}
+
+func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err error) {
+	defer func() {
+		logging.Logger.Info("Selecting next cold storage")
+		go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
+	}()
+
+	for {
+		logging.Logger.Info("Waiting for channel to get selected cold storage")
+		sc := <-ct.SelectedStorageChan
+		if sc.err != nil {
+			return "", sc.err
+		}
+
+		ct.PrevInd = sc.prevInd
+
+		if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath); err != nil {
+			logging.Logger.Error(err.Error())
+			ct.removeSelectedColdStorage()
+			go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
+			continue
+		}
+
+		if ct.DeleteLocal {
+			volume := volumesMap[getVolumePathFromBlockPath(blockPath)]
+			if err := volume.delete(hash, blockPath); err != nil {
+				logging.Logger.Error(fmt.Sprintf("Error occurred while deleting %v; Error: %v", blockPath, err))
+				return movedPath, nil
+			}
+		}
+		return
+	}
+}
+
+func (ct *coldTier) removeSelectedColdStorage() {
+	if !ct.Mu.TryLock() {
+		return
+	}
+	defer ct.Mu.Unlock()
+
+	ct.ColdStorages = append(ct.ColdStorages[:ct.PrevInd], ct.ColdStorages[ct.PrevInd+1:]...)
+	ct.PrevInd--
+}
+
+type coldStorageProvider interface {
+	moveBlock(hash, blockPath string) (string, error)
+	getBlock(hash string) ([]byte, error)
+}
+
+type minioClient struct {
+	*minio.Client
+	storageServiceURL string
+	accessId          string
+	secretAccessKey   string
+	bucketName        string
+	useSSL            bool
+
+	allowedBlockNumbers uint64
+	allowedBlockSize    uint64
+	blocksCount         uint64
+	blocksSize          uint64
+}
+
+func (mc *minioClient) initialize() (err error) {
+	mc.Client, err = minio.New(mc.storageServiceURL, &minio.Options{
+		Creds:  credentials.NewStaticV4(mc.accessId, mc.secretAccessKey, ""),
+		Secure: mc.useSSL,
+	})
+
+	if err != nil {
+		logging.Logger.Error(err.Error())
+	}
+
+	return mc.calculateBucketStats()
+}
+
+// TODO
+func (mc *minioClient) calculateBucketStats() error {
+	return nil
+}
+
+func (mc *minioClient) moveBlock(hash, blockPath string) (string, error) {
+	ctx := context.Background()
+	_, err := mc.Client.FPutObject(ctx, mc.bucketName, hash, blockPath, minio.PutObjectOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName), nil
+}
+
+func (mc *minioClient) getBlock(hash string) ([]byte, error) {
+	var ctx context.Context
+
+	ctx = context.Background()
+	statCtx, statCtxCncl := context.WithTimeout(ctx, Timeout)
+	defer statCtxCncl()
+
+	objInfo, err := mc.Client.StatObject(statCtx, mc.bucketName, hash, minio.StatObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	return &minioClient{
-		Client:      mc,
-		bucketName:  config.BucketName,
-		deleteLocal: config.DeleteLocal,
-	}, nil
+	getCtx, getCtxCncl := context.WithTimeout(ctx, Timeout)
+	defer getCtxCncl()
+
+	obj, err := mc.Client.GetObject(getCtx, mc.bucketName, hash, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	buffer := make([]byte, objInfo.Size)
+	n, err := obj.Read(buffer)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if n != len(buffer) {
+		return nil, errors.New("dirty bytes from cloud")
+	}
+
+	return buffer, nil
 }
 
-// BucketName is a part of MinioClient interface implementation.
-func (mc *minioClient) BucketName() string {
-	return mc.bucketName
+func coldInit(cViper *viper.Viper, mode string) *coldTier {
+
+	cloudStoragesI := cViper.Get("cloud_storages")
+	if cloudStoragesI == nil {
+		panic("Config is not available")
+	}
+
+	cTier := new(coldTier)
+
+	selectedColdStorageChan := make(chan selectedColdStorage, 1)
+	var f func(coldVolumes []coldStorageProvider, prevInd int)
+
+	cloudStoragesMapI := cloudStoragesI.([]interface{})
+	var cloudStoragesMap []map[string]interface{}
+	for _, cloudI := range cloudStoragesMapI {
+		m := make(map[string]interface{})
+		cloudIMap := cloudI.(map[interface{}]interface{})
+		for k, v := range cloudIMap {
+			sK := k.(string)
+			m[sK] = v
+		}
+
+		cloudStoragesMap = append(cloudStoragesMap, m)
+	}
+
+	strategy := cViper.GetString("strategy")
+	if strategy == "" {
+		strategy = DefaultColdStrategy
+	}
+
+	switch mode {
+	default:
+		panic(fmt.Errorf("%v mode is not supported", mode))
+	case "start":
+		startCloudStorages(cloudStoragesMap, cTier)
+	case "recover":
+		// recoverCloudMetaData(cloudStoragesMap, cTier)
+	}
+
+	logging.Logger.Info(fmt.Sprintf("Successfully ran coldInit in %v mode", mode))
+
+	logging.Logger.Info(fmt.Sprintf("Registering function for strategy: %v", strategy))
+
+	switch strategy {
+	default:
+		panic(ErrStrategyNotSupported(strategy))
+	case RoundRobin:
+		f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
+			cTier.Mu.Lock()
+
+			defer cTier.Mu.Unlock()
+
+			var selectedCloudStorage *minioClient
+			var selectedIndex int
+
+			if prevInd < 0 {
+				prevInd = -1
+			}
+
+			for i := prevInd + 1; i != prevInd; i++ {
+				if len(coldStorageProviders) == 0 {
+					break
+				}
+
+				if i >= len(coldStorageProviders) {
+					i = len(coldStorageProviders) - i
+				}
+				if i < 0 {
+					i = 0
+				}
+
+				selectedCloudStorage = coldStorageProviders[i].(*minioClient)
+				prevInd = i
+			}
+
+			if selectedCloudStorage == nil {
+				selectedColdStorageChan <- selectedColdStorage{
+					err: ErrUnableToSelectColdStorage,
+				}
+			} else {
+				selectedColdStorageChan <- selectedColdStorage{
+					coldStorage: selectedCloudStorage,
+					prevInd:     selectedIndex,
+				}
+			}
+		}
+	}
+
+	cTier.DeleteLocal = cViper.GetBool("delete_local")
+	cTier.SelectNextStorage = f
+	cTier.SelectedStorageChan = selectedColdStorageChan
+
+	logging.Logger.Info("Selecting first cold storage")
+	go cTier.SelectNextStorage(cTier.ColdStorages, cTier.PrevInd)
+
+	return cTier
 }
 
-// DeleteLocal is a part of MinioClient interface implementation.
-func (mc *minioClient) DeleteLocal() bool {
-	return mc.deleteLocal
+func startCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTier) {
+	coldStoragesMap = make(map[string]*minioClient)
+
+	wg := &sync.WaitGroup{}
+	coldMu := &sync.Mutex{}
+
+	for _, cloudStorageI := range cloudStorages {
+		wg.Add(1)
+		go func(cloudStorageI map[string]interface{}) {
+			defer wg.Done()
+
+			servUrlI, ok := cloudStorageI["storage_service_url"]
+			if !ok {
+				logging.Logger.Error("Discarding cloud storage; Service url is required")
+				return
+			}
+
+			accessIdI, ok := cloudStorageI["access_id"]
+			if !ok {
+				logging.Logger.Error("Discarding cloud storage; Access Id is required")
+				return
+			}
+
+			secretKeyI, ok := cloudStorageI["secret_access_key"]
+			if !ok {
+				logging.Logger.Error("Discarding cloud storage; Secred Access Key is required")
+				return
+			}
+
+			bucketNameI, ok := cloudStorageI["bucket_name"]
+			if !ok {
+				logging.Logger.Error("Discarding cloud storage; Bucket name is required")
+				return
+			}
+
+			servUrl := servUrlI.(string)
+			accessId := accessIdI.(string)
+			secretKey := secretKeyI.(string)
+			bucketName := bucketNameI.(string)
+
+			var err error
+			var allowedBlockNumbers uint64
+			allowedBlockNumbersI, ok := cloudStorageI["allowed_block_numbers"]
+			if ok {
+				allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			var allowedBlockSize uint64
+			allowedBlockSizeI, ok := cloudStorageI["allowed_block_size"]
+			if ok {
+				allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+				if err != nil {
+					panic(err)
+				}
+
+				allowedBlockSize *= GB
+			}
+
+			var useSSL bool
+			useSSLI, ok := cloudStorageI["use_ssl"]
+			if ok {
+				useSSL = useSSLI.(bool)
+			}
+
+			mc := &minioClient{
+				storageServiceURL:   servUrl,
+				accessId:            accessId,
+				secretAccessKey:     secretKey,
+				bucketName:          bucketName,
+				useSSL:              useSSL,
+				allowedBlockNumbers: allowedBlockNumbers,
+				allowedBlockSize:    allowedBlockSize,
+			}
+
+			if err := mc.initialize(); err != nil {
+				logging.Logger.Error(fmt.Sprintf("Error while initializing %v. Error: %v", servUrl, err))
+				return
+			}
+
+			if mc.blocksCount >= mc.allowedBlockNumbers {
+				logging.Logger.Debug(
+					fmt.Sprintf("%v:%v has reached its blocks number limit. Has %v, Allowed: %v ",
+						mc.storageServiceURL, mc.bucketName, mc.blocksCount, mc.allowedBlockNumbers))
+				return
+			}
+
+			if mc.blocksSize >= mc.allowedBlockSize {
+				logging.Logger.Debug(
+					fmt.Sprintf("%v:%v has reached its blocks size limit. Has %v, Allowed: %v ",
+						mc.storageServiceURL, mc.bucketName, mc.blocksSize, mc.allowedBlockSize))
+				return
+			}
+
+			coldMu.Lock()
+			coldStoragesMap[fmt.Sprintf("%v:%v", servUrl, bucketName)] = mc
+			cTier.ColdStorages = append(cTier.ColdStorages, mc)
+			coldMu.Unlock()
+		}(cloudStorageI)
+	}
+
+	wg.Wait()
+	if len(cTier.ColdStorages)/2 < len(cloudStorages) {
+		panic("At least 50%% cloud storages must be able to store blocks")
+	}
 }
