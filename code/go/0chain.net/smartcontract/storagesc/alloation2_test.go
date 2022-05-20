@@ -393,8 +393,6 @@ func testCancelAllocation(
 	newScYaml, err = ssc.getConfig(ctx, false)
 
 	require.NoError(t, err)
-	newAllb, err := ssc.getBlobbersList(ctx)
-	require.NoError(t, err)
 	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
 	require.NoError(t, err)
 	newWp, err := ssc.getWritePool(sAllocation.Owner, ctx)
@@ -409,7 +407,7 @@ func testCancelAllocation(
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
+	confirmFinalizeAllocation(t, f, *newScYaml, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
 	return nil
 }
 
@@ -452,8 +450,6 @@ func testFinalizeAllocation(
 	newScYaml, err = ssc.getConfig(ctx, false)
 
 	require.NoError(t, err)
-	newAllb, err := ssc.getBlobbersList(ctx)
-	require.NoError(t, err)
 	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
 	require.NoError(t, err)
 	newWp, err := ssc.getWritePool(sAllocation.Owner, ctx)
@@ -468,7 +464,7 @@ func testFinalizeAllocation(
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
+	confirmFinalizeAllocation(t, f, *newScYaml, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
 	return nil
 }
 
@@ -476,7 +472,6 @@ func confirmFinalizeAllocation(
 	t *testing.T,
 	f formulaeFinalizeAllocation,
 	scYaml Config,
-	_ StorageNodes,
 	challengePool challengePool,
 	allocationWritePool writePool,
 	allocation StorageAllocation,
@@ -611,8 +606,6 @@ func setupMocksFinishAllocation(
 
 	var blobberList = new(StorageNodes)
 	blobberList.Nodes = blobbers
-	_, err = ctx.InsertTrieNode(ALL_BLOBBERS_KEY, blobberList)
-	require.NoError(t, err)
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {
@@ -843,7 +836,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		}
 	}
 
-	_, err = ssc.newAllocationRequest(txn, input, ctx)
+	_, err = ssc.newAllocationRequest(txn, input, ctx, nil)
 	if err != nil {
 		return err
 	}

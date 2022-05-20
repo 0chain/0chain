@@ -22,6 +22,7 @@ func (sl SortedList) getIndex(id string) (i int, ok bool) {
 	return // not found
 }
 
+//nolint:golint,unused
 func (sl *SortedList) removeByIndex(i int) {
 	(*sl) = append((*sl)[:i], (*sl)[i+1:]...)
 }
@@ -62,6 +63,7 @@ func (sl *SortedList) add(id string) (ok bool) {
 // SortedBlobbers represents a unique sorted list of blobbers for O(logN) access
 type SortedBlobbers []*StorageNode
 
+//nolint:golint,unused
 func (sb SortedBlobbers) getIndex(id string) (i int, ok bool) {
 	i = sort.Search(len(sb), func(i int) bool {
 		return sb[i].ID >= id
@@ -88,10 +90,12 @@ func (sb SortedBlobbers) get(id string) (b *StorageNode, ok bool) {
 	return // not found
 }
 
+//nolint:golint,unused
 func (sb *SortedBlobbers) removeByIndex(i int) {
 	(*sb) = append((*sb)[:i], (*sb)[i+1:]...)
 }
 
+//nolint:golint,unused
 func (sb *SortedBlobbers) remove(id string) (ok bool) {
 	var i int
 	if i, ok = sb.getIndex(id); !ok {
@@ -125,6 +129,7 @@ func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 }
 
 // replace if found
+//nolint:golint,unused
 func (sb *SortedBlobbers) update(b *StorageNode) (ok bool) {
 	var i int
 	if i, ok = sb.getIndex(b.ID); !ok {

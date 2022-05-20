@@ -1,11 +1,11 @@
 simulation:
-  num_clients: 21
-  num_active_clients: 21
+  num_clients: 21000
+  num_active_clients: 21000
   num_miners: 5
   num_active_miners: 5
   nun_sharders: 5
   nun_active_sharders: 5
-  num_allocations: 3000
+  num_allocations: 21000
   num_blobbers: 10000
   num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation

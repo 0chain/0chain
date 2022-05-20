@@ -13,8 +13,9 @@ import (
 )
 
 type benchmarkResults struct {
-	test   benchmark.BenchTestI
-	result testing.BenchmarkResult
+	test    benchmark.BenchTestI
+	result  testing.BenchmarkResult
+	timings map[string]time.Duration
 	error
 }
 
@@ -82,12 +83,18 @@ func runSuite(
 					}
 				}
 			})
+			var resTimings map[string]time.Duration
+			if wt, ok := bm.(benchmark.WithTimings); ok && len(wt.Timings()) > 0 {
+				resTimings = wt.Timings()
+			}
+
 			benchmarkResult = append(
 				benchmarkResult,
 				benchmarkResults{
-					test:   bm,
-					result: result,
-					error:  err,
+					test:    bm,
+					result:  result,
+					error:   err,
+					timings: resTimings,
 				},
 			)
 
