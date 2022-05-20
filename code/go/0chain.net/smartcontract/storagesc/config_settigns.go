@@ -63,6 +63,7 @@ const (
 
 	ValidatorReward
 	BlobberSlash
+	MaxBlobbersPerAllocation
 	MaxReadPrice
 	MaxWritePrice
 	MinWritePrice
@@ -154,6 +155,7 @@ var (
 
 		"validator_reward",
 		"blobber_slash",
+		"max_blobbers_per_allocation",
 		"max_read_price",
 		"max_write_price",
 		"max_write_price",
@@ -249,6 +251,7 @@ var (
 
 		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
+		"max_blobbers_per_allocation":          {MaxBlobbersPerAllocation, smartcontract.Int},
 		"max_read_price":                       {MaxReadPrice, smartcontract.StateBalance},
 		"max_write_price":                      {MaxWritePrice, smartcontract.StateBalance},
 		"min_write_price":                      {MinWritePrice, smartcontract.StateBalance},
@@ -336,6 +339,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.FailedChallengesToCancel = change
 	case FailedChallengesToRevokeMinLock:
 		conf.FailedChallengesToRevokeMinLock = change
+	case MaxBlobbersPerAllocation:
+		conf.MaxBlobbersPerAllocation = change
 	case MaxChallengesPerGeneration:
 		conf.MaxChallengesPerGeneration = change
 	case ValidatorsPerChallenge:
@@ -651,6 +656,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ValidatorReward
 	case BlobberSlash:
 		return conf.BlobberSlash
+	case MaxBlobbersPerAllocation:
+		return conf.MaxBlobbersPerAllocation
 	case MaxReadPrice:
 		return conf.MaxReadPrice
 	case MaxWritePrice:

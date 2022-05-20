@@ -32,6 +32,7 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 	defer persistencestore.Close(ctx)
 	sc := GetSharderChain()
 	confirmation, err := sc.GetTransactionConfirmation(ctx, hash)
+
 	if content == "confirmation" {
 		return confirmation, err
 	}

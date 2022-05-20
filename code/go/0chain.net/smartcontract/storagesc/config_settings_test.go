@@ -362,6 +362,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"blobber_slash":                        "0.1",
 					"max_read_price":                       "100",
 					"max_write_price":                      "100",
+					"max_blobbers_per_allocation":          "40",
 					"failed_challenges_to_cancel":          "20",
 					"failed_challenges_to_revoke_min_lock": "0",
 					"challenge_enabled":                    "true",
@@ -492,6 +493,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.MinerWeight
 	case BlockRewardBlobberWeight:
 		return conf.BlockReward.BlobberWeight
+	case MaxBlobbersPerAllocation:
+		return conf.MaxBlobbersPerAllocation
 
 	case ExposeMpt:
 		return conf.ExposeMpt
