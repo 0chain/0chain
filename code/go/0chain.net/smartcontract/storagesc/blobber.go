@@ -43,10 +43,7 @@ func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	blobber := new(StorageNode)
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // update existing blobber, or reborn a deleted one

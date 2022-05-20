@@ -1041,7 +1041,7 @@ func (ssc *StorageSmartContract) GetBlocksHandler(_ context.Context, params url.
 }
 
 func (ssc *StorageSmartContract) GetTotalData(_ context.Context, balances cstate.StateContextI) (int64, error) {
-	return 0, fmt.Errorf("storageSmartContract is nil")
+	return 0, fmt.Errorf("not implemented yet")
 }
 
 func (ssc *StorageSmartContract) GetCollectedRewardHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (resp interface{}, err error) {
