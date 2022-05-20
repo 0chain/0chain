@@ -90,6 +90,7 @@ func (sb SortedBlobbers) get(id string) (b *StorageNode, ok bool) {
 	return // not found
 }
 
+//nolint:golint,unused
 func (sb *SortedBlobbers) removeByIndex(i int) {
 	(*sb) = append((*sb)[:i], (*sb)[i+1:]...)
 }
