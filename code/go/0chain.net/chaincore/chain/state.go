@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -120,6 +121,12 @@ func (c *Chain) ExecuteSmartContract(
 	done := make(chan bool, 1)
 
 	sct := time.NewTimer(c.SmartContractTimeout())
+	if node.Self.Type == node.NodeTypeSharder {
+		// give more times for sharders to compute state, as sharders are required to be run
+		// as full node, so each block should not be executed failed due to timeout
+		sct = time.NewTimer(3 * time.Minute)
+	}
+
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
 		done <- true
