@@ -72,7 +72,46 @@ func BenchmarkRestTests(
 ) bk.TestSuite {
 	var tests = []*RestBenchTest{
 		{
+			name: "get_blobber_count",
+		},
+		{
+			name: "get_blobber_total_stakes",
+		},
+		{
+			name: "get_blobber_lat_long",
+		},
+		{
 			name: "getConfig",
+		},
+		{
+			name: "transaction",
+			params: map[string]string{
+				"transaction_hash": "", // todo add transactions
+			},
+		},
+		{
+			name: "transactions",
+			params: map[string]string{
+				"client_id":  "", // todo add transactions
+				"offset":     "",
+				"limit":      "",
+				"block_hash": "",
+			},
+		},
+		{
+			name: "errors",
+			params: map[string]string{
+				"transaction_hash": "", // todo add transactions
+			},
+		},
+		{
+			name: "get_block_by_hash",
+			params: map[string]string{
+				"block_hash": "", // todo add blocks
+			},
+		},
+		{
+			name: "total_saved_data",
 		},
 		{
 			name: "latestreadmarker",
@@ -164,9 +203,18 @@ func BenchmarkRestTests(
 			},
 		},
 		{
+			name: "writemarkers", // todo
+			params: map[string]string{
+				"offset":        "",
+				"limit":         "",
+				"is_descending": "",
+			},
+		},
+		{
 			name: "getWriteMarkers",
 			params: map[string]string{
 				"allocation_id": getMockAllocationId(0),
+				"filename":      "",
 			},
 		},
 		{
@@ -205,6 +253,34 @@ func BenchmarkRestTests(
 			name: "get_validator",
 			params: map[string]string{
 				"validator_id": getMockValidatorId(0),
+			},
+		},
+		{
+			name: "alloc_written_size",
+			params: map[string]string{
+				"allocation_id": getMockValidatorId(0),
+				"block_number":  getMockValidatorId(0),
+			},
+		},
+		{
+			name: "alloc_read_size",
+			params: map[string]string{
+				"allocation_id": getMockValidatorId(0),
+				"block_number":  getMockValidatorId(0),
+			},
+		},
+		{
+			name: "alloc_write_marker_count",
+			params: map[string]string{
+				"allocation_id": getMockValidatorId(0),
+			},
+		},
+		{
+			name: "collected_reward",
+			params: map[string]string{
+				"start_block": getMockValidatorId(0),
+				"end_block":   getMockValidatorId(0),
+				"client_id":   getMockValidatorId(0),
 			},
 		},
 		{
