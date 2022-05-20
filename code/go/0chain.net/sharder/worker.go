@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/remeh/sizedwaitgroup"
@@ -50,14 +51,87 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
+	syncBlocksTicker := time.NewTicker(time.Minute)
+
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
+		case <-syncBlocksTicker.C:
+			var (
+				lfbTk = sc.GetLatestLFBTicket(ctx)
+				lfb   = sc.GetLatestFinalizedBlock()
+			)
+
+			if lfbTk.Round <= lfb.Round {
+				continue
+			}
+
+			go sc.requestBlocks(ctx, lfb.Round, lfbTk.Round)
 		case b := <-sc.GetBlockChannel():
+			cr := sc.GetCurrentRound()
+			if b.Round != sc.GetCurrentRound()+1 {
+				logging.Logger.Debug("process block skip",
+					zap.Int64("block round", b.Round), zap.Int64("current round", cr))
+				continue
+			}
 			sc.processBlock(ctx, b)
 		}
+	}
+}
+
+func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) {
+	const maxRequestBlocks = 20
+	if endRound <= startRound {
+		return
+	}
+
+	// trunk to send at most 20 blocks each time
+	reqNum := endRound - startRound
+	if reqNum > maxRequestBlocks {
+		reqNum = maxRequestBlocks
+	}
+
+	blocks := make([]*block.Block, reqNum)
+	wg := sync.WaitGroup{}
+	for i := int64(0); i < reqNum; i++ {
+		wg.Add(1)
+		go func(idx int64) {
+			defer wg.Done()
+			r := startRound + idx
+			var cancel func()
+			ctx, cancel = context.WithTimeout(ctx, 8*time.Second)
+			defer cancel()
+			// check local to see if exist
+			b, err := sc.GetBlockFromHash(ctx, "", r)
+			if err != nil {
+				logging.Logger.Debug("request block could not find block from local store",
+					zap.Int64("round", r), zap.Error(err))
+			}
+
+			// this will save block to local and create related round
+			b, err = sc.GetNotarizedBlockFromSharders(ctx, "", r)
+			if err != nil {
+				logging.Logger.Error("request block from sharders failed",
+					zap.Int64("round", r),
+					zap.Error(err))
+				return
+			}
+
+			blocks[idx] = b
+		}(i)
+	}
+	wg.Wait()
+
+	for _, b := range blocks {
+		if b == nil {
+			// return if block is not acquired, break here as we will redo the sync process from the missed one later
+			return
+		}
+
+		logging.Logger.Debug("fetched block from remote", zap.Int64("round", b.Round))
+		sc.GetBlockChannel() <- b
 	}
 }
 
