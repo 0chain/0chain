@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -282,6 +283,10 @@ type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
 	Run(state.StateContextI, *testing.B) error
+}
+
+type WithTimings interface {
+	Timings() map[string]time.Duration
 }
 
 type SignatureScheme interface {
