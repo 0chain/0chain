@@ -87,7 +87,19 @@ func BenchmarkRestTests(
 			name: "getMinerList",
 		},
 		{
+			name: "get_miners_stats",
+		},
+		{
+			name: "get_miners_stake",
+		},
+		{
 			name: "getSharderList",
+		},
+		{
+			name: "get_sharders_stats",
+		},
+		{
+			name: "get_sharders_stake",
 		},
 		{
 			name: "getPhase",
@@ -100,6 +112,12 @@ func BenchmarkRestTests(
 		},
 		{
 			name: "getGroupShareOrSigns",
+		},
+		{
+			name: "getEvents",
+			params: map[string]string{
+				"block_number": "",
+			},
 		},
 		{
 			name: "getMagicBlock",
@@ -115,6 +133,23 @@ func BenchmarkRestTests(
 			params: map[string]string{
 				"id":      GetMockNodeId(0, spenum.Miner),
 				"pool_id": getMinerDelegatePoolId(0, 0, spenum.Miner),
+			},
+		},
+
+		{
+			name: "get_miner_geolocations",
+			params: map[string]string{
+				"offset": "",
+				"limit":  "",
+				"active": "",
+			},
+		},
+		{
+			name: "get_sharder_geolocations",
+			params: map[string]string{
+				"offset": "",
+				"limit":  "",
+				"active": "",
 			},
 		},
 		{
