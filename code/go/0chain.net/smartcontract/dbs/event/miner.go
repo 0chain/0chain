@@ -30,6 +30,7 @@ type Miner struct {
 	MaxStake          state.Balance
 	LastHealthCheck   common.Timestamp
 	Rewards           state.Balance
+	TotalReward       state.Balance
 	Fees              state.Balance
 	Active            bool
 	Longitude         float64
@@ -49,6 +50,20 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		Model(&Miner{}).
 		Where(&Miner{MinerID: id}).
 		First(&miner).Error
+}
+
+func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
+	var miner providerAggregateStats
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{MinerID: id}).
+		First(&miner)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving miner %v, error %v",
+			id, result.Error)
+	}
+
+	return &miner, nil
 }
 
 type MinerQuery struct {

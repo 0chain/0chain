@@ -11,8 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/zcnsc"
 
 	"github.com/stretchr/testify/require"
@@ -338,7 +339,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Minersc_/getUserPools_No_User_Node_500",
+			name: "Minersc_/getUserPools_No_User_Node_400",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -371,7 +372,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Minersc_/getSharderList_Decoding_User_Node_Err_500",
@@ -578,10 +579,9 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/getUserPools_Fail_Retrieving_Miners_Node_404",
+			name: "Minersc_/getUserPools_Fail_Retrieving_Miners_Node_400",
 			chain: func() *chain.Chain {
-				un := minersc.UserNode{
-					ID: clientID,
+				un := stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						"key": {},
 					},
@@ -621,15 +621,14 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name: "Minersc_/getUserPools_Decoding_Miners_Node_Err_500",
+			name: "Minersc_/getUserPools_Decoding_Miners_Node_Err_400",
 			chain: func() *chain.Chain {
 				minerID := "miner id"
 
-				un := minersc.UserNode{
-					ID: clientID,
+				un := stakepool.UserStakePools{
 					Pools: map[datastore.Key][]datastore.Key{
 						minerID: {},
 					},
@@ -675,7 +674,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:  "Minersc_/getMpksList_Empty_Miners_Mpks_404",
@@ -1113,92 +1112,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			},
 			setValidConfig: true,
 			wantStatus:     http.StatusInternalServerError,
-		},
-		{
-			name:  "Storagesc_/openchallenges_404",
-			chain: serverChain,
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/openchallenges")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
-		},
-		{
-			name: "Storagesc_/openchallenges_404",
-			chain: func() *chain.Chain {
-				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
-
-				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenge:")
-				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
-					t.Fatal(err)
-				}
-
-				ch := chain.NewChainFromConfig()
-				ch.LatestFinalizedBlock = lfb
-
-				return ch
-			}(),
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/openchallenges")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			wantStatus: http.StatusNotFound,
-		},
-		{
-			name:  "Storagesc_/getchallenge_404",
-			chain: serverChain,
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/getchallenge")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
-		},
-		{
-			name: "Storagesc_/getchallenge_500",
-			chain: func() *chain.Chain {
-				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
-
-				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenges:")
-				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
-					t.Fatal(err)
-				}
-
-				ch := chain.NewChainFromConfig()
-				ch.LatestFinalizedBlock = lfb
-
-				return ch
-			}(),
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/getchallenge")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "Storagesc_/getblobbers_500",

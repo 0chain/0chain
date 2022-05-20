@@ -12,7 +12,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -129,6 +128,7 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
+	msc.SmartContractExecutionStats["collect_reward"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "collect_reward"), nil)
 	msc.SmartContractExecutionStats["miner_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "miner_health_check"), nil)
 	msc.SmartContractExecutionStats["sharder_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "sharder_health_check"), nil)
 	msc.SmartContractExecutionStats["update_globals"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_globals"), nil)
@@ -137,16 +137,6 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterCounter("feesPaid", nil)
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
-}
-
-func (msc *MinerSmartContract) addMint(gn *GlobalNode, mint state.Balance) {
-	gn.Minted += mint
-
-	var mintStatsRaw, found = msc.SmartContractExecutionStats["mintedTokens"]
-	if found {
-		var mintStats = mintStatsRaw.(metrics.Counter)
-		mintStats.Inc(int64(mint))
-	}
 }
 
 //Execute implementing the interface
@@ -186,21 +176,4 @@ func getGlobalNode(
 	}
 
 	return gn, nil
-}
-
-func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
-	un := NewUserNode()
-	un.ID = id
-	err := balances.GetTrieNode(un.GetKey(), un)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		un = NewUserNode()
-		un.ID = id
-		return un, nil
-	}
-
-	un.ID = id
-	return un, nil
 }

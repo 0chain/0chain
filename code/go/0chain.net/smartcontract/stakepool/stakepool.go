@@ -2,6 +2,7 @@ package stakepool
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -96,20 +97,21 @@ func (sp *StakePool) Save(
 	return err
 }
 
-func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) error {
+func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (state.Balance, error) {
 	minter, err := cstate.GetMinter(sp.Minter)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := balances.AddMint(&state.Mint{
 		Minter:     minter,
 		ToClientID: sp.Settings.DelegateWallet,
 		Amount:     sp.Reward,
 	}); err != nil {
-		return fmt.Errorf("minting rewards: %v", err)
+		return 0, fmt.Errorf("minting rewards: %v", err)
 	}
+	minted := sp.Reward
 	sp.Reward = 0
-	return nil
+	return minted, nil
 }
 
 func (sp *StakePool) MintRewards(
@@ -119,19 +121,27 @@ func (sp *StakePool) MintRewards(
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
+	var reward state.Balance
+	var err error
 	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
-		if err := sp.MintServiceCharge(balances); err != nil {
+		reward, err = sp.MintServiceCharge(balances)
+		if err != nil {
 			return 0, err
 		}
+		if len(poolId) == 0 {
+			return reward, nil
+		}
+	}
+	if len(poolId) == 0 {
+		return 0, errors.New("no pool id from which to release funds found")
 	}
 
 	dPool, ok := sp.Pools[poolId]
 	if !ok {
 		return 0, fmt.Errorf("cannot find rewards for %s", poolId)
 	}
-	reward := dPool.Reward
 
-	if reward > 0 {
+	if dPool.Reward > 0 {
 		minter, err := cstate.GetMinter(sp.Minter)
 		if err != nil {
 			return 0, err
@@ -139,10 +149,11 @@ func (sp *StakePool) MintRewards(
 		if err := balances.AddMint(&state.Mint{
 			Minter:     minter,
 			ToClientID: clientId,
-			Amount:     reward,
+			Amount:     dPool.Reward,
 		}); err != nil {
 			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
+		reward += dPool.Reward
 		dPool.Reward = 0
 	}
 
@@ -178,6 +189,16 @@ func (sp *StakePool) DistributeRewards(
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType)
 
+	// if no stake pools pay all rewards to the provider
+	if len(sp.Pools) == 0 {
+		sp.Reward += state.Balance(value)
+		spUpdate.Reward = int64(value)
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	serviceCharge := sp.Settings.ServiceCharge * value
 	if state.Balance(serviceCharge) > 0 {
 		reward := state.Balance(serviceCharge)
@@ -187,10 +208,6 @@ func (sp *StakePool) DistributeRewards(
 
 	if state.Balance(value-serviceCharge) == 0 {
 		return nil
-	}
-
-	if len(sp.Pools) == 0 {
-		return fmt.Errorf("no stake pools to move tokens to")
 	}
 
 	valueLeft := value - serviceCharge

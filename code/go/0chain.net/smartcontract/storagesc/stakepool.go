@@ -1,9 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -85,7 +87,9 @@ func (sp *stakePool) Decode(input []byte) error {
 func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
+	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
+	logging.Logger.Debug("after stake pool save", zap.String("root", r))
+
 	return
 }
 
@@ -443,7 +447,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.BlobberID, spr.PoolID, balances)
+	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.BlobberID, spr.PoolID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

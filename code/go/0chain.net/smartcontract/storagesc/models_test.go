@@ -4,8 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +22,7 @@ func TestStorageAllocation_validate(t *testing.T) {
 	)
 
 	var (
-		now   common.Timestamp = 150
+		now   = time.Unix(150, 0)
 		alloc StorageAllocation
 		conf  Config
 	)
@@ -122,93 +120,4 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	// accept all
 	list[1].Capacity, list[1].Used = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
-}
-
-func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
-	type args struct {
-		params []*StorageNode
-		size   int
-	}
-
-	type want struct {
-		params []*StorageNode
-	}
-
-	var locations = []*StorageNode{
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}},  // Cape Town
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}},   // St Petersburg
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}},  // Kaohsiung City
-	}
-
-	tests := []struct {
-		name string
-		args args
-		want want
-	}{
-		{
-			name: "OK optimal geo diversification (2 of 3)",
-			args: args{
-				params: []*StorageNode{locations[0], locations[1], locations[2]},
-				size:   2,
-			},
-			want: want{
-				params: []*StorageNode{locations[0], locations[1]},
-			},
-		},
-		{
-			name: "OK optimal geo diversification (3 of 4)",
-			args: args{
-				params: []*StorageNode{locations[0], locations[1], locations[2], locations[3]},
-				size:   3,
-			},
-			want: want{
-				params: []*StorageNode{locations[0], locations[1], locations[3]},
-			},
-		},
-		{
-			name: "OK optimal geo diversification not applied",
-			args: args{
-				params: []*StorageNode{locations[1]},
-				size:   2,
-			},
-			want: want{
-				params: []*StorageNode{locations[1]},
-			},
-		},
-		{
-			name: "OK zero nodes",
-			args: args{
-				params: []*StorageNode{
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-				},
-				size: 2,
-			},
-			want: want{
-				params: []*StorageNode{
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var sa = &StorageAllocation{
-				DiverseBlobbers: len(tt.args.params) > len(tt.want.params),
-			}
-
-			got := sa.diversifyBlobbers(tt.args.params, tt.args.size)
-			for i, blobber := range got {
-				require.EqualValues(t, *tt.want.params[i], *blobber)
-			}
-		})
-	}
 }
