@@ -776,6 +776,7 @@ func (pn *PhaseNode) Decode(input []byte) error {
 	return json.Unmarshal(input, pn)
 }
 
+// swagger:model DKGMinerNodes
 type DKGMinerNodes struct {
 	MinN     int     `json:"min_n"`
 	MaxN     int     `json:"max_n"`

@@ -700,6 +700,7 @@ func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, e
 	return
 }
 
+// swagger:model userPools
 type userPools struct {
 	Pools map[string][]*delegatePoolStat `json:"pools"`
 }
@@ -715,7 +716,7 @@ type userPools struct {
 //      type: string
 //
 // responses:
-//  200: MinerUserPools
+//  200: userPools
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {

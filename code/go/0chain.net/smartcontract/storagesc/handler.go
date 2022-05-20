@@ -443,7 +443,7 @@ func (srh *StorageRestHandler) getReadAmountHandler(w http.ResponseWriter, r *ht
 	common.Respond(w, r, map[string]int64{"total": total}, err)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWrittenAmountHandler getWrittenAmountHandler
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_written_size alloc_written_size
 // statistic for all locked tokens of a challenge pool
 //
 // parameters:
