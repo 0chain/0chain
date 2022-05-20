@@ -479,13 +479,22 @@ func (sc *StorageSmartContract) selectBlobbers(
 	return blobberNodes[:size], bSize, nil
 }
 
-// getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
-func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
-	balances chainstate.CommonStateContextI) *StorageNodes {
+func getBlobbers(
+	blobberIDs []string,
+	balances chainstate.CommonStateContextI,
+) *StorageNodes {
 	blobbers := getBlobbersByIDs(blobberIDs, balances)
 	return &StorageNodes{
 		Nodes: blobbers,
 	}
+}
+
+// getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
+func (_ *StorageSmartContract) getBlobbers(
+	blobberIDs []string,
+	balances chainstate.CommonStateContextI,
+) *StorageNodes {
+	return getBlobbers(blobberIDs, balances)
 }
 
 func (sc *StorageSmartContract) validateBlobbers(
