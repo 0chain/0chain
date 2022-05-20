@@ -736,18 +736,7 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 //  200: Int64Map
 //  400:
 func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	storageNodes, err := getBlobbersList(srh.GetStateContext())
-	if err != nil {
-		common.Respond(w, r, 0, fmt.Errorf("error from getBlobbersList in GetTotalData: %v", err))
-		return
-	}
-
-	var totalSavedData int64
-	for _, sn := range storageNodes.Nodes {
-		totalSavedData += sn.SavedData
-	}
-
-	common.Respond(w, r, totalSavedData, nil)
+	common.Respond(w, r, 0, fmt.Errorf("not implemented yet"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
@@ -1284,24 +1273,42 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	creationDate := time.Now()
 
 	allocData := r.URL.Query().Get("allocation_data")
-	var request newAllocationRequest
-	if err = request.decode([]byte(allocData)); err != nil {
+	var req newAllocationRequest
+	if err = req.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
 		return
 	}
+
 	balances := srh.GetStateContext()
 	edb := balances.GetEventDB()
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances)
-	if err != nil {
-		common.Respond(w, r, "", err)
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers := getBlobbersByIDs(blobberIDs, balances)
-	var sa = request.storageAllocation()
-
+	blobbers, err := getBlobbersForRequest(req, edb, balances)
+	if err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
+		return
+	}
+	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand state.Balance
-	for _, b := range blobbers {
+
+	ids := append(req.Blobbers, blobbers...)
+	uniqueMap := make(map[string]struct{})
+	for _, id := range ids {
+		uniqueMap[id] = struct{}{}
+	}
+	unique := make([]string, 0, len(ids))
+	for id := range uniqueMap {
+		unique = append(unique, id)
+	}
+	if len(unique) > req.ParityShards+req.DataShards {
+		unique = unique[:req.ParityShards+req.DataShards]
+	}
+
+	nodes := getBlobbers(unique, balances)
+	for _, b := range nodes.Nodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
 	}
