@@ -6,7 +6,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -64,16 +63,6 @@ func (mn *MinerNode) Encode() []byte {
 // Decode implements util.Serializable interface.
 func (mn *MinerNode) Decode(p []byte) error {
 	return json.Unmarshal(p, mn)
-}
-
-func (mn *MinerNode) decodeFromValues(id, n2nHost string) error {
-	mn.N2NHost = id
-	mn.ID = n2nHost
-
-	if mn.N2NHost == "" || mn.ID == "" {
-		return errors.New("URL or ID is not specified")
-	}
-	return nil
 }
 
 func (mn *MinerNode) GetNodePools(status string) map[string]*stakepool.DelegatePool {
