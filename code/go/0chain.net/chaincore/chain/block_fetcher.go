@@ -685,6 +685,76 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (*
 	return b, nil
 }
 
+func (c *Chain) GetNotarizedBlockFromSharders(ctx context.Context, hash string, rn int64) (*block.Block, error) {
+
+	var bfr = new(blockFetchRequest)
+	bfr.sharders = true
+	bfr.hash = hash
+	bfr.round = rn
+
+	var reply = make(chan BlockFetchReply, 1)
+	bfr.replies = append(bfr.replies, reply)
+
+	cctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+	defer cancel()
+	if err := c.blockFetcher.fetch(cctx, bfr); err != nil {
+		return nil, common.NewErrorf("get_notarized_block",
+			"push to block fetch channel failed, round: %d, err: %v", bfr.round, err)
+	}
+
+	var (
+		cround = c.GetCurrentRound()
+
+		rpl BlockFetchReply
+	)
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case rpl = <-reply:
+	}
+
+	switch rpl.Err {
+	case nil:
+	case context.Canceled:
+		return nil, context.Canceled
+	default:
+		return nil, rpl.Err
+	}
+
+	// the block validated and its notarization verified
+	nb := rpl.Block
+
+	var r = c.GetRound(nb.Round)
+	if r == nil {
+		logging.Logger.Info("get notarized block - no round, creating...",
+			zap.Int64("round", nb.Round), zap.String("block", nb.Hash),
+			zap.Int64("cround", cround))
+
+		r = c.RoundF.CreateRoundF(nb.Round)
+	}
+
+	logging.Logger.Info("got notarized block", zap.String("block", nb.Hash),
+		zap.Int64("round", nb.Round),
+		zap.Int("verification_tickers", nb.VerificationTicketsSize()))
+
+	var b *block.Block
+	// This is a notarized block. So, use this method to sync round info
+	// with the notarized block.
+	b, r = c.AddNotarizedBlockToRound(r, nb)
+
+	// Add the round if chain does not have it
+	if c.GetRound(nb.Round) == nil {
+		c.AddRound(r)
+	}
+
+	if b == nb {
+		go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
+	}
+
+	return b, nil
+}
+
 type AfterBlockFetchFunc func(b *block.Block)
 
 func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,

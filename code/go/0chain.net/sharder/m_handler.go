@@ -117,7 +117,7 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 		sc.GetBlockChannel() <- b // even if we have the block
 
 		// force notify block finalization process
-		sc.ForceFinalizeRound()
+		//sc.ForceFinalizeRound()
 		return true, nil
 	}
 }
