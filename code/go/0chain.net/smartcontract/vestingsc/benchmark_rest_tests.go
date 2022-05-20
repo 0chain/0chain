@@ -54,7 +54,7 @@ func (rbt *RestBenchTest) Run(balances cstate.StateContextI, b *testing.B) error
 		var prettyJSON bytes.Buffer
 		err := json.Indent(&prettyJSON, body, "", "\t")
 		require.NoError(b, err)
-		fmt.Println(rbt.Name()+" : ", prettyJSON.String())
+		fmt.Println(req.URL.String()+" : ", prettyJSON.String())
 		rbt.shownResult = true
 	}
 	if resp.StatusCode != http.StatusOK {
