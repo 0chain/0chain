@@ -51,19 +51,17 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	syncBlocksTicker := time.NewTicker(time.Minute)
-	lfb := sc.GetLatestFinalizedBlock()
-	cr := sc.GetCurrentRound()
-	if cr < lfb.Round {
-		sc.SetCurrentRound(lfb.Round)
-	}
+	syncBlocksTimer := time.NewTimer(10 * time.Second)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
-		case <-syncBlocksTicker.C:
+		case <-syncBlocksTimer.C:
+			// reset sync timer to 1 minute
+			syncBlocksTimer = time.NewTimer(time.Minute)
+
 			var (
 				lfbTk = sc.GetLatestLFBTicket(ctx)
 				lfb   = sc.GetLatestFinalizedBlock()
@@ -71,6 +69,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 			if lfbTk.Round <= lfb.Round {
 				continue
+			}
+
+			if sc.GetCurrentRound() < lfb.Round {
+				sc.SetCurrentRound(lfb.Round)
 			}
 
 			go sc.requestBlocks(ctx, lfb.Round, lfbTk.Round+int64(config.GetLFBTicketAhead()))
@@ -140,6 +142,7 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) 
 
 		logging.Logger.Debug("fetched block from remote", zap.Int64("round", b.Round))
 		sc.GetBlockChannel() <- b
+		logging.Logger.Debug("pushed to block process channel", zap.Int64("round", b.Round))
 	}
 }
 

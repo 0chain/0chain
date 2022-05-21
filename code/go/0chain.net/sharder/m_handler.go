@@ -27,6 +27,7 @@ func SetupM2SReceivers() {
 
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 type Chainer interface {
+	GetCurrentRound() int64
 	GetLatestFinalizedBlock() *block.Block
 	GetBlock(ctx context.Context, hash datastore.Key) (*block.Block, error)
 	GetBlockChannel() chan *block.Block
@@ -76,6 +77,10 @@ func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return true, nil // doesn't need a not. block for the round
 		}
 
+		if b.Round != sc.GetCurrentRound()+1 {
+			return true, nil
+		}
+
 		_, err := sc.GetBlock(ctx, b.Hash)
 		if err == nil {
 			Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
@@ -108,6 +113,10 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 		var lfb = sc.GetLatestFinalizedBlock()
 		if b.Round <= lfb.Round {
 			return true, nil // doesn't need a not. block for the round
+		}
+
+		if b.Round != sc.GetCurrentRound()+1 {
+			return true, nil
 		}
 
 		if err := node.ValidateSenderSignature(ctx); err != nil {
