@@ -75,7 +75,11 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 
 	var faucetConfig *FaucetConfig
 	if gn.FaucetConfig == nil {
-		faucetConfig = getFaucetConfig()
+		faucetConfig, err = getFaucetConfig()
+		if err != nil {
+			NoResourceOrErrInternal(w, r, err)
+			return
+		}
 	} else {
 		faucetConfig = gn.FaucetConfig
 	}
@@ -178,7 +182,10 @@ func getGlobalNode(sctx state.QueryStateContextI) (GlobalNode, error) {
 		if err != util.ErrValueNotPresent {
 			return gn, err
 		}
-		gn.FaucetConfig = getFaucetConfig()
+		gn.FaucetConfig, err = getFaucetConfig()
+		if err != nil {
+			return gn, err
+		}
 	}
 	return gn, nil
 }
