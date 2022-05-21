@@ -44,7 +44,7 @@ func BenchmarkTransactionVerify(b *testing.B) {
 
 	txnData := fmt.Sprintf("Txn: Pay %v from %s\n", 42, c.PublicKey)
 	t := datastore.GetEntityMetadata("txn").Instance().(*Transaction)
-	t.Value = 1000
+	t.ValueZCN = 1000
 	t.ClientID = c.GetKey()
 	t.TransactionType = TxnTypeSend
 	t.TransactionData = txnData

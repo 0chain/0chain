@@ -61,7 +61,7 @@ type Transaction struct {
 	ToClientID      string           `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         string           `json:"chain_id,omitempty" msgpack:"chid"`
 	TransactionData string           `json:"transaction_data" msgpack:"d"`
-	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
+	ValueZCN        int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
 	Fee             int64            `json:"transaction_fee" msgpack:"f"`
@@ -155,7 +155,7 @@ func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) 
 
 /*ValidateWrtTimeForBlock - validate entityt w.r.t given time (as now) */
 func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Timestamp, validateSignature bool) error {
-	if t.Value < 0 {
+	if t.ValueZCN < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
 	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
@@ -262,7 +262,7 @@ func (t *Transaction) HashData() string {
 	s.WriteString(":")
 	s.WriteString(t.ToClientID)
 	s.WriteString(":")
-	s.WriteString(strconv.FormatInt(t.Value, 10))
+	s.WriteString(strconv.FormatInt(t.ValueZCN, 10))
 	s.WriteString(":")
 	s.WriteString(encryption.Hash(t.TransactionData))
 	return s.String()
@@ -438,7 +438,7 @@ func (t *Transaction) Clone() *Transaction {
 		ToClientID:        t.ToClientID,
 		ChainID:           t.ChainID,
 		TransactionData:   t.TransactionData,
-		Value:             t.Value,
+		ValueZCN:          t.ValueZCN,
 		Signature:         t.Signature,
 		CreationDate:      t.CreationDate,
 		Fee:               t.Fee,

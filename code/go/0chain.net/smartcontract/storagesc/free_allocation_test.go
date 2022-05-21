@@ -290,7 +290,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			ToClientID:   ADDRESS,
 			PublicKey:    mockUserPublicKey,
 			CreationDate: now,
-			Value:        zcnToInt64(p.marker.FreeTokens),
+			ValueZCN:     zcnToInt64(p.marker.FreeTokens),
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
@@ -391,7 +391,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.ValueZCN),
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -670,7 +670,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			ClientID:     p.marker.Recipient,
 			PublicKey:    mockUserPublicKey,
 			CreationDate: now,
-			Value:        zcnToInt64(p.marker.FreeTokens),
+			ValueZCN:     zcnToInt64(p.marker.FreeTokens),
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
@@ -764,7 +764,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.ValueZCN),
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()

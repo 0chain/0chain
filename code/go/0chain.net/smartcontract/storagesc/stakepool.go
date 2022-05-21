@@ -361,7 +361,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if t.Value < conf.StakePool.MinLock {
+	if t.ValueZCN < conf.StakePool.MinLock {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too small stake to lock")
 	}

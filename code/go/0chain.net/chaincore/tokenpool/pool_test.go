@@ -15,7 +15,7 @@ func init() {
 
 func TestDigPool(t *testing.T) {
 	txn := transaction.Transaction{}
-	txn.Value = 8675309
+	txn.ValueZCN = 8675309
 	p := &ZcnPool{}
 	transfer, _, _ := p.DigPool("dig_pool", &txn)
 	if p.GetBalance() != 8675309 || transfer.Amount != p.GetBalance() {
@@ -28,7 +28,7 @@ func TestFillPool(t *testing.T) {
 	p := &ZcnPool{}
 	_, _, err := p.DigPool("fill_pool", &txn)
 	require.NoError(t, err)
-	txn.Value = 23
+	txn.ValueZCN = 23
 	transfer, _, _ := p.FillPool(&txn)
 	if p.GetBalance() != 23 || transfer.Amount != p.GetBalance() {
 		t.Error("Pool wasn't filled")
@@ -37,7 +37,7 @@ func TestFillPool(t *testing.T) {
 
 func TestEmptyPool(t *testing.T) {
 	txn := transaction.Transaction{}
-	txn.Value = 32
+	txn.ValueZCN = 32
 	p := &ZcnPool{}
 	_, _, err := p.DigPool("empty_pool", &txn)
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestEmptyPool(t *testing.T) {
 
 func TestDrainPoolWithinBalance(t *testing.T) {
 	txn := transaction.Transaction{}
-	txn.Value = 33
+	txn.ValueZCN = 33
 	p := &ZcnPool{}
 	_, _, err := p.DigPool("drain_pool_within_balance", &txn)
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestDrainPoolWithinBalance(t *testing.T) {
 
 func TestDrainPoolExceedBalance(t *testing.T) {
 	txn := transaction.Transaction{}
-	txn.Value = 31
+	txn.ValueZCN = 31
 	p := &ZcnPool{}
 	_, _, err := p.DigPool("drain_pool_exceed_balance", &txn)
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestDrainPoolExceedBalance(t *testing.T) {
 
 func TestDrainPoolToEmpty(t *testing.T) {
 	txn := transaction.Transaction{}
-	txn.Value = 37
+	txn.ValueZCN = 37
 	p := &ZcnPool{}
 	_, _, err := p.DigPool("drain_pool_equals_balance", &txn)
 	require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestSimpleTransferTo(t *testing.T) {
 	p0, p1 := &ZcnPool{}, &ZcnPool{}
 	_, _, err := p0.DigPool("pool_0", &txn)
 	require.NoError(t, err)
-	txn.Value = 7
+	txn.ValueZCN = 7
 	_, _, err = p1.DigPool("pool_1", &txn)
 	require.NoError(t, err)
 	_, _, err = p1.TransferTo(p0, 1, &txn)
@@ -123,10 +123,10 @@ func TestTransferBackAndForth(t *testing.T) {
 	p0, p1, p2 := &ZcnPool{}, &ZcnPool{}, &ZcnPool{}
 	_, _, err := p0.DigPool("pool_0", &txn)
 	require.NoError(t, err)
-	txn.Value = 7
+	txn.ValueZCN = 7
 	_, _, err = p1.DigPool("pool_1", &txn)
 	require.NoError(t, err)
-	txn.Value = 9
+	txn.ValueZCN = 9
 	_, _, err = p2.DigPool("pool_2", &txn)
 	require.NoError(t, err)
 	_, _, err = p1.TransferTo(p0, 1, &txn)

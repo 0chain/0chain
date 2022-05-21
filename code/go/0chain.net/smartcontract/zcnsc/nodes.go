@@ -51,13 +51,19 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinMintAmount = currency.Coin(amount * 1e10)
+			gn.MinMintAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case MinBurnAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinBurnAmount = currency.Coin(amount * 1e10)
+			gn.MinBurnAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case BurnAddress:
 			if value == "" {
 				return fmt.Errorf("key %s is empty", key)

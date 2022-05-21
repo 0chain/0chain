@@ -39,32 +39,32 @@ func (p *ZcnPool) GetID() string {
 }
 
 func (p *ZcnPool) DigPool(id string, txn *transaction.Transaction) (*state.Transfer, string, error) {
-	if txn.Value < 0 {
+	if txn.ValueZCN < 0 {
 		return nil, "", common.NewError("digging pool failed", "insufficient funds")
 	}
 
 	p.TokenPool.ID = id // Transaction Hash
-	p.TokenPool.Balance = currency.Coin(txn.Value)
+	p.TokenPool.Balance = currency.Coin(txn.ValueZCN)
 
 	tpr := &TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,       // transaction hash
 		FromClient: txn.ClientID,   // authorizer node id
 		ToPool:     p.ID,           // transaction hash
 		ToClient:   txn.ToClientID, // smart contracts address
-		Value:      currency.Coin(txn.Value),
+		Value:      currency.Coin(txn.ValueZCN),
 	}
 
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.ValueZCN))
 	return transfer, string(tpr.Encode()), nil
 }
 
 func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
-	if txn.Value <= 0 {
+	if txn.ValueZCN <= 0 {
 		return nil, "", common.NewError("filling pool failed", "insufficient funds")
 	}
-	p.Balance += currency.Coin(txn.Value)
-	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: currency.Coin(txn.Value)}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+	p.Balance += currency.Coin(txn.ValueZCN)
+	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: currency.Coin(txn.ValueZCN)}
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.ValueZCN))
 	return transfer, string(tpr.Encode()), nil
 }
 

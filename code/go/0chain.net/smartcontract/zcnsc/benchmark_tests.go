@@ -248,7 +248,7 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 		ClientID:     clientId,
 		PublicKey:    publicKey,
 		ToClientID:   config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress),
-		Value:        3000,
+		ValueZCN:     3000,
 		CreationDate: common.Now(),
 	}
 }
@@ -261,7 +261,7 @@ func createTransaction(clientId, publicKey string) *transaction.Transaction {
 		ClientID:     clientId,
 		PublicKey:    publicKey,
 		ToClientID:   ADDRESS,
-		Value:        3000,
+		ValueZCN:     3000,
 		CreationDate: common.Now(),
 	}
 }

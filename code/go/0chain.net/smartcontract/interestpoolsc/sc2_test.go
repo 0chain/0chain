@@ -260,7 +260,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 		ClientID:     clientId,
 		ToClientID:   storageScId,
 		CreationDate: startTime,
-		Value:        int64(zcnToBalance(tokens)),
+		ValueZCN:     int64(zcnToBalance(tokens)),
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
