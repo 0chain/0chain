@@ -155,10 +155,10 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	var alloc = StorageAllocation{
 		ID: allocID,
 		BlobberAllocs: []*BlobberAllocation{
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
 		},
 		Expiration:              10,
 		ChallengeCompletionTime: 200 * time.Second,
@@ -180,7 +180,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	_, err = ssc.writePoolLock(&tx, []byte("} malformed {"), balances)
 	requireErrMsg(t, err, errMsg2)
 	// 3. min lock
-	tx.ValueZCN = 5
+	tx.ValueZCN = 0
 	lr.Duration = 5 * time.Second
 	lr.AllocationID = allocID
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
