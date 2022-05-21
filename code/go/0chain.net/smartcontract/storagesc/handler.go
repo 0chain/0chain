@@ -978,6 +978,7 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("cannot find user stake pool: "+err.Error()))
 		return
+
 	}
 	common.Respond(w, r, spStats(*blobber, delegatePools), nil)
 }
