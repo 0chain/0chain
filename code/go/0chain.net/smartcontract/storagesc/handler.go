@@ -1758,7 +1758,7 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 	}
 	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
-		err := common.NewErrInternal("missing blobber" + blobberID)
+		err := common.NewErrInternal("missing blobber: " + blobberID)
 		common.Respond(w, r, nil, err)
 		return
 	}
