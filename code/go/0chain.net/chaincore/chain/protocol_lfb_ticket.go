@@ -290,13 +290,13 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// only if updated, only for sharders
 			// (don't rebroadcast without a block verification)
 
-			if isSharder {
-				if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
-					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket,
-						c.afterFetcher)
-					continue // if haven't the block, then don't update the latest
-				}
-			}
+			//if isSharder {
+			//	if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
+			//		c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket,
+			//			c.afterFetcher)
+			//		continue // if haven't the block, then don't update the latest
+			//	}
+			//}
 
 			// send for all subscribers
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
