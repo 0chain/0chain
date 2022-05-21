@@ -183,6 +183,7 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if !sc.cacheProcessingBlock(b.Hash) {
+		Logger.Debug("process block, being processed", zap.Int64("round", b.Round))
 		return
 	}
 
