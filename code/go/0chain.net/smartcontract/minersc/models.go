@@ -251,10 +251,16 @@ type GlobalNode struct {
 	Cost                 map[string]int `json:"cost"`
 }
 
-func (gn *GlobalNode) readConfig() {
+func (gn *GlobalNode) readConfig() (err error) {
 	const pfx = "smart_contracts.minersc."
-	gn.MinStake = currency.Coin(config.SmartContractConfig.GetFloat64(pfx+SettingName[MinStake]) * 1e10)
-	gn.MaxStake = currency.Coin(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxStake]) * 1e10)
+	gn.MinStake, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MinStake]))
+	if err != nil {
+		return
+	}
+	gn.MaxStake, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxStake]))
+	if err != nil {
+		return
+	}
 	gn.MaxN = config.SmartContractConfig.GetInt(pfx + SettingName[MaxN])
 	gn.MinN = config.SmartContractConfig.GetInt(pfx + SettingName[MinN])
 	gn.TPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent])
@@ -266,14 +272,21 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
 	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
 	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
-	gn.BlockReward = currency.Coin(config.SmartContractConfig.GetFloat64(pfx+SettingName[BlockReward]) * 1e10)
+	gn.BlockReward, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
+	if err != nil {
+		return
+	}
 	gn.MaxCharge = config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
 	gn.Epoch = config.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
-	gn.MaxMint = currency.Coin(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
+	gn.MaxMint, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))
+	if err != nil {
+		return
+	}
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
 	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
 	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
+	return nil
 }
 
 func (gn *GlobalNode) validate() error {
