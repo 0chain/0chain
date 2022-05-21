@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/zcnsc"

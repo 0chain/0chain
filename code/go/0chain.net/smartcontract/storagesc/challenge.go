@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"strconv"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"

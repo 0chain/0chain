@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 )
 
 type ConfigType int

@@ -1,7 +1,6 @@
 package smartcontract_test
 
 import (
-	"0chain.net/rest"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,12 +9,10 @@ import (
 	"net/url"
 	"testing"
 
-<<<<<<< HEAD
-=======
-	"0chain.net/pkg/currency"
+	"0chain.net/rest"
 
-	"0chain.net/smartcontract/interestpoolsc"
->>>>>>> d1d39794b (- Currency coin implemented)
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"

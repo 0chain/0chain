@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/pkg/currency"
-
+	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -65,7 +64,7 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) updateReward(reward int64, dp DelegatePool) error {
+func (edb *EventDb) updateReward(reward currency.Coin, dp DelegatePool) error {
 	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
 
 	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {

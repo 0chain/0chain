@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"

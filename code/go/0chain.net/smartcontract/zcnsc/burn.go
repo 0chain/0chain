@@ -3,7 +3,7 @@ package zcnsc
 import (
 	"fmt"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/util"
 

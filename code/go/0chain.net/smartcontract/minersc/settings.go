@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/pkg/currency"
 	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"

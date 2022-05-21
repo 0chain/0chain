@@ -4,18 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/pkg/currency"
-	"0chain.net/smartcontract/stakepool/spenum"
-	"go.uber.org/zap"
-
-	"0chain.net/core/logging"
+	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
 )
 
 //msgp:ignore challengePoolStat

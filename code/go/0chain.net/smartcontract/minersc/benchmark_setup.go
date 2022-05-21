@@ -3,7 +3,7 @@ package minersc
 import (
 	"strconv"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 

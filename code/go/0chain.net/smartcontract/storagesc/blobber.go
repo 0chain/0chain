@@ -1,12 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/core/datastore"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
+	"0chain.net/core/datastore"
 
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"

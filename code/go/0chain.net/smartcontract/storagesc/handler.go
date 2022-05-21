@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/logging"

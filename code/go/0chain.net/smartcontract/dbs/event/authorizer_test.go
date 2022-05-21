@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"

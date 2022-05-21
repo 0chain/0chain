@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 	// "context"
 	"encoding/json"
 	// "net/url"

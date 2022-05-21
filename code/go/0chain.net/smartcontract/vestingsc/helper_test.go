@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
