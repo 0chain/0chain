@@ -179,11 +179,35 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	if rewardBal > 0 {
-		for i := 0; i < int(rewardBal); i++ {
-			if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
-				return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+		rShare := rewardBal / currency.Coin(len(stakePools))
+		c, err := rewardBal.Int64()
+		if err != nil {
+			return err
+		}
+		if rShare == 0 {
+			for i := int64(0); i < c; i++ {
+				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+				}
+			}
+		} else {
+
+			for i := range stakePools {
+				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+				}
+			}
+
+			rl := rewardBal - rShare
+			if rl > 0 {
+				for i := 0; i < int(rl); i++ {
+					if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+						return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+					}
+				}
 			}
 		}
+
 	}
 
 	for i, qsp := range stakePools {
