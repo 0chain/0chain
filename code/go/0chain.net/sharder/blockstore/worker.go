@@ -32,3 +32,11 @@ func setupVolumeRevivingWorker(ctx context.Context) {
 		}
 	}
 }
+
+func setupColdWorker(ctx context.Context) {
+	for {
+		if true {
+			break
+		}
+	}
+}
