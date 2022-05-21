@@ -1,16 +1,17 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/stakepool"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
+
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/logging"
+	"0chain.net/smartcontract/stakepool"
+	"go.uber.org/zap"
 
 	"0chain.net/rest/restinterface"
 
@@ -1375,7 +1376,7 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 	}
 	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't convert to storageAllocationBlobbers"))
 	}
 
 	common.Respond(w, r, sa, nil)
