@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"

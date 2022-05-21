@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"gorm.io/gorm"
 )

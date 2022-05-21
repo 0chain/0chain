@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	cState "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"

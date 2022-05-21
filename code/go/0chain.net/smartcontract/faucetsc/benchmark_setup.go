@@ -2,9 +2,9 @@ package faucetsc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/util"
-	"0chain.net/pkg/currency"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 )

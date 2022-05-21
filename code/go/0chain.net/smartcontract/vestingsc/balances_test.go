@@ -2,13 +2,13 @@ package vestingsc
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"0chain.net/pkg/currency"
 	"0chain.net/smartcontract/dbs/event"
 )
 

@@ -1,10 +1,10 @@
 package state
 
 import (
-	"0chain.net/core/datastore"
-	"0chain.net/pkg/currency"
-
 	"io/ioutil"
+
+	"0chain.net/chaincore/currency"
+	"0chain.net/core/datastore"
 
 	"gopkg.in/yaml.v2"
 )

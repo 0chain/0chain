@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"go.uber.org/zap"
 

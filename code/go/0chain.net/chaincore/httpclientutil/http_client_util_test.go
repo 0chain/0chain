@@ -13,7 +13,7 @@ import (
 	"sync"
 	"testing"
 
-	"0chain.net/pkg/currency"
+	"0chain.net/chaincore/currency"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

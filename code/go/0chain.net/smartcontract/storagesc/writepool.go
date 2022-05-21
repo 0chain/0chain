@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/logging"
-	"0chain.net/pkg/currency"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool"
