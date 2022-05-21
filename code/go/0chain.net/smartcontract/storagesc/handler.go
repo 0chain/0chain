@@ -560,7 +560,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	}
 	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
-	var minLockDemand state.Balance
+	var minLockDemand currency.Coin
 
 	ids := append(req.Blobbers, blobbers...)
 	uniqueMap := make(map[string]struct{})
@@ -574,7 +574,6 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	if len(unique) > req.ParityShards+req.DataShards {
 		unique = unique[:req.ParityShards+req.DataShards]
 	}
-
 
 	nodes := ssc.getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
