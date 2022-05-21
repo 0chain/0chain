@@ -260,7 +260,7 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
 	}
-	if c.ChainConfig.Faucet() {
+	if c.ChainConfig.IsFaucetEnabled() {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
 			viper.GetInt64("development.faucet.refill_amount"),
 			`{"name":"refill","input":{}}`, 0)

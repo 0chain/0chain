@@ -292,7 +292,7 @@ func main() {
 	initHandlers(sc)
 
 	go sc.RegisterClient()
-	if sc.ChainConfig.Miner() {
+	if sc.ChainConfig.IsFeeEnabled() {
 		go sc.SetupSC(ctx)
 	}
 

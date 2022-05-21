@@ -140,18 +140,17 @@ const (
 )
 
 type ChainConfig interface {
-	State() bool
-	Dkg() bool
-	ViewChange() bool
-	BlockRewards() bool
-	Storage() bool
-	Faucet() bool
-	Interest() bool
-	// Indicates is fees enabled
-	Miner() bool
-	Multisig() bool
-	Vesting() bool
-	Zcn() bool
+	IsStateEnabled() bool
+	IsDkgEnabled() bool
+	IsViewChangeEnabled() bool
+	IsBlockRewardsEnabled() bool
+	IsStorageEnabled() bool
+	IsFaucetEnabled() bool
+	IsInterestEnabled() bool
+	IsFeeEnabled() bool
+	IsMultisigEnabled() bool
+	IsVestingEnabled() bool
+	IsZcnEnabled() bool
 	OwnerID() datastore.Key
 	BlockSize() int32
 	MinBlockSize() int32

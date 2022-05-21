@@ -102,7 +102,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolint: unused
-	if !sc.ChainConfig.ViewChange() {
+	if !sc.ChainConfig.IsViewChangeEnabled() {
 		return nil
 	}
 

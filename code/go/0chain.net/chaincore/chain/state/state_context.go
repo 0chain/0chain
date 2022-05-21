@@ -247,7 +247,7 @@ func (sc *StateContext) Validate() error {
 		}
 	}
 	totalValue := state.Balance(sc.txn.Value)
-	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 
 	if isFeeEnabled {
 		totalValue += state.Balance(sc.txn.Fee)

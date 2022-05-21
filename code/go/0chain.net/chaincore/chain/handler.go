@@ -525,7 +525,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "DKG phase / restarts")
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "<td class='number'>")
-		if !c.ChainConfig.ViewChange() {
+		if !c.ChainConfig.IsViewChangeEnabled() {
 			fmt.Fprint(w, "DKG process disabled")
 		} else {
 			fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
@@ -939,7 +939,7 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 
 func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 	c := GetServerChain()
-	if !c.ChainConfig.ViewChange() {
+	if !c.ChainConfig.IsViewChangeEnabled() {
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 		ss := []byte(`<doctype html><html><head>
 <title>DKG process informations</title></head><body>

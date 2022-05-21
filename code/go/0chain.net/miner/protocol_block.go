@@ -963,7 +963,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
 	}
 
-	if mc.ChainConfig.Miner() {
+	if mc.ChainConfig.IsFeeEnabled() {
 		err = mc.processTxn(ctx, mc.createFeeTxn(b, blockState), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
@@ -980,7 +980,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if mc.ChainConfig.BlockRewards() &&
+	if mc.ChainConfig.IsBlockRewardsEnabled() &&
 		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b, blockState), b, blockState, iterInfo.clients)

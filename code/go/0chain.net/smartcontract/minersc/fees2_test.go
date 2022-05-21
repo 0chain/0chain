@@ -1,10 +1,8 @@
 package minersc_test
 
 import (
-	"errors"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"0chain.net/smartcontract/minersc"
@@ -361,7 +359,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	require.NoError(t, err)
 
 	// Add information only relevant to view change rounds
-	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{ViewChange: true})
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{IsViewChangeEnabled: true})
 
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
@@ -382,27 +380,4 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	confirmResults(t, *globalNode, runtime, f, mn, ctx)
 
 	return err
-}
-
-type TestConfigReader struct {
-	Fields map[string]interface{}
-	mu     sync.Mutex
-}
-
-func (cr *TestConfigReader) ReadValue(name string) (interface{}, error) {
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
-
-	v, found := cr.Fields[name]
-	if !found {
-		return nil, errors.New("chain config - read config - invalid configuration name")
-	}
-	return v, nil
-}
-
-func (cr *TestConfigReader) WriteValue(name string, val interface{}) {
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
-
-	cr.Fields[name] = val
 }

@@ -263,7 +263,7 @@ func main() {
 		} else {
 			oldDKGShare, err = miner.LoadDKGSummary(ctx, strconv.FormatInt(genesisDKG, 10))
 			if err != nil {
-				if mc.ChainConfig.ViewChange() {
+				if mc.ChainConfig.IsViewChangeEnabled() {
 					logging.Logger.Error(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
 				} else {
 					logging.Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
@@ -277,7 +277,7 @@ func main() {
 		}
 
 		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
-			if mc.ChainConfig.ViewChange() {
+			if mc.ChainConfig.IsViewChangeEnabled() {
 				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {
 				logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
@@ -320,9 +320,9 @@ func main() {
 		go TransactionGenerator(mc.Chain, workdir)
 	}
 
-	if mc.ChainConfig.Miner() {
+	if mc.ChainConfig.IsFeeEnabled() {
 		go mc.SetupSC(ctx)
-		if mc.ChainConfig.ViewChange() {
+		if mc.ChainConfig.IsViewChangeEnabled() {
 			go mc.DKGProcess(ctx)
 		}
 	}

@@ -301,7 +301,7 @@ func (mc *Chain) SaveClients(clients []*client.Client) error {
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
-	if !mc.ChainConfig.ViewChange() {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return
 	}
 

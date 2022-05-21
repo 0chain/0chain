@@ -161,7 +161,7 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
 		return common.InvalidRequest("to client id must be a hexadecimal hash")
 	}
-	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
 	if isFeeEnabled && t.Fee < 0 {
@@ -206,7 +206,7 @@ func (t *Transaction) Validate(ctx context.Context) error {
 
 /*GetScore - score for write*/
 func (t *Transaction) GetScore() int64 {
-	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 
 	if isFeeEnabled {
 		return t.Fee

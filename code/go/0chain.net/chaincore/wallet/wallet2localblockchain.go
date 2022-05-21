@@ -44,7 +44,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 	txn.Value = value
 	txn.TransactionData = msg
 
-	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 	if isFeeEnabled {
 		txn.Fee = fee
 	}
@@ -62,7 +62,7 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 	txn.Value = value
 	txn.TransactionData = msg
 
-	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 	if isFeeEnabled {
 		txn.Fee = fee
 	}
@@ -86,7 +86,7 @@ func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Trans
 	txn.TransactionData = msg
 	txn.TransactionType = transaction.TxnTypeData
 
-	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 	if isFeeEnabled {
 		txn.Fee = fee
 	}

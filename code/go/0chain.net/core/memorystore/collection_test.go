@@ -2,8 +2,6 @@ package memorystore_test
 
 import (
 	"context"
-	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -316,27 +314,4 @@ func TestCollectionTrimmer(t *testing.T) {
 			memorystore.CollectionTrimmer(tt.args.entityMetadata, tt.args.collection, tt.args.trimSize, tt.args.trimBeyond)
 		})
 	}
-}
-
-type TestConfigReader struct {
-	Fields map[string]interface{}
-	mu     sync.Mutex
-}
-
-func (cr *TestConfigReader) ReadValue(name string) (interface{}, error) {
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
-
-	v, found := cr.Fields[name]
-	if !found {
-		return nil, errors.New("chain config - read config - invalid configuration name")
-	}
-	return v, nil
-}
-
-func (cr *TestConfigReader) WriteValue(name string, val interface{}) {
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
-
-	cr.Fields[name] = val
 }

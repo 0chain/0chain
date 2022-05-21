@@ -225,7 +225,7 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
 
-	isViewChange := config.Configuration().ChainConfig.ViewChange()
+	isViewChange := config.Configuration().ChainConfig.IsViewChangeEnabled()
 	// move phase condition
 	var movePhase = isViewChange &&
 		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
