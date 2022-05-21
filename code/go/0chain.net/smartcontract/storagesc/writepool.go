@@ -261,6 +261,9 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	txnSAS, err := currency.ParseZCN(float64(t.ValueZCN))
+	if err != nil {
+		return "", err
+	}
 	if txnSAS < conf.MinLock || t.ValueZCN <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
