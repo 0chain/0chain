@@ -70,8 +70,7 @@ var (
 
 	ErrFiftyPercent                = errors.New("At least 50%% volumes must be able to store blocks")
 	ErrCacheStorageConfNotProvided = errors.New("Storage type includes cache but cache config not provided")
-	ErrHotStorageConfNotProvided   = errors.New("Storage type includes hot tier but hot tier config not provided")
-	ErrWarmStorageConfNotProvided  = errors.New("Storage type includes warm tier but warm tier config not provided")
+	ErrDiskStorageConfNotProvided  = errors.New("Storage type includes disk tier but disk config not provided")
 	ErrColdStorageConfNotProvided  = errors.New("Storage type includes cold tier but cold tier config not provided")
 	ErrUnableToSelectVolume        = errors.New("Unable to select any available volume")
 	ErrUnableToSelectColdStorage   = errors.New("Unable to select any available cold storage")
@@ -231,7 +230,8 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 	return grandCount.totalBlocksSize, totalBlocksCount
 }
 
-//Converts integer and string representation of number to uint64. 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
+// Converts integer and string representation of number to uint64.
+// 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
 func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 	switch v.(type) {
 	case int:
@@ -264,6 +264,47 @@ func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 				}
 
 				value *= uint64(i)
+			}
+			return value, nil
+		}
+	}
+	return 0, errors.New(fmt.Sprintf("Type unsupported: %T", v))
+}
+
+// Converts integer and string representation of number to int.
+// 10 * 10 * 10 is returned as int(1000); 10^4 is returned as int(10000)
+func getintValueFromYamlConfig(v interface{}) (int, error) {
+	switch v.(type) {
+	case int:
+		return v.(int), nil
+	case string:
+		vStr := v.(string)
+		vStr = strings.ReplaceAll(vStr, " ", "")
+		if strings.Contains(vStr, "^") {
+			res := strings.Split(vStr, "^")
+			r1, err := strconv.Atoi(res[0])
+			if err != nil {
+				return 0, err
+			}
+
+			r2, err := strconv.Atoi(res[1])
+			if err != nil {
+				return 0, err
+			}
+
+			n := math.Pow(float64(r1), float64(r2))
+			return int(n), nil
+
+		} else if strings.Contains(vStr, "*") {
+			var value = int(1)
+			res := strings.Split(vStr, "*")
+			for _, r := range res {
+				i, err := strconv.Atoi(r)
+				if err != nil {
+					return 0, err
+				}
+
+				value *= i
 			}
 			return value, nil
 		}
