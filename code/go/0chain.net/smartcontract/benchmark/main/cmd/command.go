@@ -87,6 +87,7 @@ var rootCmd = &cobra.Command{
 				log.Fatal("cannot copy config file to", savePath)
 			}
 		}
+
 		testsTimer := time.Now()
 		suites := getTestSuites(data, tests, omittedTests)
 		results := runSuites(suites, mpt, root, data)

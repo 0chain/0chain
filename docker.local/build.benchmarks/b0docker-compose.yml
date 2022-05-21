@@ -1,0 +1,42 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../benchmarks/data/postgresql:/var/lib/postgresql/data
+    networks:
+      default:
+
+  benchmark:
+    image: "zchain_benchmarks"
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.25'
+    #       memory: 250M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 100M
+    environment:
+      - DOCKER=true
+    volumes:
+      - ../config:/config
+      - ../benchmarks/saved_data:/saved_data
+    command: ./bin/main  benchmark --tests "storage"
+    depends_on:
+      - postgres
+    links:
+      - postgres
+volumes:
+  saved_data:
+  config:
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true

@@ -199,17 +199,34 @@ func setUpMpt(
 	if viper.GetBool(benchmark.EventDbEnabled) {
 		timer = time.Now()
 
-		eventDb, err = event.NewEventDb(dbs.DbAccess{
-			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-			Name:            viper.GetString(benchmark.EventDbName),
-			User:            viper.GetString(benchmark.EventDbUser),
-			Password:        viper.GetString(benchmark.EventDbPassword),
-			Host:            viper.GetString(benchmark.EventDbHost),
-			Port:            viper.GetString(benchmark.EventDbPort),
-			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-		})
+		tick := func() (*event.EventDb, error) {
+			return event.NewEventDb(dbs.DbAccess{
+				Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+				Name:            viper.GetString(benchmark.EventDbName),
+				User:            viper.GetString(benchmark.EventDbUser),
+				Password:        viper.GetString(benchmark.EventDbPassword),
+				Host:            viper.GetString(benchmark.EventDbHost),
+				Port:            viper.GetString(benchmark.EventDbPort),
+				MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+				MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			})
+		}
+
+		t := time.NewTicker(time.Second)
+		eventDb, err = tick()
+		if err != nil {
+			for true {
+				<-t.C
+				eventDb, err = tick()
+				if err == nil {
+					break
+				} else {
+					log.Println("no connection to eventDB yet: " + err.Error())
+				}
+			}
+
+		}
 		if err != nil {
 			log.Fatal(err)
 		}
