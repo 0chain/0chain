@@ -255,7 +255,7 @@ func (nar *newAllocationRequest) callNewAllocReq(t testing.TB, clientID string,
 		tx    = newTransaction(clientID, ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
-	return ssc.newAllocationRequest(tx, input, balances)
+	return ssc.newAllocationRequest(tx, input, balances, nil)
 }
 
 func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
