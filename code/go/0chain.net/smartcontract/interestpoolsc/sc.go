@@ -199,10 +199,14 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	case util.ErrValueNotPresent:
 		const pfx = "smart_contracts.interestpoolsc."
 		var conf = config.SmartContractConfig
+		var err2 error
 		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
 		gn.APR = conf.GetFloat64(pfx + "apr")
 		gn.MinLock = currency.Coin(conf.GetInt64(pfx + "min_lock"))
-		gn.MaxMint = currency.Coin(conf.GetFloat64(pfx+"max_mint") * 1e10)
+		gn.MaxMint, err2 = currency.ParseZCN(conf.GetFloat64(pfx + "max_mint"))
+		if err2 != nil {
+			return nil, err2
+		}
 		gn.OwnerId = conf.GetString(pfx + "owner_id")
 		gn.Cost = conf.GetStringMapInt(pfx + "cost")
 		if funcName != "updateVariables" {
