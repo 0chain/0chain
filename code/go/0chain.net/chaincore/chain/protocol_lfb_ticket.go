@@ -337,8 +337,10 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// send for all subscribers, if any
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
-			latest = ticket // update the latest
-			logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
+			if latest.Round < ticket.Round {
+				latest = ticket // update the latest
+				logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
+			}
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
@@ -362,6 +364,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 	select {
 	case c.updateLFBTicket <- ticket:
+		logging.Logger.Debug("AddReceivedLFBTicket", zap.Int64("round", ticket.Round))
 	case <-ctx.Done():
 	}
 }
