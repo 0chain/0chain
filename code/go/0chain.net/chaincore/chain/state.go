@@ -300,7 +300,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	case transaction.TxnTypeSend:
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
-			currency.Coin(txn.Value)))
+			currency.Coin(txn.ValueZCN)))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
 				zap.Any("txn type", txn.TransactionType),

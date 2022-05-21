@@ -247,7 +247,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	if t.Value < conf.MinLock {
+	if t.ValueZCN < conf.MinLock {
 		return "", common.NewError("read_pool_lock_failed",
 			"insufficient amount to lock")
 	}
@@ -289,7 +289,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   currency.Coin(t.Value),
+			Balance:   currency.Coin(t.ValueZCN),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -303,7 +303,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.ReadPrice) / total
 			bps.add(&blobberPool{
-				Balance:   currency.Coin(float64(t.Value) * ratio),
+				Balance:   currency.Coin(float64(t.ValueZCN) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}
@@ -328,11 +328,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     currency.Coin(t.Value),
+			Amount:     currency.Coin(t.ValueZCN),
 		}); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
-		ap.Balance = currency.Coin(t.Value)
+		ap.Balance = currency.Coin(t.ValueZCN)
 		ap.ID = t.Hash
 	}
 

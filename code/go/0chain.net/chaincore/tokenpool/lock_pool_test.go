@@ -61,7 +61,7 @@ func (ts *tokenStat) Decode(input []byte) error {
 func TestTransferToLockPool(t *testing.T) {
 	txn := &transaction.Transaction{}
 	txn.ClientID = C0
-	txn.Value = 10
+	txn.ValueZCN = 10
 	txn.CreationDate = common.Now()
 	p0 := &tokenpool.ZcnLockingPool{}
 	p0.TokenLockInterface = &tokenLock{Duration: LOCKUPTIME90DAYS, StartTime: common.Now()}
@@ -70,7 +70,7 @@ func TestTransferToLockPool(t *testing.T) {
 	}
 
 	p1 := &tokenpool.ZcnPool{}
-	txn.Value = 2
+	txn.ValueZCN = 2
 	txn.ClientID = C1
 	txn.CreationDate = common.Now()
 	if _, _, err := p1.DigPool(C1, txn); err != nil {
@@ -279,12 +279,12 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	t.Parallel()
 
 	txn := transaction.Transaction{}
-	txn.Value = 5
+	txn.ValueZCN = 5
 	txn.ClientID = "client id"
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	p.Balance += currency.Coin(txn.Value)
+	p.Balance += currency.Coin(txn.ValueZCN)
 	p.ID = "pool id"
 
 	tpr := &tokenpool.TokenPoolTransferResponse{
@@ -292,9 +292,9 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 		FromClient: txn.ClientID,
 		ToPool:     p.ID,
 		ToClient:   txn.ToClientID,
-		Value:      currency.Coin(txn.Value),
+		Value:      currency.Coin(txn.ValueZCN),
 	}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.ValueZCN))
 
 	type fields struct {
 		ZcnPool            tokenpool.ZcnPool

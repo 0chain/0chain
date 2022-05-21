@@ -785,9 +785,9 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
-		Value:        request.Size,
+		ValueZCN:     request.Size,
 		ClientID:     clientId,
 		ToClientID:   storageScId,
 		CreationDate: creationDate,

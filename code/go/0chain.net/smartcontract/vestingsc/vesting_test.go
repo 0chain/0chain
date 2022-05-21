@@ -361,7 +361,7 @@ func TestVestingSmartContract_stop(t *testing.T) {
 		"only owner can stop a vesting")
 
 	// 6. destination not found
-	tx.Value = 1
+	tx.ValueZCN = 1
 	tx.ClientID = client.id
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
 	requireErrMsg(t, err, `stop_vesting_failed: `+

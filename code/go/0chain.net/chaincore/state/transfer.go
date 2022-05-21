@@ -21,8 +21,8 @@ type Transfer struct {
 }
 
 //NewTransfer - create a new transfer
-func NewTransfer(fromClientID, toClientID datastore.Key, amount currency.Coin) *Transfer {
-	t := &Transfer{ClientID: fromClientID, ToClientID: toClientID, Amount: amount}
+func NewTransfer(fromClientID, toClientID datastore.Key, zcn currency.Coin) *Transfer {
+	t := &Transfer{ClientID: fromClientID, ToClientID: toClientID, Amount: zcn}
 	return t
 }
 

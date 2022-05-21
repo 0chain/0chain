@@ -607,18 +607,18 @@ func TestExtendAllocation(t *testing.T) {
 			ClientID:     mockOwner,
 			ToClientID:   ADDRESS,
 			CreationDate: now,
-			Value:        zcnToInt64(args.value),
+			ValueZCN:     zcnToInt64(args.value),
 		}
 		txn.Hash = mockHash
-		if txn.Value > 0 {
+		if txn.ValueZCN > 0 {
 			balances.On(
 				"GetClientBalance", txn.ClientID,
-			).Return(currency.Coin(txn.Value+1), nil).Once()
+			).Return(currency.Coin(txn.ValueZCN+1), nil).Once()
 			balances.On(
 				"AddTransfer", &state.Transfer{
 					ClientID:   txn.ClientID,
 					ToClientID: txn.ToClientID,
-					Amount:     currency.Coin(txn.Value),
+					Amount:     currency.Coin(txn.ValueZCN),
 				},
 			).Return(nil).Once()
 		}
@@ -1220,7 +1220,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	)
 
 	tx.Hash = txHash
-	tx.Value = 400
+	tx.ValueZCN = 400
 	tx.ClientID = clientID
 	tx.CreationDate = toSeconds(2 * time.Hour)
 
@@ -1390,7 +1390,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
-		tx.Value = 0
+		tx.ValueZCN = 0
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg8)
 	})
@@ -1435,7 +1435,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
-		tx.Value = 400
+		tx.ValueZCN = 400
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg9)
 
@@ -1483,7 +1483,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		balances.balances[clientID] = 1100
 
-		tx.Value = 400
+		tx.ValueZCN = 400
 		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
@@ -1654,7 +1654,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	)
 
 	tx.Hash = txHash
-	tx.Value = 400
+	tx.ValueZCN = 400
 	tx.ClientID = clientID
 	tx.CreationDate = toSeconds(2 * time.Hour)
 
@@ -1707,7 +1707,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	balances.(*testBalances).balances[clientID] = 1100
 
-	tx.Value = 400
+	tx.ValueZCN = 400
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 	require.NoError(t, err)
 }

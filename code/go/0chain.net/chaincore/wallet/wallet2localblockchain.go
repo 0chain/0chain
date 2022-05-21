@@ -41,7 +41,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
-	txn.Value = value
+	txn.ValueZCN = value
 	txn.TransactionData = msg
 	if config.DevConfiguration.IsFeeEnabled {
 		txn.Fee = fee
@@ -57,7 +57,7 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
-	txn.Value = value
+	txn.ValueZCN = value
 	txn.TransactionData = msg
 	if config.DevConfiguration.IsFeeEnabled {
 		txn.Fee = fee

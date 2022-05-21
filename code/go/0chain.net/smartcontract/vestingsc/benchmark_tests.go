@@ -35,7 +35,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{
 		ClientID:     bt.txn.ClientID,
 		ToClientID:   bt.txn.ToClientID,
-		Value:        bt.txn.Value,
+		ValueZCN:     bt.txn.ValueZCN,
 		CreationDate: bt.txn.CreationDate,
 	}
 }
@@ -103,7 +103,7 @@ func BenchmarkTests(
 			endpoint: vsc.add,
 			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
-				Value:    int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
+				ValueZCN: int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
 			},
 			input: func() []byte {
 				var dests destinations

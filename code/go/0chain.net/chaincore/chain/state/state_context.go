@@ -254,7 +254,7 @@ func (sc *StateContext) Validate() error {
 			}
 		}
 	}
-	totalValue := currency.Coin(sc.txn.Value)
+	totalValue := currency.Coin(sc.txn.ValueZCN)
 	if config.DevConfiguration.IsFeeEnabled {
 		totalValue += currency.Coin(sc.txn.Fee)
 	}

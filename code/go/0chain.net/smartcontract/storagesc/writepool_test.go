@@ -128,7 +128,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 		tx       = transaction.Transaction{
 			ClientID:   client.id,
 			ToClientID: ssc.ID,
-			Value:      0,
+			ValueZCN:   0,
 		}
 		lr   lockRequest
 		resp string
@@ -170,23 +170,23 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	requireErrMsg(t, err, errMsg8)
 
 	tx.Hash = "new_write_pool_tx_hash"
-	tx.Value, balances.balances[client.id] = 40, 40 // set {
+	tx.ValueZCN, balances.balances[client.id] = 40, 40 // set {
 	err = ssc.createWritePool(&tx, &alloc, false, balances)
 	require.NoError(t, err)
 	tx.Hash = txHash
-	tx.Value, balances.balances[client.id] = 0, 0 // } reset
+	tx.ValueZCN, balances.balances[client.id] = 0, 0 // } reset
 
 	// 2. malformed request
 	_, err = ssc.writePoolLock(&tx, []byte("} malformed {"), balances)
 	requireErrMsg(t, err, errMsg2)
 	// 3. min lock
-	tx.Value = 5
+	tx.ValueZCN = 5
 	lr.Duration = 5 * time.Second
 	lr.AllocationID = allocID
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg4)
 	// 5. min lock period
-	tx.Value = 15
+	tx.ValueZCN = 15
 	balances.balances[client.id] = 15
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg5)
@@ -208,7 +208,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
 	// 8. 0 lock
-	tx.Value = 0
+	tx.ValueZCN = 0
 	lr.Duration = 5 * time.Second
 	lr.AllocationID = allocID
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)

@@ -174,7 +174,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	var ap = allocationPool{
 		AllocationID: alloc.ID,
 		ExpireAt:     alloc.Until(),
-		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
+		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.ValueZCN),
 	}
 	ap.TokenPool.ID = txn.Hash
 	alloc.addWritePoolOwner(alloc.Owner)
@@ -205,12 +205,12 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if t.Value < int64(mld) || t.Value <= 0 {
+	if t.ValueZCN < int64(mld) || t.ValueZCN <= 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
-			" (%d < %d)", t.Value, mld)
+			" (%d < %d)", t.ValueZCN, mld)
 	}
 
-	if t.Value > 0 {
+	if t.ValueZCN > 0 {
 		var until = alloc.Until()
 		ap, err := newAllocationPool(t, alloc, until, mintNewTokens, balances)
 		if err != nil {
@@ -260,7 +260,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	if t.Value < conf.MinLock || t.Value <= 0 {
+	if t.ValueZCN < conf.MinLock || t.ValueZCN <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
@@ -300,7 +300,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   currency.Coin(t.Value),
+			Balance:   currency.Coin(t.ValueZCN),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -314,7 +314,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.WritePrice) / total
 			bps.add(&blobberPool{
-				Balance:   currency.Coin(float64(t.Value) * ratio),
+				Balance:   currency.Coin(float64(t.ValueZCN) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}

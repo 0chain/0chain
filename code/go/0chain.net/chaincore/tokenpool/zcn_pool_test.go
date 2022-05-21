@@ -110,7 +110,7 @@ func TestZcnPool_DigPool_Err(t *testing.T) {
 	t.Parallel()
 
 	txn := transaction.Transaction{}
-	txn.Value = -1
+	txn.ValueZCN = -1
 
 	type fields struct {
 		TokenPool TokenPool
