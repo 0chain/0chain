@@ -37,6 +37,7 @@ type FetchQueueStat struct {
 
 type BlockFetchReply struct {
 	Hash  string       // hash of the block requested, used internally
+	Round int64        // round of the block requested, used internally
 	Block *block.Block // block, if given
 	Err   error        // error on failure
 }
@@ -79,7 +80,7 @@ func (bf *BlockFetcher) terminate(ctx context.Context, bfr *blockFetchRequest,
 
 	for _, rp := range bfr.replies {
 		select {
-		case rp <- BlockFetchReply{Hash: bfr.hash, Err: err}:
+		case rp <- BlockFetchReply{Hash: bfr.hash, Round: bfr.round, Err: err}:
 		case <-ctx.Done():
 		}
 	}
@@ -91,7 +92,7 @@ func (bf *BlockFetcher) respond(ctx context.Context, bfr *blockFetchRequest,
 
 	for _, rp := range bfr.replies {
 		select {
-		case rp <- BlockFetchReply{Hash: bfr.hash, Block: b}:
+		case rp <- BlockFetchReply{Hash: bfr.hash, Round: bfr.round, Block: b}:
 		case <-ctx.Done():
 		}
 	}
@@ -167,11 +168,12 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 		// handle block fetch requests
 		case bfr := <-bf.fetchBlock:
-
-			var have, ok = fetching[bfr.hash]
-			if ok {
-				have.replies = append(have.replies, bfr.replies...)
-				continue
+			if bfr.hash != "" {
+				var have, ok = fetching[bfr.hash]
+				if ok {
+					have.replies = append(have.replies, bfr.replies...)
+					continue
+				}
 			}
 
 			if len(fetching) >= total {
@@ -179,12 +181,16 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 				continue
 			}
 
-			fetching[bfr.hash] = bfr // add, increasing map length
+			if bfr.hash != "" {
+				fetching[bfr.hash] = bfr // add, increasing map length
+			} else {
+				fetching[strconv.FormatInt(bfr.round, 10)] = bfr
+			}
 
 			// if force from sharders
 			if bfr.sharders {
 				if bf.acquire(ctx, shardersl) {
-					fetching[bfr.hash] = bfr
+					//fetching[bfr.hash] = bfr
 					go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
 				} else {
 					go bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull)
@@ -194,7 +200,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 			// fetch from miners first
 			if bf.acquire(ctx, minersl) {
-				fetching[bfr.hash] = bfr
+				//fetching[bfr.hash] = bfr
 				go bf.fetchFromMiners(ctx, bfr, got, chainer, minersl)
 			} else {
 				// don't try to fetch from sharder on miners full queue
@@ -206,12 +212,19 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			// process fetching results
 			var bfr, ok = fetching[rpl.Hash]
 			if !ok {
-				panic("BlockFetcher, invalid state: missing block fetch request")
+				bfr, ok = fetching[strconv.FormatInt(rpl.Round, 10)]
+				if !ok {
+					panic("BlockFetcher, invalid state: missing block fetch request")
+				}
 			}
 
 			// got the correct response
 			if rpl.Block != nil {
-				delete(fetching, rpl.Hash)
+				if rpl.Hash != "" {
+					delete(fetching, rpl.Hash)
+				} else {
+					delete(fetching, strconv.FormatInt(rpl.Round, 10))
+				}
 				go bf.respond(ctx, bfr, rpl.Block)
 				continue
 			}
@@ -220,7 +233,11 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 			// already requested from sharders, so, it's the end
 			if bfr.sharders {
-				delete(fetching, rpl.Hash)
+				if rpl.Hash != "" {
+					delete(fetching, rpl.Hash)
+				} else {
+					delete(fetching, strconv.FormatInt(rpl.Round, 10))
+				}
 				go bf.terminate(ctx, bfr, rpl.Err)
 				continue
 			}
@@ -228,7 +245,11 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			// if block round > the latest ticket round, then we shouldn't
 			// request it from sharders (it can't be on sharders)
 			if bfr.round > 0 && bfr.round > latest {
-				delete(fetching, rpl.Hash)
+				if rpl.Hash != "" {
+					delete(fetching, rpl.Hash)
+				} else {
+					delete(fetching, strconv.FormatInt(rpl.Round, 10))
+				}
 				go bf.terminate(ctx, bfr, rpl.Err)
 				continue
 			}
@@ -246,11 +267,11 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 }
 
 func (bf *BlockFetcher) gotError(ctx context.Context, got chan BlockFetchReply,
-	hash string, err error) {
+	hash string, round int64, err error) {
 
 	select {
 	case <-ctx.Done():
-	case got <- BlockFetchReply{Hash: hash, Err: err}:
+	case got <- BlockFetchReply{Hash: hash, Round: round, Err: err}:
 	}
 }
 
@@ -259,7 +280,7 @@ func (bf *BlockFetcher) gotBlock(ctx context.Context, got chan BlockFetchReply,
 
 	select {
 	case <-ctx.Done():
-	case got <- BlockFetchReply{Hash: b.Hash, Block: b}:
+	case got <- BlockFetchReply{Hash: b.Hash, Round: b.Round, Block: b}:
 	}
 }
 
@@ -271,7 +292,7 @@ func (bf *BlockFetcher) fetchFromMiners(ctx context.Context,
 
 	var nb, err = chainer.GetNotarizedBlockFromMiners(ctx, bfr.hash, bfr.round, true)
 	if err != nil {
-		bf.gotError(ctx, got, bfr.hash, err)
+		bf.gotError(ctx, got, bfr.hash, bfr.round, err)
 		return
 	}
 
@@ -290,7 +311,7 @@ func (bf *BlockFetcher) fetchFromSharders(ctx context.Context,
 		SharderID: bfr.sharderID, // if set
 	})
 	if err != nil {
-		bf.gotError(ctx, got, bfr.hash, err)
+		bf.gotError(ctx, got, bfr.hash, bfr.round, err)
 		return
 	}
 
@@ -356,7 +377,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			return nil, datastore.ErrInvalidEntity
 		}
 
-		if gfb.ComputeHash() != ticket.LFBHash {
+		if ticket.LFBHash != "" && gfb.ComputeHash() != ticket.LFBHash {
 			logging.Logger.Error("fetch_fb_from_sharders - wrong block hash",
 				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash))
 			return nil, common.NewError("fetch_fb_from_sharders",
