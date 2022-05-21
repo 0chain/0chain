@@ -20,7 +20,7 @@ const (
 	Float64
 	Boolean
 	String
-	StateBalance
+	CurrencyCoin
 	Key
 	Cost
 	Strings
@@ -81,7 +81,7 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		return strconv.ParseBool(input)
 	case String:
 		return input, nil
-	case StateBalance:
+	case CurrencyCoin:
 		value, err := strconv.ParseInt(input, 10, 64)
 		return currency.Coin(value), err
 	case Strings:

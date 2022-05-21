@@ -218,7 +218,7 @@ var (
 		setting    Setting
 		configType smartcontract.ConfigType
 	}{
-		"max_mint":                      {MaxMint, smartcontract.StateBalance},
+		"max_mint":                      {MaxMint, smartcontract.CurrencyCoin},
 		"time_unit":                     {TimeUnit, smartcontract.Duration},
 		"min_alloc_size":                {MinAllocSize, smartcontract.Int64},
 		"min_alloc_duration":            {MinAllocDuration, smartcontract.Duration},
@@ -230,32 +230,32 @@ var (
 		"readpool.min_lock_period": {ReadPoolMinLockPeriod, smartcontract.Duration},
 		"readpool.max_lock_period": {ReadPoolMaxLockPeriod, smartcontract.Duration},
 
-		"writepool.min_lock":        {WritePoolMinLock, smartcontract.Int64},
+		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
 		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
 
-		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.StateBalance},
-		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.StateBalance},
+		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
+		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
 
 		"free_allocation_settings.data_shards":                   {FreeAllocationDataShards, smartcontract.Int},
 		"free_allocation_settings.parity_shards":                 {FreeAllocationParityShards, smartcontract.Int},
 		"free_allocation_settings.size":                          {FreeAllocationSize, smartcontract.Int64},
 		"free_allocation_settings.duration":                      {FreeAllocationDuration, smartcontract.Duration},
-		"free_allocation_settings.read_price_range.min":          {FreeAllocationReadPriceRangeMin, smartcontract.StateBalance},
-		"free_allocation_settings.read_price_range.max":          {FreeAllocationReadPriceRangeMax, smartcontract.StateBalance},
-		"free_allocation_settings.write_price_range.min":         {FreeAllocationWritePriceRangeMin, smartcontract.StateBalance},
-		"free_allocation_settings.write_price_range.max":         {FreeAllocationWritePriceRangeMax, smartcontract.StateBalance},
+		"free_allocation_settings.read_price_range.min":          {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
+		"free_allocation_settings.read_price_range.max":          {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
+		"free_allocation_settings.write_price_range.min":         {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
+		"free_allocation_settings.write_price_range.max":         {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
 		"free_allocation_settings.max_challenge_completion_time": {FreeAllocationMaxChallengeCompletionTime, smartcontract.Duration},
 		"free_allocation_settings.read_pool_fraction":            {FreeAllocationReadPoolFraction, smartcontract.Float64},
 
 		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
 		"max_blobbers_per_allocation":          {MaxBlobbersPerAllocation, smartcontract.Int},
-		"max_read_price":                       {MaxReadPrice, smartcontract.StateBalance},
-		"max_write_price":                      {MaxWritePrice, smartcontract.StateBalance},
-		"min_write_price":                      {MinWritePrice, smartcontract.StateBalance},
+		"max_read_price":                       {MaxReadPrice, smartcontract.CurrencyCoin},
+		"max_write_price":                      {MaxWritePrice, smartcontract.CurrencyCoin},
+		"min_write_price":                      {MinWritePrice, smartcontract.CurrencyCoin},
 		"failed_challenges_to_cancel":          {FailedChallengesToCancel, smartcontract.Int},
 		"failed_challenges_to_revoke_min_lock": {FailedChallengesToRevokeMinLock, smartcontract.Int},
 		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
@@ -264,8 +264,8 @@ var (
 		"validators_per_challenge":             {ValidatorsPerChallenge, smartcontract.Int},
 		"max_delegates":                        {MaxDelegates, smartcontract.Int},
 
-		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.StateBalance},
-		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.StateBalance},
+		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.CurrencyCoin},
+		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
 		"block_reward.sharder_ratio":    {BlockRewardSharderWeight, smartcontract.Float64},
 		"block_reward.miner_ratio":      {BlockRewardMinerWeight, smartcontract.Float64},
 		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
@@ -318,7 +318,7 @@ func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 			return out, fmt.Errorf("SettingName %s not found in Settings", key)
 		}
 		iSetting := conf.get(info.setting)
-		if info.configType == smartcontract.StateBalance {
+		if info.configType == smartcontract.CurrencyCoin {
 			sbSetting, ok := iSetting.(currency.Coin)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)
@@ -355,7 +355,7 @@ func (conf *Config) setInt(key string, change int) error {
 	return nil
 }
 
-func (conf *Config) setBalance(key string, change currency.Coin) error {
+func (conf *Config) setCoin(key string, change currency.Coin) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
@@ -387,6 +387,11 @@ func (conf *Config) setBalance(key string, change currency.Coin) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.QualifyingStake = change
+	case WritePoolMinLock:
+		if conf.WritePool == nil {
+			conf.WritePool = &writePoolConfig{}
+		}
+		conf.WritePool.MinLock = change
 	default:
 		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
@@ -405,11 +410,6 @@ func (conf *Config) setInt64(key string, change int64) error {
 			conf.ReadPool = &readPoolConfig{}
 		}
 		conf.ReadPool.MinLock = change
-	case WritePoolMinLock:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
-		}
-		conf.WritePool.MinLock = change
 	case StakePoolMinLock:
 		if conf.StakePool == nil {
 			conf.StakePool = &stakePoolConfig{}
@@ -539,9 +539,9 @@ func (conf *Config) set(key string, change string) error {
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
-	case smartcontract.StateBalance:
+	case smartcontract.CurrencyCoin:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := conf.setBalance(key, currency.Coin(value*x10)); err != nil {
+			if err := conf.setCoin(key, currency.Coin(value*x10)); err != nil {
 				return err
 			}
 		} else {

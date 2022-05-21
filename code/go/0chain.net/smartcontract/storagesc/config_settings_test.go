@@ -286,7 +286,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.StateBalance:
+					case smartcontract.CurrencyCoin:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected

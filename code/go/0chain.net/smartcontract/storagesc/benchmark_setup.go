@@ -900,7 +900,7 @@ func SetMockConfig(
 		MaxLockPeriod: viper.GetDuration(sc.StorageReadPoolMaxLockPeriod),
 	}
 	conf.WritePool = &writePoolConfig{
-		MinLock:       int64(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
+		MinLock:       currency.Coin(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
 		MinLockPeriod: viper.GetDuration(sc.StorageWritePoolMinLockPeriod),
 		MaxLockPeriod: viper.GetDuration(sc.StorageWritePoolMaxLockPeriod),
 	}

@@ -324,7 +324,7 @@ func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 		if err != nil {
 			return out, err
 		}
-		if info.ConfigType == smartcontract.StateBalance {
+		if info.ConfigType == smartcontract.CurrencyCoin {
 			sbSetting, ok := iSetting.(currency.Coin)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)
