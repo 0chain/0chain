@@ -52,6 +52,11 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	syncBlocksTicker := time.NewTicker(time.Minute)
+	lfb := sc.GetLatestFinalizedBlock()
+	cr := sc.GetCurrentRound()
+	if cr < lfb.Round {
+		sc.SetCurrentRound(lfb.Round)
+	}
 
 	for {
 		select {
