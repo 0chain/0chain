@@ -206,13 +206,10 @@ storage:
     block_meta_record_path: "/meta/bmr.db"
     query_meta_record_path: "/meta/qmr.db"
   cache:
-    write_policy: "write_through" # write_through, write_back
-    replacement_policy: "lru"
-    poll_interval: 1 # In hour
-    block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
-    volumes:
-      - path: "/path/to/cache/blocks"
-        size: 500 * 1024 * 1024
+  # Current write policy is hard coded to write_through and 
+  # cache replacement policy is lru
+    path: "/path/to/cache"
+    size: 1024*1024*1024
   disk:
     strategy: "some strategy"
     block_moves_in: 720 # In hour; Blocks older than 720 hours will be moved to cold storage is cold storage is enabled
