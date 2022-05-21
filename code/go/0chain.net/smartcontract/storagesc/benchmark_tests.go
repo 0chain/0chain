@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"0chain.net/pkg/currency"
 	sc "0chain.net/smartcontract"
@@ -35,8 +36,13 @@ type BenchTest struct {
 		[]byte,
 		cstate.StateContextI,
 	) (string, error)
-	txn   *transaction.Transaction
-	input []byte
+	txn     *transaction.Transaction
+	input   []byte
+	timings map[string]time.Duration
+}
+
+func (bt BenchTest) Timings() map[string]time.Duration {
+	return bt.timings
 }
 
 func (bt BenchTest) Name() string {
@@ -69,7 +75,6 @@ func BenchmarkTests(
 	for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
 		blobbers = append(blobbers, getMockBlobberId(i))
 	}
-
 	var freeBlobbers []string
 	//		DataShards:                 conf.FreeAllocationSettings.DataShards,
 	//		ParityShards:               conf.FreeAllocationSettings.ParityShards,
@@ -82,6 +87,15 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
+	timings := make(map[string]time.Duration)
+	newAllocationRequestF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.newAllocationRequest(t, r, b, timings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -142,7 +156,7 @@ func BenchmarkTests(
 		// data.Allocations
 		{
 			name:     "storage.new_allocation_request",
-			endpoint: ssc.newAllocationRequest,
+			endpoint: newAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -166,6 +180,7 @@ func BenchmarkTests(
 				}).encode()
 				return bytes
 			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.update_allocation_request",
@@ -346,7 +361,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: now + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     "d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577",
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {

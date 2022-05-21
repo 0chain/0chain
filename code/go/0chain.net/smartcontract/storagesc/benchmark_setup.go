@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/datastore"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -493,6 +494,10 @@ func AddMockBlobbers(
 		if err != nil {
 			panic(err)
 		}
+		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sscId), &datastore.NOIDField{})
+		if err != nil {
+			panic(err)
+		}
 		if viper.GetBool(sc.EventDbEnabled) {
 
 			blobberDb := event.Blobber{
@@ -531,10 +536,6 @@ func AddMockBlobbers(
 				panic(err)
 			}
 		}
-	}
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
-	if err != nil {
-		panic(err)
 	}
 
 	err = partition.Save(balances)
