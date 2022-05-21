@@ -83,7 +83,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
-		ValueZCN:          int64(zcnToBalance(1)),
+		ValueZCN:          1,
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
