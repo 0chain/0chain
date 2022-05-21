@@ -64,25 +64,37 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.PourAmount = currency.Coin(fAmount * 1e10)
+			gn.PourAmount, err = currency.ParseZCN(fAmount)
+			if err != nil {
+				return err
+			}
 		case Settings[MaxPourAmount]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.MaxPourAmount = currency.Coin(fAmount * 1e10)
+			gn.MaxPourAmount, err = currency.ParseZCN(fAmount)
+			if err != nil {
+				return err
+			}
 		case Settings[PeriodicLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.PeriodicLimit = currency.Coin(fAmount * 1e10)
+			gn.PeriodicLimit, err = currency.ParseZCN(fAmount)
+			if err != nil {
+				return err
+			}
 		case Settings[GlobalLimit]:
 			fAmount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to state.balance", key, value)
 			}
-			gn.GlobalLimit = currency.Coin(fAmount * 1e10)
+			gn.GlobalLimit, err = currency.ParseZCN(fAmount)
+			if err != nil {
+				return err
+			}
 		case Settings[IndividualReset]:
 			ir, err := time.ParseDuration(value)
 			if err != nil {
