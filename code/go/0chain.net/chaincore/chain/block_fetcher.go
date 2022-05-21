@@ -403,13 +403,14 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			select {
 			case fb = <-blockC:
 				return validateBlock(fb)
-			default:
-				// or continue to request from all other sharders
+			case <-lctx.Done():
 			}
 		}
 	}
 
 	doneC := make(chan struct{})
+	lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+	defer cancel()
 	go func() {
 		sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
 		close(doneC)
