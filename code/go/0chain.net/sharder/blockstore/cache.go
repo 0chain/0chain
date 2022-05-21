@@ -1,9 +1,10 @@
 package blockstore
 
-// Cache is a simple implementation using native golang map for storing block's minimal data
+// Cache is a simple implementation using simple lru for storing block's minimal data.
 // Sharder should provide config for cache which includes basically path, and its size.
-// Each read cache will be stored uncompressed into the cache path. It access time is stored in a map
-// each time it is read. When cache gets full, half of the cache is emptied that are least recently used.
+// Each read cache will be stored uncompressed into the cache path.
+// For cache is full, and size of latest read block is n then blocks are removed from blocks such
+// that total removed size is >= n
 
 import (
 	"container/list"
@@ -13,16 +14,14 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 type cacher interface {
-	Write(hash string, data []byte, t *time.Time) error
-	Read(hash string) (io.ReadCloser, error)
-	Replace()
-	UpadateMetaData(hash string, t *time.Time)
+	Write(hash string, data []byte) error
+	Read(hash string) ([]byte, error)
 }
 
 // cache manages blocks cache
@@ -41,7 +40,7 @@ type cache struct {
 
 // write will write block to the path and then run go routine to add its entry into
 // lru cache. If the size reaches cache limit, it will try to delete old block caches.
-func (c *cache) write(hash string, data []byte) error {
+func (c *cache) Write(hash string, data []byte) error {
 	logging.Logger.Info(fmt.Sprintf("Writing %v to cache", hash))
 
 	bPath := filepath.Join(c.path, hash)
@@ -71,7 +70,7 @@ func (c *cache) write(hash string, data []byte) error {
 // read read from cache and update the metadata cache.
 // If the read is done but actual file was deleted by other process then
 // `isNew` value is checked and data is re-written.
-func (c *cache) read(hash string) (data []byte, err error) {
+func (c *cache) Read(hash string) (data []byte, err error) {
 	bPath := filepath.Join(c.path, hash)
 	f, err := os.Open(bPath)
 	if err != nil {
@@ -88,7 +87,7 @@ func (c *cache) read(hash string) (data []byte, err error) {
 		n := len(data)
 		isNew := c.lru.Add(hash, n)
 		if isNew {
-			if err := c.write(hash, data); err != nil {
+			if err := c.Write(hash, data); err != nil {
 				c.lru.Remove(hash)
 				return
 			}
@@ -118,6 +117,7 @@ func (c *cache) replace(size int) {
 
 		go func(bPath string) {
 			os.Remove(bPath)
+			c.lru.list.Remove(e)
 		}(bPath)
 
 		sum += delSize
@@ -233,4 +233,32 @@ func (l *lru) getKeysAndCleanList(percent int) <-chan *entry {
 	}()
 
 	return ch
+}
+
+/**********************************Initialization************************************/
+
+func initCache(viper *viper.Viper) cacher {
+	if viper == nil {
+		panic(ErrCacheStorageConfNotProvided)
+	}
+
+	cPath := viper.GetString("path")
+	err := os.RemoveAll(cPath)
+	if err != nil {
+		panic(err)
+	}
+	err = os.MkdirAll(cPath, 0777)
+	if err != nil {
+		panic(err)
+	}
+
+	size, err := getintValueFromYamlConfig(viper.GetString("size"))
+	if err != nil {
+		panic(err)
+	}
+
+	return &cache{
+		path:      cPath,
+		sizeLimit: size,
+	}
 }
