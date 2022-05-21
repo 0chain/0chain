@@ -19,8 +19,8 @@ func makeTestChain(t *testing.T) *Chain {
 	if !ok {
 		t.Fatal("types missmatching")
 	}
-	ch.Config = chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
-	config.Configuration().ChainConfig = ch.Config
+	ch.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
+	config.Configuration().ChainConfig = ch.ChainConfig
 	ch.Initialize()
 	SetupSharderChain(ch)
 	chain.SetServerChain(ch)

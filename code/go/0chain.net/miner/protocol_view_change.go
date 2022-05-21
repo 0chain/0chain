@@ -585,7 +585,7 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 // NextViewChangeOfBlock returns next view change value based on given block.
 func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
 
-	if !mc.Config.ViewChange() {
+	if !mc.ChainConfig.ViewChange() {
 		return lfb.LatestFinalizedMagicBlockRound, nil
 	}
 
@@ -893,7 +893,7 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // previous MB and corresponding DKG. The previous MB can be useless in
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
-	if !mc.Config.ViewChange() {
+	if !mc.ChainConfig.ViewChange() {
 		return
 	}
 

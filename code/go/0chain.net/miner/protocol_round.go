@@ -1778,7 +1778,7 @@ func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
 	if mb == nil {
 		return
 	}
-	if !mc.Config.ViewChange() {
+	if !mc.ChainConfig.ViewChange() {
 		return
 	}
 	var err error

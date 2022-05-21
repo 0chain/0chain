@@ -23,7 +23,7 @@ import (
 // The sendDKGShare sends the generated secShare to the given node.
 func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
-	if !mc.Config.Dkg() {
+	if !mc.ChainConfig.Dkg() {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
 	}
 

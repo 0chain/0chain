@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
+	"0chain.net/smartcontract/dbs"
 )
 
 var (
@@ -136,6 +138,73 @@ const (
 	DeploymentTestNet     = 1
 	DeploymentMainNet     = 2
 )
+
+type ChainConfig interface {
+	State() bool
+	Dkg() bool
+	ViewChange() bool
+	BlockRewards() bool
+	Storage() bool
+	Faucet() bool
+	Interest() bool
+	// Indicates is fees enabled
+	Miner() bool
+	Multisig() bool
+	Vesting() bool
+	Zcn() bool
+	OwnerID() datastore.Key
+	BlockSize() int32
+	MinBlockSize() int32
+	MaxBlockCost() int
+	MaxByteSize() int64
+	MinGenerators() int
+	GeneratorsPercent() float64
+	NumReplicators() int
+	ThresholdByCount() int
+	ThresholdByStake() int
+	ValidationBatchSize() int
+	TxnMaxPayload() int
+	PruneStateBelowCount() int
+	RoundRange() int64
+	BlocksToSharder() int
+	VerificationTicketsTo() int
+	HealthShowCounters() bool
+	HCCycleScan() [2]HealthCheckCycleScan
+	BlockProposalMaxWaitTime() time.Duration
+	BlockProposalWaitMode() int8
+	ReuseTransactions() bool
+	ClientSignatureScheme() string
+	MinActiveSharders() int
+	MinActiveReplicators() int
+	SmartContractTimeout() time.Duration
+	SmartContractSettingUpdatePeriod() int64
+	RoundTimeoutSofttoMin() int
+	RoundTimeoutSofttoMult() int
+	RoundRestartMult() int
+	DbsEvents() dbs.DbAccess
+	FromViper()
+	Update(configMap map[string]string, version int64) error
+	TxnExempt() map[string]bool
+	MinTxnFee() int64
+	ReadValue(name string) (interface{}, error)
+}
+
+// HealthCheckCycleScan -
+type HealthCheckCycleScan struct {
+	Settle time.Duration `json:"settle"`
+	//SettleSecs int           `json:"settle_period_secs"`
+
+	Enabled   bool  `json:"scan_enable"`
+	BatchSize int64 `json:"batch_size"`
+
+	Window int64 `json:"scan_window"`
+
+	RepeatInterval time.Duration `json:"repeat_interval"`
+	//RepeatIntervalMins int           `json:"repeat_interval_mins"`
+
+	//ReportStatusMins int `json:"report_status_mins"`
+	ReportStatus time.Duration `json:"report_status"`
+}
 
 type ConfigReader interface {
 	ReadValue(name string) (interface{}, error)

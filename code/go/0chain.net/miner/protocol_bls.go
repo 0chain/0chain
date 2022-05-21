@@ -36,7 +36,7 @@ func init() {
 // SetDKG - starts the DKG process
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	mc := GetMinerChain()
-	if mc.Config.Dkg() {
+	if mc.ChainConfig.Dkg() {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
 			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
@@ -190,7 +190,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error) {
 
 	r.SetVrfStartTime(time.Now())
-	if !mc.Config.Dkg() {
+	if !mc.ChainConfig.Dkg() {
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain"), nil
 	}
@@ -407,7 +407,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	Logger.Debug("VRF Hurray we've threshold BLS shares",
 		zap.Int64("round", mr.GetRoundNumber()),
 		zap.String("round pointer", fmt.Sprintf("%p", mr)))
-	if !mc.Config.Dkg() {
+	if !mc.ChainConfig.Dkg() {
 		// We're still waiting for threshold number of VRF shares,
 		// even though DKG is not enabled.
 
@@ -474,7 +474,7 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) error {
 
 	var seed int64
-	if mc.Config.Dkg() {
+	if mc.ChainConfig.Dkg() {
 		useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
 		if err != nil {
 			panic(err)

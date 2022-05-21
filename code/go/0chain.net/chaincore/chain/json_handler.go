@@ -340,7 +340,7 @@ func (c *Chain) getInfraHealth() InfraHealth {
 			logging.Logger.Warn("get block state node failed", zap.Error(err))
 		}
 
-		if !c.Config.ViewChange() {
+		if !c.ChainConfig.ViewChange() {
 			isDKGProcessDisabled = true
 		} else {
 			dkgPhase = phase.String()

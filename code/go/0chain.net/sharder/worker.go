@@ -101,7 +101,7 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
-	if !sc.Config.ViewChange() {
+	if !sc.ChainConfig.ViewChange() {
 		return // don't send sharder_keep if view_change is false
 	}
 

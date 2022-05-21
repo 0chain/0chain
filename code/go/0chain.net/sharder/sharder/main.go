@@ -292,7 +292,7 @@ func main() {
 	initHandlers(sc)
 
 	go sc.RegisterClient()
-	if sc.Config.Miner() {
+	if sc.ChainConfig.Miner() {
 		go sc.SetupSC(ctx)
 	}
 

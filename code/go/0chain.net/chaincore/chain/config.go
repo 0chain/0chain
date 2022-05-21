@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 	"go.uber.org/zap"
@@ -38,56 +39,6 @@ const (
 	DefaultRetrySendNotarizedBlockNewMiner = 5
 	DefaultCountPruneRoundStorage          = 5
 )
-
-type Config interface {
-	State() bool
-	Dkg() bool
-	ViewChange() bool
-	BlockRewards() bool
-	Storage() bool
-	Faucet() bool
-	Interest() bool
-	// Indicates is fees enabled
-	Miner() bool
-	Multisig() bool
-	Vesting() bool
-	Zcn() bool
-	OwnerID() datastore.Key
-	BlockSize() int32
-	MinBlockSize() int32
-	MaxBlockCost() int
-	MaxByteSize() int64
-	MinGenerators() int
-	GeneratorsPercent() float64
-	NumReplicators() int
-	ThresholdByCount() int
-	ThresholdByStake() int
-	ValidationBatchSize() int
-	TxnMaxPayload() int
-	PruneStateBelowCount() int
-	RoundRange() int64
-	BlocksToSharder() int
-	VerificationTicketsTo() int
-	HealthShowCounters() bool
-	HCCycleScan() [2]HealthCheckCycleScan
-	BlockProposalMaxWaitTime() time.Duration
-	BlockProposalWaitMode() int8
-	ReuseTransactions() bool
-	ClientSignatureScheme() string
-	MinActiveSharders() int
-	MinActiveReplicators() int
-	SmartContractTimeout() time.Duration
-	SmartContractSettingUpdatePeriod() int64
-	RoundTimeoutSofttoMin() int
-	RoundTimeoutSofttoMult() int
-	RoundRestartMult() int
-	DbsEvents() dbs.DbAccess
-	FromViper()
-	Update(configMap *minersc.GlobalSettings) error
-	TxnExempt() map[string]bool
-	MinTxnFee() int64
-	ReadValue(name string) (interface{}, error)
-}
 
 type ConfigImpl struct {
 	conf  *ConfigData
@@ -309,7 +260,7 @@ func (c *ConfigImpl) HealthShowCounters() bool {
 	return c.conf.HealthShowCounters
 }
 
-func (c *ConfigImpl) HCCycleScan() [2]HealthCheckCycleScan {
+func (c *ConfigImpl) HCCycleScan() [2]config.HealthCheckCycleScan {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
 
@@ -421,23 +372,6 @@ func (c *ConfigImpl) MinTxnFee() int64 {
 	return c.conf.MinTxnFee
 }
 
-// HealthCheckCycleScan -
-type HealthCheckCycleScan struct {
-	Settle time.Duration `json:"settle"`
-	//SettleSecs int           `json:"settle_period_secs"`
-
-	Enabled   bool  `json:"scan_enable"`
-	BatchSize int64 `json:"batch_size"`
-
-	Window int64 `json:"scan_window"`
-
-	RepeatInterval time.Duration `json:"repeat_interval"`
-	//RepeatIntervalMins int           `json:"repeat_interval_mins"`
-
-	//ReportStatusMins int `json:"report_status_mins"`
-	ReportStatus time.Duration `json:"report_status"`
-}
-
 //ConfigData - chain Configuration
 type ConfigData struct {
 	version              int64         `json:"-"` //version of config to track updates
@@ -476,7 +410,7 @@ type ConfigData struct {
 
 	HealthShowCounters bool `json:"health_show_counters"` // display detail counters
 	// Health Check switches
-	HCCycleScan [2]HealthCheckCycleScan
+	HCCycleScan [2]config.HealthCheckCycleScan
 
 	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
@@ -607,10 +541,12 @@ func (c *ConfigImpl) FromViper() {
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
 }
 
-//This update is
-func (c *ConfigImpl) Update(cf *minersc.GlobalSettings) error {
+//Updates the config fields from GlobalSettings fields
+func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	c.guard.Lock()
 	defer c.guard.Unlock()
+
+	cf := &minersc.GlobalSettings{Fields: fields, Version: version}
 
 	conf := c.conf
 	old := conf.version

@@ -103,7 +103,7 @@ func makeTestChain(t *testing.T) *sharder.Chain {
 		t.Fatal("types missmatching")
 	}
 	conf := chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
-	ch.Config = conf
+	ch.ChainConfig = conf
 	ch.Initialize()
 	sharder.SetupSharderChain(ch)
 	chain.SetServerChain(ch)
