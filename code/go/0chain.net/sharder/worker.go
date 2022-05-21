@@ -106,12 +106,12 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) 
 			defer wg.Done()
 			r := startRound + idx
 			var cancel func()
-			ctx, cancel = context.WithTimeout(ctx, 8*time.Second)
+			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
 			// check local to see if exist
-			hash, err := sc.GetBlockHash(ctx, r)
+			hash, err := sc.GetBlockHash(cctx, r)
 			if err == nil {
-				b, err := sc.GetBlockFromHash(ctx, hash, r)
+				b, err := sc.GetBlockFromHash(cctx, hash, r)
 				if err == nil {
 					blocks[idx] = b
 					return
@@ -119,7 +119,7 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) 
 			}
 
 			// this will save block to local and create related round
-			b, err := sc.GetNotarizedBlockFromSharders(ctx, "", r)
+			b, err := sc.GetNotarizedBlockFromSharders(cctx, "", r)
 			if err != nil {
 				logging.Logger.Error("request block from sharders failed",
 					zap.Int64("round", r),
