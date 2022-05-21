@@ -70,6 +70,52 @@ func (d *diskTier) removeSelectedVolume() {
 	d.PrevVolInd--
 }
 
+func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err error) {
+	defer func() {
+		logging.Logger.Info("Selecting next volume")
+		go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
+	}()
+
+	for {
+		logging.Logger.Info(fmt.Sprintf("Waiting channel for selected volume to write block %v", b.Hash))
+		sdv := <-d.SelectedVolumeCh
+		if sdv.err != nil {
+			return "", sdv.err
+		}
+
+		if blockPath, err = sdv.volume.write(b, data, d); err != nil {
+			logging.Logger.Error(err.Error())
+			d.removeSelectedVolume()
+			go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
+			continue
+		}
+
+		return
+	}
+}
+
+func (dTier *diskTier) read(bPath string) (b *block.Block, err error) {
+	b = new(block.Block)
+	f, err := os.Open(bPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	err = datastore.ReadJSON(r, b)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
 type volume struct {
 	Path string
 
@@ -321,7 +367,7 @@ func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
 	return true
 }
 
-func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
+func initDisk(vViper *viper.Viper, mode string) *diskTier {
 	strategy := vViper.GetString("strategy")
 	if strategy == "" {
 		strategy = DefaultVolumeStrategy

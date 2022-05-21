@@ -1,13 +1,17 @@
 package blockstore
 
 import (
+	"bytes"
+	"compress/zlib"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 )
@@ -51,7 +55,7 @@ type blockStore struct {
 	diskTier *diskTier
 	coldTier *coldTier
 	// fields with registered functions as per the config files
-	write  func(b *block.Block) (string, error)
+	write  func(b *block.Block) error
 	read   func(hash string, round int64) (b *block.Block, err error)
 	delete func(hash string) error
 
@@ -67,13 +71,11 @@ func (sm *blockStore) Write(b *block.Block) error {
 	}
 
 	logging.Logger.Info("Writing block: " + b.Hash)
-	blockPath, err := sm.write(b)
+	err := sm.write(b)
 	if err != nil {
 		logging.Logger.Error(err.Error())
 		panic(err)
 	}
-
-	logging.Logger.Info(fmt.Sprintf("Block %v written to %v successfully", b.Hash, blockPath))
 
 	return nil
 }
@@ -108,19 +110,208 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) {
 	*/
 
 	store := new(blockStore)
-
 	switch Tiering(storageType) {
 	default:
 		panic(fmt.Sprint("Unknown storage type: ", storageType))
 	case CacheAndDisk:
 		//
-		fallthrough
+		store.cache = initCache(sViper.Sub("cache"))
+		store.diskTier = initDisk(sViper.Sub("disk"), mode)
+		store.write = func(b *block.Block) (err error) {
+			data, err := getBlockData(b)
+			if err != nil {
+				return err
+			}
+
+			blockPath, err := store.diskTier.write(b, data)
+			if err != nil {
+				return err
+			}
+
+			bwr := blockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   DiskTier,
+				BlockPath: blockPath,
+			}
+			err = bwr.addOrUpdate()
+			if err != nil {
+				os.Remove(blockPath)
+				return err
+			}
+
+			go func() {
+				if err := store.cache.Write(b.Hash, data); err != nil {
+					logging.Logger.Error(err.Error())
+				}
+			}()
+
+			return nil
+		}
+
+		store.read = func(hash string, round int64) (b *block.Block, err error) {
+			b, err = store.readFromCache(hash)
+			if err == nil && b != nil {
+				return
+			}
+			bwr, err := getBWR(hash)
+			b, err = store.diskTier.read(bwr.BlockPath)
+			if err == nil && b != nil {
+				go store.addToCache(b)
+			}
+			return
+		}
+
 	case DiskOnly:
-		//
+		store.diskTier = initDisk(sViper.Sub("disk"), mode)
+		store.write = func(b *block.Block) (err error) {
+			data, err := getBlockData(b)
+			if err != nil {
+				return err
+			}
+
+			blockPath, err := store.diskTier.write(b, data)
+			if err != nil {
+				return err
+			}
+
+			bwr := blockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   DiskTier,
+				BlockPath: blockPath,
+			}
+			err = bwr.addOrUpdate()
+			if err != nil {
+				os.Remove(blockPath)
+				return err
+			}
+
+			return nil
+		}
+
+		store.read = func(hash string, round int64) (b *block.Block, err error) {
+			bwr, err := getBWR(hash)
+			if err != nil {
+				return nil, err
+			}
+			return store.diskTier.read(bwr.BlockPath)
+		}
+
 	case CacheDiskAndCold:
-		//
-		fallthrough
+		store.cache = initCache(sViper.Sub("cache"))
+		store.diskTier = initDisk(sViper.Sub("disk"), mode)
+		store.coldTier = initCold(sViper.Sub("cold"), mode)
+
+		store.write = func(b *block.Block) error {
+			data, err := getBlockData(b)
+			if err != nil {
+				return err
+			}
+
+			blockPath, err := store.diskTier.write(b, data)
+			if err != nil {
+				return err
+			}
+
+			bwr := blockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   DiskTier,
+				BlockPath: blockPath,
+			}
+			err = bwr.addOrUpdate()
+			if err != nil {
+				os.Remove(blockPath)
+				return err
+			}
+
+			go func() {
+				if err := store.cache.Write(b.Hash, data); err != nil {
+					logging.Logger.Error(err.Error())
+				}
+			}()
+
+			return nil
+		}
+
+		store.read = func(hash string, round int64) (b *block.Block, err error) {
+			b, err = store.readFromCache(hash)
+			if err == nil {
+				return
+			}
+
+			bwr, err := getBWR(hash)
+			if err != nil {
+				return nil, err
+			}
+
+			b, err = store.diskTier.read(bwr.BlockPath)
+			if err == nil && b != nil {
+				go store.addToCache(b)
+				return
+			}
+
+			b, err = store.readFromColdTier(hash, bwr.ColdPath)
+			if err == nil && b != nil {
+				go store.addToCache(b)
+			}
+
+			return
+		}
+
+		blockMovementInterval := sViper.GetDuration("block_movement_interval")
+		if blockMovementInterval == 0 {
+			blockMovementInterval = DefaultBlockMovementInterval
+		}
+		store.blockMovementInterval = blockMovementInterval
 	case DiskAndCold:
+		store.diskTier = initDisk(viper.Sub("disk"), mode)
+		store.coldTier = initCold(sViper.Sub("cold"), mode)
+		store.write = func(b *block.Block) error {
+			data, err := getBlockData(b)
+			if err != nil {
+				return err
+			}
+
+			blockPath, err := store.diskTier.write(b, data)
+			if err != nil {
+				return err
+			}
+
+			bwr := blockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   DiskTier,
+				BlockPath: blockPath,
+			}
+			err = bwr.addOrUpdate()
+			if err != nil {
+				os.Remove(blockPath)
+				return err
+			}
+
+			return nil
+		}
+
+		store.read = func(hash string, round int64) (b *block.Block, err error) {
+			bwr, err := getBWR(hash)
+			if err != nil {
+				return nil, err
+			}
+			switch bwr.Tiering {
+			case DiskTier:
+				return store.diskTier.read(bwr.BlockPath)
+			case ColdTier:
+
+			case DiskAndColdTier:
+				b, err = store.diskTier.read(bwr.BlockPath)
+				if err == nil && b != nil {
+					return b, nil
+				}
+
+				b, err = store.readFromColdTier(hash, bwr.ColdPath)
+				return
+			}
+
+			return
+		}
 
 		blockMovementInterval := sViper.GetDuration("block_movement_interval")
 		if blockMovementInterval == 0 {
@@ -130,11 +321,53 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) {
 		//
 	}
 
-	/*
-		setup workers for block movement and cache replacement
-	*/
+	switch Tiering(storageType) {
+	case DiskAndCold, CacheDiskAndCold:
+		go setupColdWorker(ctx)
+	}
+
+	go setupVolumeRevivingWorker(ctx)
 }
 
 func getBlockData(b *block.Block) ([]byte, error) {
 	return json.Marshal(b)
+}
+
+func (store *blockStore) readFromColdTier(hash, coldPath string) (b *block.Block, err error) {
+	data, err := store.coldTier.read(coldPath, hash)
+	if err != nil {
+		return nil, err
+	}
+	r := bytes.NewReader(data)
+	zR, err := zlib.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	err = datastore.ReadJSON(zR, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (store *blockStore) readFromCache(hash string) (b *block.Block, err error) {
+	data, err := store.cache.Read(hash)
+	if err != nil {
+		return nil, err
+	}
+	r := bytes.NewReader(data)
+	err = datastore.ReadJSON(r, b)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+func (store *blockStore) addToCache(b *block.Block) {
+	data, _ := getBlockData(b)
+	err := store.cache.Write(b.Hash, data)
+	if err != nil {
+		logging.Logger.Error(err.Error())
+	}
 }

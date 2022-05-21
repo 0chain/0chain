@@ -1,12 +1,9 @@
 package blockstore
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"sync"
 	"time"
 
@@ -51,17 +48,13 @@ type coldTier struct { //Cold tier
 	Mu *sync.Mutex
 }
 
-func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
+func (ct *coldTier) read(coldPath, hash string) ([]byte, error) {
 	mc, ok := coldStoragesMap[coldPath]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Invalid cold path %v", coldPath))
 	}
 
-	data, err := mc.getBlock(hash)
-	if err != nil {
-		return nil, err
-	}
-	return ioutil.NopCloser(bytes.NewReader(data)), nil
+	return mc.getBlock(hash)
 }
 
 func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err error) {
@@ -188,7 +181,7 @@ func (mc *minioClient) getBlock(hash string) ([]byte, error) {
 	return buffer, nil
 }
 
-func coldInit(cViper *viper.Viper, mode string) *coldTier {
+func initCold(cViper *viper.Viper, mode string) *coldTier {
 
 	cloudStoragesI := cViper.Get("cloud_storages")
 	if cloudStoragesI == nil {
