@@ -88,11 +88,28 @@ func (fc *FaucetSmartContract) getConfigHandler(
 		faucetConfig = gn.FaucetConfig
 	}
 
+	pourAmount, err := faucetConfig.PourAmount.ToZCN()
+	if err != nil {
+		return nil, err
+	}
+	maxPourAmount, err := faucetConfig.MaxPourAmount.ToZCN()
+	if err != nil {
+		return nil, err
+	}
+	periodicLimit, err := faucetConfig.PeriodicLimit.ToZCN()
+	if err != nil {
+		return nil, err
+	}
+	globalLimit, err := faucetConfig.GlobalLimit.ToZCN()
+	if err != nil {
+		return nil, err
+	}
+
 	fields := map[string]string{
-		Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
-		Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
-		Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
-		Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
+		Settings[PourAmount]:      fmt.Sprintf("%v", pourAmount),
+		Settings[MaxPourAmount]:   fmt.Sprintf("%v", maxPourAmount),
+		Settings[PeriodicLimit]:   fmt.Sprintf("%v", periodicLimit),
+		Settings[GlobalLimit]:     fmt.Sprintf("%v", globalLimit),
 		Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
 		Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
 		Settings[OwnerId]:         fmt.Sprintf("%v", faucetConfig.OwnerId),
