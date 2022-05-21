@@ -559,7 +559,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 	)
 
 	if err := srh.GetStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
 		return
 	}
 
@@ -600,7 +600,7 @@ func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.R
 	var wp = &writePool{}
 	clientID := r.URL.Query().Get("client_id")
 	if err := srh.GetStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
 		return
 	}
 
@@ -1758,7 +1758,7 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 	}
 	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
-		err := common.NewErrInternal("missing blobber" + blobberID)
+		err := common.NewErrInternal("missing blobber: " + blobberID)
 		common.Respond(w, r, nil, err)
 		return
 	}
