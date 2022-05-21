@@ -732,6 +732,7 @@ func (c *Chain) GetNotarizedBlockFromSharders(ctx context.Context, hash string, 
 
 	select {
 	case <-ctx.Done():
+		logging.Logger.Error("fetch block context err", zap.Error(ctx.Err()))
 		return nil, ctx.Err()
 	case rpl = <-reply:
 	}
@@ -739,6 +740,7 @@ func (c *Chain) GetNotarizedBlockFromSharders(ctx context.Context, hash string, 
 	switch rpl.Err {
 	case nil:
 	case context.Canceled:
+		logging.Logger.Error("fetch block context cancelled")
 		return nil, context.Canceled
 	default:
 		return nil, rpl.Err
