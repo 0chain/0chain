@@ -83,6 +83,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 					zap.Int64("block round", b.Round), zap.Int64("current round", cr))
 				continue
 			}
+			logging.Logger.Debug("process block", zap.Int64("round", b.Round))
 			sc.processBlock(ctx, b)
 		}
 	}
