@@ -110,8 +110,8 @@ var (
 		Setting    Setting
 		ConfigType smartcontract.ConfigType
 	}{
-		"min_stake":                    {MinStake, smartcontract.StateBalance},
-		"max_stake":                    {MaxStake, smartcontract.StateBalance},
+		"min_stake":                    {MinStake, smartcontract.CurrencyCoin},
+		"max_stake":                    {MaxStake, smartcontract.CurrencyCoin},
 		"max_n":                        {MaxN, smartcontract.Int},
 		"min_n":                        {MinN, smartcontract.Int},
 		"t_percent":                    {TPercent, smartcontract.Float64},
@@ -123,11 +123,11 @@ var (
 		"reward_round_frequency":       {RewardRoundFrequency, smartcontract.Int64},
 		"reward_rate":                  {RewardRate, smartcontract.Float64},
 		"share_ratio":                  {ShareRatio, smartcontract.Float64},
-		"block_reward":                 {BlockReward, smartcontract.StateBalance},
+		"block_reward":                 {BlockReward, smartcontract.CurrencyCoin},
 		"max_charge":                   {MaxCharge, smartcontract.Float64},
 		"epoch":                        {Epoch, smartcontract.Int64},
 		"reward_decline_rate":          {RewardDeclineRate, smartcontract.Float64},
-		"max_mint":                     {MaxMint, smartcontract.StateBalance},
+		"max_mint":                     {MaxMint, smartcontract.CurrencyCoin},
 		"owner_id":                     {OwnerId, smartcontract.Key},
 		"cooldown_period":              {CooldownPeriod, smartcontract.Int64},
 		"cost":                         {Cost, smartcontract.Cost},
@@ -255,7 +255,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
-	case smartcontract.StateBalance:
+	case smartcontract.CurrencyCoin:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
 			if err := gn.setBalance(key, currency.Coin(value*x10)); err != nil {
 				return err

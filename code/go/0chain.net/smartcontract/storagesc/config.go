@@ -45,7 +45,7 @@ type readPoolConfig struct {
 }
 
 type writePoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
+	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
@@ -341,9 +341,18 @@ func getConfiguredConfig() (conf *Config, err error) {
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint = currency.Coin(scc.GetFloat64(pfx+"max_mint") * 1e10)
-	conf.MinStake = currency.Coin(scc.GetFloat64(pfx+"min_stake") * 1e10)
-	conf.MaxStake = currency.Coin(scc.GetFloat64(pfx+"max_stake") * 1e10)
+	conf.MaxMint, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_mint"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_stake"))
+	if err != nil {
+		return nil, err
+	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
@@ -352,12 +361,18 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
-	conf.MaxReadPrice = currency.Coin(
-		scc.GetFloat64(pfx+"max_read_price") * 1e10)
-	conf.MinWritePrice = currency.Coin(
-		scc.GetFloat64(pfx+"min_write_price") * 1e10)
-	conf.MaxWritePrice = currency.Coin(
-		scc.GetFloat64(pfx+"max_write_price") * 1e10)
+	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinWritePrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_write_price"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxWritePrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_write_price"))
+	if err != nil {
+		return nil, err
+	}
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
@@ -367,7 +382,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 		pfx + "readpool.max_lock_period")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock = int64(scc.GetFloat64(pfx+"writepool.min_lock") * 1e10)
+	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "writepool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
 	conf.WritePool.MinLockPeriod = scc.GetDuration(
 		pfx + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = scc.GetDuration(
