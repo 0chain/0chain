@@ -80,7 +80,10 @@ func (fc *FaucetSmartContract) getConfigHandler(
 
 	var faucetConfig *FaucetConfig
 	if gn == nil || gn.FaucetConfig == nil {
-		faucetConfig = getConfig()
+		faucetConfig, err = getConfig()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		faucetConfig = gn.FaucetConfig
 	}
