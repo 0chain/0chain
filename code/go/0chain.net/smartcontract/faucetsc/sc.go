@@ -225,9 +225,10 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	switch err {
 	case nil, util.ErrValueNotPresent:
 		if gn.FaucetConfig == nil {
-			gn.FaucetConfig, err = getConfig()
-			if err != nil {
-				return nil, err
+			var err2 error
+			gn.FaucetConfig, err2 = getConfig()
+			if err2 != nil {
+				return nil, err2
 			}
 		}
 		return gn, err
