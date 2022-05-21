@@ -28,7 +28,7 @@ func init() {
 func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
-	go c.SyncLFBStateWorker(ctx)
+	//go c.SyncLFBStateWorker(ctx)
 	go c.blockFetcher.StartBlockFetchWorker(ctx, c)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
 	go node.Self.Underlying().MemoryUsage()
