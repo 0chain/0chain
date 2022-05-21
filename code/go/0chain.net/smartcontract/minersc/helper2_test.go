@@ -1,9 +1,10 @@
-package minersc
+package minersc_test
 
 import (
 	"strconv"
 	"testing"
 
+	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -46,10 +47,10 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 		Data:        data,
 	})
 }
-func (sc *mockStateContext) EmitError(error)            {}
-func (sc *mockStateContext) GetEvents() []event.Event   { return nil }
-func (sc *mockStateContext) GetEventDB() *event.EventDb { return nil }
-func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                     { return nil }
+func (sc *mockStateContext) EmitError(error)                       {}
+func (sc *mockStateContext) GetEvents() []event.Event              { return nil }
+func (sc *mockStateContext) GetEventDB() *event.EventDb            { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
@@ -101,7 +102,7 @@ func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
 }
 
-func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
+func populateDelegates(t *testing.T, cNodes []*minersc.MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
 	var delegates = [][]float64{}
 	delegates = append(delegates, minerDelegates)
 	delegates = append(delegates, sharderDelegates...)
@@ -123,7 +124,7 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 	}
 }
 
-func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, mn *MinerNode, ctx cstate.StateContextI) {
+func confirmResults(t *testing.T, global minersc.GlobalNode, runtime runtimeValues, f formulae, mn *minersc.MinerNode, ctx cstate.StateContextI) {
 	var epochChangeRound = runtime.blockRound%scYaml.epoch == 0
 
 	if epochChangeRound {

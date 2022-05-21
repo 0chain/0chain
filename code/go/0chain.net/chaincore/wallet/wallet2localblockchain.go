@@ -9,8 +9,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 /*Register - register a wallet using the server side api */
@@ -46,11 +44,8 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 	txn.Value = value
 	txn.TransactionData = msg
 
-	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	if err != nil {
-		logging.Logger.Error("wallet - create send transaction - cannot read chain configuration", zap.Error(err))
-	}
-	if isFeeEnabled == true {
+	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	if isFeeEnabled {
 		txn.Fee = fee
 	}
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {
@@ -67,11 +62,8 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 	txn.Value = value
 	txn.TransactionData = msg
 
-	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	if err != nil {
-		logging.Logger.Error("wallet - create sc transaction - cannot read chain configuration", zap.Error(err))
-	}
-	if isFeeEnabled == true {
+	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	if isFeeEnabled {
 		txn.Fee = fee
 	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
@@ -94,11 +86,8 @@ func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Trans
 	txn.TransactionData = msg
 	txn.TransactionType = transaction.TxnTypeData
 
-	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	if err != nil {
-		logging.Logger.Error("wallet - create data transaction - cannot read chain configuration", zap.Error(err))
-	}
-	if isFeeEnabled == true {
+	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+	if isFeeEnabled {
 		txn.Fee = fee
 	}
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {

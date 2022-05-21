@@ -907,7 +907,7 @@ func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 	return minerNodes, nil
 }
 
-func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
+func UpdateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
 		return common.NewError("update_all_miners_list_failed", err.Error())
 	}
@@ -929,8 +929,8 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 	return dkgMiners, nil
 }
 
-// updateDKGMinersList update the dkg miners list
-func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
+// UpdateDKGMinersList update the dkg miners list
+func UpdateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
 	logging.Logger.Info("update dkg miners list", zap.Int("len", len(dkgMiners.SimpleNodes)))
 	_, err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
 	return err
@@ -1011,7 +1011,7 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	return sharders, nil
 }
 
-func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
+func UpdateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
 	_, err := state.InsertTrieNode(AllShardersKey, sharders)
 	return err
 }

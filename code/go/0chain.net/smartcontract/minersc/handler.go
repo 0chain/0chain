@@ -482,7 +482,7 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 		sn     *MinerNode
 	)
 
-	if sn, err = getMinerNode(id, balances); err != nil {
+	if sn, err = GetMinerNode(id, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
 	}
 

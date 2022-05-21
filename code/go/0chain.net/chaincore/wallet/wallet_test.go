@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/core/logging"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -36,7 +37,7 @@ const (
 )
 
 func init() {
-	config.Configuration().ChainConfig = &TestConfigReader{Fields: map[string]interface{}{}}
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	logging.InitLogging("development", "")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)

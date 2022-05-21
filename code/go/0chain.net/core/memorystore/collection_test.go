@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
@@ -18,7 +19,7 @@ import (
 )
 
 func init() {
-	config.Configuration().ChainConfig = &TestConfigReader{Fields: map[string]interface{}{}}
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	common.SetupRootContext(node.GetNodeContext())
 
 	transaction.SetupEntity(memorystore.GetStorageProvider())

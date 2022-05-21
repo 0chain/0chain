@@ -186,7 +186,6 @@ type ChainConfig interface {
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
 	MinTxnFee() int64
-	ReadValue(name string) (interface{}, error)
 }
 
 // HealthCheckCycleScan -
@@ -206,17 +205,13 @@ type HealthCheckCycleScan struct {
 	ReportStatus time.Duration `json:"report_status"`
 }
 
-type ConfigReader interface {
-	ReadValue(name string) (interface{}, error)
-}
-
 /*Config - all the config options passed from the command line*/
 type Config struct {
 	Host           string
 	Port           int
 	ChainID        string
 	DeploymentMode byte
-	ChainConfig    ConfigReader
+	ChainConfig
 }
 
 /*Configuration of the system */

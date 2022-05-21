@@ -17,7 +17,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	}
 
 	var existingMiner *MinerNode
-	existingMiner, err = getMinerNode(t.ClientID, balances)
+	existingMiner, err = GetMinerNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("miner_health_check_failed",
 			"can't get the miner "+t.ClientID+": "+err.Error())
@@ -42,7 +42,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 
 	existingMiner.LastHealthCheck = t.CreationDate
 
-	if err = updateMinersList(balances, all); err != nil {
+	if err = UpdateMinersList(balances, all); err != nil {
 		return "", common.NewError("miner_health_check_failed",
 			"can't save all miners list: "+err.Error())
 	}
@@ -89,7 +89,7 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 
 	existingSharder.LastHealthCheck = t.CreationDate
 
-	if err = updateAllShardersList(balances, all); err != nil {
+	if err = UpdateAllShardersList(balances, all); err != nil {
 		return "", common.NewError("sharder_health_check_failed",
 			"can't save all sharders list: "+err.Error())
 	}

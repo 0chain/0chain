@@ -13,7 +13,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
@@ -128,7 +127,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
 
-		m, er := getMinerNode(mn.ID, balances)
+		m, er := GetMinerNode(mn.ID, balances)
 		switch er {
 		case nil:
 			mn = m
@@ -275,7 +274,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
-	if err := updateDKGMinersList(balances, dmn); err != nil {
+	if err := UpdateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't cleanup DKG miners: %v", err)
 	}
@@ -283,16 +282,12 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	return
 }
 
-func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
+func (msc *MinerSmartContract) PayFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	isViewChange, err := config.Configuration().ChainConfig.ReadValue("ViewChange")
-	if err != nil {
-		logging.Logger.Error("payfees - cannot read chain configuration", zap.Error(err))
-		return "", err
-	}
-	if isViewChange == true {
+	isViewChange := config.Configuration().ChainConfig.ViewChange()
+	if isViewChange {
 		// TODO: cache the phase node so if when there's no view change happens, we
 		// can avoid unnecessary MPT access
 		var pn *PhaseNode
@@ -326,7 +321,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// the mb generator
 	var mn *MinerNode
-	if mn, err = getMinerNode(mb.MinerID, balances); err != nil {
+	if mn, err = GetMinerNode(mb.MinerID, balances); err != nil {
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			mb.MinerID, err)
 	}

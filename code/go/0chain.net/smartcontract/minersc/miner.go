@@ -107,7 +107,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
-		if err = updateMinersList(balances, allMiners); err != nil {
+		if err = UpdateMinersList(balances, allMiners); err != nil {
 			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
 		}
@@ -153,7 +153,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	}
 
 	var mn *MinerNode
-	mn, err = getMinerNode(deleteMiner.ID, balances)
+	mn, err = GetMinerNode(deleteMiner.ID, balances)
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
@@ -268,7 +268,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	}
 
 	var mn *MinerNode
-	mn, err = getMinerNode(update.ID, balances)
+	mn, err = GetMinerNode(update.ID, balances)
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
@@ -331,8 +331,8 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 	return getMinersList(balances)
 }
 
-// getMinerNode
-func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+// GetMinerNode
+func GetMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 
 	mn := NewMinerNode()
 	mn.ID = id

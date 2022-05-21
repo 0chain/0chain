@@ -153,7 +153,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	// save all sharders list
-	if err = updateAllShardersList(balances, allSharders); err != nil {
+	if err = UpdateAllShardersList(balances, allSharders); err != nil {
 		return "", common.NewErrorf("add_sharder", "saving all sharders list: %v", err)
 	}
 

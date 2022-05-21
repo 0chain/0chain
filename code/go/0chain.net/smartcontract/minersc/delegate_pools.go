@@ -19,7 +19,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	}
 
 	var mn *MinerNode
-	mn, err = getMinerNode(dp.MinerID, balances)
+	mn, err = GetMinerNode(dp.MinerID, balances)
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
@@ -80,7 +80,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	}
 
 	var mn *MinerNode
-	if mn, err = getMinerNode(dp.MinerID, balances); err != nil {
+	if mn, err = GetMinerNode(dp.MinerID, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error getting miner node: %v", err)
 	}

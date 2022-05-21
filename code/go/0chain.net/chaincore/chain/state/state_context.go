@@ -10,10 +10,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"go.uber.org/zap"
 )
 
 //msgp:ignore StateContext
@@ -249,12 +247,9 @@ func (sc *StateContext) Validate() error {
 		}
 	}
 	totalValue := state.Balance(sc.txn.Value)
-	isFeeEnabled, err := config.Configuration().ChainConfig.ReadValue("Miner")
-	if err != nil {
-		logging.Logger.Error("statecontext - validate - cannot read chain configuration", zap.Error(err))
-		return err
-	}
-	if isFeeEnabled == true {
+	isFeeEnabled := config.Configuration().ChainConfig.Miner()
+
+	if isFeeEnabled {
 		totalValue += state.Balance(sc.txn.Fee)
 	}
 	if amount > totalValue {
