@@ -110,24 +110,21 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) 
 			defer cancel()
 			// check local to see if exist
 			hash, err := sc.GetBlockHash(ctx, r)
-			if err != nil {
-				logging.Logger.Debug("request block could not get hash in local store",
-					zap.Int64("round", r), zap.Error(err))
-			}
-
-			b, err := sc.GetBlockFromHash(ctx, hash, r)
-			if err != nil {
-				logging.Logger.Debug("request block could not find block in local store",
-					zap.Int64("round", r), zap.Error(err))
-
-				// this will save block to local and create related round
-				b, err = sc.GetNotarizedBlockFromSharders(ctx, "", r)
-				if err != nil {
-					logging.Logger.Error("request block from sharders failed",
-						zap.Int64("round", r),
-						zap.Error(err))
+			if err == nil {
+				b, err := sc.GetBlockFromHash(ctx, hash, r)
+				if err == nil {
+					blocks[idx] = b
 					return
 				}
+			}
+
+			// this will save block to local and create related round
+			b, err := sc.GetNotarizedBlockFromSharders(ctx, "", r)
+			if err != nil {
+				logging.Logger.Error("request block from sharders failed",
+					zap.Int64("round", r),
+					zap.Error(err))
+				return
 			}
 
 			blocks[idx] = b
