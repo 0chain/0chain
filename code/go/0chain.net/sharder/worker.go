@@ -52,6 +52,10 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	syncBlocksTimer := time.NewTimer(7 * time.Second)
+	aheadN := int64(config.GetLFBTicketAhead())
+	endRound := int64(0)
+
+	const maxRequestBlocks = 20
 
 	for {
 		select {
@@ -60,7 +64,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			return
 		case <-syncBlocksTimer.C:
 			// reset sync timer to 1 minute
-			syncBlocksTimer = time.NewTimer(10 * time.Second)
+			syncBlocksTimer.Reset(time.Minute)
 
 			var (
 				lfbTk = sc.GetLatestLFBTicket(ctx)
@@ -77,7 +81,18 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				cr = lfb.Round
 			}
 
-			go sc.requestBlocks(ctx, cr, lfbTk.Round+int64(config.GetLFBTicketAhead()))
+			endRound = lfbTk.Round + aheadN
+			if endRound <= cr {
+				continue
+			}
+
+			// trunk to send at most 20 blocks each time
+			reqNum := endRound - cr
+			if reqNum > maxRequestBlocks {
+				reqNum = maxRequestBlocks
+			}
+
+			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.GetBlockChannel():
 			cr := sc.GetCurrentRound()
 			if b.Round != sc.GetCurrentRound()+1 {
@@ -87,22 +102,27 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 			logging.Logger.Debug("process block", zap.Int64("round", b.Round))
 			sc.processBlock(ctx, b)
+
+			if b.Round >= endRound {
+				// trigger sync timer immediately
+				syncBlocksTimer.Reset(0)
+			}
 		}
 	}
 }
 
-func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) {
-	const maxRequestBlocks = 20
-	if endRound <= startRound {
-		return
-	}
-
-	// trunk to send at most 20 blocks each time
-	reqNum := endRound - startRound
-	if reqNum > maxRequestBlocks {
-		reqNum = maxRequestBlocks
-	}
-
+func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
+	//const maxRequestBlocks = 20
+	//if endRound <= startRound {
+	//	return
+	//}
+	//
+	//// trunk to send at most 20 blocks each time
+	//reqNum := endRound - startRound
+	//if reqNum > maxRequestBlocks {
+	//	reqNum = maxRequestBlocks
+	//}
+	//
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
 	for i := int64(1); i <= reqNum; i++ {
