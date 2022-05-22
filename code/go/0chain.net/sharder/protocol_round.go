@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -42,7 +42,10 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	errC := make(chan error)
 	doneC := make(chan struct{})
 	t := time.Now()
-	go func() {
+	tc := math.Max(float64(time.Duration(len(b.Txns))*50*time.Millisecond), float64(3*time.Second))
+	cctx, cancel := context.WithTimeout(ctx, time.Duration(tc))
+	defer cancel()
+	go func(ctx context.Context) {
 		defer close(doneC)
 		if b.ClientState != nil {
 			// check if the block's client state is correct
@@ -64,13 +67,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 			}
 			return
 		}
-	}()
-
-	tc := time.NewTimer(3 * time.Second)
-	if node.Self.IsSharder() {
-		// make sure the state is computed for sharders
-		tc = time.NewTimer(3 * time.Minute)
-	}
+	}(cctx)
 
 	var ret bool
 	select {
@@ -82,10 +79,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 			zap.Int64("round", b.Round),
 			zap.Error(err))
 		ret = false
-	case <-tc.C:
-		Logger.Warn("AddNotarizedBlock compute state timeout", zap.Int64("round", b.Round))
-		ret = false
 	}
+
 	go sc.FinalizeRound(r)
 	return ret
 }
