@@ -181,16 +181,21 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 				continue
 			}
 
-			if bfr.hash != "" {
-				fetching[bfr.hash] = bfr // add, increasing map length
-			} else {
-				fetching[strconv.FormatInt(bfr.round, 10)] = bfr
-			}
+			//if bfr.hash != "" {
+			//	fetching[bfr.hash] = bfr // add, increasing map length
+			//} else {
+			//	fetching[strconv.FormatInt(bfr.round, 10)] = bfr
+			//}
 
 			// if force from sharders
 			if bfr.sharders {
 				if bf.acquire(ctx, shardersl) {
 					//fetching[bfr.hash] = bfr
+					if bfr.hash != "" {
+						fetching[bfr.hash] = bfr // add, increasing map length
+					} else {
+						fetching[strconv.FormatInt(bfr.round, 10)] = bfr
+					}
 					go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
 				} else {
 					go bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull)
@@ -201,6 +206,11 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			// fetch from miners first
 			if bf.acquire(ctx, minersl) {
 				//fetching[bfr.hash] = bfr
+				if bfr.hash != "" {
+					fetching[bfr.hash] = bfr // add, increasing map length
+				} else {
+					fetching[strconv.FormatInt(bfr.round, 10)] = bfr
+				}
 				go bf.fetchFromMiners(ctx, bfr, got, chainer, minersl)
 			} else {
 				// don't try to fetch from sharder on miners full queue
