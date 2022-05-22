@@ -130,11 +130,11 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 	//
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
-	for i := int64(1); i <= reqNum; i++ {
+	for i := int64(0); i < reqNum; i++ {
 		wg.Add(1)
 		go func(idx int64) {
 			defer wg.Done()
-			r := startRound + idx
+			r := startRound + idx + 1
 			var cancel func()
 			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
