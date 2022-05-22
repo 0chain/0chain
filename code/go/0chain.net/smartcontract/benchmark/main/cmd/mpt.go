@@ -4,6 +4,7 @@ import (
 	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
+	"golang.org/x/net/context"
 	"os"
 	"path"
 	"sync"
@@ -42,6 +43,7 @@ import (
 )
 
 var BenchDataKey = encryption.Hash("benchData")
+var executor = common.NewWithContextFunc(4)
 
 func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatriciaTrie {
 	pNode := mpt.GetNodeDB()
@@ -163,7 +165,7 @@ func setUpMpt(
 	log.Println("made empty blockchain")
 
 	timer := time.Now()
-	clients, publicKeys, privateKeys := addMockClients(pMpt)
+	clients, publicKeys, privateKeys := addMockClients(context.Background(), pMpt)
 	log.Println("added clients\t", time.Since(timer))
 
 	timer = time.Now()
@@ -197,7 +199,7 @@ func setUpMpt(
 
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
-		timer = time.Now()
+		timer := time.Now()
 
 		tick := func() (*event.EventDb, error) {
 			return event.NewEventDb(dbs.DbAccess{
@@ -251,7 +253,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		_ = storagesc.SetMockConfig(balances)
 		log.Println("created storage config\t", time.Since(timer))
 	}()
@@ -259,7 +261,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
 	}()
@@ -267,15 +269,15 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
-		log.Println("added blobbers\t", time.Since(timer))
+		log.Println("added validators\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
@@ -283,7 +285,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		sharders = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
@@ -297,14 +299,14 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.GetMockValidatorStakePools(clients, balances)
 		log.Println("added validator stake pools\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockAllocations(clients, publicKeys, eventDb, balances)
 		log.Println("added allocations\t", time.Since(timer))
 	}()
@@ -312,7 +314,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockReadPools(clients, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
 	}()
@@ -320,7 +322,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockWritePools(clients, balances)
 		log.Println("added allocation write pools\t", time.Since(timer))
 	}()
@@ -328,7 +330,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockFundedPools(clients, balances)
 		log.Println("added allocation funded pools\t", time.Since(timer))
 	}()
@@ -336,7 +338,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockChallengePools(balances)
 		log.Println("added challenge pools\t", time.Since(timer))
 	}()
@@ -344,42 +346,42 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockChallenges(blobbers, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockClientAllocation(clients, balances)
 		log.Println("added client allocations\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.AddNodeDelegates(clients, miners, sharders, balances)
 		log.Println("adding miners and sharders delegates\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.AddMagicBlock(miners, sharders, balances)
 		log.Println("add magic block\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.SetUpNodes(miners, sharders)
 		log.Println("registering miners and sharders\t", time.Since(timer))
 	}()
@@ -387,7 +389,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.AddPhaseNode(balances)
 		log.Println("added miners phase node\t", time.Since(timer))
 	}()
@@ -395,28 +397,28 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
 		log.Println("added free storage assigners\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockWriteRedeems(clients, publicKeys, eventDb, balances)
 		log.Println("added read redeems\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		faucetsc.AddMockGlobalNode(balances)
 		log.Println("added faucet global node\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		faucetsc.AddMockUserNodes(clients, balances)
 		log.Println("added faucet user nodes\t", time.Since(timer))
 	}()
@@ -424,21 +426,21 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		multisigsc.AddMockWallets(clients, publicKeys, balances)
 		log.Println("added client wallets\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		vestingsc.AddMockClientPools(clients, balances)
 		log.Println("added vesting client pools\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		vestingsc.AddMockVestingPools(clients, balances)
 		vestingsc.AddMockConfig(balances)
 		log.Println("added vesting pools\t", time.Since(timer))
@@ -447,7 +449,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		zcnsc.Setup(eventDb, clients, publicKeys, balances)
 		log.Println("added zcnsc\t", time.Since(timer))
 	}()
@@ -455,7 +457,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		control.AddControlObjects(balances)
 		log.Println("added control objects\t", time.Since(timer))
 	}()
@@ -464,7 +466,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		benchData.EventDb = eventDb
 		benchData.Clients = clients
 		benchData.PublicKeys = publicKeys
@@ -486,32 +488,41 @@ func setUpMpt(
 	return pMpt, balances.GetState().GetRoot(), benchData
 }
 
-func addMockClients(
+func addMockClients(ctx context.Context,
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
-	blsScheme := BLS0ChainScheme{}
 	var clientIds, publicKeys, privateKeys []string
 	activeClients := viper.GetInt(benchmark.NumActiveClients)
 	for i := 0; i < viper.GetInt(benchmark.NumClients); i++ {
-		err := blsScheme.GenerateKeys()
-		if err != nil {
-			panic(err)
-		}
-		publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
-		if err != nil {
-			panic(err)
-		}
-		clientID := encryption.Hash(publicKeyBytes)
+		err := executor.Run(ctx, func(i int) func() error {
+			return func() error {
+				blsScheme := BLS0ChainScheme{}
+				err := blsScheme.GenerateKeys()
+				if err != nil {
+					return err
+				}
+				publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
+				if err != nil {
+					return err
+				}
+				clientID := encryption.Hash(publicKeyBytes)
 
-		if i < activeClients {
-			clientIds = append(clientIds, clientID)
-			publicKeys = append(publicKeys, blsScheme.GetPublicKey())
-			privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
-		}
-		is := &state.State{}
-		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
-		_, err = pMpt.Insert(util.Path(clientID), is)
+				if i < activeClients {
+					clientIds = append(clientIds, clientID)
+					publicKeys = append(publicKeys, blsScheme.GetPublicKey())
+					privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
+				}
+				is := &state.State{}
+				_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+				is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
+				_, err = pMpt.Insert(util.Path(clientID), is)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}(i))
+
 		if err != nil {
 			panic(err)
 		}

@@ -760,22 +760,25 @@ func AddMockWriteRedeems(
 				panic(err)
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
+				t := &event.Transaction{
+					Hash: encryption.Hash("mock transaction hash" + strconv.Itoa(time.Now().Nanosecond())),
+				}
+				eventDb.Store.Get().Create(t)
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
 					AllocationID:  rm.AllocationID,
-					TransactionID: "mock transaction id",
+					TransactionID: t.Hash,
 					OwnerID:       rm.OwnerID,
 					ReadCounter:   rm.ReadCounter,
 					PayerID:       rm.PayerID,
 				}
 				_ = eventDb.Store.Get().Create(&readMarker)
-
 				writeMarker := event.WriteMarker{
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
 					AllocationID:   rm.AllocationID,
-					TransactionID:  "mock transaction id",
+					TransactionID:  t.Hash,
 					AllocationRoot: "mock allocation root",
 				}
 				_ = eventDb.Store.Get().Create(&writeMarker)

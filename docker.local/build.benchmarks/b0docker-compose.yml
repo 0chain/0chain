@@ -2,6 +2,7 @@ version: '3'
 services:
   postgres:
     image: postgres:14
+    command: postgres -c stats_temp_directory=/tmp
     environment:
       POSTGRES_PORT: 5432
       POSTGRES_HOST: postgres
@@ -9,19 +10,12 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - ../benchmarks/data/postgresql:/var/lib/postgresql/data
+      - ../sql_script/:/docker-entrypoint-initdb.d/
     networks:
       default:
 
   benchmark:
     image: "zchain_benchmarks"
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.25'
-    #       memory: 250M
-    #     reservations:
-    #       cpus: '0.1'
-    #       memory: 100M
     environment:
       - DOCKER=true
     volumes:
@@ -32,11 +26,11 @@ services:
       - postgres
     links:
       - postgres
+    networks:
+      default:
 volumes:
   saved_data:
   config:
 networks:
   default:
     driver: bridge
-  testnet0:
-    external: true
