@@ -92,6 +92,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				reqNum = maxRequestBlocks
 			}
 
+			endRound = cr + reqNum
+
 			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.GetBlockChannel():
 			cr := sc.GetCurrentRound()
@@ -103,9 +105,12 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			logging.Logger.Debug("process block", zap.Int64("round", b.Round))
 			sc.processBlock(ctx, b)
 
+			lfbTk := sc.GetLatestLFBTicket(ctx)
 			if b.Round >= endRound {
-				// trigger sync timer immediately
-				syncBlocksTimer.Reset(0)
+				// trigger sync timer immediately as the
+				if endRound < lfbTk.Round {
+					syncBlocksTimer.Reset(0)
+				}
 			}
 		}
 	}
