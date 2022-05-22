@@ -313,22 +313,32 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 			}
 		}
 
-		Logger.Debug("finalize block - state not computed, try to fetch state changes",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash),
-			zap.String("prev block", fb.PrevHash))
-
-		//fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
-
-		if err := c.GetBlockStateChange(fb); err != nil {
-			Logger.Error("finalize block failed, compute state failed",
+		if node.Self.IsSharder() {
+			// compute state
+			if err := c.ComputeState(ctx, fb); err != nil {
+				Logger.Error("finalize block - compute state failed",
+					zap.Int64("round", fb.Round),
+					zap.Error(err))
+				return
+			}
+		} else {
+			Logger.Debug("finalize block - state not computed, try to fetch state changes",
 				zap.Int64("round", fb.Round),
-				zap.Error(err))
-			return
+				zap.String("block", fb.Hash),
+				zap.String("prev block", fb.PrevHash))
+
+			//fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
+
+			if err := c.GetBlockStateChange(fb); err != nil {
+				Logger.Error("finalize block failed, compute state failed",
+					zap.Int64("round", fb.Round),
+					zap.Error(err))
+				return
+			}
+			Logger.Debug("finalize block - sync state success",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash))
 		}
-		Logger.Debug("finalize block - sync state success",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash))
 	}
 
 	// TODO/TOTHINK: move the repair chain outside the finalized worker?

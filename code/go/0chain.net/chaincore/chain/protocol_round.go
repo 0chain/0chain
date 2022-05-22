@@ -259,20 +259,30 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
 			frchain = append(frchain, b)
 			if b.PrevBlock == nil {
-				pb := c.GetPreviousBlock(ctx, b)
-				if pb == nil {
-					// break to start finalizing blocks in frchain slice
-					if len(frchain) >= maxBackDepth {
-						break
+				if node.Self.IsSharder() {
+					pb := c.GetLocalPreviousBlock(ctx, b)
+					if pb == nil {
+						logging.Logger.Error("finalize round - previous block is missing",
+							zap.Int64("round", b.Round), zap.Int64("prev_lfb", plfb.Round))
+						return
 					}
+					b.SetPreviousBlock(pb)
+				} else {
+					pb := c.GetPreviousBlock(ctx, b)
+					if pb == nil {
+						// break to start finalizing blocks in frchain slice
+						if len(frchain) >= maxBackDepth {
+							break
+						}
 
-					// return and retry in next term
-					logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
-						zap.Int64("round", b.Round),
-						zap.Int64("prev round", b.Round-1),
-						zap.Int64("prev_lfb", plfb.Round),
-						zap.String("block", b.Hash))
-					return
+						// return and retry in next term
+						logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
+							zap.Int64("round", b.Round),
+							zap.Int64("prev round", b.Round-1),
+							zap.Int64("prev_lfb", plfb.Round),
+							zap.String("block", b.Hash))
+						return
+					}
 				}
 			}
 
