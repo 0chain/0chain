@@ -64,33 +64,21 @@ func (bt *restBenchTest) Run(balances cstate.StateContextI, b *testing.B) error 
 }
 
 func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
-	return createRestTestSuite(
-		[]*restBenchTest{
+	return benchmark.GetRestTests(
+		[]benchmark.TestParameters{
 			{
-				name: "getAuthorizerNodes",
+				FuncName: "getAuthorizerNodes",
 			},
 			{
-				name: "getGlobalConfig",
+				FuncName: "getGlobalConfig",
 			},
 			{
-				name: "getAuthorizer",
-				params: map[string]string{
+				FuncName: "getAuthorizer",
+				Params: map[string]string{
 					"id": data.Clients[0],
 				},
 			},
 		},
+		ADDRESS,
 	)
-}
-
-func createRestTestSuite(restTests []*restBenchTest) benchmark.TestSuite {
-	var tests []benchmark.BenchTestI
-
-	for _, test := range restTests {
-		tests = append(tests, test)
-	}
-
-	return benchmark.TestSuite{
-		Source:     benchmark.ZCNSCBridgeRest,
-		Benchmarks: tests,
-	}
 }
