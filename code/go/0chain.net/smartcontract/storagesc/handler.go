@@ -28,6 +28,48 @@ import (
 	"0chain.net/smartcontract"
 )
 
+type RestFunctionName int
+
+const (
+	rfnGetBlobberCount RestFunctionName = iota
+	rfnGetBlobber
+	rfnGetBlobbers
+	rfnGetBlobberTotalStakes
+	rfnGetBlobberLatLong
+	rfnTransaction
+	rfnTransactions
+	rfnWriteMarkers
+	rfnErrors
+	rfnAllocations
+	rfnAllocationMinLock
+	rfnAllocation
+	rfnLatestReadMarker
+	rfnReadmarkers
+	rfnCountReadmarkers
+	rfnGetWriteMarkers
+	rfnGetValidator
+	rfnOpenChallenges
+	rfnGetChallenge
+	rfnGetStakePoolStat
+	rfnGetUserStakePoolStat
+	rfnGetBlockByHash
+	rfnGet_blocks
+	rfnTotalSavedData
+	rfnGetConfig
+	rfnGetReadPoolStat
+	rfnGetReadPoolAllocBlobberStat
+	rfnGetWritePoolStat
+	rfnGetWritePoolAllocBlobberStat
+	rfnGetChallengePoolStat
+	rfnAllocWrittenSize
+	rfnAllocReadsize
+	rfnAllocWriteMarkerCount
+	rfnCollectedReward
+	rfnBlobberIds
+	rfnAllocBlobbers
+	rfnFreeAllocBlobbers
+)
+
 type StorageRestHandler struct {
 	restinterface.RestHandlerI
 }
@@ -39,44 +81,43 @@ func NewStorageRestHandler(rh restinterface.RestHandlerI) *StorageRestHandler {
 func SetupRestHandler(rh restinterface.RestHandlerI) {
 	srh := NewStorageRestHandler(rh)
 	storage := "/v1/screst/" + ADDRESS
-	http.HandleFunc(storage+"/get_blobber_count", srh.getBlobberCount)
-	http.HandleFunc(storage+"/getBlobber", srh.getBlobber)
-	http.HandleFunc(storage+"/getblobbers", srh.getBlobbers)
-	http.HandleFunc(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes)
-	http.HandleFunc(storage+"/get_blobber_lat_long", srh.getBlobberGeoLocation)
-	http.HandleFunc(storage+"/transaction", srh.getTransactionByHash)
-	http.HandleFunc(storage+"/transactions", srh.getTransactionByFilter)
-	http.HandleFunc(storage+"/writemarkers", srh.getWriteMarker)
-	http.HandleFunc(storage+"/errors", srh.getErrors)
-	http.HandleFunc(storage+"/allocations", srh.getAllocations)
-	http.HandleFunc(storage+"/allocation_min_lock", srh.getAllocationMinLock)
-	http.HandleFunc(storage+"/allocation", srh.getAllocation)
-	http.HandleFunc(storage+"/latestreadmarker", srh.getLatestReadMarker)
-	http.HandleFunc(storage+"/readmarkers", srh.getReadMarkers)
-	http.HandleFunc(storage+"/count_readmarkers", srh.getReadMarkersCount)
-	http.HandleFunc(storage+"/getWriteMarkers", srh.getWriteMarkers)
-	http.HandleFunc(storage+"/get_validator", srh.getValidator)
-	http.HandleFunc(storage+"/openchallenges", srh.getOpenChallenges)
-	http.HandleFunc(storage+"/getchallenge", srh.getChallenge)
-	http.HandleFunc(storage+"/getStakePoolStat", srh.getStakePoolStat)
-	http.HandleFunc(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat)
-	http.HandleFunc(storage+"/get_block_by_hash", srh.getBlockByHash)
-	http.HandleFunc(storage+"/get_blocks", srh.getBlocks)
-	http.HandleFunc(storage+"/total_saved_data", srh.getTotalData)
-	http.HandleFunc(storage+"/getConfig", srh.getConfig)
-	http.HandleFunc(storage+"/getReadPoolStat", srh.getReadPoolStat)
-	http.HandleFunc(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat)
-	http.HandleFunc(storage+"/getWritePoolStat", srh.getWritePoolStat)
-	http.HandleFunc(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat)
-	http.HandleFunc(storage+"/getChallengePoolStat", srh.getChallengePoolStat)
-	http.HandleFunc(storage+"/alloc_written_size", srh.getWrittenAmountHandler)
-	http.HandleFunc(storage+"/alloc_read_size", srh.getReadAmountHandler)
-	http.HandleFunc(storage+"/alloc_write_marker_count", srh.getWriteMarkerCountHandler)
-	http.HandleFunc(storage+"/collected_reward", srh.getCollectedReward)
-
-	http.HandleFunc(storage+"/blobber_ids", srh.getBlobberIdsByUrls)
-	http.HandleFunc(storage+"/alloc_blobbers", srh.getAllocationBlobbers)
-	http.HandleFunc(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers)
+	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberCount], srh.getBlobberCount)
+	http.HandleFunc(storage+GetRestNames()[rfnGetBlobber], srh.getBlobber)
+	http.HandleFunc(storage+GetRestNames()[rfnGetBlobbers], srh.getBlobbers)
+	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberTotalStakes], srh.getBlobberTotalStakes)
+	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberLatLong], srh.getBlobberGeoLocation)
+	http.HandleFunc(storage+GetRestNames()[rfnTransaction], srh.getTransactionByHash)
+	http.HandleFunc(storage+GetRestNames()[rfnTransactions], srh.getTransactionByFilter)
+	http.HandleFunc(storage+GetRestNames()[rfnWriteMarkers], srh.getWriteMarker)
+	http.HandleFunc(storage+GetRestNames()[rfnErrors], srh.getErrors)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocations], srh.getAllocations)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocationMinLock], srh.getAllocationMinLock)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocation], srh.getAllocation)
+	http.HandleFunc(storage+GetRestNames()[rfnLatestReadMarker], srh.getLatestReadMarker)
+	http.HandleFunc(storage+GetRestNames()[rfnReadmarkers], srh.getReadMarkers)
+	http.HandleFunc(storage+GetRestNames()[rfnCountReadmarkers], srh.getReadMarkersCount)
+	http.HandleFunc(storage+GetRestNames()[rfnGetWriteMarkers], srh.getWriteMarkers)
+	http.HandleFunc(storage+GetRestNames()[rfnGetValidator], srh.getValidator)
+	http.HandleFunc(storage+GetRestNames()[rfnOpenChallenges], srh.getOpenChallenges)
+	http.HandleFunc(storage+GetRestNames()[rfnGetChallenge], srh.getChallenge)
+	http.HandleFunc(storage+GetRestNames()[rfnGetStakePoolStat], srh.getStakePoolStat)
+	http.HandleFunc(storage+GetRestNames()[rfnGetUserStakePoolStat], srh.getUserStakePoolStat)
+	http.HandleFunc(storage+GetRestNames()[rfnGetBlockByHash], srh.getBlockByHash)
+	http.HandleFunc(storage+GetRestNames()[rfnGet_blocks], srh.getBlocks)
+	http.HandleFunc(storage+GetRestNames()[rfnTotalSavedData], srh.getTotalData)
+	http.HandleFunc(storage+GetRestNames()[rfnGetConfig], srh.getConfig)
+	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolStat], srh.getReadPoolStat)
+	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolAllocBlobberStat], srh.getReadPoolAllocBlobberStat)
+	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolStat], srh.getWritePoolStat)
+	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolAllocBlobberStat], srh.getWritePoolAllocBlobberStat)
+	http.HandleFunc(storage+GetRestNames()[rfnGetChallengePoolStat], srh.getChallengePoolStat)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocWrittenSize], srh.getWrittenAmountHandler)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocReadsize], srh.getReadAmountHandler)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocWriteMarkerCount], srh.getWriteMarkerCountHandler)
+	http.HandleFunc(storage+GetRestNames()[rfnCollectedReward], srh.getCollectedReward)
+	http.HandleFunc(storage+GetRestNames()[rfnBlobberIds], srh.getBlobberIdsByUrls)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocBlobbers], srh.getAllocationBlobbers)
+	http.HandleFunc(storage+GetRestNames()[rfnFreeAllocBlobbers], srh.getFreeAllocationBlobbers)
 }
 
 func GetRestNames() []string {

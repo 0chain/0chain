@@ -531,7 +531,6 @@ func AddMockBlobbers(
 				NumDelegates:            blobber.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
 				TotalStake:              viper.GetInt64(sc.StorageMaxStake) * 1e10,
-				OffersTotal:             0,
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
 		}

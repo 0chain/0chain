@@ -62,6 +62,7 @@ func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) erro
 	resp := rec.Result()
 	if viper.GetBool(ShowOutput) && !qbt.shownResult {
 		body, _ := io.ReadAll(resp.Body)
+		defer resp.Body.Close()
 		var prettyJSON bytes.Buffer
 		err := json.Indent(&prettyJSON, body, "", "\t")
 		require.NoError(b, err)

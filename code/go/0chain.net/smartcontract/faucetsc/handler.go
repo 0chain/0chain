@@ -15,6 +15,15 @@ import (
 	"0chain.net/smartcontract"
 )
 
+type RestFunctionName int
+
+const (
+	rfnPersonalPeriodicLimit RestFunctionName = iota
+	rfnGlobalPeriodicLimit
+	rfnPourAmount
+	rfnGetConfig
+)
+
 const (
 	noLimitsMsg     = "can't get limits"
 	noGlobalNodeMsg = "can't get global node"
@@ -32,10 +41,10 @@ func NewFaucetscRestHandler(rh restinterface.RestHandlerI) *FaucetscRestHandler 
 func SetupRestHandler(rh restinterface.RestHandlerI) {
 	frh := NewFaucetscRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+"/personalPeriodicLimit", frh.getPersonalPeriodicLimit)
-	http.HandleFunc(miner+"/globalPeriodicLimit", frh.getGlobalPeriodicLimit)
-	http.HandleFunc(miner+"/pourAmount", frh.getPourAmount)
-	http.HandleFunc(miner+"/getConfig", frh.getConfig)
+	http.HandleFunc(miner+GetRestNames()[rfnPersonalPeriodicLimit], frh.getPersonalPeriodicLimit)
+	http.HandleFunc(miner+GetRestNames()[rfnGlobalPeriodicLimit], frh.getGlobalPeriodicLimit)
+	http.HandleFunc(miner+GetRestNames()[rfnPourAmount], frh.getPourAmount)
+	http.HandleFunc(miner+GetRestNames()[rfnGetConfig], frh.getConfig)
 }
 
 func GetRestNames() []string {
@@ -62,7 +71,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 
 	var faucetConfig *FaucetConfig
 	if gn.FaucetConfig == nil {
-		faucetConfig = getConfig()
+		faucetConfig = getFaucetConfig()
 	} else {
 		faucetConfig = gn.FaucetConfig
 	}
@@ -165,7 +174,7 @@ func getGlobalNode(sctx state.QueryStateContextI) (GlobalNode, error) {
 		if err != util.ErrValueNotPresent {
 			return gn, err
 		}
-		gn.FaucetConfig = getConfig()
+		gn.FaucetConfig = getFaucetConfig()
 	}
 	return gn, nil
 }

@@ -14,6 +14,14 @@ import (
 	"0chain.net/rest/restinterface"
 )
 
+type RestFunctionName int
+
+const (
+	rfnGetAuthorizerNodes RestFunctionName = iota
+	rfnGetGlobalConfig
+	rfnGetAuthorizer
+)
+
 type ZcnRestHandler struct {
 	restinterface.RestHandlerI
 }
@@ -25,9 +33,9 @@ func NewZcnRestHandler(rh restinterface.RestHandlerI) *ZcnRestHandler {
 func SetupRestHandler(rh restinterface.RestHandlerI) {
 	zrh := NewZcnRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+"/getAuthorizerNodes", zrh.getAuthorizerNodes)
-	http.HandleFunc(miner+"/getGlobalConfig", zrh.GetGlobalConfig)
-	http.HandleFunc(miner+"/getAuthorizer", zrh.getAuthorizer)
+	http.HandleFunc(miner+GetRestNames()[rfnGetAuthorizerNodes], zrh.getAuthorizerNodes)
+	http.HandleFunc(miner+GetRestNames()[rfnGetGlobalConfig], zrh.GetGlobalConfig)
+	http.HandleFunc(miner+GetRestNames()[rfnGetAuthorizer], zrh.getAuthorizer)
 }
 
 func GetRestNames() []string {

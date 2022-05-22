@@ -8,6 +8,14 @@ import (
 	"0chain.net/smartcontract"
 )
 
+type RestFunctionName int
+
+const (
+	rfnGetPoolInfo RestFunctionName = iota
+	rfnGetClientPools
+	rfnGetConfig
+)
+
 type VestingRestHandler struct {
 	restinterface.RestHandlerI
 }
@@ -19,9 +27,9 @@ func NewVestingRestHandler(rh restinterface.RestHandlerI) *VestingRestHandler {
 func SetupRestHandler(rh restinterface.RestHandlerI) {
 	vrh := NewVestingRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+"/getPoolInfo", vrh.getPoolInfo)
-	http.HandleFunc(miner+"/getClientPools", vrh.getClientPools)
-	http.HandleFunc(miner+"/getConfig", vrh.getConfig)
+	http.HandleFunc(miner+GetRestNames()[rfnGetPoolInfo], vrh.getPoolInfo)
+	http.HandleFunc(miner+GetRestNames()[rfnGetClientPools], vrh.getClientPools)
+	http.HandleFunc(miner+GetRestNames()[rfnGetConfig], vrh.getConfig)
 }
 
 func GetRestNames() []string {

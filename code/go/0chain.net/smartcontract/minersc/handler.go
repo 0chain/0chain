@@ -19,6 +19,32 @@ import (
 	sc "0chain.net/smartcontract"
 )
 
+type RestFunctionName int
+
+const (
+	rfnGlobalSettings RestFunctionName = iota
+	rfnGetNodepool
+	rfnGetUserPools
+	rfnGetMinerList
+	rfnGetMinersStats
+	rfnGetMinersStake
+	rfnGetSharderList
+	rfnGetShardersStats
+	rfnGetShardersStake
+	rfnGetSharderKeepList
+	rfnGetPhase
+	rfnGetDkgList
+	rfnGetMpksList
+	rfnGetGroupShareOrSigns
+	rfnGetMagicBlock
+	rfnGetEvents
+	rfnNodeStat
+	rfnNodePoolStat
+	rfnConfigs
+	rfnGetMinerGeolocations
+	rfnGetSharderGeolocations
+)
+
 type MinerRestHandler struct {
 	restinterface.RestHandlerI
 }
@@ -30,27 +56,27 @@ func NewMinerRestHandler(rh restinterface.RestHandlerI) *MinerRestHandler {
 func SetupRestHandler(rh restinterface.RestHandlerI) {
 	mrh := NewMinerRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+"/globalSettings", mrh.getGlobalSettings)
-	http.HandleFunc(miner+"/getNodepool", mrh.getNodepool)
-	http.HandleFunc(miner+"/getUserPools", mrh.getUserPools)
-	http.HandleFunc(miner+"/getMinerList", mrh.getMinerList)
-	http.HandleFunc(miner+"/get_miners_stats", mrh.getMinersStats)
-	http.HandleFunc(miner+"/get_miners_stake", mrh.getMinersStake)
-	http.HandleFunc(miner+"/getSharderList", mrh.getSharderList)
-	http.HandleFunc(miner+"/get_sharders_stats", mrh.getShardersStats)
-	http.HandleFunc(miner+"/get_sharders_stake", mrh.getShardersStake)
-	http.HandleFunc(miner+"/getSharderKeepList", mrh.getSharderKeepList)
-	http.HandleFunc(miner+"/getPhase", mrh.getPhase)
-	http.HandleFunc(miner+"/getDkgList", mrh.getDkgList)
-	http.HandleFunc(miner+"/getMpksList", mrh.getMpksList)
-	http.HandleFunc(miner+"/getGroupShareOrSigns", mrh.getGroupShareOrSigns)
-	http.HandleFunc(miner+"/getMagicBlock", mrh.getMagicBlock)
-	http.HandleFunc(miner+"/getEvents", mrh.getEvents)
-	http.HandleFunc(miner+"/nodeStat", mrh.getNodeStat)
-	http.HandleFunc(miner+"/nodePoolStat", mrh.getNodePoolStat)
-	http.HandleFunc(miner+"/configs", mrh.getConfigs)
-	http.HandleFunc(miner+"/get_miner_geolocations", mrh.getMinerGeolocations)
-	http.HandleFunc(miner+"/get_sharder_geolocations", mrh.getSharderGeolocations)
+	http.HandleFunc(miner+GetRestNames()[rfnGlobalSettings], mrh.getGlobalSettings)
+	http.HandleFunc(miner+GetRestNames()[rfnGetNodepool], mrh.getNodepool)
+	http.HandleFunc(miner+GetRestNames()[rfnGetUserPools], mrh.getUserPools)
+	http.HandleFunc(miner+GetRestNames()[rfnGetMinerList], mrh.getMinerList)
+	http.HandleFunc(miner+GetRestNames()[rfnGetMinersStats], mrh.getMinersStats)
+	http.HandleFunc(miner+GetRestNames()[rfnGetMinersStake], mrh.getMinersStake)
+	http.HandleFunc(miner+GetRestNames()[rfnGetSharderList], mrh.getSharderList)
+	http.HandleFunc(miner+GetRestNames()[rfnGetShardersStats], mrh.getShardersStats)
+	http.HandleFunc(miner+GetRestNames()[rfnGetShardersStake], mrh.getShardersStake)
+	http.HandleFunc(miner+GetRestNames()[rfnGetSharderKeepList], mrh.getSharderKeepList)
+	http.HandleFunc(miner+GetRestNames()[rfnGetPhase], mrh.getPhase)
+	http.HandleFunc(miner+GetRestNames()[rfnGetDkgList], mrh.getDkgList)
+	http.HandleFunc(miner+GetRestNames()[rfnGetMpksList], mrh.getMpksList)
+	http.HandleFunc(miner+GetRestNames()[rfnGetGroupShareOrSigns], mrh.getGroupShareOrSigns)
+	http.HandleFunc(miner+GetRestNames()[rfnGetMagicBlock], mrh.getMagicBlock)
+	http.HandleFunc(miner+GetRestNames()[rfnGetEvents], mrh.getEvents)
+	http.HandleFunc(miner+GetRestNames()[rfnNodeStat], mrh.getNodeStat)
+	http.HandleFunc(miner+GetRestNames()[rfnNodePoolStat], mrh.getNodePoolStat)
+	http.HandleFunc(miner+GetRestNames()[rfnConfigs], mrh.getConfigs)
+	http.HandleFunc(miner+GetRestNames()[rfnGetMinerGeolocations], mrh.getMinerGeolocations)
+	http.HandleFunc(miner+GetRestNames()[rfnGetSharderGeolocations], mrh.getSharderGeolocations)
 }
 
 func GetRestNames() []string {
@@ -72,6 +98,7 @@ func GetRestNames() []string {
 		"/getMagicBlock",
 		"/getEvents",
 		"/nodeStatHandler",
+		"/nodeStat",
 		"/nodePoolStat",
 		"/configs",
 		"/get_miner_geolocations",
