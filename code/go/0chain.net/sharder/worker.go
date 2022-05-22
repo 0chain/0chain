@@ -51,7 +51,7 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	syncBlocksTimer := time.NewTimer(10 * time.Second)
+	syncBlocksTimer := time.NewTimer(7 * time.Second)
 
 	for {
 		select {
@@ -60,7 +60,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			return
 		case <-syncBlocksTimer.C:
 			// reset sync timer to 1 minute
-			syncBlocksTimer = time.NewTimer(time.Minute)
+			syncBlocksTimer = time.NewTimer(10 * time.Second)
 
 			var (
 				lfbTk = sc.GetLatestLFBTicket(ctx)
@@ -71,11 +71,13 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
-			if sc.GetCurrentRound() < lfb.Round {
+			cr := sc.GetCurrentRound()
+			if cr < lfb.Round {
 				sc.SetCurrentRound(lfb.Round)
+				cr = lfb.Round
 			}
 
-			go sc.requestBlocks(ctx, lfb.Round, lfbTk.Round+int64(config.GetLFBTicketAhead()))
+			go sc.requestBlocks(ctx, cr, lfbTk.Round+int64(config.GetLFBTicketAhead()))
 		case b := <-sc.GetBlockChannel():
 			cr := sc.GetCurrentRound()
 			if b.Round != sc.GetCurrentRound()+1 {
@@ -103,7 +105,7 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, endRound int64) 
 
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
-	for i := int64(0); i < reqNum; i++ {
+	for i := int64(1); i <= reqNum; i++ {
 		wg.Add(1)
 		go func(idx int64) {
 			defer wg.Done()
