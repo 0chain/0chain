@@ -298,22 +298,29 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		zap.String("block", fb.Hash),
 		zap.String("prev block", fb.PrevHash))
 
+	isSharder := node.Self.IsSharder()
+
 	if !fb.IsStateComputed() {
 		if fb.PrevBlock == nil {
 			pb := c.GetLocalPreviousBlock(ctx, fb)
+			if isSharder {
+				if pb == nil || !pb.IsStateComputed() {
+					Logger.Error("finalize block - no previous block ready",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.String("prev block", fb.PrevHash),
+						zap.Int64("lfb round", lfb.Round),
+						zap.String("lfb", lfb.Hash))
+					return
+				}
+			}
+
 			if pb != nil {
 				fb.SetPreviousBlock(pb)
-			} else {
-				Logger.Error("finalize block - no previous block",
-					zap.Int64("round", fb.Round),
-					zap.String("block", fb.Hash),
-					zap.String("prev block", fb.PrevHash),
-					zap.Int64("lfb round", lfb.Round),
-					zap.String("lfb", lfb.Hash))
 			}
 		}
 
-		if node.Self.IsSharder() {
+		if isSharder {
 			// compute state
 			if err := c.ComputeState(ctx, fb); err != nil {
 				Logger.Error("finalize block - compute state failed",
