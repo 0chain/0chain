@@ -1293,7 +1293,9 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(context.Background(), b)
-		go c.notifyToSyncFinalizedRoundState(bs)
+		if !node.Self.IsSharder() {
+			go c.notifyToSyncFinalizedRoundState(bs)
+		}
 	}
 	c.lfbMutex.Unlock()
 

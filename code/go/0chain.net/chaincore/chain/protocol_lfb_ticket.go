@@ -204,8 +204,8 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 func (c *Chain) sendLFBTicketEventToSubscribers(
 	subs map[chan *LFBTicket]struct{}, ticket *LFBTicket) {
 
-	logging.Logger.Debug("[send LFB-ticket event to subscribers]",
-		zap.Int("subs", len(subs)), zap.Int64("round", ticket.Round))
+	//logging.Logger.Debug("[send LFB-ticket event to subscribers]",
+	//	zap.Int("subs", len(subs)), zap.Int64("round", ticket.Round))
 	for s := range subs {
 		select {
 		case s <- ticket: // the sending must be non-blocking
@@ -303,7 +303,6 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			// update latest
 			latest = ticket //
-			logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 
 			// don't broadcast a received LFB ticket, since its already
 			// broadcasted by its sender
@@ -364,7 +363,6 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 	select {
 	case c.updateLFBTicket <- ticket:
-		logging.Logger.Debug("AddReceivedLFBTicket", zap.Int64("round", ticket.Round))
 	case <-ctx.Done():
 	}
 }
@@ -390,8 +388,6 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
-	logging.Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr),
-		zap.Int64("round", ticket.Round))
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
 }
