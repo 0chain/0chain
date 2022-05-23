@@ -111,9 +111,9 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolStat], srh.getWritePoolStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolAllocBlobberStat], srh.getWritePoolAllocBlobberStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetChallengePoolStat], srh.getChallengePoolStat)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocWrittenSize], srh.getWrittenAmountHandler)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocReadsize], srh.getReadAmountHandler)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocWriteMarkerCount], srh.getWriteMarkerCountHandler)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocWrittenSize], srh.getWrittenAmount)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocReadsize], srh.getReadAmount)
+	http.HandleFunc(storage+GetRestNames()[rfnAllocWriteMarkerCount], srh.getWriteMarkerCount)
 	http.HandleFunc(storage+GetRestNames()[rfnCollectedReward], srh.getCollectedReward)
 	http.HandleFunc(storage+GetRestNames()[rfnBlobberIds], srh.getBlobberIdsByUrls)
 	http.HandleFunc(storage+GetRestNames()[rfnAllocBlobbers], srh.getAllocationBlobbers)
@@ -428,7 +428,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 // responses:
 //  200: challengePoolStat
 //  400:
-func (srh *StorageRestHandler) getWriteMarkerCountHandler(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getWriteMarkerCount(w http.ResponseWriter, r *http.Request) {
 	allocationID := r.URL.Query().Get("allocation_id")
 	if allocationID == "" {
 		common.Respond(w, r, nil, common.NewErrInternal("allocation_id is empty"))
@@ -463,7 +463,7 @@ func (srh *StorageRestHandler) getWriteMarkerCountHandler(w http.ResponseWriter,
 // responses:
 //  200: challengePoolStat
 //  400:
-func (srh *StorageRestHandler) getReadAmountHandler(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getReadAmount(w http.ResponseWriter, r *http.Request) {
 	blockNumberString := r.URL.Query().Get("block_number")
 	allocationIDString := r.URL.Query().Get("allocation_id")
 
@@ -503,7 +503,7 @@ func (srh *StorageRestHandler) getReadAmountHandler(w http.ResponseWriter, r *ht
 // responses:
 //  200: challengePoolStat
 //  400:
-func (srh *StorageRestHandler) getWrittenAmountHandler(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getWrittenAmount(w http.ResponseWriter, r *http.Request) {
 	blockNumberString := r.URL.Query().Get("block_number")
 	allocationIDString := r.URL.Query().Get("allocation_id")
 

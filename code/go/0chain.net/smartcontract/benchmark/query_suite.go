@@ -3,6 +3,7 @@ package benchmark
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/rest/restinterface"
 	"github.com/spf13/viper"
 
 	"bytes"
@@ -18,8 +19,10 @@ import (
 type TestSuiteFunc func(data BenchData, sigScheme SignatureScheme) TestSuite
 
 type TestParameters struct {
-	FuncName string
-	Params   map[string]string
+	FuncName string                                       `json:"func_name,omitempty"`
+	Params   map[string]string                            `json:"params,omitempty"`
+	Endpoint func(w http.ResponseWriter, r *http.Request) `json:"endpoint,omitempty"`
+	Receiver restinterface.RestHandlerI                   `json:"receiver"`
 }
 
 type QueryBenchTest struct {
@@ -28,7 +31,10 @@ type QueryBenchTest struct {
 	address     string
 }
 
-func NewQueryBenchTest(test TestParameters, address string) BenchTestI {
+func NewQueryBenchTest(
+	test TestParameters,
+	address string,
+) BenchTestI {
 	return &QueryBenchTest{
 		TestParameters: test,
 		address:        address,
@@ -56,7 +62,8 @@ func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) erro
 	}
 	b.StartTimer()
 
-	http.DefaultServeMux.ServeHTTP(rec, req)
+	qbt.Receiver.SetQueryStateContext(balances)
+	qbt.Endpoint(rec, req)
 
 	b.StopTimer()
 	resp := rec.Result()
@@ -80,9 +87,11 @@ func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) erro
 func GetRestTests(
 	tests []TestParameters,
 	address string,
+	reciever restinterface.RestHandlerI,
 ) TestSuite {
 	var testsI []BenchTestI
 	for _, test := range tests {
+		test.Receiver = reciever
 		newTest := NewQueryBenchTest(test, address)
 		testsI = append(testsI, newTest)
 	}

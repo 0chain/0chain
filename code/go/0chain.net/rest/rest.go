@@ -10,26 +10,16 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 )
 
-// TODO: implement the GetReadonlyStateContext for *Chain
-type QueryChainer interface {
-	GetQueryStateContext() state.QueryStateContextI
-}
-
 type RestHandler struct {
-	QueryChainer
+	restinterface.QueryChainer
 }
 
-func NewRestHandler(c QueryChainer) restinterface.RestHandlerI {
+func NewRestHandler(c restinterface.QueryChainer) restinterface.RestHandlerI {
 	return &RestHandler{QueryChainer: c}
 }
 
 func (rh *RestHandler) GetStateContext() state.QueryStateContextI {
 	return rh.GetQueryStateContext()
-}
-
-// RestHandlerI wraps the method to access the latest read only state context
-type RestHandlerI interface {
-	GetStateContext() state.QueryStateContextI
 }
 
 func (rh *RestHandler) SetupRestHandlers() {

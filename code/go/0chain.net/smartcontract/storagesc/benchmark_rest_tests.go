@@ -3,6 +3,7 @@ package storagesc
 import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/rest/restinterface"
 	bk "0chain.net/smartcontract/benchmark"
 	"encoding/hex"
 	"encoding/json"
@@ -14,25 +15,32 @@ import (
 func BenchmarkRestTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
+	rh := restinterface.NewTestRestHandler()
+	srh := NewStorageRestHandler(rh)
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
 				FuncName: "get_blobber_count",
+				Endpoint: srh.getBlobberCount,
 			},
 			{
 				FuncName: "get_blobber_total_stakes",
+				Endpoint: srh.getBlobberTotalStakes,
 			},
 			{
 				FuncName: "get_blobber_lat_long",
+				Endpoint: srh.getBlobberGeoLocation,
 			},
 			{
 				FuncName: "getConfig",
+				Endpoint: srh.getConfig,
 			},
 			{
 				FuncName: "transaction",
 				Params: map[string]string{
 					"transaction_hash": "", // todo add transactions
 				},
+				Endpoint: srh.getTransactionByHash,
 			},
 			{
 				FuncName: "transactions",
@@ -42,21 +50,25 @@ func BenchmarkRestTests(
 					"limit":      "",
 					"block_hash": "",
 				},
+				Endpoint: srh.getTransactionByFilter,
 			},
 			{
 				FuncName: "errors",
 				Params: map[string]string{
 					"transaction_hash": "", // todo add transactions
 				},
+				Endpoint: srh.getErrors,
 			},
 			{
 				FuncName: "get_block_by_hash",
 				Params: map[string]string{
 					"block_hash": "", // todo add blocks
 				},
+				Endpoint: srh.getBlockByHash,
 			},
 			{
 				FuncName: "total_saved_data",
+				Endpoint: srh.getTotalData,
 			},
 			{
 				FuncName: "latestreadmarker",
@@ -64,6 +76,7 @@ func BenchmarkRestTests(
 					"client":  data.Clients[0],
 					"blobber": getMockBlobberId(0),
 				},
+				Endpoint: srh.getLatestReadMarker,
 			},
 
 			{
@@ -71,12 +84,14 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
 				},
+				Endpoint: srh.getReadMarkers,
 			},
 			{
 				FuncName: "count_readmarkers",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
 				},
+				Endpoint: srh.getReadMarkersCount,
 			},
 			{
 				FuncName: "allocation",
@@ -89,6 +104,7 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"client": data.Clients[0],
 				},
+				Endpoint: srh.getAllocations,
 			},
 			{
 				FuncName: "allocation_min_lock",
@@ -110,12 +126,14 @@ func BenchmarkRestTests(
 						return string(nar)
 					}(),
 				},
+				Endpoint: srh.getAllocationMinLock,
 			},
 			{
 				FuncName: "openchallenges",
 				Params: map[string]string{
 					"blobber": getMockBlobberId(0),
 				},
+				Endpoint: srh.getOpenChallenges,
 			},
 			{
 				FuncName: "getchallenge",
@@ -123,21 +141,25 @@ func BenchmarkRestTests(
 					"blobber":   getMockBlobberId(0),
 					"challenge": getMockChallengeId(0, 0),
 				},
+				Endpoint: srh.getChallenge,
 			},
 			{
 				FuncName: "getblobbers",
+				Endpoint: srh.getBlobbers,
 			},
 			{
 				FuncName: "getBlobber",
 				Params: map[string]string{
 					"blobber_id": getMockBlobberId(0),
 				},
+				Endpoint: srh.getBlobber,
 			},
 			{
 				FuncName: "getReadPoolStat",
 				Params: map[string]string{
 					"client_id": data.Clients[0],
 				},
+				Endpoint: srh.getReadPoolStat,
 			},
 			{
 				FuncName: "getReadPoolAllocBlobberStat",
@@ -146,6 +168,7 @@ func BenchmarkRestTests(
 					"allocation_id": getMockAllocationId(0),
 					"blobber_id":    getMockBlobberId(0),
 				},
+				Endpoint: srh.getReadPoolAllocBlobberStat,
 			},
 			{
 				FuncName: "writemarkers", // todo
@@ -154,6 +177,7 @@ func BenchmarkRestTests(
 					"limit":         "",
 					"is_descending": "",
 				},
+				Endpoint: srh.getWriteMarker,
 			},
 			{
 				FuncName: "getWriteMarkers",
@@ -161,12 +185,14 @@ func BenchmarkRestTests(
 					"allocation_id": getMockAllocationId(0),
 					"filename":      "",
 				},
+				Endpoint: srh.getWriteMarkers,
 			},
 			{
 				FuncName: "getWritePoolStat",
 				Params: map[string]string{
 					"client_id": data.Clients[0],
 				},
+				Endpoint: srh.getWritePoolStat,
 			},
 			{
 				FuncName: "getWritePoolAllocBlobberStat",
@@ -175,30 +201,35 @@ func BenchmarkRestTests(
 					"allocation_id": getMockAllocationId(0),
 					"blobber_id":    getMockBlobberId(0),
 				},
+				Endpoint: srh.getWritePoolAllocBlobberStat,
 			},
 			{
 				FuncName: "getStakePoolStat",
 				Params: map[string]string{
 					"blobber_id": getMockBlobberId(0),
 				},
+				Endpoint: srh.getStakePoolStat,
 			},
 			{
 				FuncName: "getUserStakePoolStat",
 				Params: map[string]string{
 					"client_id": data.Clients[0],
 				},
+				Endpoint: srh.getUserStakePoolStat,
 			},
 			{
 				FuncName: "getChallengePoolStat",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
 				},
+				Endpoint: srh.getChallengePoolStat,
 			},
 			{
 				FuncName: "get_validator",
 				Params: map[string]string{
 					"validator_id": getMockValidatorId(0),
 				},
+				Endpoint: srh.getValidator,
 			},
 			{
 				FuncName: "alloc_written_size",
@@ -206,6 +237,7 @@ func BenchmarkRestTests(
 					"allocation_id": getMockValidatorId(0),
 					"block_number":  getMockValidatorId(0),
 				},
+				Endpoint: srh.getWrittenAmount,
 			},
 			{
 				FuncName: "alloc_read_size",
@@ -213,12 +245,14 @@ func BenchmarkRestTests(
 					"allocation_id": getMockValidatorId(0),
 					"block_number":  getMockValidatorId(0),
 				},
+				Endpoint: srh.getReadAmount,
 			},
 			{
 				FuncName: "alloc_write_marker_count",
 				Params: map[string]string{
 					"allocation_id": getMockValidatorId(0),
 				},
+				Endpoint: srh.getWriteMarkerCount,
 			},
 			{
 				FuncName: "collected_reward",
@@ -227,6 +261,7 @@ func BenchmarkRestTests(
 					"end_block":   getMockValidatorId(0),
 					"client_id":   getMockValidatorId(0),
 				},
+				Endpoint: srh.getCollectedReward,
 			},
 			{
 				FuncName: "alloc_blobbers",
@@ -248,6 +283,7 @@ func BenchmarkRestTests(
 						return string(nar)
 					}(),
 				},
+				Endpoint: srh.getAllocationBlobbers,
 			},
 			{
 				FuncName: "blobber_ids",
@@ -264,6 +300,7 @@ func BenchmarkRestTests(
 						return string(urlBytes)
 					}(),
 				},
+				Endpoint: srh.getBlobberIdsByUrls,
 			},
 			{
 				FuncName: "free_alloc_blobbers",
@@ -310,8 +347,10 @@ func BenchmarkRestTests(
 						return string(bytes)
 					}(),
 				},
+				Endpoint: srh.getFreeAllocationBlobbers,
 			},
 		},
 		ADDRESS,
+		srh,
 	)
 }
