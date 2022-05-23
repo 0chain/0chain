@@ -52,7 +52,7 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	syncBlocksTimer := time.NewTimer(7 * time.Second)
-	lfbCheckTicker := time.NewTicker(3 * time.Second)
+	lfbCheckTimer := time.NewTimer(3 * time.Second)
 	aheadN := int64(config.GetLFBTicketAhead())
 	endRound := int64(0)
 
@@ -63,20 +63,25 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
-		case <-lfbCheckTicker.C:
+		case <-lfbCheckTimer.C:
+			lfbCheckTimer.Reset(3 * time.Second)
+
 			lfb := sc.GetLatestFinalizedBlock()
 			lfbTk := sc.GetLatestLFBTicket(ctx)
 
 			if lfb.Round < endRound {
+				logging.Logger.Debug("process block, lfb.Round <= endRound, continue")
 				continue
 			}
 
 			// lfb is >= endRound, but still <= LFB ticket, continue request
 			if endRound <= lfbTk.Round {
+				logging.Logger.Debug("process block, endRound <= lfbTk.Round, trigger sync")
 				syncBlocksTimer.Reset(0)
 				continue
 			}
 
+			logging.Logger.Debug("process block, endRound > lfbTk.Round, reset to 1 minute")
 			syncBlocksTimer.Reset(time.Minute)
 
 		case <-syncBlocksTimer.C:
@@ -119,6 +124,9 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("round", b.Round),
 				zap.Int64("end round", endRound))
 			sc.processBlock(ctx, b)
+			if b.Round >= endRound {
+				lfbCheckTimer.Reset(0)
+			}
 		}
 	}
 }
