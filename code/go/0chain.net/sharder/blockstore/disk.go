@@ -396,13 +396,13 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 
 	logging.Logger.Info(fmt.Sprintf("Initializing volumes in %v mode", mode))
 	switch mode {
-	case "start":
+	case "start", "recover":
 		// Delete all existing data and start fresh
+		// If meta data is lost, it is better and sufficient to rely on proximity/deep scan
+		// so that we can completely delete existing data and start fresh
 		startVolumes(volsMap, &dTier) // will panic if right config setup is not provided
 	case "restart": // Nothing is lost but sharder was off for maintenance mode
 		restartVolumes(volsMap, &dTier)
-	case "recover": // Metadata is lost
-		// recoverVolumeMetaData(volsMap, &dTier)
 	default:
 		panic(fmt.Errorf("%v mode is not supported", mode))
 	}
