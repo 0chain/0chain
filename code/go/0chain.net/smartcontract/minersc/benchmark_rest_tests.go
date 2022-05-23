@@ -119,6 +119,7 @@ func BenchmarkRestTests(
 			},
 			{
 				FuncName: "configs",
+				Endpoint: mrh.getConfigs,
 			},
 		},
 		ADDRESS,

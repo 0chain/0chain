@@ -98,6 +98,7 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"allocation": getMockAllocationId(0),
 				},
+				Endpoint: srh.getAllocation,
 			},
 			{
 				FuncName: "allocations",
