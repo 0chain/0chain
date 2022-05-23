@@ -199,7 +199,7 @@ func (sp *stakePool) slash(
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
-	var ratio = (float64(slash) / float64(sp.stake()))
+	var ratio = float64(slash) / float64(sp.stake())
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {
 		var dpSlash = currency.Coin(float64(dp.Balance) * ratio)
