@@ -119,7 +119,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			move, bp.Balance = value, bp.Balance-value
 		}
 
-		ap.Balance -= currency.Coin(value)
+		ap.Balance -= move
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
