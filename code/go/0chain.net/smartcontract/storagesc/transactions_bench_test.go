@@ -156,7 +156,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				}
 				b.StartTimer()
 
-				_, err = ssc.newAllocationRequest(tx, input, balances)
+				_, err = ssc.newAllocationRequest(tx, input, balances, nil)
 				require.NoError(b, err)
 			}
 			b.ReportAllocs()

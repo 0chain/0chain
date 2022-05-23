@@ -93,8 +93,47 @@ var rootCmd = &cobra.Command{
 		log.Println()
 		log.Println("tests took", time.Since(testsTimer))
 		log.Println("benchmark took", time.Since(totalTimer))
+		printTimings(results)
 		printResults(results)
 	},
+}
+
+func printTimings(results []suiteResults) {
+	fmt.Println()
+	fmt.Println("Timings")
+	for _, r := range results {
+		for _, br := range r.results {
+			if br.timings != nil {
+				fmt.Printf(
+					"%v:\n",
+					br.test.Name(),
+				)
+
+				var entries []struct {
+					name string
+					dur  time.Duration
+				}
+
+				for k, v := range br.timings {
+					entries = append(entries, struct {
+						name string
+						dur  time.Duration
+					}{
+						name: k,
+						dur:  v,
+					})
+				}
+				sort.Slice(entries, func(i, j int) bool {
+					return entries[i].dur < entries[j].dur
+				})
+				for _, e := range entries {
+					fmt.Printf(
+						"%v: %v\n", e.name, e.dur,
+					)
+				}
+			}
+		}
+	}
 }
 
 func printResults(results []suiteResults) {

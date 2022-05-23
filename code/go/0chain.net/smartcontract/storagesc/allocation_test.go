@@ -1135,45 +1135,6 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	assert.EqualValues(t, &ne, &nd)
 }
 
-func Test_updateBlobbersInAll(t *testing.T) {
-	var (
-		all        StorageNodes
-		balances   = newTestBalances(t, false)
-		b1, b2, b3 StorageNode
-		u1, u2     StorageNode
-		decode     StorageNodes
-
-		err error
-	)
-
-	b1.ID, b2.ID, b3.ID = "b1", "b2", "b3"
-	b1.Capacity, b2.Capacity, b3.Capacity = 100, 100, 100
-
-	all.Nodes = []*StorageNode{&b1, &b2, &b3}
-
-	u1.ID, u2.ID = "b1", "b2"
-	u1.Capacity, u2.Capacity = 200, 200
-
-	err = updateBlobbersInAll(&all, []*StorageNode{&u1, &u2}, balances)
-	require.NoError(t, err)
-
-	var allSeri, ok = balances.tree[ALL_BLOBBERS_KEY]
-	require.True(t, ok)
-	require.NotNil(t, allSeri)
-	sv, err := allSeri.MarshalMsg(nil)
-	require.NoError(t, err)
-	_, err = decode.UnmarshalMsg(sv)
-	require.NoError(t, err)
-
-	require.Len(t, decode.Nodes, 3)
-	assert.Equal(t, "b1", decode.Nodes[0].ID)
-	assert.Equal(t, int64(200), decode.Nodes[0].Capacity)
-	assert.Equal(t, "b2", decode.Nodes[1].ID)
-	assert.Equal(t, int64(200), decode.Nodes[1].Capacity)
-	assert.Equal(t, "b3", decode.Nodes[2].ID)
-	assert.Equal(t, int64(100), decode.Nodes[2].Capacity)
-}
-
 func Test_toSeconds(t *testing.T) {
 	if toSeconds(time.Second*60+time.Millisecond*90) != 60 {
 		t.Fatal("wrong")
@@ -1274,18 +1235,18 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 1.
 	t.Run("unexpected end of JSON input", func(t *testing.T) {
-		_, err = ssc.newAllocationRequest(&tx, nil, balances)
+		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
 		requireErrMsg(t, err, errMsg1)
 	})
 	t.Run("No client id in transaction", func(t *testing.T) {
 		tx.ClientID = ""
-		_, err = ssc.newAllocationRequest(&tx, nil, balances)
+		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
 		requireErrMsg(t, err, errMsg3)
 	})
 	// 3.
 	t.Run("invalid character", func(t *testing.T) {
 		tx.ClientID = clientID
-		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances)
+		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances, nil)
 		requireErrMsg(t, err, errMsg4)
 	})
 
@@ -1294,7 +1255,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg5)
 	})
 
@@ -1332,7 +1293,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Blobbers = nil                               // not set
 		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 		nar.Owner = clientID
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg6)
 	})
 
@@ -1353,7 +1314,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg6)
 	})
 
@@ -1386,7 +1347,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
 		require.NoError(t, err)
 
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg7)
 	})
 	// 8. not enough tokens
@@ -1428,7 +1389,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
 		tx.Value = 0
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg8)
 	})
 	// 9. no tokens to lock (client balance check)
@@ -1473,7 +1434,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
 		tx.Value = 400
-		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg9)
 
 	})
@@ -1521,7 +1482,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		balances.balances[clientID] = 1100
 
 		tx.Value = 400
-		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
 		// check response
@@ -1594,7 +1555,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			},
 		}
 
-	assert.Equal(t, len(details), len(aresp.BlobberAllocs))
+		assert.Equal(t, len(details), len(aresp.BlobberAllocs))
 
 		// check out pools created and changed:
 		//  - write pool, should be created and filled with value of transaction
@@ -1745,7 +1706,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	balances.(*testBalances).balances[clientID] = 1100
 
 	tx.Value = 400
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 	require.NoError(t, err)
 }
 
@@ -2262,155 +2223,4 @@ func Test_finalize_allocation(t *testing.T) {
 	assert.True(t,
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
-}
-
-// user request allocation with preferred blobbers, but the blobbers
-// doesn't exist in the SC (or didn't dens health check transaction
-// last time becoming themselves unhealthy)
-func Test_preferred_blobbers(t *testing.T) {
-
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		client         = newClient(100*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
-	)
-
-	// add allocation we will not use, just the addAllocation creates blobbers
-	// and adds them to SC; also the addAllocation sets SC configurations
-	// (e.g. create allocation for side effects)
-	tp += 100
-	var _, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
-
-	// we need at least 4 blobbers to use them as preferred blobbers
-	require.True(t, len(blobs) > 4)
-
-	// allocation request to modify and create
-	var getAllocRequest = func() (nar *newAllocationRequest) {
-		nar = new(newAllocationRequest)
-		nar.DataShards = 2
-		nar.ParityShards = 2
-		nar.Expiration = common.Timestamp(exp)
-		nar.Owner = client.id
-		nar.OwnerPublicKey = client.pk
-		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
-		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
-		nar.Size = 2 * GB // 2 GB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
-		return
-	}
-
-	var newAlloc = func(t *testing.T, nar *newAllocationRequest) string {
-		t.Helper()
-		// call SC function
-		tp += 100
-		var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp,
-			balances)
-		require.NoError(t, err)
-		// decode response to get allocation ID
-		var deco StorageAllocation
-		require.NoError(t, deco.Decode([]byte(resp)))
-		return deco.ID
-	}
-
-	// preferred blobbers alive (just choose n-th first)
-	var getPreferredBlobbers = func(blobs []*Client, n int) (pb []string) {
-		require.True(t, n <= len(blobs),
-			"invalid test, not enough blobbers to choose preferred")
-		pb = make([]string, 0, n)
-		for i := 0; i < n; i++ {
-			pb = append(pb, blobs[i].id)
-		}
-		return
-	}
-
-	// create allocation with preferred blobbers list
-	t.Run("preferred blobbers", func(t *testing.T) {
-		var (
-			nar = getAllocRequest()
-			pbl = getPreferredBlobbers(blobs, 4)
-		)
-		nar.Blobbers = pbl
-		var (
-			allocID    = newAlloc(t, nar)
-			alloc, err = ssc.getAllocation(allocID, balances)
-		)
-		require.NoError(t, err)
-	Preferred:
-		for _, id := range pbl {
-			for _, d := range alloc.BlobberAllocs {
-				if id == d.BlobberID {
-					continue Preferred // ok
-				}
-			}
-			t.Error("missing preferred blobber in allocation blobbers")
-		}
-	})
-
-	t.Run("no preferred blobbers", func(t *testing.T) {
-
-		var getBlobbersNotExists = func(n int) (bns []string) {
-			bns = make([]string, 0, n)
-			for i := 0; i < n; i++ {
-				bns = append(bns, newClient(0, balances).id)
-			}
-			return
-		}
-
-		var (
-			nar = getAllocRequest()
-			pbl = getBlobbersNotExists(4)
-			err error
-		)
-		nar.Blobbers = pbl
-		tp += 100
-		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
-		require.Error(t, err) // expected error
-	})
-
-	t.Run("unhealthy preferred blobbers", func(t *testing.T) {
-
-		var updateBlobber = func(t *testing.T, b *StorageNode) {
-			t.Helper()
-			var all, err = ssc.getBlobbersList(balances)
-			require.NoError(t, err)
-			all.Nodes.update(b)
-			_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
-			require.NoError(t, err)
-			_, err = balances.InsertTrieNode(b.GetKey(ssc.ID), b)
-			require.NoError(t, err)
-		}
-
-		// revoke health check from preferred blobbers
-		var (
-			nar = getAllocRequest()
-			pbl = getPreferredBlobbers(blobs, 4)
-			err error
-		)
-
-		// after hour all blobbers become unhealthy
-		tp += int64(toSeconds(time.Hour))
-		for _, bx := range blobs {
-			var b *StorageNode
-			b, err = ssc.getBlobber(bx.id, balances)
-			require.NoError(t, err)
-			b.LastHealthCheck = common.Timestamp(tp) // do nothing to test the test
-			updateBlobber(t, b)
-		}
-
-		// make the preferred blobbers unhealthy
-		for _, id := range pbl {
-			var b *StorageNode
-			b, err = ssc.getBlobber(id, balances)
-			require.NoError(t, err)
-			b.LastHealthCheck = 0
-			updateBlobber(t, b)
-		}
-
-		nar.Expiration += common.Timestamp(tp)
-		nar.Blobbers = pbl
-		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
-		require.Error(t, err) // expected error
-	})
-
 }
