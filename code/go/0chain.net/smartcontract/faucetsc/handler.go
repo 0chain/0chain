@@ -56,6 +56,10 @@ func GetRestNames() []string {
 	}
 }
 
+func NoResourceOrErrInternal(w http.ResponseWriter, r *http.Request, err error) {
+	common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getConfig getConfig
 // faucet smart contract configuration settings
 //
@@ -65,7 +69,7 @@ func GetRestNames() []string {
 func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetStateContext())
 	if err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
+		NoResourceOrErrInternal(w, r, err)
 		return
 	}
 
@@ -104,7 +108,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetStateContext())
 	if err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
+		NoResourceOrErrInternal(w, r, err)
 		return
 	}
 	common.Respond(w, r, fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil)
@@ -119,7 +123,7 @@ func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Req
 func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetStateContext())
 	if err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
+		NoResourceOrErrInternal(w, r, err)
 		return
 	}
 	var resp periodicResponse
