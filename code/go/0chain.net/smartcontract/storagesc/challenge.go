@@ -100,7 +100,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
-	alloc *StorageAllocation, prev common.Timestamp, allocChallenges *AllocationChallenges,
+	alloc *StorageAllocation, latestCompletedChallTime common.Timestamp, allocChallenges *AllocationChallenges,
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
 	balances cstate.StateContextI) (err error) {
 
@@ -127,25 +127,31 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(prev)
-		dtu  = alloc.durationInTimeUnits(tp - prev)
+		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime)
+		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
-	// part of this tokens goes to related validators
+	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.Float64ToCoin(conf.ValidatorReward * float64(move))
 	if err != nil {
 		return err
 	}
-	move -= validatorsReward
+	move, err = move.MinusCoin(validatorsReward)
+	if err != nil {
+		return err
+	}
 
 	// for a case of a partial verification
 	blobberReward, err := currency.Float64ToCoin(float64(move) * partial) // blobber (partial) reward
 	if err != nil {
 		return err
 	}
-	back := move - blobberReward // return back to write pool
+	back, err := move.MinusCoin(blobberReward) // return back to write pool
+	if err != nil {
+		return err
+	}
 
 	if back > 0 {
 		// move back to write pool
@@ -158,9 +164,9 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
-		alloc.MovedBack += currency.Coin(back)
-		blobAlloc.Returned += currency.Coin(back)
-		// save the write pool
+		alloc.MovedBack += back
+		blobAlloc.Returned += back
+		// save write pool
 		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 			return fmt.Errorf("can't save allocation's write pool: %v", err)
 		}
@@ -176,7 +182,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
-	blobAlloc.ChallengeReward += currency.Coin(blobberReward)
+	blobAlloc.ChallengeReward += blobberReward
 
 	// validators' stake pools
 	var vsps []*stakePool
@@ -288,7 +294,10 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if err != nil {
 		return err
 	}
-	move -= validatorsReward
+	move, err = move.MinusCoin(validatorsReward)
+	if err != nil {
+		return err
+	}
 
 	// validators' stake pools
 	var vSPs []*stakePool
@@ -310,12 +319,12 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// move back to write pool
 	var until = alloc.Until()
-	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, currency.Coin(move))
+	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, move)
 	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}
-	alloc.MovedBack += currency.Coin(move)
-	blobAlloc.Returned += currency.Coin(move)
+	alloc.MovedBack += move
+	blobAlloc.Returned += move
 
 	slash, err := currency.Float64ToCoin(conf.BlobberSlash * float64(move))
 	if err != nil {
@@ -457,9 +466,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	// time of previous complete challenge (not the current one)
 	// or allocation start time if no challenges
-	var prev = alloc.StartTime
+	var latestCompletedChallTime = alloc.StartTime
 	if last := allocChallenges.LatestCompletedChallenge; last != nil {
-		prev = last.Created
+		latestCompletedChallTime = last.Created
 	}
 
 	var (
@@ -571,7 +580,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			partial = float64(success) / float64(threshold)
 		}
 
-		err = sc.blobberReward(t, alloc, prev, allocChallenges, blobAlloc,
+		err = sc.blobberReward(t, alloc, latestCompletedChallTime, allocChallenges, blobAlloc,
 			validators, partial, balances)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
@@ -632,7 +641,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 		logging.Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
-		err = sc.blobberPenalty(t, alloc, prev, allocChallenges, blobAlloc,
+		err = sc.blobberPenalty(t, alloc, latestCompletedChallTime, allocChallenges, blobAlloc,
 			validators, balances)
 		if err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
