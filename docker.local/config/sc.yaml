@@ -163,6 +163,8 @@ smart_contracts:
     max_read_price: 100.0
     max_write_price: 100.0
     # min_write_price: 0.1
+    
+    max_blobbers_per_allocation: 40
     # allocation cancellation
     #
     # failed_challenges_to_cancel is number of failed challenges of an

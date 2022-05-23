@@ -80,8 +80,7 @@ func (tb *testBalances) EmitError(error)                                        
 func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (tb *testBalances) GetLatestFinalizedBlock() *block.Block                     { return nil }
-func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
-	datastore.Key, error) {
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
 
 	if tb.mpts != nil {
 		if encryption.IsHash(key) {

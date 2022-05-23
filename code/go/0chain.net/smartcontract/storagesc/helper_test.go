@@ -255,7 +255,7 @@ func (nar *newAllocationRequest) callNewAllocReq(t testing.TB, clientID string,
 		tx    = newTransaction(clientID, ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
-	return ssc.newAllocationRequest(tx, input, balances)
+	return ssc.newAllocationRequest(tx, input, balances, nil)
 }
 
 func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
@@ -302,6 +302,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
+		nar.Blobbers = append(nar.Blobbers, b.id)
 		blobs = append(blobs, b)
 	}
 
@@ -332,6 +333,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
 	conf.ValidatorsPerChallenge = 10
+	conf.MaxBlobbersPerAllocation = 10
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
@@ -350,6 +352,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
 	conf.MaxMint = 100e10
+	conf.MaxBlobbersPerAllocation = 50
 
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       10,

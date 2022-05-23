@@ -1,12 +1,12 @@
 simulation:
-  num_clients: 21
-  num_active_clients: 21
+  num_clients: 21000
+  num_active_clients: 21000
   num_miners: 5
   num_active_miners: 5
   nun_sharders: 5
   nun_active_sharders: 5
-  num_allocations: 30
-  num_blobbers: 10
+  num_allocations: 21000
+  num_blobbers: 10000
   num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
@@ -99,6 +99,7 @@ smart_contracts:
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
     max_challenges_per_generation: 1
+    max_blobbers_per_allocation: 40
     validators_per_challenge: 2
     readpool:
       min_lock: 0.3

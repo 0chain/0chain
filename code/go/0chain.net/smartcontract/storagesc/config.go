@@ -112,6 +112,9 @@ type Config struct {
 	// for blobbers and validators
 	HealthCheckPeriod time.Duration `json:"health_check_period"`
 
+	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
+	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
+
 	// price limits for blobbers
 
 	// MaxReadPrice allowed for a blobber.
@@ -179,6 +182,10 @@ func (sc *Config) validate() (err error) {
 	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
 		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
 			sc.BlobberSlash)
+	}
+	if sc.MaxBlobbersPerAllocation <= 0 {
+		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
+			sc.MaxBlobbersPerAllocation)
 	}
 	if sc.MinBlobberCapacity < 0 {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
@@ -375,6 +382,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
+	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice = state.Balance(
 		scc.GetFloat64(pfx+"max_read_price") * 1e10)
 	conf.MinWritePrice = state.Balance(
@@ -449,6 +457,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
+
 	err = conf.validate()
 	return
 }

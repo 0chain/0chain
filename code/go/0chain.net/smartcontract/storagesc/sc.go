@@ -154,6 +154,9 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContract.RestHandlers["/errors"] = ssc.GetErrors
 	ssc.SmartContract.RestHandlers["/collected_reward"] = ssc.GetCollectedRewardHandler
 	// blobber aggregated saved data
+	ssc.SmartContract.RestHandlers["/blobber_ids"] = ssc.GetBlobberIdsByUrlsHandler
+	ssc.SmartContract.RestHandlers["/alloc_blobbers"] = ssc.GetAllocationBlobbersHandler
+	ssc.SmartContract.RestHandlers["/free_alloc_blobbers"] = ssc.GetFreeAllocationBlobbersHandler
 	ssc.SmartContractExecutionStats["/total_saved_data"] = ssc.GetTotalData
 }
 
@@ -235,7 +238,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// allocations
 
 	case "new_allocation_request":
-		resp, err = sc.newAllocationRequest(t, input, balances)
+		resp, err = sc.newAllocationRequest(t, input, balances, nil)
 	case "update_allocation_request":
 		resp, err = sc.updateAllocationRequest(t, input, balances)
 	case "finalize_allocation":
@@ -298,7 +301,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.writePoolLock(t, input, balances)
 	case "write_pool_unlock":
 		resp, err = sc.writePoolUnlock(t, input, balances)
-
 		// stake pool
 
 	case "stake_pool_lock":

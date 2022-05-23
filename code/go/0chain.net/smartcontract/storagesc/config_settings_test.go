@@ -166,12 +166,11 @@ func TestUpdateSettings(t *testing.T) {
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
-					"block_reward.block_reward":           "1000",
-					"block_reward.qualifying_stake":       "1",
-					"block_reward.sharder_ratio":          "80.0",
-					"block_reward.miner_ratio":            "20.0",
-					"block_reward.blobber_capacity_ratio": "20.0",
-					"block_reward.blobber_usage_ratio":    "80.0",
+					"block_reward.block_reward":     "1000",
+					"block_reward.qualifying_stake": "1",
+					"block_reward.sharder_ratio":    "80.0",
+					"block_reward.miner_ratio":      "20.0",
+					"block_reward.blobber_ratio":    "20.0",
 
 					"expose_mpt": "false",
 				},
@@ -364,6 +363,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"blobber_slash":                        "0.1",
 					"max_read_price":                       "100",
 					"max_write_price":                      "100",
+					"max_blobbers_per_allocation":          "40",
 					"failed_challenges_to_cancel":          "20",
 					"failed_challenges_to_revoke_min_lock": "0",
 					"challenge_enabled":                    "true",
@@ -494,6 +494,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.MinerWeight
 	case BlockRewardBlobberWeight:
 		return conf.BlockReward.BlobberWeight
+	case MaxBlobbersPerAllocation:
+		return conf.MaxBlobbersPerAllocation
 
 	case ExposeMpt:
 		return conf.ExposeMpt

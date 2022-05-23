@@ -3,16 +3,18 @@ package event
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"0chain.net/smartcontract/dbs"
 
+	"github.com/guregu/null"
 	"gorm.io/gorm"
 )
 
 type Blobber struct {
 	gorm.Model
 	BlobberID string `json:"id" gorm:"uniqueIndex"`
-	BaseURL   string `json:"url"`
+	BaseURL   string `json:"url" gorm:"uniqueIndex"`
 
 	//provider
 	LastHealthCheck int64 `json:"last_health_check"`
@@ -27,7 +29,7 @@ type Blobber struct {
 	ReadPrice               int64   `json:"read_price"`
 	WritePrice              int64   `json:"write_price"`
 	MinLockDemand           float64 `json:"min_lock_demand"`
-	MaxOfferDuration        string  `json:"max_offer_duration"`
+	MaxOfferDuration        int64   `json:"max_offer_duration"`
 	ChallengeCompletionTime int64   `json:"challenge_completion_time"`
 
 	Capacity        int64 `json:"capacity"`          // total blobber capacity
@@ -63,6 +65,12 @@ type BlobberLatLong struct {
 	Longitude float64 `json:"longitude"`
 }
 
+// BlobberPriceRange represents a price range allowed by user to filter blobbers.
+type BlobberPriceRange struct {
+	Min null.Int `json:"min"`
+	Max null.Int `json:"max"`
+}
+
 type blobberAggregateStats struct {
 	Reward             int64 `json:"reward"`
 	TotalServiceCharge int64 `json:"total_service_charge"`
@@ -74,7 +82,6 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
-
 	return &blobber, nil
 }
 
@@ -139,6 +146,43 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 	res := edb.Store.Get().Model(Blobber{}).Count(&count)
 
 	return count, res.Error
+}
+
+type AllocationQuery struct {
+	MaxChallengeCompletionTime time.Duration
+	MaxOfferDuration           time.Duration
+	ReadPriceRange             struct {
+		Min int64
+		Max int64
+	}
+	WritePriceRange struct {
+		Min int64
+		Max int64
+	}
+	Size              int
+	AllocationSize    int64
+	PreferredBlobbers []string
+	NumberOfBlobbers  int
+}
+
+func (edb *EventDb) GetBlobberIdsFromUrls(urls []string) ([]string, error) {
+	dbStore := edb.Store.Get().Model(&Blobber{})
+	dbStore = dbStore.Where("url IN ?", urls)
+	var blobberIDs []string
+	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
+}
+
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
+	dbStore := edb.Store.Get().Model(&Blobber{})
+	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
+	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
+	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
+	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
+	dbStore = dbStore.Where("capacity - used >= ?", allocation.AllocationSize)
+	dbStore = dbStore.Where("last_health_check > ?", time.Now().Add(-time.Hour).Unix())
+	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
+	var blobberIDs []string
+	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
