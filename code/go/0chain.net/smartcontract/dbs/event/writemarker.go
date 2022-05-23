@@ -46,6 +46,16 @@ func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	return &wm, nil
 }
 
+func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).Select("sum(size)").Where("block_number > ?", blockNumber).Where("allocation_id = ?", allocationID).Find(&total).Error
+}
+
+func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).Where("allocation_id = ?", allocationID).Count(&total).Error
+}
+
 func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]WriteMarker, error) {
 	var wm []WriteMarker
 	return wm, edb.Get().Model(&WriteMarker{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
@@ -54,13 +64,22 @@ func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]Wri
 	}).Scan(&wm).Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID}).
 		Find(&wms)
-	return &wms, result.Error
+	return wms, result.Error
+}
+
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string) ([]WriteMarker, error) {
+	var wms []WriteMarker
+	result := edb.Store.Get().
+		Model(&WriteMarker{}).
+		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).
+		Find(&wms)
+	return wms, result.Error
 }
 
 func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {

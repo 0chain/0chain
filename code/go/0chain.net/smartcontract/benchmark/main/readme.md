@@ -46,7 +46,35 @@ go build -tags bn256
 
 To use the event database you need a to set up a local postgreSQL database. Login in parameters
 are read from the benchmark yaml, dbs.events section.
-```yanl
+- MacOS
+  1. brew install postgres
+  2. initdb /usr/local/var/postgres
+  3. pg_ctl -D /usr/local/var/postgres start
+  4. /usr/local/opt/postgres/bin/createuser -s postgres
+
+Create zchain_user
+```sql
+CREATE ROLE zchain_user WITH
+LOGIN
+NOSUPERUSER
+NOCREATEDB
+NOCREATEROLE
+INHERIT
+NOREPLICATION
+CONNECTION LIMIT -1
+PASSWORD 'zchian';
+```
+
+Create events_ds database
+```sql
+CREATE DATABASE events_db
+WITH
+OWNER = zchain_user
+ENCODING = 'UTF8'
+CONNECTION LIMIT = -1;
+```
+Add connectivity details to the config 
+```yaml
 dbs:
   events:
     enabled: true

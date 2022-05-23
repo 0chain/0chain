@@ -366,7 +366,7 @@ func TestAllocations(t *testing.T) {
 		Data:        string(data),
 	}
 	eventDb.AddEvents(context.TODO(), []Event{eventAddSa})
-
+	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.DataShards, sa.DataShards)

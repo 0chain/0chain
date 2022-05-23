@@ -5,11 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -22,9 +19,6 @@ var (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-
-	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
 	logging.Logger = zap.NewNop()
 }
 
@@ -40,7 +34,7 @@ func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 func Test_Basic_GetGlobalNode_InitsNode(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	node, err := GetGlobalSavedNode(ctx)
+	node, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	require.Equal(t, ADDRESS+":globalnode:"+node.ID, node.GetKey())
@@ -125,7 +119,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	globalNode, err := GetGlobalSavedNode(ctx)
+	globalNode, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.Equal(t, state.Balance(11), globalNode.MinStakeAmount)
 
@@ -135,7 +129,7 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
-	globalNode, err = GetGlobalSavedNode(ctx)
+	globalNode, err = GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.Equal(t, state.Balance(100*1e10), globalNode.MinStakeAmount)
 }
@@ -183,25 +177,6 @@ func Test_Cannot_Delete_AuthorizerFromAnotherClient(t *testing.T) {
 	authorizer, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.Empty(t, authorizer)
 	require.Error(t, err)
-}
-
-func Test_LockingBasicLogicTest(t *testing.T) {
-	tr := CreateDefaultTransactionToZcnsc()
-	z := &tokenpool.ZcnLockingPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      "0",
-				Balance: 0,
-			},
-		},
-		TokenLockInterface: &TokenLock{
-			StartTime: common.Now(),
-			Duration:  0,
-		},
-	}
-
-	locked := z.IsLocked(tr)
-	require.Equal(t, locked, true)
 }
 
 func Test_UpdateAuthorizerSettings(t *testing.T) {

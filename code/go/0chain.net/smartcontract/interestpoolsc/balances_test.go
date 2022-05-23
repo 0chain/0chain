@@ -55,6 +55,7 @@ func (tb *testBalances) Validate() error                          { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
+func (tb *testBalances) GetLatestFinalizedBlock() *block.Block    { return nil }
 func (tb *testBalances) AddSignedTransfer(_ *state.SignedTransfer) {
 }
 func (tb *testBalances) GetEventDB() *event.EventDb { return nil }

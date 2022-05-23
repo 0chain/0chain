@@ -7,17 +7,20 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z BlobberChallengeNode) MarshalMsg(b []byte) (o []byte, err error) {
+func (z ChallengeReadyBlobber) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
+	// map header, size 2
 	// string "BlobberID"
-	o = append(o, 0x81, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
+	o = append(o, 0x82, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
+	// string "UsedCapacity"
+	o = append(o, 0xac, 0x55, 0x73, 0x65, 0x64, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79)
+	o = msgp.AppendUint64(o, z.UsedCapacity)
 	return
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *BlobberChallengeNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *ChallengeReadyBlobber) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -40,6 +43,12 @@ func (z *BlobberChallengeNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BlobberID")
 				return
 			}
+		case "UsedCapacity":
+			z.UsedCapacity, bts, err = msgp.ReadUint64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "UsedCapacity")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -53,7 +62,7 @@ func (z *BlobberChallengeNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z BlobberChallengeNode) Msgsize() (s int) {
-	s = 1 + 10 + msgp.StringPrefixSize + len(z.BlobberID)
+func (z ChallengeReadyBlobber) Msgsize() (s int) {
+	s = 1 + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 13 + msgp.Uint64Size
 	return
 }

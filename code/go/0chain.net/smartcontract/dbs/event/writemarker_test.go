@@ -99,8 +99,8 @@ func TestWriteMarker(t *testing.T) {
 
 	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID)
 	require.NoError(t, err)
-	require.EqualValues(t, 1, len(*wms))
-	require.EqualValues(t, eWriteMarker.BlockNumber, (*wms)[0].BlockNumber)
+	require.EqualValues(t, 1, len(wms))
+	require.EqualValues(t, eWriteMarker.BlockNumber, (wms)[0].BlockNumber)
 }
 
 func TestGetWriteMarkers(t *testing.T) {
@@ -169,6 +169,26 @@ func TestGetWriteMarkers(t *testing.T) {
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
+	t.Run("GetWriteMarkersForAllocationID", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id")
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
+	})
+	t.Run("GetWriteMarkersForAllocationFile", func(t *testing.T) {
+		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt")
+		assert.NoError(t, err)
+		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
+	})
+	t.Run("WriteMarkers size total", func(t *testing.T) {
+		gotWM, err := eventDb.GetAllocationWrittenSizeInLastNBlocks(5, "")
+		assert.NoError(t, err)
+		assert.Equal(t, int64(30), gotWM)
+	})
+	t.Run("writeMarker count", func(t *testing.T) {
+		gotCount, err := eventDb.GetWriteMarkerCount("allocation_id")
+		assert.NoError(t, err)
+		assert.Equal(t, int64(10), gotCount, "count should be 10")
+	})
 }
 
 func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
@@ -178,7 +198,7 @@ func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}
-		err = eventDb.addOrOverwriteWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)})
+		err = eventDb.addOrOverwriteWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id", Name: "name.txt"})
 		if !assert.NoError(t, err, "Error while writing read marker") {
 			return
 		}
@@ -190,7 +210,7 @@ func compareWriteMarker(t *testing.T, gotWM []WriteMarker, blobberID string, off
 		t.Log(offset, limit, offset+limit-1)
 		for j, i := 0, 9-offset; j < limit; i, j = i-1, j+1 {
 			transactionID := fmt.Sprintf("transactionHash_%d", i)
-			want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)}
+			want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id"}
 			want.ID = gotWM[j].ID
 			want.CreatedAt = gotWM[j].CreatedAt
 			want.UpdatedAt = gotWM[j].UpdatedAt
@@ -200,7 +220,7 @@ func compareWriteMarker(t *testing.T, gotWM []WriteMarker, blobberID string, off
 	}
 	for i, j := offset, 0; i < offset+limit; i, j = i+1, j+1 {
 		transactionID := fmt.Sprintf("transactionHash_%d", i)
-		want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i)}
+		want := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id"}
 		want.ID = gotWM[j].ID
 		want.CreatedAt = gotWM[j].CreatedAt
 		want.UpdatedAt = gotWM[j].UpdatedAt

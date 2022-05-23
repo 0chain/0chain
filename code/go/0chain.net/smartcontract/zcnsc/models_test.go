@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/encryption"
+
 	"0chain.net/chaincore/state"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -20,9 +20,6 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
-
 	logging.Logger = zap.NewNop()
 }
 
@@ -30,7 +27,7 @@ func Test_ShouldSign(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -42,7 +39,7 @@ func Test_ShouldSignAndVerify(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -60,7 +57,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	bytes, err := json.Marshal("sample string")
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -70,7 +67,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 	require.NotEmpty(t, sig)
 
 	pk := signatureScheme.GetPublicKey()
-	signatureScheme = chain.GetServerChain().GetSignatureScheme()
+	signatureScheme = encryption.NewBLS0ChainScheme()
 	err = signatureScheme.SetPublicKey(pk)
 	require.NoError(t, err)
 
@@ -148,28 +145,6 @@ func Test_PublicKey(t *testing.T) {
 	err = expected.Decode(bytes)
 	require.NoError(t, err)
 	require.Equal(t, expected.PublicKey, pk.PublicKey)
-}
-
-func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
-	pool := &tokenpool.ZcnLockingPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      "id",
-				Balance: 100,
-			},
-		},
-		TokenLockInterface: &TokenLock{
-			StartTime: 0,
-			Duration:  0,
-			Owner:     "id",
-		},
-	}
-
-	target := &tokenpool.ZcnLockingPool{}
-
-	err := target.Decode(pool.Encode(), &TokenLock{})
-	require.NoError(t, err)
-	require.Equal(t, int(target.Balance), 100)
 }
 
 func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {

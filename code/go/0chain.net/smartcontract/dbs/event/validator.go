@@ -15,6 +15,7 @@ type Validator struct {
 	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
 	BaseUrl     string `json:"url" gorm:"index:url"`
 	Stake       int64  `json:"stake" gorm:"index:stake"`
+	PublicKey   string `json:"public_key" gorm:"public_key"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
@@ -23,7 +24,7 @@ type Validator struct {
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 
-	Reward      int64 `json:"reward"`
+	Rewards     int64 `json:"rewards"`
 	TotalReward int64 `json:"total_reward"`
 }
 
@@ -52,6 +53,13 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 	return vn, nil
 }
 
+func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
+	var validators []Validator
+	result := edb.Store.Get().Model(&Validator{}).Where("validator_id IN ?", ids).Find(&validators)
+
+	return validators, result.Error
+}
+
 func (edb *EventDb) overwriteValidator(vn Validator) error {
 
 	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: vn.ValidatorID}).Updates(&vn)
@@ -72,13 +80,8 @@ func (edb *EventDb) addOrOverwriteValidator(vn Validator) error {
 	return result.Error
 }
 
-type validatorAggregateStats struct {
-	Reward      int64 `json:"reward"`
-	TotalReward int64 `json:"total_reward"`
-}
-
-func (edb *EventDb) validatorAggregateStats(id string) (*validatorAggregateStats, error) {
-	var validator validatorAggregateStats
+func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats, error) {
+	var validator providerAggregateStats
 	result := edb.Store.Get().
 		Model(&Validator{}).
 		Where(&Validator{ValidatorID: id}).

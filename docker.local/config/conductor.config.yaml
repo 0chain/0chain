@@ -7,7 +7,7 @@ bind: 0.0.0.0:15210
 # place for stdin and stdout logs of nodes (relative to the working_directory)
 logs: "conductor/logs"
 # cleanup blockchain command
-cleanup_command: ./docker.local/bin/docker-clean.sh
+cleanup_command: "./docker.local/bin/docker-clean.sh"
 # number of rounds per view change
 view_change: 250 # 100
 # skip 0dns from initialization message waiting
@@ -144,6 +144,18 @@ nodes:
 
 # named system commands
 commands:
+  build_base:
+    work_dir: "./."
+    exec: "./docker.local/bin/build.base.sh"
+    can_fail: true
+  build_sharder:
+    work_dir: "./."
+    exec: "./docker.local/bin/build.sharders-integration-tests.sh"
+    can_fail: true
+  build_miner:
+    work_dir: "./."
+    exec: "./docker.local/bin/build.miners-integration-tests.sh"
+    can_fail: true
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"

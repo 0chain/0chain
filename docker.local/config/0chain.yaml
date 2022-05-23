@@ -133,8 +133,8 @@ server_chain:
       name: events_db
       user: zchain_user
       password: zchian
-      host: postgres #localhost
-      port: 5432
+      host: postgres #it will prefer to pick from env else it will be loaded from config
+      port: 5432 #it will prefer to pick from env else it will be loaded from config
       max_idle_conns: 100
       max_open_conns: 200
       conn_max_lifetime: 20s

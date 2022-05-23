@@ -35,6 +35,8 @@ func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
+var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
+
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
@@ -188,6 +190,7 @@ func (c *Chain) NewStateContext(
 		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
+		c.GetLatestFinalizedBlock,
 		eventDb,
 	)
 }
@@ -207,6 +210,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		startRoot   = sctx.GetState().GetRoot()
 	)
 	defer func() { events = sctx.GetEvents() }()
+
+	if err := c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
+		return nil, err
+	}
 
 	//we should check that client has enough funds to pay for transaction before heavy computations are executed
 	if err = sctx.Validate(); err != nil {
@@ -355,6 +362,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
+	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
+		logging.Logger.Error("update nonce error", zap.Any("error", err),
+			zap.Any("transaction", txn.Hash),
+			zap.String("clientID", txn.ClientID))
+		return
+	}
+
 	// commit transaction
 	if err = bState.MergeMPTChanges(clientState); err != nil {
 		if state.DebugTxn() {
@@ -381,7 +395,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(bState, c.OwnerID())
+		os, err = c.GetStateById(bState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -411,7 +425,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	b := sctx.GetBlock()
 	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
-	fs, err := c.getState(clientState, fromClient)
+	fs, err := c.GetStateById(clientState, fromClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -433,7 +447,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			zap.Any("transfer", amount))
 		return transaction.ErrInsufficientBalance
 	}
-	ts, err := c.getState(clientState, toClient)
+	ts, err := c.GetStateById(clientState, toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -458,12 +472,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	fs.Balance -= amount
-	if fs.Balance == 0 {
-		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
-		_, err = clientState.Delete(util.Path(fromClient))
-	} else {
-		_, err = clientState.Insert(util.Path(fromClient), fs)
-	}
+	_, err = clientState.Insert(util.Path(fromClient), fs)
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
@@ -505,7 +514,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	b := sctx.GetBlock()
 	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
-	ts, err := c.getState(clientState, toClient)
+	ts, err := c.GetStateById(clientState, toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -556,15 +565,55 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	return nil
 }
 
+func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
+	s, err := c.GetStateById(sctx.GetState(), fromClient)
+	if !isValid(err) {
+		return err
+	}
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if nonce+1 != txnNonce {
+		b := sctx.GetBlock()
+		logging.Logger.Error("validate nonce - error",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
+			zap.Any("local_nonce", s.Nonce), zap.Error(err))
+		return ErrWrongNonce
+	}
+
+	return nil
+}
+
+func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) error {
+	sc := sctx.GetState()
+	s, err := c.GetStateById(sc, fromClient)
+	if !isValid(err) {
+		return err
+	}
+	if s == nil {
+		s = &state.State{}
+	}
+	if err := sctx.SetStateContext(s); err != nil {
+		return err
+	}
+	s.Nonce += 1
+	if _, err := sc.Insert(util.Path(fromClient), s); err != nil {
+		return err
+	}
+	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
+	return nil
+}
+
 func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
 	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
 	return tmpt
 }
 
-func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
-		return nil, common.NewError("getState", "client state does not exist")
+		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/chaincore/block"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
@@ -37,6 +39,11 @@ type mockStateContext struct {
 	stakingPools map[string]*StakePool
 }
 
+func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
+	//TODO implement me
+	panic("implement me")
+}
+
 func MakeMockStateContext() *mockStateContext {
 	ctx := &mockStateContext{
 		StateContextI: &mocks.StateContextI{},
@@ -52,7 +59,12 @@ func MakeMockStateContext() *mockStateContext {
 
 	// Global Node
 
-	ctx.globalNode = &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
+	ctx.globalNode = &GlobalNode{
+		ID: ADDRESS,
+		ZCNSConfig: &ZCNSConfig{
+			MinStakeAmount: 11,
+		},
+	}
 
 	// User Node
 

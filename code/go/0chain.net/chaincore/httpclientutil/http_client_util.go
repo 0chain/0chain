@@ -68,7 +68,7 @@ type Signer func(h string) (string, error)
 
 //ComputeHashAndSign compute Hash and sign the transaction
 func (t *Transaction) ComputeHashAndSign(handler Signer) error {
-	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID,
+	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v:%v", t.CreationDate, t.Nonce, t.ClientID,
 		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
 	t.Hash = encryption.Hash(hashdata)
 	var err error
@@ -265,8 +265,24 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-//MakeClientBalanceRequest to get a client's balance
 func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (state.Balance, error) {
+	s, err := MakeClientStateRequest(clientID, urls, consensus)
+	if err != nil {
+		return 0, err
+	}
+	return s.Balance, nil
+}
+
+func MakeClientNonceRequest(clientID string, urls []string, consensus int) (int64, error) {
+	s, err := MakeClientStateRequest(clientID, urls, consensus)
+	if err != nil {
+		return 0, err
+	}
+	return s.Nonce, nil
+}
+
+//MakeClientBalanceRequest to get a client's balance
+func MakeClientStateRequest(clientID string, urls []string, consensus int) (state.State, error) {
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
 
 	//maxCount := 0
@@ -312,26 +328,26 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 	}
 
 	if numSuccess+numErrs == 0 {
-		return 0, common.NewError("req_not_run", "Could not run the request") //why???
+		return clientState, common.NewError("req_not_run", "Could not run the request") //why???
 	}
 
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
 
 	// We've at least one success and success rate sr is at least same as consensus
 	if numSuccess > 0 && sr >= consensus {
-		return clientState.Balance, nil
+		return clientState, nil
 	} else if numSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
 		logging.Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return 0, common.NewError("err_getting_consensus", errString)
+		return clientState, common.NewError("err_getting_consensus", errString)
 	} else if numErrs > 0 {
 		//We have received only errors
 		logging.Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return 0, common.NewError("err_running_req", errString)
+		return clientState, common.NewError("err_running_req", errString)
 	}
 
 	//this should never happen
-	return 0, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+	return clientState, common.NewError("unknown_err", "Not able to run the request. unknown reason")
 }
 
 //MakeSCRestAPICall for smart contract REST API Call
@@ -722,6 +738,17 @@ func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, sc
 	}
 	txn.TransactionData = string(txnBytes)
 
+	nextNonce := node.Self.GetNextNonce()
+	if nextNonce == 0 {
+		request, err := MakeClientNonceRequest(node.Self.Underlying().GetKey(), minerUrls, 33)
+		if err != nil {
+			logging.Logger.Error("Can't get nonce from remote", zap.Error(err))
+		}
+		node.Self.SetNonce(request)
+		nextNonce = node.Self.GetNextNonce()
+	}
+	txn.Nonce = nextNonce
+
 	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)
 	}
@@ -731,6 +758,7 @@ func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, sc
 		logging.Logger.Info("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return err
 	}
+
 	SendTransaction(txn, minerUrls, node.Self.Underlying().GetKey(),
 		node.Self.Underlying().PublicKey)
 	return nil

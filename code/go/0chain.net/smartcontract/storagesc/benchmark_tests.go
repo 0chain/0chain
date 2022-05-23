@@ -1,22 +1,21 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/state"
+	sc "0chain.net/smartcontract"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"testing"
-
-	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract/stakepool"
+	"time"
 
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/encryption"
-	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
 
 	"github.com/spf13/viper"
@@ -36,8 +35,13 @@ type BenchTest struct {
 		[]byte,
 		cstate.StateContextI,
 	) (string, error)
-	txn   *transaction.Transaction
-	input []byte
+	txn     *transaction.Transaction
+	input   []byte
+	timings map[string]time.Duration
+}
+
+func (bt BenchTest) Timings() map[string]time.Duration {
+	return bt.timings
 }
 
 func (bt BenchTest) Name() string {
@@ -66,11 +70,31 @@ func BenchmarkTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
 	var now = common.Now()
+	var blobbers []string
+	for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
+		blobbers = append(blobbers, getMockBlobberId(i))
+	}
+	var freeBlobbers []string
+	//		DataShards:                 conf.FreeAllocationSettings.DataShards,
+	//		ParityShards:               conf.FreeAllocationSettings.ParityShards,
+	for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
+		freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
+	}
+
 	var ssc = StorageSmartContract{
 
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
+	timings := make(map[string]time.Duration)
+	newAllocationRequestF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.newAllocationRequest(t, r, b, timings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -130,8 +154,8 @@ func BenchmarkTests(
 
 		// data.Allocations
 		{
-			name:     "storage.new_allocation_request_random",
-			endpoint: ssc.newAllocationRequest,
+			name:     "storage.new_allocation_request",
+			endpoint: newAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -142,52 +166,20 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+					DataShards:                 len(blobbers) / 2,
+					ParityShards:               len(blobbers) / 2,
 					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
 					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
-					PreferredBlobbers:          []string{},
+					Blobbers:                   blobbers,
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
 			}(),
-		},
-		{
-			name:     "storage.new_allocation_request_preferred",
-			endpoint: ssc.newAllocationRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[0],
-				CreationDate: now,
-				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
-			},
-			input: func() []byte {
-				var blobberUrls []string
-				for i := 0; i < viper.GetInt(bk.AvailableKeys); i++ {
-					blobberUrls = append(blobberUrls, getMockBlobberId(0)+".com")
-				}
-				bytes, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					PreferredBlobbers:          blobberUrls[:8],
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
-				}).encode()
-				return bytes
-			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.update_allocation_request",
@@ -313,6 +305,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&freeStorageAllocationInput{
 					RecipientPublicKey: data.PublicKeys[1],
 					Marker:             string(fsmBytes),
+					Blobbers:           freeBlobbers,
 				})
 				return bytes
 			}(),
@@ -367,7 +360,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: now + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     "d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577",
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
@@ -754,9 +747,9 @@ func BenchmarkTests(
 						return "", nil
 					}
 				} else {
-					return "Challenges disabled in the config", nil
+					return "OpenChallenges disabled in the config", nil
 				}
-				return "Challenges generated", nil
+				return "OpenChallenges generated", nil
 			},
 			txn: &transaction.Transaction{
 				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),

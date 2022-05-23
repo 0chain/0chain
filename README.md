@@ -739,107 +739,18 @@ Run sharders test
 (cd 0chain && ./docker.local/bin/start.conductor.sh sharders)
 ```
 
-### Running view-change tests
+### Running complex scenario suites
 
-1. Set `view_change: true` on `0chain/docker.local/config.yaml`
-2. Run view-change tests
-
-```
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-2)
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-3)
-```
+1. These 2 scripts should be run with `view_change: false` in `0chain/docker.local/config.yaml`
+  1.1. `(cd 0chain && ./docker.local/bin/start.conductor.sh no-view-change.byzantine)`
+  1.2. `(cd 0chain && ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance)`
+2. Set `view_change: true` in `0chain/docker.local/config.yaml` for the following 2 scripts
+  2.1. `(cd 0chain && ./docker.local/bin/start.conductor.sh view-change.byzantine)`
+  2.2. `(cd 0chain && ./docker.local/bin/start.conductor.sh view-change.fault-tolerance*)`
 
 ### Running blobber tests
 
-Blobber tests require cloning of below services.
-
- [blobber](https://github.com/0chain/blobber)
-
-```
-git clone https://github.com/0chain/blobber.git
-```
-
-Refer to [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
-
-[zboxcli](https://github.com/0chain/zboxcli)
-
-```
-git clone https://github.com/0chain/zboxcli.git
-```
-
- [zwalletcli](https://github.com/0chain/zwalletcli)
-
-```
-git clone https://github.com/0chain/zwalletcli.git
-```
-
- [0dns](https://github.com/0chain/0dns)
-
-```
-git clone https://github.com/0chain/0dns.git
-```
-
-Confirm whether all the cloned directories exists.
-
-```
-0chain/
-blobber/
-zboxcli/
-zwalletcli/
-0dns/
-```
-
-Install zboxcli
-
-```
-(cd zboxcli && make install)
-```
-
-Install zwalletcli
-
-```
-(cd zwalletcli && make install)
-```
-
-Patch 0dns for the latest 0chain network configuration .
-
-```
-(cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
-(cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
-```
-
-Patch blobbers for the latest blobber tests
-
- ```
-(cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-(cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-```
-
-Add `~/.zcn/config.yaml` as follows
-
-```
-block_worker: http://127.0.0.1:9091
-signature_scheme: bls0chain
-min_submit: 50
-min_confirmation: 50
-confirmation_chain_length: 3
-max_txn_query: 5
-query_sleep_time: 5
-```
-
-Apply if on Ubuntu 18.04
-
-https://github.com/docker/for-linux/issues/563#issuecomment-547962928
-
-The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice package required by docker-compose and used by docker. A docker process (a build, for example) can sometimes fail due to the bug. Some tests have internal docker builds and can fail due to this bug.
-
-Run blobber tests
-
-```
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2)
-```
+Refer to [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#blobber)
 
 ### Adding new Tests
 

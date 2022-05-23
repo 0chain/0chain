@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -13,31 +15,21 @@ import (
 )
 
 func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
-
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:                edbMiner.MinerID,
-		N2NHost:           edbMiner.N2NHost,
-		Host:              edbMiner.Host,
-		Port:              edbMiner.Port,
-		Path:              edbMiner.Path,
-		PublicKey:         edbMiner.PublicKey,
-		ShortName:         edbMiner.ShortName,
-		BuildTag:          edbMiner.BuildTag,
-		TotalStaked:       int64(edbMiner.TotalStaked),
-		Delete:            edbMiner.Delete,
-		DelegateWallet:    edbMiner.DelegateWallet,
-		ServiceCharge:     edbMiner.ServiceCharge,
-		NumberOfDelegates: edbMiner.NumberOfDelegates,
-		MinStake:          edbMiner.MinStake,
-		MaxStake:          edbMiner.MaxStake,
-		Stat: Stat{
-			GeneratorRewards: edbMiner.Rewards,
-			GeneratorFees:    edbMiner.Fees,
-		},
+		ID:          edbMiner.MinerID,
+		N2NHost:     edbMiner.N2NHost,
+		Host:        edbMiner.Host,
+		Port:        edbMiner.Port,
+		Path:        edbMiner.Path,
+		PublicKey:   edbMiner.PublicKey,
+		ShortName:   edbMiner.ShortName,
+		BuildTag:    edbMiner.BuildTag,
+		TotalStaked: int64(edbMiner.TotalStaked),
+		Delete:      edbMiner.Delete,
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbMiner.Latitude,
 			Longitude: edbMiner.Longitude,
@@ -49,12 +41,21 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 
 	return MinerNode{
 		SimpleNode: &msn,
+		StakePool: &stakepool.StakePool{
+			Reward: edbMiner.Rewards,
+			Settings: stakepool.StakePoolSettings{
+				DelegateWallet:  edbMiner.DelegateWallet,
+				ServiceCharge:   edbMiner.ServiceCharge,
+				MaxNumDelegates: edbMiner.NumberOfDelegates,
+				MinStake:        edbMiner.MinStake,
+				MaxStake:        edbMiner.MaxStake,
+			},
+		},
 	}
 
 }
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
-
 	return event.Miner{
 		MinerID:           mn.ID,
 		N2NHost:           mn.N2NHost,
@@ -66,14 +67,13 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		BuildTag:          mn.BuildTag,
 		TotalStaked:       state.Balance(mn.TotalStaked),
 		Delete:            mn.Delete,
-		DelegateWallet:    mn.DelegateWallet,
-		ServiceCharge:     mn.ServiceCharge,
-		NumberOfDelegates: mn.NumberOfDelegates,
-		MinStake:          mn.MinStake,
-		MaxStake:          mn.MaxStake,
+		DelegateWallet:    mn.Settings.DelegateWallet,
+		ServiceCharge:     mn.Settings.ServiceCharge,
+		NumberOfDelegates: mn.Settings.MaxNumDelegates,
+		MinStake:          mn.Settings.MinStake,
+		MaxStake:          mn.Settings.MaxStake,
 		LastHealthCheck:   mn.LastHealthCheck,
-		Rewards:           mn.Stat.GeneratorRewards,
-		Fees:              mn.Stat.GeneratorFees,
+		Rewards:           mn.Reward,
 		Active:            mn.Status == node.NodeStatusActive,
 		Longitude:         mn.Geolocation.Longitude,
 		Latitude:          mn.Geolocation.Latitude,
@@ -124,16 +124,15 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"build_tag":           mn.BuildTag,
 			"total_staked":        mn.TotalStaked,
 			"delete":              mn.Delete,
-			"delegate_wallet":     mn.DelegateWallet,
-			"service_charge":      mn.ServiceCharge,
-			"number_of_delegates": mn.NumberOfDelegates,
-			"min_stake":           mn.MinStake,
-			"max_stake":           mn.MaxStake,
+			"delegate_wallet":     mn.Settings.DelegateWallet,
+			"service_charge":      mn.Settings.ServiceCharge,
+			"number_of_delegates": mn.Settings.MaxNumDelegates,
+			"min_stake":           mn.Settings.MinStake,
+			"max_stake":           mn.Settings.MaxStake,
 			"last_health_check":   mn.LastHealthCheck,
-			"rewards":             mn.SimpleNode.Stat.GeneratorRewards,
-			"fees":                mn.SimpleNode.Stat.GeneratorFees,
 			"longitude":           mn.SimpleNode.Geolocation.Longitude,
 			"latitude":            mn.SimpleNode.Geolocation.Latitude,
+			"rewards":             mn.Reward,
 		},
 	}
 

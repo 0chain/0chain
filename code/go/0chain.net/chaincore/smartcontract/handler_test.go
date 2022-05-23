@@ -211,7 +211,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 30,
+			restpoints: 37,
 		},
 		{
 			name:       "interest",
@@ -386,12 +386,6 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
-			minerNodes := &minersc.MinerNodes{}
-			blob, err := minerNodes.MarshalMsg(nil)
-			require.NoError(t, err)
-
-			_, err = v.UnmarshalMsg(blob)
-			require.NoError(t, err)
 			return true
 		})).Return(nil)
 	stateContextIMock.On("GetTrieNode",
@@ -500,7 +494,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0,\"last_setting_update_round\":0}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":null}",
 			wantErr: false,
 		},
 	}
