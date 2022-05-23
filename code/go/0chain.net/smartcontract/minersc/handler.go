@@ -493,6 +493,7 @@ func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Req
 	edb := mrh.GetStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	ts, err := edb.GetShardersTotalStake()
 	if err != nil {
@@ -516,6 +517,7 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 	edb := mrh.GetStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	active, err := edb.CountActiveSharders()
 	if err != nil {
@@ -582,6 +584,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	edb := mrh.GetStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	sharders, err := edb.GetShardersWithFilterAndPagination(filter, offset, limit)
 	if err != nil {
