@@ -82,7 +82,7 @@ func (c Coin) ToZCN() (float64, error) {
 	return f, nil
 }
 
-// Int64 converts a uint64 Coin to an int64, returning an error if the uint64 value overflows int64
+// Int64 converts c uint64 Coin to an int64, returning an error if the uint64 value overflows int64
 func (c Coin) Int64() (int64, error) {
 	b := int64(c)
 	if b < 0 {
@@ -91,7 +91,7 @@ func (c Coin) Int64() (int64, error) {
 	return b, nil
 }
 
-// Float64 converts a uint64 Coin to an float64, returning an error if the uint64 value overflows float64
+// Float64 converts c uint64 Coin to a float64, returning an error if the uint64 value overflows float64
 func (c Coin) Float64() (float64, error) {
 	b := float64(c)
 	if b < 0 {
@@ -100,7 +100,7 @@ func (c Coin) Float64() (float64, error) {
 	return b, nil
 }
 
-// MultUint64 multiplies Coin a by b, returning an error if the values overflow
+// MultUint64 multiplies Coin c by b, returning an error if the values overflow
 func (c Coin) MultUint64(b uint64) (Coin, error) {
 	a := uint64(c) * b
 	if a != 0 && a/uint64(c) != b {
@@ -109,7 +109,7 @@ func (c Coin) MultUint64(b uint64) (Coin, error) {
 	return Coin(a), nil
 }
 
-// AddCoin adds a and b, returning an error if the values overflow
+// AddCoin adds c and b, returning an error if the values overflow
 func (c Coin) AddCoin(b Coin) (Coin, error) {
 	sum := c + b
 	if sum < c || sum < b {
