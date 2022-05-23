@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package main
@@ -6,4 +7,3 @@ package main
 func initIntegrationsTests(id string)  {}
 func shutdownIntegrationTests()        {}
 func configureIntegrationsTestsFlags() {}
-func applyAdversarialMode() string     { return "" }

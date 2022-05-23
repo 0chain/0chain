@@ -2,7 +2,6 @@ package cases
 
 import (
 	"0chain.net/conductor/cases"
-	"0chain.net/conductor/conductrpc/stats"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -10,10 +9,6 @@ type (
 	// RoundHasFinalized represents TestCaseConfigurator implementation.
 	RoundHasFinalized struct {
 		Spammers []string `json:"spammers" yaml:"spammers" mapstructure:"spammers"`
-
-		monitorID string
-
-		statsCollector *stats.NodesServerStats
 	}
 )
 

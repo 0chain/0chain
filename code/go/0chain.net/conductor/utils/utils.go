@@ -58,7 +58,7 @@ func IsSpammer(spammers []string, node *node.Node) (isSpammer bool) {
 
 	for _, spammer := range spammers {
 		indexStr := re.FindAllString(spammer, 1)
-		if indexStr != nil && len(indexStr) > 0 {
+		if len(indexStr) > 0 {
 			index, err := strconv.Atoi(indexStr[0])
 			if err != nil {
 				log.Fatalf("Spammer name should have the format miner-<1..>: %s", spammer)
