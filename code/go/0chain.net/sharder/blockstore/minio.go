@@ -115,11 +115,13 @@ type minioClient struct {
 
 	allowedBlockNumbers uint64
 	allowedBlockSize    uint64
-	blocksCount         uint64
-	blocksSize          uint64
+
+	countMu     *sync.Mutex
+	blocksCount uint64
+	blocksSize  uint64
 }
 
-func (mc *minioClient) initialize() (err error) {
+func (mc *minioClient) initialize(delete bool) (err error) {
 	mc.Client, err = minio.New(mc.storageServiceURL, &minio.Options{
 		Creds:  credentials.NewStaticV4(mc.accessId, mc.secretAccessKey, ""),
 		Secure: mc.useSSL,
@@ -127,13 +129,44 @@ func (mc *minioClient) initialize() (err error) {
 
 	if err != nil {
 		logging.Logger.Error(err.Error())
+		return err
 	}
 
+	if delete {
+		err := mc.deleteAll()
+		if err != nil {
+			return err
+		}
+	}
 	return mc.calculateBucketStats()
 }
 
-// TODO
 func (mc *minioClient) calculateBucketStats() error {
+	ctx := context.Background()
+	ch := mc.Client.ListObjects(ctx, mc.bucketName, minio.ListObjectsOptions{})
+
+	for obj := range ch {
+		if obj.Err != nil {
+			return obj.Err
+		}
+		// Not required to lock countMU
+		mc.blocksCount++
+		mc.blocksSize += uint64(obj.Size)
+	}
+	return nil
+}
+
+func (mc *minioClient) deleteAll() error {
+	ctx := context.Background()
+	ch := mc.Client.ListObjects(ctx, mc.bucketName, minio.ListObjectsOptions{})
+
+	errCh := mc.Client.RemoveObjects(ctx, mc.bucketName, ch, minio.RemoveObjectsOptions{})
+
+	removeErr := <-errCh
+	if removeErr.Err != nil {
+		return fmt.Errorf("Error: %s, object name: %s", removeErr.Err.Error(), removeErr.ObjectName)
+	}
+
 	return nil
 }
 
@@ -213,11 +246,11 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 
 	switch mode {
 	default:
-		panic(fmt.Errorf("%v mode is not supported", mode))
-	case "start":
-		startCloudStorages(cloudStoragesMap, cTier)
-	case "recover":
-		// recoverCloudMetaData(cloudStoragesMap, cTier)
+		panic(fmt.Sprintf("%v mode is not supported", mode))
+	case "start", "recover":
+		startCloudStorages(cloudStoragesMap, cTier, true)
+	case "restart":
+		startCloudStorages(cloudStoragesMap, cTier, false)
 	}
 
 	logging.Logger.Info(fmt.Sprintf("Successfully ran coldInit in %v mode", mode))
@@ -279,7 +312,9 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 	return cTier
 }
 
-func startCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTier) {
+func startCloudStorages(cloudStorages []map[string]interface{},
+	cTier *coldTier, shouldDelete bool) {
+
 	coldStoragesMap = make(map[string]*minioClient)
 
 	wg := &sync.WaitGroup{}
@@ -356,7 +391,7 @@ func startCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTier)
 				allowedBlockSize:    allowedBlockSize,
 			}
 
-			if err := mc.initialize(); err != nil {
+			if err := mc.initialize(shouldDelete); err != nil {
 				logging.Logger.Error(fmt.Sprintf("Error while initializing %v. Error: %v", servUrl, err))
 				return
 			}
