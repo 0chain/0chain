@@ -107,6 +107,13 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			endRound = lfbTk.Round + aheadN
+
+			logging.Logger.Debug("process block, sync triggered",
+				zap.Int64("lfb", lfb.Round),
+				zap.Int64("lfb ticket", lfbTk.Round),
+				zap.Int64("current round", cr),
+				zap.Int64("end round", endRound))
+
 			if endRound <= cr {
 				continue
 			}
@@ -119,6 +126,9 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 			endRound = cr + reqNum
 
+			logging.Logger.Debug("process block, sync blocks",
+				zap.Int64("start round", cr+1),
+				zap.Int64("end round", cr+reqNum+1))
 			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.GetBlockChannel():
 			cr := sc.GetCurrentRound()
@@ -135,7 +145,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			if b.Round+aheadN >= endRound {
 				logging.Logger.Debug("process block, hit end, trigger sync",
 					zap.Int64("round", b.Round),
-					zap.Int64("end round", endRound))
+					zap.Int64("end round", endRound),
+					zap.Int64("current round", cr))
 				syncBlocksTimer.Reset(0)
 			}
 		}
