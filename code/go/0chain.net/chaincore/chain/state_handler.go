@@ -62,6 +62,9 @@ func (c *Chain) GetQueryStateContext() state.QueryStateContextI {
 	return c.GetStateContextI()
 }
 
+func (c *Chain) SetQueryStateContext(_ state.QueryStateContextI) {
+}
+
 func (c *Chain) GetStateContextI() state.StateContextI {
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.ClientState == nil {
