@@ -448,20 +448,37 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		return err
 	}
 
+	sn := len(sharders)
 	// fess and mint
-	var (
-		partf = float64(fee) / float64(len(sharders))
-		partm = float64(mint) / float64(len(sharders))
-	)
-	value, err := currency.Float64ToCoin(partf + partm)
+	feeShare, feeLeft, err := fee.DivideCurrency(int64(sn))
 	if err != nil {
 		return err
+	}
+	mintShare, mintLeft, err := mint.DivideCurrency(int64(sn))
+	if err != nil {
+		return err
+	}
+	sharderShare := feeShare + mintShare
+	totalCoinLeft := feeLeft + mintLeft
+
+	if totalCoinLeft > currency.Coin(sn) {
+		clShare, cl, err := totalCoinLeft.DivideCurrency(int64(sn))
+		if err != nil {
+			return err
+		}
+		sharderShare += clShare
+		totalCoinLeft = cl
 	}
 
 	// part for every sharder
 	for _, sh := range sharders {
+		var extraShare currency.Coin = 0
+		if totalCoinLeft > 0 {
+			extraShare = 1
+			totalCoinLeft -= 1
+		}
 		if err = sh.StakePool.DistributeRewards(
-			value, sh.ID, spenum.Sharder, balances,
+			sharderShare+extraShare, sh.ID, spenum.Sharder, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
