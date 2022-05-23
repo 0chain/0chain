@@ -77,9 +77,13 @@ func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return true, nil // doesn't need a not. block for the round
 		}
 
-		if b.Round != sc.GetCurrentRound()+1 {
-			return true, nil
-		}
+		//cr := sc.GetCurrentRound()
+		//if b.Round != cr+1 {
+		//	Logger.Debug("received notarized block, skip not connect to current round",
+		//		zap.Int64("round", b.Round),
+		//		zap.Int64("current round", cr))
+		//	return true, nil
+		//}
 
 		_, err := sc.GetBlock(ctx, b.Hash)
 		if err == nil {
@@ -115,9 +119,9 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return true, nil // doesn't need a not. block for the round
 		}
 
-		if b.Round != sc.GetCurrentRound()+1 {
-			return true, nil
-		}
+		//if b.Round != sc.GetCurrentRound()+1 {
+		//	return true, nil
+		//}
 
 		if err := node.ValidateSenderSignature(ctx); err != nil {
 			return false, err
