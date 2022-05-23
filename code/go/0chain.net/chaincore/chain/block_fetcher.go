@@ -230,7 +230,9 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			if !ok {
 				bfr, ok = fetching[strconv.FormatInt(rpl.Round, 10)]
 				if !ok {
-					panic("BlockFetcher, invalid state: missing block fetch request")
+					// a fetch request with round number could be removed by the request with block hash
+					continue
+					//panic("BlockFetcher, invalid state: missing block fetch request")
 				}
 			}
 
