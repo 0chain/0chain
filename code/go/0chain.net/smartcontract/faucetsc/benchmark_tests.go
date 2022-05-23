@@ -34,7 +34,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 		},
 		ClientID:     bt.txn.ClientID,
 		ToClientID:   bt.txn.ToClientID,
-		ValueZCN:     bt.txn.ValueZCN,
+		Value:        bt.txn.Value,
 		CreationDate: bt.txn.CreationDate,
 	}
 }
@@ -71,7 +71,7 @@ func BenchmarkTests(
 			endpoint: "updateSettings",
 			txn: &transaction.Transaction{
 				ClientID: viper.GetString(bk.FaucetOwner),
-				ValueZCN: 3,
+				Value:    3,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -90,7 +90,7 @@ func BenchmarkTests(
 			endpoint: "pour",
 			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
-				ValueZCN: 3,
+				Value:    3,
 			},
 			input: nil,
 		},
@@ -99,7 +99,7 @@ func BenchmarkTests(
 			endpoint: "refill",
 			txn: &transaction.Transaction{
 				ClientID:   data.Clients[0],
-				ValueZCN:   23,
+				Value:      23,
 				ToClientID: ADDRESS,
 			},
 			input: nil,

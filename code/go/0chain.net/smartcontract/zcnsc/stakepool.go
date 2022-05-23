@@ -208,7 +208,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewError(code, msg)
 	}
 
-	if t.ValueZCN < gn.MinLockAmount {
+	if t.Value < gn.MinLockAmount {
 		return "", common.NewError(code, "too small stake to lock")
 	}
 

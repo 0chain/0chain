@@ -121,7 +121,7 @@ func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 	tx.Hash = randString(32)
 	tx.ClientID = f
 	tx.ToClientID = t
-	tx.ValueZCN = val
+	tx.Value = val
 	tx.CreationDate = common.Timestamp(now)
 	return
 }

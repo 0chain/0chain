@@ -244,19 +244,32 @@ func (sc *StateContext) GetEventDB() *event.EventDb {
 
 //Validate - implement interface
 func (sc *StateContext) Validate() error {
-	var amount currency.Coin
+	var (
+		amount currency.Coin
+		err    error
+	)
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
-			amount += transfer.Amount
+			amount, err = amount.AddCoin(transfer.Amount)
+			if err != nil {
+				return err
+			}
 		} else {
 			if transfer.ClientID != sc.txn.ToClientID {
 				return state.ErrInvalidTransfer
 			}
 		}
 	}
-	totalValue := currency.Coin(sc.txn.ValueZCN)
+	totalValue := currency.Coin(sc.txn.Value)
 	if config.DevConfiguration.IsFeeEnabled {
-		totalValue += currency.Coin(sc.txn.Fee)
+		txnFee, err := currency.Int64ToCoin(sc.txn.Fee)
+		if err != nil {
+			return err
+		}
+		totalValue, err = totalValue.AddCoin(txnFee)
+		if err != nil {
+			return err
+		}
 	}
 	if amount > totalValue {
 		return state.ErrInvalidTransfer

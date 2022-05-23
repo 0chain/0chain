@@ -145,7 +145,7 @@ func TestStorageSmartContract_newReadPool(t *testing.T) {
 		tx       = transaction.Transaction{
 			ClientID:   clientID,
 			ToClientID: ssc.ID,
-			ValueZCN:   0,
+			Value:      0,
 		}
 		resp string
 		err  error
@@ -198,7 +198,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 		tx       = transaction.Transaction{
 			ClientID:   client.id,
 			ToClientID: ssc.ID,
-			ValueZCN:   0,
+			Value:      0,
 		}
 		lr   lockRequest
 		resp string
@@ -234,13 +234,13 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	_, err = ssc.readPoolLock(&tx, []byte("} malformed {"), balances)
 	requireErrMsg(t, err, errMsg2)
 	// 3. min lock
-	tx.ValueZCN = 5
+	tx.Value = 5
 	lr.Duration = 5 * time.Second
 	lr.AllocationID = allocID
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg4)
 	// 5. min lock period
-	tx.ValueZCN = 15
+	tx.Value = 15
 	balances.balances[client.id] = 15
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg5)

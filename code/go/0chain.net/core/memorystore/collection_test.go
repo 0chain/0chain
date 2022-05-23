@@ -51,8 +51,8 @@ func makeTestCollectionIterationHandler() datastore.CollectionIteratorHandler {
 	return func(ctx context.Context, ce datastore.CollectionEntity) bool {
 		if ce.GetEntityMetadata().GetName() == "txn" {
 			ent := ce.(*transaction.Transaction)
-			if ent.ValueZCN > 5 {
-				ent.ValueZCN++
+			if ent.Value > 5 {
+				ent.Value++
 				return true
 			}
 			return false

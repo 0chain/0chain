@@ -21,7 +21,7 @@ func CheckClientBalance(
 	t *transaction.Transaction,
 	balances cstate.StateContextI,
 ) (err error) {
-	if t.ValueZCN < 0 {
+	if t.Value < 0 {
 		return errors.New("negative transaction value")
 	}
 
@@ -36,7 +36,7 @@ func CheckClientBalance(
 		return errors.New("no tokens to lock")
 	}
 
-	if currency.Coin(t.ValueZCN) > balance {
+	if currency.Coin(t.Value) > balance {
 		return errors.New("lock amount is greater than balance")
 	}
 
@@ -55,7 +55,7 @@ func (sp *StakePool) LockPool(
 	}
 
 	dp := DelegatePool{
-		Balance:      currency.Coin(txn.ValueZCN),
+		Balance:      currency.Coin(txn.Value),
 		Reward:       0,
 		Status:       status,
 		DelegateID:   txn.ClientID,
@@ -63,7 +63,7 @@ func (sp *StakePool) LockPool(
 	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, txn.ToClientID, currency.Coin(txn.ValueZCN),
+		txn.ClientID, txn.ToClientID, currency.Coin(txn.Value),
 	)); err != nil {
 		return err
 	}

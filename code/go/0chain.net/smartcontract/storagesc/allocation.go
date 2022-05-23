@@ -977,7 +977,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	}
 
 	// lock tokens if this transaction provides them
-	if t.ValueZCN > 0 {
+	if t.Value > 0 {
 		ap, err := newAllocationPool(t, alloc, until, mintTokens, balances)
 		if err != nil {
 			return common.NewErrorf("allocation_extending_failed",
@@ -1073,7 +1073,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	}
 
 	// lock tokens if this transaction provides them
-	if t.ValueZCN > 0 {
+	if t.Value > 0 {
 		if err = stakepool.CheckClientBalance(t, balances); err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
