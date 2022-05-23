@@ -19,54 +19,91 @@ func (ssc *StorageSmartContract) collectReward(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-
 	var prr stakepool.CollectRewardRequest
 	if err := prr.Decode(input); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"can't decode request: %v", err)
 	}
-
-	usp, err := stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"can't get related user stake pools: %v", err)
+	if prr.ProviderType != spenum.Blobber && prr.ProviderType != spenum.Validator {
+		return "", common.NewErrorf("collect_reward_failed",
+			"invalid provider type: %s", prr.ProviderType.String())
 	}
 
-	providerId := usp.Find(prr.PoolId)
-	if len(providerId) == 0 {
-		return "", common.NewErrorf("pay_reward_failed",
+	var err error
+	var usp *stakepool.UserStakePools
+	var providerID = prr.ProviderId
+	if len(prr.PoolId) > 0 {
+		usp, err = stakepool.GetUserStakePools(prr.ProviderType, txn.ClientID, balances)
+		if err != nil {
+			return "", common.NewErrorf("collect_reward_failed",
+				"can't get related user stake pools: %v", err)
+		}
+
+		if len(prr.ProviderId) == 0 {
+			providerID = usp.FindProvider(prr.PoolId)
+		}
+	}
+
+	if len(providerID) == 0 {
+		return "", common.NewErrorf("collect_reward_failed",
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
 	}
 
-	sp, err := ssc.getStakePool(providerId, balances)
+	sp, err := ssc.getStakePool(providerID, balances)
 	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.MintRewards(
-		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
+	reward, err := sp.MintRewards(
+		txn.ClientID, prr.PoolId, providerID, prr.ProviderType, usp, balances)
 	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"error emptying account, %v", err)
 	}
 
 	if err := usp.Save(spenum.Blobber, txn.ClientID, balances); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+		return "", common.NewErrorf("collect_reward_failed",
 			"error saving user stake pool, %v", err)
 	}
 
-	if err := sp.save(ssc.ID, providerId, balances); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
+	if err := sp.save(ssc.ID, providerID, balances); err != nil {
+		return "", common.NewErrorf("collect_reward_failed",
 			"error saving stake pool, %v", err)
 	}
+	if reward == 0 {
+		return "", nil
+	}
+
+	conf, err := ssc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("collect_reward_failed",
+			"can't get config: %v", err)
+	}
+	conf.Minted += reward
+	if conf.Minted > conf.MaxMint {
+		return "", common.NewErrorf("collect_reward_failed",
+			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
+	}
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewErrorf("collect_reward_failed",
+			"cannot save config: %v", err)
+	}
+
 	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: providerId,
+		Id: providerID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
 	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerId, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, string(data))
+
+	err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
+	if err != nil {
+		return "", common.NewErrorf("pay_reward_failed",
+			"emitting reward event: %v", err)
+	}
 
 	return "", nil
 }

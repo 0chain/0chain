@@ -256,6 +256,7 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}
@@ -310,7 +311,7 @@ func testCommitBlobberRead(
 		StartTime:               allocation.startTime,
 		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
 		Expiration:              allocation.expiration,
-		BlobberDetails: []*BlobberAllocation{
+		BlobberAllocs: []*BlobberAllocation{
 			{
 				BlobberID: blobberId,
 				Terms: Terms{

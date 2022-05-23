@@ -79,6 +79,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 		MaxIndividualFreeAllocation: zcnToBalance(mockIndividualTokenLimit),
 		MaxTotalFreeAllocation:      zcnToBalance(mockTotalTokenLimit),
 		OwnerId:                     owner,
+		MaxBlobbersPerAllocation:    40,
 	}
 
 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
@@ -238,14 +239,16 @@ func TestFreeAllocationRequest(t *testing.T) {
 				MinLockPeriod: mockMinLockPeriod,
 				MaxLockPeriod: mockMaxLockPeriod,
 			},
+			MaxBlobbersPerAllocation: 40,
 		}
 		now                         = common.Timestamp(23000000)
 		mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
 	)
-
+	blob := make([]string, mockNumBlobbers)
 	for i := 0; i < mockNumBlobbers; i++ {
+		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:       strconv.Itoa(i),
+			ID:       blob[i],
 			Capacity: 536870912,
 			Used:     73,
 			Terms: Terms{
@@ -300,6 +303,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		inputObj := freeStorageAllocationInput{
 			RecipientPublicKey: mockUserPublicKey,
 			Marker:             string(inputBytes),
+			Blobbers:           blob,
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
@@ -312,24 +316,27 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil)
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY,
-			mockSetValue(mockAllBlobbers)).Return(nil).Once()
-
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
 				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
-				mockSetValue(newStakePool())).Return(nil).Twice()
+				mockSetValue(newStakePool())).Return(nil).Once()
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
 				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
+			balances.On(
+				"GetTrieNode", "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"+blobber.ID,
+				mock.MatchedBy(func(a *StorageNode) bool {
+					a.Terms.MaxOfferDuration = 24 * 365 * time.Hour * 2
+					a.Capacity = 100000000000
+					a.LastHealthCheck = common.Timestamp(time.Now().UnixNano())
+					return true
+				}),
+			).Return(nil)
 		}
 
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
@@ -403,7 +410,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					pool.AllocationID == mockTransactionHash &&
 					len(pool.Blobbers) == mockNumBlobbers &&
 					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
-						conf.FreeAllocationSettings.Duration).Unix())+toSeconds(mockChallengeCompletionTime)
+						conf.FreeAllocationSettings.Duration).Unix())
 			})).Return("", nil).Once()
 
 		// readPoolLock blockchain access
@@ -618,6 +625,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
+		MaxBlobbersPerAllocation:   40,
 	}
 	var now = common.Timestamp(29000000)
 	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -723,7 +731,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return("", nil).Once()
-			sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
+			sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 				BlobberID:    blobber.ID,
 				AllocationID: p.allocationId,
 			})

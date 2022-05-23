@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -23,8 +24,6 @@ const (
 	MinerRest
 	Faucet
 	FaucetRest
-	InterestPool
-	InterestPoolRest
 	Vesting
 	VestingRest
 	MultiSig
@@ -42,8 +41,6 @@ var (
 		"miner_rest",
 		"faucet",
 		"faucet_rest",
-		"interest_pool",
-		"interest_pool_rest",
 		"vesting",
 		"vesting_rest",
 		"multi_sig",
@@ -53,20 +50,18 @@ var (
 	}
 
 	SourceCode = map[string]Source{
-		SourceNames[Storage]:          Storage,
-		SourceNames[StorageRest]:      StorageRest,
-		SourceNames[Miner]:            Miner,
-		SourceNames[MinerRest]:        MinerRest,
-		SourceNames[Faucet]:           Faucet,
-		SourceNames[FaucetRest]:       FaucetRest,
-		SourceNames[InterestPool]:     InterestPool,
-		SourceNames[InterestPoolRest]: InterestPoolRest,
-		SourceNames[Vesting]:          Vesting,
-		SourceNames[VestingRest]:      VestingRest,
-		SourceNames[MultiSig]:         MultiSig,
-		SourceNames[ZCNSCBridge]:      ZCNSCBridge,
-		SourceNames[ZCNSCBridgeRest]:  ZCNSCBridgeRest,
-		SourceNames[Control]:          Control,
+		SourceNames[Storage]:         Storage,
+		SourceNames[StorageRest]:     StorageRest,
+		SourceNames[Miner]:           Miner,
+		SourceNames[MinerRest]:       MinerRest,
+		SourceNames[Faucet]:          Faucet,
+		SourceNames[FaucetRest]:      FaucetRest,
+		SourceNames[Vesting]:         Vesting,
+		SourceNames[VestingRest]:     VestingRest,
+		SourceNames[MultiSig]:        MultiSig,
+		SourceNames[ZCNSCBridge]:     ZCNSCBridge,
+		SourceNames[ZCNSCBridgeRest]: ZCNSCBridgeRest,
+		SourceNames[Control]:         Control,
 	}
 )
 
@@ -99,17 +94,16 @@ const (
 )
 
 const (
-	Simulation     = "simulation."
-	Options        = "options."
-	Internal       = "internal."
-	SmartContract  = "smart_contracts."
-	MinerSc        = "minersc."
-	StorageSc      = "storagesc."
-	FaucetSc       = "faucetsc."
-	InterestPoolSC = "interestpoolsc."
-	VestingSc      = "vestingsc."
-	ZcnSc          = "zcnsc."
-	DbsEvents      = "dbs.Events."
+	Simulation    = "simulation."
+	Options       = "options."
+	Internal      = "internal."
+	SmartContract = "smart_contracts."
+	MinerSc       = "minersc."
+	StorageSc     = "storagesc."
+	FaucetSc      = "faucetsc."
+	VestingSc     = "vestingsc."
+	ZcnSc         = "zcnsc."
+	DbsEvents     = "dbs.Events."
 
 	BlockReward = "block_reward."
 
@@ -178,6 +172,7 @@ const (
 	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
 	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 	StorageValidatorsPerChallenge        = SmartContract + StorageSc + "validators_per_challenge"
+	StorageMaxBlobbersPerAllocation      = SmartContract + StorageSc + "max_blobbers_per_allocation"
 
 	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
 	StorageBlockRewardTriggerPeriod   = SmartContract + StorageSc + BlockReward + "trigger_period"
@@ -187,11 +182,6 @@ const (
 	StorageBlockRewardMinerRatio      = SmartContract + StorageSc + BlockReward + "miner_ratio"
 	StorageBlockRewardSharderRatio    = SmartContract + StorageSc + BlockReward + "sharder_ratio"
 	StorageBlockRewardQualifyingStake = SmartContract + StorageSc + BlockReward + "qualifying_stake"
-
-	InterestPoolOwner         = SmartContract + InterestPoolSC + "owner_id"
-	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
-	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
-	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
 
 	VestingPoolOwner            = SmartContract + VestingSc + "owner_id"
 	VestingMinLock              = SmartContract + VestingSc + "min_lock"
@@ -203,16 +193,14 @@ const (
 	FaucetOwner = SmartContract + FaucetSc + "owner_id"
 
 	ZcnOwner              = SmartContract + ZcnSc + "owner_id"
-	ZcnMinMintAmount      = SmartContract + ZcnSc + "min_mint_amount"
-	ZcnMinBurnAmount      = SmartContract + ZcnSc + "min_burn_amount"
-	ZcnMinStakeAmount     = SmartContract + ZcnSc + "min_stake_amount"
-	ZcnMinLockAmount      = SmartContract + ZcnSc + "min_lock_amount"
+	ZcnMinMintAmount      = SmartContract + ZcnSc + "min_mint"
+	ZcnMinBurnAmount      = SmartContract + ZcnSc + "min_burn"
+	ZcnMinStakeAmount     = SmartContract + ZcnSc + "min_stake"
+	ZcnMinLockAmount      = SmartContract + ZcnSc + "min_lock"
 	ZcnMaxFee             = SmartContract + ZcnSc + "max_fee"
 	ZcnPercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
 	ZcnMinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
 	ZcnBurnAddress        = SmartContract + ZcnSc + "burn_address"
-	ZcnOwnerID            = SmartContract + ZcnSc + "owner_id"
-	ZcnCost               = SmartContract + ZcnSc + "cost"
 	ZcnMaxDelegates       = SmartContract + ZcnSc + "max_delegates"
 
 	EventDbEnabled         = DbsEvents + "enabled"
@@ -296,6 +284,10 @@ type BenchTestI interface {
 	Run(state.StateContextI, *testing.B) error
 }
 
+type WithTimings interface {
+	Timings() map[string]time.Duration
+}
+
 type SignatureScheme interface {
 	encryption.SignatureScheme
 	SetPrivateKey(privateKey string)
@@ -305,6 +297,7 @@ type SignatureScheme interface {
 type TestSuite struct {
 	Source     Source
 	Benchmarks []BenchTestI
+	ReadOnly   bool
 }
 
 func (ts *TestSuite) RemoveBenchmarks(listToRemove []string) {

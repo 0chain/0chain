@@ -29,26 +29,16 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	return node, err
 }
 
-func GetGlobalSavedNode(balances state.StateContextI) (*GlobalNode, error) {
+func GetGlobalNode(ctx state.StateContextI) (*GlobalNode, error) {
 	node := &GlobalNode{ID: ADDRESS}
-	err := balances.GetTrieNode(node.GetKey(), node)
+	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:
-		return node, err
+		if node.ZCNSConfig == nil {
+			node.ZCNSConfig = loadGlobalNode()
+		}
+		return node, nil
 	default:
 		return nil, err
 	}
-}
-
-func GetGlobalNode(ctx state.StateContextI) (*GlobalNode, error) {
-	gn, err := GetGlobalSavedNode(ctx)
-	if err == nil {
-		return gn, nil
-	}
-
-	if gn == nil {
-		return nil, err
-	}
-
-	return gn, nil
 }

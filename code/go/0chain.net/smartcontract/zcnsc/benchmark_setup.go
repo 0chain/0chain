@@ -1,14 +1,15 @@
 package zcnsc
 
 import (
+	"fmt"
+	"strconv"
+
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"fmt"
-	"strconv"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -36,6 +37,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
 	gn.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	gn.MinLockAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinLockAmount)
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
 	gn.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.ZcnMinAuthorizers)
@@ -132,7 +134,8 @@ func createSmartContract() ZCNSmartContract {
 
 func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
-		ID: ADDRESS,
+		ID:         ADDRESS,
+		ZCNSConfig: &ZCNSConfig{},
 	}
 }
 

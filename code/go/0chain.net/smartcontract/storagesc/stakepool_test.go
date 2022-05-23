@@ -132,6 +132,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientBalance: state.Balance(clientBalance),
 		store:         make(map[datastore.Key]util.MPTSerializable),
@@ -169,7 +170,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	newStakePool, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
 	var newUsp *stakepool.UserStakePools
-	newUsp, err = stakepool.GetUserStakePool(spenum.Blobber, txn.ClientID, ctx)
+	newUsp, err = stakepool.GetUserStakePools(spenum.Blobber, txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)

@@ -15,6 +15,10 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
+//msgp:ignore unlockResponse stakePoolRequest
+
+//go:generate msgp -v -io=false -tests=false -unexported
+
 // unlock response
 type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
@@ -255,7 +259,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Authorizer, spr.AuthorizerID, spr.PoolID, ctx)
+	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.AuthorizerID, spr.PoolID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}

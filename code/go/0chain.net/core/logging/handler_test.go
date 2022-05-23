@@ -26,7 +26,6 @@ func TestLogWriter(t *testing.T) {
 			name: "Test_LogWriter_OK",
 			args: func() args {
 				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.URL.Query().Set("detail", "1")
 
 				return args{
 					w: httptest.NewRecorder(),
@@ -40,7 +39,6 @@ func TestLogWriter(t *testing.T) {
 			name: "Test_LogWriter_OK",
 			args: func() args {
 				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.URL.Query().Set("detail", "1")
 
 				return args{
 					w: httptest.NewRecorder(),
@@ -83,7 +81,6 @@ func TestN2NLogWriter(t *testing.T) {
 			name: "Test_N2NLogWriter_OK",
 			args: func() args {
 				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.URL.Query().Set("detail", "1")
 
 				return args{
 					w: httptest.NewRecorder(),
@@ -97,7 +94,6 @@ func TestN2NLogWriter(t *testing.T) {
 			name: "Test_N2NLogWriter_OK",
 			args: func() args {
 				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.URL.Query().Set("detail", "1")
 
 				return args{
 					w: httptest.NewRecorder(),
@@ -140,7 +136,6 @@ func TestMemLogWriter(t *testing.T) {
 			name: "Test_MemLogWriter_OK",
 			args: func() args {
 				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.URL.Query().Set("detail", "1")
 
 				return args{
 					w: httptest.NewRecorder(),

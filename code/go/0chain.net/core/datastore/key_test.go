@@ -3,6 +3,7 @@ package datastore
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -68,7 +69,8 @@ func TestHashIDField_ComputeProperties(t *testing.T) {
 				Hash: tt.fields.Hash,
 			}
 
-			h.ComputeProperties()
+			err := h.ComputeProperties()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -198,7 +200,8 @@ func TestIDField_ComputeProperties(t *testing.T) {
 				ID: tt.fields.ID,
 			}
 
-			k.ComputeProperties()
+			err := k.ComputeProperties()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -526,7 +529,8 @@ func TestNOIDField_ComputeProperties(t *testing.T) {
 
 			nif := &NOIDField{}
 
-			nif.ComputeProperties()
+			err := nif.ComputeProperties()
+			assert.NoError(t, err)
 		})
 	}
 }

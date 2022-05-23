@@ -26,9 +26,8 @@ func CleanupWorker(ctx context.Context) {
 		return
 	}
 	var (
-		invalidHashes    = make([]datastore.Entity, 0, 1024)
-		invalidTxns      = make([]datastore.Entity, 0, 1024)
-		invalidTxnHashes = make([]string, 0, 1024)
+		invalidHashes = make([]datastore.Entity, 0, 1024)
+		invalidTxns   = make([]datastore.Entity, 0, 1024)
 	)
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*Transaction)
@@ -44,7 +43,6 @@ func CleanupWorker(ctx context.Context) {
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, txn)
-			invalidTxnHashes = append(invalidTxnHashes, txn.Hash)
 		}
 		err := transactionEntityMetadata.GetStore().Read(ctx, txn.Hash, txn)
 		cerr, ok := err.(*common.Error)
@@ -82,5 +80,20 @@ func CleanupWorker(ctx context.Context) {
 				}
 			}
 		}
+	}
+}
+
+func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	collectionName := txn.GetCollectionName()
+
+	logging.Logger.Info("cleaning transactions", zap.String("collection", collectionName), zap.Int("missing_count", len(txns)))
+	err := transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
+	if err != nil {
+		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
 	}
 }

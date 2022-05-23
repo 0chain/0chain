@@ -156,7 +156,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
 	sctx := state.NewStateContext(nil,
 		mpt, nil, nil, nil,
-		nil, nil, nil)
+		nil, nil, nil, nil)
 
 	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
@@ -271,37 +271,37 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
 	return state.NewStateContext(nil,
 		mpt, nil, nil, nil,
-		nil, nil, nil), clean
+		nil, nil, nil, nil), clean
 }
 
 func TestAddBlobberChallengeItems(t *testing.T) {
 	state, clean := prepareMPTState(t)
 	defer clean()
 
-	_, err := partitions.CreateIfNotExists(state, ALL_BLOBBERS_CHALLENGE_KEY, allBlobbersChallengePartitionSize)
+	_, err := partitions.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	require.NoError(t, err)
 
-	p, err := getBlobbersChallengeList(state)
+	p, err := partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
-	_, err = p.AddItem(state, &BlobberChallengeNode{BlobberID: "blobber_id_1"})
+	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
 	require.NoError(t, err)
 	err = p.Save(state)
 	require.NoError(t, err)
 
-	p, err = getBlobbersChallengeList(state)
+	p, err = partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 	s, err := p.Size(state)
 	require.NoError(t, err)
 	require.Equal(t, 1, s)
 
-	_, err = p.AddItem(state, &BlobberChallengeNode{BlobberID: "blobber_id_2"})
+	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_2"})
 	require.NoError(t, err)
 
 	err = p.Save(state)
 	require.NoError(t, err)
 
-	p, err = getBlobbersChallengeList(state)
+	p, err = partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
 	s, err = p.Size(state)

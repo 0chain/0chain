@@ -11,6 +11,10 @@ import (
 	"sort"
 	"strings"
 
+	"0chain.net/core/logging"
+
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -116,12 +120,16 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 		return nil, common.ErrTemporaryFailure
 	}
 	state, err := c.GetState(lfb, clientID)
+	logging.Logger.Info("piers GetBalanceHandler",
+		zap.String("client_id", clientID),
+		zap.Any("state", state))
 	if err != nil {
 		return nil, err
 	}
 	if err := state.ComputeProperties(); err != nil {
 		return nil, err
 	}
+	logging.Logger.Info("piers GetBalanceHandler end", zap.Any("state", state), zap.String("clientID", clientID))
 	return state, nil
 }
 

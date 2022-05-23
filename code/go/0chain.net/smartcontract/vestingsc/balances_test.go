@@ -49,6 +49,7 @@ func (tb *testBalances) GetEventDB() *event.EventDb                             
 func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
 func (tb *testBalances) EmitError(error)                                           {}
 func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
+func (tb *testBalances) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)                     {}
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -62,6 +63,7 @@ const (
 
 	ValidatorReward
 	BlobberSlash
+	MaxBlobbersPerAllocation
 	MaxReadPrice
 	MaxWritePrice
 	MinWritePrice
@@ -80,6 +82,8 @@ const (
 	BlockRewardBlobberWeight
 
 	ExposeMpt
+
+	OwnerId
 
 	Cost
 	CostUpdateSettings
@@ -151,6 +155,7 @@ var (
 
 		"validator_reward",
 		"blobber_slash",
+		"max_blobbers_per_allocation",
 		"max_read_price",
 		"max_write_price",
 		"max_write_price",
@@ -169,6 +174,8 @@ var (
 		"block_reward.blobber_ratio",
 
 		"expose_mpt",
+
+		"owner_id",
 
 		"cost",
 		"cost.update_settings",
@@ -244,6 +251,7 @@ var (
 
 		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
+		"max_blobbers_per_allocation":          {MaxBlobbersPerAllocation, smartcontract.Int},
 		"max_read_price":                       {MaxReadPrice, smartcontract.StateBalance},
 		"max_write_price":                      {MaxWritePrice, smartcontract.StateBalance},
 		"min_write_price":                      {MinWritePrice, smartcontract.StateBalance},
@@ -262,6 +270,8 @@ var (
 		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
 
 		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
+
+		"owner_id": {OwnerId, smartcontract.Key},
 
 		"cost":                             {Cost, smartcontract.Cost},
 		"cost.update_settings":             {CostUpdateSettings, smartcontract.Cost},
@@ -329,6 +339,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.FailedChallengesToCancel = change
 	case FailedChallengesToRevokeMinLock:
 		conf.FailedChallengesToRevokeMinLock = change
+	case MaxBlobbersPerAllocation:
+		conf.MaxBlobbersPerAllocation = change
 	case MaxChallengesPerGeneration:
 		conf.MaxChallengesPerGeneration = change
 	case ValidatorsPerChallenge:
@@ -501,6 +513,15 @@ func (conf *Config) setCost(key string, change int) {
 	conf.Cost[strings.TrimPrefix(key, fmt.Sprintf("%s.", SettingName[Cost]))] = change
 }
 
+func (conf *Config) setKey(key string, change string) {
+	switch Settings[key].setting {
+	case OwnerId:
+		conf.OwnerId = change
+	default:
+		panic("key: " + key + "not implemented as key")
+	}
+}
+
 func (conf *Config) set(key string, change string) error {
 	key = strings.ToLower(key)
 	s, ok := Settings[key]
@@ -566,6 +587,11 @@ func (conf *Config) set(key string, change string) error {
 			return fmt.Errorf("key %s, unable to convert %v to integer", key, change)
 		}
 		conf.setCost(key, value)
+	case smartcontract.Key:
+		if _, err := hex.DecodeString(change); err != nil {
+			return fmt.Errorf("%s must be a hes string: %v", key, err)
+		}
+		conf.setKey(key, change)
 	default:
 		return fmt.Errorf("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].configType])
 	}
@@ -630,6 +656,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ValidatorReward
 	case BlobberSlash:
 		return conf.BlobberSlash
+	case MaxBlobbersPerAllocation:
+		return conf.MaxBlobbersPerAllocation
 	case MaxReadPrice:
 		return conf.MaxReadPrice
 	case MaxWritePrice:
@@ -662,6 +690,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.BlobberWeight
 	case ExposeMpt:
 		return conf.ExposeMpt
+	case OwnerId:
+		return conf.OwnerId
 	case Cost:
 		return ""
 	case CostUpdateSettings:
@@ -776,6 +806,11 @@ func (ssc *StorageSmartContract) updateSettings(
 
 	for key, value := range newChanges.Fields {
 		updateChanges.Fields[key] = value
+	}
+
+	err = conf.update(*updateChanges)
+	if err != nil {
+		return "", common.NewError("update_settings, updating settings", err.Error())
 	}
 
 	_, err = balances.InsertTrieNode(settingChangesKey, updateChanges)

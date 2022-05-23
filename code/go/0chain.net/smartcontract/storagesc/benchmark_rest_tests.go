@@ -121,11 +121,10 @@ func BenchmarkRestTests(
 					Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
-					PreferredBlobbers:          []string{},
+					Blobbers:                   []string{},
 					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
 				}).encode()
 				values.Set("allocation_data", string(nar))
 				return values
@@ -245,6 +244,28 @@ func BenchmarkRestTests(
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
 				values.Set("validator_id", getMockValidatorId(0))
+				return values
+			}(),
+		},
+		{
+			name:     "storage_rest.GetAllocBlobber",
+			endpoint: ssc.GetAllocationBlobbersHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				now := common.Timestamp(time.Now().Unix())
+				nar, _ := (&newAllocationRequest{
+					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
+					Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+					Owner:                      data.Clients[0],
+					OwnerPublicKey:             data.PublicKeys[0],
+					Blobbers:                   []string{},
+					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+				}).encode()
+				values.Set("allocation_data", string(nar))
 				return values
 			}(),
 		},

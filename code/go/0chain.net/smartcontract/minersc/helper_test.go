@@ -102,11 +102,11 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.PublicKey = c.pk
 	mn.ShortName = "test_miner(" + c.id + ")"
 	mn.BuildTag = "commit"
-	mn.DelegateWallet = delegateWallet
-	mn.ServiceCharge = minerServiceCharge
-	mn.NumberOfDelegates = 10
-	mn.MinStake = 1e10
-	mn.MaxStake = 100e10
+	mn.Settings.DelegateWallet = delegateWallet
+	mn.Settings.ServiceCharge = minerServiceCharge
+	mn.Settings.MaxNumDelegates = 10
+	mn.Settings.MinStake = 1e10
+	mn.Settings.MaxStake = 100e10
 	return mustEncode(t, mn)
 }
 

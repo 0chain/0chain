@@ -13,6 +13,7 @@ type Wallet struct {
 	PublicKey       string `json:"public_key"`
 	ClientID        string `json:"id"`
 	Balance         int64  `json:"-"`
+	Nonce           int64  `json:"-"`
 }
 
 /*Initialize - initialize a wallet with public/private keys */

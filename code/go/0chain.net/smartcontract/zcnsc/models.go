@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AddAuthorizerPayload UpdateAuthorizerStakePoolPayload poolStat
+//msgp:ignore MintPayload BurnPayloadResponse BurnPayload AddAuthorizerPayload UpdateAuthorizerStakePoolPayload poolStat AuthorizerSignature TokenLock
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 const (

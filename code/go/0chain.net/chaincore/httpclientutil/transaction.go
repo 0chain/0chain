@@ -17,6 +17,7 @@ type Transaction struct {
 	Signature         string           `json:"signature,omitempty"`
 	CreationDate      common.Timestamp `json:"creation_date,omitempty"`
 	Fee               int64            `json:"transaction_fee,omitempty"`
+	Nonce             int64            `json:"transaction_nonce,omitempty"`
 	TransactionType   int              `json:"transaction_type,omitempty"`
 	TransactionOutput string           `json:"transaction_output,omitempty"`
 	OutputHash        string           `json:"txn_output_hash"`

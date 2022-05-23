@@ -16,8 +16,8 @@ WORKDIR $SRC_DIR/go/0chain.net/miner/miner
 # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
 # FIXME: Also, is there a way we can move this to zchain_build_base?
 RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
-    chmod -R +w . && \
-    make clean libzstd.a
+   chmod -R +w . && \
+   make clean libzstd.a
 
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 

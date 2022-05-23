@@ -55,6 +55,11 @@ func GetPartitions(state state.StateContextI, name string) (*Partitions, error) 
 	return &Partitions{rs: &rs}, nil
 }
 
+// GetName returns the partitions name
+func (p *Partitions) GetName() string {
+	return p.rs.Name
+}
+
 // AddItem adds a partition item to parititons
 func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) (int, error) {
 	return p.rs.Add(state, item)
@@ -78,6 +83,11 @@ func (p *Partitions) UpdateItem(state state.StateContextI, partIndex int, item P
 // Size returns the total item number in partitions
 func (p *Partitions) Size(state state.StateContextI) (int, error) {
 	return p.rs.Size(state)
+}
+
+// Num returns the number of partitions
+func (p *Partitions) Num() int {
+	return p.rs.NumPartitions
 }
 
 // RemoveItem removes the partition item from given partIndex in Partitions

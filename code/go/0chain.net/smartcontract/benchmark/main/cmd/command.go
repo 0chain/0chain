@@ -15,7 +15,6 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
@@ -29,20 +28,18 @@ const (
 )
 
 var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
-	bk.Storage:          storagesc.BenchmarkTests,
-	bk.StorageRest:      storagesc.BenchmarkRestTests,
-	bk.Miner:            minersc.BenchmarkTests,
-	bk.MinerRest:        minersc.BenchmarkRestTests,
-	bk.Faucet:           faucetsc.BenchmarkTests,
-	bk.FaucetRest:       faucetsc.BenchmarkRestTests,
-	bk.InterestPool:     interestpoolsc.BenchmarkTests,
-	bk.InterestPoolRest: interestpoolsc.BenchmarkRestTests,
-	bk.Vesting:          vestingsc.BenchmarkTests,
-	bk.VestingRest:      vestingsc.BenchmarkRestTests,
-	bk.MultiSig:         multisigsc.BenchmarkTests,
-	bk.ZCNSCBridge:      zcnsc.BenchmarkTests,
-	bk.ZCNSCBridgeRest:  zcnsc.BenchmarkRestTests,
-	bk.Control:          control.BenchmarkTests,
+	bk.Storage:         storagesc.BenchmarkTests,
+	bk.StorageRest:     storagesc.BenchmarkRestTests,
+	bk.Miner:           minersc.BenchmarkTests,
+	bk.MinerRest:       minersc.BenchmarkRestTests,
+	bk.Faucet:          faucetsc.BenchmarkTests,
+	bk.FaucetRest:      faucetsc.BenchmarkRestTests,
+	bk.Vesting:         vestingsc.BenchmarkTests,
+	bk.VestingRest:     vestingsc.BenchmarkRestTests,
+	bk.MultiSig:        multisigsc.BenchmarkTests,
+	bk.ZCNSCBridge:     zcnsc.BenchmarkTests,
+	bk.ZCNSCBridgeRest: zcnsc.BenchmarkRestTests,
+	bk.Control:         control.BenchmarkTests,
 }
 
 func init() {
@@ -96,8 +93,47 @@ var rootCmd = &cobra.Command{
 		log.Println()
 		log.Println("tests took", time.Since(testsTimer))
 		log.Println("benchmark took", time.Since(totalTimer))
+		printTimings(results)
 		printResults(results)
 	},
+}
+
+func printTimings(results []suiteResults) {
+	fmt.Println()
+	fmt.Println("Timings")
+	for _, r := range results {
+		for _, br := range r.results {
+			if br.timings != nil {
+				fmt.Printf(
+					"%v:\n",
+					br.test.Name(),
+				)
+
+				var entries []struct {
+					name string
+					dur  time.Duration
+				}
+
+				for k, v := range br.timings {
+					entries = append(entries, struct {
+						name string
+						dur  time.Duration
+					}{
+						name: k,
+						dur:  v,
+					})
+				}
+				sort.Slice(entries, func(i, j int) bool {
+					return entries[i].dur < entries[j].dur
+				})
+				for _, e := range entries {
+					fmt.Printf(
+						"%v: %v\n", e.name, e.dur,
+					)
+				}
+			}
+		}
+	}
 }
 
 func printResults(results []suiteResults) {
