@@ -1114,7 +1114,7 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		ClientId:          tr.ClientID,
 		ToClientId:        tr.ToClientID,
 		TransactionData:   tr.TransactionData,
-		Value:             tr.ValueZCN,
+		Value:             tr.Value,
 		Signature:         tr.Signature,
 		CreationDate:      int64(tr.CreationDate.Duration()),
 		Fee:               tr.Fee,

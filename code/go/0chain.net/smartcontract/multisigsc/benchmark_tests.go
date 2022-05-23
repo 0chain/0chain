@@ -33,7 +33,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 		},
 		ClientID:     bt.txn.ClientID,
 		ToClientID:   bt.txn.ToClientID,
-		ValueZCN:     bt.txn.ValueZCN,
+		Value:        bt.txn.Value,
 		CreationDate: bt.txn.CreationDate,
 	}
 }

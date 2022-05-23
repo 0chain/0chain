@@ -41,14 +41,14 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// check burn amount
-	transSAS, err := currency.ParseZCN(float64(trans.ValueZCN))
+	transSAS, err := currency.ParseZCN(float64(trans.Value))
 	if err != nil {
 		return "", err
 	}
 	if transSAS < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
 			"amount (value) requested (%v) is lower than min burn amount (%v), %s",
-			trans.ValueZCN,
+			trans.Value,
 			gn.MinBurnAmount,
 			info,
 		)
@@ -105,14 +105,14 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// burn the tokens
-	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, currency.Coin(trans.ValueZCN)))
+	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, currency.Coin(trans.Value)))
 	if err != nil {
 		return "", err
 	}
 
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,
-		Amount:          trans.ValueZCN,
+		Amount:          trans.Value,
 		Nonce:           payload.Nonce,
 		EthereumAddress: payload.EthereumAddress,
 	}

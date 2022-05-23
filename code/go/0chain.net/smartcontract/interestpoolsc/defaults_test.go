@@ -85,7 +85,7 @@ func testTxn(owner string, value int64) *transaction.Transaction {
 		ChainID:           config.GetMainChainID(),
 		TransactionData:   "testTxnDataOK",
 		TransactionOutput: fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, 1),
-		ValueZCN:          value,
+		Value:             value,
 		TransactionType:   transaction.TxnTypeSmartContract,
 		CreationDate:      common.Now(),
 	}
@@ -108,7 +108,7 @@ func testTxnForUnlock(client string, value int64) *transaction.Transaction {
 		ChainID:           config.GetMainChainID(),
 		TransactionData:   "testTxnDataOK",
 		TransactionOutput: fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, 1),
-		ValueZCN:          value,
+		Value:             value,
 		TransactionType:   transaction.TxnTypeSmartContract,
 		CreationDate:      common.Now(),
 	}
@@ -209,7 +209,7 @@ func testTokenPoolTransferResponse(txn *transaction.Transaction) string {
 	tpr := &tokenpool.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     txn.Hash,
-		Value:      currency.Coin(txn.ValueZCN),
+		Value:      currency.Coin(txn.Value),
 		FromClient: txn.ClientID,
 		ToClient:   txn.ToClientID,
 	}

@@ -97,14 +97,14 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	if err != nil {
 		return "", common.NewError("failed locking tokens", fmt.Sprintf("request not formatted correctly (%v)", err.Error()))
 	}
-	if t.ValueZCN < int64(gn.MinLock) {
+	if t.Value < int64(gn.MinLock) {
 		return "", common.NewError("failed locking tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
 	if err == util.ErrValueNotPresent {
 		return "", common.NewError("failed locking tokens", "you have no tokens to your name")
 	}
-	if currency.Coin(t.ValueZCN) > balance {
+	if currency.Coin(t.Value) > balance {
 		return "", common.NewError("failed locking tokens", "lock amount is greater than balance")
 	}
 	if npr.Duration > YEAR {

@@ -49,7 +49,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 		},
 		ClientID:     bt.txn.ClientID,
 		ToClientID:   bt.txn.ToClientID,
-		ValueZCN:     bt.txn.ValueZCN,
+		Value:        bt.txn.Value,
 		CreationDate: bt.txn.CreationDate,
 	}
 }
@@ -309,7 +309,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("transaction hash"),
 				},
 				ClientID: data.Clients[0],
-				ValueZCN: 1e10,
+				Value:    1e10,
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),

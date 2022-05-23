@@ -78,7 +78,7 @@ func newTransaction(f, t datastore.Key, val currency.Coin,
 	tx.Hash = randString(32)
 	tx.ClientID = f
 	tx.ToClientID = t
-	tx.ValueZCN = int64(val)
+	tx.Value = int64(val)
 	tx.CreationDate = now
 	return
 }

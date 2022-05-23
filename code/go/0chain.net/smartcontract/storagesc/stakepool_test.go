@@ -120,7 +120,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 		ClientID:     clientId,
 		ToClientID:   storageScId,
-		ValueZCN:     value,
+		Value:        value,
 		CreationDate: creationDate,
 	}
 	var ctx = &mockStateContext{
