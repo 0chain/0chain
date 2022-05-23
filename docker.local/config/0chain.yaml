@@ -197,14 +197,20 @@ integration_tests:
   lock_interval: 1s
 
 storage:
-  # Start mode will delete all the data in volumepath, will initialize meta records,
-  # Repair mode will recreate meta records and restore missing blocks(should also check if block is in cold storage).
-  mode: start # normal or repair or recover(metadata recovery)
+  # start and recover mode will delete all the existing blocks 
+  # restart will take off from where it last left
+  # start and recover is currently used interchangeably but later on
+  # recover mode should be used to recover meta data record.
+  # When disk that stores block's metadata crashes then sharder is unable to serve
+  # block requests. That is when recover mode is required so it will traverse
+  # all the paths to generate metadata
+  mode: start # start, restart, recover
   block_movement_interval: 720h # time.Duration
 
-  bolt:
-    block_meta_record_path: "/meta/bmr.db"
-    query_meta_record_path: "/meta/qmr.db"
+  rocks:
+   # have appropriate name and value
+    block_where_record: "block where record"
+    unmoved_block_record: "unmoved block record"
   cache:
   # Current write policy is hard coded to write_through and 
   # cache replacement policy is lru
