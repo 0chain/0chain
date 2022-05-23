@@ -55,8 +55,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	//lfbCheckTimer := time.NewTimer(3 * time.Second)
 	aheadN := int64(config.GetLFBTicketAhead())
 	endRound := int64(0)
+	//reqC := make(chan int64, 1)
 
 	const maxRequestBlocks = 20
+	var synching bool
 
 	for {
 		select {
@@ -107,16 +109,17 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			endRound = lfbTk.Round + aheadN
+			//endRound = lfbTk.Round
+
+			if endRound <= cr {
+				continue
+			}
 
 			logging.Logger.Debug("process block, sync triggered",
 				zap.Int64("lfb", lfb.Round),
 				zap.Int64("lfb ticket", lfbTk.Round),
 				zap.Int64("current round", cr),
 				zap.Int64("end round", endRound))
-
-			if endRound <= cr {
-				continue
-			}
 
 			// trunc to send at most 20 blocks each time
 			reqNum := endRound - cr
@@ -125,18 +128,36 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			endRound = cr + reqNum
+			synching = true
 
 			logging.Logger.Debug("process block, sync blocks",
 				zap.Int64("start round", cr+1),
 				zap.Int64("end round", cr+reqNum+1))
-			go sc.requestBlocks(ctx, cr, reqNum)
+			go func() {
+				sc.requestBlocks(ctx, cr, reqNum)
+				//reqC <- int64(n) + cr
+			}()
+
+		//case reqEndRound := <-reqC:
+		//	if reqEndRound < endRound {
+		//		<-time.After(time.Second)
+		//		//endRound = reqEndRound
+		//		syncBlocksTimer.Reset(0)
+		//	}
 		case b := <-sc.GetBlockChannel():
 			cr := sc.GetCurrentRound()
 			if b.Round != sc.GetCurrentRound()+1 {
 				logging.Logger.Debug("process block skip",
 					zap.Int64("block round", b.Round), zap.Int64("current round", cr))
+
+				if !synching {
+					syncBlocksTimer.Reset(0)
+				}
+
 				continue
 			}
+			sc.processBlock(ctx, b)
+
 			lfbTk := sc.GetLatestLFBTicket(ctx)
 			logging.Logger.Debug("process block",
 				zap.Int64("round", b.Round),
@@ -144,19 +165,21 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
-			sc.processBlock(ctx, b)
-			if b.Round+aheadN >= endRound && lfbTk.Round-b.Round > 1 {
-				logging.Logger.Debug("process block, hit end, trigger sync",
-					zap.Int64("round", b.Round),
-					zap.Int64("end round", endRound),
-					zap.Int64("current round", cr))
-				syncBlocksTimer.Reset(0)
+			if b.Round+aheadN >= endRound {
+				synching = false
+				if b.Round < lfbTk.Round {
+					logging.Logger.Debug("process block, hit end, trigger sync",
+						zap.Int64("round", b.Round),
+						zap.Int64("end round", endRound),
+						zap.Int64("current round", cr))
+					syncBlocksTimer.Reset(0)
+				}
 			}
 		}
 	}
 }
 
-func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
+func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) int {
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
 	for i := int64(0); i < reqNum; i++ {
@@ -196,16 +219,21 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 	}
 	wg.Wait()
 
-	for _, b := range blocks {
+	for i, b := range blocks {
 		if b == nil {
 			// return if block is not acquired, break here as we will redo the sync process from the missed one later
-			return
+			if i > 0 {
+				return i + 1
+			}
+			return 0
 		}
 
 		logging.Logger.Debug("fetched block from remote", zap.Int64("round", b.Round))
 		sc.GetBlockChannel() <- b
 		logging.Logger.Debug("pushed to block process channel", zap.Int64("round", b.Round))
 	}
+
+	return len(blocks)
 }
 
 func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round, bool) {
