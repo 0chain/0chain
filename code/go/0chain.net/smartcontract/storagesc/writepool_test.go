@@ -143,7 +143,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	// setup config
 
 	testSetWritePoolConfig(t, &writePoolConfig{
-		MinLock:       10 * 1e10,
+		MinLock:       10,
 		MinLockPeriod: 20 * time.Second,
 		MaxLockPeriod: 2 * time.Hour,
 	}, balances, ssc.ID)

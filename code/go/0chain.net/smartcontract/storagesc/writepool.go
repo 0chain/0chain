@@ -262,11 +262,11 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	txnSAS, err := currency.ParseZCN(float64(t.ValueZCN))
+	iTxnVal, err := currency.Int64ToCoin(t.ValueZCN)
 	if err != nil {
 		return "", err
 	}
-	if txnSAS < conf.MinLock || t.ValueZCN <= 0 {
+	if iTxnVal < conf.MinLock || t.ValueZCN <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
