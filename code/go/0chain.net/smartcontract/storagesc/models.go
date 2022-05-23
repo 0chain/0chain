@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"math/bits"
 	"strings"
 	"time"
 
@@ -29,9 +27,9 @@ const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
-	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
+	ALL_VALIDATORS_KEY               = ADDRESS + encryption.Hash("all_validators")
 	ALL_CHALLENGE_READY_BLOBBERS_KEY = ADDRESS + encryption.Hash("all_challenge_ready_blobbers")
-	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("blobber_rewards")
+	BLOBBER_REWARD_KEY               = ADDRESS + encryption.Hash("blobber_rewards")
 )
 
 func getBlobberAllocationsKey(blobberID string) string {
@@ -1108,16 +1106,20 @@ List:
 }
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp, balances chainstate.StateContextI) (
-	[]*blobberWithPool, []string) {
+func (sa *StorageAllocation) validateEachBlobber(
+	ssc *StorageSmartContract,
+	blobbers []*blobberWithPool,
+	creationDate common.Timestamp,
+	conf *Config,
+	balances chainstate.StateContextI,
+) ([]*blobberWithPool, []string) {
 
 	var (
 		errors   = make([]string, 0, len(blobbers))
 		filtered = make([]*blobberWithPool, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
+		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate, conf)
 		if err != nil {
 			errors = append(errors, err.Error())
 			continue

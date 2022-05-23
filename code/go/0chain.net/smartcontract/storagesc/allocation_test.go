@@ -72,7 +72,7 @@ func TestSelectBlobbers(t *testing.T) {
 			BaseURL:  mockURL + strconv.Itoa(index),
 			Capacity: mockBlobberCapacity,
 			Provider: provider.Provider{
-				LastHealthCheck: common.Timestamp(now.Unix()),,
+				LastHealthCheck: common.Timestamp(now.Unix()),
 			},
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,

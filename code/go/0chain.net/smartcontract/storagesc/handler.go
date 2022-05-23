@@ -172,7 +172,7 @@ func (ssc *StorageSmartContract) GetStatus(
 		if err != nil {
 			return ssc.GetBlobberHandlerDepreciated(ctx, params, balances)
 		}
-		sn, err := blobberTableToStorageNode(*blobber)
+		sn := blobberTableToStorageNode(*blobber)
 		if err != nil {
 			return nil, err
 		}
