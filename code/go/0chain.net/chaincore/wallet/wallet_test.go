@@ -190,7 +190,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 				if err != nil {
 					panic(err)
 				}
-				s.Balance -= currency.Coin(value)
+				s.Balance, err = s.Balance.MinusInt64(value)
+				if err != nil {
+					panic(err)
+				}
 				if _, err := mpt.Insert(util.Path(wf.ClientID), s); err != nil {
 					panic(err)
 				}
@@ -205,7 +208,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			if err != nil {
 				panic(err)
 			}
-			s.Balance += currency.Coin(value)
+			s.Balance, err = s.Balance.AddInt64(value)
+			if err != nil {
+				panic(err)
+			}
 			if _, err := mpt.Insert(util.Path(wt.ClientID), s); err != nil {
 				panic(err)
 			}

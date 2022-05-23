@@ -278,6 +278,7 @@ func TestZcnLockingPool_GetID(t *testing.T) {
 }
 
 func TestZcnLockingPool_FillPool(t *testing.T) {
+	var err error
 	t.Parallel()
 
 	txn := transaction.Transaction{}
@@ -286,11 +287,7 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	iTxnValue, err := currency.Int64ToCoin(txn.Value)
-	if err != nil {
-		require.NoError(t, err)
-	}
-	p.Balance, err = p.Balance.AddCoin(iTxnValue)
+	p.Balance, err = p.Balance.AddInt64(txn.Value)
 	if err != nil {
 		require.NoError(t, err)
 	}

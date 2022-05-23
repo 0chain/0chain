@@ -127,21 +127,27 @@ func existInDelegatesOfNodes(id string, nodes []*MinerNode) bool {
 	return false
 }
 
-func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) currency.Coin {
+func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
 	blockReward := gn.BlockReward
 	minerR, _ := gn.splitByShareRatio(blockReward)
-	fees := msc.sumFee(b, false)
+	fees, err := msc.sumFee(b, false)
+	if err != nil {
+		return 0, err
+	}
 	minerF, _ := gn.splitByShareRatio(fees)
 
-	return minerR + minerF
+	return minerR + minerF, nil
 }
 
-func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) currency.Coin {
+func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
 	blockReward := gn.BlockReward
 	_, sharderR := gn.splitByShareRatio(blockReward)
-	fees := msc.sumFee(b, false)
+	fees, err := msc.sumFee(b, false)
+	if err != nil {
+		return 0, err
+	}
 	_, sharderF := gn.splitByShareRatio(fees)
-	return sharderR + sharderF
+	return sharderR + sharderF, nil
 }
 
 func Test_payFees(t *testing.T) {
@@ -253,9 +259,11 @@ func Test_payFees(t *testing.T) {
 
 		for _, mn := range miners {
 			if mn == generator {
+				mnPayment, err := computeMinerPayments(gn, msc, b)
+				require.NoError(t, err)
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -273,7 +281,10 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
-				shP := computeShardersPayments(gn, msc, b) / currency.Coin(len(blockSharders))
+				shP, err := computeShardersPayments(gn, msc, b)
+				require.NoError(t, err)
+				shP = shP / currency.Coin(len(blockSharders))
+
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
@@ -335,10 +346,12 @@ func Test_payFees(t *testing.T) {
 		)
 
 		for _, mn := range miners {
+			mnPayment, err := computeMinerPayments(gn, msc, b)
+			require.NoError(t, err)
 			if mn == generator {
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -353,7 +366,9 @@ func Test_payFees(t *testing.T) {
 
 		blockSharders, err := msc.getBlockSharders(b, balances)
 		require.NoError(t, err)
-		sharderPayments := computeShardersPayments(gn, msc, b) / currency.Coin(len(blockSharders))
+		sharderPayments, err := computeShardersPayments(gn, msc, b)
+		require.NoError(t, err)
+		sharderPayments = sharderPayments / currency.Coin(len(blockSharders))
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
 				assert.Equal(t,
@@ -410,10 +425,12 @@ func Test_payFees(t *testing.T) {
 		)
 
 		for _, mn := range miners {
+			mnPayment, err := computeMinerPayments(gn, msc, b)
+			require.NoError(t, err)
 			if mn == generator {
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -431,7 +448,9 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
-				shP := computeShardersPayments(gn, msc, b) / currency.Coin(len(blockSharders))
+				shP, err := computeShardersPayments(gn, msc, b)
+				require.NoError(t, err)
+				shP = shP / currency.Coin(len(blockSharders))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
@@ -486,10 +505,12 @@ func Test_payFees(t *testing.T) {
 		)
 
 		for _, mn := range miners {
+			mnPayment, err := computeMinerPayments(gn, msc, b)
+			require.NoError(t, err)
 			if mn == generator {
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -506,7 +527,9 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
-				shP := computeShardersPayments(gn, msc, b) / currency.Coin(len(blockSharders))
+				shP, err := computeShardersPayments(gn, msc, b)
+				require.NoError(t, err)
+				shP = shP / currency.Coin(len(blockSharders))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,

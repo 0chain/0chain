@@ -59,10 +59,14 @@ func (p *ZcnPool) DigPool(id string, txn *transaction.Transaction) (*state.Trans
 }
 
 func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
+	var err error
 	if txn.Value <= 0 {
 		return nil, "", common.NewError("filling pool failed", "insufficient funds")
 	}
-	p.Balance += currency.Coin(txn.Value)
+	p.Balance, err = p.Balance.AddInt64(txn.Value)
+	if err != nil {
+		return nil, "", err
+	}
 	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: currency.Coin(txn.Value)}
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
 	return transfer, string(tpr.Encode()), nil
