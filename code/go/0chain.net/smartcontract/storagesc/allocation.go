@@ -1590,10 +1590,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		// min lock demand rest
 		var paid currency.Coin = 0
 		lack := d.MinLockDemand - d.Spent
-		iLack, err := lack.Int64()
-		if err != nil {
-			return err
-		}
+		iLack, _ := lack.Int64()
 		if iLack > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
