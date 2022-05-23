@@ -118,7 +118,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
-			// trunk to send at most 20 blocks each time
+			// trunc to send at most 20 blocks each time
 			reqNum := endRound - cr
 			if reqNum > maxRequestBlocks {
 				reqNum = maxRequestBlocks
@@ -137,12 +137,15 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 					zap.Int64("block round", b.Round), zap.Int64("current round", cr))
 				continue
 			}
+			lfbTk := sc.GetLatestLFBTicket(ctx)
 			logging.Logger.Debug("process block",
 				zap.Int64("round", b.Round),
 				zap.Int64("end round", endRound),
-				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round))
+				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
+				zap.Int64("lfb ticket round", lfbTk.Round))
+
 			sc.processBlock(ctx, b)
-			if b.Round+aheadN >= endRound {
+			if b.Round+aheadN >= endRound && lfbTk.Round-b.Round > 1 {
 				logging.Logger.Debug("process block, hit end, trigger sync",
 					zap.Int64("round", b.Round),
 					zap.Int64("end round", endRound),
