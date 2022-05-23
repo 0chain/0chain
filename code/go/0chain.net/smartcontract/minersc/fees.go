@@ -332,6 +332,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		zap.Int64("round", mb.Round),
 		zap.String("block", mb.Hash))
 
+	fees, err := msc.sumFee(mb, true)
+	if err != nil {
+		return "", err
+	}
 	var (
 		// mb reward -- mint for the mb
 		blockReward = currency.Coin(
@@ -339,7 +343,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		)
 		minerr, sharderr = gn.splitByShareRatio(blockReward)
 		// fees         -- total fees for the mb
-		fees             = msc.sumFee(mb, true)
 		minerf, sharderf = gn.splitByShareRatio(fees)
 	)
 	if err := mn.StakePool.DistributeRewards(
@@ -385,7 +388,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) sumFee(b *block.Block,
-	updateStats bool) currency.Coin {
+	updateStats bool) (currency.Coin, error) {
 
 	var totalMaxFee int64
 	var feeStats metrics.Counter
@@ -393,13 +396,16 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 		feeStats = stat.(metrics.Counter)
 	}
 	for _, txn := range b.Txns {
+		if txn.Fee < 0 {
+			return 0, fmt.Errorf("found negative transaction fee: %d", txn.Fee)
+		}
 		totalMaxFee += txn.Fee
 	}
 
 	if updateStats && feeStats != nil {
 		feeStats.Inc(totalMaxFee)
 	}
-	return currency.Coin(totalMaxFee)
+	return currency.Int64ToCoin(totalMaxFee)
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
