@@ -179,7 +179,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	if rewardBal > 0 {
-		rShare := rewardBal / currency.Coin(len(stakePools))
+		rShare, rl, err := rewardBal.DivideCurrency(int64(len(stakePools)))
+		if err != nil {
+			return err
+		}
 		c, err := rewardBal.Int64()
 		if err != nil {
 			return err
@@ -198,7 +201,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				}
 			}
 
-			rl := rewardBal - rShare
 			if rl > 0 {
 				for i := 0; i < int(rl); i++ {
 					if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
