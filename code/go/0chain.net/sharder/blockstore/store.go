@@ -229,6 +229,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) {
 				}
 			}()
 
+			go store.addToUBR(b)
+
 			return nil
 		}
 
@@ -286,6 +288,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) {
 				os.Remove(blockPath)
 				return err
 			}
+
+			go store.addToUBR(b)
 
 			return nil
 		}
@@ -368,6 +372,17 @@ func (store *blockStore) addToCache(b *block.Block) {
 	data, _ := getBlockData(b)
 	err := store.cache.Write(b.Hash, data)
 	if err != nil {
+		logging.Logger.Error(err.Error())
+	}
+}
+
+func (store *blockStore) addToUBR(b *block.Block) {
+	ubr := &unmovedBlockRecord{
+		Hash:      b.Hash,
+		CreatedAt: b.CreationDate.Duration(),
+	}
+
+	if err := ubr.Add(); err != nil {
 		logging.Logger.Error(err.Error())
 	}
 }
