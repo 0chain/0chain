@@ -189,12 +189,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 				continue
 			}
 
-			//if bfr.hash != "" {
-			//	fetching[bfr.hash] = bfr // add, increasing map length
-			//} else {
-			//	fetching[strconv.FormatInt(bfr.round, 10)] = bfr
-			//}
-
 			// if force from sharders
 			if bfr.sharders {
 				if bf.acquire(ctx, shardersl) {

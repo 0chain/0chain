@@ -52,6 +52,7 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	syncBlocksTimer := time.NewTimer(7 * time.Second)
+	lfbCheckTicker := time.NewTicker(3 * time.Second)
 	aheadN := int64(config.GetLFBTicketAhead())
 	endRound := int64(0)
 
@@ -62,6 +63,22 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
+		case <-lfbCheckTicker.C:
+			lfb := sc.GetLatestFinalizedBlock()
+			lfbTk := sc.GetLatestLFBTicket(ctx)
+
+			if lfb.Round < endRound {
+				continue
+			}
+
+			// lfb is >= endRound, but still <= LFB ticket, continue request
+			if endRound <= lfbTk.Round {
+				syncBlocksTimer.Reset(0)
+				continue
+			}
+
+			syncBlocksTimer.Reset(time.Minute)
+
 		case <-syncBlocksTimer.C:
 			// reset sync timer to 1 minute
 			syncBlocksTimer.Reset(time.Minute)
@@ -70,10 +87,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				lfbTk = sc.GetLatestLFBTicket(ctx)
 				lfb   = sc.GetLatestFinalizedBlock()
 			)
-
-			if lfbTk.Round <= lfb.Round {
-				continue
-			}
 
 			cr := sc.GetCurrentRound()
 			if cr < lfb.Round {
@@ -102,32 +115,15 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 					zap.Int64("block round", b.Round), zap.Int64("current round", cr))
 				continue
 			}
-			logging.Logger.Debug("process block", zap.Int64("round", b.Round))
+			logging.Logger.Debug("process block",
+				zap.Int64("round", b.Round),
+				zap.Int64("end round", endRound))
 			sc.processBlock(ctx, b)
-
-			lfbTk := sc.GetLatestLFBTicket(ctx)
-			if b.Round >= endRound {
-				// trigger sync timer immediately as the
-				if endRound < lfbTk.Round {
-					syncBlocksTimer.Reset(0)
-				}
-			}
 		}
 	}
 }
 
 func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
-	//const maxRequestBlocks = 20
-	//if endRound <= startRound {
-	//	return
-	//}
-	//
-	//// trunk to send at most 20 blocks each time
-	//reqNum := endRound - startRound
-	//if reqNum > maxRequestBlocks {
-	//	reqNum = maxRequestBlocks
-	//}
-	//
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
 	for i := int64(0); i < reqNum; i++ {
@@ -151,9 +147,14 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 			// this will save block to local and create related round
 			b, err := sc.GetNotarizedBlockFromSharders(cctx, "", r)
 			if err != nil {
-				logging.Logger.Error("request block from sharders failed",
-					zap.Int64("round", r),
-					zap.Error(err))
+				// fetch from miners
+				b, err = sc.GetNotarizedBlock(cctx, "", r)
+				if err != nil {
+					logging.Logger.Error("request block failed",
+						zap.Int64("round", r),
+						zap.Error(err))
+				}
+
 				return
 			}
 
