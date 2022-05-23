@@ -1589,13 +1589,18 @@ func (sc *StorageSmartContract) finishAllocation(
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
 		var paid currency.Coin = 0
-		if lack := d.MinLockDemand - d.Spent; int64(lack) > 0 {
+		lack := d.MinLockDemand - d.Spent
+		iLack, err := lack.Int64()
+		if err != nil {
+			return err
+		}
+		if iLack > 0 {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {
 					pay = aps[apIndex].Balance
 				}
-				aps[apIndex].Balance -= currency.Coin(pay)
+				aps[apIndex].Balance -= pay
 				if aps[apIndex].Balance == 0 {
 					apIndex++
 				}
@@ -1701,21 +1706,28 @@ func (sc *StorageSmartContract) finishAllocation(
 		return err
 	}
 	// move challenge pool rest to write pool
-	alloc.MovedBack, err = alloc.MovedBack.AddCoin(cp.Balance)
-	if err != nil {
-		return err
-	}
+	if cp.Balance > 0 {
+		alloc.MovedBack, err = alloc.MovedBack.AddCoin(cp.Balance)
+		if err != nil {
+			return err
+		}
 
-	// write pool
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get user's write pools: "+err.Error())
-	}
-	err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
-	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"moving challenge pool rest back to write pool: "+err.Error())
+		// write pool
+		var wp *writePool
+		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't get user's write pools: "+err.Error())
+		}
+		err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"moving challenge pool rest back to write pool: "+err.Error())
+		}
+
+		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
+			return common.NewError("fini_alloc_failed",
+				"saving write pool: "+err.Error())
+		}
 	}
 
 	// save all rest and remove allocation from all allocations list
@@ -1723,11 +1735,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving challenge pool: "+err.Error())
-	}
-
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving write pool: "+err.Error())
 	}
 
 	alloc.Finalized = true

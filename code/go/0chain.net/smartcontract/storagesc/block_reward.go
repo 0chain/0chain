@@ -183,29 +183,19 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		if err != nil {
 			return err
 		}
-		c, err := rewardBal.Int64()
-		if err != nil {
-			return err
-		}
-		if rShare == 0 {
-			for i := int64(0); i < c; i++ {
-				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
-					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
-				}
-			}
-		} else {
 
+		if rShare > 0 {
 			for i := range stakePools {
 				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
 					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
+		}
 
-			if rl > 0 {
-				for i := 0; i < int(rl); i++ {
-					if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
-						return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
-					}
+		if rl > 0 {
+			for i := 0; i < int(rl); i++ {
+				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
 		}
