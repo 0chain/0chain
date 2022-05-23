@@ -40,12 +40,17 @@ tests:
           timeout: '10m'
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
       - wait_add:
           sharders: ['sharder-1']
           miners: ['miner-1', 'miner-2', 'miner-3']
           start: true
-      # - wait_round:
-      #     round: 150 # just wait the BC starts
+      - wait_round:
+          round: 15 # just wait the BC starts
+          allow_beyond: true
       - start: ['0dns']
       #wait the 0dns starts
       - command:
