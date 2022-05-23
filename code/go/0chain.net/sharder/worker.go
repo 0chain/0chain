@@ -69,19 +69,25 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			lfb := sc.GetLatestFinalizedBlock()
 			lfbTk := sc.GetLatestLFBTicket(ctx)
 
-			if lfb.Round < endRound {
-				logging.Logger.Debug("process block, lfb.Round <= endRound, continue")
+			if lfb.Round+aheadN < endRound {
+				logging.Logger.Debug("process block, lfb.Round < endRound, continue",
+					zap.Int64("lfb round", lfb.Round),
+					zap.Int64("end round", endRound))
 				continue
 			}
 
 			// lfb is >= endRound, but still <= LFB ticket, continue request
 			if endRound <= lfbTk.Round {
-				logging.Logger.Debug("process block, endRound <= lfbTk.Round, trigger sync")
+				logging.Logger.Debug("process block, endRound <= lfbTk.Round, trigger sync",
+					zap.Int64("end round", endRound),
+					zap.Int64("lfb ticket round", lfbTk.Round))
 				syncBlocksTimer.Reset(0)
 				continue
 			}
 
-			logging.Logger.Debug("process block, endRound > lfbTk.Round, reset to 1 minute")
+			logging.Logger.Debug("process block, endRound > lfbTk.Round, reset to 1 minute",
+				zap.Int64("end round", endRound),
+				zap.Int64("lfb ticket round", lfbTk.Round))
 			syncBlocksTimer.Reset(time.Minute)
 
 		case <-syncBlocksTimer.C:
@@ -122,7 +128,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 			logging.Logger.Debug("process block",
 				zap.Int64("round", b.Round),
-				zap.Int64("end round", endRound))
+				zap.Int64("end round", endRound),
+				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round))
 			sc.processBlock(ctx, b)
 			if b.Round >= endRound {
 				lfbCheckTimer.Reset(0)
