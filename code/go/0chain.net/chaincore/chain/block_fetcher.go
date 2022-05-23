@@ -242,13 +242,12 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 			// got the correct response
 			if rpl.Block != nil {
+				rd := strconv.FormatInt(rpl.Round, 10)
+				delete(fetching, rd)
 				if rpl.Hash != "" {
 					delete(fetching, rpl.Hash)
-				} else {
-					rd := strconv.FormatInt(rpl.Round, 10)
-					logging.Logger.Debug("remove from fetching", zap.String("round", rd))
-					delete(fetching, rd)
 				}
+
 				go bf.respond(ctx, bfr, rpl.Block)
 				continue
 			}
@@ -257,14 +256,12 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 			// already requested from sharders, so, it's the end
 			if bfr.sharders {
+				rd := strconv.FormatInt(rpl.Round, 10)
+				delete(fetching, rd)
 				if rpl.Hash != "" {
 					delete(fetching, rpl.Hash)
-				} else {
-					rd := strconv.FormatInt(rpl.Round, 10)
-					logging.Logger.Debug("remove from fetching", zap.String("round", rd))
-					delete(fetching, rd)
-					//delete(fetching, strconv.FormatInt(rpl.Round, 10))
 				}
+
 				go bf.terminate(ctx, bfr, rpl.Err)
 				continue
 			}
@@ -272,14 +269,12 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			// if block round > the latest ticket round, then we shouldn't
 			// request it from sharders (it can't be on sharders)
 			if bfr.round > 0 && bfr.round > latest {
+				rd := strconv.FormatInt(rpl.Round, 10)
+				delete(fetching, rd)
 				if rpl.Hash != "" {
 					delete(fetching, rpl.Hash)
-				} else {
-					rd := strconv.FormatInt(rpl.Round, 10)
-					logging.Logger.Debug("remove from fetching", zap.String("round", rd))
-					delete(fetching, rd)
-					//delete(fetching, strconv.FormatInt(rpl.Round, 10))
 				}
+
 				go bf.terminate(ctx, bfr, rpl.Err)
 				continue
 			}
