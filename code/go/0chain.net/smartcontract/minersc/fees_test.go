@@ -129,24 +129,36 @@ func existInDelegatesOfNodes(id string, nodes []*MinerNode) bool {
 
 func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
 	blockReward := gn.BlockReward
-	minerR, _ := gn.splitByShareRatio(blockReward)
+	minerR, _, err := gn.splitByShareRatio(blockReward)
+	if err != nil {
+		return 0, err
+	}
 	fees, err := msc.sumFee(b, false)
 	if err != nil {
 		return 0, err
 	}
-	minerF, _ := gn.splitByShareRatio(fees)
+	minerF, _, err := gn.splitByShareRatio(fees)
+	if err != nil {
+		return 0, err
+	}
 
 	return minerR + minerF, nil
 }
 
 func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
 	blockReward := gn.BlockReward
-	_, sharderR := gn.splitByShareRatio(blockReward)
+	_, sharderR, err := gn.splitByShareRatio(blockReward)
+	if err != nil {
+		return 0, err
+	}
 	fees, err := msc.sumFee(b, false)
 	if err != nil {
 		return 0, err
 	}
-	_, sharderF := gn.splitByShareRatio(fees)
+	_, sharderF, err := gn.splitByShareRatio(fees)
+	if err != nil {
+		return 0, err
+	}
 	return sharderR + sharderF, nil
 }
 
