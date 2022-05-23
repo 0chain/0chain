@@ -24,7 +24,7 @@ type Validator struct {
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 
-	Reward      int64 `json:"reward"`
+	Rewards     int64 `json:"rewards"`
 	TotalReward int64 `json:"total_reward"`
 }
 
