@@ -3,11 +3,9 @@ package minersc
 import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 
@@ -248,15 +246,12 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
-	logging.Logger.Info("piers getConfigs start")
 	gn, err := getGlobalNode(mrh.GetStateContext())
-	logging.Logger.Info("piers getConfigs", zap.Any("gn", gn), zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 	rtv, err := gn.getConfigMap()
-	logging.Logger.Info("piers getConfigs", zap.Any("rtv", rtv), zap.Error(err))
 	common.Respond(w, r, rtv, err)
 }
 
