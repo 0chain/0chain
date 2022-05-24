@@ -653,7 +653,7 @@ func GetMockBlobberStakePools(
 					ProviderType: int(spenum.Blobber),
 					ProviderID:   bId,
 					DelegateID:   sp.Pools[id].DelegateID,
-					Balance:      sp.Pools[id].Balance,
+					Balance:      int64(sp.Pools[id].Balance),
 					Reward:       0,
 					TotalReward:  0,
 					TotalPenalty: 0,

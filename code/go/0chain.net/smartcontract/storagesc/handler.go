@@ -886,6 +886,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	edb := srh.GetStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	pools, err := edb.GetUserDelegatePools(clientID, int(spenum.Blobber))
 	if err != nil {
@@ -898,14 +899,38 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	for _, pool := range pools {
 		var dps = delegatePoolStat{
 			ID:           pool.PoolID,
-			Balance:      pool.Balance,
 			DelegateID:   pool.DelegateID,
-			Rewards:      pool.Reward,
-			TotalPenalty: pool.TotalPenalty,
-			TotalReward:  pool.TotalReward,
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
 		}
+		dps.Balance, err = currency.Int64ToCoin(pool.Balance)
+		if err != nil {
+			logging.Logger.Error("error converting balance", zap.Error(err))
+			common.Respond(w, r, nil, common.NewErrInternal("invalid pool balance"))
+			return
+		}
+
+		dps.Rewards, err = currency.Int64ToCoin(pool.Reward)
+		if err != nil {
+			logging.Logger.Error("error converting reward", zap.Error(err))
+			common.Respond(w, r, nil, common.NewErrInternal("invalid pool reward"))
+			return
+		}
+
+		dps.TotalPenalty, err = currency.Int64ToCoin(pool.TotalPenalty)
+		if err != nil {
+			logging.Logger.Error("error converting total penalty", zap.Error(err))
+			common.Respond(w, r, nil, common.NewErrInternal("invalid pool total penalty"))
+			return
+		}
+
+		dps.TotalReward, err = currency.Int64ToCoin(pool.TotalReward)
+		if err != nil {
+			logging.Logger.Error("error converting total reward", zap.Error(err))
+			common.Respond(w, r, nil, common.NewErrInternal("invalid pool total reward"))
+			return
+		}
+
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dps)
 	}
 
@@ -915,7 +940,8 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 func spStats(
 	blobber event.Blobber,
 	delegatePools []event.DelegatePool,
-) *stakePoolStat {
+) (*stakePoolStat, error) {
+	var err error
 	stat := new(stakePoolStat)
 	stat.ID = blobber.BlobberID
 	stat.UnstakeTotal = blobber.UnstakeTotal
@@ -934,18 +960,38 @@ func spStats(
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
-			Balance:      dp.Balance,
 			DelegateID:   dp.DelegateID,
-			Rewards:      dp.Reward,
 			Status:       spenum.PoolStatus(dp.Status).String(),
-			TotalReward:  dp.TotalReward,
-			TotalPenalty: dp.TotalPenalty,
 			RoundCreated: dp.RoundCreated,
 		}
+		dpStats.Balance, err = currency.Int64ToCoin(dp.Balance)
+		if err != nil {
+			logging.Logger.Error("error converting balance", zap.Error(err))
+			return nil, err
+		}
+
+		dpStats.Rewards, err = currency.Int64ToCoin(dp.Reward)
+		if err != nil {
+			logging.Logger.Error("error converting reward", zap.Error(err))
+			return nil, err
+		}
+
+		dpStats.TotalPenalty, err = currency.Int64ToCoin(dp.TotalPenalty)
+		if err != nil {
+			logging.Logger.Error("error converting total penalty", zap.Error(err))
+			return nil, err
+		}
+
+		dpStats.TotalReward, err = currency.Int64ToCoin(dp.TotalReward)
+		if err != nil {
+			logging.Logger.Error("error converting total reward", zap.Error(err))
+			return nil, err
+		}
+
 		stat.Balance += dpStats.Balance
 		stat.Delegate = append(stat.Delegate, dpStats)
 	}
-	return stat
+	return stat, nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
@@ -978,9 +1024,13 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("cannot find user stake pool: "+err.Error()))
 		return
-
 	}
-	common.Respond(w, r, spStats(*blobber, delegatePools), nil)
+	spS, err := spStats(*blobber, delegatePools)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("cannot fetch stake pool stats: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, spS, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge

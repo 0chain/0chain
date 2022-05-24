@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -19,12 +18,12 @@ type DelegatePool struct {
 	ProviderID   string `json:"provider_id"`
 	DelegateID   string `json:"delegate_id"`
 
-	Balance      currency.Coin `json:"balance"`
-	Reward       currency.Coin `json:"reward"`       // unclaimed reward
-	TotalReward  currency.Coin `json:"total_reward"` // total reward paid to pool
-	TotalPenalty currency.Coin `json:"total_penalty"`
-	Status       int           `json:"status"`
-	RoundCreated int64         `json:"round_created"`
+	Balance      int64 `json:"balance"`
+	Reward       int64 `json:"reward"`       // unclaimed reward
+	TotalReward  int64 `json:"total_reward"` // total reward paid to pool
+	TotalPenalty int64 `json:"total_penalty"`
+	Status       int   `json:"status"`
+	RoundCreated int64 `json:"round_created"`
 }
 
 func (edb *EventDb) overwriteDelegatePool(sp DelegatePool) error {
@@ -64,7 +63,7 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) updateReward(reward currency.Coin, dp DelegatePool) error {
+func (edb *EventDb) updateReward(reward int64, dp DelegatePool) error {
 	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
 
 	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {

@@ -25,8 +25,12 @@ func (dp DelegatePool) emitNew(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
+	dpBalance, err := dp.Balance.Int64()
+	if err != nil {
+		return err
+	}
 	data, err := json.Marshal(&event.DelegatePool{
-		Balance:      dp.Balance,
+		Balance:      dpBalance,
 		PoolID:       poolId,
 		ProviderType: int(providerType),
 		ProviderID:   providerId,
