@@ -37,7 +37,7 @@ require (
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.1
 	github.com/tinylib/msgp v1.1.6
-	github.com/valyala/gozstd v1.16.0
+	github.com/valyala/gozstd v1.17.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.9.0
 	go.uber.org/multierr v1.8.0 // indirect
