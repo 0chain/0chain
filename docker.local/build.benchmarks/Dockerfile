@@ -5,10 +5,12 @@ ENV GO111MODULE=on
 
 # Download the dependencies:
 # Will be cached if we don't change mod/sum files
-COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
 RUN cd $SRC_DIR/go/0chain.net && \
-    go mod download
+    go mod download -x
+
+COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+
 WORKDIR $SRC_DIR/go/0chain.net/core
 
 # Build libzstd:
