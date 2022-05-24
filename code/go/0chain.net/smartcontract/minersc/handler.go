@@ -3,9 +3,11 @@ package minersc
 import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 
@@ -27,21 +29,25 @@ const (
 	rfnGetUserPools
 	rfnGetMinerList
 	rfnGetMinersStats
+
 	rfnGetMinersStake
 	rfnGetSharderList
 	rfnGetShardersStats
 	rfnGetShardersStake
 	rfnGetSharderKeepList
+
 	rfnGetPhase
 	rfnGetDkgList
 	rfnGetMpksList
 	rfnGetGroupShareOrSigns
 	rfnGetMagicBlock
+
 	rfnGetEvents
 	rfnNodeStat
 	rfnNodePoolStat
 	rfnConfigs
 	rfnGetMinerGeolocations
+
 	rfnGetSharderGeolocations
 )
 
@@ -61,21 +67,25 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(miner+GetRestNames()[rfnGetUserPools], mrh.getUserPools)
 	http.HandleFunc(miner+GetRestNames()[rfnGetMinerList], mrh.getMinerList)
 	http.HandleFunc(miner+GetRestNames()[rfnGetMinersStats], mrh.getMinersStats)
+
 	http.HandleFunc(miner+GetRestNames()[rfnGetMinersStake], mrh.getMinersStake)
 	http.HandleFunc(miner+GetRestNames()[rfnGetSharderList], mrh.getSharderList)
 	http.HandleFunc(miner+GetRestNames()[rfnGetShardersStats], mrh.getShardersStats)
 	http.HandleFunc(miner+GetRestNames()[rfnGetShardersStake], mrh.getShardersStake)
 	http.HandleFunc(miner+GetRestNames()[rfnGetSharderKeepList], mrh.getSharderKeepList)
+
 	http.HandleFunc(miner+GetRestNames()[rfnGetPhase], mrh.getPhase)
 	http.HandleFunc(miner+GetRestNames()[rfnGetDkgList], mrh.getDkgList)
 	http.HandleFunc(miner+GetRestNames()[rfnGetMpksList], mrh.getMpksList)
 	http.HandleFunc(miner+GetRestNames()[rfnGetGroupShareOrSigns], mrh.getGroupShareOrSigns)
 	http.HandleFunc(miner+GetRestNames()[rfnGetMagicBlock], mrh.getMagicBlock)
+
 	http.HandleFunc(miner+GetRestNames()[rfnGetEvents], mrh.getEvents)
 	http.HandleFunc(miner+GetRestNames()[rfnNodeStat], mrh.getNodeStat)
 	http.HandleFunc(miner+GetRestNames()[rfnNodePoolStat], mrh.getNodePoolStat)
 	http.HandleFunc(miner+GetRestNames()[rfnConfigs], mrh.getConfigs)
 	http.HandleFunc(miner+GetRestNames()[rfnGetMinerGeolocations], mrh.getMinerGeolocations)
+
 	http.HandleFunc(miner+GetRestNames()[rfnGetSharderGeolocations], mrh.getSharderGeolocations)
 }
 
@@ -86,22 +96,25 @@ func GetRestNames() []string {
 		"/getUserPools",
 		"/getMinerList",
 		"/get_miners_stats",
+
 		"/get_miners_stake",
 		"/getSharderList",
 		"/get_sharders_stats",
 		"/get_sharders_stake",
 		"/getSharderKeepList",
+
 		"/getPhase",
 		"/getDkgList",
 		"/getMpksList",
 		"/getGroupShareOrSigns",
 		"/getMagicBlock",
+
 		"/getEvents",
-		"/nodeStatHandler",
 		"/nodeStat",
 		"/nodePoolStat",
 		"/configs",
 		"/get_miner_geolocations",
+
 		"/get_sharder_geolocations",
 	}
 }
@@ -235,12 +248,15 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
+	logging.Logger.Info("piers getConfigs start")
 	gn, err := getGlobalNode(mrh.GetStateContext())
+	logging.Logger.Info("piers getConfigs", zap.Any("gn", gn), zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 	rtv, err := gn.getConfigMap()
+	logging.Logger.Info("piers getConfigs", zap.Any("rtv", rtv), zap.Error(err))
 	common.Respond(w, r, rtv, err)
 }
 

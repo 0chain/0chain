@@ -36,36 +36,43 @@ const (
 	rfnGetBlobbers
 	rfnGetBlobberTotalStakes
 	rfnGetBlobberLatLong
+
 	rfnTransaction
 	rfnTransactions
 	rfnWriteMarkers
 	rfnErrors
 	rfnAllocations
+
 	rfnAllocationMinLock
 	rfnAllocation
 	rfnLatestReadMarker
 	rfnReadmarkers
 	rfnCountReadmarkers
+
 	rfnGetWriteMarkers
 	rfnGetValidator
 	rfnOpenChallenges
 	rfnGetChallenge
 	rfnGetStakePoolStat
+
 	rfnGetUserStakePoolStat
 	rfnGetBlockByHash
 	rfnGet_blocks
 	rfnTotalSavedData
 	rfnGetConfig
+
 	rfnGetReadPoolStat
 	rfnGetReadPoolAllocBlobberStat
 	rfnGetWritePoolStat
 	rfnGetWritePoolAllocBlobberStat
 	rfnGetChallengePoolStat
+
 	rfnAllocWrittenSize
 	rfnAllocReadsize
 	rfnAllocWriteMarkerCount
 	rfnCollectedReward
 	rfnBlobberIds
+
 	rfnAllocBlobbers
 	rfnFreeAllocBlobbers
 )
@@ -86,36 +93,43 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+GetRestNames()[rfnGetBlobbers], srh.getBlobbers)
 	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberTotalStakes], srh.getBlobberTotalStakes)
 	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberLatLong], srh.getBlobberGeoLocation)
+
 	http.HandleFunc(storage+GetRestNames()[rfnTransaction], srh.getTransactionByHash)
 	http.HandleFunc(storage+GetRestNames()[rfnTransactions], srh.getTransactionByFilter)
 	http.HandleFunc(storage+GetRestNames()[rfnWriteMarkers], srh.getWriteMarker)
 	http.HandleFunc(storage+GetRestNames()[rfnErrors], srh.getErrors)
 	http.HandleFunc(storage+GetRestNames()[rfnAllocations], srh.getAllocations)
+
 	http.HandleFunc(storage+GetRestNames()[rfnAllocationMinLock], srh.getAllocationMinLock)
 	http.HandleFunc(storage+GetRestNames()[rfnAllocation], srh.getAllocation)
 	http.HandleFunc(storage+GetRestNames()[rfnLatestReadMarker], srh.getLatestReadMarker)
 	http.HandleFunc(storage+GetRestNames()[rfnReadmarkers], srh.getReadMarkers)
 	http.HandleFunc(storage+GetRestNames()[rfnCountReadmarkers], srh.getReadMarkersCount)
+
 	http.HandleFunc(storage+GetRestNames()[rfnGetWriteMarkers], srh.getWriteMarkers)
 	http.HandleFunc(storage+GetRestNames()[rfnGetValidator], srh.getValidator)
 	http.HandleFunc(storage+GetRestNames()[rfnOpenChallenges], srh.getOpenChallenges)
 	http.HandleFunc(storage+GetRestNames()[rfnGetChallenge], srh.getChallenge)
 	http.HandleFunc(storage+GetRestNames()[rfnGetStakePoolStat], srh.getStakePoolStat)
+
 	http.HandleFunc(storage+GetRestNames()[rfnGetUserStakePoolStat], srh.getUserStakePoolStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetBlockByHash], srh.getBlockByHash)
 	http.HandleFunc(storage+GetRestNames()[rfnGet_blocks], srh.getBlocks)
 	http.HandleFunc(storage+GetRestNames()[rfnTotalSavedData], srh.getTotalData)
 	http.HandleFunc(storage+GetRestNames()[rfnGetConfig], srh.getConfig)
+
 	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolStat], srh.getReadPoolStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolAllocBlobberStat], srh.getReadPoolAllocBlobberStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolStat], srh.getWritePoolStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolAllocBlobberStat], srh.getWritePoolAllocBlobberStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetChallengePoolStat], srh.getChallengePoolStat)
+
 	http.HandleFunc(storage+GetRestNames()[rfnAllocWrittenSize], srh.getWrittenAmount)
 	http.HandleFunc(storage+GetRestNames()[rfnAllocReadsize], srh.getReadAmount)
 	http.HandleFunc(storage+GetRestNames()[rfnAllocWriteMarkerCount], srh.getWriteMarkerCount)
 	http.HandleFunc(storage+GetRestNames()[rfnCollectedReward], srh.getCollectedReward)
 	http.HandleFunc(storage+GetRestNames()[rfnBlobberIds], srh.getBlobberIdsByUrls)
+
 	http.HandleFunc(storage+GetRestNames()[rfnAllocBlobbers], srh.getAllocationBlobbers)
 	http.HandleFunc(storage+GetRestNames()[rfnFreeAllocBlobbers], srh.getFreeAllocationBlobbers)
 }
@@ -127,36 +141,43 @@ func GetRestNames() []string {
 		"/getblobbers",
 		"/get_blobber_total_stakes",
 		"/get_blobber_lat_long",
+
 		"/transaction",
 		"/transactions",
 		"/writemarkers",
 		"/errors",
 		"/allocations",
+
 		"/allocation_min_lock",
 		"/allocation",
 		"/latestreadmarker",
 		"/readmarkers",
 		"/count_readmarkers",
+
 		"/getWriteMarkers",
 		"/get_validator",
 		"/openchallenges",
 		"/getchallenge",
 		"/getStakePoolStat",
+
 		"/getUserStakePoolStat",
 		"/get_block_by_hash",
 		"/get_blocks",
 		"/total_saved_data",
 		"/getConfig",
+
 		"/getReadPoolStat",
 		"/getReadPoolAllocBlobberStat",
 		"/getWritePoolStat",
 		"/getWritePoolAllocBlobberStat",
 		"/getChallengePoolStat",
+
 		"/alloc_written_size",
 		"/alloc_read_size",
 		"/alloc_write_marker_count",
 		"/collected_reward",
 		"/blobber_ids",
+
 		"/alloc_blobbers",
 		"/free_alloc_blobbers",
 	}

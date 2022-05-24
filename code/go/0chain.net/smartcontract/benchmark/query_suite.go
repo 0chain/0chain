@@ -62,8 +62,10 @@ func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) erro
 	}
 	b.StartTimer()
 
-	qbt.Receiver.SetQueryStateContext(balances)
-	qbt.Endpoint(rec, req)
+	http.DefaultServeMux.ServeHTTP(rec, req)
+
+	//qbt.Receiver.SetQueryStateContext(balances)
+	//qbt.Endpoint(rec, req)
 
 	b.StopTimer()
 	resp := rec.Result()
