@@ -34,7 +34,7 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 		return errors.New("db_open_error, db disabled")
 	}
 
-	maxRetries := 60 * 5 // 5 minutes
+	maxRetries := 60 * 2 // 2 minutes
 	for i := 0; i < maxRetries; i++ {
 
 		db, err := gorm.Open(postgres.Open(fmt.Sprintf(
@@ -50,15 +50,12 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 				PrepareStmt:            true,
 			})
 
-		if err == nil {
-			// tcp host/port are ready
-
+		if err == nil { // tcp host/port are ready
 			sqldb, err := db.DB()
 			if err == nil {
 				err = sqldb.Ping()
 
-				if err == nil {
-					// login/passwd and schema are initialized
+				if err == nil { // login/passwd and schema are initialized
 					sqldb.SetMaxIdleConns(config.MaxIdleConns)
 					sqldb.SetMaxOpenConns(config.MaxOpenConns)
 					sqldb.SetConnMaxLifetime(config.ConnMaxLifetime)
@@ -68,13 +65,12 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 			}
 		}
 
-		if i >= maxRetries {
+		if (i + 1) == maxRetries {
 			return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
 		}
 		fmt.Printf("db: [%v/%v]waiting for postgres to ready\n", i, maxRetries)
 		time.Sleep(1 * time.Second)
 		continue
-
 	}
 
 	fmt.Println("made event sql database ok")
