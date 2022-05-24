@@ -41,7 +41,9 @@ tests:
       - start: ["sharder-1"]
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - round_has_finalized:
-          spammers: ["miner-1"]
+          spammers:
+            - node_type: 1 # replica node type
+              type_rank: 0
       - wait_round:
           round: 10
           allow_beyond: true

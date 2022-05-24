@@ -53,7 +53,7 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 
 	isSpammer := false
 	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Spammers != nil {
-		isSpammer = utils.IsSpammer(state.RoundHasFinalized.Spammers, node.Self.Underlying())
+		isSpammer = utils.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
 	}
 
 	if isSpammer {

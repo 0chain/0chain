@@ -1,14 +1,12 @@
 package utils
 
 import (
-	"log"
-	"regexp"
-	"strconv"
-
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/encryption"
 
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/config/cases"
 )
 
 var signature = encryption.NewBLS0ChainScheme()
@@ -52,22 +50,14 @@ func Filter(s *crpc.State, ib crpc.IsBy, nodes []*node.Node) (
 
 // IsSpammer checks whether a node is a spammer.
 // A list of spammers names with format "miner-x" are passed, then the x is extracted and compared with the node index.
-func IsSpammer(spammers []string, node *node.Node) (isSpammer bool) {
+func IsSpammer(spammers []cases.NodeTypeTypeRank, roundNum int64) (isSpammer bool) {
 	isSpammer = false
-	re := regexp.MustCompile("[0-9]+")
+
+	nodeType, typeRank := chain.GetNodeTypeAndTypeRank(roundNum)
 
 	for _, spammer := range spammers {
-		indexStr := re.FindAllString(spammer, 1)
-		if len(indexStr) > 0 {
-			index, err := strconv.Atoi(indexStr[0])
-			if err != nil {
-				log.Fatalf("Spammer name should have the format miner-<1..>: %s", spammer)
-				return
-			}
-			if index == node.SetIndex+1 {
-				isSpammer = true
-				return
-			}
+		if spammer.NodeType == nodeType && spammer.TypeRank == typeRank {
+			return true
 		}
 	}
 
