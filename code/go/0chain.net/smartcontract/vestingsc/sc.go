@@ -1,12 +1,13 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"errors"
 	"fmt"
 	"math"
 	"net/url"
+
+	"0chain.net/chaincore/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -49,10 +50,6 @@ func (vsc *VestingSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (vsc *VestingSmartContract) GetRestPoints() RestPoints {
-	return vsc.RestHandlers
-}
-
 func (vsc *VestingSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) (int, error) {
 	node, err := vsc.getConfig(balances)
 	if err != nil {
@@ -72,11 +69,6 @@ func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	bcContext smartcontractinterface.BCContextI) {
 
 	vsc.SmartContract = sc
-
-	// information (statistics) and configurations
-	vsc.SmartContract.RestHandlers["/getConfig"] = vsc.getConfigHandler
-	vsc.SmartContract.RestHandlers["/getPoolInfo"] = vsc.getPoolInfoHandler
-	vsc.SmartContract.RestHandlers["/getClientPools"] = vsc.getClientPoolsHandler
 
 	// add/delete {start,duration,lock_tokens,[destinations]}
 	vsc.SmartContractExecutionStats["add"] = metrics.GetOrRegisterTimer(

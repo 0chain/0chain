@@ -38,6 +38,7 @@ type Sharder struct {
 	Latitude          float64
 }
 
+// swagger:model SharderGeolocation
 type SharderGeolocation struct {
 	SharderID string  `json:"sharder_id"`
 	Latitude  float64 `json:"latitude"`

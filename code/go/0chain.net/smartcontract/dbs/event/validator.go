@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/state"
 )
 
+// swagger:model Validator
 type Validator struct {
 	gorm.Model
 	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`

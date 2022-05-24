@@ -202,7 +202,7 @@ func (msc *MinerSmartContract) moveToStart(balances cstate.StateContextI,
 }
 
 // GetPhaseNode gets phase nodes from client state
-func GetPhaseNode(statectx cstate.StateContextI) (
+func GetPhaseNode(statectx cstate.CommonStateContextI) (
 	*PhaseNode, error) {
 
 	pn := &PhaseNode{}

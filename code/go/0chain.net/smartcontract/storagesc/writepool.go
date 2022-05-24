@@ -1,24 +1,18 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"go.uber.org/zap"
-	"net/url"
-
-	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/stakepool"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -441,58 +435,3 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 //
 // stat
 //
-
-// statistic for an allocation/blobber (used by blobbers)
-func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		wp        *writePool
-	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
-	}
-
-	var (
-		cut  = wp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	return &stat, nil
-}
-
-const cantGetWritePoolMsg = "can't get write pool"
-
-// statistic for all locked tokens of the write pool
-func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = params.Get("client_id")
-		wp       *writePool
-	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
-	}
-
-	return wp.stat(common.Now()), nil
-}

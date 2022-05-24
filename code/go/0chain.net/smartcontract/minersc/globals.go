@@ -291,6 +291,7 @@ var GlobalSettingInfo = map[string]struct {
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
 
+// swagger:model MinerGlobalSettings
 type GlobalSettings struct {
 	Version int64             `json:"version"`
 	Fields  map[string]string `json:"fields"`
@@ -525,7 +526,7 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
+func getGlobalSettings(balances cstate.CommonStateContextI) (*GlobalSettings, error) {
 	gl := newGlobalSettings()
 
 	err := balances.GetTrieNode(GLOBALS_KEY, gl)

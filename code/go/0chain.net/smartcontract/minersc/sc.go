@@ -79,10 +79,6 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 	return msc.SmartContractExecutionStats
 }
 
-func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
-	return msc.RestHandlers
-}
-
 func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
 	n, err := getGlobalNode(balances)
 	if err != nil {
@@ -101,29 +97,6 @@ func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName stri
 //setSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
-	msc.SmartContract.RestHandlers["/globalSettings"] = msc.getGlobalsHandler
-	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
-	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
-	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
-	msc.SmartContract.RestHandlers["/get_miner_geolocations"] = msc.GetMinerGeolocationsHandler
-	msc.SmartContract.RestHandlers["/get_miners_stats"] = msc.GetMinersStatsHandler
-	msc.SmartContract.RestHandlers["/get_miners_stake"] = msc.GetMinersStateHandler
-	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
-	msc.SmartContract.RestHandlers["/get_sharder_geolocations"] = msc.GetSharderGeolocationsHandler
-	msc.SmartContract.RestHandlers["/get_sharders_stats"] = msc.GetShardersStatsHandler
-	msc.SmartContract.RestHandlers["/get_sharders_stake"] = msc.GetShardersStateHandler
-	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler
-	msc.SmartContract.RestHandlers["/getPhase"] = msc.GetPhaseHandler
-	msc.SmartContract.RestHandlers["/getDkgList"] = msc.GetDKGMinerListHandler
-	msc.SmartContract.RestHandlers["/getMpksList"] = msc.GetMinersMpksListHandler
-	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
-	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
-
-	msc.SmartContract.RestHandlers["/getEvents"] = msc.GetEventsHandler
-
-	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
-	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
-	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
 
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
@@ -160,7 +133,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 }
 
 func getGlobalNode(
-	balances cstate.StateContextI,
+	balances cstate.CommonStateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
 	err = balances.GetTrieNode(GlobalNodeKey, gn)

@@ -37,6 +37,7 @@ type Miner struct {
 	Latitude          float64
 }
 
+// swagger:model MinerGeolocation
 type MinerGeolocation struct {
 	MinerID   string  `json:"miner_id"`
 	Latitude  float64 `json:"latitude"`

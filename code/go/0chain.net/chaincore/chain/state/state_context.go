@@ -51,19 +51,29 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+type CommonStateContextI interface {
+	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
+	GetBlock() *block.Block
+	GetLatestFinalizedBlock() *block.Block
+}
+
+//go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
+type QueryStateContextI interface {
+	CommonStateContextI
+	GetEventDB() *event.EventDb
+}
+
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
-// todo this needs to be split up into different interfaces
 type StateContextI interface {
+	QueryStateContextI
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
-	GetBlock() *block.Block                   // Can use in REST endpoints
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
-	SetStateContext(st *state.State) error                       // cannot use in smart contracts or REST endpoints
-	GetTrieNode(key datastore.Key, v util.MPTSerializable) error // Can use in REST endpoints
+	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
 	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
@@ -78,8 +88,7 @@ type StateContextI interface {
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(event.EventType, event.EventTag, string, string)
 	EmitError(error)
-	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
-	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
+	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
 
 //StateContext - a context object used to manipulate global state

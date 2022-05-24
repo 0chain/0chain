@@ -466,6 +466,7 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 	return
 }
 
+// swagger:model allocationPoolsStat
 type allocationPoolsStat struct {
 	Pools []allocationPoolStat `json:"pools"`
 }
@@ -483,7 +484,7 @@ func (aps allocationPools) stat(now common.Timestamp) (
 //
 // until stat
 //
-
+// swagger:model untilStat
 type untilStat struct {
 	PoolID   string           `json:"pool_id"`
 	Balance  state.Balance    `json:"balance"`

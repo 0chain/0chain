@@ -6,14 +6,13 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/url"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v
 
 // MinerNode struct that holds information about the registering miner.
+// swagger:model MinerNode
 type MinerNode struct {
 	*SimpleNode          `json:"simple_miner"`
 	*stakepool.StakePool `json:"stake_pool"`
@@ -64,16 +63,6 @@ func (mn *MinerNode) Encode() []byte {
 // Decode implements util.Serializable interface.
 func (mn *MinerNode) Decode(p []byte) error {
 	return json.Unmarshal(p, mn)
-}
-
-func (mn *MinerNode) decodeFromValues(params url.Values) error {
-	mn.N2NHost = params.Get("n2n_host")
-	mn.ID = params.Get("id")
-
-	if mn.N2NHost == "" || mn.ID == "" {
-		return errors.New("URL or ID is not specified")
-	}
-	return nil
 }
 
 func (mn *MinerNode) GetNodePools(status string) map[string]*stakepool.DelegatePool {
