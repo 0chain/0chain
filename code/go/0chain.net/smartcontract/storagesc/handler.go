@@ -1435,10 +1435,12 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 	allocation, err := edb.GetAllocation(allocationID)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+		return
 	}
 	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't convert to storageAllocationBlobbers"))
+		return
 	}
 
 	common.Respond(w, r, sa, nil)
@@ -1467,6 +1469,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 	edb := srh.GetStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	rtv, err := edb.GetErrorByTransactionHash(transactionHash)
 	if err != nil {
