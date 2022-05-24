@@ -86,19 +86,23 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 
 	pourAmount, err := faucetConfig.PourAmount.ToZCN()
 	if err != nil {
-		return nil, err
+		NoResourceOrErrInternal(w, r, err)
+		return
 	}
 	maxPourAmount, err := faucetConfig.MaxPourAmount.ToZCN()
 	if err != nil {
-		return nil, err
+		NoResourceOrErrInternal(w, r, err)
+		return
 	}
 	periodicLimit, err := faucetConfig.PeriodicLimit.ToZCN()
 	if err != nil {
-		return nil, err
+		NoResourceOrErrInternal(w, r, err)
+		return
 	}
 	globalLimit, err := faucetConfig.GlobalLimit.ToZCN()
 	if err != nil {
-		return nil, err
+		NoResourceOrErrInternal(w, r, err)
+		return
 	}
 
 	fields := map[string]string{
