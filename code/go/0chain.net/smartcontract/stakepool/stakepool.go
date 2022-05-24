@@ -194,7 +194,10 @@ func (sp *StakePool) DistributeRewards(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		sp.Reward += value
+		sp.Reward, err = sp.Reward.AddCoin(value)
+		if err != nil {
+			return err
+		}
 		spUpdate.Reward, err = value.Int64()
 		if err != nil {
 			return
