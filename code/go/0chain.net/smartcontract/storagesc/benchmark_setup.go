@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"0chain.net/core/datastore"
+	"context"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -26,6 +27,8 @@ import (
 )
 
 const mockMinLockDemand = 1
+
+var executor = common.NewWithContextFunc(4)
 
 func AddMockAllocations(
 	clients, publicKeys []string,
@@ -542,6 +545,37 @@ func AddMockBlobbers(
 		panic(err)
 	}
 	return rtvBlobbers
+}
+
+func UpdateHealthCheck(balances cstate.StateContextI) {
+	var sscId = StorageSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}.ID
+
+	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
+		err := executor.Run(context.Background(), func(i int) func() error {
+			return func() error {
+				id := getMockBlobberId(i)
+				blobber := &StorageNode{ID: id}
+				err := balances.GetTrieNode(blobber.GetKey(sscId), blobber)
+
+				if err != nil {
+					return err
+				}
+				blobber.LastHealthCheck = common.Timestamp(time.Now().Unix())
+
+				if _, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber); err != nil {
+					return err
+				}
+				return nil
+
+			}
+		}(i))
+
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func AddMockValidators(

@@ -127,11 +127,17 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
 	root := viper.GetString(benchmark.MptRoot)
+	rootBytes, err := hex.DecodeString(root)
+	if err != nil {
+		panic(err)
+	}
 	_, balances := getBalances(
 		&transaction.Transaction{},
-		extractMpt(pMpt, util.Key(root)),
+		extractMpt(pMpt, rootBytes),
 		benchmark.BenchData{},
 	)
+
+	storagesc.UpdateHealthCheck(balances)
 
 	var benchData benchmark.BenchData
 	err = balances.GetTrieNode(BenchDataKey, &benchData)
@@ -139,7 +145,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 		log.Fatal(err)
 	}
 
-	return pMpt, util.Key(root), benchData
+	return pMpt, rootBytes, benchData
 }
 
 func setUpMpt(
@@ -466,7 +472,6 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer := time.Now()
 		benchData.EventDb = eventDb
 		benchData.Clients = clients
 		benchData.PublicKeys = publicKeys
@@ -476,13 +481,16 @@ func setUpMpt(
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
 		}
-		root := balances.GetState().GetRoot()
-		viper.Set(benchmark.MptRoot, string((root)))
-		log.Println("saved simulation parameters\t", time.Since(timer))
 	}()
 
 	wg.Wait()
 
+	timer = time.Now()
+	root := balances.GetState().GetRoot()
+	hexBytes := make([]byte, hex.EncodedLen(len(root)))
+	hex.Encode(hexBytes, root)
+	viper.Set(benchmark.MptRoot, string(hexBytes))
+	log.Println("saved simulation parameters\t", time.Since(timer))
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
 	return pMpt, balances.GetState().GetRoot(), benchData
