@@ -3,6 +3,8 @@ package storagesc
 import (
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -18,6 +20,14 @@ func BenchmarkRestTests(
 ) bk.TestSuite {
 	rh := restinterface.NewTestRestHandler()
 	srh := NewStorageRestHandler(rh)
+	maxReadPrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxReadPrice))
+	if err != nil {
+		panic(err)
+	}
+	maxWritePrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxWritePrice))
+	if err != nil {
+		panic(err)
+	}
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
@@ -121,8 +131,8 @@ func BenchmarkRestTests(
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, viper.GetInt64(bk.StorageMaxReadPrice) * 1e10},
-							WritePriceRange:            PriceRange{0, viper.GetInt64(bk.StorageMaxWritePrice) * 1e10},
+							ReadPriceRange:             PriceRange{0, maxReadPrice},
+							WritePriceRange:            PriceRange{0, maxWritePrice},
 							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)
@@ -278,8 +288,8 @@ func BenchmarkRestTests(
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, viper.GetInt64(bk.StorageMaxReadPrice) * 1e10},
-							WritePriceRange:            PriceRange{0, viper.GetInt64(bk.StorageMaxWritePrice) * 1e10},
+							ReadPriceRange:             PriceRange{0, maxReadPrice},
+							WritePriceRange:            PriceRange{0, maxWritePrice},
 							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)
