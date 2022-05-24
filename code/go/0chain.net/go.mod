@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
-	github.com/alicebob/miniredis/v2 v2.14.3
+	github.com/alicebob/miniredis/v2 v2.21.0
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
