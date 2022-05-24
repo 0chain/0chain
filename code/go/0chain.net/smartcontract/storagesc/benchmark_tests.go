@@ -75,8 +75,6 @@ func BenchmarkTests(
 		blobbers = append(blobbers, getMockBlobberId(i))
 	}
 	var freeBlobbers []string
-	//		DataShards:                 conf.FreeAllocationSettings.DataShards,
-	//		ParityShards:               conf.FreeAllocationSettings.ParityShards,
 	for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
 		freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
 	}

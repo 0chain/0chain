@@ -1,13 +1,9 @@
 package storagesc
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"time"
-
-	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -487,31 +483,6 @@ func (ssc *StorageSmartContract) getConfig(
 	default:
 		return nil, err
 	}
-}
-
-const cantGetConfigErrMsg = "can't get config"
-
-func (ssc *StorageSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
-	balances chainState.StateContextI,
-) (resp interface{}, err error) {
-	var conf *Config
-	conf, err = ssc.getConfig(balances, false)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-	}
-
-	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
-		conf, err = getConfiguredConfig()
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-		}
-	}
-
-	return conf.getConfigMap() // actual value
 }
 
 // getWritePoolConfig

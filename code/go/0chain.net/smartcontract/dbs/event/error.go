@@ -2,6 +2,7 @@ package event
 
 import "gorm.io/gorm"
 
+// swagger:model Error
 type Error struct {
 	gorm.Model
 	TransactionID string

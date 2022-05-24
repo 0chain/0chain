@@ -14,6 +14,7 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 //Balance - any quantity that is represented as an integer in the lowest denomination
+// swagger:model Balance
 type Balance int64
 
 //State - state that needs consensus within the blockchain.

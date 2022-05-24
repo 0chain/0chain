@@ -165,6 +165,7 @@ func addMockAllocation(
 
 func AddMockChallenges(
 	blobbers []*StorageNode,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
 	numAllocations := viper.GetInt(sc.NumAllocations)
@@ -196,6 +197,7 @@ func AddMockChallenges(
 				bIndex,
 				blobbers[bIndex],
 				&allocationChall[i],
+				eventDb,
 				balances,
 			)
 			challenges = append(challenges, cs...)
@@ -406,6 +408,7 @@ func setupMockChallenges(
 	bIndex int,
 	blobber *StorageNode,
 	ac *AllocationChallenges,
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*StorageChallenge {
 	ac.AllocationID = allocationId
@@ -435,6 +438,16 @@ func setupMockChallenges(
 		})
 		if blobberChallenges.LatestCompletedChallenge == nil {
 			blobberChallenges.LatestCompletedChallenge = challenge
+		}
+
+		if viper.GetBool(sc.EventDbEnabled) {
+			challengeRow := event.Challenge{
+				ChallengeID:  challenge.ID,
+				CreatedAt:    common.Timestamp(time.Now().Unix()),
+				AllocationID: challenge.AllocationID,
+				BlobberID:    challenge.BlobberID,
+			}
+			_ = eventDb.Store.Get().Create(&challengeRow)
 		}
 	}
 
@@ -475,7 +488,7 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		blobber := &StorageNode{
 			ID:      id,
-			BaseURL: id + ".com",
+			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
 				Longitude: longitudeStep*float64(i) - maxLongitude,
@@ -486,6 +499,7 @@ func AddMockBlobbers(
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
+			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
@@ -498,7 +512,6 @@ func AddMockBlobbers(
 			panic(err)
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
-
 			blobberDb := event.Blobber{
 				BlobberID:               blobber.ID,
 				BaseURL:                 blobber.BaseURL,
@@ -517,6 +530,7 @@ func AddMockBlobbers(
 				MaxStake:                int64(blobber.StakePoolSettings.MaxStake),
 				NumDelegates:            blobber.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
+				TotalStake:              viper.GetInt64(sc.StorageMaxStake) * 1e10,
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
 		}
@@ -789,7 +803,8 @@ func getMockBlobberTerms() Terms {
 		ReadPrice:        state.Balance(0.1 * 1e10),
 		WritePrice:       state.Balance(0.1 * 1e10),
 		MinLockDemand:    0.0007,
-		MaxOfferDuration: common.Now().Duration() + viper.GetDuration(sc.StorageMinOfferDuration),
+		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
+		//MaxOfferDuration: common.Now().Duration() + viper.GetDuration(sc.StorageMinOfferDuration),
 		//MaxOfferDuration:        time.Hour*24*3650 + viper.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 	}
@@ -823,6 +838,10 @@ func getMockValidatorStakePoolId(blobber, stake int) string {
 
 func getMockBlobberId(index int) string {
 	return encryption.Hash("mockBlobber_" + strconv.Itoa(index))
+}
+
+func getMockBlobberUrl(index int) string {
+	return getMockBlobberId(index) + ".com"
 }
 
 func getMockValidatorId(index int) string {

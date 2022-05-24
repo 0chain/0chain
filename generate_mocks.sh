@@ -24,6 +24,9 @@ generate_mock "../conductor/mocks"
 cd $BASEDIR/code/go/0chain.net/sharder || exit
 generate_mock "../sharder/mocks"
 
+cd $BASEDIR/code/go/0chain.net/rest || exit
+generate_mock "../rest/mocks"
+
 cd $BASEDIR/code/go/0chain.net/smartcontract || exit
 generate_mock "../smartcontract/mocks"
 

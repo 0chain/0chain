@@ -28,6 +28,7 @@ func (ps *poolStats) addStat(p *poolStat) {
 	ps.Stats = append(ps.Stats, p)
 }
 
+// swagger:model poolStat
 type poolStat struct {
 	ID           datastore.Key    `json:"pool_id"`
 	StartTime    common.Timestamp `json:"start_time"`
@@ -48,5 +49,3 @@ func (ps *poolStat) decode(input []byte) error {
 	err := json.Unmarshal(input, ps)
 	return err
 }
-
-

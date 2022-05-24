@@ -1,20 +1,125 @@
 package zcnsc
 
 import (
-	"context"
-	"net/url"
-
-	cState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
+	"net/http"
+
 	"0chain.net/core/util"
+
+	"0chain.net/core/common"
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/pkg/errors"
+
+	"0chain.net/rest/restinterface"
 )
 
-// Models
+type RestFunctionName int
 
+const (
+	rfnGetAuthorizerNodes RestFunctionName = iota
+	rfnGetGlobalConfig
+	rfnGetAuthorizer
+)
+
+type ZcnRestHandler struct {
+	restinterface.RestHandlerI
+}
+
+func NewZcnRestHandler(rh restinterface.RestHandlerI) *ZcnRestHandler {
+	return &ZcnRestHandler{rh}
+}
+
+func SetupRestHandler(rh restinterface.RestHandlerI) {
+	zrh := NewZcnRestHandler(rh)
+	miner := "/v1/screst/" + ADDRESS
+	http.HandleFunc(miner+GetRestNames()[rfnGetAuthorizerNodes], zrh.getAuthorizerNodes)
+	http.HandleFunc(miner+GetRestNames()[rfnGetGlobalConfig], zrh.GetGlobalConfig)
+	http.HandleFunc(miner+GetRestNames()[rfnGetAuthorizer], zrh.getAuthorizer)
+}
+
+func GetRestNames() []string {
+	return []string{
+		"/getAuthorizerNodes",
+		"/getGlobalConfig",
+		"/getAuthorizer",
+	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizerNodes getAuthorizerNodes
+// get authorizer nodes
+//
+// responses:
+//  200: authorizerNodesResponse
+//  404:
+func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Request) {
+	var (
+		err    error
+		events []event.Authorizer
+	)
+	edb := zrh.GetStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	events, err = edb.GetAuthorizers()
+	if err != nil {
+		common.Respond(w, r, nil, errors.Wrap(err, "getAuthorizerNodes DB error"))
+		return
+	}
+
+	if events == nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list"))
+		return
+	}
+
+	common.Respond(w, r, toNodeResponse(events), nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig GetGlobalConfig
+// get zcn configuration settings
+//
+// responses:
+//  200: StringMap
+//  404:
+func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
+	gn, err := GetGlobalNode(zrh.GetStateContext())
+	if err != nil && err != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, common.NewError("get config handler", err.Error()))
+		return
+	}
+
+	common.Respond(w, r, gn.ToStringMap(), nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer getAuthorizer
+// get authorizer
+//
+// responses:
+//  200: authorizerResponse
+//  404:
+func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no authorizer id entered"))
+		return
+	}
+	edb := zrh.GetStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	ev, err := edb.GetAuthorizer(id)
+	if err != nil {
+		common.Respond(w, r, nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id))
+		return
+	}
+	rtv := toAuthorizerResponse(ev)
+
+	common.Respond(w, r, rtv, nil)
+}
+
+// swagger:model authorizerResponse
 type authorizerResponse struct {
 	AuthorizerID string `json:"id"`
 	URL          string `json:"url"`
@@ -37,6 +142,7 @@ type authorizerResponse struct {
 	ServiceCharge  float64       `json:"service_charge"`
 }
 
+// swagger:model authorizerNodesResponse
 type authorizerNodesResponse struct {
 	Nodes []*authorizerNode `json:"nodes"`
 }
@@ -45,62 +151,6 @@ type authorizerNode struct {
 	ID  string `json:"id"`
 	URL string `json:"url"`
 }
-
-// Handlers
-
-func (zcn *ZCNSmartContract) GetAuthorizer(_ context.Context, params url.Values, ctx cState.StateContextI) (interface{}, error) {
-	id := params.Get("id")
-	if id == "" {
-		return nil, errors.New("Please, specify an Authorizer ID")
-	}
-
-	db := ctx.GetEventDB()
-	if db == nil {
-		return nil, errors.New("Events DB is not initialized (value=nil)")
-	}
-
-	var ev, err = db.GetAuthorizer(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "GetAuthorizer DB error, ID = "+id)
-	}
-
-	return toAuthorizerResponse(ev), nil
-}
-
-func (zcn *ZCNSmartContract) GetGlobalConfig(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
-	gn, err := GetGlobalNode(ctx)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, common.NewError("get config handler", err.Error())
-	}
-
-	return gn.ToStringMap(), nil
-}
-
-// GetAuthorizerNodes returns all authorizers from eventDB
-// which is used to assign jobs to all or a part of authorizers
-func (zcn *ZCNSmartContract) GetAuthorizerNodes(_ context.Context, _ url.Values, ctx cState.StateContextI) (interface{}, error) {
-	var (
-		err    error
-		events []event.Authorizer
-	)
-
-	if ctx.GetEventDB() == nil {
-		return nil, errors.New("eventsDB not initialized")
-	}
-
-	events, err = ctx.GetEventDB().GetAuthorizers()
-	if err != nil {
-		return nil, errors.Wrap(err, "getAuthorizerNodes DB error")
-	}
-
-	if events == nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list")
-	}
-
-	return toNodeResponse(events), nil
-}
-
-// Helpers
 
 func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 	resp := &authorizerResponse{

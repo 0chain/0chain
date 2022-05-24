@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/json"
 	"errors"
@@ -505,6 +506,7 @@ type destInfo struct {
 	Last   common.Timestamp `json:"last"`   // last time unlocked
 }
 
+// swagger:model vestingInfo
 type info struct {
 	ID           datastore.Key    `json:"pool_id"`      // pool ID
 	Balance      state.Balance    `json:"balance"`      // real pool balance
@@ -520,8 +522,20 @@ type info struct {
 // helpers
 //
 
-func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
-	balances chainstate.StateContextI) (vp *vestingPool, err error) {
+func getPool(
+	poolID datastore.Key,
+	balances chainstate.CommonStateContextI,
+) (vp *vestingPool, err error) {
+	var vsc = VestingSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}
+	return vsc.getPool(poolID, balances)
+}
+
+func (vsc *VestingSmartContract) getPool(
+	poolID datastore.Key,
+	balances chainstate.CommonStateContextI,
+) (vp *vestingPool, err error) {
 
 	vp = newVestingPool()
 	err = balances.GetTrieNode(poolID, vp)

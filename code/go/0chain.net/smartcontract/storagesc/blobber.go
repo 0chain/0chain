@@ -25,17 +25,24 @@ const (
 	blobberHealthTime = 60 * 60 // 1 Hour
 )
 
-func (sc *StorageSmartContract) getBlobber(blobberID string,
-	balances cstate.StateContextI) (blobber *StorageNode, err error) {
-
-	blobber = new(StorageNode)
+func getBlobber(
+	blobberID string,
+	balances cstate.CommonStateContextI,
+) (*StorageNode, error) {
+	blobber := new(StorageNode)
 	blobber.ID = blobberID
-	err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
+	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
 	}
+	return blobber, nil
+}
 
-	return
+func (_ *StorageSmartContract) getBlobber(
+	blobberID string,
+	balances cstate.StateContextI,
+) (blobber *StorageNode, err error) {
+	return getBlobber(blobberID, balances)
 }
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,

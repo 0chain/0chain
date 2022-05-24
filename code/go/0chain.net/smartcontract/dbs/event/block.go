@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// swagger:model Block
 type Block struct {
 	gorm.Model
 
