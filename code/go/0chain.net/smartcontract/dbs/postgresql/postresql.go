@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -34,10 +35,14 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 		return errors.New("db_open_error, db disabled")
 	}
 
+	var db *gorm.DB
+	var sqldb *sql.DB
+	var err error
+
 	maxRetries := 60 * 1 // 1 minutes
 	for i := 0; i < maxRetries; i++ {
 
-		db, err := gorm.Open(postgres.Open(fmt.Sprintf(
+		db, err = gorm.Open(postgres.Open(fmt.Sprintf(
 			"host=%v port=%v user=%v dbname=%v password=%v sslmode=disable",
 			config.Host,
 			config.Port,
@@ -51,7 +56,7 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 			})
 
 		if err == nil { // tcp host/port are ready
-			sqldb, err := db.DB()
+			sqldb, err = db.DB()
 			if err == nil {
 				err = sqldb.Ping()
 
@@ -65,12 +70,13 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 			}
 		}
 
-		if (i + 1) == maxRetries {
-			return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
-		}
 		fmt.Printf("db: [%v/%v]waiting for postgres to ready\n", i+1, maxRetries)
 		time.Sleep(1 * time.Second)
 		continue
+	}
+
+	if store.db == nil {
+		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
 	}
 
 	fmt.Println("made event sql database ok")
