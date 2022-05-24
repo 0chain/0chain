@@ -13,7 +13,7 @@ require (
 	github.com/go-ini/ini v1.66.4 // indirect
 	github.com/go-openapi/runtime v0.24.0
 	github.com/go-playground/validator/v10 v10.10.1
-	github.com/gocql/gocql v1.0.0
+	github.com/gocql/gocql v1.1.0
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.8
 	github.com/guregu/null v4.0.0+incompatible
