@@ -110,8 +110,8 @@ func TestNewAllocation(t *testing.T) {
 }
 
 func TestCancelAllocationRequest(t *testing.T) {
-	var blobberStakePools = [][]mockStakePool{}
-	var challenges = [][]common.Timestamp{}
+	var blobberStakePools [][]mockStakePool
+	var challenges [][]common.Timestamp
 	var scYaml = Config{
 		MaxMint:                         zcnToBalance(4000000.0),
 		StakePool:                       &stakePoolConfig{},
@@ -694,7 +694,7 @@ func (f *formulaeFinalizeAllocation) minLockDelegatePayment(blobber, delegate in
 
 func (f *formulaeFinalizeAllocation) blobberServiceCharge(blobberIndex int) int64 {
 	var serviceCharge = blobberYaml.serviceCharge
-	var blobberRewards = float64(f._blobberReward(blobberIndex))
+	var blobberRewards = f._blobberReward(blobberIndex)
 
 	return int64(blobberRewards * serviceCharge)
 }

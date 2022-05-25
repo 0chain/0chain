@@ -1622,7 +1622,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		// min lock demand rest
 		var paid currency.Coin = 0
 		lack := d.MinLockDemand - d.Spent
-		if d.Spent > d.MinLockDemand {
+		if d.MinLockDemand > d.Spent {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {
@@ -1633,8 +1633,14 @@ func (sc *StorageSmartContract) finishAllocation(
 					apIndex++
 				}
 
-				paid += pay
-				lack -= pay
+				paid, err = currency.AddCoin(paid, pay)
+				if err != nil {
+					return err
+				}
+				lack, err = currency.MinusCoin(lack, pay)
+				if err != nil {
+					return err
+				}
 			}
 			if lack > 0 {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
