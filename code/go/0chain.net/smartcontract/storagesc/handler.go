@@ -67,7 +67,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 		{Name: storage + "/get_block_by_hash", Endpoint: srh.getBlockByHash},
 		{Name: storage + "/get_blocks", Endpoint: srh.getBlocks},
 		{Name: storage + "/total_saved_data", Endpoint: srh.getTotalData},
-		{Name: storage + "/getConfig", Endpoint: srh.getConfig},
+		{Name: storage + "/storage_config", Endpoint: srh.getConfig},
 		{Name: storage + "/getReadPoolStat", Endpoint: srh.getReadPoolStat},
 		{Name: storage + "/getReadPoolAllocBlobberStat", Endpoint: srh.getReadPoolAllocBlobberStat},
 		{Name: storage + "/getWritePoolStat", Endpoint: srh.getWritePoolStat},
@@ -670,7 +670,7 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 	return conf, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getConfig getConfig
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage_config storage_config
 // Gets the current storage smart contract settings
 //
 // responses:

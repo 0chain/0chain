@@ -28,7 +28,7 @@ func BenchmarkRestTests(
 				Endpoint: frh.getPourAmount,
 			},
 			{
-				FuncName: "getConfig",
+				FuncName: "faucet_config",
 				Endpoint: frh.getConfig,
 			},
 		},

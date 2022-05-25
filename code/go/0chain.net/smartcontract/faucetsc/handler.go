@@ -39,7 +39,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 		{Name: faucet + "/personalPeriodicLimit", Endpoint: frh.getPersonalPeriodicLimit},
 		{Name: faucet + "/globalPeriodicLimit", Endpoint: frh.getGlobalPeriodicLimit},
 		{Name: faucet + "/pourAmount", Endpoint: frh.getPourAmount},
-		{Name: faucet + "/getConfig", Endpoint: frh.getConfig},
+		{Name: faucet + "/faucet_config", Endpoint: frh.getConfig},
 	}
 }
 
@@ -47,7 +47,7 @@ func NoResourceOrErrInternal(w http.ResponseWriter, r *http.Request, err error) 
 	common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg))
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getConfig getConfig
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/faucet_config faucet_config
 // faucet smart contract configuration settings
 //
 // responses:

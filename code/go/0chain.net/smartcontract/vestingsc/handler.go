@@ -26,7 +26,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 	return []rest.RestEndpoint{
 		{Name: vesting + "/getPoolInfo", Endpoint: vrh.getPoolInfo},
 		{Name: vesting + "/getClientPools", Endpoint: vrh.getClientPools},
-		{Name: vesting + "/getConfig", Endpoint: vrh.getConfig},
+		{Name: vesting + "/vesting_config", Endpoint: vrh.getConfig},
 	}
 }
 
@@ -73,7 +73,7 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, vp.info(common.Now()), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getConfig getConfig
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config vesting_config
 // get vesting configuration settings
 //
 // responses:

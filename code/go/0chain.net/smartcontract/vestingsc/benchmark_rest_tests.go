@@ -15,7 +15,7 @@ func BenchmarkRestTests(
 	return benchmark.GetRestTests(
 		[]benchmark.TestParameters{
 			{
-				FuncName: "getConfig",
+				FuncName: "vesting_config",
 				Endpoint: vrh.getConfig,
 			},
 			{
