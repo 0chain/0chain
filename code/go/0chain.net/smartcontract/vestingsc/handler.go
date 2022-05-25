@@ -24,9 +24,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 	vrh := NewVestingRestHandler(rh)
 	vesting := "/v1/screst/" + ADDRESS
 	return []rest.RestEndpoint{
-		{vesting + "/getPoolInfo", vrh.getPoolInfo},
-		{vesting + "/getClientPools", vrh.getClientPools},
-		{vesting + "/getConfig", vrh.getConfig},
+		{Name: vesting + "/getPoolInfo", Endpoint: vrh.getPoolInfo},
+		{Name: vesting + "/getClientPools", Endpoint: vrh.getClientPools},
+		{Name: vesting + "/getConfig", Endpoint: vrh.getConfig},
 	}
 }
 
