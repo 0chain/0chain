@@ -1604,13 +1604,16 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
 	blobbers, err := edb.GetBlobbers()
-	if err != nil || len(blobbers) == 0 {
+	if err != nil {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 
-	var sns storageNodesResponse
+	sns := storageNodesResponse{
+		Nodes: make([]storageNodeResponse, 0, len(blobbers)),
+	}
+
 	for _, blobber := range blobbers {
 		sn := blobberTableToStorageNode(blobber)
 		sns.Nodes = append(sns.Nodes, sn)
