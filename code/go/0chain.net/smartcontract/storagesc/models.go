@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"strings"
 	"time"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/partitions"
@@ -28,9 +29,9 @@ const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
-	ALL_VALIDATORS_KEY         = ADDRESS + encryption.Hash("all_validators")
+	ALL_VALIDATORS_KEY               = ADDRESS + encryption.Hash("all_validators")
 	ALL_CHALLENGE_READY_BLOBBERS_KEY = ADDRESS + encryption.Hash("all_challenge_ready_blobbers")
-	BLOBBER_REWARD_KEY         = ADDRESS + encryption.Hash("blobber_rewards")
+	BLOBBER_REWARD_KEY               = ADDRESS + encryption.Hash("blobber_rewards")
 )
 
 func getBlobberAllocationsKey(blobberID string) string {
@@ -190,12 +191,14 @@ type allocationChallengesDecoder AllocationChallenges
 
 // swagger:model StorageChallenge
 type StorageChallenge struct {
-	Created         common.Timestamp `json:"created"`
-	ID              string           `json:"id"`
-	TotalValidators int              `json:"total_validators"`
-	AllocationID    string           `json:"allocation_id"`
-	BlobberID       string           `json:"blobber_id"`
-	Responded       bool             `json:"responded"`
+	Created         common.Timestamp    `json:"created"`
+	ID              string              `json:"id"`
+	TotalValidators int                 `json:"total_validators"`
+	ValidatorIDs    []string            `json:"validator_ids"`
+	ValidatorIDMap  map[string]struct{} `json:"-" msg:"-"`
+	AllocationID    string              `json:"allocation_id"`
+	BlobberID       string              `json:"blobber_id"`
+	Responded       bool                `json:"responded"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
