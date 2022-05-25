@@ -8,7 +8,7 @@ import (
 func BenchmarkRestTests(
 	data benchmark.BenchData, _ benchmark.SignatureScheme,
 ) benchmark.TestSuite {
-	rh := rest.NewTestRestHandler()
+	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	frh := NewFaucetscRestHandler(rh)
 	return benchmark.GetRestTests(
 		[]benchmark.TestParameters{

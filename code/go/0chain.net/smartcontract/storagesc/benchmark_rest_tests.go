@@ -15,7 +15,7 @@ import (
 func BenchmarkRestTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
-	rh := rest.NewTestRestHandler()
+	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	srh := NewStorageRestHandler(rh)
 	return bk.GetRestTests(
 		[]bk.TestParameters{

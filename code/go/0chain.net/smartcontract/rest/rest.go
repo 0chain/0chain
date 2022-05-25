@@ -5,16 +5,45 @@ import (
 	"net/http"
 )
 
+type RestEndpoint struct {
+	Name     string
+	Endpoint func(w http.ResponseWriter, r *http.Request)
+}
+
+// swagger:model Int64Map
+type Int64Map map[string]int64
+
+// swagger:model InterfaceMap
+type InterfaceMap map[string]interface{}
+
+type QueryChainer interface {
+	GetQueryStateContext() state.QueryStateContextI
+	SetQueryStateContext(state.QueryStateContextI)
+}
+
+type RestHandlerI interface {
+	QueryChainer
+	Register([]RestEndpoint)
+}
+
+type TestQueryChainer struct {
+	sctx state.QueryStateContextI
+}
+
+func (qc *TestQueryChainer) GetQueryStateContext() state.QueryStateContextI {
+	return qc.sctx
+}
+
+func (qc *TestQueryChainer) SetQueryStateContext(sctx state.QueryStateContextI) {
+	qc.sctx = sctx
+}
+
 type RestHandler struct {
 	QueryChainer
 }
 
 func NewRestHandler(c QueryChainer) RestHandlerI {
 	return &RestHandler{QueryChainer: c}
-}
-
-func (rh *RestHandler) GetQueryStateContext() state.QueryStateContextI {
-	return rh.GetQueryStateContext()
 }
 
 func (rh *RestHandler) Register(endpoints []RestEndpoint) {
