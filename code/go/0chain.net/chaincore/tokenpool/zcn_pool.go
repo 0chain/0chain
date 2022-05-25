@@ -63,7 +63,7 @@ func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, strin
 	if txn.Value <= 0 {
 		return nil, "", common.NewError("filling pool failed", "insufficient funds")
 	}
-	p.Balance, err = p.Balance.AddInt64(txn.Value)
+	p.Balance, err = currency.AddInt64(p.Balance, txn.Value)
 	if err != nil {
 		return nil, "", err
 	}

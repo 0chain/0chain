@@ -190,7 +190,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 				if err != nil {
 					panic(err)
 				}
-				s.Balance, err = s.Balance.MinusInt64(value)
+				s.Balance, err = currency.MinusInt64(s.Balance, value)
 				if err != nil {
 					panic(err)
 				}
@@ -208,7 +208,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			if err != nil {
 				panic(err)
 			}
-			s.Balance, err = s.Balance.AddInt64(value)
+			s.Balance, err = currency.AddInt64(s.Balance, value)
 			if err != nil {
 				panic(err)
 			}

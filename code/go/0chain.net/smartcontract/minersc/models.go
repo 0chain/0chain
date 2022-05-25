@@ -572,7 +572,7 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	miner, sharders currency.Coin, err error) {
 
 	miner = currency.Coin(float64(fees) * gn.ShareRatio)
-	sharders, err = fees.MinusCoin(miner)
+	sharders, err = currency.MinusCoin(fees, miner)
 	return
 }
 

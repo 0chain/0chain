@@ -287,7 +287,7 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	p.Balance, err = p.Balance.AddInt64(txn.Value)
+	p.Balance, err = currency.AddInt64(p.Balance, txn.Value)
 	if err != nil {
 		require.NoError(t, err)
 	}

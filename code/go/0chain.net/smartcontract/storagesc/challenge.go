@@ -138,7 +138,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err != nil {
 		return err
 	}
-	move, err = move.MinusCoin(validatorsReward)
+	move, err = currency.MinusCoin(move, validatorsReward)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err != nil {
 		return err
 	}
-	back, err := move.MinusCoin(blobberReward) // return back to write pool
+	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if err != nil {
 		return err
 	}
-	move, err = move.MinusCoin(validatorsReward)
+	move, err = currency.MinusCoin(move, validatorsReward)
 	if err != nil {
 		return err
 	}

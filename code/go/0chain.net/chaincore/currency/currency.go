@@ -103,7 +103,7 @@ func (c Coin) Float64() (float64, error) {
 }
 
 // MultUint64 multiplies Coin c by b, returning an error if the values overflow
-func (c Coin) MultUint64(b uint64) (Coin, error) {
+func MultUint64(c Coin, b uint64) (Coin, error) {
 	a := uint64(c) * b
 	if a != 0 && a/uint64(c) != b {
 		return 0, ErrUint64MultOverflow
@@ -112,7 +112,7 @@ func (c Coin) MultUint64(b uint64) (Coin, error) {
 }
 
 // AddCoin adds c and b, returning an error if the values overflow
-func (c Coin) AddCoin(b Coin) (Coin, error) {
+func AddCoin(c, b Coin) (Coin, error) {
 	sum := c + b
 	if sum < c || sum < b {
 		return 0, ErrUint64AddOverflow
@@ -121,16 +121,16 @@ func (c Coin) AddCoin(b Coin) (Coin, error) {
 }
 
 // AddInt64 adds c and a, returning an error if the values overflow
-func (c Coin) AddInt64(a int64) (Coin, error) {
+func AddInt64(c Coin, a int64) (Coin, error) {
 	b, err := Int64ToCoin(a)
 	if err != nil {
 		return 0, err
 	}
-	return c.AddCoin(b)
+	return AddCoin(c, b)
 }
 
 // MinusCoin subtracts b from c, returning an error if the values overflow
-func (c Coin) MinusCoin(b Coin) (Coin, error) {
+func MinusCoin(c, b Coin) (Coin, error) {
 	if b > c {
 		return 0, ErrUint64MinusOverflow
 	}
@@ -139,12 +139,12 @@ func (c Coin) MinusCoin(b Coin) (Coin, error) {
 }
 
 // MinusInt64 subtracts a from c, returning an error if the values overflow
-func (c Coin) MinusInt64(a int64) (Coin, error) {
+func MinusInt64(c Coin, a int64) (Coin, error) {
 	b, err := Int64ToCoin(a)
 	if err != nil {
 		return 0, err
 	}
-	return c.MinusCoin(b)
+	return MinusCoin(c, b)
 }
 
 func (c Coin) DivideCurrency(a int64) (oCur, bal Coin, err error) {

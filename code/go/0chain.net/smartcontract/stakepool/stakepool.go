@@ -194,7 +194,7 @@ func (sp *StakePool) DistributeRewards(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		sp.Reward, err = sp.Reward.AddCoin(value)
+		sp.Reward, err = currency.AddCoin(sp.Reward, value)
 		if err != nil {
 			return err
 		}
@@ -218,7 +218,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 	if serviceCharge > 0 {
 		reward := serviceCharge
-		sp.Reward, err = sp.Reward.AddCoin(reward)
+		sp.Reward, err = currency.AddCoin(sp.Reward, reward)
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func (sp *StakePool) DistributeRewards(
 		} else {
 			valueBalance -= reward
 		}
-		pool.Reward, err = pool.Reward.AddCoin(reward)
+		pool.Reward, err = currency.AddCoin(pool.Reward, reward)
 		if err != nil {
 			return err
 		}

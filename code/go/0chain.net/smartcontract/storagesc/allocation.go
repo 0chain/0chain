@@ -1659,15 +1659,15 @@ func (sc *StorageSmartContract) finishAllocation(
 				return common.NewError("fini_alloc_failed",
 					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			d.Spent, err = d.Spent.AddCoin(reward)
+			d.Spent, err = currency.AddCoin(d.Spent, reward)
 			if err != nil {
 				return fmt.Errorf("blobber alloc spent: %v", err)
 			}
-			d.FinalReward, err = d.FinalReward.AddCoin(reward)
+			d.FinalReward, err = currency.AddCoin(d.FinalReward, reward)
 			if err != nil {
 				return fmt.Errorf("blobber alloc final reward: %v", err)
 			}
-			passPayments, err = passPayments.AddCoin(reward)
+			passPayments, err = currency.AddCoin(passPayments, reward)
 			if err != nil {
 				return fmt.Errorf("pass payments: %v", err)
 			}
@@ -1698,13 +1698,13 @@ func (sc *StorageSmartContract) finishAllocation(
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
 	}
-	cp.Balance, err = cp.Balance.MinusCoin(passPayments)
+	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
 	if err != nil {
 		return err
 	}
 	// move challenge pool rest to write pool
 	if cp.Balance > 0 {
-		alloc.MovedBack, err = alloc.MovedBack.AddCoin(cp.Balance)
+		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, cp.Balance)
 		if err != nil {
 			return err
 		}

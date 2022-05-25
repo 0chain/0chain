@@ -250,7 +250,7 @@ func (sc *StateContext) Validate() error {
 	)
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
-			amount, err = amount.AddCoin(transfer.Amount)
+			amount, err = currency.AddCoin(amount, transfer.Amount)
 			if err != nil {
 				return err
 			}
@@ -262,7 +262,7 @@ func (sc *StateContext) Validate() error {
 	}
 	totalValue := currency.Coin(sc.txn.Value)
 	if config.DevConfiguration.IsFeeEnabled {
-		totalValue, err = totalValue.AddInt64(sc.txn.Fee)
+		totalValue, err = currency.AddInt64(totalValue, sc.txn.Fee)
 		if err != nil {
 			return err
 		}
