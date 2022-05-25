@@ -42,7 +42,6 @@ msgp:
 swagger:
 	@echo "Run swagger..."
 	swagger generate spec -w  code/go/0chain.net/sharder/sharder  -m  -o docs/swagger.yaml
-	swagger generate markdown  -f docs/swagger.yaml
-	mv markdown.md docs/swagger.md
+	swagger generate markdown  -f docs/swagger.yaml --output=docs/swagger.md
 	@echo "swagger documentation generated"
 
