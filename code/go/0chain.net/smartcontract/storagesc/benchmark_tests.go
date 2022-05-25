@@ -10,7 +10,6 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/chaincore/state"
 	sc "0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
