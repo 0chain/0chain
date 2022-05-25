@@ -1,9 +1,9 @@
 package chain
 
 import (
-	"0chain.net/rest"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
