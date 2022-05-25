@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/rest"
 	"net/http"
 
 	"0chain.net/core/util"
@@ -10,39 +11,27 @@ import (
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/pkg/errors"
-
-	"0chain.net/rest/restinterface"
-)
-
-type RestFunctionName int
-
-const (
-	rfnGetAuthorizerNodes RestFunctionName = iota
-	rfnGetGlobalConfig
-	rfnGetAuthorizer
 )
 
 type ZcnRestHandler struct {
-	restinterface.RestHandlerI
+	rest.RestHandlerI
 }
 
-func NewZcnRestHandler(rh restinterface.RestHandlerI) *ZcnRestHandler {
+func NewZcnRestHandler(rh rest.RestHandlerI) *ZcnRestHandler {
 	return &ZcnRestHandler{rh}
 }
 
-func SetupRestHandler(rh restinterface.RestHandlerI) {
-	zrh := NewZcnRestHandler(rh)
-	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+GetRestNames()[rfnGetAuthorizerNodes], zrh.getAuthorizerNodes)
-	http.HandleFunc(miner+GetRestNames()[rfnGetGlobalConfig], zrh.GetGlobalConfig)
-	http.HandleFunc(miner+GetRestNames()[rfnGetAuthorizer], zrh.getAuthorizer)
+func SetupRestHandler(rh rest.RestHandlerI) {
+	rh.Register(GetEndpoints(rh))
 }
 
-func GetRestNames() []string {
-	return []string{
-		"/getAuthorizerNodes",
-		"/getGlobalConfig",
-		"/getAuthorizer",
+func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
+	zrh := NewZcnRestHandler(rh)
+	zcn := "/v1/screst/" + ADDRESS
+	return []rest.RestEndpoint{
+		{zcn + "/getAuthorizerNodes", zrh.getAuthorizerNodes},
+		{zcn + "/getGlobalConfig", zrh.GetGlobalConfig},
+		{zcn + "/getAuthorizer", zrh.getAuthorizer},
 	}
 }
 
@@ -57,7 +46,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 		err    error
 		events []event.Authorizer
 	)
-	edb := zrh.GetStateContext().GetEventDB()
+	edb := zrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -83,7 +72,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 //  200: StringMap
 //  404:
 func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := GetGlobalNode(zrh.GetStateContext())
+	gn, err := GetGlobalNode(zrh.GetQueryStateContext())
 	if err != nil && err != util.ErrValueNotPresent {
 		common.Respond(w, r, nil, common.NewError("get config handler", err.Error()))
 		return
@@ -104,7 +93,7 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("no authorizer id entered"))
 		return
 	}
-	edb := zrh.GetStateContext().GetEventDB()
+	edb := zrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return

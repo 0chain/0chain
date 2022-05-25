@@ -1,12 +1,12 @@
 package zcnsc
 
 import (
-	"0chain.net/rest/restinterface"
 	"0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/rest"
 )
 
 func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
-	rh := restinterface.NewTestRestHandler()
+	rh := rest.NewTestRestHandler()
 	zrh := NewZcnRestHandler(rh)
 	return benchmark.GetRestTests(
 		[]benchmark.TestParameters{

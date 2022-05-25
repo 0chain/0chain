@@ -1,13 +1,18 @@
-package restinterface
+package rest
 
 import (
 	"0chain.net/chaincore/chain/state"
+	"net/http"
 )
 
+type RestEndpoint struct {
+	Name     string
+	Endpoint func(w http.ResponseWriter, r *http.Request)
+}
+
 type RestHandlerI interface {
-	GetStateContext() state.QueryStateContextI
-	SetupRestHandlers()
-	SetQueryStateContext(state.QueryStateContextI)
+	QueryChainer
+	Register([]RestEndpoint)
 }
 
 // swagger:model Int64Map
@@ -43,8 +48,10 @@ func NewTestRestHandler() RestHandlerI {
 	}
 }
 
-func (rh *TestRestHandler) GetStateContext() state.QueryStateContextI {
-	return rh.GetQueryStateContext()
+func (rh *TestRestHandler) Register(endpoints []RestEndpoint) {
+	for _, e := range endpoints {
+		http.HandleFunc(e.Name, e.Endpoint)
+	}
 }
 
 func (rh *TestRestHandler) SetupRestHandlers() {

@@ -3,8 +3,8 @@ package storagesc
 import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
-	"0chain.net/rest/restinterface"
 	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/rest"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/spf13/viper"
@@ -15,7 +15,7 @@ import (
 func BenchmarkRestTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
-	rh := restinterface.NewTestRestHandler()
+	rh := rest.NewTestRestHandler()
 	srh := NewStorageRestHandler(rh)
 	return bk.GetRestTests(
 		[]bk.TestParameters{

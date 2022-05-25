@@ -1,14 +1,14 @@
 package faucetsc
 
 import (
-	"0chain.net/rest/restinterface"
 	benchmark "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/rest"
 )
 
 func BenchmarkRestTests(
 	data benchmark.BenchData, _ benchmark.SignatureScheme,
 ) benchmark.TestSuite {
-	rh := restinterface.NewTestRestHandler()
+	rh := rest.NewTestRestHandler()
 	frh := NewFaucetscRestHandler(rh)
 	return benchmark.GetRestTests(
 		[]benchmark.TestParameters{
