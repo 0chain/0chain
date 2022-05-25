@@ -225,7 +225,7 @@ func sizeInGB(size int64) float64 {
 
 // exclude blobbers with not enough token in stake pool to fit the size
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
-	size int64, balances chainstate.StateContextI) (filter filterBlobberFunc) {
+	size int64, balances chainstate.CommonStateContextI) (filter filterBlobberFunc) {
 
 	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
 		var sp, err = sc.getStakePool(b.ID, balances)
@@ -437,11 +437,11 @@ func (sc *StorageSmartContract) selectBlobbers(
 	allBlobbersList StorageNodes,
 	sa *StorageAllocation,
 	randomSeed int64,
-	balances chainstate.StateContextI,
+	balances chainstate.CommonStateContextI,
 ) ([]*StorageNode, int64, error) {
 	var err error
 	var conf *Config
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = getConfig(balances); err != nil {
 		return nil, 0, fmt.Errorf("can't get config: %v", err)
 	}
 
@@ -479,13 +479,22 @@ func (sc *StorageSmartContract) selectBlobbers(
 	return blobberNodes[:size], bSize, nil
 }
 
-// getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
-func (sc *StorageSmartContract) getBlobbers(blobberIDs []string,
-	balances chainstate.StateContextI) *StorageNodes {
-	blobbers := sc.getBlobbersByIDs(blobberIDs, balances)
+func getBlobbers(
+	blobberIDs []string,
+	balances chainstate.CommonStateContextI,
+) *StorageNodes {
+	blobbers := getBlobbersByIDs(blobberIDs, balances)
 	return &StorageNodes{
 		Nodes: blobbers,
 	}
+}
+
+// getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
+func (_ *StorageSmartContract) getBlobbers(
+	blobberIDs []string,
+	balances chainstate.CommonStateContextI,
+) *StorageNodes {
+	return getBlobbers(blobberIDs, balances)
 }
 
 func (sc *StorageSmartContract) validateBlobbers(
@@ -603,7 +612,7 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 	return alloc.BlobberAllocs[0].Size + uar.getBlobbersSizeDiff(alloc)
 }
 
-func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainstate.StateContextI) []*StorageNode {
+func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) []*StorageNode {
 	type blobberResp struct {
 		index   int
 		blobber *StorageNode
@@ -615,7 +624,7 @@ func (sc *StorageSmartContract) getBlobbersByIDs(ids []string, balances chainsta
 		wg.Add(1)
 		go func(index int, blobberId string) {
 			defer wg.Done()
-			blobber, err := sc.getBlobber(blobberId, balances)
+			blobber, err := getBlobber(blobberId, balances)
 			if err != nil || blobber == nil {
 				logging.Logger.Debug("can't get blobber", zap.String("blobberId", blobberId), zap.Error(err))
 				return

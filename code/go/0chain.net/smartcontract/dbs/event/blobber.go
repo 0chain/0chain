@@ -55,7 +55,9 @@ type Blobber struct {
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
+// swagger:model BlobberLatLong
 type BlobberLatLong struct {
+	BlobberID string `json:"id" gorm:"uniqueIndex"`
 	// geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -163,7 +165,7 @@ type AllocationQuery struct {
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("url IN ?", urls)
+	dbStore = dbStore.Where("base_url IN ?", urls)
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }

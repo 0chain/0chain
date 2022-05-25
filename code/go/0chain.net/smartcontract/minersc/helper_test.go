@@ -294,6 +294,18 @@ func (msc *MinerSmartContract) ConfigHandler(
 	return msc.configHandler(ctx, values, balances)
 }
 
+func (msc *MinerSmartContract) configHandler(
+	_ context.Context,
+	_ url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	gn, err := getGlobalNode(balances)
+	if err != nil {
+		return nil, common.NewErrInternal(err.Error())
+	}
+	return gn.getConfigMap()
+}
+
 func (msc *MinerSmartContract) UpdateSettings(
 	t *transaction.Transaction,
 	inputData []byte,

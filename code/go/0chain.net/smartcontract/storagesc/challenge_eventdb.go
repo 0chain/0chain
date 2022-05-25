@@ -33,12 +33,12 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Chall
 	}
 }
 
-func challengeTableToStorageChallengeInfo(ch *event.Challenge, balances cstate.StateContextI) (*StorageChallengeResponse, error) {
+func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventDb) (*StorageChallengeResponse, error) {
 	vIDs := strings.Split(ch.ValidatorsID, ",")
 	if len(vIDs) == 0 {
 		return nil, errors.New("no validators in challenge")
 	}
-	validators, err := getValidators(vIDs, balances.GetEventDB())
+	validators, err := getValidators(vIDs, edb)
 	if err != nil {
 		return nil, err
 	}
@@ -81,17 +81,17 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 }
 
 func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
-	balances cstate.StateContextI) ([]*StorageChallengeResponse, error) {
+	edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 
 	var chs []*StorageChallengeResponse
-	challenges, err := balances.GetEventDB().GetOpenChallengesForBlobber(blobberID,
+	challenges, err := edb.GetOpenChallengesForBlobber(blobberID,
 		common.Timestamp(time.Now().Unix()), cct)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, ch := range challenges {
-		challInfo, err := challengeTableToStorageChallengeInfo(ch, balances)
+		challInfo, err := challengeTableToStorageChallengeInfo(ch, edb)
 		if err != nil {
 			return nil, err
 		}
@@ -101,14 +101,14 @@ func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
 }
 
 func getChallengeForBlobber(blobberID, challengeID string,
-	balances cstate.StateContextI) (*StorageChallengeResponse, error) {
+	edb *event.EventDb) (*StorageChallengeResponse, error) {
 
-	challenge, err := balances.GetEventDB().GetChallengeForBlobber(blobberID, challengeID)
+	challenge, err := edb.GetChallengeForBlobber(blobberID, challengeID)
 	if err != nil {
 		return nil, err
 	}
 
-	challInfo, err := challengeTableToStorageChallengeInfo(challenge, balances)
+	challInfo, err := challengeTableToStorageChallengeInfo(challenge, edb)
 	if err != nil {
 		return nil, err
 	}

@@ -28,6 +28,7 @@ type PoolMemberInfo struct {
 }
 
 //PoolMembersInfo array of pool memebers
+// swagger:model PoolMembersInfo
 type PoolMembersInfo struct {
 	MembersInfo []PoolMemberInfo `json:"members_info"`
 }

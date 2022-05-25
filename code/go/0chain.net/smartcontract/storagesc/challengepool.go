@@ -2,16 +2,10 @@ package storagesc
 
 import (
 	"0chain.net/core/logging"
-	"context"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go.uber.org/zap"
-	"net/url"
-
-	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -161,6 +155,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 	return
 }
 
+// swagger:model challengePoolStat
 type challengePoolStat struct {
 	ID         string           `json:"id"`
 	Balance    state.Balance    `json:"balance"`
@@ -221,35 +216,4 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	}
 
 	return
-}
-
-//
-// stat
-//
-
-// statistic for all locked tokens of a challenge pool
-func (ssc *StorageSmartContract) getChallengePoolStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		allocationID = datastore.Key(params.Get("allocation_id"))
-		alloc        *StorageAllocation
-		cp           *challengePool
-	)
-
-	if allocationID == "" {
-		err := errors.New("missing allocation_id URL query parameter")
-		return nil, common.NewErrBadRequest(err.Error())
-	}
-
-	if alloc, err = ssc.getAllocation(allocationID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
-	}
-
-	if cp, err = ssc.getChallengePool(allocationID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool")
-	}
-
-	return cp.stat(alloc), nil
 }

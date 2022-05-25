@@ -54,10 +54,6 @@ func (fc *FaucetSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return fc.SmartContract.RestHandlers
-}
-
 func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
 	node, err := fc.getGlobalVariables(t, balances)
 	if err != nil {
@@ -75,10 +71,6 @@ func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName stri
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
-	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
-	fc.SmartContract.RestHandlers["/globalPeriodicLimit"] = fc.globalPeriodicLimit
-	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
-	fc.SmartContract.RestHandlers["/getConfig"] = fc.getConfigHandler
 	fc.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "update-settings"), nil)
 	fc.SmartContractExecutionStats["pour"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "pour"), nil)
 	fc.SmartContractExecutionStats["refill"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "refill"), nil)
@@ -223,7 +215,7 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	switch err {
 	case nil, util.ErrValueNotPresent:
 		if gn.FaucetConfig == nil {
-			gn.FaucetConfig = getConfig()
+			gn.FaucetConfig = getFaucetConfig()
 		}
 		return gn, err
 	default:

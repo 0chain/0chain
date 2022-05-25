@@ -264,6 +264,24 @@ func getConfiguredConfig() (conf *config, err error) {
 	return
 }
 
+func getConfigReadOnly(
+	balances chainstate.CommonStateContextI,
+) (conf *config, err error) {
+	conf = new(config)
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
+	switch err {
+	case nil:
+		return conf, nil
+	case util.ErrValueNotPresent:
+		if conf, err = getConfiguredConfig(); err != nil {
+			return nil, err
+		}
+		return conf, nil
+	default:
+		return nil, err
+	}
+}
+
 func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {

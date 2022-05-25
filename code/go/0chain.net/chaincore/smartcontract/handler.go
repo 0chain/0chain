@@ -21,20 +21,6 @@ import (
 //ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
 
-//ExecuteRestAPI - executes the rest api on the smart contract
-func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	scI := getSmartContract(scAdress)
-	if scI != nil {
-		//add bc context here
-		handler, restpathok := scI.GetRestPoints()[restpath]
-		if !restpathok {
-			return nil, common.NewError("invalid_path", "Invalid path")
-		}
-		return handler(ctx, params, balances)
-	}
-	return nil, common.NewError("invalid_sc", "Invalid Smart contract address")
-}
-
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
 	scI := getSmartContract(scAdress)
 	if scI != nil {

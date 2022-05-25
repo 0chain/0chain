@@ -57,10 +57,6 @@ func (ipsc *InterestPoolSmartContract) GetExecutionStats() map[string]interface{
 	return ipsc.SmartContractExecutionStats
 }
 
-func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return ipsc.RestHandlers
-}
-
 func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
 	n, err := ipsc.getGlobalNode(balances, funcName)
 	if err != nil {
@@ -81,9 +77,9 @@ func (ipsc *InterestPoolSmartContract) GetCost(t *transaction.Transaction, funcN
 
 func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
-	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
-	ipsc.SmartContract.RestHandlers["/getLockConfig"] = ipsc.getLockConfig
-	ipsc.SmartContract.RestHandlers["/getConfig"] = ipsc.getConfig
+	//ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
+	//ipsc.SmartContract.RestHandlers["/getLockConfig"] = ipsc.getLockConfig
+	//ipsc.SmartContract.RestHandlers["/getConfig"] = ipsc.getConfig
 	ipsc.SmartContractExecutionStats["lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "lock"), nil)
 	ipsc.SmartContractExecutionStats["unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "unlock"), nil)
 	ipsc.SmartContractExecutionStats["updateVariables"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "updateVariables"), nil)

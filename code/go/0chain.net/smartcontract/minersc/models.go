@@ -647,6 +647,7 @@ type SimpleNodeGeolocation struct {
 	Longitude float64 `json:"longitude"`
 }
 
+// swagger:model SimpleNode
 type SimpleNode struct {
 	ID          string                `json:"id" validate:"hexadecimal,len=64"`
 	N2NHost     string                `json:"n2n_host"`
@@ -754,6 +755,7 @@ func (dp *deletePool) Decode(input []byte) error {
 	return json.Unmarshal(input, dp)
 }
 
+// swagger:model PhaseNode
 type PhaseNode struct {
 	Phase        Phase `json:"phase"`
 	StartRound   int64 `json:"start_round"`
@@ -774,6 +776,7 @@ func (pn *PhaseNode) Decode(input []byte) error {
 	return json.Unmarshal(input, pn)
 }
 
+// swagger:model DKGMinerNodes
 type DKGMinerNodes struct {
 	MinN     int     `json:"min_n"`
 	MaxN     int     `json:"max_n"`
@@ -894,7 +897,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 }
 
 // getMinersList returns miners list
-func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
+func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -915,7 +918,7 @@ func UpdateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 }
 
 // getDKGMinersList gets dkg miners list
-func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
+func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
 	err := state.GetTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
@@ -936,7 +939,7 @@ func UpdateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) e
 	return err
 }
 
-func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
+func getMinersMPKs(state cstate.CommonStateContextI) (*block.Mpks, error) {
 	mpks := block.NewMpks()
 	err := state.GetTrieNode(MinersMPKKey, mpks)
 	if err != nil {
@@ -951,7 +954,7 @@ func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
 	return err
 }
 
-func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
+func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()
 	err := state.GetTrieNode(MagicBlockKey, magicBlock)
 	if err != nil {
@@ -966,7 +969,7 @@ func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) 
 	return err
 }
 
-func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+func getGroupShareOrSigns(state cstate.CommonStateContextI) (*block.GroupSharesOrSigns, error) {
 	var gsos = block.NewGroupSharesOrSigns()
 	err := state.GetTrieNode(GroupShareOrSignsKey, gsos)
 	if err != nil {
@@ -982,7 +985,7 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 }
 
 // getShardersKeepList returns the sharder list
-func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
+func getShardersKeepList(balances cstate.CommonStateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, ShardersKeepKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -1016,7 +1019,7 @@ func UpdateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) err
 	return err
 }
 
-func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
+func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*MinerNodes, error) {
 	nodesList := &MinerNodes{}
 	err := balances.GetTrieNode(key, nodesList)
 	if err != nil {

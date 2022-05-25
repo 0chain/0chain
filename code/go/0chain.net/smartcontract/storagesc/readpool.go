@@ -1,17 +1,12 @@
 package storagesc
 
 import (
-	"context"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -403,61 +398,4 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	}
 
 	return
-}
-
-//
-// stat
-//
-
-// statistic for an allocation/blobber (used by blobbers)
-func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		rp        *readPool
-	)
-
-	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get retrieving read pool")
-	}
-
-	var (
-		cut  = rp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	return &stat, nil
-}
-
-// statistic for all locked tokens of the read pool
-func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = datastore.Key(params.Get("client_id"))
-		rp       *readPool
-	)
-
-	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool")
-	}
-
-	return rp.stat(common.Now()), nil
 }
