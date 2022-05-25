@@ -246,9 +246,9 @@ func TestAllocations(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
+	t.Skip("only for local debugging, requires local postgresql")
 	eventDb, err := NewEventDb(access)
 	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
 		return
 	}
 	defer eventDb.Close()
