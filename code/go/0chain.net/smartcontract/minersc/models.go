@@ -571,7 +571,14 @@ func (gn *GlobalNode) epochDecline() {
 func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	miner, sharders currency.Coin, err error) {
 
-	miner = currency.Coin(float64(fees) * gn.ShareRatio)
+	fFees, err := fees.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio)
+	if err != nil {
+		return 0, 0, err
+	}
 	sharders, err = currency.MinusCoin(fees, miner)
 	return
 }

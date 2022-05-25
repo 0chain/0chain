@@ -151,7 +151,11 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		}
 		weightRatio := weight[i] / totalWeight
 		if weightRatio > 0 && weightRatio <= 1 {
-			reward, err := currency.Float64ToCoin(float64(bbr) * weightRatio)
+			fBBR, err := bbr.Float64()
+			if err != nil {
+				return err
+			}
+			reward, err := currency.Float64ToCoin(fBBR * weightRatio)
 			if err != nil {
 				return err
 			}
@@ -179,7 +183,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	if rewardBal > 0 {
-		rShare, rl, err := rewardBal.DivideCurrency(int64(len(stakePools)))
+		rShare, rl, err := rewardBal.DivideCoin(int64(len(stakePools)))
 		if err != nil {
 			return err
 		}

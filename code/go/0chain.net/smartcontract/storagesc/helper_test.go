@@ -435,9 +435,12 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 	return
 }
 
-func stakePoolTotal(sp *stakePool) (total currency.Coin) {
+func stakePoolTotal(sp *stakePool) (total currency.Coin, err error) {
 	for _, id := range sp.OrderedPoolIds() {
-		total += sp.Pools[id].Balance
+		total, err = currency.AddCoin(total, sp.Pools[id].Balance)
+		if err != nil {
+			return 0, err
+		}
 	}
 	return
 }

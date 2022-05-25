@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	sci "0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/currency"
 
@@ -75,8 +76,8 @@ type destination struct {
 }
 
 // tokens left for this destination
-func (d *destination) left() (left currency.Coin) {
-	return d.Amount - d.Vested
+func (d *destination) left() (left currency.Coin, err error) {
+	return currency.MinusCoin(d.Amount, d.Vested)
 }
 
 // full time range left for the destination based on last payment time and
@@ -105,16 +106,19 @@ func (d *destination) move(now common.Timestamp, moved currency.Coin) {
 // end. Also, the now must be greater or equal to start time of related
 // vesting pool.
 func (d *destination) unlock(now, end common.Timestamp, dry bool) (
-	amount currency.Coin) {
+	amount currency.Coin, err error) {
 
 	var (
 		full   = d.full(end)   // full time range left
 		period = d.period(now) // current vesting period
-		ending = (now == end)  // pool ending, should drain all
-		left   = d.left()      // tokens left
+		ending = now == end    // pool ending, should drain all
 
-		ratio float64 = 1.0 // vesting ratio for the period
+		ratio = 1.0 // vesting ratio for the period
 	)
+	left, err := d.left() // tokens left
+	if err != nil {
+		return 0, err
+	}
 
 	// also, the ending protects against zero division error
 	if !ending {
@@ -332,7 +336,10 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 	)
 	sb.WriteByte('[')
 	for _, d := range vp.Destinations {
-		var value = d.unlock(now, end, false)
+		value, err := d.unlock(now, end, false)
+		if err != nil {
+			return "", err
+		}
 		if value == 0 {
 			continue
 		}
@@ -353,12 +360,16 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 }
 
 // excess returns amount of tokens over the vesting pool requires
-func (vp *vestingPool) excess() (amount currency.Coin) {
+func (vp *vestingPool) excess() (amount currency.Coin, err error) {
 	var need currency.Coin
 	for _, d := range vp.Destinations {
-		need += d.left()
+		destLeft, err := d.left()
+		if err != nil {
+			return 0, err
+		}
+		need += destLeft
 	}
-	return vp.Balance - need
+	return vp.Balance - need, nil
 }
 
 func (vp *vestingPool) delete(destID string) (err error) {
@@ -411,7 +422,10 @@ func (vp *vestingPool) vest(vscID, destID datastore.Key, now common.Timestamp,
 		return
 	}
 
-	var value = d.unlock(now, end, false)
+	value, err := d.unlock(now, end, false)
+	if err != nil {
+		return "", err
+	}
 	if value == 0 {
 		return "", errZeroVesting
 	}
@@ -430,7 +444,10 @@ func (vp *vestingPool) drain(t *transaction.Transaction,
 		return "", errors.New("only owner can unlock the excess tokens")
 	}
 
-	var over = vp.excess()
+	over, err := vp.excess()
+	if err != nil {
+		return "", err
+	}
 	if over == 0 {
 		return "", errors.New("no excess tokens to unlock")
 	}
@@ -457,12 +474,15 @@ func (vp *vestingPool) save(balances chainstate.StateContextI) (err error) {
 // info (stat)
 //
 
-func (vp *vestingPool) info(now common.Timestamp) (i *info) {
+func (vp *vestingPool) info(now common.Timestamp) (i *info, err error) {
 	i = new(info)
 
 	i.ID = vp.ID
 	i.Balance = vp.Balance
-	i.Left = vp.excess()
+	i.Left, err = vp.excess()
+	if err != nil {
+		return nil, err
+	}
 	i.Description = vp.Description
 	i.StartTime = vp.StartTime
 	i.ExpireAt = vp.ExpireAt
@@ -479,7 +499,10 @@ func (vp *vestingPool) info(now common.Timestamp) (i *info) {
 
 	var dinfos = make([]*destInfo, 0, len(vp.Destinations))
 	for _, d := range vp.Destinations {
-		var value = d.unlock(now, end, true)
+		value, err := d.unlock(now, end, true)
+		if err != nil {
+			return nil, err
+		}
 		dinfos = append(dinfos, &destInfo{
 			ID:     d.ID,
 			Wanted: d.Amount,
@@ -843,5 +866,5 @@ func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pool")
 	}
 
-	return vp.info(common.Now()), nil
+	return vp.info(common.Now())
 }

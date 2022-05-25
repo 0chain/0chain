@@ -257,7 +257,11 @@ func (gn *GlobalNode) set(key string, change string) error {
 		}
 	case smartcontract.CurrencyCoin:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := gn.setBalance(key, currency.Coin(value*x10)); err != nil {
+			coinV, err := currency.ParseZCN(value)
+			if err != nil {
+				return err
+			}
+			if err := gn.setBalance(key, coinV); err != nil {
 				return err
 			}
 		} else {

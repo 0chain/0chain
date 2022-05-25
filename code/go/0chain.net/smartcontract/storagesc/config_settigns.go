@@ -541,7 +541,11 @@ func (conf *Config) set(key string, change string) error {
 		}
 	case smartcontract.CurrencyCoin:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := conf.setCoin(key, currency.Coin(value*x10)); err != nil {
+			vCoin, err2 := currency.ParseZCN(value)
+			if err2 != nil {
+				return err2
+			}
+			if err := conf.setCoin(key, vCoin); err != nil {
 				return err
 			}
 		} else {

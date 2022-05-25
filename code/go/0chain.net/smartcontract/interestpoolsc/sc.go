@@ -195,10 +195,10 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	case util.ErrValueNotPresent:
 		const pfx = "smart_contracts.interestpoolsc."
 		var conf = config.SmartContractConfig
-		var err2 error
 		gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
 		gn.APR = conf.GetFloat64(pfx + "apr")
 		gn.MinLock = currency.Coin(conf.GetInt64(pfx + "min_lock"))
+		var err2 error
 		gn.MaxMint, err2 = currency.ParseZCN(conf.GetFloat64(pfx + "max_mint"))
 		if err2 != nil {
 			return nil, err2

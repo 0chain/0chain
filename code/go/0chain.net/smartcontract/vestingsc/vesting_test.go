@@ -128,7 +128,8 @@ func Test_vestingPool(t *testing.T) {
 	require.NoError(t, vpd.Decode(vp.Encode()))
 	assert.Equal(t, vp, vpd)
 
-	var inf = vpd.info(11)
+	inf, err := vpd.info(11)
+	require.NoError(t, err)
 	assert.Equal(t, vp.Description, inf.Description)
 	assert.Equal(t, vp.StartTime, inf.StartTime)
 	assert.Equal(t, vp.ExpireAt, inf.ExpireAt)

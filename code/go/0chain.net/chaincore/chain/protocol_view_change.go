@@ -231,7 +231,6 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 }
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
-	var err error
 	selfNode := node.Self.Underlying()
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
 		c.ID, selfNode.PublicKey)
@@ -250,6 +249,8 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Settings.DelegateWallet = viper.GetString("delegate_wallet")
 	mn.Settings.ServiceChargeRatio = viper.GetFloat64("service_charge")
 	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
+
+	var err error
 	mn.Settings.MinStake, err = currency.ParseZCN(viper.GetFloat64("min_stake"))
 	if err != nil {
 		return nil, err

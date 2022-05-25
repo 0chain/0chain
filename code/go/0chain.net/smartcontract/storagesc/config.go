@@ -426,10 +426,16 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	conf.BlockReward = new(blockReward)
-	conf.BlockReward.BlockReward = currency.Coin(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.BlockReward, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.block_reward"))
+	if err != nil {
+		return nil, err
+	}
 	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
 	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
-	conf.BlockReward.QualifyingStake = currency.Coin(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
+	conf.BlockReward.QualifyingStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.qualifying_stake"))
+	if err != nil {
+		return nil, err
+	}
 
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(

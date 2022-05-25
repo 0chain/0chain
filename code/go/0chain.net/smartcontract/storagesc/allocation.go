@@ -787,23 +787,49 @@ func (ap *allocPeriod) weight() float64 {
 }
 
 // returns weighted average read and write prices
-func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin) {
+func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
 		ws       = apw + npw                // weights sum
 		rp, wp   float64                    // read sum, write sum (weighted)
 	)
 
-	rp = (float64(ap.read) * apw) + (float64(np.read) * npw)
-	wp = (float64(ap.write) * apw) + (float64(np.write) * npw)
+	apReadF, err := ap.read.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
 
-	avgRead = currency.Coin(rp / ws)
-	avgWrite = currency.Coin(wp / ws)
+	apWriteF, err := ap.write.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	npReadF, err := np.read.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	npWriteF, err := np.write.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	rp = (apReadF * apw) + (npReadF * npw)
+	wp = (apWriteF * apw) + (npWriteF * npw)
+
+	avgRead, err = currency.Float64ToCoin(rp / ws)
+	if err != nil {
+		return 0, 0, err
+	}
+	avgWrite, err = currency.Float64ToCoin(wp / ws)
+	if err != nil {
+		return 0, 0, err
+	}
 	return
 }
 
 func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
-	psize, sizeDiff int64) (avg Terms) {
+	psize, sizeDiff int64) (avg Terms, err error) {
 
 	// allocation periods
 	var left, added allocPeriod
@@ -812,7 +838,10 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	left.size, added.size = psize, psize+sizeDiff             // sizes
 	left.period, added.period = pexp-tx, pexp+expDiff-tx      // periods
 	// join
-	avg.ReadPrice, avg.WritePrice = left.join(&added)
+	avg.ReadPrice, avg.WritePrice, err = left.join(&added)
+	if err != nil {
+		return
+	}
 
 	// just copy from next
 	avg.MinLockDemand = next.MinLockDemand
@@ -919,9 +948,12 @@ func (sc *StorageSmartContract) extendAllocation(
 		b.Used += diff // new capacity used
 
 		// update terms using weighted average
-		details.Terms = weightedAverage(&details.Terms, &b.Terms,
+		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
 			t.CreationDate, prevExpiration, alloc.Expiration, details.Size,
 			diff)
+		if err != nil {
+			return err
+		}
 
 		details.Size = size // new size
 
@@ -1590,8 +1622,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		// min lock demand rest
 		var paid currency.Coin = 0
 		lack := d.MinLockDemand - d.Spent
-		iLack, _ := lack.Int64()
-		if iLack > 0 {
+		if d.Spent > d.MinLockDemand {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {
@@ -1638,7 +1669,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
-	var passPayments currency.Coin = 0
+	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		var b = blobbers[i]
 		if b.ID != d.BlobberID {
@@ -1646,10 +1677,12 @@ func (sc *StorageSmartContract) finishAllocation(
 				"blobber %s and %s don't match", b.ID, d.BlobberID)
 		}
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			var (
-				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-			)
-			reward, err := currency.Float64ToCoin(float64(cp.Balance) * ratio * passRates[i])
+			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+			cpBalance, err := cp.Balance.Float64()
+			if err != nil {
+				return err
+			}
+			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
 			if err != nil {
 				return err
 			}

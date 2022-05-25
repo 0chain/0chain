@@ -1018,7 +1018,9 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			spTotal, err := stakePoolTotal(sp)
+			require.NoError(t, err)
+			require.EqualValues(t, 10e10, spTotal)
 		}
 
 		// values before
@@ -1154,7 +1156,9 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			spTotal, err := stakePoolTotal(sp)
+			require.NoError(t, err)
+			require.EqualValues(t, 10e10, spTotal)
 		}
 
 		// values before
@@ -1244,7 +1248,9 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			spTotal, err := stakePoolTotal(sp)
+			require.NoError(t, err)
+			require.EqualValues(t, 10e10, spTotal)
 		}
 
 		// values before

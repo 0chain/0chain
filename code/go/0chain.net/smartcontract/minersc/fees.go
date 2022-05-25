@@ -336,17 +336,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err != nil {
 		return "", err
 	}
-	var (
-		// mb reward -- mint for the mb
-		blockReward = currency.Coin(
-			float64(gn.BlockReward) * gn.RewardRate,
-		)
+	blockReward := currency.Coin(
+		float64(gn.BlockReward) * gn.RewardRate,
 	)
 	minerRewards, sharderRewards, err := gn.splitByShareRatio(blockReward)
 	if err != nil {
 		return "", fmt.Errorf("error splitting rewards by ratio: %v", err)
 	}
-	// fees         -- total fees for the mb
 	minerFees, sharderFees, err := gn.splitByShareRatio(fees)
 	if err != nil {
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
@@ -457,11 +453,11 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 	sn := len(sharders)
 	// fess and mint
-	feeShare, feeLeft, err := fee.DivideCurrency(int64(sn))
+	feeShare, feeLeft, err := fee.DivideCoin(int64(sn))
 	if err != nil {
 		return err
 	}
-	mintShare, mintLeft, err := mint.DivideCurrency(int64(sn))
+	mintShare, mintLeft, err := mint.DivideCoin(int64(sn))
 	if err != nil {
 		return err
 	}
@@ -469,7 +465,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	totalCoinLeft := feeLeft + mintLeft
 
 	if totalCoinLeft > currency.Coin(sn) {
-		clShare, cl, err := totalCoinLeft.DivideCurrency(int64(sn))
+		clShare, cl, err := totalCoinLeft.DivideCoin(int64(sn))
 		if err != nil {
 			return err
 		}
@@ -479,7 +475,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 	// part for every sharder
 	for _, sh := range sharders {
-		var extraShare currency.Coin = 0
+		var extraShare currency.Coin
 		if totalCoinLeft > 0 {
 			extraShare = 1
 			totalCoinLeft -= 1

@@ -37,12 +37,25 @@ func Setup(eventDb *event.EventDb, clients, publicKeys []string, balances cstate
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
-	gn.MinStakeAmount = currency.Coin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	var err error
+	gn.MinStakeAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	if err != nil {
+		panic(err)
+	}
 	gn.MinLockAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinLockAmount)
-	gn.MinMintAmount = currency.Coin(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
-	gn.MaxFee = currency.Coin(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
+	gn.MinMintAmount, err = currency.Float64ToCoin(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
+	if err != nil {
+		panic(err)
+	}
+	gn.MaxFee, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
+	if err != nil {
+		panic(err)
+	}
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.ZcnMinAuthorizers)
-	gn.MinBurnAmount = currency.Coin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	gn.MinBurnAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	if err != nil {
+		panic(err)
+	}
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)

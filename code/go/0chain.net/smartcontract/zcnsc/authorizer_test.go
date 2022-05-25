@@ -225,7 +225,8 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 	)
 
 	sc := CreateZCNSmartContract()
-	tr := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx)
+	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx)
+	require.NoError(t, err)
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)

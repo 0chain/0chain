@@ -223,7 +223,7 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 				return nil, err2
 			}
 		}
-		return gn, err
+		return nil, err
 	default:
 		return nil, err
 	}

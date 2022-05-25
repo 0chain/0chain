@@ -97,6 +97,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	var redeems []readPoolRedeem
 	var moved currency.Coin = 0
 	var torm []*allocationPool // to remove later (empty allocation pools)
+	valueLeft := value
 	for _, ap := range cut {
 		if value == moved {
 			break // all required tokens has moved to the blobber
@@ -109,13 +110,14 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			bp   = ap.Blobbers[bi]
 			move currency.Coin
 		)
-		if value >= bp.Balance {
+		if valueLeft >= bp.Balance {
 			move, bp.Balance = bp.Balance, 0
 		} else {
-			move, bp.Balance = value, bp.Balance-value
+			move, bp.Balance = valueLeft, bp.Balance-valueLeft
 		}
 
 		ap.Balance -= move
+		valueLeft -= move
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,

@@ -248,7 +248,10 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
-	conf.MinLock = currency.Coin(scconf.GetFloat64(prefix+"min_lock") * 1e10)
+	conf.MinLock, err = currency.ParseZCN(scconf.GetFloat64(prefix + "min_lock"))
+	if err != nil {
+		return nil, err
+	}
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")

@@ -59,10 +59,11 @@ func (p *ZcnPool) DigPool(id string, txn *transaction.Transaction) (*state.Trans
 }
 
 func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
-	var err error
 	if txn.Value <= 0 {
 		return nil, "", common.NewError("filling pool failed", "insufficient funds")
 	}
+
+	var err error
 	p.Balance, err = currency.AddInt64(p.Balance, txn.Value)
 	if err != nil {
 		return nil, "", err

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"0chain.net/chaincore/currency"
-
 	"0chain.net/chaincore/block"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -26,12 +24,6 @@ const (
 	txHash    = "tx hash"
 	startTime = common.Timestamp(100)
 )
-
-const x10 = 10 * 1000 * 1000 * 1000
-
-func zcnToBalance(token float64) currency.Coin {
-	return currency.Coin(token * float64(x10))
-}
 
 type mockStateContext struct {
 	*mocks.StateContextI
