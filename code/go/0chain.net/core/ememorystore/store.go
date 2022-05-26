@@ -68,6 +68,9 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 		}
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
+		if rNumber == 0 {
+			log.Println("write genesis round, data:", string(data))
+		}
 		if err := c.Conn.Put(key, data); err != nil {
 			return err
 		}

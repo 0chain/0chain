@@ -65,34 +65,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
-		//case <-lfbCheckTimer.C:
-		//	lfbCheckTimer.Reset(3 * time.Second)
-		//
-		//	lfb := sc.GetLatestFinalizedBlock()
-		//	lfbTk := sc.GetLatestLFBTicket(ctx)
-		//
-		//	if lfb.Round+aheadN+1 < endRound {
-		//		logging.Logger.Debug("process block, lfb.Round < endRound, continue",
-		//			zap.Int64("lfb round", lfb.Round),
-		//			zap.Int64("end round", endRound),
-		//			zap.Int64("lfb ticket round", lfbTk.Round))
-		//		continue
-		//	}
-		//
-		//	// lfb is >= endRound, but still <= LFB ticket, continue request
-		//	if endRound <= lfbTk.Round {
-		//		logging.Logger.Debug("process block, endRound <= lfbTk.Round, trigger sync",
-		//			zap.Int64("end round", endRound),
-		//			zap.Int64("lfb ticket round", lfbTk.Round))
-		//		syncBlocksTimer.Reset(0)
-		//		continue
-		//	}
-		//
-		//	logging.Logger.Debug("process block, endRound > lfbTk.Round, reset to 1 minute",
-		//		zap.Int64("end round", endRound),
-		//		zap.Int64("lfb ticket round", lfbTk.Round))
-		//	syncBlocksTimer.Reset(time.Minute)
-		//
 		case <-syncBlocksTimer.C:
 			// reset sync timer to 1 minute
 			syncBlocksTimer.Reset(time.Minute)
