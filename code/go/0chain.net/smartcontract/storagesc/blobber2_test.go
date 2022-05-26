@@ -349,17 +349,6 @@ func testCommitBlobberRead(
 		rPool.Pools[startBlock+i].ID = blobberId
 		rPool.Pools[startBlock+i].Balance = zcnToBalance(aPool.balance)
 		rPool.Pools[startBlock+i].ExpireAt = aPool.expires
-		rPool.Pools[startBlock+i].Blobbers = []*blobberPool{}
-		var myBlobberIndex = 0
-		for j := 0; j < int(aPool.numberOfBlobbers); j++ {
-			var id = strconv.Itoa(i)
-			var pool = &blobberPool{BlobberID: id}
-			if j == myBlobberIndex {
-				pool.BlobberID = blobberId
-				pool.Balance = zcnToBalance(aPool.blobberBalance)
-			}
-			rPool.Pools[startBlock+i].Blobbers.add(pool)
-		}
 	}
 	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
 

@@ -408,7 +408,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 				return pool.Balance == state.Balance(writePoolLocked) &&
 					pool.ID == mockTransactionHash &&
 					pool.AllocationID == mockTransactionHash &&
-					len(pool.Blobbers) == mockNumBlobbers &&
 					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
 						conf.FreeAllocationSettings.Duration).Unix())
 			})).Return("", nil).Once()
@@ -776,16 +775,13 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			writePoolKey(ssc.ID, p.marker.Recipient),
-			//mock.Anything,
 			mock.MatchedBy(func(wp *writePool) bool {
 				pool, found := wp.Pools.get(p.allocationId)
 				if found {
 					return pool.Balance == zcnToBalance(p.marker.FreeTokens) &&
 						pool.ID == mockTransactionHash &&
-						pool.AllocationID == p.allocationId &&
-						len(pool.Blobbers) == mockNumBlobbers
+						pool.AllocationID == p.allocationId
 				}
-				//require.True(t, found)
 				return false
 			}),
 		).Return("", nil).Once()

@@ -35,13 +35,7 @@ func Test_writePool_Encode_Decode(t *testing.T) {
 			},
 		},
 		AllocationID: "ALLOCATION ID",
-		Blobbers: blobberPools{
-			&blobberPool{
-				BlobberID: "BLOBBER ID",
-				Balance:   10300,
-			},
-		},
-		ExpireAt: 90210,
+		ExpireAt:     90210,
 	})
 	require.NoError(t, json.Unmarshal(mustEncode(t, rpe), &rpd))
 	assert.EqualValues(t, rpe, rpd)

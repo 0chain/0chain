@@ -686,12 +686,6 @@ func TestExtendAllocation(t *testing.T) {
 					ExpireAt:     expiresAt,
 				}
 				ap.Balance = zcnToBalance(funds)
-				for _, blobber := range blobbers {
-					ap.Blobbers.add(&blobberPool{
-						BlobberID: blobber.ID,
-						Balance:   ap.Balance / state.Balance(bCount*args.poolCount[i]),
-					})
-				}
 				wp.Pools.add(&ap)
 			}
 

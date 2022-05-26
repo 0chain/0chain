@@ -181,14 +181,6 @@ func (aps allocationPools) allocationCut(allocID string) (
 	return
 }
 
-func (aps allocationPools) blobberCut(allocID, blobberID string,
-	now common.Timestamp) (cut []*allocationPool) {
-
-	cut = aps.allocationCut(allocID)
-	sortExpireAt(cut)
-	return
-}
-
 func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
 	value state.Balance) {
 

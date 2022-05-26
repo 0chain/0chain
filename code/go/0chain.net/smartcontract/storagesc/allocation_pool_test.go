@@ -193,7 +193,7 @@ func Test_allocationPools(t *testing.T) {
 			AllocationID: "a2",
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
-					Balance: 257,
+					Balance: 255,
 				},
 			},
 		},
@@ -207,16 +207,25 @@ func Test_allocationPools(t *testing.T) {
 
 	cut = aps.allocationCut(a2)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
+			ExpireAt:     20,
+			AllocationID: "a2",
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 253,
+				},
+			},
+		},
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 		},
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
-					Balance: 257,
+					Balance: 255,
 				},
 			},
 		},
@@ -224,16 +233,16 @@ func Test_allocationPools(t *testing.T) {
 
 	sortExpireAt(cut)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
-					Balance: 257,
+					Balance: 255,
 				},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			ZcnPool: tokenpool.ZcnPool{
@@ -241,11 +250,24 @@ func Test_allocationPools(t *testing.T) {
 					Balance: 253,
 				},
 			},
+		},
+		{
+			ExpireAt:     20,
+			AllocationID: "a2",
 		},
 	}, cut)
 
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
+			ExpireAt:     10,
+			AllocationID: "a2",
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 255,
+				},
+			},
+		},
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			ZcnPool: tokenpool.ZcnPool{
@@ -253,65 +275,12 @@ func Test_allocationPools(t *testing.T) {
 					Balance: 253,
 				},
 			},
+		},
+		{
+			ExpireAt:     20,
+			AllocationID: "a2",
 		},
 	}, cut)
-
-	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     10,
-			AllocationID: "a2",
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					Balance: 257,
-				},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					Balance: 253,
-				},
-			},
-		},
-	}, aps.blobberCut(a2, "b2", 0))
-
-	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     10,
-			AllocationID: "a2",
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					Balance: 257,
-				},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					Balance: 253,
-				},
-			},
-		},
-	}, aps.blobberCut(a2, "b2", 0))
-
-	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			ZcnPool: tokenpool.ZcnPool{
-				TokenPool: tokenpool.TokenPool{
-					Balance: 253,
-				},
-			},
-		},
-	}, aps.blobberCut(a2, "b2", 15))
-
-	require.EqualValues(t, []*allocationPool{}, aps.blobberCut(a2, "b2", 21))
-
 }
 
 func Test_allocationPools_sortExpiry(t *testing.T) {

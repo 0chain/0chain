@@ -621,8 +621,6 @@ func setupChallengeMocks(
 		var newPool = &allocationPool{}
 		newPool.Balance = state.Balance(balance)
 		newPool.AllocationID = allocation.ID
-		newPool.Blobbers = blobberPools{}
-		newPool.Blobbers.add(&blobberPool{BlobberID: blobberId})
 		wPool.Pools.add(newPool)
 	}
 	for i := 0; i < otherWritePools; i++ {
