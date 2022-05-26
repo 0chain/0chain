@@ -26,12 +26,6 @@ func (rp *readPool) allocTotal(allocID string,
 	return rp.Pools.allocTotal(allocID, now)
 }
 
-func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
-	now int64) state.Balance {
-
-	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
-}
-
 func mustEncode(t testing.TB, val interface{}) []byte {
 	var err error
 	b, err := json.Marshal(val)

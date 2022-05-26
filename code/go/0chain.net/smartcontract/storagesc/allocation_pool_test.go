@@ -36,21 +36,6 @@ func (aps allocationPools) allocTotal(allocID string, now int64) (
 	return
 }
 
-func (aps allocationPools) allocBlobberTotal(allocID, blobberID string,
-	now int64) (total state.Balance) {
-
-	for _, ap := range aps {
-		if ap.ExpireAt < common.Timestamp(now) {
-			continue
-		}
-		if ap.AllocationID != allocID {
-			continue
-		}
-		total += ap.Balance
-	}
-	return
-}
-
 //
 // allocation pools
 //

@@ -242,7 +242,6 @@ func Test_flow_reward(t *testing.T) {
 		var rp *readPool
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10, rp.allocBlobberTotal(allocID, b1.id, tp))
 
 		// read
 		tp += 100
@@ -256,7 +255,6 @@ func Test_flow_reward(t *testing.T) {
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
 		require.EqualValues(t, readPoolFund-1e10, rp.allocTotal(allocID, tp))
-		require.EqualValues(t, 1e10, rp.allocBlobberTotal(allocID, b1.id, tp))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -330,13 +328,6 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.EqualValues(t, 6e9, sp.Reward)
-
-		var rp *readPool
-		rp, err = ssc.getReadPool(reader.id, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, 10000000000,
-			rp.allocBlobberTotal(allocID, b1.id, tp))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
