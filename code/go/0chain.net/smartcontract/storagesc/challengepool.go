@@ -99,18 +99,6 @@ func (cp *challengePool) moveToWritePool(
 		wp.Pools.add(ap)
 	}
 
-	// move
-	if blobID != "" {
-		var bp, ok = ap.Blobbers.get(blobID)
-		if !ok {
-			ap.Blobbers.add(&blobberPool{
-				BlobberID: blobID,
-				Balance:   value,
-			})
-		} else {
-			bp.Balance += value
-		}
-	}
 	_, _, err = cp.TransferTo(ap, value, nil)
 	return
 }

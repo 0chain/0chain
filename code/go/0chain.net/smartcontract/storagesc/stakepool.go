@@ -216,19 +216,6 @@ func (sp *stakePool) slash(
 		return 0, err
 	}
 
-	// move
-	if blobID != "" {
-		var bp, ok = ap.Blobbers.get(blobID)
-		if !ok {
-			ap.Blobbers.add(&blobberPool{
-				BlobberID: blobID,
-				Balance:   move,
-			})
-		} else {
-			bp.Balance += move
-		}
-	}
-
 	return
 }
 
