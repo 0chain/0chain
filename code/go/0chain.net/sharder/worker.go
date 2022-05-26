@@ -217,7 +217,7 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 			return 0
 		}
 
-		if err := sc.PushToBlockProcessor(ctx, b); err != nil {
+		if err := sc.PushToBlockProcessor(b); err != nil {
 			logging.Logger.Debug("requested block, but failed to pushed to process channel",
 				zap.Int64("round", b.Round), zap.Error(err))
 		}

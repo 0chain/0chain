@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -75,14 +76,12 @@ type Chain struct {
 }
 
 // PushToBlockProcessor pushs the block to processor,
-func (sc *Chain) PushToBlockProcessor(ctx context.Context, b *block.Block) error {
-	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
+func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
 	select {
 	case sc.blockChannel <- b:
 		return nil
-	case <-cctx.Done():
-		return cctx.Err()
+	case <-time.After(3 * time.Second):
+		return errors.New("push to block processor timeout")
 	}
 }
 

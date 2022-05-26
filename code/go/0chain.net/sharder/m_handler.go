@@ -29,7 +29,7 @@ type Chainer interface {
 	GetCurrentRound() int64
 	GetLatestFinalizedBlock() *block.Block
 	GetBlock(ctx context.Context, hash datastore.Key) (*block.Block, error)
-	PushToBlockProcessor(ctx context.Context, b *block.Block) error
+	PushToBlockProcessor(b *block.Block) error
 	ForceFinalizeRound()
 }
 
@@ -86,7 +86,7 @@ func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return false, err
 		}
 
-		if err := sc.PushToBlockProcessor(ctx, b); err != nil {
+		if err := sc.PushToBlockProcessor(b); err != nil {
 			Logger.Error("NotarizedBlockHandler, push notarized block to channel failed",
 				zap.Int64("round", b.Round), zap.Error(err))
 			return false, nil
@@ -113,7 +113,7 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return false, err
 		}
 
-		if err := sc.PushToBlockProcessor(ctx, b); err != nil {
+		if err := sc.PushToBlockProcessor(b); err != nil {
 			Logger.Debug("Notarized block kick, push block to process channel failed",
 				zap.Int64("round", b.Round), zap.Error(err))
 		}
