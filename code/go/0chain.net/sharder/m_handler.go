@@ -3,7 +3,6 @@ package sharder
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -30,7 +29,7 @@ type Chainer interface {
 	GetCurrentRound() int64
 	GetLatestFinalizedBlock() *block.Block
 	GetBlock(ctx context.Context, hash datastore.Key) (*block.Block, error)
-	GetBlockChannel() chan *block.Block
+	PushToBlockProcessor(ctx context.Context, b *block.Block) error
 	ForceFinalizeRound()
 }
 
@@ -77,14 +76,6 @@ func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return true, nil // doesn't need a not. block for the round
 		}
 
-		//cr := sc.GetCurrentRound()
-		//if b.Round != cr+1 {
-		//	Logger.Debug("received notarized block, skip not connect to current round",
-		//		zap.Int64("round", b.Round),
-		//		zap.Int64("current round", cr))
-		//	return true, nil
-		//}
-
 		_, err := sc.GetBlock(ctx, b.Hash)
 		if err == nil {
 			Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
@@ -95,10 +86,9 @@ func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return false, err
 		}
 
-		select {
-		case sc.GetBlockChannel() <- b:
-		case <-time.NewTimer(3 * time.Second).C: // TODO: make the timeout configurable
-			Logger.Error("Push notarized block to channel timeout")
+		if err := sc.PushToBlockProcessor(ctx, b); err != nil {
+			Logger.Error("NotarizedBlockHandler, push notarized block to channel failed",
+				zap.Int64("round", b.Round), zap.Error(err))
 			return false, nil
 		}
 
@@ -119,18 +109,15 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return true, nil // doesn't need a not. block for the round
 		}
 
-		//if b.Round != sc.GetCurrentRound()+1 {
-		//	return true, nil
-		//}
-
 		if err := node.ValidateSenderSignature(ctx); err != nil {
 			return false, err
 		}
 
-		sc.GetBlockChannel() <- b // even if we have the block
+		if err := sc.PushToBlockProcessor(ctx, b); err != nil {
+			Logger.Debug("Notarized block kick, push block to process channel failed",
+				zap.Int64("round", b.Round), zap.Error(err))
+		}
 
-		// force notify block finalization process
-		//sc.ForceFinalizeRound()
 		return true, nil
 	}
 }

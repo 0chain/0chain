@@ -123,7 +123,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
-				BlockChannel:   tt.fields.BlockChannel,
+				blockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
 				BlockCache:     tt.fields.BlockCache,
 				BlockTxnCache:  tt.fields.BlockTxnCache,

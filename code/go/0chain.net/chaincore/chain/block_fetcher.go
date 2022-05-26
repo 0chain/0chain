@@ -192,12 +192,9 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			// if force from sharders
 			if bfr.sharders {
 				if bf.acquire(ctx, shardersl) {
-					//fetching[bfr.hash] = bfr
 					if bfr.hash != "" {
 						fetching[bfr.hash] = bfr // add, increasing map length
 					} else {
-						rd := strconv.FormatInt(bfr.round, 10)
-						logging.Logger.Debug("fetching block", zap.String("round", rd))
 						fetching[strconv.FormatInt(bfr.round, 10)] = bfr
 					}
 					go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
@@ -213,8 +210,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 				if bfr.hash != "" {
 					fetching[bfr.hash] = bfr // add, increasing map length
 				} else {
-					rd := strconv.FormatInt(bfr.round, 10)
-					logging.Logger.Debug("fetching block", zap.String("round", rd))
 					fetching[strconv.FormatInt(bfr.round, 10)] = bfr
 				}
 				go bf.fetchFromMiners(ctx, bfr, got, chainer, minersl)

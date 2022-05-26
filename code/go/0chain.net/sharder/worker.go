@@ -58,7 +58,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	//reqC := make(chan int64, 1)
 
 	const maxRequestBlocks = 20
-	var synching bool
+	var syncing bool
 
 	for {
 		select {
@@ -103,11 +103,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			)
 
 			cr := sc.GetCurrentRound()
-			if cr < lfb.Round {
-				sc.SetCurrentRound(lfb.Round)
-				cr = lfb.Round
-			}
-
 			if cr > lfbTk.Round {
 				continue
 			}
@@ -131,31 +126,21 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			endRound = cr + reqNum
-			synching = true
+			syncing = true
 
 			logging.Logger.Debug("process block, sync blocks",
 				zap.Int64("start round", cr+1),
 				zap.Int64("end round", cr+reqNum+1))
-			go func() {
-				sc.requestBlocks(ctx, cr, reqNum)
-				//reqC <- int64(n) + cr
-			}()
-
-		//case reqEndRound := <-reqC:
-		//	if reqEndRound < endRound {
-		//		<-time.After(time.Second)
-		//		//endRound = reqEndRound
-		//		syncBlocksTimer.Reset(0)
-		//	}
-		case b := <-sc.GetBlockChannel():
+			go sc.requestBlocks(ctx, cr, reqNum)
+		case b := <-sc.blockChannel:
 			cr := sc.GetCurrentRound()
 			if b.Round != sc.GetCurrentRound()+1 {
 				logging.Logger.Debug("process block skip",
 					zap.Int64("block round", b.Round),
 					zap.Int64("current round", cr),
-					zap.Bool("syncing", synching))
+					zap.Bool("syncing", syncing))
 
-				if !synching {
+				if !syncing {
 					syncBlocksTimer.Reset(0)
 				}
 
@@ -171,7 +156,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
 			if b.Round+aheadN >= endRound {
-				synching = false
+				syncing = false
 				if b.Round < lfbTk.Round {
 					logging.Logger.Debug("process block, hit end, trigger sync",
 						zap.Int64("round", b.Round),
@@ -232,9 +217,10 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 			return 0
 		}
 
-		logging.Logger.Debug("fetched block from remote", zap.Int64("round", b.Round))
-		sc.GetBlockChannel() <- b
-		logging.Logger.Debug("pushed to block process channel", zap.Int64("round", b.Round))
+		if err := sc.PushToBlockProcessor(ctx, b); err != nil {
+			logging.Logger.Debug("requested block, but failed to pushed to process channel",
+				zap.Int64("round", b.Round), zap.Error(err))
+		}
 	}
 
 	return len(blocks)

@@ -29,7 +29,7 @@ var sharderChain = &Chain{}
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
-	sharderChain.BlockChannel = make(chan *block.Block, 1)
+	sharderChain.blockChannel = make(chan *block.Block, 1)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
@@ -62,7 +62,7 @@ type MinioStats struct {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	BlockChannel   chan *block.Block
+	blockChannel   chan *block.Block
 	RoundChannel   chan *round.Round
 	BlockCache     cache.Cache
 	BlockTxnCache  cache.Cache
@@ -74,9 +74,16 @@ type Chain struct {
 	pbMutex          sync.RWMutex
 }
 
-/*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
-func (sc *Chain) GetBlockChannel() chan *block.Block {
-	return sc.BlockChannel
+// PushToBlockProcessor pushs the block to processor,
+func (sc *Chain) PushToBlockProcessor(ctx context.Context, b *block.Block) error {
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	select {
+	case sc.blockChannel <- b:
+		return nil
+	case <-cctx.Done():
+		return cctx.Err()
+	}
 }
 
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
