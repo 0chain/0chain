@@ -47,10 +47,8 @@ type mockAllocation struct {
 	expiration common.Timestamp
 }
 type mockAllocationPool struct {
-	balance          float64
-	expires          common.Timestamp
-	blobberBalance   float64
-	numberOfBlobbers int64
+	balance float64
+	expires common.Timestamp
 }
 
 type mockReadPools struct {
@@ -95,9 +93,9 @@ func TestCommitBlobberRead(t *testing.T) {
 	}
 	var rPools = mockReadPools{
 		thisAllocation: []mockAllocationPool{
-			{2.3, now, 19.2, 1},
-			{2.3, now * 3, 19.2, 3},
-			{2.3, now - 1, 19.2, 1},
+			{2.3, now},
+			{2.3, now * 3},
+			{2.3, now - 1},
 		},
 		otherAllocations: 4,
 	}
@@ -112,7 +110,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	t.Run("check blobber sort needed", func(t *testing.T) {
 		var bRPools = rPools
 		bRPools.thisAllocation = []mockAllocationPool{
-			{2.3, now * 3, 19.2, 3},
+			{2.3, now * 3},
 		}
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, read, allocation, stakes, bRPools,
@@ -189,36 +187,6 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
 		require.True(t, strings.Contains(err.Error(), errExpiredAllocation))
 	})
-
-	t.Run(errNoTokensReadPool+" expired blobbers", func(t *testing.T) {
-		var expiredReadPools = rPools
-		expiredReadPools.thisAllocation = []mockAllocationPool{
-			{2.3, 0, 19.2, 1},
-			{2.3, now - 2, 19.2, 3},
-			{2.3, now - 1, 19.2, 1},
-		}
-		var err = testCommitBlobberRead(
-			t, blobberYaml, lastRead, read, allocation, stakes, expiredReadPools,
-		)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-		require.True(t, strings.Contains(err.Error(), errNoTokensReadPool))
-	})
-
-	t.Run(errNotEnoughTokens+" expired blobbers", func(t *testing.T) {
-		var expiredReadPools = rPools
-		expiredReadPools.thisAllocation = []mockAllocationPool{
-			{2.3, now * 3, 0.00001, 1},
-			{2.3, now - 1, 19.2, 1},
-		}
-		var err = testCommitBlobberRead(
-			t, blobberYaml, lastRead, read, allocation, stakes, expiredReadPools,
-		)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-		require.True(t, strings.Contains(err.Error(), errNotEnoughTokens))
-	})
-
 }
 
 func testCommitBlobberRead(
