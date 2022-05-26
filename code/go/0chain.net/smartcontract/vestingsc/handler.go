@@ -20,13 +20,13 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 	rh.Register(GetEndpoints(rh))
 }
 
-func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	vrh := NewVestingRestHandler(rh)
 	vesting := "/v1/screst/" + ADDRESS
-	return []rest.RestEndpoint{
-		{Name: vesting + "/getPoolInfo", Endpoint: vrh.getPoolInfo},
-		{Name: vesting + "/getClientPools", Endpoint: vrh.getClientPools},
-		{Name: vesting + "/vesting_config", Endpoint: vrh.getConfig},
+	return []rest.Endpoint{
+		{URI: vesting + "/getPoolInfo", Handler: vrh.getPoolInfo},
+		{URI: vesting + "/getClientPools", Handler: vrh.getClientPools},
+		{URI: vesting + "/vesting_config", Handler: vrh.getConfig},
 	}
 }
 

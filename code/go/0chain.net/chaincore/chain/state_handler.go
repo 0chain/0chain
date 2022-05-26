@@ -188,7 +188,7 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetFunctionNames(address string) []string {
-	var endpoints []rest.RestEndpoint
+	var endpoints []rest.Endpoint
 	switch address {
 	case storagesc.ADDRESS:
 		endpoints = storagesc.GetEndpoints(nil)
@@ -205,7 +205,7 @@ func GetFunctionNames(address string) []string {
 	}
 	var names []string
 	for _, endepoint := range endpoints {
-		names = append(names, endepoint.Name)
+		names = append(names, endepoint.URI)
 	}
 	return names
 }

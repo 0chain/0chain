@@ -5,9 +5,9 @@ import (
 	"net/http"
 )
 
-type RestEndpoint struct {
-	Name     string
-	Endpoint func(w http.ResponseWriter, r *http.Request)
+type Endpoint struct {
+	URI     string
+	Handler func(w http.ResponseWriter, r *http.Request)
 }
 
 // swagger:model Int64Map
@@ -23,7 +23,7 @@ type QueryChainer interface {
 
 type RestHandlerI interface {
 	QueryChainer
-	Register([]RestEndpoint)
+	Register([]Endpoint)
 }
 
 type TestQueryChainer struct {
@@ -46,8 +46,8 @@ func NewRestHandler(c QueryChainer) RestHandlerI {
 	return &RestHandler{QueryChainer: c}
 }
 
-func (rh *RestHandler) Register(endpoints []RestEndpoint) {
+func (rh *RestHandler) Register(endpoints []Endpoint) {
 	for _, e := range endpoints {
-		http.HandleFunc(e.Name, e.Endpoint)
+		http.HandleFunc(e.URI, e.Handler)
 	}
 }

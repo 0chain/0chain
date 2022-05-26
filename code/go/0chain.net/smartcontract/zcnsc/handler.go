@@ -26,13 +26,13 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 	rh.Register(GetEndpoints(rh))
 }
 
-func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	zrh := NewZcnRestHandler(rh)
 	zcn := "/v1/screst/" + ADDRESS
-	return []rest.RestEndpoint{
-		{Name: zcn + "/getAuthorizerNodes", Endpoint: zrh.getAuthorizerNodes},
-		{Name: zcn + "/getGlobalConfig", Endpoint: zrh.GetGlobalConfig},
-		{Name: zcn + "/getAuthorizer", Endpoint: zrh.getAuthorizer},
+	return []rest.Endpoint{
+		{URI: zcn + "/getAuthorizerNodes", Handler: zrh.getAuthorizerNodes},
+		{URI: zcn + "/getGlobalConfig", Handler: zrh.GetGlobalConfig},
+		{URI: zcn + "/getAuthorizer", Handler: zrh.getAuthorizer},
 	}
 }
 

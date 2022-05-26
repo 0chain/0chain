@@ -32,14 +32,14 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 	rh.Register(GetEndpoints(rh))
 }
 
-func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	frh := NewFaucetscRestHandler(rh)
 	faucet := "/v1/screst/" + ADDRESS
-	return []rest.RestEndpoint{
-		{Name: faucet + "/personalPeriodicLimit", Endpoint: frh.getPersonalPeriodicLimit},
-		{Name: faucet + "/globalPeriodicLimit", Endpoint: frh.getGlobalPeriodicLimit},
-		{Name: faucet + "/pourAmount", Endpoint: frh.getPourAmount},
-		{Name: faucet + "/faucet_config", Endpoint: frh.getConfig},
+	return []rest.Endpoint{
+		{URI: faucet + "/personalPeriodicLimit", Handler: frh.getPersonalPeriodicLimit},
+		{URI: faucet + "/globalPeriodicLimit", Handler: frh.getGlobalPeriodicLimit},
+		{URI: faucet + "/pourAmount", Handler: frh.getPourAmount},
+		{URI: faucet + "/faucet_config", Handler: frh.getConfig},
 	}
 }
 

@@ -34,31 +34,31 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 	rh.Register(GetEndpoints(rh))
 }
 
-func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	mrh := NewMinerRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
-	return []rest.RestEndpoint{
-		{Name: miner + "/globalSettings", Endpoint: mrh.getGlobalSettings},
-		{Name: miner + "/getNodepool", Endpoint: mrh.getNodePool},
-		{Name: miner + "/getUserPools", Endpoint: mrh.getUserPools},
-		{Name: miner + "/getMinerList", Endpoint: mrh.getMinerList},
-		{Name: miner + "/get_miners_stats", Endpoint: mrh.getMinersStats},
-		{Name: miner + "/get_miners_stake", Endpoint: mrh.getMinersStake},
-		{Name: miner + "/getSharderList", Endpoint: mrh.getSharderList},
-		{Name: miner + "/get_sharders_stats", Endpoint: mrh.getShardersStats},
-		{Name: miner + "/get_sharders_stake", Endpoint: mrh.getShardersStake},
-		{Name: miner + "/getSharderKeepList", Endpoint: mrh.getSharderKeepList},
-		{Name: miner + "/getPhase", Endpoint: mrh.getPhase},
-		{Name: miner + "/getDkgList", Endpoint: mrh.getDkgList},
-		{Name: miner + "/getMpksList", Endpoint: mrh.getMpksList},
-		{Name: miner + "/getGroupShareOrSigns", Endpoint: mrh.getGroupShareOrSigns},
-		{Name: miner + "/getMagicBlock", Endpoint: mrh.getMagicBlock},
-		{Name: miner + "/getEvents", Endpoint: mrh.getEvents},
-		{Name: miner + "/nodeStat", Endpoint: mrh.getNodeStat},
-		{Name: miner + "/nodePoolStat", Endpoint: mrh.getNodePoolStat},
-		{Name: miner + "/configs", Endpoint: mrh.getConfigs},
-		{Name: miner + "/get_miner_geolocations", Endpoint: mrh.getMinerGeolocations},
-		{Name: miner + "/get_sharder_geolocations", Endpoint: mrh.getSharderGeolocations},
+	return []rest.Endpoint{
+		{URI: miner + "/globalSettings", Handler: mrh.getGlobalSettings},
+		{URI: miner + "/getNodepool", Handler: mrh.getNodePool},
+		{URI: miner + "/getUserPools", Handler: mrh.getUserPools},
+		{URI: miner + "/getMinerList", Handler: mrh.getMinerList},
+		{URI: miner + "/get_miners_stats", Handler: mrh.getMinersStats},
+		{URI: miner + "/get_miners_stake", Handler: mrh.getMinersStake},
+		{URI: miner + "/getSharderList", Handler: mrh.getSharderList},
+		{URI: miner + "/get_sharders_stats", Handler: mrh.getShardersStats},
+		{URI: miner + "/get_sharders_stake", Handler: mrh.getShardersStake},
+		{URI: miner + "/getSharderKeepList", Handler: mrh.getSharderKeepList},
+		{URI: miner + "/getPhase", Handler: mrh.getPhase},
+		{URI: miner + "/getDkgList", Handler: mrh.getDkgList},
+		{URI: miner + "/getMpksList", Handler: mrh.getMpksList},
+		{URI: miner + "/getGroupShareOrSigns", Handler: mrh.getGroupShareOrSigns},
+		{URI: miner + "/getMagicBlock", Handler: mrh.getMagicBlock},
+		{URI: miner + "/getEvents", Handler: mrh.getEvents},
+		{URI: miner + "/nodeStat", Handler: mrh.getNodeStat},
+		{URI: miner + "/nodePoolStat", Handler: mrh.getNodePoolStat},
+		{URI: miner + "/configs", Handler: mrh.getConfigs},
+		{URI: miner + "/get_miner_geolocations", Handler: mrh.getMinerGeolocations},
+		{URI: miner + "/get_sharder_geolocations", Handler: mrh.getSharderGeolocations},
 	}
 }
 
