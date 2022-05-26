@@ -148,7 +148,9 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			cr := sc.GetCurrentRound()
 			if b.Round != sc.GetCurrentRound()+1 {
 				logging.Logger.Debug("process block skip",
-					zap.Int64("block round", b.Round), zap.Int64("current round", cr))
+					zap.Int64("block round", b.Round),
+					zap.Int64("current round", cr),
+					zap.Bool("syncing", synching))
 
 				if !synching {
 					syncBlocksTimer.Reset(0)
@@ -209,9 +211,8 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 					logging.Logger.Error("request block failed",
 						zap.Int64("round", r),
 						zap.Error(err))
+					return
 				}
-
-				return
 			}
 
 			blocks[idx] = b
