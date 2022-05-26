@@ -92,15 +92,21 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
 func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
-	_, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
-	//sc.AddRound(gr)
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
+	sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
+
+	// Save the round
+	if err := sc.StoreRound(gr.(*round.Round)); err != nil {
+		Logger.Panic("setup genesis block, save genesis round failed", zap.Error(err))
+	}
+
 	// Save the block
 	err := sc.storeBlock(gb)
 	if err != nil {
-		Logger.Error("Failed to save genesis block",
-			zap.Error(err))
+		Logger.Panic("setup genesis block, save genesis block failed", zap.Error(err))
 	}
+
 	if gb.MagicBlock != nil {
 		var tries int64
 		bs := gb.GetSummary()
