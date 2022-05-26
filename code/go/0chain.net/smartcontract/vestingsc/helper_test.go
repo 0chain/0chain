@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -41,10 +42,10 @@ type Client struct {
 	id      string                     // identifier
 	pk      string                     // public key
 	scheme  encryption.SignatureScheme // pk/sk
-	balance state.Balance              // user or blobber
+	balance currency.Coin              // user or blobber
 }
 
-func newClient(balance state.Balance, balances chainstate.StateContextI) (
+func newClient(balance currency.Coin, balances chainstate.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -70,13 +71,13 @@ func mustEncode(t *testing.T, val interface{}) (b []byte) {
 	return
 }
 
-func newTransaction(f, t datastore.Key, val state.Balance,
+func newTransaction(f, t datastore.Key, val currency.Coin,
 	now common.Timestamp) (tx *transaction.Transaction) {
 
 	tx = new(transaction.Transaction)
 	tx.Hash = randString(32)
-	tx.ClientID = string(f)
-	tx.ToClientID = string(t)
+	tx.ClientID = f
+	tx.ToClientID = t
 	tx.Value = int64(val)
 	tx.CreationDate = now
 	return
@@ -90,7 +91,7 @@ func newTestVestingSC() (vsc *VestingSmartContract) {
 }
 
 func (c *Client) add(t *testing.T, vsc *VestingSmartContract,
-	ar *addRequest, value state.Balance, now common.Timestamp,
+	ar *addRequest, value currency.Coin, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	var tx = newTransaction(c.id, ADDRESS, value, now)

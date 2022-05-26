@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/node"
@@ -143,7 +145,7 @@ func GetMPT(dbType int, version util.Sequence, root util.Key) util.MerklePatrici
 func saveWallets(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 	if mpt != nil {
 		for _, w := range wallets {
-			balance := state.Balance(w.Balance)
+			balance := currency.Coin(w.Balance)
 			s := state.State{Balance: balance}
 			s.SetTxnHash(strings.Repeat("00", 32))
 			if _, err := mpt.Insert(util.Path(w.ClientID), &s); err != nil {
@@ -188,7 +190,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 				if err != nil {
 					panic(err)
 				}
-				s.Balance -= state.Balance(value)
+				s.Balance, err = currency.MinusInt64(s.Balance, value)
+				if err != nil {
+					panic(err)
+				}
 				if _, err := mpt.Insert(util.Path(wf.ClientID), s); err != nil {
 					panic(err)
 				}
@@ -203,7 +208,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			if err != nil {
 				panic(err)
 			}
-			s.Balance += state.Balance(value)
+			s.Balance, err = currency.AddInt64(s.Balance, value)
+			if err != nil {
+				panic(err)
+			}
 			if _, err := mpt.Insert(util.Path(wt.ClientID), s); err != nil {
 				panic(err)
 			}
@@ -223,7 +231,7 @@ func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 		if err != nil {
 			panic(err)
 		} else {
-			if s.Balance != state.Balance(w.Balance) {
+			if s.Balance != currency.Coin(w.Balance) {
 				panic(fmt.Sprintf("balance mismatch (%v): %d; Found : %d\n", w.ClientID, w.Balance, s.Balance))
 			}
 		}

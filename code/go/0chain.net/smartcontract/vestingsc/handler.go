@@ -70,7 +70,13 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	common.Respond(w, r, vp.info(common.Now()), nil)
+	vpInfo, err := vp.info(common.Now())
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true,
+			"can't get vesting pool info"))
+		return
+	}
+	common.Respond(w, r, vpInfo, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config vesting_config

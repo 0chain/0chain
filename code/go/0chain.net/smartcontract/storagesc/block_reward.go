@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"sync"
 
+	"0chain.net/chaincore/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
@@ -143,12 +144,29 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		totalWeight = 1
 	}
 
+	rewardBal := bbr
 	for i, qsp := range stakePools {
+		if rewardBal == 0 {
+			break
+		}
 		weightRatio := weight[i] / totalWeight
 		if weightRatio > 0 && weightRatio <= 1 {
-			reward := bbr * weightRatio
+			fBBR, err := bbr.Float64()
+			if err != nil {
+				return err
+			}
+			reward, err := currency.Float64ToCoin(fBBR * weightRatio)
+			if err != nil {
+				return err
+			}
+			if reward > rewardBal {
+				reward = rewardBal
+				rewardBal = 0
+			} else {
+				rewardBal -= reward
+			}
 			logging.Logger.Info("blobber_block_rewards_pass",
-				zap.Float64("reward", reward),
+				zap.Uint64("reward", uint64(reward)),
 				zap.String("blobber id", qualifyingBlobberIds[i]),
 				zap.Int64("round", balances.GetBlock().Round),
 				zap.String("block_hash", balances.GetBlock().Hash))
@@ -162,6 +180,30 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				zap.Any("stake pool", qsp))
 			return common.NewError("blobber_block_rewards_failed", "weight ratio out of bound")
 		}
+	}
+
+	if rewardBal > 0 {
+		rShare, rl, err := currency.DivideCoin(rewardBal, int64(len(stakePools)))
+		if err != nil {
+			return err
+		}
+
+		if rShare > 0 {
+			for i := range stakePools {
+				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+				}
+			}
+		}
+
+		if rl > 0 {
+			for i := 0; i < int(rl); i++ {
+				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+				}
+			}
+		}
+
 	}
 
 	for i, qsp := range stakePools {
@@ -183,17 +225,17 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 }
 
 func getBlockReward(
-	br state.Balance,
+	br currency.Coin,
 	currentRound,
 	brChangePeriod int64,
 	brChangeRatio,
-	blobberWeight float64) (float64, error) {
+	blobberWeight float64) (currency.Coin, error) {
 	if brChangeRatio <= 0 || brChangeRatio >= 1 {
 		return 0, fmt.Errorf("unexpected block reward change ratio: %f", brChangeRatio)
 	}
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound % brChangePeriod
-	return float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight, nil
+	return currency.Float64ToCoin(float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight)
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {

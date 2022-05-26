@@ -3,9 +3,9 @@ package stakepool
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/chaincore/currency"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -17,7 +17,7 @@ func (sp *StakePool) UnlockClientStakePool(
 	providerId datastore.Key,
 	poolId datastore.Key,
 	balances cstate.StateContextI,
-) (state.Balance, error) {
+) (currency.Coin, error) {
 	var usp *UserStakePools
 	usp, err := getOrCreateUserStakePool(providerType, clientID, balances)
 	if err != nil {
@@ -40,7 +40,7 @@ func (sp *StakePool) UnlockPool(
 	poolId datastore.Key,
 	usp *UserStakePools,
 	balances cstate.StateContextI,
-) (state.Balance, error) {
+) (currency.Coin, error) {
 	foundProvider := usp.FindProvider(poolId)
 	if len(foundProvider) == 0 || providerId != foundProvider {
 		return 0, fmt.Errorf("user %v does not own stake pool %v", clientID, poolId)

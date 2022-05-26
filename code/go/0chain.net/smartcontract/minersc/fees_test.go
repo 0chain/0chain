@@ -4,11 +4,11 @@ import (
 	"math/rand"
 	"testing"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ type miner struct {
 
 // create and add miner, create stake holders, don't stake
 func newMiner(t *testing.T, msc *MinerSmartContract, now, ns int64,
-	val state.Balance, balances cstate.StateContextI) (mn *miner) {
+	val currency.Coin, balances cstate.StateContextI) (mn *miner) {
 
 	mn = new(miner)
 	mn.miner, mn.delegate = addMiner(t, msc, now, balances)
@@ -33,7 +33,7 @@ func newMiner(t *testing.T, msc *MinerSmartContract, now, ns int64,
 
 // create and add sharder, create stake holders, don't stake
 func newSharder(t *testing.T, msc *MinerSmartContract, now, ns int64,
-	val state.Balance, balances cstate.StateContextI) (sh *sharder) {
+	val currency.Coin, balances cstate.StateContextI) (sh *sharder) {
 
 	sh = new(sharder)
 	sh.sharder, sh.delegate = addSharder(t, msc, now, balances)
@@ -127,21 +127,39 @@ func existInDelegatesOfNodes(id string, nodes []*MinerNode) bool {
 	return false
 }
 
-func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) state.Balance {
+func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
 	blockReward := gn.BlockReward
-	minerR, _ := gn.splitByShareRatio(blockReward)
-	fees := msc.sumFee(b, false)
-	minerF, _ := gn.splitByShareRatio(fees)
+	minerR, _, err := gn.splitByShareRatio(blockReward)
+	if err != nil {
+		return 0, err
+	}
+	fees, err := msc.sumFee(b, false)
+	if err != nil {
+		return 0, err
+	}
+	minerF, _, err := gn.splitByShareRatio(fees)
+	if err != nil {
+		return 0, err
+	}
 
-	return minerR + minerF
+	return minerR + minerF, nil
 }
 
-func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) state.Balance {
+func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
 	blockReward := gn.BlockReward
-	_, sharderR := gn.splitByShareRatio(blockReward)
-	fees := msc.sumFee(b, false)
-	_, sharderF := gn.splitByShareRatio(fees)
-	return sharderR + sharderF
+	_, sharderR, err := gn.splitByShareRatio(blockReward)
+	if err != nil {
+		return 0, err
+	}
+	fees, err := msc.sumFee(b, false)
+	if err != nil {
+		return 0, err
+	}
+	_, sharderF, err := gn.splitByShareRatio(fees)
+	if err != nil {
+		return 0, err
+	}
+	return sharderR + sharderF, nil
 }
 
 func Test_payFees(t *testing.T) {
@@ -253,9 +271,11 @@ func Test_payFees(t *testing.T) {
 
 		for _, mn := range miners {
 			if mn == generator {
+				mnPayment, err := computeMinerPayments(gn, msc, b)
+				require.NoError(t, err)
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -273,7 +293,10 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
-				shP := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+				shP, err := computeShardersPayments(gn, msc, b)
+				require.NoError(t, err)
+				shP = shP / currency.Coin(len(blockSharders))
+
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
@@ -330,15 +353,17 @@ func Test_payFees(t *testing.T) {
 		// generator's and block sharders' stake holders
 
 		var (
-			expected = make(map[string]state.Balance)
-			got      = make(map[string]state.Balance)
+			expected = make(map[string]currency.Coin)
+			got      = make(map[string]currency.Coin)
 		)
 
 		for _, mn := range miners {
+			mnPayment, err := computeMinerPayments(gn, msc, b)
+			require.NoError(t, err)
 			if mn == generator {
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -353,7 +378,9 @@ func Test_payFees(t *testing.T) {
 
 		blockSharders, err := msc.getBlockSharders(b, balances)
 		require.NoError(t, err)
-		sharderPayments := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+		sharderPayments, err := computeShardersPayments(gn, msc, b)
+		require.NoError(t, err)
+		sharderPayments = sharderPayments / currency.Coin(len(blockSharders))
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
 				assert.Equal(t,
@@ -376,7 +403,7 @@ func Test_payFees(t *testing.T) {
 	// don't set DKG miners list, because no VC is expected
 
 	// reset all balances
-	balances.balances = make(map[string]state.Balance)
+	balances.balances = make(map[string]currency.Coin)
 
 	t.Run("pay fees -> with fees", func(t *testing.T) {
 
@@ -405,15 +432,17 @@ func Test_payFees(t *testing.T) {
 		// pools are active, rewards as above and +fees
 
 		var (
-			expected = make(map[string]state.Balance)
-			got      = make(map[string]state.Balance)
+			expected = make(map[string]currency.Coin)
+			got      = make(map[string]currency.Coin)
 		)
 
 		for _, mn := range miners {
+			mnPayment, err := computeMinerPayments(gn, msc, b)
+			require.NoError(t, err)
 			if mn == generator {
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -431,7 +460,9 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
-				shP := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+				shP, err := computeShardersPayments(gn, msc, b)
+				require.NoError(t, err)
+				shP = shP / currency.Coin(len(blockSharders))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
@@ -454,7 +485,7 @@ func Test_payFees(t *testing.T) {
 	// don't set DKG miners list, because no VC is expected
 
 	// reset all balances
-	balances.balances = make(map[string]state.Balance)
+	balances.balances = make(map[string]currency.Coin)
 
 	t.Run("pay fees -> view change interests", func(t *testing.T) {
 
@@ -481,15 +512,17 @@ func Test_payFees(t *testing.T) {
 		// pools are active, rewards as above and +fees
 
 		var (
-			expected = make(map[string]state.Balance)
-			got      = make(map[string]state.Balance)
+			expected = make(map[string]currency.Coin)
+			got      = make(map[string]currency.Coin)
 		)
 
 		for _, mn := range miners {
+			mnPayment, err := computeMinerPayments(gn, msc, b)
+			require.NoError(t, err)
 			if mn == generator {
 				assert.Equal(t,
 					balances.balances[mn.delegate.id],
-					computeMinerPayments(gn, msc, b),
+					mnPayment,
 				)
 				balances.balances[mn.delegate.id] = 0
 			}
@@ -506,7 +539,9 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		for _, sh := range sharders {
 			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
-				shP := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+				shP, err := computeShardersPayments(gn, msc, b)
+				require.NoError(t, err)
+				shP = shP / currency.Coin(len(blockSharders))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
