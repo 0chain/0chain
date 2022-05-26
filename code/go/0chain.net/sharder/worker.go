@@ -108,8 +108,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				cr = lfb.Round
 			}
 
+			if cr > lfbTk.Round {
+				continue
+			}
+
 			endRound = lfbTk.Round + aheadN
-			//endRound = lfbTk.Round
 
 			if endRound <= cr {
 				continue
