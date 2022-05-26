@@ -81,6 +81,10 @@ func (sc *StorageSmartContract) getStorageChallenge(challengeID string,
 	if err != nil {
 		return nil, err
 	}
+	challenge.ValidatorIDMap = make(map[string]struct{}, len(challenge.ValidatorIDs))
+	for _, vID := range challenge.ValidatorIDs {
+		challenge.ValidatorIDMap[vID] = struct{}{}
+	}
 
 	return challenge, nil
 }
@@ -402,6 +406,18 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	challenge, err := sc.getStorageChallenge(challResp.ID, balances)
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge", "could not find challenge, %v", err)
+	}
+
+	for _, vn := range challResp.ValidationTickets {
+		if _, ok := challenge.ValidatorIDMap[vn.ValidatorID]; !ok {
+			return "", common.NewError("verify_challenge",
+				"found invalid validator id in validation ticket")
+		}
+	}
+
+	if len(challResp.ValidationTickets) != len(challenge.ValidatorIDs) {
+		return "", common.NewError("verify_challenge",
+			"found invalid validation ticket count")
 	}
 
 	if challenge.BlobberID != t.ClientID {
@@ -843,9 +859,15 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 	}
 
+	validatorIDs := make([]string, len(selectedValidators))
+	for i := range selectedValidators {
+		validatorIDs[i] = selectedValidators[i].ID
+	}
+
 	var storageChallenge = new(StorageChallenge)
 	storageChallenge.ID = challengeID
 	storageChallenge.TotalValidators = len(selectedValidators)
+	storageChallenge.ValidatorIDs = validatorIDs
 	storageChallenge.BlobberID = blobberID
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = txn.CreationDate

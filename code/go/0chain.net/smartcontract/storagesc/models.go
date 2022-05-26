@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+
 	"0chain.net/chaincore/currency"
+
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -192,12 +194,14 @@ type allocationChallengesDecoder AllocationChallenges
 
 // swagger:model StorageChallenge
 type StorageChallenge struct {
-	Created         common.Timestamp `json:"created"`
-	ID              string           `json:"id"`
-	TotalValidators int              `json:"total_validators"`
-	AllocationID    string           `json:"allocation_id"`
-	BlobberID       string           `json:"blobber_id"`
-	Responded       bool             `json:"responded"`
+	Created         common.Timestamp    `json:"created"`
+	ID              string              `json:"id"`
+	TotalValidators int                 `json:"total_validators"`
+	ValidatorIDs    []string            `json:"validator_ids"`
+	ValidatorIDMap  map[string]struct{} `json:"-" msg:"-"`
+	AllocationID    string              `json:"allocation_id"`
+	BlobberID       string              `json:"blobber_id"`
+	Responded       bool                `json:"responded"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {

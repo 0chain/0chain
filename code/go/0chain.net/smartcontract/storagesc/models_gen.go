@@ -2008,9 +2008,9 @@ func (z *StorageAllocationStats) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 6
+	// map header, size 7
 	// string "Created"
-	o = append(o, 0x86, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+	o = append(o, 0x87, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o, err = z.Created.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Created")
@@ -2022,6 +2022,12 @@ func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "TotalValidators"
 	o = append(o, 0xaf, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73)
 	o = msgp.AppendInt(o, z.TotalValidators)
+	// string "ValidatorIDs"
+	o = append(o, 0xac, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x49, 0x44, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.ValidatorIDs)))
+	for za0001 := range z.ValidatorIDs {
+		o = msgp.AppendString(o, z.ValidatorIDs[za0001])
+	}
 	// string "AllocationID"
 	o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
 	o = msgp.AppendString(o, z.AllocationID)
@@ -2070,6 +2076,25 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "TotalValidators")
 				return
 			}
+		case "ValidatorIDs":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ValidatorIDs")
+				return
+			}
+			if cap(z.ValidatorIDs) >= int(zb0002) {
+				z.ValidatorIDs = (z.ValidatorIDs)[:zb0002]
+			} else {
+				z.ValidatorIDs = make([]string, zb0002)
+			}
+			for za0001 := range z.ValidatorIDs {
+				z.ValidatorIDs[za0001], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ValidatorIDs", za0001)
+					return
+				}
+			}
 		case "AllocationID":
 			z.AllocationID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -2102,7 +2127,11 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageChallenge) Msgsize() (s int) {
-	s = 1 + 8 + z.Created.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + msgp.IntSize + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.BoolSize
+	s = 1 + 8 + z.Created.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + msgp.IntSize + 13 + msgp.ArrayHeaderSize
+	for za0001 := range z.ValidatorIDs {
+		s += msgp.StringPrefixSize + len(z.ValidatorIDs[za0001])
+	}
+	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.BoolSize
 	return
 }
 
