@@ -233,7 +233,7 @@ Outer:
 }
 
 func (aps *allocationPools) moveToChallenge(
-	allocID, blobID string,
+	allocID string,
 	cp *challengePool,
 	now common.Timestamp,
 	value state.Balance,
@@ -245,8 +245,7 @@ func (aps *allocationPools) moveToChallenge(
 	var cut = aps.allocationCut(allocID)
 
 	if len(cut) == 0 {
-		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
+		return fmt.Errorf("no tokens in write pool for allocation: %s,", allocID)
 	}
 
 	var torm []*allocationPool // to remove later (empty allocation pools)
@@ -258,9 +257,9 @@ func (aps *allocationPools) moveToChallenge(
 			move state.Balance
 		)
 		if value >= ap.Balance {
-			move, ap.Balance = ap.Balance, 0
+			move = ap.Balance
 		} else {
-			move, ap.Balance = value, ap.Balance-value
+			move = value
 		}
 		if _, _, err = ap.TransferTo(cp, move, nil); err != nil {
 			return // transferring error
@@ -272,8 +271,7 @@ func (aps *allocationPools) moveToChallenge(
 	}
 
 	if value != 0 {
-		return fmt.Errorf("not enough tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
+		return fmt.Errorf("not enough tokens in write pool for allocation: %s,", allocID)
 	}
 
 	// remove empty allocation pools

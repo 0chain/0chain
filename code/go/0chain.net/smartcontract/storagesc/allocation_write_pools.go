@@ -49,12 +49,12 @@ func (awp *allocationWritePools) saveWritePools(
 }
 
 func (awp *allocationWritePools) moveToChallenge(
-	allocID, blobID string,
+	allocID string,
 	cp *challengePool,
 	now common.Timestamp,
 	value state.Balance,
 ) (err error) {
-	return awp.allocationPools.moveToChallenge(allocID, blobID, cp, now, value)
+	return awp.allocationPools.moveToChallenge(allocID, cp, now, value)
 }
 
 func (aps allocationWritePools) allocUntil(

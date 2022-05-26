@@ -75,7 +75,6 @@ func (cp *challengePool) save(sscKey, allocationID string,
 // moveToWritePool moves tokens back to write pool on data deleted
 func (cp *challengePool) moveToWritePool(
 	alloc *StorageAllocation,
-	blobID string,
 	until common.Timestamp,
 	wp *writePool,
 	value state.Balance,

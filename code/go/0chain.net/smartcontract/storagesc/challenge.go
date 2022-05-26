@@ -146,7 +146,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 			return fmt.Errorf("can't get allocation's write pool: %v", err)
 		}
 		var until = alloc.Until()
-		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, state.Balance(back))
+		err = cp.moveToWritePool(alloc, until, wp, state.Balance(back))
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
@@ -299,7 +299,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// move back to write pool
 	var until = alloc.Until()
-	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, state.Balance(move))
+	err = cp.moveToWritePool(alloc, until, wp, state.Balance(move))
 	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}

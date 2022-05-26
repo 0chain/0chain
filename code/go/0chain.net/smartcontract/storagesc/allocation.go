@@ -842,11 +842,10 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	var changed bool
 
-	for i, ch := range changes {
-		var blobID = alloc.BlobberAllocs[i].BlobberID
+	for _, ch := range changes {
 		switch {
 		case ch > 0:
-			err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
+			err = awp.moveToChallenge(alloc.ID, cp, now, ch)
 			changed = true
 		case ch < 0:
 			// only if the challenge pool has the tokens; all the tokens
@@ -857,7 +856,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 				if err != nil {
 					return fmt.Errorf("adjust_challenge_pool: %v", err)
 				}
-				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
+				err = cp.moveToWritePool(alloc, alloc.Until(), wp, -ch)
 				if err != nil {
 					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
 				}
@@ -1703,7 +1702,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewError("fini_alloc_failed",
 			"can't get user's write pools: "+err.Error())
 	}
-	err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
+	err = cp.moveToWritePool(alloc, alloc.Until(), wp, cp.Balance)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"moving challenge pool rest back to write pool: "+err.Error())

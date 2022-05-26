@@ -810,7 +810,10 @@ func TestExtendAllocation(t *testing.T) {
 				false,
 				balances,
 			)
-			require.EqualValues(t, tt.want.err, err != nil)
+			if tt.want.err != (err != nil) {
+				require.EqualValues(t, tt.want.err, err != nil)
+			}
+
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
 			} else {

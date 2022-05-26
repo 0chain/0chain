@@ -102,9 +102,9 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			move state.Balance
 		)
 		if value >= ap.Balance {
-			move, ap.Balance = ap.Balance, 0
+			move = ap.Balance
 		} else {
-			move, ap.Balance = value, ap.Balance-value
+			move = value
 		}
 
 		ap.Balance -= state.Balance(value)
