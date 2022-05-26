@@ -3,6 +3,7 @@ package ememorystore
 import (
 	"context"
 	"encoding/binary"
+	"log"
 	"strconv"
 
 	"github.com/0chain/gorocksdb"
@@ -48,6 +49,9 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 	defer data.Free()
 	err = datastore.FromJSON(data.Data(), entity)
 	if err != nil {
+		if entity.GetKey() == "0" {
+			log.Println("data:", string(data.Data()))
+		}
 		return err
 	}
 	return nil

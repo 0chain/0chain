@@ -3,6 +3,7 @@ package sharder
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,7 +62,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if roundEntity == nil {
 			_, err = sc.GetRoundFromStore(ctx, roundNumber)
 			if err != nil {
-				fmt.Println("get round from store failed", err)
+				log.Println("get round from store failed:", err)
 				return nil, err
 			}
 		}
