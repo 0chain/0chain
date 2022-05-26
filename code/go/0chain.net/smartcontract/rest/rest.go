@@ -10,6 +10,13 @@ type Endpoint struct {
 	Handler func(w http.ResponseWriter, r *http.Request)
 }
 
+func MakeEndpoint(uri string, f func(w http.ResponseWriter, r *http.Request)) Endpoint {
+	return Endpoint{
+		URI:     uri,
+		Handler: f,
+	}
+}
+
 // swagger:model Int64Map
 type Int64Map map[string]int64
 
