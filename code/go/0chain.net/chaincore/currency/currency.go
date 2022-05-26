@@ -147,7 +147,7 @@ func MinusInt64(c Coin, a int64) (Coin, error) {
 	return MinusCoin(c, b)
 }
 
-func (c Coin) DivideCoin(a int64) (oCur, bal Coin, err error) {
+func DivideCoin(c Coin, a int64) (oCur, bal Coin, err error) {
 	d, err := Int64ToCoin(a)
 	if err != nil {
 		return

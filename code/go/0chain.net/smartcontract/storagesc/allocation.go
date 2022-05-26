@@ -1620,7 +1620,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
-		var paid currency.Coin = 0
+		var paid currency.Coin
 		lack := d.MinLockDemand - d.Spent
 		if d.MinLockDemand > d.Spent {
 			for apIndex < len(aps) && lack > 0 {

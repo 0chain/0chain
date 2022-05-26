@@ -293,7 +293,7 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 		return strings.Compare(delegates[i].DelegateID, delegates[j].DelegateID) == -1
 	})
 
-	share, r, err := coins.DivideCoin(int64(len(delegates)))
+	share, r, err := currency.DivideCoin(coins, int64(len(delegates)))
 	if err != nil {
 		return err
 	}

@@ -129,7 +129,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 		return fmt.Errorf("not enough tokens in challenge pool: %v < %v", cp.Balance, reward)
 	}
 
-	oneReward, bal, err := reward.DivideCoin(int64(len(validators)))
+	oneReward, bal, err := currency.DivideCoin(reward, int64(len(validators)))
 	if err != nil {
 		return err
 	}
