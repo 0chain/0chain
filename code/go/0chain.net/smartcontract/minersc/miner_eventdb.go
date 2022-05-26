@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -43,12 +44,12 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbMiner.Rewards,
-			Settings: stakepool.StakePoolSettings{
-				DelegateWallet:  edbMiner.DelegateWallet,
-				ServiceCharge:   edbMiner.ServiceCharge,
-				MaxNumDelegates: edbMiner.NumberOfDelegates,
-				MinStake:        edbMiner.MinStake,
-				MaxStake:        edbMiner.MaxStake,
+			Settings: stakepool.Settings{
+				DelegateWallet:     edbMiner.DelegateWallet,
+				ServiceChargeRatio: edbMiner.ServiceCharge,
+				MaxNumDelegates:    edbMiner.NumberOfDelegates,
+				MinStake:           edbMiner.MinStake,
+				MaxStake:           edbMiner.MaxStake,
 			},
 		},
 	}
@@ -65,10 +66,10 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		PublicKey:         mn.PublicKey,
 		ShortName:         mn.ShortName,
 		BuildTag:          mn.BuildTag,
-		TotalStaked:       state.Balance(mn.TotalStaked),
+		TotalStaked:       currency.Coin(mn.TotalStaked),
 		Delete:            mn.Delete,
 		DelegateWallet:    mn.Settings.DelegateWallet,
-		ServiceCharge:     mn.Settings.ServiceCharge,
+		ServiceCharge:     mn.Settings.ServiceChargeRatio,
 		NumberOfDelegates: mn.Settings.MaxNumDelegates,
 		MinStake:          mn.Settings.MinStake,
 		MaxStake:          mn.Settings.MaxStake,
@@ -125,7 +126,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"total_staked":        mn.TotalStaked,
 			"delete":              mn.Delete,
 			"delegate_wallet":     mn.Settings.DelegateWallet,
-			"service_charge":      mn.Settings.ServiceCharge,
+			"service_charge":      mn.Settings.ServiceChargeRatio,
 			"number_of_delegates": mn.Settings.MaxNumDelegates,
 			"min_stake":           mn.Settings.MinStake,
 			"max_stake":           mn.Settings.MaxStake,

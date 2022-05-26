@@ -333,13 +333,6 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	if in.Config.Fee < 0 || gn.MaxFee < 0 {
-		msg := fmt.Sprintf("invalid negative Auth Config Fee: %v or GN Config MaxFee: %v", in.Config.Fee, gn.MaxFee)
-		err = common.NewErrorf(code, msg)
-		Logger.Error(msg, zap.Error(err))
-		return "", err
-	}
-
 	if in.Config.Fee > gn.MaxFee {
 		msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", in.Config.Fee, gn.MaxFee)
 		err = common.NewErrorf(code, msg)

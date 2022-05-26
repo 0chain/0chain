@@ -9,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -68,10 +69,10 @@ type Client struct {
 	id      string                     // identifier
 	pk      string                     // public key
 	scheme  encryption.SignatureScheme // pk/sk
-	balance state.Balance              // client wallet balance
+	balance currency.Coin              // client wallet balance
 }
 
-func newClient(balance state.Balance, balances cstate.StateContextI) (
+func newClient(balance currency.Coin, balances cstate.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -103,7 +104,7 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.ShortName = "test_miner(" + c.id + ")"
 	mn.BuildTag = "commit"
 	mn.Settings.DelegateWallet = delegateWallet
-	mn.Settings.ServiceCharge = minerServiceCharge
+	mn.Settings.ServiceChargeRatio = minerServiceCharge
 	mn.Settings.MaxNumDelegates = 10
 	mn.Settings.MinStake = 1e10
 	mn.Settings.MaxStake = 100e10
@@ -220,15 +221,15 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.TPercent = 0.51   // %
 	gn.KPercent = 0.75   // %
 	gn.LastRound = 0
-	gn.MaxStake = state.Balance(100.0e10)
-	gn.MinStake = state.Balance(0.01e10)
+	gn.MaxStake = currency.Coin(100.0e10)
+	gn.MinStake = currency.Coin(0.01e10)
 	gn.RewardRate = 1.0
 	gn.ShareRatio = 0.10
-	gn.BlockReward = state.Balance(0.7e10)
+	gn.BlockReward = currency.Coin(0.7e10)
 	gn.MaxCharge = 0.5 // %
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
-	gn.MaxMint = state.Balance(4e6 * 1e10)
+	gn.MaxMint = currency.Coin(4e6 * 1e10)
 	gn.Minted = 0
 
 	mustSave(t, GlobalNodeKey, gn, balances)

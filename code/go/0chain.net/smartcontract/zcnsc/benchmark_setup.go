@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -15,7 +17,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 )
@@ -36,12 +37,25 @@ func Setup(eventDb *event.EventDb, clients, publicKeys []string, balances cstate
 func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
-	gn.MinStakeAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	var err error
+	gn.MinStakeAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	if err != nil {
+		panic(err)
+	}
 	gn.MinLockAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinLockAmount)
-	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
-	gn.MaxFee = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
+	gn.MinMintAmount, err = currency.Float64ToCoin(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
+	if err != nil {
+		panic(err)
+	}
+	gn.MaxFee, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxFee))
+	if err != nil {
+		panic(err)
+	}
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.ZcnMinAuthorizers)
-	gn.MinBurnAmount = state.Balance(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	gn.MinBurnAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	if err != nil {
+		panic(err)
+	}
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)
@@ -69,7 +83,7 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 				DelegateWallet:  clients[i],
 				MinStake:        settings.MinStake,
 				MaxStake:        settings.MaxStake,
-				ServiceCharge:   settings.ServiceCharge,
+				ServiceCharge:   settings.ServiceChargeRatio,
 			}
 			_ = eventDb.Store.Get().Create(&authorizer)
 		}
@@ -154,12 +168,12 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 }
 
 // todo get from sc.yaml
-func getMockStakePoolSettings(wallet string) stakepool.StakePoolSettings {
-	return stakepool.StakePoolSettings{
-		DelegateWallet:  wallet,
-		MinStake:        state.Balance(1 * 1e10),
-		MaxStake:        state.Balance(100 * 1e10),
-		MaxNumDelegates: 10,
-		ServiceCharge:   0.1,
+func getMockStakePoolSettings(wallet string) stakepool.Settings {
+	return stakepool.Settings{
+		DelegateWallet:     wallet,
+		MinStake:           currency.Coin(1 * 1e10),
+		MaxStake:           currency.Coin(100 * 1e10),
+		MaxNumDelegates:    10,
+		ServiceChargeRatio: 0.1,
 	}
 }

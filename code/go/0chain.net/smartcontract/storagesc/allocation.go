@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -18,7 +20,6 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -775,8 +776,8 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(
 
 // allocation period used to calculate weighted average prices
 type allocPeriod struct {
-	read   state.Balance    // read price
-	write  state.Balance    // write price
+	read   currency.Coin    // read price
+	write  currency.Coin    // write price
 	period common.Timestamp // period (duration)
 	size   int64            // size for period
 }
@@ -786,23 +787,49 @@ func (ap *allocPeriod) weight() float64 {
 }
 
 // returns weighted average read and write prices
-func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite state.Balance) {
+func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
 		ws       = apw + npw                // weights sum
 		rp, wp   float64                    // read sum, write sum (weighted)
 	)
 
-	rp = (float64(ap.read) * apw) + (float64(np.read) * npw)
-	wp = (float64(ap.write) * apw) + (float64(np.write) * npw)
+	apReadF, err := ap.read.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
 
-	avgRead = state.Balance(rp / ws)
-	avgWrite = state.Balance(wp / ws)
+	apWriteF, err := ap.write.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	npReadF, err := np.read.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	npWriteF, err := np.write.Float64()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	rp = (apReadF * apw) + (npReadF * npw)
+	wp = (apWriteF * apw) + (npWriteF * npw)
+
+	avgRead, err = currency.Float64ToCoin(rp / ws)
+	if err != nil {
+		return 0, 0, err
+	}
+	avgWrite, err = currency.Float64ToCoin(wp / ws)
+	if err != nil {
+		return 0, 0, err
+	}
 	return
 }
 
 func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
-	psize, sizeDiff int64) (avg Terms) {
+	psize, sizeDiff int64) (avg Terms, err error) {
 
 	// allocation periods
 	var left, added allocPeriod
@@ -811,7 +838,10 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	left.size, added.size = psize, psize+sizeDiff             // sizes
 	left.period, added.period = pexp-tx, pexp+expDiff-tx      // periods
 	// join
-	avg.ReadPrice, avg.WritePrice = left.join(&added)
+	avg.ReadPrice, avg.WritePrice, err = left.join(&added)
+	if err != nil {
+		return
+	}
 
 	// just copy from next
 	avg.MinLockDemand = next.MinLockDemand
@@ -843,26 +873,15 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	var changed bool
 
 	for i, ch := range changes {
+		_, err = ch.Int64()
+		if err != nil {
+			return err
+		}
 		var blobID = alloc.BlobberAllocs[i].BlobberID
 		switch {
 		case ch > 0:
 			err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
 			changed = true
-		case ch < 0:
-			// only if the challenge pool has the tokens; all the tokens
-			// can be moved back already, or moved to a blobber due to
-			// challenge process
-			if cp.Balance >= -ch {
-				wp, err := awp.getOwnerWP()
-				if err != nil {
-					return fmt.Errorf("adjust_challenge_pool: %v", err)
-				}
-				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
-				if err != nil {
-					logging.Logger.Error("moveToWritePool faliled", zap.Error(err))
-				}
-				changed = true
-			}
 		default:
 			// no changes for the blobber
 		}
@@ -929,9 +948,12 @@ func (sc *StorageSmartContract) extendAllocation(
 		b.Used += diff // new capacity used
 
 		// update terms using weighted average
-		details.Terms = weightedAverage(&details.Terms, &b.Terms,
+		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
 			t.CreationDate, prevExpiration, alloc.Expiration, details.Size,
 			diff)
+		if err != nil {
+			return err
+		}
 
 		details.Size = size // new size
 
@@ -1598,27 +1620,34 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
-		var paid state.Balance = 0
-		if lack := d.MinLockDemand - d.Spent; lack > 0 {
+		var paid currency.Coin
+		lack := d.MinLockDemand - d.Spent
+		if d.MinLockDemand > d.Spent {
 			for apIndex < len(aps) && lack > 0 {
 				pay := lack
 				if pay > aps[apIndex].Balance {
 					pay = aps[apIndex].Balance
 				}
-				aps[apIndex].Balance -= state.Balance(pay)
+				aps[apIndex].Balance -= pay
 				if aps[apIndex].Balance == 0 {
 					apIndex++
 				}
 
-				paid += pay
-				lack -= pay
+				paid, err = currency.AddCoin(paid, pay)
+				if err != nil {
+					return err
+				}
+				lack, err = currency.MinusCoin(lack, pay)
+				if err != nil {
+					return err
+				}
 			}
 			if lack > 0 {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
 					"ammount was short by %v", d.BlobberID, lack)
 			}
 
-			err = sps[i].DistributeRewards(float64(paid), d.BlobberID, spenum.Blobber, balances)
+			err = sps[i].DistributeRewards(paid, d.BlobberID, spenum.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
 					"%v from alocation poosl %v, minlock demand %v spent %v error %v",
@@ -1646,7 +1675,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
-	var passPayments = 0.0
+	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		var b = blobbers[i]
 		if b.ID != d.BlobberID {
@@ -1654,18 +1683,33 @@ func (sc *StorageSmartContract) finishAllocation(
 				"blobber %s and %s don't match", b.ID, d.BlobberID)
 		}
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			var (
-				ratio  = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-				reward = float64(cp.Balance) * ratio * passRates[i]
-			)
+			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+			cpBalance, err := cp.Balance.Float64()
+			if err != nil {
+				return err
+			}
+			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
+			if err != nil {
+				return err
+			}
+
 			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"paying reward to stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			d.Spent += state.Balance(reward)
-			d.FinalReward += state.Balance(reward)
-			passPayments += reward
+			d.Spent, err = currency.AddCoin(d.Spent, reward)
+			if err != nil {
+				return fmt.Errorf("blobber alloc spent: %v", err)
+			}
+			d.FinalReward, err = currency.AddCoin(d.FinalReward, reward)
+			if err != nil {
+				return fmt.Errorf("blobber alloc final reward: %v", err)
+			}
+			passPayments, err = currency.AddCoin(passPayments, reward)
+			if err != nil {
+				return fmt.Errorf("pass payments: %v", err)
+			}
 		}
 
 		if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
@@ -1693,20 +1737,33 @@ func (sc *StorageSmartContract) finishAllocation(
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
 	}
-	cp.Balance -= state.Balance(passPayments)
-	// move challenge pool rest to write pool
-	alloc.MovedBack += cp.Balance
-
-	// write pool
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get user's write pools: "+err.Error())
-	}
-	err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
+	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
 	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"moving challenge pool rest back to write pool: "+err.Error())
+		return err
+	}
+	// move challenge pool rest to write pool
+	if cp.Balance > 0 {
+		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, cp.Balance)
+		if err != nil {
+			return err
+		}
+
+		// write pool
+		var wp *writePool
+		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't get user's write pools: "+err.Error())
+		}
+		err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"moving challenge pool rest back to write pool: "+err.Error())
+		}
+
+		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
+			return common.NewError("fini_alloc_failed",
+				"saving write pool: "+err.Error())
+		}
 	}
 
 	// save all rest and remove allocation from all allocations list
@@ -1714,11 +1771,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving challenge pool: "+err.Error())
-	}
-
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving write pool: "+err.Error())
 	}
 
 	alloc.Finalized = true

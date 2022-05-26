@@ -141,7 +141,10 @@ func getGlobalNode(
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		gn.readConfig()
+		err = gn.readConfig()
+		if err != nil {
+			return nil, fmt.Errorf("error reading config: %v", err)
+		}
 		if err := gn.validate(); err != nil {
 			return nil, fmt.Errorf("validating global node: %v", err)
 		}

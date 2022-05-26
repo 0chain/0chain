@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
+
 	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -36,8 +37,8 @@ type poolStat struct {
 	TimeLeft     time.Duration    `json:"time_left"`
 	Locked       bool             `json:"locked"`
 	APR          float64          `json:"apr"`
-	TokensEarned state.Balance    `json:"tokens_earned"`
-	Balance      state.Balance    `json:"balance"`
+	TokensEarned currency.Coin    `json:"tokens_earned"`
+	Balance      currency.Coin    `json:"balance"`
 }
 
 func (ps *poolStat) encode() []byte {

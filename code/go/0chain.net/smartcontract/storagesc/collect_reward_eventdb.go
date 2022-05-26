@@ -1,16 +1,18 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"0chain.net/chaincore/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
-	"fmt"
 )
 
-func emitAddOrOverwriteReward(amount state.Balance, providerID string, prr stakepool.CollectRewardRequest, balances cstate.StateContextI, t *transaction.Transaction) error {
+func emitAddOrOverwriteReward(amount currency.Coin, providerID string, prr stakepool.CollectRewardRequest, balances cstate.StateContextI, t *transaction.Transaction) error {
 	data, err := json.Marshal(event.Reward{
 		Amount:       int64(amount),
 		BlockNumber:  balances.GetBlock().Round,
