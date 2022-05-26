@@ -1,4 +1,4 @@
-package sharder_test
+package sharder
 
 import (
 	"context"
@@ -18,7 +18,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"0chain.net/sharder"
 )
 
 func init() {
@@ -51,12 +50,12 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			sc := &sharder.MockChainer{}
+			sc := &MockChainer{}
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlockChannel").Return(make(chan *block.Block, 1))
 			sc.On("ForceFinalizeRound()")
 
-			got, err := sharder.LatestFinalizedBlockHandler(sc)(tt.args.ctx, tt.args.r)
+			got, err := LatestFinalizedBlockHandler(sc)(tt.args.ctx, tt.args.r)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LatestFinalizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -80,9 +79,9 @@ func TestChain_AcceptMessage(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   sharder.Stats
-		BlockSyncStats *sharder.SyncStats
-		TieringStats   *sharder.MinioStats
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
 	}
 	type args struct {
 		entityName string
@@ -102,7 +101,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 		{
 			name: "Test_Chain_AcceptMessage_Existing_Block_FALSE",
 			fields: fields{
-				Chain: sharder.GetSharderChain().Chain,
+				Chain: GetSharderChain().Chain,
 			},
 			args: args{entityName: "block", entityID: b.Hash},
 			want: false,
@@ -110,7 +109,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 		{
 			name: "Test_Chain_AcceptMessage_Not_Existing_Block_TRUE",
 			fields: fields{
-				Chain: sharder.GetSharderChain().Chain,
+				Chain: GetSharderChain().Chain,
 			},
 			args: args{entityName: "block", entityID: encryption.Hash("Test_Chain_AcceptMessage_Not_Existing_Block_TRUE")},
 			want: true,
@@ -121,7 +120,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			sc := &sharder.Chain{
+			sc := &Chain{
 				Chain:          tt.fields.Chain,
 				blockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
@@ -167,11 +166,11 @@ func TestNotarizedBlockHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &sharder.MockChainer{}
+			sc := &MockChainer{}
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
 
-			got, err := sharder.NotarizedBlockHandler(sc)(tt.args.ctx, tt.args.entity)
+			got, err := NotarizedBlockHandler(sc)(tt.args.ctx, tt.args.entity)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NotarizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -215,12 +214,12 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			sc := &sharder.MockChainer{}
+			sc := &MockChainer{}
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlockChannel").Return(make(chan *block.Block, 1))
 			sc.On("ForceFinalizeRound()")
 
-			got, err := sharder.NotarizedBlockKickHandler(sc)(tt.args.ctx, tt.args.entity)
+			got, err := NotarizedBlockKickHandler(sc)(tt.args.ctx, tt.args.entity)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NotarizedBlockKickHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return

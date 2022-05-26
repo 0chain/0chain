@@ -8,12 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
+	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 )
 
@@ -62,12 +61,14 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if roundEntity == nil {
 			_, err = sc.GetRoundFromStore(ctx, roundNumber)
 			if err != nil {
+				fmt.Println("get round from store failed", err)
 				return nil, err
 			}
 		}
 
 		hash, err = sc.GetBlockHash(ctx, roundNumber)
 		if err != nil {
+			fmt.Println("get block hash failed", err)
 			return nil, err
 		}
 	}
@@ -87,9 +88,11 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange() {
 		b, err = sc.GetBlockFromStore(hash, roundEntity)
 		if err != nil {
+			fmt.Println("get block from store 2 failed", err)
 			return nil, err
 		}
 	}
+	fmt.Println("here")
 	return chain.GetBlockResponse(b, parts)
 }
 
