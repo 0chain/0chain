@@ -39,7 +39,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 		{Name: faucet + "/personalPeriodicLimit", Endpoint: frh.getPersonalPeriodicLimit},
 		{Name: faucet + "/globalPeriodicLimit", Endpoint: frh.getGlobalPeriodicLimit},
 		{Name: faucet + "/pourAmount", Endpoint: frh.getPourAmount},
-		{Name: faucet + "/faucet_config", Endpoint: frh.getConfig},
+		{Name: faucet + "/getConfig", Endpoint: frh.getConfig},
 	}
 }
 
