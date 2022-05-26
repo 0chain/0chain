@@ -1,6 +1,7 @@
 package main
 
 import (
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
@@ -128,7 +129,7 @@ func (t testWallet) newProposal(proposalID string, toClientID string, value int6
 	transfer := state.Transfer{
 		ClientID:   t.groupClientID,
 		ToClientID: toClientID,
-		Amount:     state.Balance(value),
+		Amount:     currency.Coin(value),
 	}
 
 	votes := make(map[string]multisigsc.Vote)

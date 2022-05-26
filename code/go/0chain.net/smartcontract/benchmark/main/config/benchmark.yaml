@@ -81,7 +81,7 @@ smart_contracts:
     min_alloc_duration: 1y
     max_read_price: 100.0
     max_write_price: 100.0
-    max_challenge_completion_time: 30m
+    max_challenge_completion_time: 3m
     min_offer_duration: 10h
     min_blobber_capacity: 1024
     max_charge: 0.2
@@ -116,7 +116,7 @@ smart_contracts:
       write_price_range:
         min: 0.0
         max: 0.1
-      max_challenge_completion_time: 30m
+      max_challenge_completion_time: 3m
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true

@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract"
 	"github.com/stretchr/testify/mock"
@@ -41,9 +42,6 @@ func Test_config_validate(t *testing.T) {
 		config config
 		err    string
 	}{
-		// min lock
-		{config{-1, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
-		{config{0, 0, 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_lock (<= 0)"},
 		// min duration
 		{config{1, s(-1), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
 		{config{1, s(0), 0, 0, 0, "", map[string]int{"1": 1, "2": 2, "3": 3}}, "invalid min_duration (< 1s)"},
@@ -136,7 +134,7 @@ func TestUpdateConfig(t *testing.T) {
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
 			fValue, _ := strconv.ParseFloat(value, 64)
-			conf.MinLock = state.Balance(fValue * 1e10)
+			conf.MinLock = currency.Coin(fValue * 1e10)
 		}
 		if value, ok := p.input[Settings[MinDuration]]; ok {
 			minDur, _ := time.ParseDuration(value)

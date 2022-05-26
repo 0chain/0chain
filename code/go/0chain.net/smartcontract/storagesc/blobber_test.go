@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
@@ -80,7 +81,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	)
 
 	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
-		terms Terms, balacne state.Balance, balances chainState.StateContextI) (
+		terms Terms, balacne currency.Coin, balances chainState.StateContextI) (
 		err error) {
 
 		var blob = newClient(0, balances)
@@ -1017,7 +1018,9 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			spTotal, err := stakePoolTotal(sp)
+			require.NoError(t, err)
+			require.EqualValues(t, 10e10, spTotal)
 		}
 
 		// values before
@@ -1153,7 +1156,9 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			spTotal, err := stakePoolTotal(sp)
+			require.NoError(t, err)
+			require.EqualValues(t, 10e10, spTotal)
 		}
 
 		// values before
@@ -1243,7 +1248,9 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			spTotal, err := stakePoolTotal(sp)
+			require.NoError(t, err)
+			require.EqualValues(t, 10e10, spTotal)
 		}
 
 		// values before

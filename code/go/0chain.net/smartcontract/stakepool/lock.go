@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/core/util"
@@ -23,7 +25,7 @@ func CheckClientBalance(
 		return errors.New("negative transaction value")
 	}
 
-	var balance state.Balance
+	var balance currency.Coin
 	balance, err = balances.GetClientBalance(t.ClientID)
 
 	if err != nil && err != util.ErrValueNotPresent {
@@ -34,7 +36,7 @@ func CheckClientBalance(
 		return errors.New("no tokens to lock")
 	}
 
-	if state.Balance(t.Value) > balance {
+	if currency.Coin(t.Value) > balance {
 		return errors.New("lock amount is greater than balance")
 	}
 
@@ -53,7 +55,7 @@ func (sp *StakePool) LockPool(
 	}
 
 	dp := DelegatePool{
-		Balance:      state.Balance(txn.Value),
+		Balance:      currency.Coin(txn.Value),
 		Reward:       0,
 		Status:       status,
 		DelegateID:   txn.ClientID,
@@ -61,7 +63,7 @@ func (sp *StakePool) LockPool(
 	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, txn.ToClientID, state.Balance(txn.Value),
+		txn.ClientID, txn.ToClientID, currency.Coin(txn.Value),
 	)); err != nil {
 		return err
 	}

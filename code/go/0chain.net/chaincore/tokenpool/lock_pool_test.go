@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
@@ -206,7 +210,7 @@ func TestZcnLockingPool_GetBalance(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   state.Balance
+		want   currency.Coin
 	}{
 		{
 			name: "OK",
@@ -274,6 +278,7 @@ func TestZcnLockingPool_GetID(t *testing.T) {
 }
 
 func TestZcnLockingPool_FillPool(t *testing.T) {
+	var err error
 	t.Parallel()
 
 	txn := transaction.Transaction{}
@@ -282,7 +287,10 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	p.Balance += state.Balance(txn.Value)
+	p.Balance, err = currency.AddInt64(p.Balance, txn.Value)
+	if err != nil {
+		require.NoError(t, err)
+	}
 	p.ID = "pool id"
 
 	tpr := &tokenpool.TokenPoolTransferResponse{
@@ -290,9 +298,9 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 		FromClient: txn.ClientID,
 		ToPool:     p.ID,
 		ToClient:   txn.ToClientID,
-		Value:      state.Balance(txn.Value),
+		Value:      currency.Coin(txn.Value),
 	}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
 
 	type fields struct {
 		ZcnPool            tokenpool.ZcnPool
@@ -367,7 +375,7 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 		}
 		fromClientID = "from client id"
 		toClientID   = "to client id"
-		value        = state.Balance(4)
+		value        = currency.Coin(4)
 
 		tpr = &tokenpool.TokenPoolTransferResponse{
 			FromClient: fromClientID,
@@ -385,7 +393,7 @@ func TestZcnLockingPool_DrainPool(t *testing.T) {
 	type args struct {
 		fromClientID string
 		toClientID   string
-		value        state.Balance
+		value        currency.Coin
 		entity       interface{}
 	}
 	tests := []struct {

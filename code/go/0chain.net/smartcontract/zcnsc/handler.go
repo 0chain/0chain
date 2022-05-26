@@ -1,12 +1,13 @@
 package zcnsc
 
 import (
-	"0chain.net/chaincore/state"
 	"net/http"
 
-	"0chain.net/core/util"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
+	"0chain.net/core/util"
+
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/pkg/errors"
@@ -125,7 +126,7 @@ type authorizerResponse struct {
 	URL          string `json:"url"`
 
 	// Configuration
-	Fee state.Balance `json:"fee"`
+	Fee currency.Coin `json:"fee"`
 
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
@@ -136,8 +137,8 @@ type authorizerResponse struct {
 
 	// stake_pool_settings
 	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       state.Balance `json:"min_stake"`
-	MaxStake       state.Balance `json:"max_stake"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 }

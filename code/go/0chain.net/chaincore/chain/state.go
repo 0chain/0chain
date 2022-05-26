@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -297,13 +299,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	case transaction.TxnTypeSend:
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
-			state.Balance(txn.Value)))
+			currency.Coin(txn.Value)))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
 				zap.Any("txn type", txn.TransactionType),
 				zap.Any("transaction_ClientID", txn.ClientID),
 				zap.Any("minersc_address", minersc.ADDRESS),
-				zap.Any("state_Balance", state.Balance(txn.Fee)),
+				zap.Any("state_Balance", currency.Coin(txn.Fee)),
 				zap.Any("current_root", sctx.GetState().GetRoot()))
 			return
 		}
@@ -314,13 +316,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	if c.ChainConfig.IsFeeEnabled() {
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS,
-			state.Balance(txn.Fee)))
+			currency.Coin(txn.Fee)))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
 				zap.Any("txn type", txn.TransactionType),
 				zap.Any("transaction_ClientID", txn.ClientID),
 				zap.Any("minersc_address", minersc.ADDRESS),
-				zap.Any("state_Balance", state.Balance(txn.Fee)))
+				zap.Any("state_Balance", currency.Coin(txn.Fee)))
 			return
 		}
 	}
@@ -414,7 +416,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 *   when there is an error getting the state of the from or to account (other than no value), the error is simply returned back
 *   when there is an error inserting/deleting the state of the from or to account, this results in fatal error when state is enabled
  */
-func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
+func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient datastore.Key, amount currency.Coin) error {
 	if amount == 0 {
 		return nil
 	}
@@ -506,7 +508,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	return nil
 }
 
-func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount state.Balance) error {
+func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) error {
 	if amount == 0 {
 		return nil
 	}
@@ -615,7 +617,7 @@ func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID stri
 		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
 	s := &state.State{}
-	s.Balance = state.Balance(0)
+	s.Balance = currency.Coin(0)
 	err := clientState.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

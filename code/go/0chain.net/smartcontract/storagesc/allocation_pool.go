@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -64,7 +66,7 @@ func (ur *unlockRequest) decode(input []byte) error {
 // blobber pool represents tokens locked for a blobber
 type blobberPool struct {
 	BlobberID string        `json:"blobber_id"`
-	Balance   state.Balance `json:"balance"`
+	Balance   currency.Coin `json:"balance"`
 }
 
 //
@@ -174,7 +176,7 @@ func newAllocationPool(
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     state.Balance(t.Value),
+			Amount:     currency.Coin(t.Value),
 		}); err != nil {
 			return nil, fmt.Errorf("minting tokens for write pool: %v", err)
 		}
@@ -275,7 +277,7 @@ func (aps allocationPools) blobberCut(allocID, blobberID string,
 }
 
 func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
-	value state.Balance) {
+	value currency.Coin) {
 
 	var cut = aps.allocationCut(allocID)
 	cut = removeExpired(cut, until)
@@ -329,7 +331,7 @@ func (aps *allocationPools) moveToChallenge(
 	allocID, blobID string,
 	cp *challengePool,
 	now common.Timestamp,
-	value state.Balance,
+	value currency.Coin,
 ) (err error) {
 	if value == 0 {
 		return // nothing to move, ok
@@ -353,7 +355,7 @@ func (aps *allocationPools) moveToChallenge(
 		}
 		var (
 			bp   = ap.Blobbers[bi]
-			move state.Balance
+			move currency.Coin
 		)
 		if value >= bp.Balance {
 			move, bp.Balance = bp.Balance, 0
@@ -431,7 +433,7 @@ func sortExpireAt(cut []*allocationPool) {
 // blobber pool represents tokens locked for a blobber
 type blobberPoolStat struct {
 	BlobberID string        `json:"blobber_id"`
-	Balance   state.Balance `json:"balance"`
+	Balance   currency.Coin `json:"balance"`
 }
 
 func (bp *blobberPool) stat() (stat blobberPoolStat) {
@@ -443,7 +445,7 @@ func (bp *blobberPool) stat() (stat blobberPoolStat) {
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPoolStat struct {
 	ID           string            `json:"id"`
-	Balance      state.Balance     `json:"balance"`
+	Balance      currency.Coin     `json:"balance"`
 	ExpireAt     common.Timestamp  `json:"expire_at"`
 	AllocationID string            `json:"allocation_id"`
 	Blobbers     []blobberPoolStat `json:"blobbers"`
@@ -487,6 +489,6 @@ func (aps allocationPools) stat(now common.Timestamp) (
 // swagger:model untilStat
 type untilStat struct {
 	PoolID   string           `json:"pool_id"`
-	Balance  state.Balance    `json:"balance"`
+	Balance  currency.Coin    `json:"balance"`
 	ExpireAt common.Timestamp `json:"expire_at"`
 }

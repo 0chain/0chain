@@ -1,15 +1,18 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
+	"time"
+
+	"0chain.net/chaincore/currency"
+
+	"encoding/hex"
+	"encoding/json"
+	"log"
+
 	"0chain.net/core/common"
 	"0chain.net/rest/restinterface"
 	bk "0chain.net/smartcontract/benchmark"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/spf13/viper"
-	"log"
-	"time"
 )
 
 func BenchmarkRestTests(
@@ -17,6 +20,14 @@ func BenchmarkRestTests(
 ) bk.TestSuite {
 	rh := restinterface.NewTestRestHandler()
 	srh := NewStorageRestHandler(rh)
+	maxReadPrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxReadPrice))
+	if err != nil {
+		panic(err)
+	}
+	maxWritePrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxWritePrice))
+	if err != nil {
+		panic(err)
+	}
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
@@ -120,8 +131,8 @@ func BenchmarkRestTests(
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-							WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+							ReadPriceRange:             PriceRange{0, maxReadPrice},
+							WritePriceRange:            PriceRange{0, maxWritePrice},
 							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)
@@ -277,8 +288,8 @@ func BenchmarkRestTests(
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-							WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+							ReadPriceRange:             PriceRange{0, maxReadPrice},
+							WritePriceRange:            PriceRange{0, maxWritePrice},
 							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)

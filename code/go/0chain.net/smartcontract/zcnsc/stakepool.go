@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -24,7 +26,7 @@ type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
 	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
 	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance state.Balance `json:"balance"`
+	Balance currency.Coin `json:"balance"`
 }
 
 type stakePoolRequest struct {
@@ -119,7 +121,7 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
 	authorizerID datastore.Key,
-	settings stakepool.StakePoolSettings,
+	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
@@ -150,8 +152,8 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		changed = true
 	}
 
-	if sp.Settings.ServiceCharge != settings.ServiceCharge {
-		sp.Settings.ServiceCharge = settings.ServiceCharge
+	if sp.Settings.ServiceChargeRatio != settings.ServiceChargeRatio {
+		sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 		changed = true
 	}
 
@@ -167,12 +169,12 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *GlobalNode) error {
+func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
 	err := conf.validateStakeRange(poolSettings.MinStake, poolSettings.MaxStake)
 	if err != nil {
 		return err
 	}
-	if poolSettings.ServiceCharge < 0.0 {
+	if poolSettings.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}
 	if poolSettings.MaxNumDelegates <= 0 {
@@ -182,7 +184,7 @@ func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *G
 	return nil
 }
 
-func (gn *GlobalNode) validateStakeRange(min, max state.Balance) (err error) {
+func (gn *GlobalNode) validateStakeRange(min, max currency.Coin) (err error) {
 	if min < gn.MinStakeAmount {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min, gn.MinStakeAmount)
 	}

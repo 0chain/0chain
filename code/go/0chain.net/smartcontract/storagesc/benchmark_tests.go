@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
+
 	sc "0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -172,8 +173,8 @@ func BenchmarkTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					Blobbers:                   blobbers,
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 				}).encode()
 				return bytes
@@ -679,7 +680,7 @@ func BenchmarkTests(
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "30m",
+					"max_challenge_completion_time": "3m",
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
