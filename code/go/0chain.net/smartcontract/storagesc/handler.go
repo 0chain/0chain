@@ -16,8 +16,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/state"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"

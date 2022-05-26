@@ -1,7 +1,6 @@
 package zcnsc
 
 import (
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/rest"
 	"net/http"
 

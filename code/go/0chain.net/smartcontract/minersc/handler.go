@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/rest"
 	"errors"
 	"fmt"

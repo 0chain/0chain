@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"testing"
 
-	"0chain.net/rest"
-
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/multisigsc"
