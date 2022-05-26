@@ -421,17 +421,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return("", nil).Once()
 
 		balances.On(
-			"GetTrieNode",
-			mock.MatchedBy(func(key string) bool {
-				return balances.TestData()[newSaSaved].(bool) &&
-					key == allocation.GetKey(ssc.ID)
-			}),
-			mock.MatchedBy(func(a *StorageAllocation) bool {
-				*a = allocation
-				return true
-			})).Return(nil).Once()
-
-		balances.On(
 			"GetSignatureScheme",
 		).Return(encryption.NewBLS0ChainScheme()).Once()
 
