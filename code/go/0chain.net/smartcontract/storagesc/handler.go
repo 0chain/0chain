@@ -67,7 +67,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 		{Name: storage + "/get_block_by_hash", Endpoint: srh.getBlockByHash},
 		{Name: storage + "/get_blocks", Endpoint: srh.getBlocks},
 		{Name: storage + "/total_saved_data", Endpoint: srh.getTotalData},
-		{Name: storage + "/getConfig", Endpoint: srh.getConfig},
+		{Name: storage + "/storage_config", Endpoint: srh.getConfig},
 		{Name: storage + "/getReadPoolStat", Endpoint: srh.getReadPoolStat},
 		{Name: storage + "/getReadPoolAllocBlobberStat", Endpoint: srh.getReadPoolAllocBlobberStat},
 		{Name: storage + "/getWritePoolStat", Endpoint: srh.getWritePoolStat},

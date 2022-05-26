@@ -26,7 +26,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.RestEndpoint {
 	return []rest.RestEndpoint{
 		{Name: vesting + "/getPoolInfo", Endpoint: vrh.getPoolInfo},
 		{Name: vesting + "/getClientPools", Endpoint: vrh.getClientPools},
-		{Name: vesting + "/getConfig", Endpoint: vrh.getConfig},
+		{Name: vesting + "/vesting_config", Endpoint: vrh.getConfig},
 	}
 }
 
