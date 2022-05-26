@@ -409,7 +409,12 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.ID = challID
 	var valSlice []ValidationPartitionNode
 	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)
+	valIDs := make([]string, len(valSlice))
+	for i := range valSlice {
+		valIDs[i] = valSlice[i].Id
+	}
 	storChall.TotalValidators = len(valSlice)
+	storChall.ValidatorIDs = valIDs
 
 	storChall.AllocationID = allocID
 	storChall.BlobberID = blobber.ID
