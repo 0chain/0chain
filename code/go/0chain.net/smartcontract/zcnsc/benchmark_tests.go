@@ -254,6 +254,11 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 }
 
 func createTransaction(clientId, publicKey string) *transaction.Transaction {
+	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTime := common.Now()
+	if creationTimeRaw != 0 {
+		creationTime = common.Timestamp(creationTimeRaw)
+	}
 	return &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
@@ -262,7 +267,7 @@ func createTransaction(clientId, publicKey string) *transaction.Transaction {
 		PublicKey:    publicKey,
 		ToClientID:   ADDRESS,
 		Value:        3000,
-		CreationDate: common.Now(),
+		CreationDate: creationTime,
 	}
 }
 

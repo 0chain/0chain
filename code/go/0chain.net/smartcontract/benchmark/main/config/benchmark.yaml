@@ -159,7 +159,6 @@ smart_contracts:
 internal:
   t: 2
   available_keys: 10
-  now: 100000
   signature_scheme: bls0chain # don't change only bls0chian works
   start_tokens: 100000000000000
   bad: 50ms

@@ -263,6 +263,7 @@ func setUpMpt(
 		defer wg.Done()
 		timer := time.Now()
 		_ = storagesc.SetMockConfig(balances)
+		viper.Set(benchmark.MptCreationTime, timer.Unix())
 		log.Println("created storage config\t", time.Since(timer))
 	}()
 

@@ -21,7 +21,7 @@ services:
     volumes:
       - ../config:/config
       - ../benchmarks/saved_data:/saved_data
-    command: ./bin/main  benchmark --tests "storage" #--load /saved_data
+    command: ./bin/main  benchmark --tests "storage" --load /saved_data
     depends_on:
       - postgres
     links:
