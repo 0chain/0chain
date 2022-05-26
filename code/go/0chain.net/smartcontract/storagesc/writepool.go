@@ -33,7 +33,7 @@ type writePool struct {
 func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
-	return wp.Pools.blobberCut(allocID, blobberID, now)
+	return wp.Pools.allocationCut(allocID)
 }
 
 // Encode implements util.Serializable interface.
@@ -112,22 +112,6 @@ func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	return
 }
 
-func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPools {
-	var bps blobberPools
-	var total float64
-	for _, b := range alloc.BlobberAllocs {
-		total += float64(b.Terms.WritePrice)
-	}
-	for _, b := range alloc.BlobberAllocs {
-		var ratio = float64(b.Terms.WritePrice) / total
-		bps.add(&blobberPool{
-			Balance:   state.Balance(float64(value) * ratio),
-			BlobberID: b.BlobberID,
-		})
-	}
-	return bps
-}
-
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 	value state.Balance) {
 
@@ -167,7 +151,6 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	var ap = allocationPool{
 		AllocationID: alloc.ID,
 		ExpireAt:     alloc.Until(),
-		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
 	}
 	ap.TokenPool.ID = txn.Hash
 	alloc.addWritePoolOwner(alloc.Owner)
@@ -283,38 +266,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"can't get allocation: "+err.Error())
 	}
 
-	var bps blobberPools
-
-	// lock for allocation -> blobber (particular blobber locking)
-	if lr.BlobberID != "" {
-		if _, ok := alloc.BlobberAllocsMap[lr.BlobberID]; !ok {
-			return "", common.NewError("write_pool_lock_failed",
-				fmt.Sprintf("no such blobber %s in allocation %s",
-					lr.BlobberID, lr.AllocationID))
-		}
-		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
-			BlobberID: lr.BlobberID,
-		})
-	} else {
-		// divide depending write price range for all blobbers of the
-		// allocation
-		var total float64 // total write price
-		for _, b := range alloc.BlobberAllocs {
-			total += float64(b.Terms.WritePrice)
-		}
-		// calculate (divide)
-		for _, b := range alloc.BlobberAllocs {
-			var ratio = float64(b.Terms.WritePrice) / total
-			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
-				BlobberID: b.BlobberID,
-			})
-		}
-	}
-
 	// create and dig allocation pool
-
 	var (
 		ap       allocationPool
 		transfer *state.Transfer
@@ -330,7 +282,6 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	// set fields
 	ap.AllocationID = lr.AllocationID
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
-	ap.Blobbers = bps
 
 	// add and save
 	alloc.addWritePoolOwner(t.ClientID)

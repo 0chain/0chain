@@ -62,9 +62,7 @@ const (
 	rfnGetConfig
 
 	rfnGetReadPoolStat
-	rfnGetReadPoolAllocBlobberStat
 	rfnGetWritePoolStat
-	rfnGetWritePoolAllocBlobberStat
 	rfnGetChallengePoolStat
 
 	rfnAllocWrittenSize
@@ -119,9 +117,7 @@ func SetupRestHandler(rh restinterface.RestHandlerI) {
 	http.HandleFunc(storage+GetRestNames()[rfnGetConfig], srh.getConfig)
 
 	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolStat], srh.getReadPoolStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolAllocBlobberStat], srh.getReadPoolAllocBlobberStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolStat], srh.getWritePoolStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolAllocBlobberStat], srh.getWritePoolAllocBlobberStat)
 	http.HandleFunc(storage+GetRestNames()[rfnGetChallengePoolStat], srh.getChallengePoolStat)
 
 	http.HandleFunc(storage+GetRestNames()[rfnAllocWrittenSize], srh.getWrittenAmount)
@@ -167,7 +163,6 @@ func GetRestNames() []string {
 		"/getConfig",
 
 		"/getReadPoolStat",
-		"/getReadPoolAllocBlobberStat",
 		"/getWritePoolStat",
 		"/getWritePoolAllocBlobberStat",
 		"/getChallengePoolStat",
@@ -590,62 +585,6 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, cp.stat(alloc), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolAllocBlobberStat getWritePoolAllocBlobberStat
-// Gets statistic for all locked tokens of the indicated read pools
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: allocation_id
-//      description: allocation for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: blobber_id
-//      description: blobber for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: []untilStat
-//  400:
-func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	var (
-		clientID  = r.URL.Query().Get("client_id")
-		allocID   = r.URL.Query().Get("allocation_id")
-		blobberID = r.URL.Query().Get("blobber_id")
-		wp        = &writePool{}
-	)
-
-	if err := srh.GetStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
-		return
-	}
-
-	var (
-		cut  = wp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	common.Respond(w, r, &stat, nil)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolStat getWritePoolStat
 // Gets  statistic for all locked tokens of the write pool
 //
@@ -668,62 +607,6 @@ func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.R
 	}
 
 	common.Respond(w, r, wp.stat(common.Now()), nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolAllocBlobberStat getReadPoolAllocBlobberStat
-// Gets statistic for all locked tokens of the indicated read pools
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: allocation_id
-//      description: allocation for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: blobber_id
-//      description: blobber for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: []untilStat
-//  400:
-func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	var (
-		clientID  = r.URL.Query().Get("client_id")
-		allocID   = r.URL.Query().Get("allocation_id")
-		blobberID = r.URL.Query().Get("blobber_id")
-		rp        = &readPool{}
-	)
-
-	if err := srh.GetStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
-		return
-	}
-
-	var (
-		cut  = rp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	common.Respond(w, r, &stat, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat

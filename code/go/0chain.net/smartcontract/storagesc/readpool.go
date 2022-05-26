@@ -35,7 +35,7 @@ type readPool struct {
 func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
 
-	return rp.Pools.blobberCut(allocID, blobberID, now)
+	return rp.Pools.allocationCut(allocID)
 }
 
 func (rp *readPool) removeEmpty(allocID string, ap []*allocationPool) {
@@ -98,18 +98,13 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		if value == moved {
 			break // all required tokens has moved to the blobber
 		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
-		if !ok {
-			continue // impossible case, but leave the check here
-		}
 		var (
-			bp   = ap.Blobbers[bi]
 			move state.Balance
 		)
-		if value >= bp.Balance {
-			move, bp.Balance = bp.Balance, 0
+		if value >= ap.Balance {
+			move, ap.Balance = ap.Balance, 0
 		} else {
-			move, bp.Balance = value, bp.Balance-value
+			move, ap.Balance = value, ap.Balance-value
 		}
 
 		ap.Balance -= state.Balance(value)
@@ -120,9 +115,6 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		})
 
 		moved += move
-		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
-		}
 		if ap.Balance == 0 {
 			torm = append(torm, ap) // remove the allocation pool later
 		}
@@ -268,50 +260,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		}
 	}
 
-	// get the allocation object
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
-	if err != nil {
-		return "", common.NewError("read_pool_lock_failed",
-			"can't get allocation: "+err.Error())
-	}
-
-	var bps blobberPools
-
-	// lock for allocation -> blobber (particular blobber locking)
-	if lr.BlobberID != "" {
-		if _, ok := alloc.BlobberAllocsMap[lr.BlobberID]; !ok {
-			return "", common.NewError("read_pool_lock_failed",
-				fmt.Sprintf("no such blobber %s in allocation %s",
-					lr.BlobberID, lr.AllocationID))
-		}
-		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
-			BlobberID: lr.BlobberID,
-		})
-	} else {
-		// divide depending read price range for all blobbers of the
-		// allocation
-		var total float64 // total read price
-		for _, b := range alloc.BlobberAllocs {
-			total += float64(b.Terms.ReadPrice)
-		}
-		// calculate (divide)
-		for _, b := range alloc.BlobberAllocs {
-			var ratio = float64(b.Terms.ReadPrice) / total
-			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
-				BlobberID: b.BlobberID,
-			})
-		}
-	}
-
 	// create and dig allocation pool
-
 	var ap allocationPool
 	ap.AllocationID = lr.AllocationID
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
-	ap.Blobbers = bps
 
 	if !lr.MintTokens {
 		var transfer *state.Transfer

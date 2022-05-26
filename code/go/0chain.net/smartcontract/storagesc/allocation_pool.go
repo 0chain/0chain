@@ -58,88 +58,6 @@ func (ur *unlockRequest) decode(input []byte) error {
 }
 
 //
-// blobber read/write pool (expire_at at level above)
-//
-
-// blobber pool represents tokens locked for a blobber
-type blobberPool struct {
-	BlobberID string        `json:"blobber_id"`
-	Balance   state.Balance `json:"balance"`
-}
-
-//
-// blobber read/write pools (list)
-//
-
-// blobberPools is sorted list of blobber read/write pools sorted by blobber ID
-type blobberPools []*blobberPool
-
-func (bps blobberPools) getIndex(blobberID string) (i int, ok bool) {
-	i = sort.Search(len(bps), func(i int) bool {
-		return bps[i].BlobberID >= blobberID
-	})
-	if i == len(bps) {
-		return // not found
-	}
-	if bps[i].BlobberID == blobberID {
-		return i, true // found
-	}
-	return // not found
-}
-
-func (bps blobberPools) get(blobberID string) (
-	bp *blobberPool, ok bool) {
-
-	var i = sort.Search(len(bps), func(i int) bool {
-		return bps[i].BlobberID >= blobberID
-	})
-	if i == len(bps) {
-		return // not found
-	}
-	if bps[i].BlobberID == blobberID {
-		return bps[i], true // found
-	}
-	return // not found
-}
-
-func (bps *blobberPools) removeByIndex(i int) {
-	(*bps) = append((*bps)[:i], (*bps)[i+1:]...)
-}
-
-func (bps *blobberPools) remove(blobberID string) (ok bool) {
-	var i int
-	if i, ok = bps.getIndex(blobberID); !ok {
-		return // false
-	}
-	bps.removeByIndex(i)
-	return true // removed
-}
-
-func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
-	if len(*bps) == 0 {
-		(*bps) = append((*bps), bp)
-		return true // added
-	}
-	var i = sort.Search(len(*bps), func(i int) bool {
-		return (*bps)[i].BlobberID >= bp.BlobberID
-	})
-	// out of bounds
-	if i == len(*bps) {
-		(*bps) = append((*bps), bp)
-		return true // added
-	}
-	// the same
-	if (*bps)[i].BlobberID == bp.BlobberID {
-		(*bps)[i] = bp // replace
-		return false   // already have
-	}
-	// next
-	(*bps) = append((*bps)[:i], append([]*blobberPool{bp},
-		(*bps)[i:]...)...)
-	return true // added
-}
-
-//
 // allocation read/write pool
 //
 
@@ -148,7 +66,6 @@ type allocationPool struct {
 	tokenpool.ZcnPool `json:"pool"`
 	ExpireAt          common.Timestamp `json:"expire_at"`     // inclusive
 	AllocationID      string           `json:"allocation_id"` //
-	Blobbers          blobberPools     `json:"blobbers"`      //
 }
 
 func newAllocationPool(
@@ -187,7 +104,6 @@ func newAllocationPool(
 	// set fields
 	ap.AllocationID = alloc.ID
 	ap.ExpireAt = until
-	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
 
 	// add the allocation pool
 	alloc.addWritePoolOwner(alloc.Owner)
@@ -269,7 +185,6 @@ func (aps allocationPools) blobberCut(allocID, blobberID string,
 	now common.Timestamp) (cut []*allocationPool) {
 
 	cut = aps.allocationCut(allocID)
-	cut = removeBlobberExpired(cut, blobberID, now)
 	sortExpireAt(cut)
 	return
 }
@@ -335,7 +250,7 @@ func (aps *allocationPools) moveToChallenge(
 		return // nothing to move, ok
 	}
 
-	var cut = aps.blobberCut(allocID, blobID, now)
+	var cut = aps.allocationCut(allocID)
 
 	if len(cut) == 0 {
 		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
@@ -347,26 +262,18 @@ func (aps *allocationPools) moveToChallenge(
 		if value == 0 {
 			break // all required tokens has moved to the blobber
 		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
-		if !ok {
-			continue // impossible case, but leave the check here
-		}
 		var (
-			bp   = ap.Blobbers[bi]
 			move state.Balance
 		)
-		if value >= bp.Balance {
-			move, bp.Balance = bp.Balance, 0
+		if value >= ap.Balance {
+			move, ap.Balance = ap.Balance, 0
 		} else {
-			move, bp.Balance = value, bp.Balance-value
+			move, ap.Balance = value, ap.Balance-value
 		}
 		if _, _, err = ap.TransferTo(cp, move, nil); err != nil {
 			return // transferring error
 		}
 		value -= move
-		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
-		}
 		if ap.Balance == 0 {
 			torm = append(torm, ap) // remove the allocation pool later
 		}
@@ -398,26 +305,6 @@ func removeExpired(cut []*allocationPool, now common.Timestamp) (
 	return cut[:i]
 }
 
-func removeBlobberExpired(cut []*allocationPool, blobberID string,
-	now common.Timestamp) (clean []*allocationPool) {
-
-	var i int
-	for _, arp := range cut {
-		if arp.ExpireAt < now {
-			continue
-		}
-		var bp, ok = arp.Blobbers.get(blobberID)
-		if !ok {
-			continue // no pool for this blobber
-		}
-		if bp.Balance == 0 {
-			continue // no tokens for this blobber
-		}
-		cut[i], i = arp, i+1
-	}
-	return cut[:i]
-}
-
 func sortExpireAt(cut []*allocationPool) {
 	sort.Slice(cut, func(i, j int) bool {
 		return cut[i].ExpireAt < cut[j].ExpireAt
@@ -428,26 +315,13 @@ func sortExpireAt(cut []*allocationPool) {
 // stat
 //
 
-// blobber pool represents tokens locked for a blobber
-type blobberPoolStat struct {
-	BlobberID string        `json:"blobber_id"`
-	Balance   state.Balance `json:"balance"`
-}
-
-func (bp *blobberPool) stat() (stat blobberPoolStat) {
-	stat.Balance = bp.Balance
-	stat.BlobberID = bp.BlobberID
-	return
-}
-
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPoolStat struct {
-	ID           string            `json:"id"`
-	Balance      state.Balance     `json:"balance"`
-	ExpireAt     common.Timestamp  `json:"expire_at"`
-	AllocationID string            `json:"allocation_id"`
-	Blobbers     []blobberPoolStat `json:"blobbers"`
-	Locked       bool              `json:"locked"`
+	ID           string           `json:"id"`
+	Balance      state.Balance    `json:"balance"`
+	ExpireAt     common.Timestamp `json:"expire_at"`
+	AllocationID string           `json:"allocation_id"`
+	Locked       bool             `json:"locked"`
 }
 
 func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
@@ -457,11 +331,6 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 	stat.ExpireAt = ap.ExpireAt
 	stat.AllocationID = ap.AllocationID
 	stat.Locked = ap.ExpireAt >= now
-
-	stat.Blobbers = make([]blobberPoolStat, 0, len(ap.Blobbers))
-	for _, bp := range ap.Blobbers {
-		stat.Blobbers = append(stat.Blobbers, bp.stat())
-	}
 
 	return
 }
