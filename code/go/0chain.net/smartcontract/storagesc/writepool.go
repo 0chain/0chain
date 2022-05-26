@@ -1,24 +1,25 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
+
 	"go.uber.org/zap"
-	"net/url"
 
 	"0chain.net/smartcontract/stakepool"
 
-	"0chain.net/smartcontract"
+	"encoding/json"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -127,7 +128,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 	for _, b := range alloc.BlobberAllocs {
 		var ratio = float64(b.Terms.WritePrice) / total
 		bps.add(&blobberPool{
-			Balance:   state.Balance(float64(value) * ratio),
+			Balance:   currency.Coin(float64(value) * ratio),
 			BlobberID: b.BlobberID,
 		})
 	}
@@ -135,7 +136,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
-	value state.Balance) {
+	value currency.Coin) {
 
 	return wp.Pools.allocUntil(allocID, until)
 }
@@ -259,7 +260,11 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	if t.Value < conf.MinLock || t.Value <= 0 {
+	iTxnVal, err := currency.Int64ToCoin(t.Value)
+	if err != nil {
+		return "", err
+	}
+	if iTxnVal < conf.MinLock || t.Value <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
@@ -299,7 +304,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
+			Balance:   currency.Coin(t.Value),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -313,7 +318,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.WritePrice) / total
 			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
+				Balance:   currency.Coin(float64(t.Value) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}
@@ -441,58 +446,3 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 //
 // stat
 //
-
-// statistic for an allocation/blobber (used by blobbers)
-func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		wp        *writePool
-	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
-	}
-
-	var (
-		cut  = wp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	return &stat, nil
-}
-
-const cantGetWritePoolMsg = "can't get write pool"
-
-// statistic for all locked tokens of the write pool
-func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = params.Get("client_id")
-		wp       *writePool
-	)
-
-	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
-	}
-
-	return wp.stat(common.Now()), nil
-}

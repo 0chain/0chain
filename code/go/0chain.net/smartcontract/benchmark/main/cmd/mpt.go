@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
 	"golang.org/x/net/context"
@@ -10,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/zcnsc"
@@ -353,7 +355,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockChallenges(blobbers, balances)
+		storagesc.AddMockChallenges(blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -522,7 +524,7 @@ func addMockClients(ctx context.Context,
 				}
 				is := &state.State{}
 				_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-				is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
+				is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
 				_, err = pMpt.Insert(util.Path(clientID), is)
 				if err != nil {
 					return err
@@ -530,7 +532,6 @@ func addMockClients(ctx context.Context,
 				return nil
 			}
 		}(i))
-
 		if err != nil {
 			panic(err)
 		}

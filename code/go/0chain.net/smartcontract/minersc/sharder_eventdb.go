@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
@@ -44,12 +45,12 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards,
-			Settings: stakepool.StakePoolSettings{
-				DelegateWallet:  edbSharder.DelegateWallet,
-				ServiceCharge:   edbSharder.ServiceCharge,
-				MaxNumDelegates: edbSharder.NumberOfDelegates,
-				MinStake:        edbSharder.MinStake,
-				MaxStake:        edbSharder.MaxStake,
+			Settings: stakepool.Settings{
+				DelegateWallet:     edbSharder.DelegateWallet,
+				ServiceChargeRatio: edbSharder.ServiceCharge,
+				MaxNumDelegates:    edbSharder.NumberOfDelegates,
+				MinStake:           edbSharder.MinStake,
+				MaxStake:           edbSharder.MaxStake,
 			},
 		},
 	}
@@ -67,10 +68,10 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		PublicKey:         sn.PublicKey,
 		ShortName:         sn.ShortName,
 		BuildTag:          sn.BuildTag,
-		TotalStaked:       state.Balance(sn.TotalStaked),
+		TotalStaked:       currency.Coin(sn.TotalStaked),
 		Delete:            sn.Delete,
 		DelegateWallet:    sn.Settings.DelegateWallet,
-		ServiceCharge:     sn.Settings.ServiceCharge,
+		ServiceCharge:     sn.Settings.ServiceChargeRatio,
 		NumberOfDelegates: sn.Settings.MaxNumDelegates,
 		MinStake:          sn.Settings.MinStake,
 		MaxStake:          sn.Settings.MaxStake,
@@ -121,7 +122,7 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"total_staked":        sn.TotalStaked,
 			"delete":              sn.Delete,
 			"delegate_wallet":     sn.Settings.DelegateWallet,
-			"service_charge":      sn.Settings.ServiceCharge,
+			"service_charge":      sn.Settings.ServiceChargeRatio,
 			"number_of_delegates": sn.Settings.MaxNumDelegates,
 			"min_stake":           sn.Settings.MinStake,
 			"max_stake":           sn.Settings.MaxStake,

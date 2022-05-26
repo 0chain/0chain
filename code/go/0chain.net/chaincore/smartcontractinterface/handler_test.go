@@ -94,7 +94,6 @@ func TestSmartContract_HandlerStats(t *testing.T) {
 
 			sc := &SmartContract{
 				ID:                          tt.fields.ID,
-				RestHandlers:                tt.fields.RestHandlers,
 				SmartContractExecutionStats: tt.fields.SmartContractExecutionStats,
 			}
 			got, err := sc.HandlerStats(tt.args.ctx, tt.args.params)

@@ -1,16 +1,18 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
-	sc "0chain.net/smartcontract"
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/currency"
+
+	sc "0chain.net/smartcontract"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/smartcontract"
 
@@ -75,8 +77,6 @@ func BenchmarkTests(
 		blobbers = append(blobbers, getMockBlobberId(i))
 	}
 	var freeBlobbers []string
-	//		DataShards:                 conf.FreeAllocationSettings.DataShards,
-	//		ParityShards:               conf.FreeAllocationSettings.ParityShards,
 	for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
 		freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
 	}
@@ -173,8 +173,8 @@ func BenchmarkTests(
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					Blobbers:                   blobbers,
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 				}).encode()
 				return bytes
@@ -680,7 +680,7 @@ func BenchmarkTests(
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "30m",
+					"max_challenge_completion_time": "3m",
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 

@@ -4,7 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/tokenpool"
 )
 
@@ -39,7 +40,7 @@ func Test_interestPool_encode(t *testing.T) {
 	type fields struct {
 		ZcnLockingPool *tokenpool.ZcnLockingPool
 		APR            float64
-		TokensEarned   state.Balance
+		TokensEarned   currency.Coin
 	}
 	tests := []struct {
 		name   string
@@ -74,7 +75,7 @@ func Test_interestPool_decode(t *testing.T) {
 	type fields struct {
 		ZcnLockingPool *tokenpool.ZcnLockingPool
 		APR            float64
-		TokensEarned   state.Balance
+		TokensEarned   currency.Coin
 	}
 	type args struct {
 		input []byte

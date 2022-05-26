@@ -1,17 +1,15 @@
 package storagesc
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
+
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -73,7 +71,7 @@ func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI)
 // A Blobber uses this response for internal read pools cache.
 type readPoolRedeem struct {
 	PoolID  string        `json:"pool_id"` // read pool ID
-	Balance state.Balance `json:"balance"` // balance reduction
+	Balance currency.Coin `json:"balance"` // balance reduction
 }
 
 func toJson(val interface{}) string {
@@ -85,7 +83,7 @@ func toJson(val interface{}) string {
 }
 
 func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
-	sp *stakePool, now common.Timestamp, value state.Balance,
+	sp *stakePool, now common.Timestamp, value currency.Coin,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	var cut = rp.blobberCut(allocID, blobID, now)
@@ -97,8 +95,9 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
-	var moved state.Balance = 0
+	var moved currency.Coin = 0
 	var torm []*allocationPool // to remove later (empty allocation pools)
+	valueLeft := value
 	for _, ap := range cut {
 		if value == moved {
 			break // all required tokens has moved to the blobber
@@ -109,15 +108,16 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		}
 		var (
 			bp   = ap.Blobbers[bi]
-			move state.Balance
+			move currency.Coin
 		)
-		if value >= bp.Balance {
+		if valueLeft >= bp.Balance {
 			move, bp.Balance = bp.Balance, 0
 		} else {
-			move, bp.Balance = value, bp.Balance-value
+			move, bp.Balance = valueLeft, bp.Balance-valueLeft
 		}
 
-		ap.Balance -= state.Balance(value)
+		ap.Balance -= move
+		valueLeft -= move
 
 		redeems = append(redeems, readPoolRedeem{
 			PoolID:  ap.ID,
@@ -138,7 +138,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			"allocation: %s, blobber: %s", allocID, blobID)
 	}
 
-	err = sp.DistributeRewards(float64(value), blobID, spenum.Blobber, balances)
+	err = sp.DistributeRewards(value, blobID, spenum.Blobber, balances)
 	if err != nil {
 		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -291,7 +291,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
+			Balance:   currency.Coin(t.Value),
 			BlobberID: lr.BlobberID,
 		})
 	} else {
@@ -305,7 +305,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		for _, b := range alloc.BlobberAllocs {
 			var ratio = float64(b.Terms.ReadPrice) / total
 			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
+				Balance:   currency.Coin(float64(t.Value) * ratio),
 				BlobberID: b.BlobberID,
 			})
 		}
@@ -330,11 +330,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     state.Balance(t.Value),
+			Amount:     currency.Coin(t.Value),
 		}); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
-		ap.Balance = state.Balance(t.Value)
+		ap.Balance = currency.Coin(t.Value)
 		ap.ID = t.Hash
 	}
 
@@ -403,61 +403,4 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	}
 
 	return
-}
-
-//
-// stat
-//
-
-// statistic for an allocation/blobber (used by blobbers)
-func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID  = params.Get("client_id")
-		allocID   = params.Get("allocation_id")
-		blobberID = params.Get("blobber_id")
-		rp        *readPool
-	)
-
-	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get retrieving read pool")
-	}
-
-	var (
-		cut  = rp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	return &stat, nil
-}
-
-// statistic for all locked tokens of the read pool
-func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = datastore.Key(params.Get("client_id"))
-		rp       *readPool
-	)
-
-	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool")
-	}
-
-	return rp.stat(common.Now()), nil
 }

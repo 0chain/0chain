@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -25,7 +27,7 @@ func TestDeleteMiner(t *testing.T) {
 	const (
 		mockDeletedMinerId               = "mock deleted miner id"
 		mockRoundNumber                  = 5
-		x10                state.Balance = 10 * 1000 * 1000 * 1000
+		x10                currency.Coin = 10 * 1000 * 1000 * 1000
 	)
 	type parameters struct {
 		pendingPools []int
@@ -58,7 +60,7 @@ func TestDeleteMiner(t *testing.T) {
 			delegateId := "delegate " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
 			dp.Status = spenum.Pending
-			dp.Balance = state.Balance(amount) * x10
+			dp.Balance = currency.Coin(amount) * x10
 			dp.DelegateID = delegateId
 			balances.On("AddTransfer", &state.Transfer{
 				ClientID:   msc.ID,

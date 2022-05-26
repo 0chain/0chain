@@ -9,7 +9,7 @@ import (
 )
 
 type providerAggregateStats struct {
-	Reward      int64 `json:"reward"`
+	Rewards     int64 `json:"rewards"`
 	TotalReward int64 `json:"total_reward"`
 }
 
@@ -59,24 +59,24 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
 		if err != nil {
 			return err
 		}
-		update.Updates["reward"] = validator.Reward + spu.Reward
-		update.Updates["total_service_charge"] = validator.TotalReward + spu.Reward
+		update.Updates["rewards"] = validator.Rewards + spu.Reward
+		update.Updates["total_reward"] = validator.TotalReward + spu.Reward
 		return edb.updateValidator(*update)
 	case spenum.Miner:
 		miner, err := edb.minerAggregateStats(spu.ProviderId)
 		if err != nil {
 			return err
 		}
-		update.Updates["reward"] = miner.Reward + spu.Reward
-		update.Updates["total_service_charge"] = miner.TotalReward + spu.Reward
+		update.Updates["rewards"] = miner.Rewards + spu.Reward
+		update.Updates["total_reward"] = miner.TotalReward + spu.Reward
 		return edb.updateMiner(*update)
 	case spenum.Sharder:
 		sharder, err := edb.sharderAggregateStats(spu.ProviderId)
 		if err != nil {
 			return err
 		}
-		update.Updates["reward"] = sharder.Reward + spu.Reward
-		update.Updates["total_service_charge"] = sharder.TotalReward + spu.Reward
+		update.Updates["rewards"] = sharder.Rewards + spu.Reward
+		update.Updates["total_reward"] = sharder.TotalReward + spu.Reward
 		return edb.updateSharder(*update)
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)

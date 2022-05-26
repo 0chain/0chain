@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/currency"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/block"
 
 	"0chain.net/smartcontract"
 
@@ -126,7 +126,7 @@ func TestUpdateSettings(t *testing.T) {
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "30m",
+					"max_challenge_completion_time": "3m",
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
@@ -286,14 +286,14 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.StateBalance:
+					case smartcontract.CurrencyCoin:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
 							require.NoError(t, err)
-							actual, ok := setting.(state.Balance)
+							actual, ok := setting.(currency.Coin)
 							require.True(t, ok)
-							if state.Balance(expected) != actual {
+							if currency.Coin(expected) != actual {
 								return false
 							}
 						}
@@ -330,7 +330,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "30m",
+					"max_challenge_completion_time": "3m",
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 

@@ -1,10 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/core/datastore"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/chaincore/currency"
+	"0chain.net/core/datastore"
 
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
@@ -15,7 +17,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -25,17 +26,24 @@ const (
 	blobberHealthTime = 60 * 60 // 1 Hour
 )
 
-func (sc *StorageSmartContract) getBlobber(blobberID string,
-	balances cstate.StateContextI) (blobber *StorageNode, err error) {
-
-	blobber = new(StorageNode)
+func getBlobber(
+	blobberID string,
+	balances cstate.CommonStateContextI,
+) (*StorageNode, error) {
+	blobber := new(StorageNode)
 	blobber.ID = blobberID
-	err = balances.GetTrieNode(blobber.GetKey(sc.ID), blobber)
+	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
 	}
+	return blobber, nil
+}
 
-	return
+func (_ *StorageSmartContract) getBlobber(
+	blobberID string,
+	balances cstate.StateContextI,
+) (blobber *StorageNode, err error) {
+	return getBlobber(blobberID, balances)
 }
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
@@ -113,7 +121,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
-	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
+	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
@@ -389,7 +397,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
-		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
+		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.PayerID
 	)
 
@@ -519,7 +527,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		move  state.Balance
+		move  currency.Coin
 	)
 
 	// the details will be saved in caller with allocation object (the details

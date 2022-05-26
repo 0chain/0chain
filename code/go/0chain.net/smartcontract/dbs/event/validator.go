@@ -3,13 +3,14 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
-
-	"0chain.net/chaincore/state"
 )
 
+// swagger:model Validator
 type Validator struct {
 	gorm.Model
 	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
@@ -19,12 +20,12 @@ type Validator struct {
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       state.Balance `json:"min_stake"`
-	MaxStake       state.Balance `json:"max_stake"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 
-	Reward      int64 `json:"reward"`
+	Rewards     int64 `json:"rewards"`
 	TotalReward int64 `json:"total_reward"`
 }
 

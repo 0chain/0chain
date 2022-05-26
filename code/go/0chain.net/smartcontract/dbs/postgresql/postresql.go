@@ -1,8 +1,10 @@
 package postgresql
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm/logger"
 
@@ -33,30 +35,50 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 		return errors.New("db_open_error, db disabled")
 	}
 
-	db, err := gorm.Open(postgres.Open(fmt.Sprintf(
-		"host=%v port=%v user=%v dbname=%v password=%v sslmode=disable",
-		config.Host,
-		config.Port,
-		config.User,
-		config.Name,
-		config.Password)),
-		&gorm.Config{
-			Logger: logger.Default.LogMode(logger.Silent),
-		})
-	if err != nil {
+	var db *gorm.DB
+	var sqldb *sql.DB
+	var err error
+
+	maxRetries := 60 * 1 // 1 minutes
+	for i := 0; i < maxRetries; i++ {
+
+		db, err = gorm.Open(postgres.Open(fmt.Sprintf(
+			"host=%v port=%v user=%v dbname=%v password=%v sslmode=disable",
+			config.Host,
+			config.Port,
+			config.User,
+			config.Name,
+			config.Password)),
+			&gorm.Config{
+				Logger:                 logger.Default.LogMode(logger.Silent),
+				SkipDefaultTransaction: true,
+				PrepareStmt:            true,
+			})
+
+		if err == nil { // tcp host/port are ready
+			sqldb, err = db.DB()
+			if err == nil {
+				err = sqldb.Ping()
+
+				if err == nil { // login/passwd and schema are initialized
+					sqldb.SetMaxIdleConns(config.MaxIdleConns)
+					sqldb.SetMaxOpenConns(config.MaxOpenConns)
+					sqldb.SetConnMaxLifetime(config.ConnMaxLifetime)
+					store.db = db
+					break
+				}
+			}
+		}
+
+		fmt.Printf("db: [%v/%v]waiting for postgres to ready\n", i+1, maxRetries)
+		time.Sleep(1 * time.Second)
+		continue
+	}
+
+	if store.db == nil {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
 	}
 
-	sqldb, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
-	}
-
-	sqldb.SetMaxIdleConns(config.MaxIdleConns)
-	sqldb.SetMaxOpenConns(config.MaxOpenConns)
-	sqldb.SetConnMaxLifetime(config.ConnMaxLifetime)
-
-	store.db = db
 	fmt.Println("made event sql database ok")
 	return nil
 }

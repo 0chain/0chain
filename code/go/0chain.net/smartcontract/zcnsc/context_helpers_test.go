@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/block"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -24,12 +24,6 @@ const (
 	txHash    = "tx hash"
 	startTime = common.Timestamp(100)
 )
-
-const x10 = 10 * 1000 * 1000 * 1000
-
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
-}
 
 type mockStateContext struct {
 	*mocks.StateContextI
