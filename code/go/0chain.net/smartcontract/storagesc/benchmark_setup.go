@@ -48,7 +48,9 @@ func AddMockAllocations(
 	}
 }
 
-var benchAllocationExpire = common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+func benchAllocationExpire() common.Timestamp {
+	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+}
 
 func addMockAllocation(
 	i int,
@@ -64,7 +66,7 @@ func addMockAllocation(
 		DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 		ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 		Size:                       viper.GetInt64(sc.StorageMinAllocSize),
-		Expiration:                 benchAllocationExpire,
+		Expiration:                 benchAllocationExpire(),
 		Owner:                      clients[cIndex],
 		OwnerPublicKey:             publicKey,
 		ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
@@ -419,6 +421,12 @@ func setupMockChallenges(
 		BlobberID:     blobber.ID,
 		ChallengesMap: make(map[string]struct{}),
 	}
+
+	ids := make([]string, 0, totalValidatorsNum)
+	for i := 0; i < totalValidatorsNum; i++ {
+		ids = append(ids, getMockValidatorId(i))
+	}
+
 	challenges := make([]*StorageChallenge, 0, challengesPerBlobber)
 	for i := 0; i < challengesPerBlobber; i++ {
 		challenge := &StorageChallenge{
@@ -426,6 +434,7 @@ func setupMockChallenges(
 			AllocationID:    allocationId,
 			TotalValidators: totalValidatorsNum,
 			BlobberID:       blobber.ID,
+			ValidatorIDs:    ids,
 		}
 		_, err := balances.InsertTrieNode(challenge.GetKey(ADDRESS), challenge)
 		if err != nil {
@@ -665,6 +674,7 @@ func GetMockBlobberStakePools(
 				Reward:   0,
 				Settings: getMockStakePoolSettings(bId),
 			},
+			TotalOffers: currency.Coin(100000),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockBlobberStakePoolId(i, j)
@@ -840,7 +850,7 @@ func getMockBlobberTerms() Terms {
 		ReadPrice:        currency.Coin(0.1 * 1e10),
 		WritePrice:       currency.Coin(0.1 * 1e10),
 		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
+		MaxOfferDuration: time.Hour*10000 + viper.GetDuration(sc.StorageMinOfferDuration),
 		//MaxOfferDuration: common.Now().Duration() + viper.GetDuration(sc.StorageMinOfferDuration),
 		//MaxOfferDuration:        time.Hour*24*3650 + viper.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),

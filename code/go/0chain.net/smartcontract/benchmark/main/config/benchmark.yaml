@@ -78,11 +78,12 @@ smart_contracts:
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_alloc_size: 1024
-    min_alloc_duration: 1y
+    min_alloc_duration: 8760h
     max_read_price: 100.0
     max_write_price: 100.0
     max_challenge_completion_time: 3m
     min_offer_duration: 10h
+    max_offer_duration: 10h
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0
@@ -98,18 +99,18 @@ smart_contracts:
     readpool:
       min_lock: 0.3
       min_lock_period: 1m
-      max_lock_period: 8760h
+      max_lock_period: 11000h
     writepool:
       min_lock: 0.1
       min_lock_period: 2m
-      max_lock_period: 8760h
+      max_lock_period: 11000h
     stakepool:
       min_lock: 0.1
     free_allocation_settings:
       data_shards: 4
       parity_shards: 4
       size: 10000
-      duration: 50h
+      duration: 10000h
       read_price_range:
         min: 0.0
         max: 0.1

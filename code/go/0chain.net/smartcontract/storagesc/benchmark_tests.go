@@ -204,7 +204,7 @@ func BenchmarkTests(
 					ID:              getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
-					Expiration:      1,
+					Expiration:      common.Timestamp(8760 * 60 * 60),
 					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
@@ -221,7 +221,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-				CreationDate: creationTime + benchAllocationExpire + 1,
+				CreationDate: creationTime + benchAllocationExpire() + 1,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -658,8 +658,11 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				var validationTickets []*ValidationTicket
-				const numberOfValidators = 4
-				for i := 0; i < numberOfValidators; i++ {
+				//always use first NumBlobbersPerAllocation/2 validators the same we use for challenge creation.
+				//to randomize it we need to load challenge here, not sure if it's needed
+				for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation)/2; i++ {
+					//startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
+
 					vt := &ValidationTicket{
 						ChallengeID:  getMockChallengeId(0, 0),
 						BlobberID:    getMockBlobberId(0),
@@ -710,9 +713,7 @@ func BenchmarkTests(
 					"writepool.min_lock_period": "2m",
 					"writepool.max_lock_period": "8760h",
 
-					"stakepool.min_lock":          "10",
-					"stakepool.interest_rate":     "0.0",
-					"stakepool.interest_interval": "1m",
+					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -740,12 +741,10 @@ func BenchmarkTests(
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
-					"block_reward.block_reward":           "1000",
-					"block_reward.qualifying_stake":       "1",
-					"block_reward.sharder_ratio":          "80.0",
-					"block_reward.miner_ratio":            "20.0",
-					"block_reward.blobber_capacity_ratio": "20.0",
-					"block_reward.blobber_usage_ratio":    "80.0",
+					"block_reward.block_reward":     "1000",
+					"block_reward.qualifying_stake": "1",
+					"block_reward.sharder_ratio":    "80.0",
+					"block_reward.miner_ratio":      "20.0",
 
 					"expose_mpt": "false",
 				},
