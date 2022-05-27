@@ -3,7 +3,6 @@ package ememorystore
 import (
 	"context"
 	"encoding/binary"
-	"log"
 	"strconv"
 
 	"github.com/0chain/gorocksdb"
@@ -47,14 +46,7 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 		}
 	}
 	defer data.Free()
-	err = datastore.FromJSON(data.Data(), entity)
-	if err != nil {
-		if entity.GetKey() == "0" {
-			log.Println("data:", string(data.Data()))
-		}
-		return err
-	}
-	return nil
+	return datastore.FromJSON(data.Data(), entity)
 }
 
 func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
@@ -68,9 +60,6 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 		}
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
-		if rNumber == 0 {
-			log.Println("write genesis round, data:", string(data))
-		}
 		if err := c.Conn.Put(key, data); err != nil {
 			return err
 		}
