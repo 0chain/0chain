@@ -76,9 +76,9 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			)
 
 			cr := sc.GetCurrentRound()
-			if cr > lfbTk.Round {
-				continue
-			}
+			//if cr > lfbTk.Round {
+			//	continue
+			//}
 
 			if cr < lfb.Round {
 				sc.SetCurrentRound(lfb.Round)
