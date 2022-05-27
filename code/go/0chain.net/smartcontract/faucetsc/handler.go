@@ -115,7 +115,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 // pour amount
 //
 // responses:
-//  200:
+//  200: Balance
 //  404:
 func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetQueryStateContext())
