@@ -51,14 +51,15 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	syncBlocksTimer := time.NewTimer(7 * time.Second)
-	//lfbCheckTimer := time.NewTimer(3 * time.Second)
-	aheadN := int64(config.GetLFBTicketAhead())
-	endRound := int64(0)
-	//reqC := make(chan int64, 1)
+	var (
+		endRound int64
+		syncing  bool
+
+		syncBlocksTimer = time.NewTimer(7 * time.Second)
+		aheadN          = int64(config.GetLFBTicketAhead())
+	)
 
 	const maxRequestBlocks = 20
-	var syncing bool
 
 	for {
 		select {
@@ -77,6 +78,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			cr := sc.GetCurrentRound()
 			if cr > lfbTk.Round {
 				continue
+			}
+
+			if cr < lfb.Round {
+				sc.SetCurrentRound(lfb.Round)
+				cr = lfb.Round
 			}
 
 			endRound = lfbTk.Round + aheadN
@@ -123,7 +129,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			lfbTk := sc.GetLatestLFBTicket(ctx)
 			logging.Logger.Debug("process block",
 				zap.Int64("round", b.Round),
-				zap.Int64("end round", endRound),
 				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
