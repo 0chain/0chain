@@ -163,9 +163,7 @@ func GetRestNames() []string {
 		"/getConfig",
 
 		"/getReadPoolStat",
-		"/getReadPoolAllocBlobberStat",
 		"/getWritePoolStat",
-		"/getWritePoolAllocBlobberStat",
 		"/getChallengePoolStat",
 
 		"/alloc_written_size",
