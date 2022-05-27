@@ -594,6 +594,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.SetRoundRandomSeed(genesisRandomSeed)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
+	gr.BlockHash = gb.Hash
 	return gr, gb
 }
 
