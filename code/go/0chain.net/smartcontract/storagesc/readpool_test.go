@@ -26,12 +26,6 @@ func (rp *readPool) allocTotal(allocID string,
 	return rp.Pools.allocTotal(allocID, now)
 }
 
-func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
-	now int64) currency.Coin {
-
-	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
-}
-
 func mustEncode(t testing.TB, val interface{}) []byte {
 	var err error
 	b, err := json.Marshal(val)
@@ -74,13 +68,7 @@ func Test_readPool_Encode_Decode(t *testing.T) {
 			},
 		},
 		AllocationID: "ALLOCATION ID",
-		Blobbers: blobberPools{
-			&blobberPool{
-				BlobberID: "BLOBBER ID",
-				Balance:   10300,
-			},
-		},
-		ExpireAt: 90210,
+		ExpireAt:     90210,
 	})
 	require.NoError(t, json.Unmarshal(mustEncode(t, rpe), &rpd))
 	assert.EqualValues(t, rpe, rpd)
