@@ -339,13 +339,3 @@ func (aps allocationPools) stat(now common.Timestamp) (
 	}
 	return
 }
-
-//
-// until stat
-//
-// swagger:model untilStat
-type untilStat struct {
-	PoolID   string           `json:"pool_id"`
-	Balance  currency.Coin    `json:"balance"`
-	ExpireAt common.Timestamp `json:"expire_at"`
-}
