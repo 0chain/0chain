@@ -1,42 +1,32 @@
 package vestingsc
 
 import (
+	"0chain.net/smartcontract/rest"
 	"net/http"
 
 	"0chain.net/core/common"
-	"0chain.net/rest/restinterface"
 	"0chain.net/smartcontract"
 )
 
-type RestFunctionName int
-
-const (
-	rfnGetPoolInfo RestFunctionName = iota
-	rfnGetClientPools
-	rfnGetConfig
-)
-
 type VestingRestHandler struct {
-	restinterface.RestHandlerI
+	rest.RestHandlerI
 }
 
-func NewVestingRestHandler(rh restinterface.RestHandlerI) *VestingRestHandler {
+func NewVestingRestHandler(rh rest.RestHandlerI) *VestingRestHandler {
 	return &VestingRestHandler{rh}
 }
 
-func SetupRestHandler(rh restinterface.RestHandlerI) {
-	vrh := NewVestingRestHandler(rh)
-	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+GetRestNames()[rfnGetPoolInfo], vrh.getPoolInfo)
-	http.HandleFunc(miner+GetRestNames()[rfnGetClientPools], vrh.getClientPools)
-	http.HandleFunc(miner+GetRestNames()[rfnGetConfig], vrh.getConfig)
+func SetupRestHandler(rh rest.RestHandlerI) {
+	rh.Register(GetEndpoints(rh))
 }
 
-func GetRestNames() []string {
-	return []string{
-		"/getPoolInfo",
-		"/getClientPools",
-		"/getConfig",
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
+	vrh := NewVestingRestHandler(rh)
+	vesting := "/v1/screst/" + ADDRESS
+	return []rest.Endpoint{
+		rest.MakeEndpoint(vesting+"/getPoolInfo", vrh.getPoolInfo),
+		rest.MakeEndpoint(vesting+"/getClientPools", vrh.getClientPools),
+		rest.MakeEndpoint(vesting+"/vesting-config", vrh.getConfig),
 	}
 }
 
@@ -47,7 +37,6 @@ func GetRestNames() []string {
 //  200: vestingClientPools
 //  500:
 func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Request) {
-
 	var (
 		clientID = r.URL.Query().Get("client_id")
 		cp       *clientPools
@@ -55,7 +44,7 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 	)
 
 	// just return empty list if not found
-	if cp, err = getOrCreateClientPools(clientID, vrh.GetStateContext()); err != nil {
+	if cp, err = getOrCreateClientPools(clientID, vrh.GetQueryStateContext()); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get or create client pools"))
 		return
 	}
@@ -76,7 +65,7 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 		err    error
 	)
 
-	if vp, err = getPool(poolID, vrh.GetStateContext()); err != nil {
+	if vp, err = getPool(poolID, vrh.GetQueryStateContext()); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pool"))
 		return
 	}
@@ -90,14 +79,14 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, vpInfo, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getConfig getConfig
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config vesting_config
 // get vesting configuration settings
 //
 // responses:
 //  200: StringMap
 //  500:
 func (vrh *VestingRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	conf, err := getConfigReadOnly(vrh.GetStateContext())
+	conf, err := getConfigReadOnly(vrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get config", err.Error()))
 		return

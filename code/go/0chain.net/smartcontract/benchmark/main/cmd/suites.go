@@ -4,7 +4,12 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/viper"
-	"0chain.net/rest"
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"fmt"
 	"sync"
 	"testing"
@@ -54,12 +59,16 @@ func runSuites(
 		extractMpt(mpt, root),
 		data,
 	)
-	restSetup := rest.RestHandler{
+	restSetup := &rest.RestHandler{
 		QueryChainer: &chainer{
 			qsc: readOnlyBalances,
 		},
 	}
-	restSetup.SetupRestHandlers()
+	faucetsc.SetupRestHandler(restSetup)
+	minersc.SetupRestHandler(restSetup)
+	storagesc.SetupRestHandler(restSetup)
+	vestingsc.SetupRestHandler(restSetup)
+	zcnsc.SetupRestHandler(restSetup)
 
 	for _, suite := range suites {
 		log.Println("starting suite ==>", suite.Source)
