@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/tokenpool"
 	"testing"
 
 	"0chain.net/chaincore/currency"
@@ -34,89 +35,6 @@ func (aps allocationPools) allocTotal(allocID string, now int64) (
 		}
 	}
 	return
-}
-
-func (aps allocationPools) allocBlobberTotal(allocID, blobberID string,
-	now int64) (total currency.Coin) {
-
-	for _, ap := range aps {
-		if ap.ExpireAt < common.Timestamp(now) {
-			continue
-		}
-		if ap.AllocationID != allocID {
-			continue
-		}
-		for _, bp := range ap.Blobbers {
-			if bp.BlobberID == blobberID {
-				total += bp.Balance
-			}
-		}
-	}
-	return
-}
-
-//
-// blobber pools
-//
-
-func Test_blobberPools(t *testing.T) {
-	// getIndex
-	// get
-	// removeByIndex
-	// remove
-	// add
-
-	var (
-		bps   blobberPools
-		bp    *blobberPool
-		i, ok = bps.getIndex("blobber_id")
-	)
-	require.Zero(t, i)
-	require.False(t, ok)
-
-	bp, ok = bps.get("blobber_id")
-	require.Nil(t, bp)
-	require.False(t, ok)
-
-	require.False(t, bps.remove("blobber_id"))
-
-	var (
-		b1, b2, b3, b4, b5 = "b1", "b2", "b3", "b4", "b5"
-		random             = []string{b4, b1, b3, b5, b2}
-		ordered            = []string{b1, b2, b3, b4, b5}
-	)
-
-	for _, b := range random {
-		require.True(t, bps.add(&blobberPool{BlobberID: b}))
-	}
-	require.Len(t, bps, len(random))
-
-	for i, o := range ordered {
-		require.Equal(t, bps[i].BlobberID, o)
-	}
-
-	// uniqueness
-
-	for _, b := range random {
-		require.False(t, bps.add(&blobberPool{BlobberID: b}))
-	}
-	require.Len(t, bps, len(random))
-
-	for i, o := range ordered {
-		require.Equal(t, bps[i].BlobberID, o)
-	}
-
-	i, ok = bps.getIndex(b3)
-	require.True(t, ok)
-	bp, ok = bps.get(b3)
-	require.True(t, ok)
-	require.Equal(t, bps[i], bp)
-
-	bps.removeByIndex(i)
-	bps.remove(b4)
-	for i, o := range []string{b1, b2, b5} {
-		require.Equal(t, bps[i].BlobberID, o)
-	}
 }
 
 //
@@ -213,35 +131,32 @@ func Test_allocationPools(t *testing.T) {
 		&allocationPool{
 			ExpireAt:     10,
 			AllocationID: "a1",
-			Blobbers:     blobberPools{},
 		},
 		&allocationPool{
 			ExpireAt:     20,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 253,
+				},
 			},
 		},
 		&allocationPool{
 			ExpireAt:     20,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 0},
-			},
 		},
 		&allocationPool{
 			ExpireAt:     10,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 255,
+				},
 			},
 		},
 		&allocationPool{
 			ExpireAt:     20,
 			AllocationID: "a3",
-			Blobbers:     blobberPools{},
 		},
 	}
 
@@ -249,24 +164,23 @@ func Test_allocationPools(t *testing.T) {
 		&allocationPool{
 			ExpireAt:     20,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 253,
+				},
 			},
 		},
 		&allocationPool{
 			ExpireAt:     20,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 0},
-			},
 		},
 		&allocationPool{
 			ExpireAt:     10,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 255,
+				},
 			},
 		},
 	}, aps.allocationCut(a2))
@@ -278,109 +192,56 @@ func Test_allocationPools(t *testing.T) {
 	//
 
 	cut = aps.allocationCut(a2)
-	cut = removeBlobberExpired(cut, "b1", 0)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 253,
+				},
 			},
 		},
-		&allocationPool{
+		{
+			ExpireAt:     20,
+			AllocationID: "a2",
+		},
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 255,
+				},
 			},
 		},
 	}, cut)
 
 	sortExpireAt(cut)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 255,
+				},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 253,
+				},
 			},
+		},
+		{
+			ExpireAt:     20,
+			AllocationID: "a2",
 		},
 	}, cut)
-
-	cut = removeBlobberExpired(cut, "b2", 15)
-	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
-			},
-		},
-	}, cut)
-
-	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     10,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
-			},
-		},
-	}, aps.blobberCut(a2, "b2", 0))
-
-	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     10,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 103},
-				&blobberPool{BlobberID: "b2", Balance: 154},
-			},
-		},
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
-			},
-		},
-	}, aps.blobberCut(a2, "b2", 0))
-
-	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
-			ExpireAt:     20,
-			AllocationID: "a2",
-			Blobbers: blobberPools{
-				&blobberPool{BlobberID: "b1", Balance: 101},
-				&blobberPool{BlobberID: "b2", Balance: 152},
-			},
-		},
-	}, aps.blobberCut(a2, "b2", 15))
-
-	require.EqualValues(t, []*allocationPool{}, aps.blobberCut(a2, "b2", 21))
-
 }
 
 func Test_allocationPools_sortExpiry(t *testing.T) {
@@ -394,70 +255,64 @@ func Test_allocationPools_sortExpiry(t *testing.T) {
 				&allocationPool{
 					ExpireAt:     100,
 					AllocationID: "a1",
-					Blobbers:     blobberPools{},
 				},
 				&allocationPool{
 					ExpireAt:     15,
 					AllocationID: "a2",
-					Blobbers: blobberPools{
-						&blobberPool{BlobberID: "b1", Balance: 101},
-						&blobberPool{BlobberID: "b2", Balance: 152},
+					ZcnPool: tokenpool.ZcnPool{
+						TokenPool: tokenpool.TokenPool{
+							Balance: 253,
+						},
 					},
 				},
 				&allocationPool{
 					ExpireAt:     210,
 					AllocationID: "a2",
-					Blobbers: blobberPools{
-						&blobberPool{BlobberID: "b1", Balance: 0},
-					},
 				},
 				&allocationPool{
 					ExpireAt:     125,
 					AllocationID: "a2",
-					Blobbers: blobberPools{
-						&blobberPool{BlobberID: "b1", Balance: 103},
-						&blobberPool{BlobberID: "b2", Balance: 154},
+					ZcnPool: tokenpool.ZcnPool{
+						TokenPool: tokenpool.TokenPool{
+							Balance: 257,
+						},
 					},
 				},
 				&allocationPool{
 					ExpireAt:     3,
 					AllocationID: "a3",
-					Blobbers:     blobberPools{},
 				},
 			},
 			want: allocationPools{
 				&allocationPool{
 					ExpireAt:     3,
 					AllocationID: "a3",
-					Blobbers:     blobberPools{},
 				},
 				&allocationPool{
 					ExpireAt:     15,
 					AllocationID: "a2",
-					Blobbers: blobberPools{
-						&blobberPool{BlobberID: "b1", Balance: 101},
-						&blobberPool{BlobberID: "b2", Balance: 152},
+					ZcnPool: tokenpool.ZcnPool{
+						TokenPool: tokenpool.TokenPool{
+							Balance: 253,
+						},
 					},
 				},
 				&allocationPool{
 					ExpireAt:     100,
 					AllocationID: "a1",
-					Blobbers:     blobberPools{},
 				},
 				&allocationPool{
 					ExpireAt:     125,
 					AllocationID: "a2",
-					Blobbers: blobberPools{
-						&blobberPool{BlobberID: "b1", Balance: 103},
-						&blobberPool{BlobberID: "b2", Balance: 154},
+					ZcnPool: tokenpool.ZcnPool{
+						TokenPool: tokenpool.TokenPool{
+							Balance: 257,
+						},
 					},
 				},
 				&allocationPool{
 					ExpireAt:     210,
 					AllocationID: "a2",
-					Blobbers: blobberPools{
-						&blobberPool{BlobberID: "b1", Balance: 0},
-					},
 				},
 			}},
 	}

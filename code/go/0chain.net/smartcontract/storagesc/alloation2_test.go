@@ -577,14 +577,7 @@ func setupMocksFinishAllocation(
 	newPool.ID = "first_mock_write_pool"
 	newPool.Balance = currency.Coin(wpBalance)
 	newPool.AllocationID = sAllocation.ID
-	newPool.Blobbers = blobberPools{}
 	newPool.ExpireAt = now
-	for i := 0; i < len(sAllocation.BlobberAllocs); i++ {
-		newPool.Blobbers.add(&blobberPool{
-			BlobberID: blobbers[i].ID,
-			Balance:   currency.Coin(1),
-		})
-	}
 
 	awp := &allocationWritePools{
 		ownerId:    0,
@@ -931,14 +924,6 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 	require.EqualValues(t, transactionHash, wp.Pools[0].ID)
 	require.EqualValues(t, transactionHash, wp.Pools[0].AllocationID)
 	require.EqualValues(t, f.request.Size, wp.Pools[0].Balance)
-	require.Len(t, wp.Pools[0].Blobbers, f.blobbersUsed())
-	var blobbersUsed []string
-	for _, blobber := range wp.Pools[0].Blobbers {
-		blobbersUsed = append(blobbersUsed, blobber.BlobberID)
-	}
-	for _, blobber := range wp.Pools[0].Blobbers {
-		require.EqualValues(t, f.blobberEarnt(t, blobber.BlobberID, blobbersUsed), blobber.Balance)
-	}
 
 	var countUsedBlobbers = 0
 	for _, blobber := range blobbers {

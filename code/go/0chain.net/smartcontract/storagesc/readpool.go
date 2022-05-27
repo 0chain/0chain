@@ -35,12 +35,6 @@ type readPool struct {
 	Pools allocationPools `json:"pools"`
 }
 
-func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
-) []*allocationPool {
-
-	return rp.Pools.blobberCut(allocID, blobberID, now)
-}
-
 func (rp *readPool) removeEmpty(allocID string, ap []*allocationPool) {
 	rp.Pools.removeEmpty(allocID, ap)
 }
@@ -86,7 +80,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	sp *stakePool, now common.Timestamp, value currency.Coin,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	var cut = rp.blobberCut(allocID, blobID, now)
+	var cut = rp.Pools.allocationCut(allocID)
 
 	if len(cut) == 0 {
 		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
@@ -102,18 +96,13 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		if value == moved {
 			break // all required tokens has moved to the blobber
 		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
-		if !ok {
-			continue // impossible case, but leave the check here
-		}
 		var (
-			bp   = ap.Blobbers[bi]
 			move currency.Coin
 		)
-		if valueLeft >= bp.Balance {
-			move, bp.Balance = bp.Balance, 0
+		if valueLeft >= ap.Balance {
+			move = ap.Balance
 		} else {
-			move, bp.Balance = valueLeft, bp.Balance-valueLeft
+			move = valueLeft
 		}
 
 		ap.Balance -= move
@@ -125,9 +114,6 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		})
 
 		moved += move
-		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
-		}
 		if ap.Balance == 0 {
 			torm = append(torm, ap) // remove the allocation pool later
 		}
@@ -273,50 +259,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		}
 	}
 
-	// get the allocation object
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
-	if err != nil {
-		return "", common.NewError("read_pool_lock_failed",
-			"can't get allocation: "+err.Error())
-	}
-
-	var bps blobberPools
-
-	// lock for allocation -> blobber (particular blobber locking)
-	if lr.BlobberID != "" {
-		if _, ok := alloc.BlobberAllocsMap[lr.BlobberID]; !ok {
-			return "", common.NewError("read_pool_lock_failed",
-				fmt.Sprintf("no such blobber %s in allocation %s",
-					lr.BlobberID, lr.AllocationID))
-		}
-		bps = append(bps, &blobberPool{
-			Balance:   currency.Coin(t.Value),
-			BlobberID: lr.BlobberID,
-		})
-	} else {
-		// divide depending read price range for all blobbers of the
-		// allocation
-		var total float64 // total read price
-		for _, b := range alloc.BlobberAllocs {
-			total += float64(b.Terms.ReadPrice)
-		}
-		// calculate (divide)
-		for _, b := range alloc.BlobberAllocs {
-			var ratio = float64(b.Terms.ReadPrice) / total
-			bps.add(&blobberPool{
-				Balance:   currency.Coin(float64(t.Value) * ratio),
-				BlobberID: b.BlobberID,
-			})
-		}
-	}
-
 	// create and dig allocation pool
-
 	var ap allocationPool
 	ap.AllocationID = lr.AllocationID
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
-	ap.Blobbers = bps
 
 	if !lr.MintTokens {
 		var transfer *state.Transfer
