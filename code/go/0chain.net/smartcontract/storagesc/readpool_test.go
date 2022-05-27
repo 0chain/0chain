@@ -239,7 +239,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	// 7. no such allocation
 	lr.Duration = 15 * time.Second
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	require.Error(t, err)
+	require.NoError(t, err, "readPoolLock does not need to access the allocation")
 
 	balances.balances[client.id] = 200e10
 	var aid, _ = addAllocation(t, ssc, client, 10, int64(toSeconds(time.Hour)),
