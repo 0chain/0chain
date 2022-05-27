@@ -19,7 +19,7 @@ jobs:
         run: ./docker.local/bin/check.msgp.sh
 
       - name: Check swagger generation
-        run: ./docker.local/bin/test.swagger.sh
+        run: docker.local/bin/test.swagger.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
