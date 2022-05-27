@@ -39,7 +39,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(faucet+"/personalPeriodicLimit", frh.getPersonalPeriodicLimit),
 		rest.MakeEndpoint(faucet+"/globalPeriodicLimit", frh.getGlobalPeriodicLimit),
 		rest.MakeEndpoint(faucet+"/pourAmount", frh.getPourAmount),
-		rest.MakeEndpoint(faucet+"/faucet_config", frh.getConfig),
+		rest.MakeEndpoint(faucet+"/faucet-config", frh.getConfig),
 	}
 }
 

@@ -67,7 +67,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
 		rest.MakeEndpoint(storage+"/total_saved_data", srh.getTotalData),
-		rest.MakeEndpoint(storage+"/storage_config", srh.getConfig),
+		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
 		rest.MakeEndpoint(storage+"/getWritePoolStat", srh.getWritePoolStat),

@@ -26,7 +26,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	return []rest.Endpoint{
 		rest.MakeEndpoint(vesting+"/getPoolInfo", vrh.getPoolInfo),
 		rest.MakeEndpoint(vesting+"/getClientPools", vrh.getClientPools),
-		rest.MakeEndpoint(vesting+"/vesting_config", vrh.getConfig),
+		rest.MakeEndpoint(vesting+"/vesting-config", vrh.getConfig),
 	}
 }
 
