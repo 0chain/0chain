@@ -226,7 +226,7 @@ func setUpMpt(
 		t := time.NewTicker(time.Second)
 		eventDb, err = tick()
 		if err != nil {
-			for true {
+			for {
 				<-t.C
 				eventDb, err = tick()
 				if err == nil {
