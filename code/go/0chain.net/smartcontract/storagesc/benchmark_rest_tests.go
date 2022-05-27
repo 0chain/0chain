@@ -10,15 +10,15 @@ import (
 	"log"
 
 	"0chain.net/core/common"
-	"0chain.net/rest/restinterface"
 	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/rest"
 	"github.com/spf13/viper"
 )
 
 func BenchmarkRestTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
-	rh := restinterface.NewTestRestHandler()
+	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	srh := NewStorageRestHandler(rh)
 	maxReadPrice, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxReadPrice))
 	if err != nil {
@@ -43,7 +43,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobberGeoLocation,
 			},
 			{
-				FuncName: "getConfig",
+				FuncName: "storage_config",
 				Endpoint: srh.getConfig,
 			},
 			{

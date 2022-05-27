@@ -1,7 +1,12 @@
 package chain
 
 import (
-	"0chain.net/rest"
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -42,7 +47,12 @@ func SetupScRestApiHandlers() {
 	restHandler := rest.NewRestHandler(c)
 	SetupSwagger()
 	if c.EventDb != nil {
-		restHandler.SetupRestHandlers()
+		faucetsc.SetupRestHandler(restHandler)
+		minersc.SetupRestHandler(restHandler)
+		storagesc.SetupRestHandler(restHandler)
+		vestingsc.SetupRestHandler(restHandler)
+		zcnsc.SetupRestHandler(restHandler)
+
 	} else {
 		logging.Logger.Warn("cannot find event database, REST API will not be supported on this sharder")
 	}
@@ -177,6 +187,29 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
+func GetFunctionNames(address string) []string {
+	var endpoints []rest.Endpoint
+	switch address {
+	case storagesc.ADDRESS:
+		endpoints = storagesc.GetEndpoints(nil)
+	case minersc.ADDRESS:
+		endpoints = minersc.GetEndpoints(nil)
+	case faucetsc.ADDRESS:
+		endpoints = faucetsc.GetEndpoints(nil)
+	case vestingsc.ADDRESS:
+		endpoints = vestingsc.GetEndpoints(nil)
+	case zcnsc.ADDRESS:
+		endpoints = zcnsc.GetEndpoints(nil)
+	default:
+		return []string{}
+	}
+	var names []string
+	for _, endepoint := range endpoints {
+		names = append(names, endepoint.URI)
+	}
+	return names
+}
+
 func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
@@ -189,7 +222,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
 
 	key := pathParams[1]
-	names := rest.GetFunctionNames(pathParams[1])
+	names := GetFunctionNames(pathParams[1])
 
 	sort.Strings(names)
 	for _, funcName := range names {

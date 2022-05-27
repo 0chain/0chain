@@ -1,6 +1,7 @@
 package smartcontract_test
 
 import (
+	"0chain.net/chaincore/chain"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,8 +9,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-
-	"0chain.net/rest"
 
 	"0chain.net/chaincore/currency"
 
@@ -181,7 +180,7 @@ func TestGetSmartContract(t *testing.T) {
 			}
 			require.EqualValues(t, tt.name, got.GetName())
 			require.EqualValues(t, tt.address, got.GetAddress())
-			require.EqualValues(t, tt.restpoints, len(rest.GetFunctionNames(tt.address)))
+			require.EqualValues(t, tt.restpoints, len(chain.GetFunctionNames(tt.address)))
 		})
 	}
 }
