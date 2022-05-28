@@ -16,11 +16,11 @@ func TestBenchmarkTests(t *testing.T) {
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 
-	ssc := NewMinerSmartContract()
+	msc := NewMinerSmartContract()
 
 	require.EqualValues(
 		t,
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
-		len(ssc.GetExecutionStats())-ScStatsNotFunctionCalls,
+		len(msc.GetExecutionStats())-ScStatsNotFunctionCalls,
 	)
 }
