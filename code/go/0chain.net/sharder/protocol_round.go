@@ -15,6 +15,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrNoPreviousBlock = errors.New("previous block does not exist")
+
 func shouldNotFinalize(r round.RoundI) bool {
 	return r.IsFinalizing() || r.IsFinalized()
 }
@@ -40,7 +42,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 
 	pb, _ := sc.GetBlock(ctx, b.PrevHash)
 	if pb == nil {
-		return errors.New("previous block does not exist")
+		return ErrNoPreviousBlock
 	}
 
 	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {

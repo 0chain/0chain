@@ -131,13 +131,36 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
 					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash))
+					zap.String("block", b.Hash),
+					zap.String("prev block", b.PrevHash))
+				if err != ErrNoPreviousBlock {
+					continue
+				}
 
-				continue
+				// fetch the previous block
+				pb, _ := sc.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+				if pb != nil {
+					if err := sc.processBlock(ctx, pb); err != nil {
+						logging.Logger.Error("process block, handle previous block failed",
+							zap.Int64("round", pb.Round),
+							zap.String("block", pb.Hash),
+							zap.Error(err))
+						continue
+					}
+
+					// process this block again
+					if err := sc.processBlock(ctx, b); err != nil {
+						logging.Logger.Error("process block, failed after getting previous block",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.Error(err))
+						continue
+					}
+				}
 			}
 
 			lfbTk := sc.GetLatestLFBTicket(ctx)
-			logging.Logger.Debug("process block",
+			logging.Logger.Debug("process block successfully",
 				zap.Int64("round", b.Round),
 				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
