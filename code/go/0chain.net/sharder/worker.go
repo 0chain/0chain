@@ -113,7 +113,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		case b := <-sc.blockChannel:
 			cr := sc.GetCurrentRound()
 			//lfb := sc.GetLatestFinalizedBlock()
-			if b.Round >= sc.GetCurrentRound()+1 {
+			if b.Round > sc.GetCurrentRound()+1 {
 				//if b.Round >= lfb.Round+aheadN {
 				logging.Logger.Debug("process block skip",
 					zap.Int64("block round", b.Round),

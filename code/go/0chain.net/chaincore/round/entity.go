@@ -450,6 +450,13 @@ func (r *Round) Finalize(b *block.Block) {
 	r.BlockHash = b.Hash
 }
 
+func (r *Round) GetBlockHash() (hash string) {
+	r.mutex.Lock()
+	hash = r.BlockHash
+	r.mutex.Unlock()
+	return
+}
+
 /*SetFinalizing - the round is being finalized */
 func (r *Round) SetFinalizing() bool {
 	r.mutex.Lock()
