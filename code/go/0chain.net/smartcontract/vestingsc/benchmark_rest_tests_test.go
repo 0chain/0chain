@@ -18,7 +18,7 @@ func TestBenchmarkRestTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(BenchmarkRestTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 		len(GetEndpoints(rest.NewRestHandler(nil))),
+		len(BenchmarkRestTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }

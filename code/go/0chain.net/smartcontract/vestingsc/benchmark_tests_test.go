@@ -18,7 +18,7 @@ func TestBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 		len(vsc.GetExecutionStats()),
+		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }

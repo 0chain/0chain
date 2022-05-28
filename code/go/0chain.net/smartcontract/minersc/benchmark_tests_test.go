@@ -20,7 +20,7 @@ func TestBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 		len(msc.GetExecutionStats())-ScStatsNotFunctionCalls,
+		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
