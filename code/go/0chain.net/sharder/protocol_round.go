@@ -37,6 +37,16 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 				zap.Any("existing_block", nb[0].Hash))
 		}
 	}
+
+	pb, _ := sc.GetBlock(ctx, b.PrevHash)
+	if pb == nil {
+		return errors.New("previous block does not exist")
+	}
+
+	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+		return errors.New("previous block state is not computed")
+	}
+
 	errC := make(chan error)
 	doneC := make(chan struct{})
 	t := time.Now()

@@ -112,7 +112,9 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.blockChannel:
 			cr := sc.GetCurrentRound()
+			//lfb := sc.GetLatestFinalizedBlock()
 			if b.Round != sc.GetCurrentRound()+1 {
+				//if b.Round >= lfb.Round+aheadN {
 				logging.Logger.Debug("process block skip",
 					zap.Int64("block round", b.Round),
 					zap.Int64("current round", cr),
@@ -166,14 +168,14 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
 			// check local to see if exist
-			hash, err := sc.GetBlockHash(cctx, r)
-			if err == nil {
-				b, err := sc.GetBlockFromHash(cctx, hash, r)
-				if err == nil {
-					blocks[idx] = b
-					return
-				}
-			}
+			//hash, err := sc.GetBlockHash(cctx, r)
+			//if err == nil {
+			//	b, err := sc.GetBlockFromHash(cctx, hash, r)
+			//	if err == nil {
+			//		blocks[idx] = b
+			//		return
+			//	}
+			//}
 
 			// this will save block to local and create related round
 			b, err := sc.GetNotarizedBlockFromSharders(cctx, "", r)
