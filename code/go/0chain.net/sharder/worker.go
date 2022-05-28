@@ -124,7 +124,15 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 				continue
 			}
-			sc.processBlock(ctx, b)
+
+			if err := sc.processBlock(ctx, b); err != nil {
+				logging.Logger.Error("process block failed",
+					zap.Error(err),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash))
+
+				continue
+			}
 
 			lfbTk := sc.GetLatestLFBTicket(ctx)
 			logging.Logger.Debug("process block",

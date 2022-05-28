@@ -181,10 +181,13 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 	return // everything is done
 }
 
-func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+// TODO: return error if previous block is not connected
+// the previous round added may not finalized yet, so need to check again to
+// ensure that the finalized one is saved.
+func (sc *Chain) processBlock(ctx context.Context, b *block.Block) error {
 	if !sc.cacheProcessingBlock(b.Hash) {
 		Logger.Debug("process block, being processed", zap.Int64("round", b.Round))
-		return
+		return nil
 	}
 
 	Logger.Debug("process notarized block",
@@ -205,7 +208,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		if b.GetRoundRandomSeed() == 0 {
 			Logger.Error("process block - block has no seed",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash))
-			return
+			return fmt.Errorf("block has no seed")
 		}
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
 	}
@@ -217,13 +220,13 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
-		return
+		return fmt.Errorf("could not pull related magic block, err: %v", err)
 	}
 
 	if err = b.Validate(ctx); err != nil {
 		Logger.Error("block validation", zap.Any("round", b.Round),
 			zap.Any("hash", b.Hash), zap.Error(err))
-		return
+		return fmt.Errorf("validate block failed, err: %v", err)
 	}
 
 	err = sc.VerifyBlockNotarization(ctx, b)
@@ -232,7 +235,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 			zap.Error(err),
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash))
-		return
+		return fmt.Errorf("verify block notarization failed, err: %v", err)
 	}
 
 	//TODO remove it since verify block adds this block to round
@@ -241,7 +244,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("received notarized block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("client_state", util.ToHex(b.ClientStateHash)))
-	sc.AddNotarizedBlock(ctx, er, b)
+	return sc.AddNotarizedBlock(ctx, er, b)
 }
 
 func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int64, scan HealthCheckScan) *round.Round {

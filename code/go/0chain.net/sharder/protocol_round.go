@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -20,12 +21,12 @@ func shouldNotFinalize(r round.RoundI) bool {
 
 // AddNotarizedBlock - add a notarized block for a given round.
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
-	b *block.Block) bool {
+	b *block.Block) error {
 
 	_, ok := r.AddNotarizedBlock(b)
 
 	if !ok && shouldNotFinalize(r) {
-		return false
+		return errors.New("add notarized block to round failed")
 	}
 
 	sc.SetCurrentRound(r.GetRoundNumber())
@@ -69,18 +70,18 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		}
 	}(cctx)
 
-	var ret bool
 	select {
 	case <-doneC:
-		ret = true
 		Logger.Debug("AddNotarizedBlock compute state successfully", zap.Any("duration", time.Since(t)))
 	case err := <-errC:
 		Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),
 			zap.Error(err))
-		ret = false
+		if node.Self.IsSharder() {
+			return err
+		}
 	}
 
 	go sc.FinalizeRound(r)
-	return ret
+	return nil
 }
