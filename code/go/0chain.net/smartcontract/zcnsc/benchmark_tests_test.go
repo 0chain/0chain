@@ -2,7 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/smartcontract/benchmark"
-	"0chain.net/smartcontract/mocks"
+	"0chain.net/smartcontract/benchmark/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"testing"

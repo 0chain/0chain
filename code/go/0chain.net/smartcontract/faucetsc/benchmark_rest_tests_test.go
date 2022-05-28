@@ -2,7 +2,7 @@ package faucetsc
 
 import (
 	"0chain.net/smartcontract/benchmark"
-	"0chain.net/smartcontract/mocks"
+	"0chain.net/smartcontract/benchmark/mocks"
 	"0chain.net/smartcontract/rest"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
