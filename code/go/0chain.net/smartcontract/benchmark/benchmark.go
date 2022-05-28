@@ -348,9 +348,9 @@ func (bd *BenchData) Decode(input []byte) error {
 
 var MockBenchData = BenchData{
 	BenchDataMpt: BenchDataMpt{
-		Clients:     make([]string, 100, 100),
-		PublicKeys:  make([]string, 100, 100),
-		PrivateKeys: make([]string, 100, 100),
-		Sharders:    make([]string, 100, 100),
+		Clients:     make([]string, 100),
+		PublicKeys:  make([]string, 100),
+		PrivateKeys: make([]string, 100),
+		Sharders:    make([]string, 100),
 	},
 }
