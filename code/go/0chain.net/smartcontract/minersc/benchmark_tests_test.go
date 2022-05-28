@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-const ScStatsNotFunctionCalls = 7
-
 func TestMinerBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
 	mockSigScheme.On("SetPublicKey", mock.Anything).Return(nil)
@@ -20,7 +18,7 @@ func TestMinerBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(msc.GetExecutionStats())-ScStatsNotFunctionCalls,
+		len(msc.GetExecutionStats()),
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
