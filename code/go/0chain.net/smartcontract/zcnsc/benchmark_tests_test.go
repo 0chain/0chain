@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestBenchmarkTests(t *testing.T) {
+func TestZcnBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
 	mockSigScheme.On("SetPublicKey", mock.Anything).Return(nil)
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()

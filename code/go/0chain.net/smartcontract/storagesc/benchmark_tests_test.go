@@ -10,7 +10,7 @@ import (
 
 const ScStatsNotFunctionCalls = 7
 
-func TestBenchmarkTests(t *testing.T) {
+func TestStorageBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
 	mockSigScheme.On("SetPublicKey", mock.Anything).Return(nil)
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
