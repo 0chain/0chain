@@ -29,7 +29,6 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		return errors.New("add notarized block to round failed")
 	}
 
-	sc.SetCurrentRound(r.GetRoundNumber())
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()
 		if len(nb) > 0 {
@@ -38,8 +37,6 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 				zap.Any("existing_block", nb[0].Hash))
 		}
 	}
-	sc.UpdateNodeState(b)
-
 	errC := make(chan error)
 	doneC := make(chan struct{})
 	t := time.Now()
@@ -81,6 +78,9 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 			return err
 		}
 	}
+
+	sc.SetCurrentRound(r.GetRoundNumber())
+	sc.UpdateNodeState(b)
 
 	go sc.FinalizeRound(r)
 	return nil
