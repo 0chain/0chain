@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+const extraStats = 2
+
 func TestFaucetBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
 	mockSigScheme.On("SetPublicKey", mock.Anything).Return(nil)
@@ -18,7 +20,7 @@ func TestFaucetBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(fsc.GetExecutionStats()),
+		len(fsc.GetExecutionStats())-extraStats,
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }

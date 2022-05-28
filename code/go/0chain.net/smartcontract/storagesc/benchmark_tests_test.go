@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-const ScStatsNotFunctionCalls = 7
+const extraStats = 7
 
 func TestStorageBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
@@ -20,7 +20,7 @@ func TestStorageBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(ssc.GetExecutionStats())-ScStatsNotFunctionCalls,
+		len(ssc.GetExecutionStats())-extraStats,
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
