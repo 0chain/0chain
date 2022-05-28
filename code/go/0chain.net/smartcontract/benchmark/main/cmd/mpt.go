@@ -139,8 +139,6 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 		benchmark.BenchData{},
 	)
 
-	storagesc.UpdateHealthCheck(balances)
-
 	var benchData benchmark.BenchData
 	err = balances.GetTrieNode(BenchDataKey, &benchData)
 	if err != nil {
