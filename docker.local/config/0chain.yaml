@@ -205,6 +205,7 @@ storage:
   # block requests. That is when recover mode is required so it will traverse
   # all the paths to generate metadata
   mode: start # start, restart, recover
+  # blocks older than 720 hours will be moved to cold tier if cold tiering is enabled
   block_movement_interval: 720h # time.Duration
 
   rocks:
@@ -218,7 +219,6 @@ storage:
     size: 1024*1024*1024
   disk:
     strategy: "some strategy"
-    block_moves_in: 720 # In hour; Blocks older than 720 hours will be moved to cold storage is cold storage is enabled
     volumes:
       - path: "/path/to/hot/blocks"
         recovery: false
