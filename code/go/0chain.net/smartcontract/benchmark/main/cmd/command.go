@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/pflag"
 	"path"
 	"sort"
 	"time"
@@ -47,11 +48,27 @@ func init() {
 	node.Self = &node.SelfNode{
 		Node: node.Provider(),
 	}
-	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
-	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")
-	rootCmd.PersistentFlags().StringSlice("omit", nil, "list endpoints to omit")
-	rootCmd.PersistentFlags().String("config", defaultConfigPath, "path to config file")
-	rootCmd.PersistentFlags().String("load", "", "path to mpt")
+
+	pflag.String("config", defaultConfigPath, "path to config")
+	pflag.String("load", "", "path to load")
+
+	pflag.StringSlice("tests", nil, "comma delimited list of test suites")
+	pflag.Bool("verbose", true, "verbose")
+	pflag.StringSlice("omit", nil, "comma delimited list of tests to ommit")
+
+	//	pflag.Parse()
+	//err := viper.BindPFlags(pflag.CommandLine)
+
+	_ = viper.BindPFlag("config", pflag.Lookup("config"))
+	_ = viper.BindPFlag("load", pflag.Lookup("load"))
+
+	_ = viper.BindPFlag(bk.OptionTestSuites, pflag.Lookup("tests"))
+	_ = viper.BindEnv(bk.OptionTestSuites, "TESTS")
+	_ = viper.BindPFlag(bk.OptionOmittedTests, pflag.Lookup("omit"))
+	_ = viper.BindEnv(bk.OptionOmittedTests, "OMIT")
+	_ = viper.BindPFlag(bk.OptionVerbose, pflag.Lookup("verbose"))
+	_ = viper.BindEnv(bk.OptionVerbose, "VERBOSE")
+	viper.AutomaticEnv()
 }
 
 func Execute() error {
@@ -70,12 +87,19 @@ var rootCmd = &cobra.Command{
 		}()
 		totalTimer := time.Now()
 		// path to config file can only come from command line options
-		loadPath, configPath := loadPath(cmd.Flags())
+
+		loadPath := viper.GetString("load")
+		log.Println("load path", loadPath)
+		configPath := viper.GetString("config")
+		if loadPath != "" {
+			configPath = path.Join(loadPath, "benchmark.yaml")
+		}
+		log.Println("config path", configPath)
 
 		GetViper(loadPath)
 		log.PrintSimSettings()
 
-		tests, omittedTests := setupOptions(cmd.Flags())
+		tests, omittedTests := suitesOmits()
 		log.Println("read in command line options")
 
 		mpt, root, data := getMpt(loadPath, configPath)

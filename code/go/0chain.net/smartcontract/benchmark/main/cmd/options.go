@@ -31,41 +31,16 @@ func loadPath(flags *pflag.FlagSet) (string, string) {
 	return "", defaultConfigPath
 }
 
-func setupOptions(flags *pflag.FlagSet) ([]string, []string) {
-	var err error
-	var verbose bool
-	if flags.Changed("verbose") {
-		verbose, err = flags.GetBool("verbose")
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		verbose = viper.GetBool(bk.OptionVerbose)
-	}
+func suitesOmits() ([]string, []string) {
+	verbose := viper.GetBool(bk.OptionVerbose)
 	log.SetVerbose(verbose)
 
-	var testSuites []string
-	if flags.Changed("tests") {
-		testSuites, err = flags.GetStringSlice("tests")
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		testSuites = viper.GetStringSlice(bk.OptionTestSuites)
-	}
+	testSuites := viper.GetStringSlice(bk.OptionTestSuites)
 	for i := 0; i < len(testSuites); i++ {
 		testSuites[i] = strings.TrimSpace(testSuites[i])
 	}
 
-	var omit []string
-	if flags.Changed("omit") {
-		omit, err = flags.GetStringSlice("omit")
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		omit = viper.GetStringSlice(bk.OptionOmittedTests)
-	}
+	omit := viper.GetStringSlice(bk.OptionOmittedTests)
 	for i := 0; i < len(omit); i++ {
 		omit[i] = strings.TrimSpace(omit[i])
 	}

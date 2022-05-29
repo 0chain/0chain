@@ -17,11 +17,15 @@ services:
   benchmark:
     image: "zchain_benchmarks"
     environment:
-      - DOCKER=true
+      - LOAD
+      - TESTS
+      - CONFIG
+      - VERBOSE
+      - OMIT
     volumes:
       - ../config:/config
       - ../benchmarks/saved_data:/saved_data
-    command: ./bin/main  benchmark --tests "storage" --load /saved_data
+    command: ./bin/main  benchmark
     depends_on:
       - postgres
     links:

@@ -6,7 +6,37 @@ The blockchain database used in these tests is constructed from the parameters i
 file. Smartcontracts do not (or should not) access tha chain so a populated 
 MPT database is enough to give a realistic benchmark.
 
-To run
+## To run
+### DOCKER
+1. run init
+```shell
+./docker.local/bin/init.setup.sh
+```
+2. build base image
+```shell
+./docker.local/bin/build.base.sh
+```
+3. build docker image
+```shell
+./docker.local/bin/build.benchmark.sh
+```
+4. change dir to benchmarks
+```shell
+cd docker.local/benchmarks
+```
+5. run tests
+```shell
+../bin/start.benchmarks.sh
+```
+
+Script can be run with different options:
+- load 
+- tests
+- config
+- verbose
+- omit
+
+### BARE METAL
 ```bash
 go build -tags bn256 && ./main benchmark | column -t -s,
 ```
