@@ -242,13 +242,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		return
 	}
 
-	if roundNumber-lfb.Round <= 1 {
-		logging.Logger.Debug("finalize round - lfb round should have confirmed number > 1",
-			zap.Int64("round", roundNumber),
-			zap.Int64("lfb round", lfb.Round),
-			zap.String("lfb", lfb.Hash))
-		return
-	}
+	//if roundNumber-lfb.Round <= 1 {
+	//	logging.Logger.Debug("finalize round - lfb round should have confirmed number > 1",
+	//		zap.Int64("round", roundNumber),
+	//		zap.Int64("lfb round", lfb.Round),
+	//		zap.String("lfb", lfb.Hash))
+	//	return
+	//}
 
 	if lfb.Round > plfb.Round {
 
@@ -265,6 +265,15 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		maxBackDepth := config.GetLFBTicketAhead()
 		frchain := make([]*block.Block, 0, maxBackDepth)
 		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
+			if roundNumber-b.Round <= 2 {
+				logging.Logger.Debug("finalize round - round should have confirmed number > 1",
+					zap.Int64("finalize round", roundNumber),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.Int64("new lfb round", lfb.Round),
+					zap.String("new lfb", lfb.Hash))
+				continue
+			}
 			frchain = append(frchain, b)
 			if b.PrevBlock == nil {
 				if node.Self.IsSharder() {
