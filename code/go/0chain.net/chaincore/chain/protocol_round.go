@@ -287,6 +287,15 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			}
 
 			b = b.PrevBlock
+			if b.Round == plfb.Round && b.Hash != plfb.Hash {
+				logging.Logger.Error("finalize round, computed lfb could not connect to prev lfb",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev lfb block", plfb.Hash),
+					zap.Int64("computed lfb", lfb.Round),
+					zap.String("computed lfb block", lfb.Hash))
+				return
+			}
 
 			if len(frchain) >= maxBackDepth {
 				break
