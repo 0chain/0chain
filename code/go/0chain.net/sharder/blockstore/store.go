@@ -94,7 +94,7 @@ func (sm *blockStore) Delete(hash string) error {
 	return nil // Not implemented
 }
 
-func InitializeStore(sViper *viper.Viper, ctx context.Context) {
+func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 	logging.Logger.Info("Initializing storages")
 	storageType := sViper.GetInt("storage_type")
 	if storageType == 0 {
@@ -105,9 +105,8 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) {
 	if mode == "" {
 		mode = "start"
 	}
-	/*
-		setup bwr
-	*/
+
+	initBWR(sViper.Sub("rocks"), mode, workDir)
 
 	store := new(blockStore)
 	switch Tiering(storageType) {

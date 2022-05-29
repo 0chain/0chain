@@ -2,6 +2,9 @@ package blockstore
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/core/logging"
@@ -34,9 +37,71 @@ func setupVolumeRevivingWorker(ctx context.Context) {
 }
 
 func setupColdWorker(ctx context.Context) {
+	store := Store.(*blockStore)
+	ticker := time.NewTicker(store.blockMovementInterval)
+
 	for {
-		if true {
+		select {
+		case <-ctx.Done():
 			break
+		case <-ticker.C:
+			logging.Logger.Info("Moving blocks to cold tier")
+			upto := time.Now().Add(-store.blockMovementInterval).UnixNano()
+			maxPrefix := strconv.FormatInt(upto, 10)
+			ch := getUnmovedBlockRecords([]byte(maxPrefix))
+			guideCh := make(chan struct{}, 10)
+			wg := &sync.WaitGroup{}
+			for ubr := range ch {
+				guideCh <- struct{}{}
+				wg.Add(1)
+				logging.Logger.Info(fmt.Sprintf("Moving block %v to cold tier", ubr.Hash))
+
+				go func(ubr *unmovedBlockRecord) {
+					defer func() {
+						<-guideCh
+						wg.Done()
+					}()
+
+					bwr, err := getBWR(ubr.Hash)
+					if err != nil {
+						logging.Logger.Error(fmt.Sprintf("Unexpected error; Error: %v", err))
+						return
+					}
+					newColdPath, err := store.coldTier.moveBlock(bwr.Hash, bwr.BlockPath)
+					if err != nil {
+						logging.Logger.Error(err.Error())
+						return
+					}
+
+					logging.Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
+
+					bwr.Tiering = newTiering(store.coldTier.DeleteLocal)
+					if store.coldTier.DeleteLocal {
+						bwr.BlockPath = ""
+					}
+					bwr.ColdPath = newColdPath
+
+					if err := ubr.Delete(); err != nil {
+						logging.Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not delete meta record from unmoved block bucket. Error: %v", bwr.Hash, newColdPath, err))
+					}
+
+					if err := bwr.addOrUpdate(); err != nil {
+						logging.Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not update meta record. Error: %v", bwr.Hash, newColdPath, err))
+					}
+
+					logging.Logger.Info(fmt.Sprintf("Block meta data for bmr for block %v is updated successfully", bwr.Hash))
+
+				}(ubr)
+			}
+
 		}
 	}
+}
+
+func newTiering(deleteLocal bool) (nt WhichTier) {
+	nt = DiskAndColdTier
+	if deleteLocal {
+		nt = ColdTier
+	}
+	return
 }

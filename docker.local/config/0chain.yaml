@@ -209,8 +209,8 @@ storage:
 
   rocks:
    # have appropriate name and value
-    block_where_record: "block where record"
-    unmoved_block_record: "unmoved block record"
+    path: /path/to/store/rocksdb/database
+    cache_size: 100*1024*1024 # 100MB
   cache:
   # Current write policy is hard coded to write_through and 
   # cache replacement policy is lru

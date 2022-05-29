@@ -46,7 +46,37 @@ func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
 	return gorocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }
 
+func OpenDB(
+	dir string,
+	cfs []string,
+	cfsOpts []*gorocksdb.Options,
+	cacheSize uint64,
+	isCreate bool,
+) (*gorocksdb.DB, gorocksdb.ColumnFamilyHandles, error) {
+
+	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetBlockCache(gorocksdb.NewLRUCache(cacheSize))
+
+	opts := gorocksdb.NewDefaultOptions()
+	opts.SetBlockBasedTableFactory(bbto)
+	if isCreate {
+		opts.SetCreateIfMissing(true)
+		db, err := gorocksdb.OpenDb(opts, dir)
+		if err != nil {
+			return nil, nil, err
+		}
+		return db, nil, nil
+	}
+
+	db, cfHs, err := gorocksdb.OpenDbColumnFamilies(opts, dir, cfs, cfsOpts)
+	if err != nil {
+		return nil, nil, err
+	}
+	return db, cfHs, nil
+}
+
 //DefaultPool - default db pool
+// FIXME This DefaultPool is always nil.
 var DefaultPool *gorocksdb.TransactionDB
 
 var pools = make(map[string]*dbpool)
