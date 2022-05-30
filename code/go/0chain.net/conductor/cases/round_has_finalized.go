@@ -58,6 +58,7 @@ func (n *RoundHasFinalized) Configure(blob []byte) error {
 	}
 
 	n.roundID = roundID
+
 	return nil
 }
 

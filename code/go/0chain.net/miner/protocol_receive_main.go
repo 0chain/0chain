@@ -17,7 +17,18 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	mc.handleNotarizationMessage(ctx, msg)
 }
 
+// HandleNotarizedBlockMessage - handles a notarized block for a previous round.
+func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
+	msg *BlockMessage) {
+	mc.handleNotarizedBlockMessage(ctx, msg)
+}
+
 // HandleVerificationTicketMessage - handles the verification ticket message.
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
 	mc.handleVerificationTicketMessage(ctx, msg)
+}
+
+// handleVRFShare - handles the vrf share.
+func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	handleVRFShare(ctx, msg)
 }

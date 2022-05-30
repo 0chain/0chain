@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 
@@ -18,7 +19,12 @@ import (
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	cfg "0chain.net/conductor/config/cases"
+<<<<<<< HEAD
 	"github.com/0chain/common/core/logging"
+=======
+	"0chain.net/conductor/utils"
+	"0chain.net/core/logging"
+>>>>>>> lock notarization in a honest miner until receiving the spamming VRF
 )
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
@@ -198,22 +204,23 @@ func resendProposedBlockIfNeeded(ctx context.Context, b *block.Block, mc *Chain)
 
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	if isIgnoringNotarisation(msg.Notarization.Round) {
+	state := crpc.Client().State()
+
+	if isIgnoringNotarisation(msg.Notarization.Round, state) {
 		return
 	}
 
-	obtainNotarisationIfNeeded(msg.Notarization)
+	obtainNotarisationIfNeeded(msg.Notarization, state)
 
-	resendNotarisationIfNeeded(msg.Notarization.Round)
+	resendNotarisationIfNeeded(msg.Notarization.Round, state)
 
 	configureBlockStateChangeRequestorTestCaseIfNeeded(msg.Notarization)
 
 	mc.handleNotarizationMessage(ctx, msg)
 }
 
-func isIgnoringNotarisation(round int64) bool {
+func isIgnoringNotarisation(round int64, state *crpc.State) bool {
 	var (
-		state   = crpc.Client().State()
 		testCfg cfg.TestReporter
 	)
 	switch {
@@ -231,8 +238,8 @@ func isIgnoringNotarisation(round int64) bool {
 	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
-func obtainNotarisationIfNeeded(not *Notarization) {
-	testCfg := crpc.Client().State().ResendNotarisation
+func obtainNotarisationIfNeeded(not *Notarization, state *crpc.State) {
+	testCfg := state.ResendNotarisation
 
 	testCfg.Lock()
 	defer testCfg.Unlock()
@@ -251,8 +258,8 @@ func obtainNotarisationIfNeeded(not *Notarization) {
 	crpc.Client().State().ResendNotarisation.Notarisation = blob
 }
 
-func resendNotarisationIfNeeded(round int64) {
-	testCfg := crpc.Client().State().ResendNotarisation
+func resendNotarisationIfNeeded(round int64, state *crpc.State) {
+	testCfg := state.ResendNotarisation
 
 	testCfg.Lock()
 	defer testCfg.Unlock()
@@ -306,6 +313,28 @@ func getNotarisationInfo(not *Notarization) *cases.NotarisationInfo {
 		BlockID:             not.BlockID,
 		Round:               not.Round,
 	}
+}
+
+// HandleNotarizedBlockMessage - handles a notarized block for a previous round.
+func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
+	msg *BlockMessage) {
+	mc.handleNotarizedBlockMessage(ctx, msg)
+}
+
+// handleVRFShare - handles the vrf share.
+func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	state := crpc.Client().State()
+
+	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Round+1 == int(msg.VRFShare.Round) && utils.IsSpamReceiver(state, msg.VRFShare.Round-1) {
+		counter := int(atomic.LoadInt32(&waitForSpammingVRFCount))
+		logging.Logger.Sugar().Debugf("Unlocking notarization (%v)", counter)
+		for i := 0; i < counter; i++ {
+			waitForSpammingVRF <- true
+			atomic.AddInt32(&waitForSpammingVRFCount, -1)
+		}
+	}
+
+	mc.handleVRFShare(ctx, msg)
 }
 
 const (

@@ -16,22 +16,14 @@ sets:
 #
 # test cases
 #	Flow of this test case:
-#		Attack VRF and ``GetBlockToExtend()``. If adversarial can force network to create VRF,
-#    it will force generators to propose. To propose, they will need ``NotarizedBlock`` from previous rounds,
-#    if they have none, they should query miners. Miners won’t have any and won’t answer.
-#    (Peter hardcoded check for HNB==nil -> return, seems like it can prevent proposing at all,
-#    since it is called in computeRoundRandomSeed). Note: it takes at least 2δ + Δ to transfer to new round via
-#    (VRF->RRS->Propose->Notarization)
-# 		(T0) Replica_0(Adv): send VRF_Share0_0 #normal send
-# 		(T0) Replica_0(Adv): send VRF_Share1_0
-# 		(T0 + δ) Replica_i: send VRF_Share1_i
-# 		(T0 + 2δ) Replica_i: create RRS_1
-# 		(T0 + 2δ) Leader_j: Propose Block0_j, query HNB_0
-# 		(T0 + 2δ) Replica_0(Adv): send VRF_Share2_0
-# 		(T0 + 3δ) Replica_i: send VRF_Share2_i
-# 		(T0 + 4δ) Replica_i: create RRS_2
-# 		(T0 + 4δ) Leader_j: Propose Block2_j, query HNB_1
-#
+#   There is a miner that that sends a VRF before the previous round has been notarized. This test checks whether this attack blocks the rest of network from working (creating new rounds and blocks).
+#   1. All miners communicate honestly until 10th round
+#   2. Lock notarization messages (Put messages on hold before processing on unlock step)
+#   3. Replica_0 (Adv): send VRF_Share0_10
+#   4. Replica_0 (Adv): wait for RRS 10 to generate VRF_Share0_11 for round 11 and send VRF_Share0_11
+#   5. Unlock notarization messages
+#   6. Wait for round 10 to be finalized and check RRS is the same of step 4
+#   7. Check if round 11, round 12, etc (2 or 3 are enough) are finalized
 tests:
   # VRF
   - name: "Spam VRFS to everyone"
@@ -44,8 +36,12 @@ tests:
           spammers:
             - node_type: 1 # replica node type
               type_rank: 0
-      - wait_round:
+          spamming_receiver:
+            node_type: 0
+            type_rank: 0
           round: 10
+      - wait_round:
+          shift: 10
           allow_beyond: true
       - make_test_case_check:
-          wait_time: 1m
+          wait_time: 10s

@@ -51,14 +51,14 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		good, bad []*node.Node
 	)
 
-	isSpammer := false
 	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Spammers != nil {
+		isSpammer := false
 		isSpammer = utils.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
-	}
 
-	if isSpammer {
-		mc.SendVRFSSpam(ctx, vrfs)
-		return
+		if isSpammer && vrfs.Round == int64(state.RoundHasFinalized.Round) {
+			mc.SendVRFSSpam(ctx, vrfs)
+			return
+		}
 	}
 
 	// not possible to send bad VRFS and bad round timeout at the same time
@@ -138,15 +138,15 @@ func (mc *Chain) SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
 	currentRoundId := mc.GetCurrentRound()
 	currentRound := mc.GetMinerRound(currentRoundId)
 
-	if err := configureRoundHasFinalizedTest(int(vrfs.Round)); err != nil {
-		log.Fatalf("Conductor: RoundHasFinalized: error while configuring test case: %v", err)
-		return
-	}
-
 	r := mc.StartNextRound(ctx, currentRound)
 	v.RoundTimeoutCount = r.GetTimeoutCount()
 	v.Round = r.GetRoundNumber()
 	v.Share, err = mc.GetBlsShare(ctx, r.Round)
+
+	if err := configureRoundHasFinalizedTest(int(r.Number)); err != nil {
+		log.Fatalf("Conductor: RoundHasFinalized: error while configuring test case: %v", err)
+		return
+	}
 
 	if err != nil {
 		return

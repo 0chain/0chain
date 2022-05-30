@@ -19,6 +19,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/utils"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -97,7 +98,9 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 	addResultIfAdversarialValidatorTest(b)
 
-	if isTestingOnUpdateFinalizedBlock(b.Round) || isTestingRoundHasFinalized() {
+	state := crpc.Client().State()
+
+	if isTestingOnUpdateFinalizedBlock(b.Round, state) || isTestingRoundHasFinalized(state, int(b.Round)) {
 		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
@@ -140,14 +143,11 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 	}
 }
 
-func isTestingRoundHasFinalized() bool {
-	state := crpc.Client().State()
-
-	return state.RoundHasFinalized != nil
+func isTestingRoundHasFinalized(s *crpc.State, blockRound int) bool {
+	return s.RoundHasFinalized != nil && s.RoundHasFinalized.Round == blockRound && utils.IsSpamReceiver(s, int64(blockRound))
 }
 
-func isTestingOnUpdateFinalizedBlock(round int64) bool {
-	s := crpc.Client().State()
+func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
 	var isTestingFunc func(round int64, generator bool, typeRank int) bool
 	switch {
 	case s.ExtendNotNotarisedBlock != nil:

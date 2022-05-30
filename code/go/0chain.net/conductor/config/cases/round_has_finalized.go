@@ -14,7 +14,9 @@ type (
 	}
 	// RoundHasFinalized represents TestCaseConfigurator implementation.
 	RoundHasFinalized struct {
-		Spammers []NodeTypeTypeRank `json:"spammers" yaml:"spammers" mapstructure:"spammers"`
+		Spammers         []NodeTypeTypeRank `json:"spammers" yaml:"spammers" mapstructure:"spammers"`
+		SpammingReceiver NodeTypeTypeRank   `json:"spamming_receiver" yaml:"spamming_receiver" mapstructure:"spamming_receiver"`
+		Round            int                `json:"round" yaml:"round" mapstructure:"round"`
 	}
 )
 
