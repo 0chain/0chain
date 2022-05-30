@@ -56,6 +56,8 @@ go build -tags bn256 && ./main benchmark --load saved_data  | column -t -s,
 -
 
 To run only a subset of the test suits
+
+_Note: when run from docker list of tests should be passed as space delimited list, not comma delimited, it caused with bug in viper https://github.com/spf13/viper/issues/380_
 ```bash
 go build -tags bn256
 ./main benchmark benchmark --tests "miner, storage" | column -t -s,

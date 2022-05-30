@@ -51,4 +51,4 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
-docker-compose -p benchmarks -f ../build.benchmarks/b0docker-compose.yml up
+docker-compose -p benchmarks -f ../build.benchmarks/b0docker-compose.yml up --abort-on-container-exit
