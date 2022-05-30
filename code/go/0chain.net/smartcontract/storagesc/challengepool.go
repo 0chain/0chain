@@ -1,19 +1,20 @@
 package storagesc
 
 import (
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
+
+	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
 )
 
 //msgp:ignore challengePoolStat
@@ -78,7 +79,7 @@ func (cp *challengePool) moveToWritePool(
 	blobID string,
 	until common.Timestamp,
 	wp *writePool,
-	value state.Balance,
+	value currency.Coin,
 ) (err error) {
 
 	if value == 0 {
@@ -115,29 +116,42 @@ func (cp *challengePool) moveToWritePool(
 	return
 }
 
-func (cp *challengePool) moveToValidators(sscKey string, reward float64,
-	validatos []datastore.Key,
-	vsps []*stakePool,
+func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
+	validators []datastore.Key,
+	vSPs []*stakePool,
 	balances cstate.StateContextI,
 ) error {
-	if len(validatos) == 0 || reward == 0.0 {
+	if len(validators) == 0 || reward == 0 {
 		return nil // nothing to move, or nothing to move to
 	}
 
-	var oneReward = reward / float64(len(validatos))
+	if cp.ZcnPool.Balance < reward {
+		return fmt.Errorf("not enough tokens in challenge pool: %v < %v", cp.Balance, reward)
+	}
 
-	for i, sp := range vsps {
-		if float64(cp.Balance) < oneReward {
-			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
-				cp.Balance, oneReward)
-		}
-		err := sp.DistributeRewards(oneReward, validatos[i], spenum.Validator, balances)
+	oneReward, bal, err := currency.DivideCoin(reward, int64(len(validators)))
+	if err != nil {
+		return err
+	}
+
+	for i, sp := range vSPs {
+		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, balances)
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
-				validatos[i], err)
+				validators[i], err)
 		}
 	}
-	cp.ZcnPool.Balance -= state.Balance(reward)
+	if bal > 0 {
+		for i := 0; i < int(bal); i++ {
+			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, balances)
+			if err != nil {
+				return fmt.Errorf("moving to validator %s: %v",
+					validators[i], err)
+			}
+		}
+	}
+
+	cp.ZcnPool.Balance -= reward
 	return nil
 }
 
@@ -158,7 +172,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 // swagger:model challengePoolStat
 type challengePoolStat struct {
 	ID         string           `json:"id"`
-	Balance    state.Balance    `json:"balance"`
+	Balance    currency.Coin    `json:"balance"`
 	StartTime  common.Timestamp `json:"start_time"`
 	Expiration common.Timestamp `json:"expiration"`
 	Finalized  bool             `json:"finalized"`

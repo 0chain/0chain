@@ -3,6 +3,8 @@ package minersc
 import (
 	"strconv"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool"
@@ -11,7 +13,6 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -54,10 +55,10 @@ func AddMockNodes(
 		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.Now))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.Settings.MinStake = state.Balance(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.Settings.MaxStake = state.Balance(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
+		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
+		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = newNode.ID
 
@@ -90,7 +91,7 @@ func AddMockNodes(
 					MinerID:           newNode.ID,
 					LastHealthCheck:   newNode.LastHealthCheck,
 					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.Settings.ServiceCharge,
+					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
@@ -101,7 +102,7 @@ func AddMockNodes(
 					SharderID:         newNode.ID,
 					LastHealthCheck:   newNode.LastHealthCheck,
 					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.Settings.ServiceCharge,
+					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,

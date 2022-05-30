@@ -3,8 +3,9 @@ package faucetsc
 import (
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -42,10 +43,10 @@ var (
 )
 
 type FaucetConfig struct {
-	PourAmount      state.Balance  `json:"pour_amount"`
-	MaxPourAmount   state.Balance  `json:"max_pour_amount"`
-	PeriodicLimit   state.Balance  `json:"periodic_limit"`
-	GlobalLimit     state.Balance  `json:"global_limit"`
+	PourAmount      currency.Coin  `json:"pour_amount"`
+	MaxPourAmount   currency.Coin  `json:"max_pour_amount"`
+	PeriodicLimit   currency.Coin  `json:"periodic_limit"`
+	GlobalLimit     currency.Coin  `json:"global_limit"`
 	IndividualReset time.Duration  `json:"individual_reset"`
 	GlobalReset     time.Duration  `json:"global_rest"`
 	OwnerId         string         `json:"owner_id"`
@@ -53,12 +54,25 @@ type FaucetConfig struct {
 }
 
 // configurations from sc.yaml
-func getFaucetConfig() (conf *FaucetConfig) {
+func getFaucetConfig() (conf *FaucetConfig, err error) {
+
 	conf = new(FaucetConfig)
-	conf.PourAmount = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.pour_amount") * 1e10)
-	conf.MaxPourAmount = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.max_pour_amount") * 1e10)
-	conf.PeriodicLimit = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.periodic_limit") * 1e10)
-	conf.GlobalLimit = state.Balance(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.global_limit") * 1e10)
+	conf.PourAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.pour_amount"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxPourAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.max_pour_amount"))
+	if err != nil {
+		return nil, err
+	}
+	conf.PeriodicLimit, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.periodic_limit"))
+	if err != nil {
+		return nil, err
+	}
+	conf.GlobalLimit, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64("smart_contracts.faucetsc.global_limit"))
+	if err != nil {
+		return nil, err
+	}
 	conf.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
 	conf.GlobalReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	conf.OwnerId = config.SmartContractConfig.GetString("smart_contracts.faucetsc.owner_id")

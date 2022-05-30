@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -611,12 +613,12 @@ func TestExtendAllocation(t *testing.T) {
 		if txn.Value > 0 {
 			balances.On(
 				"GetClientBalance", txn.ClientID,
-			).Return(state.Balance(txn.Value+1), nil).Once()
+			).Return(currency.Coin(txn.Value+1), nil).Once()
 			balances.On(
 				"AddTransfer", &state.Transfer{
 					ClientID:   txn.ClientID,
 					ToClientID: txn.ToClientID,
-					Amount:     state.Balance(txn.Value),
+					Amount:     currency.Coin(txn.Value),
 				},
 			).Return(nil).Once()
 		}
@@ -689,7 +691,7 @@ func TestExtendAllocation(t *testing.T) {
 				for _, blobber := range blobbers {
 					ap.Blobbers.add(&blobberPool{
 						BlobberID: blobber.ID,
-						Balance:   ap.Balance / state.Balance(bCount*args.poolCount[i]),
+						Balance:   ap.Balance / currency.Coin(bCount*args.poolCount[i]),
 					})
 				}
 				wp.Pools.add(&ap)
@@ -737,7 +739,7 @@ func TestExtendAllocation(t *testing.T) {
 				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
 					float64(sa.durationInTimeUnits(args.request.Expiration))
-				return cp.Balance/10 == state.Balance(newFunds/10) // ignore type cast errors
+				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
 
@@ -1566,7 +1568,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var wp *writePool
 		wp, err = ssc.getWritePool(clientID, balances)
 		require.NoError(t, err)
-		assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
+		assert.Equal(t, currency.Coin(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
 		_, err = ssc.getStakePool("b1", balances)
 		require.NoError(t, err)
@@ -1974,8 +1976,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		var blob *StorageNode
 		blob, err = ssc.getBlobber(b.id, balances)
 		require.NoError(t, err)
-		blob.Terms.WritePrice = state.Balance(1.8 * x10)
-		blob.Terms.ReadPrice = state.Balance(0.8 * x10)
+		blob.Terms.WritePrice = currency.Coin(1.8 * x10)
+		blob.Terms.ReadPrice = currency.Coin(0.8 * x10)
 		_, err = updateBlobber(t, blob, 0, tp, ssc, balances)
 		require.NoError(t, err)
 	}

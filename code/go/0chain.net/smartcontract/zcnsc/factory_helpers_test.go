@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -54,14 +56,22 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
+func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI) (*transaction.Transaction, error) {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
+	value, err := currency.ParseZCN(1)
+	if err != nil {
+		return nil, err
+	}
+	iValue, err := value.Int64()
+	if err != nil {
+		return nil, err
+	}
 	txn := &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
-		Value:             int64(zcnToBalance(1)),
+		Value:             iValue,
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
@@ -72,7 +82,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 		OutputHash:        "",
 	}
 	addTransactionData(txn, DeleteAuthorizerFunc, nil)
-	return txn
+	return txn, nil
 }
 
 func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
@@ -83,7 +93,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
-		Value:             int64(zcnToBalance(1)),
+		Value:             1,
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
@@ -99,15 +109,24 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 	return txn
 }
 
-func CreateTransaction(fromClient, method string, payload []byte, ctx state.StateContextI) *transaction.Transaction {
+func CreateTransaction(fromClient, method string, payload []byte, ctx state.StateContextI) (*transaction.Transaction, error) {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
+	value, err := currency.ParseZCN(1)
+	if err != nil {
+		return nil, err
+	}
+
+	iValue, err := value.Int64()
+	if err != nil {
+		return nil, err
+	}
 
 	var txn = &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
-		Value:             int64(zcnToBalance(1)),
+		Value:             iValue,
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
@@ -120,31 +139,31 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 
 	addTransactionData(txn, method, payload)
 
-	return txn
+	return txn, nil
 }
 
 func CreateAuthorizerParam(delegateWalletID string) *AddAuthorizerPayload {
 	return &AddAuthorizerPayload{
 		PublicKey: "public key",
 		URL:       "http://localhost:2344",
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  delegateWalletID,
-			MinStake:        12345678,
-			MaxStake:        12345678,
-			MaxNumDelegates: 12345678,
-			ServiceCharge:   12345678,
+		StakePoolSettings: stakepool.Settings{
+			DelegateWallet:     delegateWalletID,
+			MinStake:           12345678,
+			MaxStake:           12345678,
+			MaxNumDelegates:    12345678,
+			ServiceChargeRatio: 12345678,
 		},
 	}
 }
 
 func CreateAuthorizerStakingPoolParam(delegateWalletID string) *UpdateAuthorizerStakePoolPayload {
 	return &UpdateAuthorizerStakePoolPayload{
-		StakePoolSettings: stakepool.StakePoolSettings{
-			DelegateWallet:  delegateWalletID,
-			MinStake:        100,
-			MaxStake:        100,
-			MaxNumDelegates: 100,
-			ServiceCharge:   100,
+		StakePoolSettings: stakepool.Settings{
+			DelegateWallet:     delegateWalletID,
+			MinStake:           100,
+			MaxStake:           100,
+			MaxNumDelegates:    100,
+			ServiceChargeRatio: 100,
 		},
 	}
 }
