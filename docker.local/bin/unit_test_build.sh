@@ -18,9 +18,11 @@ do
     esac
 done
 
+# generate mocks
+make mockery
+
 # Runs each unit test in batches corresponding to each subdirectory
 # of code/go/0chain.net.
 # Returns 0 if all of the tests pass and 1 if any one of the tests fail.
-
 docker $cmd -f $dockerfile . -t zchain_unit_test
 docker run $platform $INTERACTIVE -v $(pwd)/code:/codecov  zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
