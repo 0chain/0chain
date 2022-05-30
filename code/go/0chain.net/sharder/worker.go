@@ -166,8 +166,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
-			//if b.Round+aheadN >= endRound {
-			if b.Round >= endRound {
+			if b.Round+aheadN >= endRound {
 				syncing = false
 				if b.Round < lfbTk.Round {
 					logging.Logger.Debug("process block, hit end, trigger sync",
