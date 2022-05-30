@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/rest"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,8 +16,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"go.uber.org/zap"
 
-	"0chain.net/rest/restinterface"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -28,158 +27,59 @@ import (
 	"0chain.net/smartcontract"
 )
 
-type RestFunctionName int
-
-const (
-	rfnGetBlobberCount RestFunctionName = iota
-	rfnGetBlobber
-	rfnGetBlobbers
-	rfnGetBlobberTotalStakes
-	rfnGetBlobberLatLong
-
-	rfnTransaction
-	rfnTransactions
-	rfnWriteMarkers
-	rfnErrors
-	rfnAllocations
-
-	rfnAllocationMinLock
-	rfnAllocation
-	rfnLatestReadMarker
-	rfnReadmarkers
-	rfnCountReadmarkers
-
-	rfnGetWriteMarkers
-	rfnGetValidator
-	rfnOpenChallenges
-	rfnGetChallenge
-	rfnGetStakePoolStat
-
-	rfnGetUserStakePoolStat
-	rfnGetBlockByHash
-	rfnGet_blocks
-	rfnTotalSavedData
-	rfnGetConfig
-
-	rfnGetReadPoolStat
-	rfnGetReadPoolAllocBlobberStat
-	rfnGetWritePoolStat
-	rfnGetWritePoolAllocBlobberStat
-	rfnGetChallengePoolStat
-
-	rfnAllocWrittenSize
-	rfnAllocReadsize
-	rfnAllocWriteMarkerCount
-	rfnCollectedReward
-	rfnBlobberIds
-
-	rfnAllocBlobbers
-	rfnFreeAllocBlobbers
-)
-
 type StorageRestHandler struct {
-	restinterface.RestHandlerI
+	rest.RestHandlerI
 }
 
-func NewStorageRestHandler(rh restinterface.RestHandlerI) *StorageRestHandler {
+func NewStorageRestHandler(rh rest.RestHandlerI) *StorageRestHandler {
 	return &StorageRestHandler{rh}
 }
 
-func SetupRestHandler(rh restinterface.RestHandlerI) {
-	srh := NewStorageRestHandler(rh)
-	storage := "/v1/screst/" + ADDRESS
-	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberCount], srh.getBlobberCount)
-	http.HandleFunc(storage+GetRestNames()[rfnGetBlobber], srh.getBlobber)
-	http.HandleFunc(storage+GetRestNames()[rfnGetBlobbers], srh.getBlobbers)
-	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberTotalStakes], srh.getBlobberTotalStakes)
-	http.HandleFunc(storage+GetRestNames()[rfnGetBlobberLatLong], srh.getBlobberGeoLocation)
-
-	http.HandleFunc(storage+GetRestNames()[rfnTransaction], srh.getTransactionByHash)
-	http.HandleFunc(storage+GetRestNames()[rfnTransactions], srh.getTransactionByFilter)
-	http.HandleFunc(storage+GetRestNames()[rfnWriteMarkers], srh.getWriteMarker)
-	http.HandleFunc(storage+GetRestNames()[rfnErrors], srh.getErrors)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocations], srh.getAllocations)
-
-	http.HandleFunc(storage+GetRestNames()[rfnAllocationMinLock], srh.getAllocationMinLock)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocation], srh.getAllocation)
-	http.HandleFunc(storage+GetRestNames()[rfnLatestReadMarker], srh.getLatestReadMarker)
-	http.HandleFunc(storage+GetRestNames()[rfnReadmarkers], srh.getReadMarkers)
-	http.HandleFunc(storage+GetRestNames()[rfnCountReadmarkers], srh.getReadMarkersCount)
-
-	http.HandleFunc(storage+GetRestNames()[rfnGetWriteMarkers], srh.getWriteMarkers)
-	http.HandleFunc(storage+GetRestNames()[rfnGetValidator], srh.getValidator)
-	http.HandleFunc(storage+GetRestNames()[rfnOpenChallenges], srh.getOpenChallenges)
-	http.HandleFunc(storage+GetRestNames()[rfnGetChallenge], srh.getChallenge)
-	http.HandleFunc(storage+GetRestNames()[rfnGetStakePoolStat], srh.getStakePoolStat)
-
-	http.HandleFunc(storage+GetRestNames()[rfnGetUserStakePoolStat], srh.getUserStakePoolStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetBlockByHash], srh.getBlockByHash)
-	http.HandleFunc(storage+GetRestNames()[rfnGet_blocks], srh.getBlocks)
-	http.HandleFunc(storage+GetRestNames()[rfnTotalSavedData], srh.getTotalData)
-	http.HandleFunc(storage+GetRestNames()[rfnGetConfig], srh.getConfig)
-
-	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolStat], srh.getReadPoolStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetReadPoolAllocBlobberStat], srh.getReadPoolAllocBlobberStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolStat], srh.getWritePoolStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetWritePoolAllocBlobberStat], srh.getWritePoolAllocBlobberStat)
-	http.HandleFunc(storage+GetRestNames()[rfnGetChallengePoolStat], srh.getChallengePoolStat)
-
-	http.HandleFunc(storage+GetRestNames()[rfnAllocWrittenSize], srh.getWrittenAmount)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocReadsize], srh.getReadAmount)
-	http.HandleFunc(storage+GetRestNames()[rfnAllocWriteMarkerCount], srh.getWriteMarkerCount)
-	http.HandleFunc(storage+GetRestNames()[rfnCollectedReward], srh.getCollectedReward)
-	http.HandleFunc(storage+GetRestNames()[rfnBlobberIds], srh.getBlobberIdsByUrls)
-
-	http.HandleFunc(storage+GetRestNames()[rfnAllocBlobbers], srh.getAllocationBlobbers)
-	http.HandleFunc(storage+GetRestNames()[rfnFreeAllocBlobbers], srh.getFreeAllocationBlobbers)
+func SetupRestHandler(rh rest.RestHandlerI) {
+	rh.Register(GetEndpoints(rh))
 }
 
-func GetRestNames() []string {
-	return []string{
-		"/get_blobber_count",
-		"/getBlobber",
-		"/getblobbers",
-		"/get_blobber_total_stakes",
-		"/get_blobber_lat_long",
-
-		"/transaction",
-		"/transactions",
-		"/writemarkers",
-		"/errors",
-		"/allocations",
-
-		"/allocation_min_lock",
-		"/allocation",
-		"/latestreadmarker",
-		"/readmarkers",
-		"/count_readmarkers",
-
-		"/getWriteMarkers",
-		"/get_validator",
-		"/openchallenges",
-		"/getchallenge",
-		"/getStakePoolStat",
-
-		"/getUserStakePoolStat",
-		"/get_block_by_hash",
-		"/get_blocks",
-		"/total_saved_data",
-		"/getConfig",
-
-		"/getReadPoolStat",
-		"/getReadPoolAllocBlobberStat",
-		"/getWritePoolStat",
-		"/getWritePoolAllocBlobberStat",
-		"/getChallengePoolStat",
-
-		"/alloc_written_size",
-		"/alloc_read_size",
-		"/alloc_write_marker_count",
-		"/collected_reward",
-		"/blobber_ids",
-
-		"/alloc_blobbers",
-		"/free_alloc_blobbers",
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
+	srh := NewStorageRestHandler(rh)
+	storage := "/v1/screst/" + ADDRESS
+	return []rest.Endpoint{
+		rest.MakeEndpoint(storage+"/get_blobber_count", srh.getBlobberCount),
+		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
+		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
+		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes),
+		rest.MakeEndpoint(storage+"/get_blobber_lat_long", srh.getBlobberGeoLocation),
+		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
+		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
+		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
+		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
+		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
+		rest.MakeEndpoint(storage+"/allocation_min_lock", srh.getAllocationMinLock),
+		rest.MakeEndpoint(storage+"/allocation", srh.getAllocation),
+		rest.MakeEndpoint(storage+"/latestreadmarker", srh.getLatestReadMarker),
+		rest.MakeEndpoint(storage+"/readmarkers", srh.getReadMarkers),
+		rest.MakeEndpoint(storage+"/count_readmarkers", srh.getReadMarkersCount),
+		rest.MakeEndpoint(storage+"/getWriteMarkers", srh.getWriteMarkers),
+		rest.MakeEndpoint(storage+"/get_validator", srh.getValidator),
+		rest.MakeEndpoint(storage+"/openchallenges", srh.getOpenChallenges),
+		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
+		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
+		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
+		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
+		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
+		rest.MakeEndpoint(storage+"/total_saved_data", srh.getTotalData),
+		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
+		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
+		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
+		rest.MakeEndpoint(storage+"/getWritePoolStat", srh.getWritePoolStat),
+		rest.MakeEndpoint(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat),
+		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
+		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
+		rest.MakeEndpoint(storage+"/alloc_read_size", srh.getReadAmount),
+		rest.MakeEndpoint(storage+"/alloc_write_marker_count", srh.getWriteMarkerCount),
+		rest.MakeEndpoint(storage+"/collected_reward", srh.getCollectedReward),
+		rest.MakeEndpoint(storage+"/blobber_ids", srh.getBlobberIdsByUrls),
+		rest.MakeEndpoint(storage+"/alloc_blobbers", srh.getAllocationBlobbers),
+		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 	}
 }
 
@@ -215,7 +115,7 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 		return
 	}
 
-	balances := srh.GetStateContext()
+	balances := srh.GetQueryStateContext()
 	edb := balances.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -258,7 +158,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 
-	balances := srh.GetStateContext()
+	balances := srh.GetQueryStateContext()
 	var conf *Config
 	if conf, err = getConfig(balances); err != nil {
 		common.Respond(w, r, "", common.NewErrorf("free_allocation_failed",
@@ -308,7 +208,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //  200:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
-	balances := srh.GetStateContext()
+	balances := srh.GetQueryStateContext()
 	edb := balances.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -420,7 +320,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		EndBlock:   endBlock,
 		ClientID:   clientID,
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -455,7 +355,7 @@ func (srh *StorageRestHandler) getWriteMarkerCount(w http.ResponseWriter, r *htt
 		common.Respond(w, r, nil, common.NewErrInternal("allocation_id is empty"))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -497,7 +397,7 @@ func (srh *StorageRestHandler) getReadAmount(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, common.NewErrInternal("block_number is not valid"))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -537,7 +437,7 @@ func (srh *StorageRestHandler) getWrittenAmount(w http.ResponseWriter, r *http.R
 		common.Respond(w, r, nil, common.NewErrInternal("block_number is not valid"))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -576,7 +476,7 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	sctx := srh.GetStateContext()
+	sctx := srh.GetQueryStateContext()
 	if err := sctx.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
@@ -621,7 +521,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 		wp        = &writePool{}
 	)
 
-	if err := srh.GetStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
+	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
 		return
 	}
@@ -662,7 +562,7 @@ func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWrite
 func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
 	var wp = &writePool{}
 	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
+	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
 		return
 	}
@@ -701,7 +601,7 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 		rp        = &readPool{}
 	)
 
-	if err := srh.GetStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
+	if err := srh.GetQueryStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
@@ -743,7 +643,7 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 	var rp = &readPool{}
 
 	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
+	if err := srh.GetQueryStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
@@ -770,14 +670,14 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 	return conf, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getConfig getConfig
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage_config storage_config
 // Gets the current storage smart contract settings
 //
 // responses:
 //  200: StringMap
 //  400:
 func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	conf, err := getConfig(srh.GetStateContext())
+	conf, err := getConfig(srh.GetQueryStateContext())
 	if err != nil && err != util.ErrValueNotPresent {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
 		return
@@ -817,7 +717,7 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -850,7 +750,7 @@ func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Req
 		common.Respond(w, r, nil, common.NewErrBadRequest("annot find valid block hash: "+hash))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -883,7 +783,7 @@ type userPoolStat struct {
 //  400:
 func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -1010,7 +910,7 @@ func spStats(
 //  500:
 func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber_id")
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1057,7 +957,7 @@ func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Reque
 	blobberID := r.URL.Query().Get("blobber")
 
 	challengeID := r.URL.Query().Get("challenge")
-	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetStateContext().GetEventDB())
+	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetQueryStateContext().GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 	}
@@ -1096,7 +996,7 @@ type ChallengesResponse struct {
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber")
-	sctx := srh.GetStateContext()
+	sctx := srh.GetQueryStateContext()
 	edb := sctx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -1142,7 +1042,7 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrBadRequest("no validator id"))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1179,7 +1079,7 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, nil, common.NewErrBadRequest("no allocation id"))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1228,7 +1128,7 @@ func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *htt
 	if allocationID != "" {
 		query.AllocationID = allocationID
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -1320,7 +1220,7 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 			return
 		}
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1362,7 +1262,7 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 		ClientID:  clientID,
 	}
 
-	err := srh.GetStateContext().GetTrieNode(commitRead.GetKey(ADDRESS), commitRead)
+	err := srh.GetQueryStateContext().GetTrieNode(commitRead.GetKey(ADDRESS), commitRead)
 	switch err {
 	case nil:
 		common.Respond(w, r, commitRead.ReadMarker, nil)
@@ -1393,7 +1293,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		return
 	}
 
-	balances := srh.GetStateContext()
+	balances := srh.GetQueryStateContext()
 	edb := balances.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -1450,7 +1350,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //  500:
 func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client")
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1478,7 +1378,7 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 //  500:
 func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Request) {
 	allocationID := r.URL.Query().Get("allocation")
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -1517,7 +1417,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("transaction_hash is empty"))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -1579,7 +1479,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 		common.Respond(w, r, nil, common.NewErrBadRequest("is_descending value was not valid: "+err.Error()))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1640,7 +1540,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		common.Respond(w, r, nil, common.NewErrBadRequest("limitString value was not valid:"+err.Error()))
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1681,7 +1581,7 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, err)
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1750,7 +1650,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 //  200: storageNodeResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1780,7 +1680,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 //  200: BlobberLatLong
 //  500:
 func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1801,7 +1701,7 @@ func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *h
 //  200: Int64Map
 //  500:
 func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *http.Request) {
-	sctx := srh.GetStateContext()
+	sctx := srh.GetQueryStateContext()
 	edb := sctx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -1823,7 +1723,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 		}
 		total += int64(sp.stake())
 	}
-	common.Respond(w, r, restinterface.Int64Map{
+	common.Respond(w, r, rest.Int64Map{
 		"total": total,
 	}, nil)
 }
@@ -1835,7 +1735,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 //  200: Int64Map
 //  400:
 func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1846,7 +1746,7 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	common.Respond(w, r, restinterface.Int64Map{
+	common.Respond(w, r, rest.Int64Map{
 		"count": blobberCount,
 	}, nil)
 }
@@ -1872,7 +1772,7 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, err)
 		return
 	}
-	edb := srh.GetStateContext().GetEventDB()
+	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}

@@ -3,7 +3,7 @@ package benchmark
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/rest/restinterface"
+	"0chain.net/smartcontract/rest"
 	"github.com/spf13/viper"
 
 	"bytes"
@@ -22,7 +22,7 @@ type TestParameters struct {
 	FuncName string                                       `json:"func_name,omitempty"`
 	Params   map[string]string                            `json:"params,omitempty"`
 	Endpoint func(w http.ResponseWriter, r *http.Request) `json:"endpoint,omitempty"`
-	Receiver restinterface.RestHandlerI                   `json:"receiver"`
+	Receiver rest.RestHandlerI                            `json:"receiver"`
 }
 
 type QueryBenchTest struct {
@@ -90,7 +90,7 @@ func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) erro
 func GetRestTests(
 	tests []TestParameters,
 	address string,
-	reciever restinterface.RestHandlerI,
+	reciever rest.RestHandlerI,
 	source Source,
 ) TestSuite {
 	var testsI []BenchTestI
