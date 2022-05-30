@@ -5,7 +5,7 @@ GIT_COMMIT=$(git rev-list -1 HEAD)
 echo "$GIT_COMMIT"
 
 # generate mocks
-make mockery
+make build-mocks
 
 cmd="build"
 

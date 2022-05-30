@@ -10,7 +10,7 @@ DOCKER_FILE="$DOCKER_DIR/Dockerfile"
 DOCKERCOMPOSE="$DOCKER_DIR/docker-compose.yml"
 
 # generate mocks
-make mockery
+make build-mocks
 
 cmd="build"
 

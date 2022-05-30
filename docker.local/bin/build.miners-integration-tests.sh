@@ -2,7 +2,7 @@
 set -e
 
 # generate mocks
-make mockery
+make build-mocks
 
 cmd="build"
 

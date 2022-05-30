@@ -49,7 +49,7 @@ install-mockery:
 	@[ -f ./bin/mockery/mockery ] | tar zxvfC ./bin/mockery/mockery.tar.gz ./bin/mockery
 	@cp ./bin/mockery/mockery $(GOPATH)/bin/
 
-mockery: install-mockery
+build-mocks: install-mockery
 	@echo "Making mocks..."
 	@echo "-------------------------------------"
 	@echo "[+] core	" 

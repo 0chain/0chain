@@ -19,7 +19,7 @@ do
 done
 
 # generate mocks
-make mockery
+make build-mocks
 
 # Runs each unit test in batches corresponding to each subdirectory
 # of code/go/0chain.net.
