@@ -118,6 +118,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				logging.Logger.Debug("process block skip",
 					zap.Int64("block round", b.Round),
 					zap.Int64("current round", cr),
+					zap.Int64("lfb", lfb.Round),
 					zap.Bool("syncing", syncing))
 
 				if !syncing {
