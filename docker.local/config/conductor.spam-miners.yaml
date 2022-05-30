@@ -16,14 +16,13 @@ sets:
 #
 # test cases
 #	Flow of this test case:
-#   There is a miner that that sends a VRF before the previous round has been notarized. This test checks whether this attack blocks the rest of network from working (creating new rounds and blocks).
-#   1. All miners communicate honestly until 10th round
-#   2. Lock notarization messages (Put messages on hold before processing on unlock step)
+#   There is a miner that sends a VRF before the previous round has been notarized. This test checks whether this attack prevents the rest of the network from operating(creating new rounds and blocks).
+#   1. All miners communicate honestly until the 10th round
+#   2. Leader_0 locks the notarization messages
 #   3. Replica_0 (Adv): send VRF_Share0_10
-#   4. Replica_0 (Adv): wait for RRS 10 to generate VRF_Share0_11 for round 11 and send VRF_Share0_11
-#   5. Unlock notarization messages
-#   6. Wait for round 10 to be finalized and check RRS is the same of step 4
-#   7. Check if round 11, round 12, etc (2 or 3 are enough) are finalized
+#   4. Replica_0 (Adv): generate VRF_Share0_11 for round 11 and send VRF_Share0_11
+#   5. Leader_0 waits for VRF_Share0_11 to unlock notarization messages
+#   6. Check whether round 11 has been finalized
 tests:
   # VRF
   - name: "Spam VRFS to everyone"
