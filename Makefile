@@ -76,11 +76,6 @@ mockery: install-mockery
 	@cd $(root_path)/code/go/0chain.net/sharder && $(root_path)/bin/mockery/mockery --case underscore --output=../sharder/mocks --all
 
 	@echo "-------------------------------------"
-	@echo "[+] rest	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/rest && $(root_path)/bin/mockery/mockery --case underscore --output=../rest/mocks --all
-
-	@echo "-------------------------------------"
 	@echo "[+] smartcontract	" 
 	@echo "-------------------------------------"
 	@cd $(root_path)/code/go/0chain.net/smartcontract && $(root_path)/bin/mockery/mockery --case underscore --output=../smartcontract/mocks --all
