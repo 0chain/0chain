@@ -96,9 +96,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		if value == moved {
 			break // all required tokens has moved to the blobber
 		}
-		var (
-			move currency.Coin
-		)
+		var move currency.Coin
 		if valueLeft >= ap.Balance {
 			move = ap.Balance
 		} else {

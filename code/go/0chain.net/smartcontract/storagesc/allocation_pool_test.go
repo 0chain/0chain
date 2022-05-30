@@ -1,13 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/tokenpool"
 	"testing"
 
 	"0chain.net/chaincore/currency"
-
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

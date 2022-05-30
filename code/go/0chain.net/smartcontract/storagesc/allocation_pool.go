@@ -256,9 +256,7 @@ func (aps *allocationPools) moveToChallenge(
 		if value == 0 {
 			break // all required tokens has moved to the blobber
 		}
-		var (
-			move currency.Coin
-		)
+		var move currency.Coin
 		if value >= ap.Balance {
 			move = ap.Balance
 		} else {
