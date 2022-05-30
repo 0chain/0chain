@@ -35,6 +35,7 @@ func BenchmarkRestTests(
 		},
 		ADDRESS,
 		vrh,
+		benchmark.VestingRest,
 	)
 
 }

@@ -29,20 +29,23 @@ type QueryBenchTest struct {
 	TestParameters
 	shownResult bool
 	address     string
+	source      Source
 }
 
 func NewQueryBenchTest(
 	test TestParameters,
 	address string,
+	source Source,
 ) BenchTestI {
 	return &QueryBenchTest{
 		TestParameters: test,
 		address:        address,
+		source:         source,
 	}
 }
 
 func (qbt *QueryBenchTest) Name() string {
-	return "faucet_rest." + qbt.FuncName
+	return SourceNames[qbt.source] + "." + qbt.FuncName
 }
 
 func (qbt *QueryBenchTest) Transaction() *transaction.Transaction {
@@ -88,15 +91,16 @@ func GetRestTests(
 	tests []TestParameters,
 	address string,
 	reciever restinterface.RestHandlerI,
+	source Source,
 ) TestSuite {
 	var testsI []BenchTestI
 	for _, test := range tests {
 		test.Receiver = reciever
-		newTest := NewQueryBenchTest(test, address)
+		newTest := NewQueryBenchTest(test, address, source)
 		testsI = append(testsI, newTest)
 	}
 	return TestSuite{
-		Source:     FaucetRest,
+		Source:     source,
 		Benchmarks: testsI,
 	}
 }

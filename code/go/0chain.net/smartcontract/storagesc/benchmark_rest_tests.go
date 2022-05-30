@@ -365,5 +365,6 @@ func BenchmarkRestTests(
 		},
 		ADDRESS,
 		srh,
+		bk.StorageRest,
 	)
 }

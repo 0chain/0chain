@@ -124,5 +124,6 @@ func BenchmarkRestTests(
 		},
 		ADDRESS,
 		mrh,
+		benchmark.MinerRest,
 	)
 }
