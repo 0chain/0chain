@@ -59,7 +59,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		aheadN          = int64(config.GetLFBTicketAhead())
 	)
 
-	const maxRequestBlocks = 20
+	const maxRequestBlocks = 5
 
 	for {
 		select {
@@ -166,7 +166,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
-			if b.Round+aheadN >= endRound {
+			//if b.Round+aheadN >= endRound {
+			if b.Round >= endRound {
 				syncing = false
 				if b.Round < lfbTk.Round {
 					logging.Logger.Debug("process block, hit end, trigger sync",
