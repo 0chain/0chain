@@ -47,6 +47,7 @@ install-mockery:
 	@[ -f ./bin/mockery/mockery.tar.gz ] || curl -L -o ./bin/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.12.2/mockery_2.12.2_$(detected_OS)_$(detected_ARCH).tar.gz
 	@echo "[+]install mockery"
 	@[ -f ./bin/mockery/mockery ] | tar zxvfC ./bin/mockery/mockery.tar.gz ./bin/mockery
+	@cp ./bin/mockery/mockery $GOPATH/bin/
 
 mockery: install-mockery
 	@echo "Making mocks..."
