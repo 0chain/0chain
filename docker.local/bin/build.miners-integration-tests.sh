@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# generate mocks
+make mockery
+
 cmd="build"
 
 for arg in "$@"
