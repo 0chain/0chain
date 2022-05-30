@@ -51,21 +51,31 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
+	const stuckDuration = 3 * time.Second
 	var (
 		endRound int64
 		syncing  bool
 
-		syncBlocksTimer = time.NewTimer(7 * time.Second)
-		aheadN          = int64(config.GetLFBTicketAhead())
-	)
+		syncBlocksTimer  = time.NewTimer(7 * time.Second)
+		aheadN           = int64(config.GetLFBTicketAhead())
+		maxRequestBlocks = aheadN
 
-	const maxRequestBlocks = 5
+		// triggered after sync process is started
+		stuckCheckTimer = time.NewTimer(10 * time.Second)
+	)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
+		case <-stuckCheckTimer.C:
+			logging.Logger.Debug("finalize block, detected stuck, trigger sync",
+				zap.Int64("round", sc.GetCurrentRound()),
+				zap.Int64("lfb", sc.GetLatestFinalizedBlock().Round))
+			stuckCheckTimer.Reset(stuckDuration)
+			// trigger sync
+			syncBlocksTimer.Reset(0)
 		case <-syncBlocksTimer.C:
 			// reset sync timer to 1 minute
 			syncBlocksTimer.Reset(time.Minute)
@@ -76,10 +86,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			)
 
 			cr := sc.GetCurrentRound()
-			//if cr > lfbTk.Round {
-			//	continue
-			//}
-
 			if cr < lfb.Round {
 				sc.SetCurrentRound(lfb.Round)
 				cr = lfb.Round
@@ -111,15 +117,18 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("end round", cr+reqNum+1))
 			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.blockChannel:
+			stuckCheckTimer.Reset(stuckDuration)
 			cr := sc.GetCurrentRound()
 			lfb := sc.GetLatestFinalizedBlock()
-			//if b.Round > sc.GetCurrentRound()+1 {
 			if b.Round > lfb.Round+aheadN {
-				logging.Logger.Debug("process block skip",
-					zap.Int64("block round", b.Round),
-					zap.Int64("current round", cr),
-					zap.Int64("lfb", lfb.Round),
-					zap.Bool("syncing", syncing))
+				// avoid the skipping logs when syncing blocks
+				if b.Round <= lfb.Round+2*aheadN {
+					logging.Logger.Debug("process block skip",
+						zap.Int64("block round", b.Round),
+						zap.Int64("current round", cr),
+						zap.Int64("lfb", lfb.Round),
+						zap.Bool("syncing", syncing))
+				}
 
 				if !syncing {
 					syncBlocksTimer.Reset(0)

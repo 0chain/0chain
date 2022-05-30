@@ -242,14 +242,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		return
 	}
 
-	//if roundNumber-lfb.Round <= 1 {
-	//	logging.Logger.Debug("finalize round - lfb round should have confirmed number > 1",
-	//		zap.Int64("round", roundNumber),
-	//		zap.Int64("lfb round", lfb.Round),
-	//		zap.String("lfb", lfb.Hash))
-	//	return
-	//}
-
 	if lfb.Round > plfb.Round {
 
 		if roundNumber-lfb.Round >= int64(2*config.GetLFBTicketAhead()) {
