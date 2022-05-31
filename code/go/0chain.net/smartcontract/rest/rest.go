@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"0chain.net/chaincore/chain/state"
 	"net/http"
+
+	"0chain.net/chaincore/chain/state"
 )
 
 type Endpoint struct {
@@ -55,6 +56,22 @@ func NewRestHandler(c QueryChainer) RestHandlerI {
 
 func (rh *RestHandler) Register(endpoints []Endpoint) {
 	for _, e := range endpoints {
-		http.HandleFunc(e.URI, e.Handler)
+		http.HandleFunc(e.URI, WithCORS(e.Handler))
+	}
+}
+
+// WithCORS enable CORS
+func WithCORS(fn func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // CORS for all.
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		if r.Method == "OPTIONS" {
+			w.Header().Add("Access-Control-Max-Age", "3600")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		fn(w, r)
 	}
 }
