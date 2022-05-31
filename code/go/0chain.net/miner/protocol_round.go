@@ -888,7 +888,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			minerStats.VerificationTicketsByRank[b.RoundRank]++
 		}
-		logging.Logger.Debug("verifyAndSend - finished successfully", zap.Any("block", b.Hash))
+		logging.Logger.Debug("verifyAndSend - finished successfully",
+			zap.Int64("round", b.Round),
+			zap.Any("block", b.Hash))
 		return true
 	}
 	var sendVerification = false

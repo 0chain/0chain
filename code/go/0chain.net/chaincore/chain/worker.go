@@ -258,17 +258,14 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				defer cancel()
 
-				t := time.Now()
-				doneC := make(chan struct{})
+				errC := make(chan error, 1)
 				go func() {
-					defer close(doneC)
-					c.finalizeBlockProcess(cctx, fbr.block, bsh)
+					errC <- c.finalizeBlockProcess(cctx, fbr.block, bsh)
 				}()
 
 				select {
-				case <-doneC:
-					Logger.Debug("finalize block process duration", zap.Any("duration", time.Since(t)))
-					fbr.resultC <- nil
+				case err := <-errC:
+					fbr.resultC <- err
 				case <-cctx.Done():
 					Logger.Warn("finalize block process context done",
 						zap.Error(cctx.Err()))
@@ -279,7 +276,7 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 	}
 }
 
-func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
+func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh BlockStateHandler) error {
 	lfb := c.GetLatestFinalizedBlock()
 	if fb.Round < lfb.Round-5 {
 		Logger.Warn("finalize block - slow finalized block processing",
@@ -290,7 +287,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		Logger.Info("finalize block - already finalized",
 			zap.Int64("round", fb.Round),
 			zap.String("block", fb.Hash))
-		return
+		return nil
 	}
 
 	Logger.Debug("start to finalize block",
@@ -311,7 +308,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 						zap.String("prev block", fb.PrevHash),
 						zap.Int64("lfb round", lfb.Round),
 						zap.String("lfb", lfb.Hash))
-					return
+					return errors.New("previous block state not computed or synced")
 				}
 			}
 
@@ -326,7 +323,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				Logger.Error("finalize block - compute state failed",
 					zap.Int64("round", fb.Round),
 					zap.Error(err))
-				return
+				return fmt.Errorf("compute state failed: %v", err)
 			}
 		} else {
 			Logger.Debug("finalize block - state not computed, try to fetch state changes",
@@ -334,14 +331,13 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				zap.String("block", fb.Hash),
 				zap.String("prev block", fb.PrevHash))
 
-			//fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
-
 			if err := c.GetBlockStateChange(fb); err != nil {
 				Logger.Error("finalize block failed, compute state failed",
 					zap.Int64("round", fb.Round),
 					zap.Error(err))
-				return
+				return fmt.Errorf("sync state changes failed: %v", err)
 			}
+
 			Logger.Debug("finalize block - sync state success",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash))
@@ -357,7 +353,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
 		if err != nil {
 			Logger.Error("finalize block - repairing MB chain", zap.Error(err))
-			return
+			return fmt.Errorf("repair chain failed: %v", err)
 		}
 	}
 
@@ -367,14 +363,14 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		if pr == nil {
 			Logger.Error("finalize block - previous round not found",
 				zap.Int64("round", fb.Round))
-			return
+			return errors.New("previous round is missing")
 		}
 
 		prevBlockHash := pr.GetBlockHash()
 		if prevBlockHash == "" {
 			Logger.Error("finalize block - previous round not finalized",
 				zap.Int64("round", fb.Round))
-			return
+			return errors.New("previous round not finalized")
 		}
 
 		if fb.PrevHash != prevBlockHash {
@@ -383,12 +379,13 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				zap.String("block", fb.Hash),
 				zap.String("prev block", fb.PrevHash),
 				zap.String("finalized previous block", prevBlockHash))
-			return
+			return errors.New("could not connect to previous finalized round")
 		}
 
 	}
 	// finalize
 	c.finalizeBlock(ctx, fb, bsh)
+	return nil
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
