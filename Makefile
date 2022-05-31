@@ -55,32 +55,32 @@ build-mocks: install-mockery
 	@echo "-------------------------------------"
 	@echo "[+] core	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/core && $(root_path)/bin/mockery/mockery --case underscore --output=../core/mocks --all
+	@cd $(root_path)/code/go/0chain.net/core && mockery --case underscore --output=../core/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] miner	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/miner && $(root_path)/bin/mockery/mockery --case underscore --output=../miner/mocks --all
+	@cd $(root_path)/code/go/0chain.net/miner && mockery --case underscore --output=../miner/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] chaincore	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/chaincore && $(root_path)/bin/mockery/mockery --case underscore --output=../chaincore/mocks --all
+	@cd $(root_path)/code/go/0chain.net/chaincore && mockery --case underscore --output=../chaincore/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] conductor	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/conductor && $(root_path)/bin/mockery/mockery --case underscore --output=../conductor/mocks --all
+	@cd $(root_path)/code/go/0chain.net/conductor && mockery --case underscore --output=../conductor/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] sharder	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/sharder && $(root_path)/bin/mockery/mockery --case underscore --output=../sharder/mocks --all
+	@cd $(root_path)/code/go/0chain.net/sharder && mockery --case underscore --output=../sharder/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] smartcontract	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/smartcontract && $(root_path)/bin/mockery/mockery --case underscore --output=../smartcontract/mocks --all
+	@cd $(root_path)/code/go/0chain.net/smartcontract && mockery --case underscore --output=../smartcontract/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] ./...	" 
