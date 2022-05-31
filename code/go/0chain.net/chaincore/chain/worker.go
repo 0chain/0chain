@@ -28,7 +28,6 @@ func init() {
 func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
-	//go c.SyncLFBStateWorker(ctx)
 	go c.blockFetcher.StartBlockFetchWorker(ctx, c)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
 	go node.Self.Underlying().MemoryUsage()
@@ -374,12 +373,12 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 
 		if fb.PrevHash != prevBlockHash {
-			Logger.Error("finalize block - previous block hash can not connect to last finalized block",
+			Logger.Error("finalize block - could not connect to lfb",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
 				zap.String("prev block", fb.PrevHash),
 				zap.String("finalized previous block", prevBlockHash))
-			return errors.New("could not connect to previous finalized round")
+			return errors.New("could not connect to lfb")
 		}
 
 	}

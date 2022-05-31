@@ -184,7 +184,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			}
 
 			if len(fetching) >= total {
-				logging.Logger.Error("full block fetcher list:", zap.Any("fetching", fetching))
 				go bf.terminate(ctx, bfr, ErrBlockFetchQueueFull)
 				continue
 			}
@@ -206,7 +205,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 			// fetch from miners first
 			if bf.acquire(ctx, minersl) {
-				//fetching[bfr.hash] = bfr
 				if bfr.hash != "" {
 					fetching[bfr.hash] = bfr // add, increasing map length
 				} else {
@@ -227,7 +225,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 				if !ok {
 					// a fetch request with round number could be removed by the request with block hash
 					continue
-					//panic("BlockFetcher, invalid state: missing block fetch request")
 				}
 			}
 
@@ -742,8 +739,7 @@ func (c *Chain) GetNotarizedBlockFromSharders(ctx context.Context, hash string, 
 
 	var (
 		cround = c.GetCurrentRound()
-
-		rpl BlockFetchReply
+		rpl    BlockFetchReply
 	)
 
 	select {

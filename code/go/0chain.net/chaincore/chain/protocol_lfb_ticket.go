@@ -204,8 +204,6 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 func (c *Chain) sendLFBTicketEventToSubscribers(
 	subs map[chan *LFBTicket]struct{}, ticket *LFBTicket) {
 
-	//logging.Logger.Debug("[send LFB-ticket event to subscribers]",
-	//	zap.Int("subs", len(subs)), zap.Int64("round", ticket.Round))
 	for s := range subs {
 		select {
 		case s <- ticket: // the sending must be non-blocking
@@ -286,17 +284,6 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				c.sendLFBTicketEventToSubscribers(subs, ticket)
 				continue // don't need a block for the blank kick ticket
 			}
-
-			// only if updated, only for sharders
-			// (don't rebroadcast without a block verification)
-
-			//if isSharder {
-			//	if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
-			//		c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket,
-			//			c.afterFetcher)
-			//		continue // if haven't the block, then don't update the latest
-			//	}
-			//}
 
 			// send for all subscribers
 			c.sendLFBTicketEventToSubscribers(subs, ticket)

@@ -90,12 +90,6 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	sc.SetCurrentRound(r.GetRoundNumber())
 	sc.UpdateNodeState(b)
 
-	//if !ok && shouldNotFinalize(r) {
-	//	return errors.New("add notarized block to round failed")
-	//}
-	// TODO: issue, new finalize block for the same round could override and will lead to
-	// break chain, need to fix this.
-
 	go sc.FinalizeRound(r)
 	return nil
 }

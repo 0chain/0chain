@@ -890,7 +890,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		logging.Logger.Debug("verifyAndSend - finished successfully",
 			zap.Int64("round", b.Round),
-			zap.Any("block", b.Hash))
+			zap.String("block", b.Hash))
 		return true
 	}
 	var sendVerification = false

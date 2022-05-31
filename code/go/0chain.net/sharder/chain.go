@@ -151,22 +151,15 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 /*GetBlockHash - get the block hash for a given round */
 func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
 	var err error
-	//var fromStore bool
 	r := sc.GetSharderRound(roundNumber)
 	if r == nil {
 		r, err = sc.GetRoundFromStore(ctx, roundNumber)
 		if err != nil {
 			return "", err
 		}
-		//fromStore = true
 	}
 	if r.BlockHash == "" {
 		return "", fmt.Errorf("round %d has empty block hash", roundNumber)
-		//Logger.Error("get_block_hash",
-		//	zap.Int64("round", roundNumber),
-		//	zap.Bool("from_store", fromStore),
-		//	zap.Error(err))
-		//return "", err
 	}
 	return r.BlockHash, nil
 }

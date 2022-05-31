@@ -153,13 +153,6 @@ func (sc *Chain) cacheProcessingBlock(hash string) bool {
 	_, err := sc.processingBlocks.Get(hash)
 	switch err {
 	case cache.ErrKeyNotFound:
-		// check if block is processed
-		//_, err := sc.GetBlock(context.Background(), hash)
-		//if err == nil {
-		//	sc.pbMutex.Unlock()
-		//	return false
-		//}
-
 		if err := sc.processingBlocks.Add(hash, struct{}{}); err != nil {
 			Logger.Warn("cache process block failed",
 				zap.String("block", hash),

@@ -181,12 +181,11 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 	return // everything is done
 }
 
-// TODO: return error if previous block is not connected
-// the previous round added may not finalized yet, so need to check again to
-// ensure that the finalized one is saved.
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) error {
 	if !sc.cacheProcessingBlock(b.Hash) {
-		Logger.Debug("process block, being processed", zap.Int64("round", b.Round))
+		Logger.Debug("process block, being processed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
 		return nil
 	}
 

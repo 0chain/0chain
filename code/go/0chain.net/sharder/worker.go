@@ -103,7 +103,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("current round", cr),
 				zap.Int64("end round", endRound))
 
-			// trunc to send at most 20 blocks each time
+			// trunc to send maxRequestBlocks each time
 			reqNum := endRound - cr
 			if reqNum > maxRequestBlocks {
 				reqNum = maxRequestBlocks
@@ -130,6 +130,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 						zap.Bool("syncing", syncing))
 				}
 
+				// trigger sync process to pull the latest blocks when
+				// current round is > lfb.Round + aheadN to break the stuck if any.
 				if !syncing {
 					syncBlocksTimer.Reset(0)
 				}
@@ -189,7 +191,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	}
 }
 
-func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) int {
+func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
 	for i := int64(0); i < reqNum; i++ {
@@ -200,17 +202,6 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 			var cancel func()
 			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
-			// check local to see if exist
-			//hash, err := sc.GetBlockHash(cctx, r)
-			//if err == nil {
-			//	b, err := sc.GetBlockFromHash(cctx, hash, r)
-			//	if err == nil {
-			//		blocks[idx] = b
-			//		return
-			//	}
-			//}
-
-			// this will save block to local and create related round
 			b, err := sc.GetNotarizedBlockFromSharders(cctx, "", r)
 			if err != nil {
 				// fetch from miners
@@ -228,13 +219,10 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 	}
 	wg.Wait()
 
-	for i, b := range blocks {
+	for _, b := range blocks {
 		if b == nil {
 			// return if block is not acquired, break here as we will redo the sync process from the missed one later
-			if i > 0 {
-				return i + 1
-			}
-			return 0
+			return
 		}
 
 		if err := sc.PushToBlockProcessor(b); err != nil {
@@ -242,8 +230,6 @@ func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) in
 				zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
-
-	return len(blocks)
 }
 
 func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round, bool) {
