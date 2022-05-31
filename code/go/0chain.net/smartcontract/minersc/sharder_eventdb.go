@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/smartcontract/stakepool"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
@@ -18,25 +21,17 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:                edbSharder.SharderID,
-		N2NHost:           edbSharder.N2NHost,
-		Host:              edbSharder.Host,
-		Port:              edbSharder.Port,
-		Path:              edbSharder.Path,
-		PublicKey:         edbSharder.PublicKey,
-		ShortName:         edbSharder.ShortName,
-		BuildTag:          edbSharder.BuildTag,
-		TotalStaked:       int64(edbSharder.TotalStaked),
-		Delete:            edbSharder.Delete,
-		DelegateWallet:    edbSharder.DelegateWallet,
-		ServiceCharge:     edbSharder.ServiceCharge,
-		NumberOfDelegates: edbSharder.NumberOfDelegates,
-		MinStake:          edbSharder.MinStake,
-		MaxStake:          edbSharder.MaxStake,
-		Stat: Stat{
-			GeneratorRewards: edbSharder.Rewards,
-			GeneratorFees:    edbSharder.Fees,
-		},
+		ID:          edbSharder.SharderID,
+		N2NHost:     edbSharder.N2NHost,
+		Host:        edbSharder.Host,
+		Port:        edbSharder.Port,
+		Path:        edbSharder.Path,
+		PublicKey:   edbSharder.PublicKey,
+		ShortName:   edbSharder.ShortName,
+		BuildTag:    edbSharder.BuildTag,
+		TotalStaked: int64(edbSharder.TotalStaked),
+		Delete:      edbSharder.Delete,
+
 		LastHealthCheck: edbSharder.LastHealthCheck,
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbSharder.Latitude,
@@ -48,6 +43,16 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 
 	return MinerNode{
 		SimpleNode: &msn,
+		StakePool: &stakepool.StakePool{
+			Reward: edbSharder.Rewards,
+			Settings: stakepool.Settings{
+				DelegateWallet:     edbSharder.DelegateWallet,
+				ServiceChargeRatio: edbSharder.ServiceCharge,
+				MaxNumDelegates:    edbSharder.NumberOfDelegates,
+				MinStake:           edbSharder.MinStake,
+				MaxStake:           edbSharder.MaxStake,
+			},
+		},
 	}
 
 }
@@ -63,16 +68,15 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		PublicKey:         sn.PublicKey,
 		ShortName:         sn.ShortName,
 		BuildTag:          sn.BuildTag,
-		TotalStaked:       state.Balance(sn.TotalStaked),
+		TotalStaked:       currency.Coin(sn.TotalStaked),
 		Delete:            sn.Delete,
-		DelegateWallet:    sn.DelegateWallet,
-		ServiceCharge:     sn.ServiceCharge,
-		NumberOfDelegates: sn.NumberOfDelegates,
-		MinStake:          sn.MinStake,
-		MaxStake:          sn.MaxStake,
+		DelegateWallet:    sn.Settings.DelegateWallet,
+		ServiceCharge:     sn.Settings.ServiceChargeRatio,
+		NumberOfDelegates: sn.Settings.MaxNumDelegates,
+		MinStake:          sn.Settings.MinStake,
+		MaxStake:          sn.Settings.MaxStake,
 		LastHealthCheck:   sn.LastHealthCheck,
-		Rewards:           sn.Stat.GeneratorRewards,
-		Fees:              sn.Stat.GeneratorFees,
+		Rewards:           sn.Reward,
 		Active:            sn.Status == node.NodeStatusActive,
 		Longitude:         sn.Geolocation.Longitude,
 		Latitude:          sn.Geolocation.Latitude,
@@ -117,16 +121,15 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"build_tag":           sn.BuildTag,
 			"total_staked":        sn.TotalStaked,
 			"delete":              sn.Delete,
-			"delegate_wallet":     sn.DelegateWallet,
-			"service_charge":      sn.ServiceCharge,
-			"number_of_delegates": sn.NumberOfDelegates,
-			"min_stake":           sn.MinStake,
-			"max_stake":           sn.MaxStake,
+			"delegate_wallet":     sn.Settings.DelegateWallet,
+			"service_charge":      sn.Settings.ServiceChargeRatio,
+			"number_of_delegates": sn.Settings.MaxNumDelegates,
+			"min_stake":           sn.Settings.MinStake,
+			"max_stake":           sn.Settings.MaxStake,
 			"last_health_check":   sn.LastHealthCheck,
-			"rewards":             sn.SimpleNode.Stat.GeneratorRewards,
-			"fees":                sn.SimpleNode.Stat.GeneratorFees,
 			"longitude":           sn.SimpleNode.Geolocation.Longitude,
 			"latitude":            sn.SimpleNode.Geolocation.Latitude,
+			"rewards":             sn.Reward,
 		},
 	}
 

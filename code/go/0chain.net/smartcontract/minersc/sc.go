@@ -12,7 +12,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -80,10 +79,6 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 	return msc.SmartContractExecutionStats
 }
 
-func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
-	return msc.RestHandlers
-}
-
 func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
 	n, err := getGlobalNode(balances)
 	if err != nil {
@@ -102,33 +97,11 @@ func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName stri
 //setSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
-	msc.SmartContract.RestHandlers["/globalSettings"] = msc.getGlobalsHandler
-	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
-	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
-	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
-	msc.SmartContract.RestHandlers["/get_miner_geolocations"] = msc.GetMinerGeolocationsHandler
-	msc.SmartContract.RestHandlers["/get_miners_stats"] = msc.GetMinersStatsHandler
-	msc.SmartContract.RestHandlers["/get_miners_stake"] = msc.GetMinersStateHandler
-	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
-	msc.SmartContract.RestHandlers["/get_sharder_geolocations"] = msc.GetSharderGeolocationsHandler
-	msc.SmartContract.RestHandlers["/get_sharders_stats"] = msc.GetShardersStatsHandler
-	msc.SmartContract.RestHandlers["/get_sharders_stake"] = msc.GetShardersStateHandler
-	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler
-	msc.SmartContract.RestHandlers["/getPhase"] = msc.GetPhaseHandler
-	msc.SmartContract.RestHandlers["/getDkgList"] = msc.GetDKGMinerListHandler
-	msc.SmartContract.RestHandlers["/getMpksList"] = msc.GetMinersMpksListHandler
-	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
-	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
-
-	msc.SmartContract.RestHandlers["/getEvents"] = msc.GetEventsHandler
-
-	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
-	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
-	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
 
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
+	msc.SmartContractExecutionStats["collect_reward"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "collect_reward"), nil)
 	msc.SmartContractExecutionStats["miner_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "miner_health_check"), nil)
 	msc.SmartContractExecutionStats["sharder_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "sharder_health_check"), nil)
 	msc.SmartContractExecutionStats["update_globals"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_globals"), nil)
@@ -137,16 +110,6 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterCounter("feesPaid", nil)
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
-}
-
-func (msc *MinerSmartContract) addMint(gn *GlobalNode, mint state.Balance) {
-	gn.Minted += mint
-
-	var mintStatsRaw, found = msc.SmartContractExecutionStats["mintedTokens"]
-	if found {
-		var mintStats = mintStatsRaw.(metrics.Counter)
-		mintStats.Inc(int64(mint))
-	}
 }
 
 //Execute implementing the interface
@@ -170,7 +133,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 }
 
 func getGlobalNode(
-	balances cstate.StateContextI,
+	balances cstate.CommonStateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
 	err = balances.GetTrieNode(GlobalNodeKey, gn)
@@ -178,7 +141,10 @@ func getGlobalNode(
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		gn.readConfig()
+		err = gn.readConfig()
+		if err != nil {
+			return nil, fmt.Errorf("error reading config: %v", err)
+		}
 		if err := gn.validate(); err != nil {
 			return nil, fmt.Errorf("validating global node: %v", err)
 		}
@@ -186,21 +152,4 @@ func getGlobalNode(
 	}
 
 	return gn, nil
-}
-
-func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
-	un := NewUserNode()
-	un.ID = id
-	err := balances.GetTrieNode(un.GetKey(), un)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		un = NewUserNode()
-		un.ID = id
-		return un, nil
-	}
-
-	un.ID = id
-	return un, nil
 }

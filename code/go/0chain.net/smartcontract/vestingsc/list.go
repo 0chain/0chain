@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/json"
 	"net/url"
@@ -23,6 +24,7 @@ func clientPoolsKey(vscKey, clientID datastore.Key) datastore.Key {
 	return vscKey + ":clientvestingpools:" + clientID
 }
 
+// swagger:model vestingClientPools
 type clientPools struct {
 	Pools []string `json:"pools"`
 }
@@ -100,7 +102,7 @@ func (cp *clientPools) save(vscKey, clientID datastore.Key,
 //
 
 func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
+	balances chainstate.CommonStateContextI) (cp *clientPools, err error) {
 
 	cp = new(clientPools)
 	err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID), cp)
@@ -111,8 +113,18 @@ func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 	return cp, nil
 }
 
+func getOrCreateClientPools(
+	clientID datastore.Key,
+	balances chainstate.CommonStateContextI,
+) (cp *clientPools, err error) {
+	var vsc = VestingSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}
+	return vsc.getOrCreateClientPools(clientID, balances)
+}
+
 func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
+	balances chainstate.CommonStateContextI) (cp *clientPools, err error) {
 
 	cp, err = vsc.getClientPools(clientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -131,7 +143,7 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 //
 
 func (vsc *VestingSmartContract) getClientPoolsHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+	params url.Values, balances chainstate.CommonStateContextI) (
 	resp interface{}, err error) {
 
 	var (

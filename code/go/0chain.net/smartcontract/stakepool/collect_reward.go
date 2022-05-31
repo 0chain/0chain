@@ -8,6 +8,7 @@ import (
 
 // CollectRewardRequest uniquely defines a stake pool.
 type CollectRewardRequest struct {
+	ProviderId   string          `json:"provider_id"`
 	ProviderType spenum.Provider `json:"provider_type"`
 	PoolId       string          `json:"pool_id"`
 }

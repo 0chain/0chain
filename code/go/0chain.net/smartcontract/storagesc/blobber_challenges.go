@@ -30,7 +30,7 @@ func (bcs *BlobberChallenges) GetKey(globalKey string) datastore.Key {
 	return globalKey + ":blobberchallenges:" + bcs.BlobberID
 }
 
-func (bcs *BlobberChallenges) load(state state.StateContextI, globalKey string) error {
+func (bcs *BlobberChallenges) load(state state.CommonStateContextI, globalKey string) error {
 	return state.GetTrieNode(bcs.GetKey(globalKey), bcs)
 }
 

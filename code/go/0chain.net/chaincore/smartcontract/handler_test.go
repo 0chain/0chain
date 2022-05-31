@@ -1,16 +1,17 @@
 package smartcontract_test
 
 import (
+	"0chain.net/chaincore/chain"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"testing"
 
-	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
@@ -55,77 +56,6 @@ func init() {
 
 	setupsc.SetupSmartContracts()
 	logging.InitLogging("testing", "")
-}
-
-func TestExecuteRestAPI(t *testing.T) {
-	t.Parallel()
-
-	gn := &faucetsc.GlobalNode{}
-	blob, err := gn.MarshalMsg(nil)
-	require.NoError(t, err)
-
-	sc := mocks.StateContextI{}
-	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(nil).Run(
-		func(args mock.Arguments) {
-			v := args.Get(1).(*faucetsc.GlobalNode)
-			_, err := v.UnmarshalMsg(blob)
-			require.NoError(t, err)
-		})
-
-	type args struct {
-		ctx      context.Context
-		scAdress string
-		restpath string
-		params   url.Values
-		balances chstate.StateContextI
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    interface{}
-		wantErr bool
-	}{
-		{
-			name: "Unregistered_SC_ERR",
-			args: args{
-				scAdress: storagesc.ADDRESS,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Unknown_REST_Path_ERR",
-			args: args{
-				restpath: "unknown path",
-				scAdress: faucetsc.ADDRESS,
-			},
-			wantErr: true,
-		},
-		{
-			name: "OK",
-			args: args{
-				restpath: "/pourAmount",
-				scAdress: faucetsc.ADDRESS,
-				balances: &sc,
-			},
-			want:    "Pour amount per request: 0",
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExecuteRestAPI() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ExecuteRestAPI() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
 
 func TestExecuteStats(t *testing.T) {
@@ -211,12 +141,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 34,
-		},
-		{
-			name:       "interest",
-			address:    interestpoolsc.ADDRESS,
-			restpoints: 3,
+			restpoints: 37,
 		},
 		{
 			name:       "multisig",
@@ -255,7 +180,7 @@ func TestGetSmartContract(t *testing.T) {
 			}
 			require.EqualValues(t, tt.name, got.GetName())
 			require.EqualValues(t, tt.address, got.GetAddress())
-			require.EqualValues(t, tt.restpoints, len(got.GetRestPoints()))
+			require.EqualValues(t, tt.restpoints, len(chain.GetFunctionNames(tt.address)))
 		})
 	}
 }
@@ -263,7 +188,7 @@ func TestGetSmartContract(t *testing.T) {
 func makeTestStateContextIMock() *mocks.StateContextI {
 	stateContextI := mocks.StateContextI{}
 	stateContextI.On("GetClientBalance", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) state.Balance {
+		func(_ datastore.Key) currency.Coin {
 			return 5
 		},
 		func(_ datastore.Key) error {
@@ -386,12 +311,6 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
-			minerNodes := &minersc.MinerNodes{}
-			blob, err := minerNodes.MarshalMsg(nil)
-			require.NoError(t, err)
-
-			_, err = v.UnmarshalMsg(blob)
-			require.NoError(t, err)
 			return true
 		})).Return(nil)
 	stateContextIMock.On("GetTrieNode",
@@ -500,7 +419,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0,\"last_setting_update_round\":0}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":null}",
 			wantErr: false,
 		},
 	}

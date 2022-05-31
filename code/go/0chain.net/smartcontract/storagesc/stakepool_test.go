@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
@@ -16,7 +18,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
@@ -134,7 +135,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			nil,
 			nil,
 		),
-		clientBalance: state.Balance(clientBalance),
+		clientBalance: currency.Coin(clientBalance),
 		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
@@ -170,7 +171,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	newStakePool, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
 	var newUsp *stakepool.UserStakePools
-	newUsp, err = stakepool.GetUserStakePool(spenum.Blobber, txn.ClientID, ctx)
+	newUsp, err = stakepool.GetUserStakePools(spenum.Blobber, txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)

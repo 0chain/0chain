@@ -1,15 +1,18 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"strconv"
+
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/smartcontract/dbs/event"
+
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -20,7 +23,7 @@ import (
 
 func AddMockNodes(
 	clients []string,
-	nodeType NodeType,
+	nodeType spenum.Provider,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []string {
@@ -28,14 +31,14 @@ func AddMockNodes(
 		err          error
 		nodes        []string
 		allNodes     MinerNodes
-		numActive    int
 		nodeMap      = make(map[string]*SimpleNode)
 		numNodes     int
+		numActive    int
 		numDelegates int
 		key          string
 	)
 
-	if nodeType == NodeTypeMiner {
+	if nodeType == spenum.Miner {
 		numActive = viper.GetInt(benchmark.NumActiveMiners)
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
@@ -52,32 +55,26 @@ func AddMockNodes(
 		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.Now))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
-		newNode.NumberOfDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.MinStake = state.Balance(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.MaxStake = state.Balance(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
+		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
+		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
+		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
-		newNode.DelegateWallet = newNode.ID
+		newNode.Settings.DelegateWallet = newNode.ID
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
-			pool := sci.DelegatePool{
-				ZcnLockingPool: &tokenpool.ZcnLockingPool{
-					ZcnPool: tokenpool.ZcnPool{
-						TokenPool: tokenpool.TokenPool{
-							ID:      getMinerDelegatePoolId(i, dId, nodeType),
-							Balance: 100 * 1e10,
-						},
-					},
-				},
-				PoolStats: &sci.PoolStats{},
+			pool := stakepool.DelegatePool{
+				Balance:    100 * 1e10,
+				Reward:     0.3 * 1e10,
+				DelegateID: clients[dId],
 			}
-
-			pool.DelegateID = clients[dId]
 			if i < numActive {
-				newNode.Active[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+				pool.Status = spenum.Active
+				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			} else {
-				newNode.Pending[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+				pool.Status = spenum.Pending
+				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			}
 		}
 		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
@@ -89,15 +86,15 @@ func AddMockNodes(
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
-			if nodeType == NodeTypeMiner {
+			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
 					MinerID:           newNode.ID,
 					LastHealthCheck:   newNode.LastHealthCheck,
 					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.ServiceCharge,
-					NumberOfDelegates: newNode.NumberOfDelegates,
-					MinStake:          newNode.MinStake,
-					MaxStake:          newNode.MaxStake,
+					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
+					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
+					MinStake:          newNode.Settings.MinStake,
+					MaxStake:          newNode.Settings.MaxStake,
 				}
 				_ = eventDb.Store.Get().Create(&minerDb)
 			} else {
@@ -105,16 +102,16 @@ func AddMockNodes(
 					SharderID:         newNode.ID,
 					LastHealthCheck:   newNode.LastHealthCheck,
 					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.ServiceCharge,
-					NumberOfDelegates: newNode.NumberOfDelegates,
-					MinStake:          newNode.MinStake,
-					MaxStake:          newNode.MaxStake,
+					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
+					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
+					MinStake:          newNode.Settings.MinStake,
+					MaxStake:          newNode.Settings.MaxStake,
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}
 		}
 	}
-	if nodeType == NodeTypeMiner {
+	if nodeType == spenum.Miner {
 		dkgMiners := NewDKGMinerNodes()
 		dkgMiners.SimpleNodes = nodeMap
 		dkgMiners.T = viper.GetInt(benchmark.InternalT)
@@ -154,38 +151,32 @@ func AddNodeDelegates(
 	clients, miners, sharders []string,
 	balances cstate.StateContextI,
 ) {
-	var cns = make(map[string]UserNode)
 	for i := range miners {
-		AddUserNodesForNode(i, NodeTypeMiner, miners, clients, cns)
+		AddUserNodesForNode(i, spenum.Miner, miners, clients, balances)
 	}
 	for i := range sharders {
-		AddUserNodesForNode(i, NodeTypeSharder, sharders, clients, cns)
-	}
-	for _, un := range cns {
-		_, _ = balances.InsertTrieNode(un.GetKey(), &un)
+		AddUserNodesForNode(i, spenum.Sharder, sharders, clients, balances)
 	}
 }
 
 func AddUserNodesForNode(
 	nodeIndex int,
-	nodeType NodeType,
+	nodeType spenum.Provider,
 	nodes []string,
-	clients []string, cns map[string]UserNode,
+	clients []string,
+	balances cstate.StateContextI,
 ) {
 	var numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 	for j := 0; j < numDelegates; j++ {
 		delegate := (nodeIndex + j) % len(nodes)
-		var un UserNode
-		un, ok := cns[clients[delegate]]
-		if !ok {
-			un = UserNode{
-				ID:    clients[delegate],
-				Pools: make(map[datastore.Key][]datastore.Key),
-			}
+		un := stakepool.UserStakePools{
+			Pools: make(map[datastore.Key][]datastore.Key),
 		}
-		un.Pools[nodes[nodeIndex]] = append(un.Pools[nodes[nodeIndex]],
-			getMinerDelegatePoolId(nodeIndex, delegate, nodeType))
-		cns[clients[delegate]] = un
+		un.Pools[nodes[nodeIndex]] = append(
+			un.Pools[nodes[nodeIndex]],
+			getMinerDelegatePoolId(nodeIndex, delegate, nodeType),
+		)
+		_, _ = balances.InsertTrieNode(stakepool.UserStakePoolsKey(nodeType, clients[delegate]), &un)
 	}
 }
 
@@ -251,11 +242,11 @@ func AddPhaseNode(balances cstate.StateContextI) {
 	}
 }
 
-func getMinerDelegatePoolId(miner, delegate int, nodeType NodeType) string {
+func getMinerDelegatePoolId(miner, delegate int, nodeType spenum.Provider) string {
 	return encryption.Hash("delegate pool" +
 		strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType)))
 }
 
-func GetMockNodeId(index int, nodeType NodeType) string {
+func GetMockNodeId(index int, nodeType spenum.Provider) string {
 	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
 }

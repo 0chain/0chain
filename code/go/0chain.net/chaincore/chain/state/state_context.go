@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
@@ -51,19 +53,29 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+type CommonStateContextI interface {
+	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
+	GetBlock() *block.Block
+	GetLatestFinalizedBlock() *block.Block
+}
+
+//go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
+type QueryStateContextI interface {
+	CommonStateContextI
+	GetEventDB() *event.EventDb
+}
+
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
-// todo this needs to be split up into different interfaces
 type StateContextI interface {
+	QueryStateContextI
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
-	GetBlock() *block.Block                   // Can use in REST endpoints
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
-	GetClientBalance(clientID datastore.Key) (state.Balance, error)
-	SetStateContext(st *state.State) error                       // cannot use in smart contracts or REST endpoints
-	GetTrieNode(key datastore.Key, v util.MPTSerializable) error // Can use in REST endpoints
+	GetClientBalance(clientID datastore.Key) (currency.Coin, error)
+	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
 	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
@@ -78,8 +90,7 @@ type StateContextI interface {
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(event.EventType, event.EventTag, string, string)
 	EmitError(error)
-	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
-	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
+	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
 
 //StateContext - a context object used to manipulate global state
@@ -233,22 +244,28 @@ func (sc *StateContext) GetEventDB() *event.EventDb {
 
 //Validate - implement interface
 func (sc *StateContext) Validate() error {
-	var amount state.Balance
+	var (
+		amount currency.Coin
+		err    error
+	)
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
-			amount += transfer.Amount
+			amount, err = currency.AddCoin(amount, transfer.Amount)
+			if err != nil {
+				return err
+			}
 		} else {
 			if transfer.ClientID != sc.txn.ToClientID {
 				return state.ErrInvalidTransfer
 			}
 		}
-		if transfer.Amount < 0 {
-			return state.ErrInvalidTransfer
-		}
 	}
-	totalValue := state.Balance(sc.txn.Value)
+	totalValue := currency.Coin(sc.txn.Value)
 	if config.DevConfiguration.IsFeeEnabled {
-		totalValue += state.Balance(sc.txn.Fee)
+		totalValue, err = currency.AddInt64(totalValue, sc.txn.Fee)
+		if err != nil {
+			return err
+		}
 	}
 	if amount > totalValue {
 		return state.ErrInvalidTransfer
@@ -281,7 +298,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 }
 
 //GetClientBalance - get the balance of the client
-func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error) {
+func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
 		return 0, err

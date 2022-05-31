@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -121,17 +122,17 @@ func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 
 	globalNode, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, state.Balance(11), globalNode.MinStakeAmount)
+	require.Equal(t, currency.Coin(11), globalNode.MinStakeAmount)
 
 	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = state.Balance(100 * 1e10)
+	node.MinStakeAmount = currency.Coin(100 * 1e10)
 
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
 	globalNode, err = GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.Equal(t, state.Balance(100*1e10), globalNode.MinStakeAmount)
+	require.Equal(t, currency.Coin(100*1e10), globalNode.MinStakeAmount)
 }
 
 func Test_Should_FailWithoutInputData(t *testing.T) {
@@ -195,7 +196,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	require.NotNil(t, node)
 
 	cfg := &AuthorizerConfig{
-		Fee: state.Balance(111),
+		Fee: currency.Coin(111),
 	}
 
 	err := node.UpdateConfig(cfg)
@@ -206,7 +207,7 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	// Get node and check its setting
 	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node.Config)
-	require.Equal(t, state.Balance(111), node.Config.Fee)
+	require.Equal(t, currency.Coin(111), node.Config.Fee)
 }
 
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {
@@ -224,7 +225,8 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 	)
 
 	sc := CreateZCNSmartContract()
-	tr := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx)
+	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx)
+	require.NoError(t, err)
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)

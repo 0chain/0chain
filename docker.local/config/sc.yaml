@@ -89,6 +89,7 @@ smart_contracts:
       addToDelegatePool: 100
       deleteFromDelegatePool: 100
       sharder_keep: 100
+      collect_reward: 100
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # the time_unit is a duration used as divider for a write price; a write
@@ -104,7 +105,7 @@ smart_contracts:
     # min possible allocation duration allowed by the SC
     min_alloc_duration: "5m"
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_time: "30m"
+    max_challenge_completion_time: "3m"
     # min blobber's offer duration allowed by the SC
     min_offer_duration: "10h"
     # min blobber capacity allowed by the SC
@@ -161,6 +162,8 @@ smart_contracts:
     max_read_price: 100.0
     max_write_price: 100.0
     # min_write_price: 0.1
+
+    max_blobbers_per_allocation: 40
     # allocation cancellation
     #
     # failed_challenges_to_cancel is number of failed challenges of an

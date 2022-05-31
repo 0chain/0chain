@@ -1,13 +1,17 @@
 package cmd
 
 import (
-	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/core/common"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/zcnsc"
 
@@ -65,8 +69,8 @@ func getBalances(
 	}
 	bk.Round = 2
 	bk.CreationDate = common.Timestamp(time.Now().Unix())
-	bk.MinerID = minersc.GetMockNodeId(0, minersc.NodeTypeMiner)
-	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, minersc.NodeTypeMiner))
+	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
+	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
@@ -257,7 +261,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		miners = minersc.AddMockNodes(clients, minersc.NodeTypeMiner, eventDb, balances)
+		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
 
@@ -265,7 +269,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		sharders = minersc.AddMockNodes(clients, minersc.NodeTypeSharder, eventDb, balances)
+		sharders = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
@@ -326,7 +330,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockChallenges(blobbers, balances)
+		storagesc.AddMockChallenges(blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -491,7 +495,7 @@ func addMockClients(
 		}
 		is := &state.State{}
 		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
+		is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
 		_, err = pMpt.Insert(util.Path(clientID), is)
 		if err != nil {
 			panic(err)

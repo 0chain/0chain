@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
 )
 
 type ConfigType int
@@ -20,7 +20,7 @@ const (
 	Float64
 	Boolean
 	String
-	StateBalance
+	CurrencyCoin
 	Key
 	Cost
 	Strings
@@ -29,9 +29,10 @@ const (
 //go:generate msgp -io=false -tests=false -v
 
 var ConfigTypeName = []string{
-	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance","Cost", "datastore.Key", "[]string",
+	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "currency.Coin", "Cost", "datastore.Key", "[]string",
 }
 
+// swagger:model StringMap
 type StringMap struct {
 	Fields map[string]string `json:"fields"`
 }
@@ -80,9 +81,9 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		return strconv.ParseBool(input)
 	case String:
 		return input, nil
-	case StateBalance:
+	case CurrencyCoin:
 		value, err := strconv.ParseInt(input, 10, 64)
-		return state.Balance(value), err
+		return currency.Coin(value), err
 	case Strings:
 		return strings.Split(input, ","), nil
 	default:

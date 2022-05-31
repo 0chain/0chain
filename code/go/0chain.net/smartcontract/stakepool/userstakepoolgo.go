@@ -30,7 +30,7 @@ func (usp *UserStakePools) add(providerId, poolID datastore.Key) {
 	usp.Pools[providerId] = append(usp.Pools[providerId], poolID)
 }
 
-func (usp *UserStakePools) Find(searchId datastore.Key) datastore.Key {
+func (usp *UserStakePools) FindProvider(searchId datastore.Key) datastore.Key {
 	for providedId, provider := range usp.Pools {
 		for _, poolId := range provider {
 			if searchId == poolId {
@@ -84,7 +84,7 @@ func (usp *UserStakePools) Save(
 }
 
 // GetUserStakePool of given client
-func GetUserStakePool(
+func GetUserStakePools(
 	p spenum.Provider,
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
@@ -105,7 +105,7 @@ func getOrCreateUserStakePool(
 	clientID datastore.Key,
 	balances chainstate.StateContextI,
 ) (usp *UserStakePools, err error) {
-	usp, err = GetUserStakePool(p, clientID, balances)
+	usp, err = GetUserStakePools(p, clientID, balances)
 	switch err {
 	case nil:
 		return usp, nil

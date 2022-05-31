@@ -2,14 +2,10 @@ package minersc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
@@ -22,18 +18,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"decoding request: %v", err)
 	}
 
-	var un *UserNode
-	if un, err = msc.getUserNode(t.ClientID, balances); err != nil {
-		return "", common.NewErrorf("delegate_pool_add",
-			"getting user node: %v", err)
-	}
-
-	var (
-		pool = sci.NewDelegatePool()
-
-		mn       *MinerNode
-		transfer *state.Transfer
-	)
+	var mn *MinerNode
 	mn, err = getMinerNode(dp.MinerID, balances)
 	switch err {
 	case nil:
@@ -50,61 +35,37 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"can't add delegate pool for miner being deleted")
 	}
 
-	if fnd, lnd := mn.numDelegates(), mn.NumberOfDelegates; fnd >= lnd {
+	numDelegates := mn.numDelegates()
+	if numDelegates >= mn.Settings.MaxNumDelegates {
 		return "", common.NewErrorf("delegate_pool_add",
-			"max delegates already reached: %d (%d)", fnd, lnd)
+			"max delegates already reached: %d (%d)", numDelegates, mn.Settings.MaxNumDelegates)
 	}
 
-	if fnd, scn := mn.numDelegates(), gn.MaxDelegates; fnd >= scn {
+	if numDelegates >= gn.MaxDelegates {
 		return "", common.NewErrorf("delegate_pool_add",
-			"SC max delegates already reached: %d (%d)", fnd, scn)
+			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
 	}
 
-	if t.Value < int64(mn.MinStake) {
+	if t.Value < int64(mn.Settings.MinStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is less than min allowed: %d < %d", t.Value, mn.MinStake)
+			"stake is less than min allowed: %d < %d", t.Value, mn.Settings.MinStake)
 	}
-	if t.Value > int64(mn.MaxStake) {
+	if t.Value > int64(mn.Settings.MaxStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is greater than max allowed: %d > %d", t.Value, mn.MaxStake)
+			"stake is greater than max allowed: %d > %d", t.Value, mn.Settings.MaxStake)
 	}
 
-	pool.TokenLockInterface = &ViewChangeLock{
-		Owner:               t.ClientID,
-		DeleteViewChangeSet: false,
-	}
-	pool.DelegateID = t.ClientID
-	pool.Status = PENDING
-
-	Logger.Info("add delegate pool", zap.Any("pool", pool))
-
-	if transfer, _, err = pool.DigPool(t.Hash, t); err != nil {
+	if err := mn.LockPool(t, spenum.Miner, mn.ID, spenum.Pending, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"digging delegate pool: %v", err)
 	}
 
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewErrorf("delegate_pool_add",
-			"adding transfer: %v", err)
-	}
-
-	// user node pool information
-	un.Pools[mn.ID] = append(un.Pools[mn.ID], t.Hash)
-
-	// add to pending making it active next VC
-	mn.Pending[t.Hash] = pool
-
-	// save user node and the miner/sharder
-	if err = un.save(balances); err != nil {
-		return "", common.NewErrorf("delegate_pool_add",
-			"saving user node: %v", err)
-	}
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"saving miner node: %v", err)
 	}
 
-	resp = string(mn.Encode()) + string(transfer.Encode()) + string(un.Encode())
+	resp = string(mn.Encode())
 	return
 }
 
@@ -124,56 +85,10 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			"error getting miner node: %v", err)
 	}
 
-	var un *UserNode
-	if un, err = msc.getUserNode(t.ClientID, balances); err != nil {
-		return "", common.NewErrorf("delegate_pool_del",
-			"error getting user node: %v", err)
-	}
-
-	// just delete it if it's still pending
-	if pool, ok := mn.Pending[dp.PoolID]; ok {
-		if pool.DelegateID != t.ClientID {
-			return "", common.NewErrorf("delegate_pool_del",
-				"you (%v) do not own the pool, it belongs to %v",
-				t.ClientID, pool.DelegateID)
-		}
-		var transfer *state.Transfer
-		transfer, resp, err = pool.EmptyPool(msc.ID, t.ClientID, nil)
-		if err != nil {
-			return "", common.NewErrorf("delegate_pool_del",
-				"error emptying delegate pool: %v", err)
-		}
-
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", common.NewErrorf("delegate_pool_del",
-				"adding transfer: %v", err)
-		}
-
-		delete(un.Pools, dp.PoolID)
-		delete(mn.Pending, dp.PoolID)
-
-		if err = un.save(balances); err != nil {
-			return "", common.NewError("delegate_pool_del", err.Error())
-		}
-
-		if err = mn.save(balances); err != nil {
-			return "", common.NewError("delegate_pool_del", err.Error())
-		}
-
-		return resp, nil
-	}
-
-	// move to deleting if it's active
-
-	var pool, ok = mn.Active[dp.PoolID]
+	pool, ok := mn.Pools[dp.PoolID]
 	if !ok {
 		return "", common.NewError("delegate_pool_del",
 			"pool does not exist for deletion")
-	}
-
-	if pool.Status == DELETING {
-		return "", common.NewError("delegate_pool_del",
-			"pool already deleted")
 	}
 
 	if pool.DelegateID != t.ClientID {
@@ -182,18 +97,36 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			t.ClientID, pool.DelegateID)
 	}
 
-	pool.Status = DELETING // mark as deleting
-	pool.TokenLockInterface = &ViewChangeLock{
-		Owner:               t.ClientID,
-		DeleteViewChangeSet: true,
-		DeleteVC:            gn.ViewChange,
-	}
-	mn.Deleting[dp.PoolID] = pool // add to deleting
-
-	if err = mn.save(balances); err != nil {
+	switch pool.Status {
+	case spenum.Pending:
+		{
+			_, err := mn.UnlockClientStakePool(t.ClientID, spenum.Miner, dp.MinerID, dp.PoolID, balances)
+			if err != nil {
+				return "", common.NewErrorf("delegate_pool_del",
+					"stake_pool_unlock_failed: %v", err)
+			}
+			if err = mn.save(balances); err != nil {
+				return "", common.NewError("delegate_pool_del", err.Error())
+			}
+			return resp, nil
+		}
+	case spenum.Active:
+		{
+			pool.Status = spenum.Deleting
+			if err = mn.save(balances); err != nil {
+				return "", common.NewErrorf("delegate_pool_del",
+					"saving miner node: %v", err)
+			}
+			return `{"action": "pool will be released next VC"}`, nil
+		}
+	case spenum.Deleting:
+		return "", common.NewError("delegate_pool_del",
+			"pool already deleted")
+	case spenum.Deleted:
+		return "", common.NewError("delegate_pool_del",
+			"pool already deleted")
+	default:
 		return "", common.NewErrorf("delegate_pool_del",
-			"saving miner node: %v", err)
+			"unrecognised stakepool status: %v", pool.Status.String())
 	}
-
-	return `{"action": "pool will be released next VC"}`, nil
 }

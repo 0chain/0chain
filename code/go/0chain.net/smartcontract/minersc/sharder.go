@@ -40,15 +40,14 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	if sn.Delete {
 		return "", common.NewError("update_settings", "can't update settings of sharder being deleted")
 	}
-	if sn.DelegateWallet != t.ClientID {
+	if sn.Settings.DelegateWallet != t.ClientID {
 		return "", common.NewError("update_sharder_settings", "access denied")
 	}
 
-	sn.ServiceCharge = update.ServiceCharge
-	sn.NumberOfDelegates = update.NumberOfDelegates
-	sn.MinStake = update.MinStake
-	sn.MaxStake = update.MaxStake
-	sn.LastSettingUpdateRound = balances.GetBlock().Round
+	sn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
+	sn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
+	sn.Settings.MinStake = update.Settings.MinStake
+	sn.Settings.MaxStake = update.Settings.MaxStake
 
 	if err = sn.save(balances); err != nil {
 		return "", common.NewErrorf("update_sharder_settings", "saving: %v", err)
@@ -89,8 +88,8 @@ func (msc *MinerSmartContract) AddSharder(
 
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
-	if newSharder.DelegateWallet == "" {
-		newSharder.DelegateWallet = newSharder.ID
+	if newSharder.Settings.DelegateWallet == "" {
+		newSharder.Settings.DelegateWallet = newSharder.ID
 	}
 
 	newSharder.LastHealthCheck = t.CreationDate
@@ -100,11 +99,11 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
 		zap.Any("mscID", msc.ID),
-		zap.String("delegate_wallet", newSharder.DelegateWallet),
-		zap.Float64("service_charge", newSharder.ServiceCharge),
-		zap.Int("number_of_delegates", newSharder.NumberOfDelegates),
-		zap.Int64("min_stake", int64(newSharder.MinStake)),
-		zap.Int64("max_stake", int64(newSharder.MaxStake)))
+		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
+		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
+		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates),
+		zap.Int64("min_stake", int64(newSharder.Settings.MinStake)),
+		zap.Int64("max_stake", int64(newSharder.Settings.MaxStake)))
 
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 
@@ -131,7 +130,7 @@ func (msc *MinerSmartContract) AddSharder(
 			return string(newSharder.Encode()), nil
 		}
 		// otherwise the sharder has saved by block sharders reward
-		newSharder.Stat.SharderRewards = existing.Stat.SharderRewards
+		newSharder.Reward = existing.Reward
 	}
 
 	newSharder.NodeType = NodeTypeSharder // set node type

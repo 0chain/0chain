@@ -38,3 +38,10 @@ msgp:
 	@echo "Run msgp..."
 	@cd $(root_path)/code/go/0chain.net && go generate -run=msgp ./...
 	@echo "Run msgp completed."
+
+swagger:
+	@echo "Run swagger..."
+	swagger generate spec -w  code/go/0chain.net/sharder/sharder  -m  -o docs/swagger.yaml
+	swagger generate markdown  -f docs/swagger.yaml --output=docs/swagger.md
+	@echo "swagger documentation generated"
+

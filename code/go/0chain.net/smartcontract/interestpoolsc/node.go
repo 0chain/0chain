@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -17,12 +17,14 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
+// swagger:model InterestPoolGlobalNode
 type GlobalNode struct {
 	*SimpleGlobalNode `json:"simple_global_node"`
 	ID                string
 	MinLockPeriod     time.Duration `json:"min_lock_period"`
 }
 
+// swagger:model InterestPoolGlobalNode
 func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
 		ID:               ADDRESS,
@@ -81,7 +83,10 @@ func (gn *GlobalNode) set(key string, value string) error {
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
-		gn.MinLock = state.Balance(fValue * 1e10)
+		gn.MinLock, err = currency.ParseZCN(fValue)
+		if err != nil {
+			return err
+		}
 	case Settings[Apr]:
 		gn.APR, err = strconv.ParseFloat(value, 64)
 		if err != nil {
@@ -99,7 +104,10 @@ func (gn *GlobalNode) set(key string, value string) error {
 		if err != nil {
 			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
 		}
-		gn.MaxMint = state.Balance(fValue * 1e10)
+		gn.MaxMint, err = currency.ParseZCN(fValue)
+		if err != nil {
+			return err
+		}
 	case Settings[OwnerId]:
 		if _, err := hex.DecodeString(value); err != nil {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)

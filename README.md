@@ -27,6 +27,7 @@
 - [Integration tests](#integration-tests)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
+- [Swagger documentation](#swagger-documentation)
 
 ## Changelog
 [CHANGELOG.md](CHANGELOG.md)
@@ -767,3 +768,12 @@ Check the [supported directives](https://github.com/0chain/0chain/blob/master/co
 
 Check [Custom Commands](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#custom-commands) in the conductor documentation for more information
 
+## Swagger documentation
+
+To generate swagger documentation you need go-swagger installed, visit https://goswagger.io/install.html for details.
+
+You then need to run the makefile
+```bash
+make swagger
+```
+The documentation will be in `docs/swagger.md` and `docs/swagger.yaml`.

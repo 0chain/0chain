@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
@@ -15,17 +16,6 @@ import (
 type StorageAllocationBlobbers struct {
 	StorageAllocation `json:",inline"`
 	Blobbers          []*StorageNode `json:"blobbers"`
-}
-
-func (ad *StorageAllocationBlobbers) getBlobbers(sc *StorageSmartContract, balances cstate.StateContextI) error {
-	for _, ba := range ad.BlobberAllocs {
-		blobber, err := sc.getBlobber(ba.BlobberID, balances)
-		if err != nil {
-			return err
-		}
-		ad.Blobbers = append(ad.Blobbers, blobber)
-	}
-	return nil
 }
 
 func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
@@ -87,12 +77,12 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Used:            b.Used,
 			SavedData:       b.SavedData,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
-			StakePoolSettings: stakepool.StakePoolSettings{
-				DelegateWallet:  b.DelegateWallet,
-				MinStake:        state.Balance(b.MinStake),
-				MaxStake:        state.Balance(b.MaxStake),
-				MaxNumDelegates: b.NumDelegates,
-				ServiceCharge:   b.ServiceCharge,
+			StakePoolSettings: stakepool.Settings{
+				DelegateWallet:     b.DelegateWallet,
+				MinStake:           currency.Coin(b.MinStake),
+				MaxStake:           currency.Coin(b.MaxStake),
+				MaxNumDelegates:    b.NumDelegates,
+				ServiceChargeRatio: b.ServiceCharge,
 			},
 		})
 
@@ -102,7 +92,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
 			Size:          b.Used,
 			Terms:         terms,
-			MinLockDemand: state.Balance(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
+			MinLockDemand: currency.Coin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation
@@ -228,20 +218,6 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocation, alloc.AllocationID, string(data))
 
 	return nil
-}
-
-func getStorageAllocationFromDb(id string, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
-	alloc, err := eventDb.GetAllocation(id)
-	if err != nil {
-		return nil, err
-	}
-
-	sa, err := allocationTableToStorageAllocationBlobbers(alloc, eventDb)
-	if err != nil {
-		return nil, err
-	}
-
-	return sa, nil
 }
 
 func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {

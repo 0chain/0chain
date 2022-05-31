@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -121,6 +122,7 @@ const (
 	ControlM                = Internal + "control_m"
 	ControlN                = Internal + "control_n"
 	MptRoot                 = Internal + "mpt_root"
+	ShowOutput              = Internal + "show_output"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"
@@ -171,6 +173,7 @@ const (
 	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
 	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 	StorageValidatorsPerChallenge        = SmartContract + StorageSc + "validators_per_challenge"
+	StorageMaxBlobbersPerAllocation      = SmartContract + StorageSc + "max_blobbers_per_allocation"
 
 	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
 	StorageBlockRewardTriggerPeriod   = SmartContract + StorageSc + BlockReward + "trigger_period"
@@ -280,6 +283,10 @@ type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
 	Run(state.StateContextI, *testing.B) error
+}
+
+type WithTimings interface {
+	Timings() map[string]time.Duration
 }
 
 type SignatureScheme interface {

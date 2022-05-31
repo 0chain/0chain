@@ -216,12 +216,12 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "can't decode request: %v", err)
 	}
 
-	usp, err := stakepool.GetUserStakePool(prr.ProviderType, tran.ClientID, ctx)
+	usp, err := stakepool.GetUserStakePools(prr.ProviderType, tran.ClientID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.Find(prr.PoolId)
+	providerId := usp.FindProvider(prr.PoolId)
 	if len(providerId) == 0 {
 		return "", common.NewErrorf(code, "user %v does not own stake pool %v", tran.ClientID, prr.PoolId)
 	}
@@ -330,13 +330,6 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		msg := fmt.Sprintf("decoding request: %v", err)
 		Logger.Error(msg, zap.Error(err))
 		err = common.NewError(code, msg)
-		return "", err
-	}
-
-	if in.Config.Fee < 0 || gn.MaxFee < 0 {
-		msg := fmt.Sprintf("invalid negative Auth Config Fee: %v or GN Config MaxFee: %v", in.Config.Fee, gn.MaxFee)
-		err = common.NewErrorf(code, msg)
-		Logger.Error(msg, zap.Error(err))
 		return "", err
 	}
 

@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
@@ -21,21 +22,23 @@ type Miner struct {
 	PublicKey         string
 	ShortName         string
 	BuildTag          string
-	TotalStaked       state.Balance
+	TotalStaked       currency.Coin
 	Delete            bool
 	DelegateWallet    string
 	ServiceCharge     float64
 	NumberOfDelegates int
-	MinStake          state.Balance
-	MaxStake          state.Balance
+	MinStake          currency.Coin
+	MaxStake          currency.Coin
 	LastHealthCheck   common.Timestamp
-	Rewards           state.Balance
-	Fees              state.Balance
+	Rewards           currency.Coin
+	TotalReward       currency.Coin
+	Fees              currency.Coin
 	Active            bool
 	Longitude         float64
 	Latitude          float64
 }
 
+// swagger:model MinerGeolocation
 type MinerGeolocation struct {
 	MinerID   string  `json:"miner_id"`
 	Latitude  float64 `json:"latitude"`
@@ -51,6 +54,20 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
+func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
+	var miner providerAggregateStats
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{MinerID: id}).
+		First(&miner)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving miner %v, error %v",
+			id, result.Error)
+	}
+
+	return &miner, nil
+}
+
 type MinerQuery struct {
 	gorm.Model
 	MinerID           null.String
@@ -61,7 +78,7 @@ type MinerQuery struct {
 	PublicKey         null.String
 	ShortName         null.String
 	BuildTag          null.String
-	TotalStaked       state.Balance
+	TotalStaked       currency.Coin
 	Delete            null.Bool
 	DelegateWallet    null.String
 	ServiceCharge     null.Float

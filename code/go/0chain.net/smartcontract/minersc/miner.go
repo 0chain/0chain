@@ -3,8 +3,10 @@ package minersc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -13,8 +15,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
-	balances cstate.StateContextI) bool {
+func doesMinerExist(pkey datastore.Key,
+	balances cstate.CommonStateContextI) bool {
 
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
@@ -60,8 +62,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	msc.verifyMinerState(balances,
 		"add_miner: checking all miners list in the beginning")
 
-	if newMiner.DelegateWallet == "" {
-		newMiner.DelegateWallet = newMiner.ID
+	if newMiner.Settings.DelegateWallet == "" {
+		newMiner.Settings.DelegateWallet = newMiner.ID
 	}
 
 	newMiner.LastHealthCheck = t.CreationDate
@@ -71,11 +73,11 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("ID", newMiner.ID),
 		zap.String("pkey", newMiner.PublicKey),
 		zap.Any("mscID", msc.ID),
-		zap.String("delegate_wallet", newMiner.DelegateWallet),
-		zap.Float64("service_charge", newMiner.ServiceCharge),
-		zap.Int("number_of_delegates", newMiner.NumberOfDelegates),
-		zap.Int64("min_stake", int64(newMiner.MinStake)),
-		zap.Int64("max_stake", int64(newMiner.MaxStake)),
+		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
+		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
+		zap.Int("number_of_delegates", newMiner.Settings.MaxNumDelegates),
+		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
+		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
 	)
 	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
@@ -119,7 +121,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		update = true
 	}
 
-	if !msc.doesMinerExist(newMiner.GetKey(), balances) {
+	if !doesMinerExist(newMiner.GetKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}
@@ -180,50 +182,39 @@ func (msc *MinerSmartContract) deleteNode(
 ) (*MinerNode, error) {
 	var err error
 	deleteNode.Delete = true
+	var nodeType spenum.Provider
+	switch deleteNode.NodeType {
+	case NodeTypeMiner:
+		nodeType = spenum.Miner
+	case NodeTypeSharder:
+		nodeType = spenum.Sharder
+	default:
+		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
+	}
 
-	// deleting pending pools
-	for key, pool := range deleteNode.Pending {
-		var un *UserNode
-		if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
-			return nil, fmt.Errorf("getting user node: %v", err)
-		}
+	usp, err := stakepool.GetUserStakePools(nodeType, deleteNode.Settings.DelegateWallet, balances)
+	if err != nil {
+		return nil, fmt.Errorf("can't get user pools list: %v", err)
+	}
 
-		var transfer *state.Transfer
-		transfer, _, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
-		if err != nil {
-			return nil, fmt.Errorf("error emptying delegate pool: %v", err)
-		}
-
-		if err = balances.AddTransfer(transfer); err != nil {
-			return nil, fmt.Errorf("adding transfer: %v", err)
-		}
-
-		if err := un.deletePool(deleteNode.ID, key); err != nil {
-			return nil, fmt.Errorf("deleting pool: %v", err)
-		}
-		delete(deleteNode.Pending, key)
-
-		if err = un.save(balances); err != nil {
-			return nil, fmt.Errorf("saving user node%s: %v", un.ID, err)
+	for key, pool := range deleteNode.Pools {
+		switch pool.Status {
+		case spenum.Pending:
+			_, err := deleteNode.UnlockPool(
+				pool.DelegateID, nodeType, deleteNode.ID, key, usp, balances)
+			if err != nil {
+				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
+			}
+		case spenum.Active:
+			pool.Status = spenum.Deleting
+		case spenum.Deleting:
+		case spenum.Deleted:
+		default:
+			return nil, fmt.Errorf(
+				"unrecognised stakepool status: %v", pool.Status.String())
 		}
 	}
 
-	// deleting active pools
-	for key, pool := range deleteNode.Active {
-		if pool.Status == DELETING {
-			continue
-		}
-
-		pool.Status = DELETING // mark as deleting
-		pool.TokenLockInterface = &ViewChangeLock{
-			Owner:               pool.DelegateID,
-			DeleteViewChangeSet: true,
-			DeleteVC:            gn.ViewChange,
-		}
-		deleteNode.Deleting[key] = pool // add to deleting
-	}
-
-	// set node type -- miner
 	if err = deleteNode.save(balances); err != nil {
 		return nil, fmt.Errorf("saving node %v", err.Error())
 	}
@@ -295,16 +286,15 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
 	}
 
-	if mn.DelegateWallet != t.ClientID {
-		logging.Logger.Debug("delegate wallet is not equal to one set in config", zap.String("delegate", t.ClientID), zap.String("config", mn.DelegateWallet))
+	if mn.Settings.DelegateWallet != t.ClientID {
+		logging.Logger.Debug("delegate wallet is not equal to one set in config", zap.String("delegate", t.ClientID), zap.String("config", mn.Settings.DelegateWallet))
 		return "", common.NewError("update_miner_settings", "access denied")
 	}
 
-	mn.ServiceCharge = update.ServiceCharge
-	mn.NumberOfDelegates = update.NumberOfDelegates
-	mn.MinStake = update.MinStake
-	mn.MaxStake = update.MaxStake
-	mn.LastSettingUpdateRound = balances.GetBlock().Round
+	mn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
+	mn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
+	mn.Settings.MinStake = update.Settings.MinStake
+	mn.Settings.MaxStake = update.Settings.MaxStake
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
@@ -342,7 +332,7 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 }
 
 // getMinerNode
-func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
 
 	mn := NewMinerNode()
 	mn.ID = id
@@ -355,48 +345,43 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
-	if node.ServiceCharge < 0 {
+	if node.Settings.ServiceChargeRatio < 0 {
 		return common.NewErrorf(opcode,
-			"invalid negative service charge: %v", node.ServiceCharge)
+			"invalid negative service charge: %v", node.Settings.ServiceChargeRatio)
 	}
 
-	if node.ServiceCharge > gn.MaxCharge {
+	if node.Settings.ServiceChargeRatio > gn.MaxCharge {
 		return common.NewErrorf(opcode,
 			"max_charge is greater than allowed by SC: %v > %v",
-			node.ServiceCharge, gn.MaxCharge)
+			node.Settings.ServiceChargeRatio, gn.MaxCharge)
 	}
 
-	if node.NumberOfDelegates <= 0 {
+	if node.Settings.MaxNumDelegates <= 0 {
 		return common.NewErrorf(opcode,
-			"invalid non-positive number_of_delegates: %v", node.NumberOfDelegates)
+			"invalid non-positive number_of_delegates: %v", node.Settings.MaxNumDelegates)
 	}
 
-	if node.NumberOfDelegates > gn.MaxDelegates {
+	if node.Settings.MaxNumDelegates > gn.MaxDelegates {
 		return common.NewErrorf(opcode,
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			node.NumberOfDelegates, gn.MaxDelegates)
+			node.Settings.MaxNumDelegates, gn.MaxDelegates)
 	}
 
-	if node.MinStake < gn.MinStake {
+	if node.Settings.MinStake < gn.MinStake {
 		return common.NewErrorf(opcode,
 			"min_stake is less than allowed by SC: %v > %v",
-			node.MinStake, gn.MinStake)
+			node.Settings.MinStake, gn.MinStake)
 	}
 
-	if node.MinStake < 0 || node.MaxStake < 0 {
+	if node.Settings.MinStake > node.Settings.MaxStake {
 		return common.NewErrorf(opcode,
-			"invalid negative min_stake: %v or max_stake: %v", node.MinStake, node.MaxStake)
+			"invalid node request results in min_stake greater than max_stake: %v > %v", node.Settings.MinStake, node.Settings.MaxStake)
 	}
 
-	if node.MinStake > node.MaxStake {
-		return common.NewErrorf(opcode,
-			"invalid node request results in min_stake greater than max_stake: %v > %v", node.MinStake, node.MaxStake)
-	}
-
-	if node.MaxStake > gn.MaxStake {
+	if node.Settings.MaxStake > gn.MaxStake {
 		return common.NewErrorf(opcode,
 			"max_stake is greater than allowed by SC: %v > %v",
-			node.MaxStake, gn.MaxStake)
+			node.Settings.MaxStake, gn.MaxStake)
 	}
 
 	return nil
