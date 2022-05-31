@@ -6,14 +6,13 @@ package chain
 import (
 	"log"
 
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 func (c *Chain) FinalizeRound(r round.RoundI) {
@@ -84,6 +83,7 @@ func GetNodeTypeAndTypeRank(roundNum int64) (nodeType, typeRank int) {
 	}
 	return nodeType, typeRank
 }
+
 func AddRoundInfoResult(r round.RoundI, finalisedBlockHash string) error {
 	res := roundInfo(r.GetRoundNumber(), finalisedBlockHash)
 	blob, err := res.Encode()
