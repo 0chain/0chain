@@ -112,7 +112,6 @@ type AllocOpenChallenge struct {
 	BlobberID string           `json:"blobber_id"` // blobber id
 }
 
-// swagger:model AllocationChallenges
 type AllocationChallenges struct {
 	AllocationID   string                `json:"allocation_id"`
 	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
