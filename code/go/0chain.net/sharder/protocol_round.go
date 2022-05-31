@@ -17,10 +17,6 @@ import (
 
 var ErrNoPreviousBlock = errors.New("previous block does not exist")
 
-func shouldNotFinalize(r round.RoundI) bool {
-	return r.IsFinalizing() || r.IsFinalized()
-}
-
 // AddNotarizedBlock - add a notarized block for a given round.
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	b *block.Block) error {
