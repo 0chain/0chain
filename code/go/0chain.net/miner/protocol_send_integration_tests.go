@@ -52,8 +52,7 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	)
 
 	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Spammers != nil {
-		isSpammer := false
-		isSpammer = utils.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
+		isSpammer := utils.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
 
 		if isSpammer && vrfs.Round == int64(state.RoundHasFinalized.Round) {
 			mc.SendVRFSSpam(ctx, vrfs)
@@ -143,7 +142,7 @@ func (mc *Chain) SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
 	v.Round = r.GetRoundNumber()
 	v.Share, err = mc.GetBlsShare(ctx, r.Round)
 
-	if err := configureRoundHasFinalizedTest(int(r.Number)); err != nil {
+	if err := configureRoundHasFinalizedTest(int(currentRoundId)); err != nil {
 		log.Fatalf("Conductor: RoundHasFinalized: error while configuring test case: %v", err)
 		return
 	}

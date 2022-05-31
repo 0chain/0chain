@@ -30,5 +30,5 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 
 // handleVRFShare - handles the vrf share.
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
-	handleVRFShare(ctx, msg)
+	mc.handleVRFShare(ctx, msg)
 }

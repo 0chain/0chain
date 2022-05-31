@@ -16,7 +16,7 @@ sets:
 #
 # test cases
 #	Flow of this test case:
-#   There is a miner that sends a VRF before the previous round has been notarized. This test checks whether this attack prevents the rest of the network from operating(creating new rounds and blocks).
+#   There is a miner that sends a VRF before the previous round has been notarized. This test checks whether this attack prevents the rest of the network from operating (creating new rounds and blocks).
 #   1. All miners communicate honestly until the 10th round
 #   2. Leader_0 locks the notarization messages
 #   3. Replica_0 (Adv): send VRF_Share0_10

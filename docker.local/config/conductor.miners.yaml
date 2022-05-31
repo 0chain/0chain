@@ -78,15 +78,20 @@ tests:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
-      - start: ["miner-1", "miner-2", "miner-3"]
-      - env:
-          CLI_ARGS: "--adversarial vrfs_spam"
-      - wait_add:
-          miners: ["miner-4"]
-          start: true
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - round_has_finalized:
+          spammers:
+            - node_type: 1 # replica node type
+              type_rank: 0
+          spamming_receiver:
+            node_type: 0
+            type_rank: 0
+          round: 10
       - wait_round:
-          shift: 50
-          timeout: "3m"
+          shift: 10
+          allow_beyond: true
+      - make_test_case_check:
+          wait_time: 10s
   - name: "Send VRFS only to group"
     flow:
       - magic_block: config/b0magicBlock_4_miners_2_sharders.json
