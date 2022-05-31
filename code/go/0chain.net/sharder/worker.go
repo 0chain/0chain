@@ -70,7 +70,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
 		case <-stuckCheckTimer.C:
-			logging.Logger.Debug("finalize block, detected stuck, trigger sync",
+			logging.Logger.Debug("process block, detected stuck, trigger sync",
 				zap.Int64("round", sc.GetCurrentRound()),
 				zap.Int64("lfb", sc.GetLatestFinalizedBlock().Round))
 			stuckCheckTimer.Reset(stuckDuration)

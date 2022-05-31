@@ -361,30 +361,32 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 	}
 
-	// get previous finalized block
-	pr := c.GetRound(fb.Round - 1)
-	if pr == nil {
-		Logger.Error("finalize block - previous round not found",
-			zap.Int64("round", fb.Round))
-		return
-	}
+	if isSharder {
+		// get previous finalized block
+		pr := c.GetRound(fb.Round - 1)
+		if pr == nil {
+			Logger.Error("finalize block - previous round not found",
+				zap.Int64("round", fb.Round))
+			return
+		}
 
-	prevBlockHash := pr.GetBlockHash()
-	if prevBlockHash == "" {
-		Logger.Error("finalize block - previous round not finalized",
-			zap.Int64("round", fb.Round))
-		return
-	}
+		prevBlockHash := pr.GetBlockHash()
+		if prevBlockHash == "" {
+			Logger.Error("finalize block - previous round not finalized",
+				zap.Int64("round", fb.Round))
+			return
+		}
 
-	if fb.PrevHash != prevBlockHash {
-		Logger.Error("finalize block - previous block hash can not connect to last finalized block",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash),
-			zap.String("prev block", fb.PrevHash),
-			zap.String("finalized previous block", prevBlockHash))
-		return
-	}
+		if fb.PrevHash != prevBlockHash {
+			Logger.Error("finalize block - previous block hash can not connect to last finalized block",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.String("prev block", fb.PrevHash),
+				zap.String("finalized previous block", prevBlockHash))
+			return
+		}
 
+	}
 	// finalize
 	c.finalizeBlock(ctx, fb, bsh)
 }
