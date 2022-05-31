@@ -46,40 +46,41 @@ install-mockery:
 	@echo "[+]download mockery" 
 	@[ -f ./bin/mockery/mockery.tar.gz ] || curl -L -o ./bin/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.12.2/mockery_2.12.2_$(detected_OS)_$(detected_ARCH).tar.gz
 	@echo "[+]install mockery"
-	@[ -f "$(GOPATH)/bin/mockery" ] || tar zxvfC ./bin/mockery/mockery.tar.gz $(GOPATH)/bin
-
+	@[ -f "$(GOPATH)/bin/mockery" ] || tar zxvfC ./bin/mockery/mockery.tar.gz ./bin/mockery 
+	@cp ./bin/mockery/mockery $(GOPATH)/bin/
+	@rm -rf ./bin/mockery/mockery
 
 build-mocks: install-mockery
 	@echo "Making mocks..."
 	@echo "-------------------------------------"
 	@echo "[+] core	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/core && mockery --case underscore --output=../core/mocks --all
+	@cd $(root_path)/code/go/0chain.net/core && $(root_path)/bin/mockery/mockery --case underscore --output=../core/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] miner	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/miner && mockery --case underscore --output=../miner/mocks --all
+	@cd $(root_path)/code/go/0chain.net/miner && $(root_path)/bin/mockery/mockery --case underscore --output=../miner/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] chaincore	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/chaincore && mockery --case underscore --output=../chaincore/mocks --all
+	@cd $(root_path)/code/go/0chain.net/chaincore && $(root_path)/bin/mockery/mockery --case underscore --output=../chaincore/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] conductor	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/conductor && mockery --case underscore --output=../conductor/mocks --all
+	@cd $(root_path)/code/go/0chain.net/conductor && $(root_path)/bin/mockery/mockery --case underscore --output=../conductor/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] sharder	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/sharder && mockery --case underscore --output=../sharder/mocks --all
+	@cd $(root_path)/code/go/0chain.net/sharder && $(root_path)/bin/mockery/mockery --case underscore --output=../sharder/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] smartcontract	" 
 	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/smartcontract && mockery --case underscore --output=../smartcontract/mocks --all
+	@cd $(root_path)/code/go/0chain.net/smartcontract && $(root_path)/bin/mockery/mockery --case underscore --output=../smartcontract/mocks --all
 
 	@echo "-------------------------------------"
 	@echo "[+] ./...	" 
