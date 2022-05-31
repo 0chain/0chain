@@ -51,43 +51,7 @@ install-mockery:
 	&& rm -rf ./bin/mockery)
 
 build-mocks: install-mockery
-	@echo "Making mocks..."
-	@echo "-------------------------------------"
-	@echo "[+] core	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/core && mockery --case underscore --output=../core/mocks --all
-
-	@echo "-------------------------------------"
-	@echo "[+] miner	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/miner && mockery --case underscore --output=../miner/mocks --all
-
-	@echo "-------------------------------------"
-	@echo "[+] chaincore	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/chaincore && mockery --case underscore --output=../chaincore/mocks --all
-
-	@echo "-------------------------------------"
-	@echo "[+] conductor	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/conductor && mockery --case underscore --output=../conductor/mocks --all
-
-	@echo "-------------------------------------"
-	@echo "[+] sharder	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/sharder && mockery --case underscore --output=../sharder/mocks --all
-
-	@echo "-------------------------------------"
-	@echo "[+] smartcontract	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net/smartcontract && mockery --case underscore --output=../smartcontract/mocks --all
-
-	@echo "-------------------------------------"
-	@echo "[+] ./...	" 
-	@echo "-------------------------------------"
-	@cd $(root_path)/code/go/0chain.net && go generate -run="mockery" ./...
-
-	@echo "Mocks files are generated."
+	./generate_mocks.sh
 
 install-msgp:
 	@echo "Install msgp..."
