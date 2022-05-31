@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"time"
@@ -206,6 +207,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //
 // responses:
 //  200:
+//  204:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
 	balances := srh.GetQueryStateContext()
@@ -274,6 +276,9 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	})
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("not enough blobbers to honor the allocation")
@@ -1303,6 +1308,9 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	if err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
+	}
+	if blobbers == nil {
+		common.Respond(w, r, nil, nil)
 	}
 	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
