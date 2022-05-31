@@ -1,4 +1,4 @@
-package sharder_test
+package sharder
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
-	"0chain.net/sharder"
 )
 
 func TestLatestRoundRequestHandler(t *testing.T) {
@@ -46,7 +45,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.LatestRoundRequestHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(LatestRoundRequestHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -99,7 +98,7 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 			defer cl()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockSummaryRequestHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(BlockSummaryRequestHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -140,7 +139,7 @@ func TestRoundBlockRequestHandler(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.RoundBlockRequestHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(RoundBlockRequestHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
