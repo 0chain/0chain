@@ -4,7 +4,6 @@ set -e
 
 cmd="build"
 dockerfile="docker.local/build.swagger/Dockerfile"
-#dockerfile="docker.local/build.unit_test/Dockerfile"
 platform=""
 
 for arg in "$@"
