@@ -29,7 +29,10 @@ type ReadMarker struct {
 
 func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
 	var total int64
-	return total, edb.Store.Get().Model(&ReadMarker{}).Select("sum(read_size)").Where("block_number > ?", blockNumber).Where("allocation_id = ?", allocationID).Find(&total).Error
+	return total, edb.Store.Get().Model(&WriteMarker{}).
+		Select("sum(read_size)").
+		Where(&WriteMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
+		Find(&total).Error
 }
 
 func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, offset, limit int, isDescending bool) ([]ReadMarker, error) {

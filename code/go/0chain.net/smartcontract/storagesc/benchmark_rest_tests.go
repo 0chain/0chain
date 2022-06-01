@@ -189,7 +189,7 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"offset":        "",
 					"limit":         "",
-					"is_descending": "",
+					"is_descending": "true",
 				},
 				Endpoint: srh.getWriteMarker,
 			},

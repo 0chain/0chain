@@ -1464,6 +1464,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 	if limitString == "" {
 		limitString = "10"
 	}
+
 	offset, err := strconv.Atoi(offsetString)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("offset value was not valid: "+err.Error()))
@@ -1475,11 +1476,17 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 		common.Respond(w, r, nil, common.NewErrBadRequest("limitString value was not valid: "+err.Error()))
 		return
 	}
-	isDescending, err := strconv.ParseBool(isDescendingString)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("is_descending value was not valid: "+err.Error()))
-		return
+	var isDescending bool
+	if isDescendingString == "" {
+		isDescending = false
+	} else {
+		isDescending, err = strconv.ParseBool(isDescendingString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("is_descending value was not valid: "+err.Error()))
+			return
+		}
 	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
