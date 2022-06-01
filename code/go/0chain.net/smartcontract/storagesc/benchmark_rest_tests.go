@@ -185,7 +185,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getReadPoolAllocBlobberStat,
 			},
 			{
-				FuncName: "writemarkers", // todo
+				FuncName: "writemarkers",
 				Params: map[string]string{
 					"offset":        "",
 					"limit":         "",
