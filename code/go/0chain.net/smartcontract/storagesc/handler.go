@@ -694,24 +694,13 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total_saved_data total_saved_data
-// Gets the total data stored across all blobbers.
+// Gets the total data stored across all blobbers. Todo: We need to rewrite this to use event database not MPT
 //
 // responses:
 //  200: Int64Map
 //  400:
 func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	total, err := edb.TotalUsedData()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
-	}
-	common.Respond(w, r, rest.Int64Map{
-		"total_saved_data": total,
-	}, nil)
+	common.Respond(w, r, 0, fmt.Errorf("not implemented yet"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
