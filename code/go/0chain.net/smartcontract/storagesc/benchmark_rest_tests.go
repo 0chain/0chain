@@ -3,6 +3,8 @@ package storagesc
 import (
 	"time"
 
+	"0chain.net/smartcontract/dbs/benchmark"
+
 	"0chain.net/chaincore/currency"
 
 	"encoding/hex"
@@ -49,31 +51,31 @@ func BenchmarkRestTests(
 			{
 				FuncName: "transaction",
 				Params: map[string]string{
-					"transaction_hash": "", // todo add transactions
+					"transaction_hash": benchmark.GetMockTransactionHash(1, 1),
 				},
 				Endpoint: srh.getTransactionByHash,
 			},
 			{
 				FuncName: "transactions",
 				Params: map[string]string{
-					"client_id":  "", // todo add transactions
+					"client_id":  data.Clients[1],
 					"offset":     "",
 					"limit":      "",
-					"block_hash": "",
+					"block_hash": benchmark.GetMockBlockHash(1),
 				},
 				Endpoint: srh.getTransactionByFilter,
 			},
 			{
 				FuncName: "errors",
 				Params: map[string]string{
-					"transaction_hash": "", // todo add transactions
+					"transaction_hash": benchmark.GetMockTransactionHash(3, 3),
 				},
 				Endpoint: srh.getErrors,
 			},
 			{
 				FuncName: "get_block_by_hash",
 				Params: map[string]string{
-					"block_hash": "", // todo add blocks
+					"block_hash": benchmark.GetMockBlockHash(1),
 				},
 				Endpoint: srh.getBlockByHash,
 			},
@@ -246,15 +248,15 @@ func BenchmarkRestTests(
 			{
 				FuncName: "alloc_written_size",
 				Params: map[string]string{
-					"allocation_id": getMockValidatorId(0),
-					"block_number":  getMockValidatorId(0),
+					"allocation_id": getMockAllocationId(0),
+					"block_number":  "1",
 				},
 				Endpoint: srh.getWrittenAmount,
 			},
 			{
 				FuncName: "alloc_read_size",
 				Params: map[string]string{
-					"allocation_id": getMockValidatorId(0),
+					"allocation_id": getMockAllocationId(0),
 					"block_number":  "1",
 				},
 				Endpoint: srh.getReadAmount,
@@ -262,16 +264,16 @@ func BenchmarkRestTests(
 			{
 				FuncName: "alloc_write_marker_count",
 				Params: map[string]string{
-					"allocation_id": getMockValidatorId(0),
+					"allocation_id": getMockAllocationId(0),
 				},
 				Endpoint: srh.getWriteMarkerCount,
 			},
 			{
 				FuncName: "collected_reward",
 				Params: map[string]string{
-					"start_block": getMockValidatorId(0),
-					"end_block":   getMockValidatorId(0),
-					"client_id":   getMockValidatorId(0),
+					"start_block": "1",
+					"end_block":   "100",
+					"client_id":   data.Clients[1],
 				},
 				Endpoint: srh.getCollectedReward,
 			},

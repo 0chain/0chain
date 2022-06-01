@@ -227,7 +227,6 @@ func setUpMpt(
 	}
 
 	var wg sync.WaitGroup
-
 	var (
 		blobbers         []*storagesc.StorageNode
 		miners, sharders []string
@@ -274,6 +273,16 @@ func setUpMpt(
 	}()
 
 	wg.Wait()
+
+	// used as foreign key
+	timer = time.Now()
+	ebk.AddMockBlocks(miners, eventDb)
+	log.Println("added mock blocks\t", time.Since(timer))
+
+	// used as foreign key
+	timer = time.Now()
+	ebk.AddMockTransactions(clients, eventDb)
+	log.Println("added mock transaction\t", time.Since(timer))
 
 	timer = time.Now()
 	stakePools := storagesc.GetMockBlobberStakePools(clients, eventDb, balances)
@@ -459,22 +468,6 @@ func setUpMpt(
 		timer = time.Now()
 		ebk.AddMockErrors(eventDb)
 		log.Println("added mock errors\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		ebk.AddMockTransactions(clients, eventDb)
-		log.Println("added mock transaction\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer = time.Now()
-		ebk.AddMockBlocks(miners, eventDb)
-		log.Println("added mock blocks\t", time.Since(timer))
 	}()
 
 	var benchData benchmark.BenchData

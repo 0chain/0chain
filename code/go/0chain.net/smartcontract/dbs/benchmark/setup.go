@@ -18,9 +18,9 @@ func AddMockEvents(eventDb *event.EventDb) {
 			if viper.GetBool(benchmark.EventDbEnabled) {
 				event := event.Event{
 					BlockNumber: block_number,
-					TxHash:      getMockTransactionHash(block_number, i),
+					TxHash:      GetMockTransactionHash(block_number, i),
 					Type:        int(event.TypeStats),
-					Tag:         0,
+					Tag:         3,
 					Index:       "mock index",
 					Data:        "mock data",
 				}
@@ -38,7 +38,7 @@ func AddMockErrors(eventDb *event.EventDb) {
 		for i := int(0); i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			if viper.GetBool(benchmark.EventDbEnabled) && i%3 == 0 {
 				error := event.Error{
-					TransactionID: getMockTransactionHash(block_number, i),
+					TransactionID: GetMockTransactionHash(block_number, i),
 					Error:         "mock error text",
 				}
 				_ = eventDb.Store.Get().Create(&error)
@@ -59,8 +59,8 @@ func AddMockTransactions(
 		for i := int(0); i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			if viper.GetBool(benchmark.EventDbEnabled) {
 				transaction := event.Transaction{
-					Hash:              getMockTransactionHash(block_number, i),
-					BlockHash:         getMockBlockHash(block_number),
+					Hash:              GetMockTransactionHash(block_number, i),
+					BlockHash:         GetMockBlockHash(block_number),
 					Version:           "mock version",
 					ClientId:          clients[i%len(clients)],
 					ToClientId:        clients[int(block_number)%len(clients)],
@@ -90,7 +90,7 @@ func AddMockBlocks(
 	for block_number := int64(0); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			block := event.Block{
-				Hash:                  getMockBlockHash(block_number),
+				Hash:                  GetMockBlockHash(block_number),
 				Version:               "mock version",
 				CreationDate:          int64(common.Now()),
 				Round:                 block_number,
@@ -101,7 +101,7 @@ func AddMockBlocks(
 				ReceiptMerkleTreeRoot: "mock rmt root",
 				NumTxns:               viper.GetInt(benchmark.NumTransactionPerBlock),
 				MagicBlockHash:        "mock matic block hash",
-				PrevHash:              getMockBlockHash(block_number - 1),
+				PrevHash:              GetMockBlockHash(block_number - 1),
 				Signature:             "mock signature",
 				ChainId:               "mock chain id",
 				RunningTxnCount:       "mock running txn count",
@@ -113,11 +113,11 @@ func AddMockBlocks(
 	}
 }
 
-func getMockBlockHash(blockNumber int64) string {
+func GetMockBlockHash(blockNumber int64) string {
 	return encryption.Hash("block" + strconv.FormatInt(blockNumber, 10))
 }
 
-func getMockTransactionHash(blockNumber int64, index int) string {
+func GetMockTransactionHash(blockNumber int64, index int) string {
 	return encryption.Hash("block" +
 		strconv.FormatInt(blockNumber, 10) + "index" + strconv.Itoa(index))
 }
