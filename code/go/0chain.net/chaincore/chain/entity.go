@@ -693,6 +693,9 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		return eb
 	}
 	c.blocks[b.Hash] = b
+
+	c.pushBlockEvent(b)
+
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
@@ -706,6 +709,18 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		}
 	}
 	return b
+}
+
+func (c *Chain) pushBlockEvent(b *block.Block) {
+	err, ev := block.CreateBlockEvent(b)
+	if err != nil {
+		logging.Logger.Error("emit block event error", zap.Error(err))
+	}
+	go func() {
+		rootContext := common.GetRootContext()
+		ctx, _ := context.WithTimeout(rootContext, 5*time.Second)
+		c.GetEventDb().AddEvents(ctx, []event.Event{ev})
+	}()
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */

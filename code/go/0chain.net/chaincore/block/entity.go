@@ -1069,11 +1069,6 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		}
 	}
 
-	err := emitBlockEvent(b.PrevBlock)
-	if err != nil {
-		logging.Logger.Error("emit block event error", zap.Error(err))
-	}
-
 	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
