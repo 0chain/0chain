@@ -718,7 +718,8 @@ func (c *Chain) pushBlockEvent(b *block.Block) {
 	}
 	go func() {
 		rootContext := common.GetRootContext()
-		ctx, _ := context.WithTimeout(rootContext, 5*time.Second)
+		ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
+		defer cancel()
 		c.GetEventDb().AddEvents(ctx, []event.Event{ev})
 	}()
 }
