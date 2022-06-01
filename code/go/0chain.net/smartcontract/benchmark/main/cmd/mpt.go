@@ -15,11 +15,11 @@ import (
 
 	"0chain.net/smartcontract/zcnsc"
 
+	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
+	ebk "0chain.net/smartcontract/dbs/benchmark"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
-
-	"0chain.net/core/datastore"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -443,6 +443,38 @@ func setUpMpt(
 		timer = time.Now()
 		control.AddControlObjects(balances)
 		log.Println("added control objects\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		ebk.AddMockEvents(eventDb)
+		log.Println("added mock events\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		ebk.AddMockErrors(eventDb)
+		log.Println("added mock errors\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		ebk.AddMockTransactions(clients, eventDb)
+		log.Println("added mock transaction\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		ebk.AddMockBlocks(miners, eventDb)
+		log.Println("added mock blocks\t", time.Since(timer))
 	}()
 
 	var benchData benchmark.BenchData

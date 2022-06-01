@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/rest"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
+	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
 
@@ -286,7 +287,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
-// statistic for all locked tokens of a challenge pool
+//
 //
 // parameters:
 //    + name: start_block
@@ -337,7 +338,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count alloc_write_marker_count
-// statistic for all locked tokens of a challenge pool
+//
 //
 // parameters:
 //    + name: allocation_id
@@ -367,7 +368,7 @@ func (srh *StorageRestHandler) getWriteMarkerCount(w http.ResponseWriter, r *htt
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_read_size alloc_read_size
-// statistic for all locked tokens of a challenge pool
+//
 //
 // parameters:
 //    + name: allocation_id

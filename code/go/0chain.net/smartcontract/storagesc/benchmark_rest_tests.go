@@ -255,7 +255,7 @@ func BenchmarkRestTests(
 				FuncName: "alloc_read_size",
 				Params: map[string]string{
 					"allocation_id": getMockValidatorId(0),
-					"block_number":  getMockValidatorId(0),
+					"block_number":  "1",
 				},
 				Endpoint: srh.getReadAmount,
 			},
