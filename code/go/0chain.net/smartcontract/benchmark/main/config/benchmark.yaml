@@ -171,5 +171,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: true
+  show_output: false
 
