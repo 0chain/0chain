@@ -75,7 +75,7 @@ jobs:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
     
     - name: Running VC Fault Tolerance Tests.
-      if: ${{ github.event.inputs.view_change == 'true' }}
+      if: ${{ github.event.inputs.view_change == 'true' || true }}
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
@@ -158,7 +158,7 @@ jobs:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
     - name: Running VC Byzantine Tests.
-      if: ${{ github.event.inputs.view_change == 'true' }}
+      if: ${{ github.event.inputs.view_change == 'true' || true }}
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.byzantine
 
