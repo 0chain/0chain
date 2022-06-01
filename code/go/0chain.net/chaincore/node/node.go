@@ -92,6 +92,15 @@ func (n NodeType) String() string {
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
+func GetNodeTypeName(n *Node) (typename string, err error) {
+	if n.Type < 0 || int(n.Type) >= len(NodeTypeNames) {
+		err = fmt.Errorf("unknown_node_type %v", n.Type)
+	} else {
+		typename = NodeTypeNames[n.Type].Value
+	}
+	return
+}
+
 /*Node - a struct holding the node information */
 type Node struct {
 	client.Client  `yaml:",inline"`
@@ -327,7 +336,12 @@ func (n *Node) GetNodeType() string {
 
 /*GetNodeTypeName - get the name of this node type */
 func (n *Node) GetNodeTypeName() string {
-	return NodeTypeNames[n.Type].Value
+	name, err := GetNodeTypeName(n)
+	if err == nil {
+		return name
+	} else {
+		return "Unknown"
+	}
 }
 
 //Grab - grab a slot to send message
