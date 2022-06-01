@@ -75,6 +75,13 @@ type blobberAggregateStats struct {
 	TotalServiceCharge int64 `json:"total_service_charge"`
 }
 
+func (edb *EventDb) TotalUsedData() (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&Blobber{}).
+		Select("sum(total_data_stored)").
+		Find(&total).Error
+}
+
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error
@@ -82,6 +89,20 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
 	return &blobber, nil
+}
+
+func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
+	blobber, err := edb.GetBlobber(id)
+	if err != nil {
+		return err
+	}
+	update := dbs.DbUpdates{
+		Id: id,
+		Updates: map[string]interface{}{
+			"total_data_stored": blobber.TotalDataStored + stored,
+		},
+	}
+	return edb.updateBlobber(update)
 }
 
 func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
