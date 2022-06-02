@@ -52,7 +52,7 @@ type diskTier struct {
 	SelectNextVolume func(volumes []*volume, prevInd int)
 	SelectedVolumeCh <-chan selectedDiskVolume // volume that will be used to store blocks next
 	PrevVolInd       int
-	Mu               *sync.Mutex
+	Mu               Mutex
 }
 
 // removeSelectedVolume will remove volumes from the list and put it in unableVolumes
@@ -625,6 +625,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 
 	dTier.SelectedVolumeCh = diskVolumeSelectChan
 	dTier.SelectNextVolume = f
+	dTier.Mu = make(Mutex, 1)
 
 	volumesMap = make(map[string]*volume, len(dTier.Volumes))
 	unableVolumes = make(map[string]*volume)

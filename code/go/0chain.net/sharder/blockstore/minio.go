@@ -45,7 +45,7 @@ type coldTier struct { //Cold tier
 	DeleteLocal bool
 
 	// Mu: Mutex used to select storage or remove storage from the list
-	Mu *sync.Mutex
+	Mu Mutex
 }
 
 func (ct *coldTier) read(coldPath, hash string) ([]byte, error) {
@@ -304,6 +304,7 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 
 	cTier.DeleteLocal = cViper.GetBool("delete_local")
 	cTier.SelectNextStorage = f
+	cTier.Mu = make(Mutex, 1)
 	cTier.SelectedStorageChan = selectedColdStorageChan
 
 	logging.Logger.Info("Selecting first cold storage")

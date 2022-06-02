@@ -324,3 +324,26 @@ func getVolumePathFromBlockPath(bPath string) string {
 	*/
 	return strings.Join(splittedPaths[:len(splittedPaths)-3], "/")
 }
+
+type Mutex chan struct{}
+
+func (mu Mutex) Lock() {
+	mu <- struct{}{}
+}
+
+func (mu Mutex) Unlock() {
+	select {
+	case <-mu:
+	default:
+		panic("trying to unlock unlocked lock")
+	}
+}
+
+func (mu Mutex) TryLock() bool {
+	select {
+	case mu <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
