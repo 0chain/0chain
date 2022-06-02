@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"0chain.net/core/common"
 	"fmt"
 	"github.com/spf13/pflag"
 	"path"
@@ -102,7 +103,8 @@ var rootCmd = &cobra.Command{
 		tests, omittedTests := suitesOmits()
 		log.Println("read in command line options")
 
-		mpt, root, data := getMpt(loadPath, configPath)
+		executor := common.NewWithContextFunc(viper.GetInt(bk.OptionsLoadConcurrency))
+		mpt, root, data := getMpt(loadPath, configPath, executor)
 		log.Println("finished setting up blockchain", "root", string(root))
 
 		savePath := viper.GetString(bk.OptionSavePath)

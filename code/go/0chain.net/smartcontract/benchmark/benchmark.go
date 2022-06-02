@@ -126,11 +126,12 @@ const (
 	ShowOutput              = Internal + "show_output"
 	MptCreationTime         = Internal + "mpt_creation_time"
 
-	OptionVerbose      = Options + "verbose"
-	OptionTestSuites   = Options + "test_suites"
-	OptionOmittedTests = Options + "omitted_tests"
-	OptionLoadPath     = Options + "load_path"
-	OptionSavePath     = Options + "save_path"
+	OptionVerbose          = Options + "verbose"
+	OptionTestSuites       = Options + "test_suites"
+	OptionOmittedTests     = Options + "omitted_tests"
+	OptionLoadPath         = Options + "load_path"
+	OptionSavePath         = Options + "save_path"
+	OptionsLoadConcurrency = Options + "load_concurrency"
 
 	MinerMOwner       = SmartContract + MinerSc + "owner_id"
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"

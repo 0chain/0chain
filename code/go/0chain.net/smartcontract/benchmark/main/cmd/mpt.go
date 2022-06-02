@@ -88,7 +88,7 @@ func getBalances(
 	)
 }
 
-func getMpt(loadPath, configPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in getMpt", r)
@@ -96,6 +96,7 @@ func getMpt(loadPath, configPath string) (*util.MerklePatriciaTrie, util.Key, be
 	}()
 	var mptDir string
 	savePath := viper.GetString(benchmark.OptionSavePath)
+	executor = exec
 
 	if len(savePath) > 0 {
 		if loadPath != savePath {
