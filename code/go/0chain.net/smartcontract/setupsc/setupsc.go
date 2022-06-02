@@ -19,7 +19,6 @@ type SCName int
 const (
 	Faucet SCName = iota
 	Storage
-	Interest
 	Multisig
 	Miner
 	Vesting
@@ -30,7 +29,6 @@ var (
 	SCNames = []string{
 		"faucet",
 		"storage",
-		"interest",
 		"multisig",
 		"miner",
 		"vesting",
@@ -40,7 +38,6 @@ var (
 	SCCode = map[string]SCName{
 		"faucet":   Faucet,
 		"storage":  Storage,
-		"interest": Interest,
 		"multisig": Multisig,
 		"miner":    Miner,
 		"vesting":  Vesting,
