@@ -67,7 +67,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
 		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
-		rest.MakeEndpoint(storage+"/total_saved_data", srh.getTotalData),
+		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
@@ -693,7 +693,7 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total_saved_data total_saved_data
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
 // Gets the total data stored across all blobbers.
 //
 // responses:
@@ -710,7 +710,7 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
 	}
 	common.Respond(w, r, rest.Int64Map{
-		"total_saved_data": total,
+		"total-stored-data": total,
 	}, nil)
 }
 
