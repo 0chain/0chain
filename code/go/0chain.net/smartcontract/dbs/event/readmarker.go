@@ -29,7 +29,7 @@ type ReadMarker struct {
 
 func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
 	var total int64
-	return total, edb.Store.Get().Model(&WriteMarker{}).
+	return total, edb.Store.Get().Model(&ReadMarker{}).
 		Select("sum(read_size)").
 		Where(&WriteMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
 		Find(&total).Error
