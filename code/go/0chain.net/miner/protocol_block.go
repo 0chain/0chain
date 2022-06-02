@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/rcrowley/go-metrics"
@@ -726,7 +727,7 @@ type TxnIterInfo struct {
 	// included transaction data size
 	byteSize int64
 	//accumulated transaction cost
-	cost int
+	cost int64
 }
 
 func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
@@ -778,7 +779,7 @@ func txnIterHandlerFunc(mc *Chain,
 	txnProcessor txnProcessorHandler,
 	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
 	return func(ctx context.Context, qe datastore.CollectionEntity) bool {
-		tii.count++
+		atomic.AddInt32(&tii.count, 1)
 		if ctx.Err() != nil {
 			return false
 		}
@@ -809,13 +810,13 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return true
 		}
-		if tii.cost+cost >= mc.Config.MaxBlockCost() {
+		if int(tii.cost)+cost >= mc.Config.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
-			tii.cost += cost
+			atomic.AddInt64(&tii.cost, int64(cost))
 			if tii.idx >= mc.Config.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
 					zap.Bool("idx >= block size", tii.idx >= mc.Config.BlockSize()),
@@ -924,7 +925,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	var reusedTxns int32
 
 	rcount := 0
-	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.Config.MaxBlockCost() &&
+	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < int64(mc.Config.MaxBlockCost()) &&
 		blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
@@ -932,13 +933,13 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			break
 		}
-		if iterInfo.cost+cost >= mc.Config.MaxBlockCost() {
+		if int(iterInfo.cost)+cost >= mc.Config.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			break
 		}
 		if txnProcessor(ctx, blockState, txn, iterInfo) {
 			rcount++
-			iterInfo.cost += cost
+			atomic.AddInt64(&iterInfo.cost, int64(cost))
 			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 				break
 			}
