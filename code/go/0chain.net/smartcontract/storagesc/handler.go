@@ -227,8 +227,12 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	}
 
 	blobberIDs, err := getBlobbersForRequest(request, edb, balances)
-	if err != nil {
+	if len(blobberIDs) == 0 {
 		common.Respond(w, r, nil, nil)
+		return
+	}
+	if err != nil {
+		common.Respond(w, r, nil, err)
 		return
 	}
 
