@@ -75,7 +75,9 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getEvents",
 				Params: map[string]string{
-					"block_number": "",
+					"block_number": "1",
+					"type":         "2",
+					"tag":          "3",
 				},
 				Endpoint: mrh.getEvents,
 			},
