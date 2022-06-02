@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/dbs/benchmark"
+
 	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/currency"
@@ -496,7 +498,7 @@ func AddMockBlobbers(
 			},
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
-			Used:              0,
+			Used:              1000,
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
@@ -525,6 +527,7 @@ func AddMockBlobbers(
 				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.Nanoseconds(),
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,
+				TotalDataStored:         500,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),
 				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
 				MinStake:                blobber.StakePoolSettings.MinStake,
@@ -775,25 +778,34 @@ func AddMockWriteRedeems(
 				panic(err)
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
+				mockBlockNumber := int64((i + 1) % viper.GetInt(sc.NumBlocks))
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
 					AllocationID:  rm.AllocationID,
-					TransactionID: "mock transaction id",
+					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, 1),
 					OwnerID:       rm.OwnerID,
 					ReadCounter:   rm.ReadCounter,
 					PayerID:       rm.PayerID,
+					ReadSize:      100,
+					BlockNumber:   mockBlockNumber,
 				}
-				_ = eventDb.Store.Get().Create(&readMarker)
+				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
+					log.Fatal(out.Error)
+				}
 
 				writeMarker := event.WriteMarker{
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
 					AllocationID:   rm.AllocationID,
-					TransactionID:  "mock transaction id",
+					TransactionID:  benchmark.GetMockTransactionHash(mockBlockNumber, 1),
 					AllocationRoot: "mock allocation root",
+					BlockNumber:    mockBlockNumber,
+					Size:           100,
 				}
-				_ = eventDb.Store.Get().Create(&writeMarker)
+				if out := eventDb.Store.Get().Create(&writeMarker); out.Error != nil {
+					log.Fatal(out.Error)
+				}
 			}
 		}
 	}
@@ -801,12 +813,10 @@ func AddMockWriteRedeems(
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:        currency.Coin(0.1 * 1e10),
-		WritePrice:       currency.Coin(0.1 * 1e10),
-		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
-		//MaxOfferDuration: common.Now().Duration() + viper.GetDuration(sc.StorageMinOfferDuration),
-		//MaxOfferDuration:        time.Hour*24*3650 + viper.GetDuration(sc.StorageMinOfferDuration),
+		ReadPrice:               currency.Coin(0.1 * 1e10),
+		WritePrice:              currency.Coin(0.1 * 1e10),
+		MinLockDemand:           0.0007,
+		MaxOfferDuration:        time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 	}
 }
