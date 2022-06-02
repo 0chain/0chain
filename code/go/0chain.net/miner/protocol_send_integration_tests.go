@@ -21,7 +21,6 @@ import (
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/conductor/utils"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -52,7 +51,7 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	)
 
 	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Spammers != nil {
-		isSpammer := utils.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
+		isSpammer := chain.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
 
 		if isSpammer && vrfs.Round == int64(state.RoundHasFinalized.Round) {
 			mc.SendVRFSSpam(ctx, vrfs)

@@ -18,15 +18,10 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config/cases"
-	"0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-<<<<<<< HEAD
-	"github.com/0chain/common/core/util"
-=======
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
->>>>>>> lock notarization in a honest miner until receiving the spamming VRF
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/gosdk/core/util"
 )
 
 // SetupX2MResponders - setup responders.
@@ -101,7 +96,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 
 	state := crpc.Client().State()
 
-	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Round == int(not.Round) && utils.IsSpamReceiver(state, not.Round) {
+	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Round == int(not.Round) && chain.IsSpamReceiver(state, not.Round) {
 		m := GetMinerChain()
 		mr := m.getOrCreateRound(ctx, (int64)(state.RoundHasFinalized.Round+1))
 		// if already received VRF share of next round the miner does not need to wait for the spamming VRF share

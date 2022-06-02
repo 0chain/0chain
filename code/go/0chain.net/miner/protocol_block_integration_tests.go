@@ -19,7 +19,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/conductor/utils"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -144,7 +143,7 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 }
 
 func isTestingRoundHasFinalized(s *crpc.State, blockRound int) bool {
-	return s.RoundHasFinalized != nil && s.RoundHasFinalized.Round == blockRound && utils.IsSpamReceiver(s, int64(blockRound))
+	return s.RoundHasFinalized != nil && s.RoundHasFinalized.Round == blockRound && chain.IsSpamReceiver(s, int64(blockRound))
 }
 
 func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
