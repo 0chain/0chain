@@ -54,6 +54,7 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
+	NumberOfTags
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
