@@ -115,6 +115,13 @@ func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, er
 	return &blobber, nil
 }
 
+func (edb *EventDb) TotalUsedData() (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&Blobber{}).
+		Select("sum(total_data_stored)").
+		Find(&total).Error
+}
+
 func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
