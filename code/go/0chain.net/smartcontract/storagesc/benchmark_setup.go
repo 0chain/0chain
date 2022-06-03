@@ -489,6 +489,7 @@ func AddMockBlobbers(
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
+		const mockUsedData = 1000
 		blobber := &StorageNode{
 			ID:      id,
 			BaseURL: getMockBlobberUrl(i),
@@ -498,7 +499,7 @@ func AddMockBlobbers(
 			},
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
-			Used:              1000,
+			Used:              mockUsedData,
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
@@ -527,7 +528,7 @@ func AddMockBlobbers(
 				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.Nanoseconds(),
 				Capacity:                blobber.Capacity,
 				Used:                    blobber.Used,
-				TotalDataStored:         500,
+				TotalDataStored:         blobber.Used / 2,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),
 				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
 				MinStake:                blobber.StakePoolSettings.MinStake,

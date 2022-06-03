@@ -33,10 +33,10 @@ const (
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
-	TagAddOrOverwriteWriteMarker
+	TagAddWriteMarker
 	TagAddBlock
 	TagAddOrOverwriteValidator
-	TagAddOrOverwriteReadMarker
+	TagAddReadMarker
 	TagAddMiner
 	TagAddOrOverwriteMiner
 	TagUpdateMiner
@@ -117,7 +117,7 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.AddAuthorizer(auth)
 	case TagDeleteAuthorizer:
 		return edb.DeleteAuthorizer(event.Data)
-	case TagAddOrOverwriteWriteMarker:
+	case TagAddWriteMarker:
 		var wm WriteMarker
 		err := json.Unmarshal([]byte(event.Data), &wm)
 		if err != nil {
@@ -125,8 +125,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		wm.TransactionID = event.TxHash
 		wm.BlockNumber = event.BlockNumber
-		return edb.addOrOverwriteWriteMarker(wm)
-	case TagAddOrOverwriteReadMarker:
+		if err := edb.addOrOverwriteWriteMarker(wm); err != nil {
+			return err
+		}
+		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
+	case TagAddReadMarker:
 		var rm ReadMarker
 		err := json.Unmarshal([]byte(event.Data), &rm)
 		if err != nil {
