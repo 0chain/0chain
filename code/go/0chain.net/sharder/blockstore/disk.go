@@ -747,6 +747,8 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			CurKInd:             curKInd,
 			CurDirInd:           curDirInd,
 			CurDirBlockNums:     curDirBlockNums,
+			CountMu:             &sync.Mutex{},
+			IndMu:               &sync.Mutex{},
 		})
 	}
 

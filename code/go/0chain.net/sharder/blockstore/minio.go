@@ -390,6 +390,7 @@ func startCloudStorages(cloudStorages []map[string]interface{},
 				useSSL:              useSSL,
 				allowedBlockNumbers: allowedBlockNumbers,
 				allowedBlockSize:    allowedBlockSize,
+				countMu:             &sync.Mutex{},
 			}
 
 			if err := mc.initialize(shouldDelete); err != nil {
