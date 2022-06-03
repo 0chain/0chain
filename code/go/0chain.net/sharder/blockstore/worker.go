@@ -12,8 +12,7 @@ import (
 
 func setupVolumeRevivingWorker(ctx context.Context) {
 	logging.Logger.Info("Setting volume reviving worker")
-	mainStore := Store.(*blockStore)
-	t := time.NewTicker(mainStore.blockMovementInterval)
+	t := time.NewTicker(time.Hour)
 
 	var dTier *diskTier
 
