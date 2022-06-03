@@ -110,6 +110,7 @@ func NewSimpleNodes() SimpleNodes {
 }
 
 // not thread safe
+// swagger:model SimpleNodes
 type SimpleNodes map[string]*SimpleNode
 
 // Pooler represents a pool interface
@@ -663,6 +664,7 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	return
 }
 
+// swagger:model SimpleNodeGeolocation
 type SimpleNodeGeolocation struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -754,6 +756,7 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
+// swagger:model
 type delegatePoolStat struct {
 	ID         datastore.Key `json:"id"`
 	Balance    currency.Coin `json:"balance"`

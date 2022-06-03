@@ -23,7 +23,6 @@ type ApprovedMinter int
 
 const (
 	MinterMiner ApprovedMinter = iota
-	MinterInterestPool
 	MinterStorage
 	MinterZcn
 )
@@ -31,7 +30,6 @@ const (
 var (
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
-		"cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4", // interest SC
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7", // storage SC
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"} //zcn SC
 )

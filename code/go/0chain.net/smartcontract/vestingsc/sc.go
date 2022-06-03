@@ -87,6 +87,9 @@ func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	// move vested tokens to destinations by pool owner
 	vsc.SmartContractExecutionStats["trigger"] = metrics.GetOrRegisterTimer(
 		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "trigger"), nil)
+
+	vsc.SmartContractExecutionStats["vestingsc-update-settings"] = metrics.GetOrRegisterTimer(
+		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "vestingsc-update-settings"), nil)
 }
 
 func (vsc *VestingSmartContract) Execute(t *transaction.Transaction,

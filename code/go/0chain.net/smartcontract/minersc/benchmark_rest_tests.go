@@ -1,21 +1,21 @@
 package minersc
 
 import (
-	"0chain.net/rest/restinterface"
 	benchmark "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 func BenchmarkRestTests(
 	data benchmark.BenchData, _ benchmark.SignatureScheme,
 ) benchmark.TestSuite {
-	rh := restinterface.NewTestRestHandler()
+	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	mrh := NewMinerRestHandler(rh)
 	return benchmark.GetRestTests(
 		[]benchmark.TestParameters{
 			{
 				FuncName: "getNodepool",
-				Endpoint: mrh.getNodepool,
+				Endpoint: mrh.getNodePool,
 			},
 			{
 				FuncName: "getUserPools",
@@ -75,7 +75,9 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getEvents",
 				Params: map[string]string{
-					"block_number": "",
+					"block_number": "1",
+					"type":         "2",
+					"tag":          "3",
 				},
 				Endpoint: mrh.getEvents,
 			},

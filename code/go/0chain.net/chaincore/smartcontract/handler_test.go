@@ -9,10 +9,6 @@ import (
 	"net/url"
 	"testing"
 
-	"0chain.net/rest"
-
-	"0chain.net/chaincore/currency"
-
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
@@ -22,9 +18,11 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
 
+	"0chain.net/chaincore/chain"
 	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -43,7 +41,6 @@ func init() {
 	viper.Set("server_chain.smart_contract.faucet", true)
 	viper.Set("server_chain.smart_contract.storage", true)
 	viper.Set("server_chain.smart_contract.zcn", true)
-	viper.Set("server_chain.smart_contract.interest", true)
 	viper.Set("server_chain.smart_contract.multisig", true)
 	viper.Set("server_chain.smart_contract.miner", true)
 	viper.Set("server_chain.smart_contract.vesting", true)
@@ -51,7 +48,6 @@ func init() {
 	config.SmartContractConfig = viper.New()
 	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.interestpoolsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 
@@ -181,7 +177,7 @@ func TestGetSmartContract(t *testing.T) {
 			}
 			require.EqualValues(t, tt.name, got.GetName())
 			require.EqualValues(t, tt.address, got.GetAddress())
-			require.EqualValues(t, tt.restpoints, len(rest.GetFunctionNames(tt.address)))
+			require.EqualValues(t, tt.restpoints, len(chain.GetFunctionNames(tt.address)))
 		})
 	}
 }

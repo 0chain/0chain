@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"0chain.net/chaincore/smartcontract"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
-	"0chain.net/rest/restinterface"
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/guregu/null"
@@ -23,102 +23,44 @@ import (
 	sc "0chain.net/smartcontract"
 )
 
-type RestFunctionName int
-
-const (
-	rfnGlobalSettings RestFunctionName = iota
-	rfnGetNodepool
-	rfnGetUserPools
-	rfnGetMinerList
-	rfnGetMinersStats
-
-	rfnGetMinersStake
-	rfnGetSharderList
-	rfnGetShardersStats
-	rfnGetShardersStake
-	rfnGetSharderKeepList
-
-	rfnGetPhase
-	rfnGetDkgList
-	rfnGetMpksList
-	rfnGetGroupShareOrSigns
-	rfnGetMagicBlock
-
-	rfnGetEvents
-	rfnNodeStat
-	rfnNodePoolStat
-	rfnConfigs
-	rfnGetMinerGeolocations
-
-	rfnGetSharderGeolocations
-)
-
 type MinerRestHandler struct {
-	restinterface.RestHandlerI
+	rest.RestHandlerI
 }
 
-func NewMinerRestHandler(rh restinterface.RestHandlerI) *MinerRestHandler {
+func NewMinerRestHandler(rh rest.RestHandlerI) *MinerRestHandler {
 	return &MinerRestHandler{rh}
 
 }
 
-func SetupRestHandler(rh restinterface.RestHandlerI) {
-	mrh := NewMinerRestHandler(rh)
-	miner := "/v1/screst/" + ADDRESS
-	http.HandleFunc(miner+GetRestNames()[rfnGlobalSettings], mrh.getGlobalSettings)
-	http.HandleFunc(miner+GetRestNames()[rfnGetNodepool], mrh.getNodepool)
-	http.HandleFunc(miner+GetRestNames()[rfnGetUserPools], mrh.getUserPools)
-	http.HandleFunc(miner+GetRestNames()[rfnGetMinerList], mrh.getMinerList)
-	http.HandleFunc(miner+GetRestNames()[rfnGetMinersStats], mrh.getMinersStats)
-
-	http.HandleFunc(miner+GetRestNames()[rfnGetMinersStake], mrh.getMinersStake)
-	http.HandleFunc(miner+GetRestNames()[rfnGetSharderList], mrh.getSharderList)
-	http.HandleFunc(miner+GetRestNames()[rfnGetShardersStats], mrh.getShardersStats)
-	http.HandleFunc(miner+GetRestNames()[rfnGetShardersStake], mrh.getShardersStake)
-	http.HandleFunc(miner+GetRestNames()[rfnGetSharderKeepList], mrh.getSharderKeepList)
-
-	http.HandleFunc(miner+GetRestNames()[rfnGetPhase], mrh.getPhase)
-	http.HandleFunc(miner+GetRestNames()[rfnGetDkgList], mrh.getDkgList)
-	http.HandleFunc(miner+GetRestNames()[rfnGetMpksList], mrh.getMpksList)
-	http.HandleFunc(miner+GetRestNames()[rfnGetGroupShareOrSigns], mrh.getGroupShareOrSigns)
-	http.HandleFunc(miner+GetRestNames()[rfnGetMagicBlock], mrh.getMagicBlock)
-
-	http.HandleFunc(miner+GetRestNames()[rfnGetEvents], mrh.getEvents)
-	http.HandleFunc(miner+GetRestNames()[rfnNodeStat], mrh.getNodeStat)
-	http.HandleFunc(miner+GetRestNames()[rfnNodePoolStat], mrh.getNodePoolStat)
-	http.HandleFunc(miner+GetRestNames()[rfnConfigs], mrh.getConfigs)
-	http.HandleFunc(miner+GetRestNames()[rfnGetMinerGeolocations], mrh.getMinerGeolocations)
-
-	http.HandleFunc(miner+GetRestNames()[rfnGetSharderGeolocations], mrh.getSharderGeolocations)
+func SetupRestHandler(rh rest.RestHandlerI) {
+	rh.Register(GetEndpoints(rh))
 }
 
-func GetRestNames() []string {
-	return []string{
-		"/globalSettings",
-		"/getNodepool",
-		"/getUserPools",
-		"/getMinerList",
-		"/get_miners_stats",
-
-		"/get_miners_stake",
-		"/getSharderList",
-		"/get_sharders_stats",
-		"/get_sharders_stake",
-		"/getSharderKeepList",
-
-		"/getPhase",
-		"/getDkgList",
-		"/getMpksList",
-		"/getGroupShareOrSigns",
-		"/getMagicBlock",
-
-		"/getEvents",
-		"/nodeStat",
-		"/nodePoolStat",
-		"/configs",
-		"/get_miner_geolocations",
-
-		"/get_sharder_geolocations",
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
+	mrh := NewMinerRestHandler(rh)
+	miner := "/v1/screst/" + ADDRESS
+	return []rest.Endpoint{
+		rest.MakeEndpoint(miner+"/globalSettings", mrh.getGlobalSettings),
+		rest.MakeEndpoint(miner+"/getNodepool", mrh.getNodePool),
+		rest.MakeEndpoint(miner+"/getUserPools", mrh.getUserPools),
+		rest.MakeEndpoint(miner+"/getMinerList", mrh.getMinerList),
+		rest.MakeEndpoint(miner+"/get_miners_stats", mrh.getMinersStats),
+		rest.MakeEndpoint(miner+"/get_miners_stake", mrh.getMinersStake),
+		rest.MakeEndpoint(miner+"/getSharderList", mrh.getSharderList),
+		rest.MakeEndpoint(miner+"/get_sharders_stats", mrh.getShardersStats),
+		rest.MakeEndpoint(miner+"/get_sharders_stake", mrh.getShardersStake),
+		rest.MakeEndpoint(miner+"/getSharderKeepList", mrh.getSharderKeepList),
+		rest.MakeEndpoint(miner+"/getPhase", mrh.getPhase),
+		rest.MakeEndpoint(miner+"/getDkgList", mrh.getDkgList),
+		rest.MakeEndpoint(miner+"/getMpksList", mrh.getMpksList),
+		rest.MakeEndpoint(miner+"/getGroupShareOrSigns", mrh.getGroupShareOrSigns),
+		rest.MakeEndpoint(miner+"/getMagicBlock", mrh.getMagicBlock),
+		rest.MakeEndpoint(miner+"/getEvents", mrh.getEvents),
+		rest.MakeEndpoint(miner+"/nodeStat", mrh.getNodeStat),
+		rest.MakeEndpoint(miner+"/nodePoolStat", mrh.getNodePoolStat),
+		rest.MakeEndpoint(miner+"/configs", mrh.getConfigs),
+		rest.MakeEndpoint(miner+"/get_miner_geolocations", mrh.getMinerGeolocations),
+		rest.MakeEndpoint(miner+"/get_sharder_geolocations", mrh.getSharderGeolocations),
 	}
 }
 
@@ -169,7 +111,7 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 		filter.Active = null.BoolFrom(active)
 	}
 
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -229,7 +171,7 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -251,7 +193,7 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(mrh.GetStateContext())
+	gn, err := getGlobalNode(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -283,7 +225,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		err    error
 	)
 
-	if sn, err = GetMinerNode(id, mrh.GetStateContext()); err != nil {
+	if sn, err = GetMinerNode(id, mrh.GetQueryStateContext()); err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
 		return
 	}
@@ -321,7 +263,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -390,7 +332,7 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 		Type:        eventType,
 		Tag:         eventTag,
 	}
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -413,7 +355,7 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 //  200: MagicBlock
 //  400:
 func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Request) {
-	mb, err := getMagicBlock(mrh.GetStateContext())
+	mb, err := getMagicBlock(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
 		return
@@ -429,7 +371,7 @@ func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Reques
 //  200: GroupSharesOrSigns
 //  400:
 func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http.Request) {
-	sos, err := getGroupShareOrSigns(mrh.GetStateContext())
+	sos, err := getGroupShareOrSigns(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
 		return
@@ -445,7 +387,7 @@ func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http
 //  200: Mpks
 //  400:
 func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request) {
-	mpks, err := getMinersMPKs(mrh.GetStateContext())
+	mpks, err := getMinersMPKs(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
 		return
@@ -461,7 +403,7 @@ func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request)
 //  200: DKGMinerNodes
 //  500:
 func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) {
-	dkgMinersList, err := getDKGMinersList(mrh.GetStateContext())
+	dkgMinersList, err := getDKGMinersList(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners dkg list", err.Error()))
 		return
@@ -476,7 +418,7 @@ func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) 
 //  200: PhaseNode
 //  400:
 func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
-	pn, err := GetPhaseNode(mrh.GetStateContext())
+	pn, err := GetPhaseNode(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, "", common.NewErrNoResource("can't get phase node", err.Error()))
 		return
@@ -491,7 +433,7 @@ func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
 //  200: MinerNodes
 //  500:
 func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.Request) {
-	allShardersList, err := getShardersKeepList(mrh.GetStateContext())
+	allShardersList, err := getShardersKeepList(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("cannot get sharder list", err.Error()))
 		return
@@ -506,7 +448,7 @@ func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.R
 //  200: Int64Map
 //  404:
 func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -517,7 +459,7 @@ func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	common.Respond(w, r, restinterface.Int64Map{
+	common.Respond(w, r, rest.Int64Map{
 		"sharders_total_stake": ts,
 	}, nil)
 
@@ -530,7 +472,7 @@ func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Req
 //  200: Int64Map
 //  404:
 func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -547,7 +489,7 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	common.Respond(w, r, restinterface.Int64Map{
+	common.Respond(w, r, rest.Int64Map{
 		"active_sharders":   active,
 		"inactive_sharders": inactive,
 	}, nil)
@@ -597,7 +539,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -611,7 +553,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	for i, sharder := range sharders {
 		shardersArr[i] = sharderTableToSharderNode(sharder)
 	}
-	common.Respond(w, r, restinterface.InterfaceMap{
+	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": shardersArr,
 	}, nil)
 }
@@ -623,7 +565,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 //  200: Int64Map
 //  404:
 func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -633,7 +575,7 @@ func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	common.Respond(w, r, restinterface.Int64Map{
+	common.Respond(w, r, rest.Int64Map{
 		"miners_total_stake": ts,
 	}, nil)
 
@@ -646,7 +588,7 @@ func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Reque
 //  200: Int64Map
 //  404:
 func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -661,7 +603,7 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
 	}
 
-	common.Respond(w, r, restinterface.Int64Map{
+	common.Respond(w, r, rest.Int64Map{
 		"active_miners":   active,
 		"inactive_miners": inactive,
 	}, nil)
@@ -710,7 +652,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-	edb := mrh.GetStateContext().GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -724,7 +666,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	for i, miner := range miners {
 		minersArr[i] = minerTableToMinerNode(miner)
 	}
-	common.Respond(w, r, restinterface.InterfaceMap{
+	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": minersArr,
 	}, nil)
 }
@@ -768,7 +710,7 @@ type userPools struct {
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
 
-	balances := mrh.GetStateContext()
+	balances := mrh.GetQueryStateContext()
 
 	if balances.GetEventDB() == nil {
 		common.Respond(w, r, nil, errors.New("no event database found"))
@@ -858,7 +800,7 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 //  200: PoolMembersInfo
 //  400:
 //  484:
-func (mrh *MinerRestHandler) getNodepool(w http.ResponseWriter, r *http.Request) {
+func (mrh *MinerRestHandler) getNodePool(w http.ResponseWriter, r *http.Request) {
 	npi := (&smartcontract.BCContext{}).GetNodepoolInfo()
 	common.Respond(w, r, npi, nil)
 }
@@ -870,7 +812,7 @@ func (mrh *MinerRestHandler) getNodepool(w http.ResponseWriter, r *http.Request)
 //  200: MinerGlobalSettings
 //  400:
 func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Request) {
-	globals, err := getGlobalSettings(mrh.GetStateContext())
+	globals, err := getGlobalSettings(mrh.GetQueryStateContext())
 
 	if err != nil {
 		if err != util.ErrValueNotPresent {

@@ -27,7 +27,6 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
@@ -37,7 +36,6 @@ import (
 func init() {
 	config.SetupDefaultConfig()
 	viper.Set("server_chain.smart_contract.faucet", true)
-	viper.Set("server_chain.smart_contract.interest", true)
 	viper.Set("server_chain.smart_contract.miner", true)
 	viper.Set("server_chain.smart_contract.storage", true)
 	viper.Set("server_chain.smart_contract.vesting", true)
@@ -46,7 +44,6 @@ func init() {
 	config.SmartContractConfig = viper.New()
 	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.interestpoolsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 
@@ -283,20 +280,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			wantStatus: http.StatusInternalServerError,
-		},
-		{
-			name:  "Interestpool_/getPoolsStats_Empty_User_Nodes_404",
-			chain: serverChain,
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", interestpoolsc.ADDRESS, "/getPoolsStats")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:  "Minersc_/getNodepool_Decode_Miner_From_Params_Err_400",

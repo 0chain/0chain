@@ -169,8 +169,6 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 			return math.MaxInt32, err
 		}
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
-		logging.Logger.Debug("transaction cost", zap.Int("cost", cost), zap.String("tx_hash", txn.Hash),
-			zap.String("func", scData.FunctionName))
 		return cost, err
 	}
 

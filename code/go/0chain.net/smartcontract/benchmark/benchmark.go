@@ -90,6 +90,8 @@ const (
 	SimulationNumChallengesBlobber
 	SimulationNumAuthorizers
 	SimulationNumRewardPartitionBlobber
+	SimulationNumBlocks
+	SimulationNumTransactionsPerBlock
 	NumberSimulationParameters
 )
 
@@ -248,6 +250,8 @@ var parameterName = []string{
 	"num_challenges_blobber",
 	"num_authorizers",
 	"num_reward_partition_blobber",
+	"num_blocks",
+	"num_transactions_per_block",
 }
 
 func (w SimulatorParameter) String() string {
@@ -277,6 +281,8 @@ var (
 	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
 	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
 	NumRewardPartitionBlobber    = Simulation + SimulationNumRewardPartitionBlobber.String()
+	NumBlocks                    = Simulation + SimulationNumBlocks.String()
+	NumTransactionPerBlock       = Simulation + SimulationNumTransactionsPerBlock.String()
 )
 
 type BenchTestI interface {
@@ -344,4 +350,13 @@ func (bd *BenchData) Encode() (b []byte) {
 // Decode from []byte
 func (bd *BenchData) Decode(input []byte) error {
 	return json.Unmarshal(input, bd)
+}
+
+var MockBenchData = BenchData{
+	BenchDataMpt: BenchDataMpt{
+		Clients:     make([]string, 100),
+		PublicKeys:  make([]string, 100),
+		PrivateKeys: make([]string, 100),
+		Sharders:    make([]string, 100),
+	},
 }

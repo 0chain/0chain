@@ -35,7 +35,6 @@ const (
 	BlockRewards                      // todo from development
 	Storage                           // todo from development
 	Faucet                            // todo from development
-	Interest                          // todo from development
 	Miner                             // todo from development
 	Multisig                          // todo from development
 
@@ -121,7 +120,6 @@ var GlobalSettingName = []string{
 	"server_chain.block_rewards",
 	"server_chain.smart_contract.storage",
 	"server_chain.smart_contract.faucet",
-	"server_chain.smart_contract.interest",
 	"server_chain.smart_contract.miner",
 	"server_chain.smart_contract.multisig",
 	"server_chain.smart_contract.vesting",
@@ -220,7 +218,6 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[BlockRewards]:                      {smartcontract.Boolean, false},
 	GlobalSettingName[Storage]:                           {smartcontract.Boolean, false},
 	GlobalSettingName[Faucet]:                            {smartcontract.Boolean, false},
-	GlobalSettingName[Interest]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Miner]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Multisig]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Vesting]:                           {smartcontract.Boolean, false},
