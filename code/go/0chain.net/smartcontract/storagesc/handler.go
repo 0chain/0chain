@@ -708,6 +708,7 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 	total, err := edb.TotalUsedData()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
 	}
 	common.Respond(w, r, rest.Int64Map{
 		"total-stored-data": total,
