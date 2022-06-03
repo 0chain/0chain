@@ -324,6 +324,8 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 		//
 	}
 
+	SetupStore(store)
+
 	switch Tiering(storageType) {
 	case DiskAndCold, CacheDiskAndCold:
 		go setupColdWorker(ctx)
