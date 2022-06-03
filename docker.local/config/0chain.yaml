@@ -197,6 +197,11 @@ integration_tests:
   lock_interval: 1s
 
 storage:
+  # Cache -> 1, Disk -> 2 and Cold -> 4. So combination would be sum of these value.
+  # For example if storage_type: 3, then it means blockstore initializer will look for
+  # cache and disk config. Similarly if it is 7, it will look for cache, disk and cold
+  # config
+  storage_type: 2
   # start and recover mode will delete all the existing blocks 
   # restart will take off from where it last left
   # start and recover is currently used interchangeably but later on

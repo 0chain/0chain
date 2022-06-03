@@ -84,5 +84,5 @@ start_sharder(){
     keys_file=$root/data/sharder$i/config/b0snode${i}_keys.txt
     minio_file=$root/data/sharder$i/config/minio_config.txt
 
-    ./sharder --deployment_mode 0 --keys_file $keys_file --minio_file $minio_file --work_dir $root/data/sharder$i
+    ./sharder --deployment_mode 0 --keys_file $keys_file --work_dir $root/data/sharder$i
 }
