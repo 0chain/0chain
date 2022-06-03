@@ -223,7 +223,7 @@ storage:
     path: "/path/to/cache"
     size: 1024*1024*1024
   disk:
-    strategy: "some strategy"
+    strategy: "round_robin" # one of random, round_robin, min_size_first, min_count_first
     volumes:
       - path: "/path/to/hot/blocks"
         recovery: false
@@ -231,7 +231,7 @@ storage:
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^3
         allowed_block_size: 500 * 1024 * 1024 # 500GB
-      - path: "/path/to/hot/blocks"
+      - path: "/path/to/another/hot/blocks"
         recovery: false
         size_to_maintain: 1 # In GB
         inodes_to_maintain: 5 # In percent
