@@ -155,7 +155,7 @@ func initBWR(viper *viper.Viper, mode, workDir string) {
 
 	default:
 		err := os.RemoveAll(dbPath)
-		if !errors.Is(err, os.ErrNotExist) {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			panic(err)
 		}
 
