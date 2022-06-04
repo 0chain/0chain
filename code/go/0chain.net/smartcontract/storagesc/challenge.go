@@ -704,11 +704,6 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"unexpected error getting allocation: %v", err)
 	}
 
-	if alloc.Expiration < t.CreationDate {
-		return nil, common.NewErrorf("adding_challenge_error",
-			"allocation is already expired, alloc.Expiration: %d, t.CreationDate: %d",
-			alloc.Expiration, t.CreationDate)
-	}
 	if alloc.Stats == nil {
 		return nil, common.NewError("adding_challenge_error",
 			"found empty allocation stats")
@@ -833,6 +828,23 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("invalid blobber for allocation")
 	}
 
+	if alloc.Expiration < txn.CreationDate {
+		logging.Logger.Error("populate_generate_challenge",
+			zap.Error(errors.New("allocation is already expired")),
+			zap.Any("allocation expired", alloc.Expiration),
+			zap.Any("transaction creation", txn.CreationDate))
+
+		if err := removeAllocationFromBlobber(sc,
+			blobberID,
+			allocBlobber.BlobberAllocationsPartitionLoc,
+			allocID,
+			balances); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	}
+
 	var randValidators []ValidationPartitionNode
 	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
 		return nil, common.NewError("add_challenge",
@@ -955,6 +967,11 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		balances)
 	if err != nil {
 		return common.NewErrorf("adding_challenge_error", err.Error())
+	}
+
+	if result == nil {
+		logging.Logger.Error("received empty data for challenge generation. Skipping challenge generation")
+		return nil
 	}
 
 	err = sc.addChallenge(result.alloc,
