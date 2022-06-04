@@ -50,6 +50,10 @@ func BenchmarkRestTests(
 				Endpoint: srh.getConfig,
 			},
 			{
+				FuncName: "get_blocks",
+				Endpoint: srh.getBlocks,
+			},
+			{
 				FuncName: "transaction",
 				Params: map[string]string{
 					"transaction_hash": benchmark.GetMockTransactionHash(1, 1),

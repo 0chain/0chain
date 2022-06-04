@@ -99,9 +99,6 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_limit", 100000000)
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.individual_reset", "2h")
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.min_lock", 100)
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.lock_period", "2160h")
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.interest_rate", 0.01)
 
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)

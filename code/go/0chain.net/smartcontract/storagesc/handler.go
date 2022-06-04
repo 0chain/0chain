@@ -67,7 +67,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
 		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
-		rest.MakeEndpoint(storage+"/total_saved_data", srh.getTotalData),
+		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
@@ -693,14 +693,26 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total_saved_data total_saved_data
-// Gets the total data stored across all blobbers. Todo: We need to rewrite this to use event database not MPT
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
+// Gets the total data stored across all blobbers.
 //
 // responses:
 //  200: Int64Map
 //  400:
 func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, 0, fmt.Errorf("not implemented yet"))
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	total, err := edb.TotalUsedData()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"total-stored-data": total,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks

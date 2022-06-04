@@ -352,3 +352,12 @@ func (bd *BenchData) Encode() (b []byte) {
 func (bd *BenchData) Decode(input []byte) error {
 	return json.Unmarshal(input, bd)
 }
+
+var MockBenchData = BenchData{
+	BenchDataMpt: BenchDataMpt{
+		Clients:     make([]string, 100),
+		PublicKeys:  make([]string, 100),
+		PrivateKeys: make([]string, 100),
+		Sharders:    make([]string, 100),
+	},
+}
