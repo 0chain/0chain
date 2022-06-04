@@ -204,7 +204,7 @@ func BenchmarkTests(
 					ID:              getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
-					Expiration:      common.Timestamp(8760 * 60 * 60),
+					Expiration:      common.Timestamp(50 * 60 * 60),
 					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
