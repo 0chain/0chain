@@ -21,6 +21,8 @@ simulation:
   num_challenges_blobber: 1
   num_authorizers: 12
   num_reward_partition_blobber: 5
+  num_blocks: 100
+  num_transactions_per_block: 10
 
 options:
   verbose: true
@@ -32,6 +34,7 @@ options:
     - "zcnscbridge_rest"
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
+  load_concurrency: 4
 
 dbs:
   events:
@@ -169,4 +172,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
+  show_output: false
 

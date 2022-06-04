@@ -31,8 +31,6 @@ import (
 
 const mockMinLockDemand = 1
 
-var executor = common.NewWithContextFunc(4)
-
 func AddMockAllocations(
 	clients, publicKeys []string,
 	eventDb *event.EventDb,

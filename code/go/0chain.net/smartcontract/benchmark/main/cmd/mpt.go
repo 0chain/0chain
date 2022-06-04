@@ -131,16 +131,20 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 
 	root := viper.GetString(benchmark.MptRoot)
 	rootBytes, err := hex.DecodeString(root)
+	var eventDb *event.EventDb
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		eventDb = createEventsDb()
+	}
 	if err != nil {
 		panic(err)
 	}
+	benchData := benchmark.BenchData{EventDb: eventDb}
 	_, balances := getBalances(
 		&transaction.Transaction{},
 		extractMpt(pMpt, rootBytes),
-		benchmark.BenchData{},
+		benchData,
 	)
 
-	var benchData benchmark.BenchData
 	err = balances.GetTrieNode(BenchDataKey, &benchData)
 	if err != nil {
 		log.Fatal(err)
@@ -206,48 +210,7 @@ func setUpMpt(
 
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
-		timer := time.Now()
-
-		tick := func() (*event.EventDb, error) {
-			return event.NewEventDb(dbs.DbAccess{
-				Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-				Name:            viper.GetString(benchmark.EventDbName),
-				User:            viper.GetString(benchmark.EventDbUser),
-				Password:        viper.GetString(benchmark.EventDbPassword),
-				Host:            viper.GetString(benchmark.EventDbHost),
-				Port:            viper.GetString(benchmark.EventDbPort),
-				MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-				MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-			})
-		}
-
-		t := time.NewTicker(time.Second)
-		eventDb, err = tick()
-		if err != nil {
-			for {
-				<-t.C
-				eventDb, err = tick()
-				if err == nil {
-					break
-				} else {
-					log.Println("no connection to eventDB yet: " + err.Error())
-				}
-			}
-
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = eventDb.Drop()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := eventDb.AutoMigrate(); err != nil {
-			log.Fatal(err)
-		}
-		log.Println("created event database\t", time.Since(timer))
+		eventDb = createEventsDb()
 	}
 
 	var wg sync.WaitGroup
@@ -521,6 +484,53 @@ func setUpMpt(
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
 	return pMpt, balances.GetState().GetRoot(), benchData
+}
+
+func createEventsDb() *event.EventDb {
+	timer := time.Now()
+	var eventDb *event.EventDb
+	tick := func() (*event.EventDb, error) {
+		return event.NewEventDb(dbs.DbAccess{
+			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+			Name:            viper.GetString(benchmark.EventDbName),
+			User:            viper.GetString(benchmark.EventDbUser),
+			Password:        viper.GetString(benchmark.EventDbPassword),
+			Host:            viper.GetString(benchmark.EventDbHost),
+			Port:            viper.GetString(benchmark.EventDbPort),
+			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+		})
+	}
+
+	t := time.NewTicker(time.Second)
+	var err error
+	eventDb, err = tick()
+	if err != nil {
+		for {
+			<-t.C
+			eventDb, err = tick()
+			if err == nil {
+				break
+			} else {
+				log.Println("no connection to eventDB yet: " + err.Error())
+			}
+		}
+
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = eventDb.Drop()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := eventDb.AutoMigrate(); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("created event database\t", time.Since(timer))
+	return eventDb
 }
 
 func addMockClients(ctx context.Context,

@@ -2,34 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	bk "0chain.net/smartcontract/benchmark"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 )
-
-func loadPath(flags *pflag.FlagSet) (string, string) {
-	if flags.Changed("load") {
-		loadPath, err := flags.GetString("load")
-		if err != nil {
-			log.Fatal(err)
-		}
-		return loadPath, path.Join(loadPath, "benchmark.yaml")
-	}
-
-	if flags.Changed("config") {
-		configPath, err := flags.GetString("config")
-		if err != nil {
-			log.Fatal(err)
-		}
-		return "", configPath
-	}
-	return "", defaultConfigPath
-}
 
 func suitesOmits() ([]string, []string) {
 	verbose := viper.GetBool(bk.OptionVerbose)
