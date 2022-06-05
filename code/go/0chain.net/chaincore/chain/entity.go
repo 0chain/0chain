@@ -594,6 +594,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.SetRoundRandomSeed(genesisRandomSeed)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
+	gr.BlockHash = gb.Hash
 	return gr, gb
 }
 
@@ -612,7 +613,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 }
 
 // AddLoadedFinalizedBlocks - adds the genesis block to the chain.
-func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
+func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block, r *round.Round) {
 	err := c.UpdateMagicBlock(lfmb.MagicBlock)
 	if err != nil {
 		logging.Logger.Warn("update magic block failed", zap.Error(err))
@@ -620,6 +621,7 @@ func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
 	c.blocks[lfb.Hash] = lfb
+	c.rounds[lfb.Round] = r
 }
 
 /*AddBlock - adds a block to the cache */
@@ -1293,7 +1295,9 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(context.Background(), b)
-		go c.notifyToSyncFinalizedRoundState(bs)
+		if !node.Self.IsSharder() {
+			go c.notifyToSyncFinalizedRoundState(bs)
+		}
 	}
 	c.lfbMutex.Unlock()
 

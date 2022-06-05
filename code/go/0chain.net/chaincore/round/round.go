@@ -8,6 +8,7 @@ import (
 //RoundI - an interface that represents a blockchain round
 type RoundI interface {
 	GetRoundNumber() int64
+	GetBlockHash() string
 
 	GetRandomSeed() int64
 	SetRandomSeed(seed int64, minersNum int)

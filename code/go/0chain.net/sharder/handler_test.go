@@ -1,4 +1,4 @@
-package sharder_test
+package sharder
 
 import (
 	"net/http"
@@ -9,7 +9,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/sharder"
 )
 
 func init() {
@@ -84,7 +83,7 @@ func TestBlockHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(BlockHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -122,7 +121,7 @@ func TestChainStatsWriter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(sharder.ChainStatsWriter))
+			handler := http.HandlerFunc(common.UserRateLimit(ChainStatsWriter))
 
 			handler.ServeHTTP(rr, tt.request)
 

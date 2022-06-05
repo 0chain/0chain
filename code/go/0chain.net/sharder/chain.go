@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -29,7 +30,7 @@ var sharderChain = &Chain{}
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
-	sharderChain.BlockChannel = make(chan *block.Block, 1)
+	sharderChain.blockChannel = make(chan *block.Block, 1)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
@@ -62,7 +63,7 @@ type MinioStats struct {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	BlockChannel   chan *block.Block
+	blockChannel   chan *block.Block
 	RoundChannel   chan *round.Round
 	BlockCache     cache.Cache
 	BlockTxnCache  cache.Cache
@@ -74,9 +75,14 @@ type Chain struct {
 	pbMutex          sync.RWMutex
 }
 
-/*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
-func (sc *Chain) GetBlockChannel() chan *block.Block {
-	return sc.BlockChannel
+// PushToBlockProcessor pushs the block to processor,
+func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
+	select {
+	case sc.blockChannel <- b:
+		return nil
+	case <-time.After(3 * time.Second):
+		return errors.New("push to block processor timeout")
+	}
 }
 
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
@@ -86,15 +92,21 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
 func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
-	_, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
-	//sc.AddRound(gr)
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
+	sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
+
+	// Save the round
+	if err := sc.StoreRound(gr.(*round.Round)); err != nil {
+		Logger.Panic("setup genesis block, save genesis round failed", zap.Error(err))
+	}
+
 	// Save the block
 	err := sc.storeBlock(gb)
 	if err != nil {
-		Logger.Error("Failed to save genesis block",
-			zap.Error(err))
+		Logger.Panic("setup genesis block, save genesis block failed", zap.Error(err))
 	}
+
 	if gb.MagicBlock != nil {
 		var tries int64
 		bs := gb.GetSummary()
@@ -139,22 +151,15 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 /*GetBlockHash - get the block hash for a given round */
 func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
 	var err error
-	var fromStore bool
 	r := sc.GetSharderRound(roundNumber)
 	if r == nil {
 		r, err = sc.GetRoundFromStore(ctx, roundNumber)
 		if err != nil {
 			return "", err
 		}
-		fromStore = true
 	}
 	if r.BlockHash == "" {
-		err = fmt.Errorf("round %d has empty block hash", roundNumber)
-		Logger.Error("get_block_hash",
-			zap.Int64("round", roundNumber),
-			zap.Bool("from_store", fromStore),
-			zap.Error(err))
-		return "", err
+		return "", fmt.Errorf("round %d has empty block hash", roundNumber)
 	}
 	return r.BlockHash, nil
 }
@@ -201,9 +206,10 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
 	bl.r.Block = bl.lfb
+	bl.r.BlockHash = bl.lfb.Hash
 
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map
-	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
+	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb, bl.r)
 
 	// check is it notarized
 	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
@@ -389,6 +395,9 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 			zap.Error(err))
 		return nil // the nil is 'use genesis'
 	}
+
+	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
+	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
 
 	// and then, check out related LFMB can be missing
 	bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
