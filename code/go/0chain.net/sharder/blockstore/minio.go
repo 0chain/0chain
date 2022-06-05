@@ -340,7 +340,7 @@ func startCloudStorages(cloudStorages []map[string]interface{},
 
 			secretKeyI, ok := cloudStorageI["secret_access_key"]
 			if !ok {
-				logging.Logger.Error("Discarding cloud storage; Secred Access Key is required")
+				logging.Logger.Error("Discarding cloud storage; Secret Access Key is required")
 				return
 			}
 
@@ -420,7 +420,7 @@ func startCloudStorages(cloudStorages []map[string]interface{},
 	}
 
 	wg.Wait()
-	if len(cTier.ColdStorages)/2 < len(cloudStorages) {
+	if len(cTier.ColdStorages) < len(cloudStorages)/2 {
 		panic("At least 50%% cloud storages must be able to store blocks")
 	}
 }
