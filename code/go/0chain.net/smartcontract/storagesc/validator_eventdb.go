@@ -86,3 +86,28 @@ func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode
 
 	return vNodes, nil
 }
+
+func emitAddOrOverwriteValidator(
+	sn *ValidationNode, sp *stakePool, balances cstate.StateContextI,
+) error {
+	data, err := json.Marshal(&event.Blobber{
+		BlobberID: sn.ID,
+		BaseURL:   sn.BaseURL,
+
+		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+		MinStake:       sn.StakePoolSettings.MinStake,
+		MaxStake:       sn.StakePoolSettings.MaxStake,
+		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+
+		OffersTotal:  sp.TotalOffers,
+		UnstakeTotal: sp.TotalUnStake,
+		Reward:       sp.Reward,
+		TotalStake:   int64(sp.stake()),
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling validator: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteValidator, sn.ID, string(data))
+	return nil
+}
