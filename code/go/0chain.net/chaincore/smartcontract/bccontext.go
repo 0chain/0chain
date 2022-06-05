@@ -9,13 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	//Miner member type
-	Miner = "MINER"
-	//Sharder member type
-	Sharder = "SHARDER"
-)
-
 //BCContext a wrapper to access Blockchain
 type BCContext struct{}
 
@@ -28,6 +21,7 @@ type PoolMemberInfo struct {
 }
 
 //PoolMembersInfo array of pool memebers
+// swagger:model PoolMembersInfo
 type PoolMembersInfo struct {
 	MembersInfo []PoolMemberInfo `json:"members_info"`
 }
@@ -44,13 +38,11 @@ func (bc *BCContext) GetNodepoolInfo() interface{} {
 		pm := &PoolMemberInfo{}
 		pm.N2NHost = n.N2NHost
 		pm.Port = strconv.Itoa(n.Port)
-		switch n.Type {
-		case node.NodeTypeMiner:
-			pm.Type = Miner
-		case node.NodeTypeSharder:
-			pm.Type = Sharder
-		default:
-			logging.Logger.Info("unknown_node_type", zap.Int8("Type", int8(n.Type)))
+		typename, err := node.GetNodeTypeName(n)
+		if err != nil {
+			logging.Logger.Info(err.Error())
+		} else {
+			pm.Type = typename
 		}
 		pm.PublicKey = n.PublicKey
 		//Logger.Info("Adding poolmember ", zap.String("Type", pm.Type), zap.String("N2nHost", pm.N2NHost))

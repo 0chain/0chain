@@ -87,7 +87,7 @@ func TestWriteMarker(t *testing.T) {
 		BlockNumber: eWriteMarker.BlockNumber,
 		TxHash:      eWriteMarker.TransactionID,
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteWriteMarker),
+		Tag:         int(TagAddWriteMarker),
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}
@@ -115,9 +115,10 @@ func TestGetWriteMarkers(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
+	t.Skip("only for local debugging, requires local postgresql")
 	eventDb, err := NewEventDb(access)
 	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
+		return
 	}
 
 	defer eventDb.Close()

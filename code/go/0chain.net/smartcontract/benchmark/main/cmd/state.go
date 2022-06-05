@@ -2,6 +2,7 @@ package cmd
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/util"
@@ -10,10 +11,10 @@ import (
 
 func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, txn.ToClientID, state.Balance(txn.Value)),
+		txn.ClientID, txn.ToClientID, currency.Coin(txn.Value)),
 	)
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, minersc.ADDRESS, state.Balance(txn.Fee)),
+		txn.ClientID, minersc.ADDRESS, currency.Coin(txn.Fee)),
 	)
 
 	clientState := balances.GetState()
@@ -49,7 +50,7 @@ func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI
 
 func mockMint(
 	to []byte,
-	amount state.Balance,
+	amount currency.Coin,
 	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {
@@ -65,7 +66,7 @@ func mockMint(
 
 func mockTransferAmount(
 	from, to []byte,
-	amount state.Balance,
+	amount currency.Coin,
 	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {

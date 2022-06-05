@@ -1,7 +1,10 @@
 package minersc
 
 import (
+	"encoding/json"
 	"testing"
+
+	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -12,7 +15,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
@@ -100,11 +102,11 @@ func BenchmarkTests(
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.StakePoolSettings{
-						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					Settings: stakepool.Settings{
+						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -123,11 +125,11 @@ func BenchmarkTests(
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.StakePoolSettings{
-						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					Settings: stakepool.Settings{
+						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -141,7 +143,7 @@ func BenchmarkTests(
 			input: nil,
 		},
 		{
-			name:     "miner.miner_heath_check",
+			name:     "miner.miner_health_check",
 			endpoint: msc.minerHealthCheck,
 			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, spenum.Miner),
@@ -270,11 +272,11 @@ func BenchmarkTests(
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.StakePoolSettings{
-						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					Settings: stakepool.Settings{
+						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -291,11 +293,11 @@ func BenchmarkTests(
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.StakePoolSettings{
-						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:        state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:        state.Balance(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
+					Settings: stakepool.Settings{
+						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
+						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -336,6 +338,43 @@ func BenchmarkTests(
 					PublicKey: "my public key",
 				},
 			}).Encode(),
+		},
+		{
+			name:     "miner.delete_miner",
+			endpoint: msc.DeleteMiner,
+			txn:      &transaction.Transaction{},
+			input: (&MinerNode{
+				SimpleNode: &SimpleNode{
+					ID:        GetMockNodeId(0, spenum.Sharder),
+					PublicKey: "my public key",
+				},
+			}).Encode(),
+		},
+		{
+			name:     "miner.delete_sharder",
+			endpoint: msc.DeleteSharder,
+			txn:      &transaction.Transaction{},
+			input: (&MinerNode{
+				SimpleNode: &SimpleNode{
+					ID:        GetMockNodeId(0, spenum.Sharder),
+					PublicKey: "my public key",
+				},
+			}).Encode(),
+		},
+		{
+			name:     "miner.collect_reward",
+			endpoint: msc.collectReward,
+			txn: &transaction.Transaction{
+				ClientID:   data.Clients[0],
+				ToClientID: ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
+					PoolId:       "", // todo add getMockMinerStakePoolId
+					ProviderType: spenum.Blobber,
+				})
+				return bytes
+			}(),
 		},
 	}
 	var testsI []bk.BenchTestI

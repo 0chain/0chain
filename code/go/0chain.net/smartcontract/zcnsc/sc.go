@@ -74,12 +74,6 @@ func (zcn *ZCNSmartContract) InitSC() {
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
 
-	// REST
-
-	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
-	zcn.SmartContract.RestHandlers["/getGlobalConfig"] = zcn.GetGlobalConfig
-	zcn.SmartContract.RestHandlers["/getAuthorizer"] = zcn.GetAuthorizer
-
 	// Smart contract functions
 
 	// Authorizer
@@ -107,11 +101,6 @@ func (zcn *ZCNSmartContract) GetName() string {
 // GetAddress ...
 func (zcn *ZCNSmartContract) GetAddress() string {
 	return ADDRESS
-}
-
-// GetRestPoints ...
-func (zcn *ZCNSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return zcn.RestHandlers
 }
 
 func (zcn *ZCNSmartContract) GetExecutionStats() map[string]interface{} {

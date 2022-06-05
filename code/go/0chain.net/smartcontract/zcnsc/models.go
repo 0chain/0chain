@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -42,7 +43,7 @@ type AuthorizerSignature struct {
 
 type MintPayload struct {
 	EthereumTxnID     string                 `json:"ethereum_txn_id"`
-	Amount            state.Balance          `json:"amount"`
+	Amount            currency.Coin          `json:"amount"`
 	Nonce             int64                  `json:"nonce"`
 	Signatures        []*AuthorizerSignature `json:"signatures"`
 	ReceivingClientID string                 `json:"receiving_client_id"`
@@ -104,7 +105,7 @@ func (mp *MintPayload) Decode(input []byte) error {
 		if err != nil {
 			return err
 		}
-		mp.Amount = state.Balance(*value)
+		mp.Amount = currency.Coin(*value)
 	}
 
 	id, ok = objMap[fieldReceivingClientId]
@@ -219,7 +220,7 @@ func (bp *BurnPayload) Decode(input []byte) error {
 // ------- UpdateAuthorizerStakePoolPayload ------------
 
 type UpdateAuthorizerStakePoolPayload struct {
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
 
 func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte) {
@@ -235,9 +236,9 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 // ------- AddAuthorizerPayload ------------
 
 type AddAuthorizerPayload struct {
-	PublicKey         string                      `json:"public_key"`
-	URL               string                      `json:"url"`
-	StakePoolSettings stakepool.StakePoolSettings `json:"stake_pool_settings"` // Used to initially create stake pool
+	PublicKey         string             `json:"public_key"`
+	URL               string             `json:"url"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"` // Used to initially create stake pool
 }
 
 func (pk *AddAuthorizerPayload) Encode() (data []byte, err error) {

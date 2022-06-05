@@ -35,7 +35,6 @@ const (
 	BlockRewards                      // todo from development
 	Storage                           // todo from development
 	Faucet                            // todo from development
-	Interest                          // todo from development
 	Miner                             // todo from development
 	Multisig                          // todo from development
 
@@ -120,7 +119,6 @@ var GlobalSettingName = []string{
 	"development.block_rewards",
 	"development.smart_contract.storage",
 	"development.smart_contract.faucet",
-	"development.smart_contract.interest",
 	"development.smart_contract.miner",
 	"development.smart_contract.multisig",
 	"development.smart_contract.vesting",
@@ -218,7 +216,6 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[BlockRewards]:                      {smartcontract.Boolean, false},
 	GlobalSettingName[Storage]:                           {smartcontract.Boolean, false},
 	GlobalSettingName[Faucet]:                            {smartcontract.Boolean, false},
-	GlobalSettingName[Interest]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Miner]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Multisig]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Vesting]:                           {smartcontract.Boolean, false},
@@ -291,6 +288,7 @@ var GlobalSettingInfo = map[string]struct {
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
 
+// swagger:model MinerGlobalSettings
 type GlobalSettings struct {
 	Version int64             `json:"version"`
 	Fields  map[string]string `json:"fields"`
@@ -525,7 +523,7 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
+func getGlobalSettings(balances cstate.CommonStateContextI) (*GlobalSettings, error) {
 	gl := newGlobalSettings()
 
 	err := balances.GetTrieNode(GLOBALS_KEY, gl)

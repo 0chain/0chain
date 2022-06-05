@@ -3,6 +3,8 @@ package tokenpool
 import (
 	"encoding/json"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/util"
@@ -14,7 +16,7 @@ type TokenPoolTransferResponse struct {
 	TxnHash    string        `json:"txn_hash,omitempty"`
 	FromPool   string        `json:"from_pool,omitempty"`
 	ToPool     string        `json:"to_pool,omitempty"`
-	Value      state.Balance `json:"value,omitempty"`
+	Value      currency.Coin `json:"value,omitempty"`
 	FromClient string        `json:"from_client,omitempty"`
 	ToClient   string        `json:"to_client,omitempty"`
 }
@@ -30,19 +32,19 @@ func (p *TokenPoolTransferResponse) Decode(input []byte) error {
 }
 
 type TokenPoolI interface {
-	GetBalance() state.Balance
-	SetBalance(value state.Balance)
+	GetBalance() currency.Coin
+	SetBalance(value currency.Coin)
 	GetID() string
 	DigPool(id string, txn *transaction.Transaction) (*state.Transfer, string, error)
 	FillPool(txn *transaction.Transaction) (*state.Transfer, string, error)
-	TransferTo(op TokenPoolI, value state.Balance, entity interface{}) (*state.Transfer, string, error)
-	DrainPool(fromClientID, toClientID string, value state.Balance, entity interface{}) (*state.Transfer, string, error)
+	TransferTo(op TokenPoolI, value currency.Coin, entity interface{}) (*state.Transfer, string, error)
+	DrainPool(fromClientID, toClientID string, value currency.Coin, entity interface{}) (*state.Transfer, string, error)
 	EmptyPool(fromClientID, toClientID string, entity interface{}) (*state.Transfer, string, error)
 }
 
 type TokenPool struct {
 	ID      string        `json:"id"`
-	Balance state.Balance `json:"balance"`
+	Balance currency.Coin `json:"balance"`
 }
 
 //go:generate mockery --case underscore --name TokenLockInterface --inpackage --testonly

@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -277,8 +278,8 @@ func TestAddChallenge(t *testing.T) {
 
 func TestBlobberReward(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
-	var challengePoolIntegralValue = state.Balance(73000000)
-	var challengePoolBalance = state.Balance(700000)
+	var challengePoolIntegralValue = currency.Coin(73000000)
+	var challengePoolBalance = currency.Coin(700000)
 	var partial = 0.9
 	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
@@ -321,7 +322,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
-		var challengePoolBalance = state.Balance(0)
+		var challengePoolBalance = currency.Coin(0)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -349,8 +350,8 @@ func TestBlobberReward(t *testing.T) {
 
 func TestBlobberPenalty(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
-	var challengePoolIntegralValue = state.Balance(73000000)
-	var challengePoolBalance = state.Balance(700000)
+	var challengePoolIntegralValue = currency.Coin(73000000)
+	var challengePoolBalance = currency.Coin(700000)
 	var partial = 0.9
 	var preiviousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
@@ -412,7 +413,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
-		var challengePoolBalance = state.Balance(0)
+		var challengePoolBalance = currency.Coin(0)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
@@ -431,7 +432,7 @@ func testBlobberPenalty(
 	validatorStakes [][]int64,
 	wpBalances []int64,
 	otherWritePools int,
-	challengePoolIntegralValue, challengePoolBalance state.Balance,
+	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	partial float64,
 	size int64,
 	previous, thisChallange, thisExpires, now common.Timestamp,
@@ -488,7 +489,7 @@ func testBlobberReward(
 	validatorStakes [][]int64,
 	wpBalances []int64,
 	otherWritePools int,
-	challengePoolIntegralValue, challengePoolBalance state.Balance,
+	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	partial float64,
 	previous, thisChallange, thisExpires, now common.Timestamp,
 ) (err error) {
@@ -545,7 +546,7 @@ func setupChallengeMocks(
 	validatorStakes [][]int64,
 	wpBalances []int64,
 	otherWritePools int,
-	challengePoolIntegralValue, challengePoolBalance state.Balance,
+	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	thisChallange, thisExpires, now common.Timestamp,
 	size int64,
 ) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
@@ -619,7 +620,7 @@ func setupChallengeMocks(
 	}
 	for _, balance := range wpBalances {
 		var newPool = &allocationPool{}
-		newPool.Balance = state.Balance(balance)
+		newPool.Balance = currency.Coin(balance)
 		newPool.AllocationID = allocation.ID
 		newPool.Blobbers = blobberPools{}
 		newPool.Blobbers.add(&blobberPool{BlobberID: blobberId})
@@ -634,11 +635,11 @@ func setupChallengeMocks(
 	require.NoError(t, wPool.save(ssc.ID, allocation.Owner, ctx))
 
 	var sp = newStakePool()
-	sp.Settings.ServiceCharge = blobberYaml.serviceCharge
+	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
 		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
-		sp.Pools["paula"+id].Balance = state.Balance(stake)
+		sp.Pools["paula"+id].Balance = currency.Coin(stake)
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
@@ -647,10 +648,10 @@ func setupChallengeMocks(
 	var validatorsSPs []*stakePool
 	for i, validator := range validators {
 		var sPool = newStakePool()
-		sPool.Settings.ServiceCharge = validatorYamls[i].serviceCharge
+		sPool.Settings.ServiceChargeRatio = validatorYamls[i].serviceCharge
 		for j, stake := range validatorStakes[i] {
 			var pool = &stakepool.DelegatePool{}
-			pool.Balance = state.Balance(stake)
+			pool.Balance = currency.Coin(stake)
 			var id = validator + " delegate " + strconv.Itoa(j)
 			sPool.Pools[id] = pool
 		}

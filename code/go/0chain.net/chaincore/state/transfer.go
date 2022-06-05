@@ -3,6 +3,8 @@ package state
 import (
 	"encoding/json"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
@@ -13,14 +15,14 @@ var ErrInvalidTransfer = common.NewError("invalid_transfer", "invalid transfer o
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {
-	ClientID   string  `json:"from"`
-	ToClientID string  `json:"to"`
-	Amount     Balance `json:"amount"`
+	ClientID   string        `json:"from"`
+	ToClientID string        `json:"to"`
+	Amount     currency.Coin `json:"amount"`
 }
 
 //NewTransfer - create a new transfer
-func NewTransfer(fromClientID, toClientID datastore.Key, amount Balance) *Transfer {
-	t := &Transfer{ClientID: fromClientID, ToClientID: toClientID, Amount: amount}
+func NewTransfer(fromClientID, toClientID datastore.Key, zcn currency.Coin) *Transfer {
+	t := &Transfer{ClientID: fromClientID, ToClientID: toClientID, Amount: zcn}
 	return t
 }
 

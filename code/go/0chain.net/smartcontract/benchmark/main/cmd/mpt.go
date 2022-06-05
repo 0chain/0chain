@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"0chain.net/core/common"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -9,15 +8,18 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/zcnsc"
 
+	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
+	ebk "0chain.net/smartcontract/dbs/benchmark"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
-
-	"0chain.net/core/datastore"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -225,7 +227,6 @@ func setUpMpt(
 	}
 
 	var wg sync.WaitGroup
-
 	var (
 		blobbers         []*storagesc.StorageNode
 		miners, sharders []string
@@ -272,6 +273,16 @@ func setUpMpt(
 	}()
 
 	wg.Wait()
+
+	// used as foreign key
+	timer = time.Now()
+	ebk.AddMockBlocks(miners, eventDb)
+	log.Println("added mock blocks\t", time.Since(timer))
+
+	// used as foreign key
+	timer = time.Now()
+	ebk.AddMockTransactions(clients, eventDb)
+	log.Println("added mock transaction\t", time.Since(timer))
 
 	timer = time.Now()
 	stakePools := storagesc.GetMockBlobberStakePools(clients, eventDb, balances)
@@ -328,7 +339,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer = time.Now()
-		storagesc.AddMockChallenges(blobbers, balances)
+		storagesc.AddMockChallenges(blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -443,6 +454,22 @@ func setUpMpt(
 		log.Println("added control objects\t", time.Since(timer))
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		ebk.AddMockEvents(eventDb)
+		log.Println("added mock events\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer = time.Now()
+		ebk.AddMockErrors(eventDb)
+		log.Println("added mock errors\t", time.Since(timer))
+	}()
+
 	var benchData benchmark.BenchData
 	wg.Add(1)
 	go func() {
@@ -493,7 +520,7 @@ func addMockClients(
 		}
 		is := &state.State{}
 		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
+		is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
 		_, err = pMpt.Insert(util.Path(clientID), is)
 		if err != nil {
 			panic(err)

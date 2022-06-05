@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/block"
@@ -13,7 +15,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -67,7 +68,7 @@ type runtimeValues struct {
 	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
-	minted         state.Balance
+	minted         currency.Coin
 	fees           []int64
 }
 
@@ -318,9 +319,9 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		},
 		StakePool: stakepool.NewStakePool(),
 	}
-	miner.Settings.ServiceCharge = zChainYaml.ServiceCharge
+	miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
 	miner.Settings.DelegateWallet = minerID
-	miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
+	miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
 	}
@@ -337,9 +338,9 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			},
 			StakePool: stakepool.NewStakePool(),
 		}
-		miner.Settings.ServiceCharge = zChainYaml.ServiceCharge
+		miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
 		miner.Settings.DelegateWallet = minerID
-		miner.StakePool.Settings.ServiceCharge = zChainYaml.ServiceCharge
+		miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
 		sharders = append(sharders, sharder)
 	}
 

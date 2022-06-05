@@ -75,6 +75,8 @@ func SetupDefaultConfig() {
 	// Asynchronous blocks fetching.
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_miners", 100)
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
+
+	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
 }
 
 // SetupConfig setups the main configuration system.
@@ -97,13 +99,10 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_limit", 100000000)
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.individual_reset", "2h")
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.min_lock", 100)
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.lock_period", "2160h")
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.interest_rate", 0.01)
 
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
-	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "30m")
+	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "3m")
 }
 
 // SetupSmartContractConfig setups the smart contracts configuration system.

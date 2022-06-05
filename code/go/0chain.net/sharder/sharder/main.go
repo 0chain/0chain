@@ -357,6 +357,7 @@ func initHandlers(c chain.Chainer) {
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()
+	chain.SetupScRestApiHandlers()
 	chain.SetupStateHandlers()
 
 	serverChain := chain.GetServerChain()

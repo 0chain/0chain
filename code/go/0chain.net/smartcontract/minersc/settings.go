@@ -1,14 +1,15 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/smartcontract"
 	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/currency"
+
+	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -109,8 +110,8 @@ var (
 		Setting    Setting
 		ConfigType smartcontract.ConfigType
 	}{
-		"min_stake":                    {MinStake, smartcontract.StateBalance},
-		"max_stake":                    {MaxStake, smartcontract.StateBalance},
+		"min_stake":                    {MinStake, smartcontract.CurrencyCoin},
+		"max_stake":                    {MaxStake, smartcontract.CurrencyCoin},
 		"max_n":                        {MaxN, smartcontract.Int},
 		"min_n":                        {MinN, smartcontract.Int},
 		"t_percent":                    {TPercent, smartcontract.Float64},
@@ -122,11 +123,11 @@ var (
 		"reward_round_frequency":       {RewardRoundFrequency, smartcontract.Int64},
 		"reward_rate":                  {RewardRate, smartcontract.Float64},
 		"share_ratio":                  {ShareRatio, smartcontract.Float64},
-		"block_reward":                 {BlockReward, smartcontract.StateBalance},
+		"block_reward":                 {BlockReward, smartcontract.CurrencyCoin},
 		"max_charge":                   {MaxCharge, smartcontract.Float64},
 		"epoch":                        {Epoch, smartcontract.Int64},
 		"reward_decline_rate":          {RewardDeclineRate, smartcontract.Float64},
-		"max_mint":                     {MaxMint, smartcontract.StateBalance},
+		"max_mint":                     {MaxMint, smartcontract.CurrencyCoin},
 		"owner_id":                     {OwnerId, smartcontract.Key},
 		"cooldown_period":              {CooldownPeriod, smartcontract.Int64},
 		"cost":                         {Cost, smartcontract.Cost},
@@ -169,7 +170,7 @@ func (gn *GlobalNode) setInt(key string, change int) error {
 	return nil
 }
 
-func (gn *GlobalNode) setBalance(key string, change state.Balance) error {
+func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
 	switch Settings[key].Setting {
 	case MaxMint:
 		gn.MaxMint = change
@@ -254,9 +255,13 @@ func (gn *GlobalNode) set(key string, change string) error {
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
-	case smartcontract.StateBalance:
+	case smartcontract.CurrencyCoin:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := gn.setBalance(key, state.Balance(value*x10)); err != nil {
+			coinV, err := currency.ParseZCN(value)
+			if err != nil {
+				return err
+			}
+			if err := gn.setBalance(key, coinV); err != nil {
 				return err
 			}
 		} else {

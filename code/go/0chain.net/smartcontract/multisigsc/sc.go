@@ -55,10 +55,6 @@ func (ms *MultiSigSmartContract) GetAddress() string {
 	return Address
 }
 
-func (ms *MultiSigSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return ms.SmartContract.RestHandlers
-}
-
 func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {
 	ms.SmartContract = sc
 }

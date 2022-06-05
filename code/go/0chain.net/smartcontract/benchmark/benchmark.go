@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -89,6 +90,8 @@ const (
 	SimulationNumChallengesBlobber
 	SimulationNumAuthorizers
 	SimulationNumRewardPartitionBlobber
+	SimulationNumBlocks
+	SimulationNumTransactionsPerBlock
 	NumberSimulationParameters
 )
 
@@ -121,6 +124,7 @@ const (
 	ControlM                = Internal + "control_m"
 	ControlN                = Internal + "control_n"
 	MptRoot                 = Internal + "mpt_root"
+	ShowOutput              = Internal + "show_output"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"
@@ -171,6 +175,7 @@ const (
 	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
 	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 	StorageValidatorsPerChallenge        = SmartContract + StorageSc + "validators_per_challenge"
+	StorageMaxBlobbersPerAllocation      = SmartContract + StorageSc + "max_blobbers_per_allocation"
 
 	StorageBlockReward                = SmartContract + StorageSc + BlockReward + "block_reward"
 	StorageBlockRewardTriggerPeriod   = SmartContract + StorageSc + BlockReward + "trigger_period"
@@ -245,6 +250,8 @@ var parameterName = []string{
 	"num_challenges_blobber",
 	"num_authorizers",
 	"num_reward_partition_blobber",
+	"num_blocks",
+	"num_transactions_per_block",
 }
 
 func (w SimulatorParameter) String() string {
@@ -274,12 +281,18 @@ var (
 	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
 	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
 	NumRewardPartitionBlobber    = Simulation + SimulationNumRewardPartitionBlobber.String()
+	NumBlocks                    = Simulation + SimulationNumBlocks.String()
+	NumTransactionPerBlock       = Simulation + SimulationNumTransactionsPerBlock.String()
 )
 
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
 	Run(state.StateContextI, *testing.B) error
+}
+
+type WithTimings interface {
+	Timings() map[string]time.Duration
 }
 
 type SignatureScheme interface {
@@ -337,4 +350,13 @@ func (bd *BenchData) Encode() (b []byte) {
 // Decode from []byte
 func (bd *BenchData) Decode(input []byte) error {
 	return json.Unmarshal(input, bd)
+}
+
+var MockBenchData = BenchData{
+	BenchDataMpt: BenchDataMpt{
+		Clients:     make([]string, 100),
+		PublicKeys:  make([]string, 100),
+		PrivateKeys: make([]string, 100),
+		Sharders:    make([]string, 100),
+	},
 }
