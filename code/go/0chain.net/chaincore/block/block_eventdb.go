@@ -1,10 +1,10 @@
 package block
 
 import (
-	"0chain.net/core/util"
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 )
 
