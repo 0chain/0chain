@@ -204,6 +204,12 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
+	// start sharding from the LFB stored
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.Error("load latest blocks from store: " + err.Error())
+		return
+	}
+
 	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
@@ -269,12 +275,6 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers(sc)
 	initWorkers(ctx)
-
-	// start sharding from the LFB stored
-	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
-		return
-	}
 
 	startBlocksInfoLogs(sc)
 
