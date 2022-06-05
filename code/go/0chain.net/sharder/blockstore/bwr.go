@@ -78,7 +78,7 @@ type unmovedBlockRecord struct {
 }
 
 func (ubr *unmovedBlockRecord) Add() error {
-	k := strconv.FormatInt(int64(ubr.CreatedAt), 64)
+	k := strconv.FormatInt(int64(ubr.CreatedAt), 10)
 	wo := gorocksdb.NewDefaultWriteOptions()
 	err := bmrDB.PutCF(gorocksdb.NewDefaultWriteOptions(), ubrHandle, []byte(k), []byte(ubr.Hash))
 	wo.Destroy()
@@ -86,7 +86,7 @@ func (ubr *unmovedBlockRecord) Add() error {
 }
 
 func (ubr *unmovedBlockRecord) Delete() error {
-	k := strconv.FormatInt(int64(ubr.CreatedAt), 64)
+	k := strconv.FormatInt(int64(ubr.CreatedAt), 10)
 	wo := gorocksdb.NewDefaultWriteOptions()
 	err := bmrDB.DeleteCF(wo, ubrHandle, []byte(k))
 	wo.Destroy()
