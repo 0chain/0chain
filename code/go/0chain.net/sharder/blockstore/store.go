@@ -264,7 +264,7 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 		}
 		store.blockMovementInterval = blockMovementInterval
 	case DiskAndCold:
-		store.diskTier = initDisk(viper.Sub("disk"), mode)
+		store.diskTier = initDisk(sViper.Sub("disk"), mode)
 		store.coldTier = initCold(sViper.Sub("cold"), mode)
 		store.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
