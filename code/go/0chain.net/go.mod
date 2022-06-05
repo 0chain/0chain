@@ -10,7 +10,6 @@ require (
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/fsnotify/fsnotify v1.5.3 // indirect
-	github.com/go-ini/ini v1.66.4 // indirect
 	github.com/go-openapi/runtime v0.24.0
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/gocql/gocql v1.0.0
@@ -22,8 +21,7 @@ require (
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
-	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/minio/minio-go/v7 v7.0.26 // indirect
+	github.com/minio/minio-go/v7 v7.0.26
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -46,7 +44,7 @@ require (
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
-	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
+	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
