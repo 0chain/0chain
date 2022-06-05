@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
@@ -21,7 +22,6 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -201,7 +201,7 @@ func setUpMpt(
 	if viper.GetBool(benchmark.EventDbEnabled) {
 		timer = time.Now()
 
-		eventDb, err = event.NewEventDb(dbs.DbAccess{
+		eventDb, err = event.NewEventDb(config.DbAccess{
 			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
 			Name:            viper.GetString(benchmark.EventDbName),
 			User:            viper.GetString(benchmark.EventDbUser),

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"golang.org/x/net/context"
@@ -84,7 +85,7 @@ func TestBlobbers(t *testing.T) {
 
 	}
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -230,7 +231,7 @@ func TestBlobbers(t *testing.T) {
 }
 
 func TestBlobberExists(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -276,7 +277,7 @@ func TestBlobberExists(t *testing.T) {
 }
 
 func TestBlobberIds(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -307,7 +308,7 @@ func TestBlobberIds(t *testing.T) {
 }
 
 func TestBlobberLatLong(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -337,7 +338,7 @@ func TestBlobberLatLong(t *testing.T) {
 }
 
 func TestBlobberGetCount(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),

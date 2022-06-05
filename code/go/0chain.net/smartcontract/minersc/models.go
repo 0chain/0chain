@@ -934,7 +934,7 @@ func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
 	return minerNodes, nil
 }
 
-func UpdateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
+func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
 		return common.NewError("update_all_miners_list_failed", err.Error())
 	}
@@ -1038,7 +1038,7 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	return sharders, nil
 }
 
-func UpdateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
+func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
 	_, err := state.InsertTrieNode(AllShardersKey, sharders)
 	return err
 }

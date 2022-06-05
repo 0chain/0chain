@@ -1,4 +1,4 @@
-package minersc_test
+package minersc
 
 import (
 	"strconv"
@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -106,7 +105,7 @@ func zcnToBalance(token float64) currency.Coin {
 	return currency.Coin(token * float64(x10))
 }
 
-func populateDelegates(t *testing.T, cNodes []*minersc.MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
+func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
 	var delegates = [][]float64{}
 	delegates = append(delegates, minerDelegates)
 	delegates = append(delegates, sharderDelegates...)
@@ -128,7 +127,7 @@ func populateDelegates(t *testing.T, cNodes []*minersc.MinerNode, minerDelegates
 	}
 }
 
-func confirmResults(t *testing.T, global minersc.GlobalNode, runtime runtimeValues, f formulae, mn *minersc.MinerNode, ctx cstate.StateContextI) {
+func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, mn *MinerNode, ctx cstate.StateContextI) {
 	var epochChangeRound = runtime.blockRound%scYaml.epoch == 0
 
 	if epochChangeRound {

@@ -47,7 +47,7 @@ func (ssc *MinerSmartContract) collectReward(
 	var provider *MinerNode
 	switch prr.ProviderType {
 	case spenum.Miner:
-		provider, err = GetMinerNode(providerID, balances)
+		provider, err = getMinerNode(providerID, balances)
 	case spenum.Sharder:
 		provider, err = ssc.getSharderNode(providerID, balances)
 	default:

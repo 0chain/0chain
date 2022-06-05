@@ -1,20 +1,19 @@
-package minersc_test
+package minersc
 
 import (
 	"os"
 	"strings"
 	"testing"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/config/mocks"
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -67,7 +66,7 @@ type mock0ChainYaml struct {
 type runtimeValues struct {
 	lastRound      int64
 	blockRound     int64
-	phase          minersc.Phase
+	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
 	minted         currency.Coin
@@ -113,7 +112,7 @@ var (
 
 func TestMain(m *testing.M) {
 	// Initialise global variables
-	minersc.PhaseRounds = make(map[minersc.Phase]int64)
+	PhaseRounds = make(map[Phase]int64)
 	node.Self = &node.SelfNode{
 		Node: &node.Node{
 			Client: client.Client{
@@ -241,7 +240,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		sharderDelegates: sharderStakes,
 	}
 
-	var globalNode = &minersc.GlobalNode{
+	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
 		LastRound:            runtime.lastRound,
 		RewardRate:           scYaml.rewardRate,
@@ -252,7 +251,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		Minted:               runtime.minted,
 		RewardRoundFrequency: scYaml.rewardRoundPeriod,
 	}
-	var msc = &minersc.MinerSmartContract{
+	var msc = &MinerSmartContract{
 		SmartContract: &sci.SmartContract{
 			SmartContractExecutionStats: make(map[string]interface{}),
 		},
@@ -298,24 +297,24 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	for _, fee := range runtime.fees {
 		ctx.block.Txns = append(ctx.block.Txns, &transaction.Transaction{Fee: fee})
 	}
-	var phaseNode = &minersc.PhaseNode{
+	var phaseNode = &PhaseNode{
 		Phase:      runtime.phase,
 		StartRound: scYaml.startRound,
 	}
-	minersc.PhaseRounds[phaseNode.Phase] = runtime.phaseRound
+	PhaseRounds[phaseNode.Phase] = runtime.phaseRound
 	_, err := ctx.InsertTrieNode(phaseNode.GetKey(), phaseNode)
 	require.NoError(t, err)
 
-	var self = &minersc.MinerNode{
-		SimpleNode: &minersc.SimpleNode{
+	var self = &MinerNode{
+		SimpleNode: &SimpleNode{
 			ID: selfId,
 		},
 	}
 	_, err = ctx.InsertTrieNode(self.GetKey(), self)
 	require.NoError(t, err)
 
-	var miner = &minersc.MinerNode{
-		SimpleNode: &minersc.SimpleNode{
+	var miner = &MinerNode{
+		SimpleNode: &SimpleNode{
 			ID:          minerID,
 			TotalStaked: 100,
 		},
@@ -324,17 +323,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
 	miner.Settings.DelegateWallet = minerID
 	miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
-	var allMiners = &minersc.MinerNodes{
-		Nodes: []*minersc.MinerNode{miner},
+	var allMiners = &MinerNodes{
+		Nodes: []*MinerNode{miner},
 	}
 
-	err = minersc.UpdateMinersList(ctx, allMiners)
+	err = updateMinersList(ctx, allMiners)
 	require.NoError(t, err)
 
-	var sharders []*minersc.MinerNode
+	var sharders []*MinerNode
 	for i := 0; i < numberOfSharders; i++ {
-		sharder := &minersc.MinerNode{
-			SimpleNode: &minersc.SimpleNode{
+		sharder := &MinerNode{
+			SimpleNode: &SimpleNode{
 				ID:          sharderIDs[i],
 				TotalStaked: 100,
 			},
@@ -346,36 +345,38 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		sharders = append(sharders, sharder)
 	}
 
-	populateDelegates(t, append([]*minersc.MinerNode{miner}, sharders...), minerStakes, sharderStakes)
+	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
 	_, err = ctx.InsertTrieNode(miner.GetKey(), miner)
 	require.NoError(t, err)
 	for i := 0; i < numberOfSharders; i++ {
 		_, err = ctx.InsertTrieNode(sharders[i].GetKey(), sharders[i])
 		require.NoError(t, err)
 	}
-	var allSharders = &minersc.MinerNodes{
+	var allSharders = &MinerNodes{
 		Nodes: sharders,
 	}
-	err = minersc.UpdateAllShardersList(ctx, allSharders)
+	err = updateAllShardersList(ctx, allSharders)
 	require.NoError(t, err)
 
+	mockChainConfig := mocks.NewChainConfig(t)
+	mockChainConfig.On("IsViewChangeEnabled").Return(true)
 	// Add information only relevant to view change rounds
-	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{IsViewChangeEnabled: true})
+	config.Configuration().ChainConfig = mockChainConfig
 
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
-		var allMinersList = &minersc.MinerNodes{}
-		err = minersc.UpdateAllShardersList(ctx, allMinersList)
+		var allMinersList = &MinerNodes{}
+		err = updateAllShardersList(ctx, allMinersList)
 	}
 
-	_, err = msc.PayFees(txn, nil, globalNode, ctx)
+	_, err = msc.payFees(txn, nil, globalNode, ctx)
 	if err != nil {
 		return err
 	}
 
 	require.NoError(t, err)
 
-	mn, err := minersc.GetMinerNode(txn.ClientID, ctx)
+	mn, err := getMinerNode(txn.ClientID, ctx)
 	require.NoError(t, err)
 
 	confirmResults(t, *globalNode, runtime, f, mn, ctx)

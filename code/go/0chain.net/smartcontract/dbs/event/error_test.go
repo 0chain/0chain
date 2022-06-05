@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAddAndGetError(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),

@@ -129,7 +129,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
 
-		m, er := GetMinerNode(mn.ID, balances)
+		m, er := getMinerNode(mn.ID, balances)
 		switch er {
 		case nil:
 			mn = m
@@ -284,7 +284,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	return
 }
 
-func (msc *MinerSmartContract) PayFees(t *transaction.Transaction,
+func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -323,7 +323,7 @@ func (msc *MinerSmartContract) PayFees(t *transaction.Transaction,
 
 	// the mb generator
 	var mn *MinerNode
-	if mn, err = GetMinerNode(mb.MinerID, balances); err != nil {
+	if mn, err = getMinerNode(mb.MinerID, balances); err != nil {
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			mb.MinerID, err)
 	}

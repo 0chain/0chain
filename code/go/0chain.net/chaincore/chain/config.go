@@ -9,8 +9,6 @@ import (
 	"0chain.net/core/viper"
 	"go.uber.org/zap"
 
-	"0chain.net/smartcontract/dbs"
-
 	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/datastore"
@@ -321,7 +319,7 @@ func (c *ConfigImpl) RoundRestartMult() int {
 	return c.conf.RoundRestartMult
 }
 
-func (c *ConfigImpl) DbsEvents() dbs.DbAccess {
+func (c *ConfigImpl) DbsEvents() config.DbAccess {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
 
@@ -406,7 +404,7 @@ type ConfigData struct {
 	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
 	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 
-	DbsEvents dbs.DbAccess    `json:"dbs_event"`
+	DbsEvents config.DbAccess `json:"dbs_event"`
 	TxnExempt map[string]bool `json:"txn_exempt"`
 }
 

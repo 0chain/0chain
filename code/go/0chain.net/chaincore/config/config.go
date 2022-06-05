@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
-	"0chain.net/smartcontract/dbs"
 )
 
 var (
@@ -136,6 +135,7 @@ const (
 	DeploymentMainNet     = 2
 )
 
+//go:generate mockery --case underscore --name=ChainConfig --output=./mocks
 type ChainConfig interface {
 	IsStateEnabled() bool
 	IsDkgEnabled() bool
@@ -177,11 +177,24 @@ type ChainConfig interface {
 	RoundTimeoutSofttoMin() int
 	RoundTimeoutSofttoMult() int
 	RoundRestartMult() int
-	DbsEvents() dbs.DbAccess
+	DbsEvents() DbAccess
 	FromViper()
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
 	MinTxnFee() int64
+}
+
+type DbAccess struct {
+	Enabled  bool   `json:"enabled"`
+	Name     string `json:"name"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+
+	MaxIdleConns    int           `json:"max_idle_conns"`
+	MaxOpenConns    int           `json:"max_open_conns"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
 }
 
 // HealthCheckCycleScan -

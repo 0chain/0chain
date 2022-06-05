@@ -225,7 +225,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		err    error
 	)
 
-	if sn, err = GetMinerNode(id, mrh.GetQueryStateContext()); err != nil {
+	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
 		return
 	}

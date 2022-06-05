@@ -160,7 +160,7 @@ func BenchmarkTests(
 		},
 		{
 			name:     "miner.payFees",
-			endpoint: msc.PayFees,
+			endpoint: msc.payFees,
 			txn: &transaction.Transaction{
 				ClientID:   GetMockNodeId(0, spenum.Miner),
 				ToClientID: ADDRESS,

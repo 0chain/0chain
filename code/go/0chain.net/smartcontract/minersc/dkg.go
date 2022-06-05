@@ -40,7 +40,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		err error
 	)
 
-	if allMinersList, err = msc.GetMinersList(balances); err != nil {
+	if allMinersList, err = msc.getMinersList(balances); err != nil {
 		return common.NewError("move_to_contribute_failed", err.Error())
 	}
 
@@ -291,7 +291,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 func (msc *MinerSmartContract) createDKGMinersForContribute(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 
-	allMinersList, err := msc.GetMinersList(balances)
+	allMinersList, err := msc.getMinersList(balances)
 	if err != nil {
 		Logger.Error("createDKGMinersForContribute -- failed to get miner list",
 			zap.Any("error", err))

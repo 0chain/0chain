@@ -264,7 +264,7 @@ func Test_payFees(t *testing.T) {
 		balances.blockSharders = extractBlockSharders(sharders, 3)
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
-		_, err = msc.PayFees(tx, nil, gn, balances)
+		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
 
 		// pools becomes active, nothing should be payed
@@ -346,7 +346,7 @@ func Test_payFees(t *testing.T) {
 		balances.blockSharders = extractBlockSharders(sharders, 3)
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
-		_, err = msc.PayFees(tx, nil, gn, balances)
+		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
 
 		// pools active, no fees, rewards should be payed for
@@ -426,7 +426,7 @@ func Test_payFees(t *testing.T) {
 		b.Txns = append(b.Txns, tx)
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
-		_, err = msc.PayFees(tx, nil, gn, balances)
+		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
 
 		// pools are active, rewards as above and +fees
@@ -506,7 +506,7 @@ func Test_payFees(t *testing.T) {
 		// add fees
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
-		_, err = msc.PayFees(tx, nil, gn, balances)
+		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
 
 		// pools are active, rewards as above and +fees
