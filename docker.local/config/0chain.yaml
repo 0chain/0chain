@@ -240,17 +240,17 @@ storage:
   cold:
     # storage that provides minio interface 
     delete_local: true
-    strategy: "some cold strategy"
+    strategy: "round_robin" # only round_robin is supported
     cloud_storages:
-      - storage_service_url: ""
-        access_id: ""
-        secret_access_key: ""
-        bucket_name: ""
-        allowed_bock_numbers: 10^15 # Can be any numbers
-        allowed_block_size: 10^10 # In GB
-      - storage_service_url: ""
-        access_id: ""
-        secret_access_key: ""
-        bucket_name: ""
-        allowed_bock_numbers: 10^15 # Can be any numbers
+      - storage_service_url: "s3.amazonaws.com"
+        access_id: "AKIA4MPQDEZ4FKNA3OPR"
+        secret_access_key: "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"
+        bucket_name: "lpobkt1"
+        allowed_block_numbers: 10^15 # Can be any numbers
         allowed_block_size: 10^5 # In GB
+      # - storage_service_url: ""
+      #   access_id: ""
+      #   secret_access_key: ""
+      #   bucket_name: ""
+      #   allowed_block_numbers: 10^15 # Can be any numbers
+      #   allowed_block_size: 10^5 # In GB
