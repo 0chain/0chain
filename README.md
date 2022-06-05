@@ -60,7 +60,7 @@ Setup a network called testnet0 for each of these node containers to talk to eac
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
 ```
-./docker.local/bin/setup_network.sh
+./docker.local/bin/setup.network.sh
 ```
 
 ## Building the Nodes

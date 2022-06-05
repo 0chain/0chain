@@ -71,12 +71,12 @@ func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, no
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodes(false)
-	var infos []int
+	var infos []string
 	for _, n := range nodes {
-		infos = append(infos, n.SetIndex)
+		infos = append(infos, n.GetPseudoName())
 	}
 	logging.Logger.Debug("send at least", zap.Int("number_to_send", numNodes),
-		zap.Int("num_of_nodes", len(nodes)), zap.Ints("indices", infos))
+		zap.Int("num_of_nodes", len(nodes)), zap.Strings("nodes", infos))
 	return np.sendTo(ctx, numNodes, nodes, handler)
 }
 
@@ -323,8 +323,8 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			defer cancel()
 
 			logging.N2n.Info("sending",
-				zap.Int("from", selfNode.SetIndex),
-				zap.Int("to", receiver.SetIndex),
+				zap.String("from", selfNode.GetPseudoName()),
+				zap.String("to", receiver.GetPseudoName()),
 				zap.String("handler", uri),
 				zap.Duration("duration", time.Since(ts)),
 				zap.String("entity", entity.GetEntityMetadata().GetName()),
@@ -337,7 +337,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				if ok && ue.Unwrap() != context.Canceled {
 					receiver.AddSendErrors(1)
 					receiver.AddErrorCount(1)
-					logging.N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+					logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				}
 				return false
 			}
@@ -354,7 +354,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				sizer.Update(int64(len(data)))
 			}
 			if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent) {
-				logging.N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
+				logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
 				return false
 			}
 			return true
@@ -386,40 +386,40 @@ func SetSendHeaders(req *http.Request, entity datastore.Entity, options *SendOpt
 func validateSendRequest(sender *Node, r *http.Request) bool {
 	entityName := r.Header.Get(HeaderRequestEntityName)
 	entityID := r.Header.Get(HeaderRequestEntityID)
-	selfSetIndex := Self.Underlying().SetIndex
+	selfPseudoName := Self.Underlying().GetPseudoName()
 	if !validateChain(sender, r) {
-		logging.N2n.Error("message received - invalid chain", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
+		logging.N2n.Error("message received - invalid chain", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}
 	if !validateEntityMetadata(sender, r) {
-		logging.N2n.Error("message received - invalid entity metadata", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
+		logging.N2n.Error("message received - invalid entity metadata", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}
 	if entityID == "" {
-		logging.N2n.Error("message received - entity id blank", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI))
+		logging.N2n.Error("message received - entity id blank", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI))
 		return false
 	}
 	reqTS := r.Header.Get(HeaderRequestTimeStamp)
 	if reqTS == "" {
-		logging.N2n.Error("message received - no timestamp for the message", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID))
+		logging.N2n.Error("message received - no timestamp for the message", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID))
 		return false
 	}
 	reqTSn, err := strconv.ParseInt(reqTS, 10, 64)
 	if err != nil {
-		logging.N2n.Error("message received", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID), zap.Error(err))
+		logging.N2n.Error("message received", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID), zap.Error(err))
 		return false
 	}
 	sender.SetStatus(NodeStatusActive)
 	sender.SetLastActiveTime(time.Unix(reqTSn, 0))
 	Self.Underlying().SetLastActiveTime(time.Now())
 	if !common.Within(reqTSn, int64(N2NTimeTolerance*time.Second)) {
-		logging.N2n.Error("message received - tolerance", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI),
+		logging.N2n.Error("message received - tolerance", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI),
 			zap.String("enitty", entityName), zap.String("id", entityID),
 			zap.Int64("ts", reqTSn), zap.Time("tstime", time.Unix(reqTSn, 0)))
 		return false
@@ -428,14 +428,14 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	reqHashdata := getHashData(sender.GetKey(), common.Timestamp(reqTSn), entityID)
 	reqHash := r.Header.Get(HeaderRequestHash)
 	if reqHash != encryption.Hash(reqHashdata) {
-		logging.N2n.Error("message received - request data hash invalid", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata))
+		logging.N2n.Error("message received - request data hash invalid", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata))
 		return false
 	}
 	reqSignature := r.Header.Get(HeaderNodeRequestSignature)
 	if ok, _ := sender.Verify(reqSignature, reqHash); !ok {
-		logging.N2n.Error("message received - invalid signature", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata), zap.String("signature", reqSignature))
+		logging.N2n.Error("message received - invalid signature", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata), zap.String("signature", reqSignature))
 		return false
 	}
 	sender.SetStatus(NodeStatusActive)
@@ -496,7 +496,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if sender == nil {
 			logging.N2n.Error("message received - request from unrecognized node",
 				zap.String("from", nodeID),
-				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("to", Self.Underlying().GetPseudoName()),
 				zap.String("handler", r.RequestURI))
 			return
 		}
@@ -514,7 +514,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if _, err := buf.ReadFrom(r.Body); err != nil {
 			logging.N2n.Error("message received - read body failed",
 				zap.String("from", nodeID),
-				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("to", Self.Underlying().GetPseudoName()),
 				zap.String("handler", r.RequestURI),
 				zap.Error(err))
 		}
@@ -558,8 +558,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 			if entity.GetKey() != entityID {
 				logging.N2n.Error("message received - entity id doesn't match with signed id",
-					zap.Int("from", sender.SetIndex),
-					zap.Int("to", Self.SetIndex),
+					zap.String("from", sender.GetPseudoName()),
+					zap.String("to", Self.GetPseudoName()),
 					zap.String("handler", r.RequestURI),
 					zap.String("entity_id", entityID),
 					zap.String("entity.id", entity.GetKey()))
@@ -570,11 +570,11 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			_, err = handler(ctx, entity)
 			duration := time.Since(start)
 			if err != nil {
-				logging.N2n.Error("message received", zap.Int("from", sender.SetIndex),
-					zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+				logging.N2n.Error("message received", zap.String("from", sender.GetPseudoName()),
+					zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 			} else {
-				logging.N2n.Info("message received", zap.Int("from", sender.SetIndex),
-					zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+				logging.N2n.Info("message received", zap.String("from", sender.GetPseudoName()),
+					zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 			}
 			sender.AddReceived(1)
 

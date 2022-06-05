@@ -1,10 +1,10 @@
 package block
 
 import (
-	"0chain.net/core/util"
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -36,7 +36,7 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 		return fmt.Errorf("error marshalling block: %v", err), event.Event{}
 	}
 
-	event := event.Event{
+	return nil, event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
 		Type:        int(event.TypeStats),
@@ -44,6 +44,4 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 		Index:       block.Hash,
 		Data:        string(data),
 	}
-
-	return nil, event
 }
