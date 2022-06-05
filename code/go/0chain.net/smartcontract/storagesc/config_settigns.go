@@ -107,6 +107,7 @@ const (
 	CostChallengeResponse
 	CostGenerateChallenges
 	CostAddValidator
+	CostUpdateValidatorSettings
 	CostAddBlobber
 	CostNewReadPool
 	CostReadPoolLock
@@ -199,6 +200,7 @@ var (
 		"cost.challenge_response",
 		"cost.generate_challenges",
 		"cost.add_validator",
+		"cost.update_validator_settings",
 		"cost.add_blobber",
 		"cost.new_read_pool",
 		"cost.read_pool_lock",
@@ -295,6 +297,7 @@ var (
 		"cost.challenge_response":          {CostChallengeResponse, smartcontract.Cost},
 		"cost.generate_challenges":         {CostGenerateChallenges, smartcontract.Cost},
 		"cost.add_validator":               {CostAddValidator, smartcontract.Cost},
+		"cost.update_validator_settings":   {CostUpdateValidatorSettings, smartcontract.Cost},
 		"cost.add_blobber":                 {CostAddBlobber, smartcontract.Cost},
 		"cost.new_read_pool":               {CostNewReadPool, smartcontract.Cost},
 		"cost.read_pool_lock":              {CostReadPoolLock, smartcontract.Cost},
@@ -739,6 +742,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostGenerateChallenges], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostAddValidator:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostUpdateValidatorSettings:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateValidatorSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostAddBlobber:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostNewReadPool:
