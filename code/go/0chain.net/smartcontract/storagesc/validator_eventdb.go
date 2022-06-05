@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -51,6 +52,25 @@ func emitAddOrOverwriteValidatorTable(vn *ValidationNode, balances cstate.StateC
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteValidator, t.Hash, string(data))
 
+	return nil
+}
+
+func emitUpdateValidator(sn *ValidationNode, balances cstate.StateContextI) error {
+	data, err := json.Marshal(&dbs.DbUpdates{
+		Id: sn.ID,
+		Updates: map[string]interface{}{
+			"base_url":        sn.BaseURL,
+			"delegate_wallet": sn.StakePoolSettings.DelegateWallet,
+			"min_stake":       int64(sn.StakePoolSettings.MinStake),
+			"max_stake":       int64(sn.StakePoolSettings.MaxStake),
+			"num_delegates":   sn.StakePoolSettings.MaxNumDelegates,
+			"service_charge":  sn.StakePoolSettings.ServiceChargeRatio,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling update: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, sn.ID, string(data))
 	return nil
 }
 
