@@ -560,9 +560,12 @@ storage:
 	`)
 
 	v := viper.New()
-	v.ReadConfig(bytes.NewBuffer(storageConfig))
-	viper.Set("storage.rocks.path", fmt.Sprintf("%v/rocks", baseDir))
-	viper.Set("storage.disk.volumes.0.path", fmt.Sprintf("%v/blocks", baseDir))
+	if err := v.ReadConfig(bytes.NewBuffer(storageConfig)); err != nil {
+		panic(err)
+	}
+
+	v.Set("storage.rocks.path", fmt.Sprintf("%v/rocks", baseDir))
+	v.Set("storage.disk.volumes.0.path", fmt.Sprintf("%v/blocks", baseDir))
 
 	blockstore.InitializeStore(context.Background(), v, baseDir)
 }
