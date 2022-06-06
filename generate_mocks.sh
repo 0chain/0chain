@@ -19,7 +19,7 @@ cd $BASEDIR/code/go/0chain.net/chaincore || exit
 generate_mock "../chaincore/mocks"
 
 cd $BASEDIR/code/go/0chain.net/chaincore/chain/state || exit
-generate_mock "../chaincore/chain/state/mocks"
+generate_mock "../state/mocks"
 
 cd $BASEDIR/code/go/0chain.net/conductor || exit
 generate_mock "../conductor/mocks"
