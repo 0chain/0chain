@@ -26,6 +26,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder/blockstore"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/require"
@@ -69,12 +70,7 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 		panic(err)
 	}
 
-	mClient, err := makeTestMinioClient()
-	if err != nil {
-		return nil, err
-	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
-		usr.HomeDir, string(os.PathSeparator)), mClient))
+	initBlockStore(usr.HomeDir)
 
 	var rd *Round
 	switch rr := r.(type) {
@@ -127,21 +123,6 @@ func CreateMockRound(number int64) *MockRound {
 	return mr
 }
 
-func makeTestMinioClient() (blockstore.MinioClient, error) {
-	//todo: replace play.min.io with local service
-	mConf := blockstore.MinioConfiguration{
-		StorageServiceURL: "play.min.io",
-		AccessKeyID:       "Q3AM3UQ867SPQQA43P2F",
-		SecretAccessKey:   "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
-		BucketName:        "mytestbucket",
-		BucketLocation:    "us-east-1",
-		DeleteLocal:       false,
-		Secure:            false,
-	}
-
-	return blockstore.CreateMinioClientFromConfig(mConf)
-}
-
 func setupMinerChain() (*Chain, func()) {
 	mc := GetMinerChain()
 	if mc.Chain == nil {
@@ -181,12 +162,7 @@ func TestBlockGeneration(t *testing.T) {
 		panic(err)
 	}
 
-	mClient, err := makeTestMinioClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
-		usr.HomeDir, string(os.PathSeparator)), mClient))
+	initBlockStore(usr.HomeDir)
 
 	r := CreateRound(1)
 	r.RandomSeed = time.Now().UnixNano()
@@ -562,4 +538,31 @@ func setupSelf() func() { //nolint
 		clean()
 		s.Close()
 	}
+}
+
+func initBlockStore(baseDir string) {
+	storageConfig := []byte(`
+storage:
+  storage_type: 2
+  mode: start
+  block_movement_interval: 720h
+  rocks:
+    path: ""
+    cache_size: 100*1024*1024
+  disk:
+    strategy: round_robin
+    volumes:
+      -  path: ""
+         size_to_maintain: 1
+         inodes_to_maintain: 5
+         allowed_block_numbers: 10^3
+         allowed_block_size: 1
+	`)
+
+	v := viper.New()
+	v.ReadConfig(bytes.NewBuffer(storageConfig))
+	viper.Set("storage.rocks.path", fmt.Sprintf("%v/rocks", baseDir))
+	viper.Set("storage.disk.volumes.0.path", fmt.Sprintf("%v/blocks", baseDir))
+
+	blockstore.InitializeStore(context.Background(), v, baseDir)
 }
