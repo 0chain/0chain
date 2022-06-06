@@ -30,6 +30,8 @@ generate_mock "../sharder/mocks"
 cd $BASEDIR/code/go/0chain.net/smartcontract || exit
 generate_mock "../smartcontract/mocks"
 
+cd $BASEDIR/code/go/0chain.net/smartcontract/benchmark || exit
+generate_mock "../benchmark/mocks"
 
 cd $BASEDIR/code/go/0chain.net || exit
 go generate -run="mockery" ./...

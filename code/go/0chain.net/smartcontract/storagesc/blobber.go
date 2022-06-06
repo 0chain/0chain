@@ -675,12 +675,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	storageNode.SavedData += alloc.Stats.UsedSize
 
-	var sp *stakePool
-	if sp, err = sc.getStakePool(storageNode.ID, balances); err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"can't get stake pool")
-	}
-
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_connection_failed",
@@ -744,12 +738,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving allocation object: %v", err)
 	}
 
-	// emit blobber update event
-	if err = emitAddOrOverwriteBlobber(storageNode, sp, balances); err != nil {
-		logging.Logger.Error("error emitting blobber",
-			zap.Any("blobber", storageNode.ID), zap.Error(err))
-	}
-
 	// save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
@@ -763,7 +751,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"emitting allocation event: %v", err)
 	}
 
-	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
+	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"emitting write marker event: %v", err)

@@ -7,9 +7,7 @@ import (
 	"strings"
 	"time"
 
-
 	"0chain.net/chaincore/currency"
-
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -877,6 +875,11 @@ func removeAllocationFromBlobber(
 	allocPartLoc *partitions.PartitionLocation,
 	allocID string,
 	balances chainstate.StateContextI) error {
+
+	if allocPartLoc == nil {
+		return errors.New("empty blobber allocation partition location")
+	}
+
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
