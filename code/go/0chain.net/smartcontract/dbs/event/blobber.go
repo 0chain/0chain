@@ -56,14 +56,6 @@ type Blobber struct {
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
-// swagger:model BlobberLatLong
-type BlobberLatLong struct {
-	BlobberID string `json:"id" gorm:"uniqueIndex"`
-	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
 type BlobberPriceRange struct {
 	Min null.Int `json:"min"`
@@ -136,11 +128,19 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	return blobberIDs, result.Error
 }
 
-func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
-	var blobbers []BlobberLatLong
-	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+func (edb *EventDb) GeBlobberByLatLong(
+	maxLatitude, minLatitude, maxLongitude, minLongitude int,
+) ([]string, error) {
+	var blobberIDs []string
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("latitude <=", maxLatitude).
+		Where("latitude >=", minLatitude).
+		Where("longitude <=", maxLongitude).
+		Where("longitude >=", maxLongitude).
+		Find(&blobberIDs)
 
-	return blobbers, result.Error
+	return blobberIDs, result.Error
 }
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {

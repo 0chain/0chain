@@ -41,8 +41,14 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobberTotalStakes,
 			},
 			{
-				FuncName: "get_blobber_lat_long",
-				Endpoint: srh.getBlobberGeoLocation,
+				FuncName: "blobbers-by-geolocation",
+				Params: map[string]string{
+					"max_latitude":  "20",
+					"min_latitude":  "-20",
+					"max_longitude": "20",
+					"min_longitude": "-20",
+				},
+				Endpoint: srh.getBlobbersByGeoLocation,
 			},
 			{
 				FuncName: "storage_config",
@@ -84,8 +90,12 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlockByHash,
 			},
 			{
-				FuncName: "total_saved_data",
+				FuncName: "total-saved-data",
 				Endpoint: srh.getTotalData,
+			},
+			{
+				FuncName: "average-write-price",
+				Endpoint: srh.getAverageWritePrice,
 			},
 			{
 				FuncName: "latestreadmarker",

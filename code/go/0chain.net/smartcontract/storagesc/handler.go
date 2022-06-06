@@ -28,6 +28,9 @@ import (
 	"0chain.net/smartcontract"
 )
 
+// swagger:model stringArray
+type stringArray []string
+
 type StorageRestHandler struct {
 	rest.RestHandlerI
 }
@@ -48,7 +51,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
 		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes),
-		rest.MakeEndpoint(storage+"/get_blobber_lat_long", srh.getBlobberGeoLocation),
+		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
@@ -86,7 +89,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
-// Gets the total data stored across all blobbers.
+// Gets the average write price across all blobbers
 //
 // responses:
 //  200: Int64Map
@@ -118,7 +121,7 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 //      type: string
 //
 // responses:
-//  200:
+//  200: stringArray
 //  400:
 func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *http.Request) {
 	urlsStr := r.URL.Query().Get("blobber_urls")
@@ -717,7 +720,14 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
+//
 // Gets the total data stored across all blobbers.
+// Each change to files results in the blobber sending a WriteMarker to 0chain.
+// This WriteMarker has a Size filed indicated the change the data stored on the blobber.
+// Negative if data is removed.
+//
+// This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
+//
 //
 // responses:
 //  200: Int64Map
@@ -1715,19 +1725,108 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, sns, nil)
 }
 
-// todo add filter or similar
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_lat_long get_blobber_lat_long
-// Gets list of latitude and longitude for all blobbers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation blobbers-by-geolocation
+//
+//  Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
+//
+//    + name: max_latitude
+//      description: maximum latitude value, defaults to 90
+//      in: query
+//      type: string
+//    + name: min_latitude
+//      description:  minimum latitude value, defaults to -90
+//      in: query
+//      type: string
+//    + name: max_longitude
+//      description: maximum max_longitude value, defaults to 180
+//      in: query
+//      type: string
+//    + name: min_longitude
+//      description: minimum max_longitude value, defaults to -180
+//      in: query
+//      type: string
 //
 // responses:
-//  200: BlobberLatLong
+//  200: stringArray
 //  500:
-func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r *http.Request) {
+	const (
+		maxLatitudeValue  = 90
+		minLatitudeValue  = -90
+		maxLongitudeValue = 180
+		minLongitudeValue = -180
+	)
+	var maxLatitude, minLatitude, maxLongitude, minLongitude int
+	var err error
+
+	maxL := r.URL.Query().Get("max_latitude")
+	if len(maxL) > 0 {
+		maxLatitude, err = strconv.Atoi(maxL)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
+		}
+		if maxLatitude > maxLatitudeValue {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxL+" out of range -90,+90"))
+		}
+	} else {
+		maxLatitude = maxLatitudeValue
+	}
+
+	minL := r.URL.Query().Get("min_latitude")
+	if len(minL) > 0 {
+		minLatitude, err = strconv.Atoi(minL)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
+		}
+		if minLatitude < -minLatitudeValue {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minL+" out of range -90,+90"))
+		}
+	} else {
+		minLatitude = minLatitudeValue
+	}
+	ml := r.URL.Query().Get("min_latitude")
+
+	maxL = r.URL.Query().Get("max_longitude")
+	if len(maxL) > 0 {
+		maxLongitude, err = strconv.Atoi(maxL)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude"+err.Error()))
+		}
+		if maxLongitude > maxLongitudeValue {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxL+" out of range -180,80"))
+		}
+	} else {
+		maxLongitude = maxLongitudeValue
+	}
+
+	minL = r.URL.Query().Get("min_longitude")
+	if len(minL) > 0 {
+		minLongitude, err = strconv.Atoi(minL)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude"+err.Error()))
+		}
+		if minLongitude < -90 {
+			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minL+" out of range -180,180"))
+		}
+	} else {
+		minLongitude = minLongitudeValue
+	}
+
+	if len(ml) > 0 {
+		maxLatitude, err = strconv.Atoi(ml)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
+		}
+	} else {
+		const maxLatitudeValue = 90
+		maxLatitude = maxLatitudeValue
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	blobbers, err := edb.GetAllBlobberLatLong()
+	blobbers, err := edb.GeBlobberByLatLong(maxLatitude, minLatitude, maxLongitude, minLongitude)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber geolocation" + err.Error())
 		common.Respond(w, r, nil, err)
