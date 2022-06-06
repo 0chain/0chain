@@ -1,4 +1,4 @@
-# TestNet Setup with Docker Containers
+            # TestNet Setup with Docker Containers
 
 [![Build](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml)
 [![Test](https://github.com/0chain/0chain/actions/workflows/unit-test.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/unit-test.yml)
@@ -55,7 +55,7 @@ In the git/0chain run the following command
 
 ### Setup Network
 
-Setup a network called testnet0 for each of these node containers to talk to each other.
+Set up a network called testnet0 for each of these node containers to talk to each other.
 
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
@@ -99,7 +99,7 @@ for building the 1 sharder.
 
 ## Configuring the nodes
 
-1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are setup for running the blockchain fast in development.
+1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
 
 1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
 
@@ -208,7 +208,7 @@ However, you can use the <a href='https://github.com/0chain/block-explorer'>bloc
 docker ps
 ```
 
-This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
+This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner, and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
 
 2. Confirming the servers are up and running. From a browser, visit
 
@@ -266,6 +266,8 @@ When we need to add a new data struct to MPT, for example:
 
 ```go
 //go:generate msgp -io=false -tests=false -v
+package main
+
 type Foo struct {
 	Name string
 }
@@ -319,9 +321,9 @@ three machines to for a working 0chain.
 
 ### Log files
 
-The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
+The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happened which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
 
-Find arrors in all the miner nodes (from git/0chain)
+Find errors in all the miner nodes (from git/0chain)
 
 ```
 grep ERROR docker.local/miner*/log/0chain.log
@@ -425,7 +427,7 @@ The RUN command is an image build step which allows installing of application an
 
 #### Step 6: RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.5. &&     chmod -R +w . &&  make clean libzstd.a
 
-This step runs the gozstd package and provides write permissions to the directory. gozstd which is a go wrapper for zstd (library) provides Go bindings for the libzstd C library. The `make clean` is ran in the last to clean up the code and remove all the compiled object files from the source code
+This step runs the gozstd package and provides write permissions to the directory. gozstd which is a go wrapper for zstd (library) provides Go bindings for the libzstd C library. The `make clean` is run in the last to clean up the code and remove all the compiled object files from the source code
 
 #### Step 7: WORKDIR $SRC_DIR/go
 
@@ -457,11 +459,11 @@ The magic block and the dkg summary json files will appear in the docker.local/c
 
 The magic_block_file setting in the 0chain.yaml file needs to be updated with the new name of the magic block created.
 
-Update the miner config file so it is set to the new dkg summaries. To do this edit the docker.local/build.miner/b0docker-compose.yml file. On line 55 is a flag "--dkg_file" set it to the dkg summary files created with the magic block.
+Update the miner config file, so it is set to the new dkg summaries. To do this edit the docker.local/build.miner/b0docker-compose.yml file. On line 55 is a flag "--dkg_file" set it to the dkg summary files created with the magic block.
 
 ## Initial states
 
-The balance for the various nodes is setup in a `initial_state.yaml` file.
+The balance for the various nodes is set up in a `initial_state.yaml` file.
 This file is a list of node ids and token amounts.
 
 The initial state yaml file is entered as a command line argument when
@@ -469,7 +471,7 @@ running a sharder or miner, falling that the `0chain.yaml`
 `network.inital_states` entry is used to find the initial state file.
 
 An example, that can be used with the preset ids, can be found at
-[0chian/docker.local/config/inital_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
+[0chain/docker.local/config/initial_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
 
 ## Miscellaneous
 
@@ -495,9 +497,9 @@ docker system prune
 
 ### Minio
 
-- You can use the inbuild minio support to store blocks on cloud
+- You can use the inbuilt minio support to store blocks on cloud
 
-You have to update minio_config file with the cloud creds data, The file can found at `docker.local/config/minio_config.txt`.
+You have to update minio_config file with the cloud creds data, The file can be found at `docker.local/config/minio_config.txt`.
 The following order is used for the content :
 
 ```
@@ -547,7 +549,7 @@ minio:
 
 Integration testing combines individual 0chain modules and test them as a group. Integration testing evaluates the compliance of a system for specific functional requirements and usually occurs after unit testing .
 
-For integration testing, A conductor which is a RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
+For integration testing, A conductor which is RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
 
 
 
