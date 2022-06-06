@@ -148,7 +148,8 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	ids, err := edb.GetBlobberIdsFromUrls(urls)
+	var ids stringArray
+	ids, err = edb.GetBlobberIdsFromUrls(urls)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return

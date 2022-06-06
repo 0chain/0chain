@@ -330,10 +330,6 @@ func TestBlobberLatLong(t *testing.T) {
 	defer eventDb.Drop()
 
 	setUpBlobbers(t, eventDb)
-
-	blobbers, err := eventDb.GetAllBlobberLatLong()
-	require.NoError(t, err, "There should be no error")
-	require.Equal(t, 10, len(blobbers), "Not all lat long were returned")
 }
 
 func TestBlobberGetCount(t *testing.T) {
