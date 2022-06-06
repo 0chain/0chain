@@ -49,7 +49,7 @@ install-mockery:
 	&& echo "[+]install mockery" \
 	&& tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery \
 	&& cp ./tmp/mockery/mockery $(GOPATH)/bin/ \
-	&& rm -rf ./tmp/mockery
+	&& rm -rf ./tmp
 
 build-mocks: 
 	./generate_mocks.sh
