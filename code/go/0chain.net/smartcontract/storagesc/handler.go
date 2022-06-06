@@ -1844,7 +1844,7 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	}
 	blobbers, err := edb.GeBlobberByLatLong(maxLatitude, minLatitude, maxLongitude, minLongitude)
 	if err != nil {
-		err := common.NewErrInternal("cannot get blobber geolocation" + err.Error())
+		err := common.NewErrInternal("cannot get blobber geolocation: " + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
