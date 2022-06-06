@@ -428,6 +428,25 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
+		{
+			name:     "storage.update_validator_settings",
+			endpoint: ssc.updateValidatorSettings,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: now + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&ValidationNode{
+					ID:                getMockValidatorId(0),
+					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
+				})
+				return bytes
+			}(),
+		},
 		// add_curator
 		{
 			name:     "storage.curator_transfer_allocation",
