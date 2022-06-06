@@ -90,6 +90,13 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 	return edb.updateBlobber(update)
 }
 
+func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&Blobber{}).
+		Select("SUM(capacity)").
+		Find(&total).Error
+}
+
 func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
 	var average float64
 	return average, edb.Store.Get().Model(&Blobber{}).

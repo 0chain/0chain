@@ -41,6 +41,10 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobberTotalStakes,
 			},
 			{
+				FuncName: "total-blobber-capacity",
+				Endpoint: srh.getTotalBlobberCapacity,
+			},
+			{
 				FuncName: "blobbers-by-geolocation",
 				Params: map[string]string{
 					"max_latitude":  "40",
