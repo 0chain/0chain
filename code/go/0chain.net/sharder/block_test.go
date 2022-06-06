@@ -2,13 +2,12 @@ package sharder
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -143,6 +142,9 @@ func TestBlockSummariesProvider(t *testing.T) {
 
 func TestChain_GetBlockBySummary(t *testing.T) {
 	b := block.NewBlock("", 1)
+	b.CreationDate = common.Now()
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Hash = encryption.Hash("random hash")
 	b.HashBlock()
 
 	makeTestChain(t)
@@ -203,6 +205,9 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 
 func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
+	b.CreationDate = common.Now()
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Hash = encryption.Hash("random hash")
 	b.HashBlock()
 	makeTestChain(t)
 	GetSharderChain().AddBlock(b)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"bufio"
 	"context"
 	"errors"
@@ -142,6 +143,19 @@ func main() {
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
 		logging.Logger.Panic("Error setting up events database")
+	}
+
+	serverChain.OnBlockAdded = func(b *block.Block) {
+		err, ev := block.CreateBlockEvent(b)
+		if err != nil {
+			logging.Logger.Error("emit block event error", zap.Error(err))
+		}
+		go func() {
+			rootContext := common.GetRootContext()
+			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
+			defer cancel()
+			serverChain.GetEventDb().AddEvents(ctx, []event.Event{ev})
+		}()
 	}
 
 	sharder.SetupSharderChain(serverChain)

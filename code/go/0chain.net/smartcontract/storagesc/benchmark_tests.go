@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -428,6 +427,25 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
+		{
+			name:     "storage.update_validator_settings",
+			endpoint: ssc.updateValidatorSettings,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: now + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&ValidationNode{
+					ID:                getMockValidatorId(0),
+					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
+				})
+				return bytes
+			}(),
+		},
 		// add_curator
 		{
 			name:     "storage.curator_transfer_allocation",
@@ -494,12 +512,10 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				lr := &lockRequest{
-					Duration:     viper.GetDuration(bk.StorageReadPoolMinLockPeriod),
-					AllocationID: getMockAllocationId(0),
+				lr := &readPoolLockRequest{
+					IsOwner: true,
 				}
 				bytes, _ := json.Marshal(lr)
-				log.Println("lock_pool_duration:", lr.Duration)
 				return bytes
 			}(),
 		},
@@ -516,8 +532,8 @@ func BenchmarkTests(
 				CreationDate: benchWritePoolExpire + 1,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: getMockReadPoolId(0, 0, 0),
+				bytes, _ := json.Marshal(&readPoolUnlockRequest{
+					IsOwner: true,
 				})
 				return bytes
 			}(),
@@ -536,7 +552,6 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
-					Duration:     viper.GetDuration(bk.StorageWritePoolMinLockPeriod),
 					AllocationID: getMockAllocationId(0),
 				})
 				return bytes

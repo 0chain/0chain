@@ -199,6 +199,8 @@ type Chain struct {
 
 	// compute state
 	computeBlockStateC chan struct{}
+
+	OnBlockAdded func(b *block.Block)
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -410,6 +412,7 @@ func NewChainFromConfig() *Chain {
 
 	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators()+1)
 	client.SetClientSignatureScheme(chain.ClientSignatureScheme())
+
 	return chain
 }
 
@@ -487,6 +490,8 @@ func (c *Chain) Initialize() {
 	c.minersStake = make(map[datastore.Key]int)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
+	c.OnBlockAdded = func(b *block.Block) {
+	}
 }
 
 /*SetupEntity - setup the entity */
@@ -696,6 +701,7 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		return eb
 	}
 	c.blocks[b.Hash] = b
+
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
@@ -708,6 +714,8 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 			break
 		}
 	}
+
+	c.OnBlockAdded(b)
 	return b
 }
 

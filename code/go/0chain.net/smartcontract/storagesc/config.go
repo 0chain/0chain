@@ -36,8 +36,6 @@ type stakePoolConfig struct {
 
 type readPoolConfig struct {
 	MinLock       int64         `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
 
 type writePoolConfig struct {
@@ -372,10 +370,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
-	conf.ReadPool.MinLockPeriod = scc.GetDuration(
-		pfx + "readpool.min_lock_period")
-	conf.ReadPool.MaxLockPeriod = scc.GetDuration(
-		pfx + "readpool.max_lock_period")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
 	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "writepool.min_lock"))
