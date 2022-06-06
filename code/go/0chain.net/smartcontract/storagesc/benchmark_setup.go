@@ -341,8 +341,10 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	rps := make([]*readPool, len(clients))
 	for i := range clients {
-		rps[i].OwnerBalance = 10 * 1e10
-		rps[i].VisitorBalance = 10 * 1e10
+		rps[i] = &readPool{
+			OwnerBalance:   10 * 1e10,
+			VisitorBalance: 10 * 1e10,
+		}
 	}
 	for i := 0; i < len(rps); i++ {
 		if _, err := balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i]); err != nil {
