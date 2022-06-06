@@ -1781,10 +1781,12 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	if len(maxLatitudeString) > 0 {
 		maxLatitude, err = strconv.ParseFloat(maxLatitudeString, 64)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
+			return
 		}
 		if maxLatitude > MaxLatitude {
 			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxLatitudeString+" out of range -90,+90"))
+			return
 		}
 	} else {
 		maxLatitude = MaxLatitude
@@ -1794,10 +1796,12 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	if len(minLatitudeString) > 0 {
 		minLatitude, err = strconv.ParseFloat(minLatitudeString, 64)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
+			return
 		}
 		if minLatitude < MinLatitude {
 			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minLatitudeString+" out of range -90,+90"))
+			return
 		}
 	} else {
 		minLatitude = MinLatitude
@@ -1807,10 +1811,12 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	if len(maxLongitudeString) > 0 {
 		maxLongitude, err = strconv.ParseFloat(maxLongitudeString, 64)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude"+err.Error()))
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude: "+err.Error()))
+			return
 		}
 		if maxLongitude > MaxLongitude {
 			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxLongitudeString+" out of range -180,80"))
+			return
 		}
 	} else {
 		maxLongitude = MaxLongitude
@@ -1820,10 +1826,12 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	if len(minLongitudeString) > 0 {
 		minLongitude, err = strconv.ParseFloat(minLongitudeString, 64)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude"+err.Error()))
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude: "+err.Error()))
+			return
 		}
 		if minLongitude < MinLongitude {
 			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minLongitudeString+" out of range -180,180"))
+			return
 		}
 	} else {
 		minLongitude = MinLongitude
@@ -1832,6 +1840,7 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	blobbers, err := edb.GeBlobberByLatLong(maxLatitude, minLatitude, maxLongitude, minLongitude)
 	if err != nil {
