@@ -835,12 +835,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
 		}
-		dps.Balance, err = currency.Int64ToCoin(pool.Balance)
-		if err != nil {
-			logging.Logger.Error("error converting balance", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool balance"))
-			return
-		}
+		dps.Balance = pool.Balance
 
 		dps.Rewards, err = currency.Int64ToCoin(pool.Reward)
 		if err != nil {
@@ -896,11 +891,7 @@ func spStats(
 			Status:       spenum.PoolStatus(dp.Status).String(),
 			RoundCreated: dp.RoundCreated,
 		}
-		dpStats.Balance, err = currency.Int64ToCoin(dp.Balance)
-		if err != nil {
-			logging.Logger.Error("error converting balance", zap.Error(err))
-			return nil, err
-		}
+		dpStats.Balance = dp.Balance
 
 		dpStats.Rewards, err = currency.Int64ToCoin(dp.Reward)
 		if err != nil {
