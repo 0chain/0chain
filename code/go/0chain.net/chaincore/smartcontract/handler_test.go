@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -37,12 +38,13 @@ import (
 
 func init() {
 	metrics.DefaultRegistry = metrics.NewRegistry()
+	viper.Set("server_chain.smart_contract.faucet", true)
 	viper.Set("server_chain.smart_contract.storage", true)
 	viper.Set("server_chain.smart_contract.zcn", true)
 	viper.Set("server_chain.smart_contract.multisig", true)
 	viper.Set("server_chain.smart_contract.miner", true)
 	viper.Set("server_chain.smart_contract.vesting", true)
-
+	setupsc.SetupSmartContracts()
 }
 
 func TestExecuteStats(t *testing.T) {
@@ -417,7 +419,7 @@ func TestExecuteSmartContract(t *testing.T) {
 
 			got, err := ExecuteSmartContract(tt.args.t, tt.args.td, tt.args.balances)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v, sc name=", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
