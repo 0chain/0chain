@@ -167,7 +167,7 @@ func (sp *stakePool) removeOffer(amount currency.Coin) error {
 }
 
 // slash represents blobber penalty; it returns number of tokens moved in
-// reality, with regards to division errors
+// reality, in regard to division errors
 func (sp *stakePool) slash(
 	alloc *StorageAllocation,
 	blobID string,

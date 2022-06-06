@@ -515,7 +515,10 @@ func AddMockBlobbers(
 				MaxStake:                blobber.StakePoolSettings.MaxStake,
 				NumDelegates:            blobber.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:           blobber.StakePoolSettings.ServiceChargeRatio,
-				TotalStake:              viper.GetInt64(sc.StorageMaxStake) * 1e10,
+			}
+			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
+			if err != nil {
+				panic(err)
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
 		}
