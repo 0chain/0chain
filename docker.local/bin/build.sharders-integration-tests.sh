@@ -1,8 +1,6 @@
 #!/bin/sh
 set -e
 
-# generate mocks
-make build-mocks
 
 cmd="build"
 

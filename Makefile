@@ -43,15 +43,15 @@ run-test:
 	@echo "Tests completed."
 
 install-mockery:
-	@[ -f "$(GOPATH)/bin/mockery" ] || ([ -d ./bin/mockery ] || mkdir -p ./bin/mockery \
+	@([ -d ./tmp/mockery ] || mkdir -p ./tmp/mockery) \
 	&& echo "[+]download mockery" \
-	&& ([ -f ./bin/mockery/mockery.tar.gz ] || curl -L -o ./bin/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.12.2/mockery_2.12.2_$(detected_OS)_$(detected_ARCH).tar.gz) \
+	&& ([ -f ./tmp/mockery/mockery.tar.gz ] || curl -L -o ./tmp/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.12.2/mockery_2.12.2_$(detected_OS)_$(detected_ARCH).tar.gz) \
 	&& echo "[+]install mockery" \
-	&& tar zxvfC ./bin/mockery/mockery.tar.gz ./bin/mockery \
-	&& cp ./bin/mockery/mockery $(GOPATH)/bin/ \
-	&& rm -rf ./bin/mockery)
+	&& tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery \
+	&& cp ./tmp/mockery/mockery $(GOPATH)/bin/ \
+	&& rm -rf ./tmp/mockery
 
-build-mocks: install-mockery
+build-mocks: 
 	./generate_mocks.sh
 
 install-msgp:

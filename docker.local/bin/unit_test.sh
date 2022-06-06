@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-# generate mocks
-make build-mocks
 
 cmd="build"
 dockerfile="docker.local/build.unit_test/Dockerfile"

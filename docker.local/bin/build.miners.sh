@@ -9,8 +9,6 @@ DOCKER_DIR="$ROOT/docker.local/build.miner"
 DOCKER_FILE="$DOCKER_DIR/Dockerfile"
 DOCKERCOMPOSE="$DOCKER_DIR/docker-compose.yml"
 
-# generate mocks
-make build-mocks
 
 cmd="build"
 

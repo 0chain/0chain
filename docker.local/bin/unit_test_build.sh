@@ -18,8 +18,6 @@ do
     esac
 done
 
-# generate mocks
-make build-mocks
 
 # Runs each unit test in batches corresponding to each subdirectory
 # of code/go/0chain.net.
