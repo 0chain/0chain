@@ -419,7 +419,7 @@ func TestExecuteSmartContract(t *testing.T) {
 
 			got, err := ExecuteSmartContract(tt.args.t, tt.args.td, tt.args.balances)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v, sc name=", err, tt.wantErr)
+				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
