@@ -43,10 +43,10 @@ func BenchmarkRestTests(
 			{
 				FuncName: "blobbers-by-geolocation",
 				Params: map[string]string{
-					"max_latitude":  "20",
-					"min_latitude":  "-20",
-					"max_longitude": "20",
-					"min_longitude": "-20",
+					"max_latitude":  "40",
+					"min_latitude":  "-40",
+					"max_longitude": "40",
+					"min_longitude": "-40",
 				},
 				Endpoint: srh.getBlobbersByGeoLocation,
 			},

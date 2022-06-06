@@ -90,8 +90,8 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 	return edb.updateBlobber(update)
 }
 
-func (edb *EventDb) BlobberAverageWritePrice() (int64, error) {
-	var average int64
+func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
+	var average float64
 	return average, edb.Store.Get().Model(&Blobber{}).
 		Select("AVG(write_price)").
 		Find(&average).Error
@@ -129,15 +129,14 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 }
 
 func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude int,
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64,
 ) ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().
 		Model(&Blobber{}).
-		Where("latitude <=", maxLatitude).
-		Where("latitude >=", minLatitude).
-		Where("longitude <=", maxLongitude).
-		Where("longitude >=", maxLongitude).
+		Select("blobber_id").
+		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
+			maxLatitude, minLatitude, maxLongitude, minLongitude).
 		Find(&blobberIDs)
 
 	return blobberIDs, result.Error

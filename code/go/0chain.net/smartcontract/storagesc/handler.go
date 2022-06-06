@@ -100,13 +100,13 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	total, err := edb.BlobberAverageWritePrice()
+	averageWritePrice, err := edb.BlobberAverageWritePrice()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
 		return
 	}
 	common.Respond(w, r, rest.Int64Map{
-		"total-stored-data": total,
+		"average-write-price": int64(averageWritePrice),
 	}, nil)
 }
 
@@ -1750,76 +1750,59 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 //  200: stringArray
 //  500:
 func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r *http.Request) {
-	const (
-		maxLatitudeValue  = 90
-		minLatitudeValue  = -90
-		maxLongitudeValue = 180
-		minLongitudeValue = -180
-	)
-	var maxLatitude, minLatitude, maxLongitude, minLongitude int
+	var maxLatitude, minLatitude, maxLongitude, minLongitude float64
 	var err error
 
-	maxL := r.URL.Query().Get("max_latitude")
-	if len(maxL) > 0 {
-		maxLatitude, err = strconv.Atoi(maxL)
+	maxLatitudeString := r.URL.Query().Get("max_latitude")
+	if len(maxLatitudeString) > 0 {
+		maxLatitude, err = strconv.ParseFloat(maxLatitudeString, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
 		}
-		if maxLatitude > maxLatitudeValue {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxL+" out of range -90,+90"))
+		if maxLatitude > MaxLatitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxLatitudeString+" out of range -90,+90"))
 		}
 	} else {
-		maxLatitude = maxLatitudeValue
+		maxLatitude = MaxLatitude
 	}
 
-	minL := r.URL.Query().Get("min_latitude")
-	if len(minL) > 0 {
-		minLatitude, err = strconv.Atoi(minL)
+	minLatitudeString := r.URL.Query().Get("min_latitude")
+	if len(minLatitudeString) > 0 {
+		minLatitude, err = strconv.ParseFloat(minLatitudeString, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
 		}
-		if minLatitude < -minLatitudeValue {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minL+" out of range -90,+90"))
+		if minLatitude < MinLatitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minLatitudeString+" out of range -90,+90"))
 		}
 	} else {
-		minLatitude = minLatitudeValue
+		minLatitude = MinLatitude
 	}
-	ml := r.URL.Query().Get("min_latitude")
 
-	maxL = r.URL.Query().Get("max_longitude")
-	if len(maxL) > 0 {
-		maxLongitude, err = strconv.Atoi(maxL)
+	maxLongitudeString := r.URL.Query().Get("max_longitude")
+	if len(maxLongitudeString) > 0 {
+		maxLongitude, err = strconv.ParseFloat(maxLongitudeString, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude"+err.Error()))
 		}
-		if maxLongitude > maxLongitudeValue {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxL+" out of range -180,80"))
+		if maxLongitude > MaxLongitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxLongitudeString+" out of range -180,80"))
 		}
 	} else {
-		maxLongitude = maxLongitudeValue
+		maxLongitude = MaxLongitude
 	}
 
-	minL = r.URL.Query().Get("min_longitude")
-	if len(minL) > 0 {
-		minLongitude, err = strconv.Atoi(minL)
+	minLongitudeString := r.URL.Query().Get("min_longitude")
+	if len(minLongitudeString) > 0 {
+		minLongitude, err = strconv.ParseFloat(minLongitudeString, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude"+err.Error()))
 		}
-		if minLongitude < -90 {
-			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minL+" out of range -180,180"))
+		if minLongitude < MinLongitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minLongitudeString+" out of range -180,180"))
 		}
 	} else {
-		minLongitude = minLongitudeValue
-	}
-
-	if len(ml) > 0 {
-		maxLatitude, err = strconv.Atoi(ml)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude"+err.Error()))
-		}
-	} else {
-		const maxLatitudeValue = 90
-		maxLatitude = maxLatitudeValue
+		minLongitude = MinLongitude
 	}
 
 	edb := srh.GetQueryStateContext().GetEventDB()
