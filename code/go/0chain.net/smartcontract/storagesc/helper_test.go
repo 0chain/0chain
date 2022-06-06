@@ -357,8 +357,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
-		MaxLockPeriod: 20 * time.Minute,
 	}
 	conf.WritePool = &writePoolConfig{
 		MinLock:       10,

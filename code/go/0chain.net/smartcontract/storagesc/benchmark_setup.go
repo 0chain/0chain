@@ -340,33 +340,10 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	rps := make([]*readPool, len(clients))
-	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
-	amountPerBlobber := currency.Coin(100 * 1e10)
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		allocationID := getMockAllocationId(i)
-		startClients := i % len(clients)
-		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
-			cIndex := (startClients + j) % len(clients)
-			if rps[cIndex] == nil {
-				rps[cIndex] = new(readPool)
-			}
-			for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
-				rap := allocationPool{
-					ExpireAt:     expiration,
-					AllocationID: allocationID,
-				}
-				rap.Balance = 100 * 1e10
-				rap.ID = getMockReadPoolId(i, cIndex, k)
-				rap.Balance = 100 * 1e10
-				startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
-				for l := 0; l < viper.GetInt(sc.NumBlobbersPerAllocation); l++ {
-					rap.Blobbers.add(&blobberPool{
-						BlobberID: getMockBlobberId(startBlobbers + l),
-						Balance:   amountPerBlobber,
-					})
-				}
-				rps[cIndex].Pools = append(rps[cIndex].Pools, &rap)
-			}
+	for i := range clients {
+		rps[i] = &readPool{
+			OwnerBalance:   10 * 1e10,
+			VisitorBalance: 10 * 1e10,
 		}
 	}
 	for i := 0; i < len(rps); i++ {
@@ -906,9 +883,7 @@ func SetMockConfig(
 	conf.MaxTotalFreeAllocation = currency.Coin(viper.GetInt64(sc.StorageMaxTotalFreeAllocation) * 1e10)
 	conf.MaxIndividualFreeAllocation = currency.Coin(viper.GetInt64(sc.StorageMaxIndividualFreeAllocation) * 1e10)
 	conf.ReadPool = &readPoolConfig{
-		MinLock:       int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
-		MinLockPeriod: viper.GetDuration(sc.StorageReadPoolMinLockPeriod),
-		MaxLockPeriod: viper.GetDuration(sc.StorageReadPoolMaxLockPeriod),
+		MinLock: int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
 	}
 	conf.WritePool = &writePoolConfig{
 		MinLock:       currency.Coin(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
