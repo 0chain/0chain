@@ -215,7 +215,6 @@ storage:
 
   rocks:
    # have appropriate name and value
-    path: /path/to/store/rocksdb/database
     cache_size: 100*1024*1024 # 100MB
   cache:
   # Current write policy is hard coded to write_through and 
@@ -226,17 +225,16 @@ storage:
     strategy: "round_robin" # one of random, round_robin, min_size_first, min_count_first
     volumes:
       - path: "/path/to/hot/blocks"
-        recovery: false
         size_to_maintain: 1 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^3
-        allowed_block_size: 500 * 1024 * 1024 # 500GB
+        allowed_block_size: 500 # In GB
       - path: "/path/to/another/hot/blocks"
         recovery: false
         size_to_maintain: 1 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^3
-        allowed_block_size: 500 * 1024 * 1024 # 500GB
+        allowed_block_size: 500 # In GB
   cold:
     # storage that provides minio interface 
     delete_local: true
