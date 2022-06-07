@@ -158,21 +158,21 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	if back > 0 {
-		// move back to write pool
-		var wp *writePool
-		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-			return fmt.Errorf("can't get allocation's write pool: %v", err)
+		// move back to allocation pool
+		aps, err := getAllocationPools(alloc.ID, balances)
+		if err != nil {
+			return fmt.Errorf("cannot find allocation pools for %s: %v " + alloc.ID + ": " + err.Error())
 		}
-		var until = alloc.Until()
-		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, back)
+
+		err = cp.moveToAllocationPools(alloc.Owner, aps, back)
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
 		alloc.MovedBack += back
 		blobAlloc.Returned += back
 		// save write pool
-		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-			return fmt.Errorf("can't save allocation's write pool: %v", err)
+		if err = aps.save(alloc.ID, balances); err != nil {
+			return fmt.Errorf("can't save allocation pools: %v", err)
 		}
 	}
 
@@ -282,11 +282,6 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return fmt.Errorf("can't get allocation's write pool: %v", err)
-	}
-
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev)
 		dtu  = alloc.durationInTimeUnits(tp - prev)
@@ -323,9 +318,22 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// move back to write pool
 	var until = alloc.Until()
-	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, move)
+
+	aps, err := getAllocationPools(alloc.ID, balances)
 	if err != nil {
-		return fmt.Errorf("moving failed challenge to write pool: %v", err)
+		return common.NewError("fini_alloc_failed",
+			"cannot find allocation pools for "+alloc.ID+": "+err.Error())
+	}
+
+	err = cp.moveToAllocationPools(alloc.Owner, aps, move)
+	if err != nil {
+		return common.NewError("fini_alloc_failed",
+			"moving challenge pool rest back to write pool: "+err.Error())
+	}
+
+	if err = aps.save(alloc.ID, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"saving allocation pools: "+err.Error())
 	}
 	alloc.MovedBack += move
 	blobAlloc.Returned += move
@@ -346,7 +354,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		}
 
 		var move currency.Coin
-		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, wp, blobAlloc.Offer(), slash, balances)
+		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, aps, blobAlloc.Offer(), slash, balances)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -360,9 +368,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		}
 	}
 
-	// save pools
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return fmt.Errorf("can't save allocation's write pool: %v", err)
+	if err = aps.save(alloc.ID, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"saving allocation pools: "+err.Error())
 	}
 
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {

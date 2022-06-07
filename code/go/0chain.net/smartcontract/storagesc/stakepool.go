@@ -170,9 +170,8 @@ func (sp *stakePool) removeOffer(amount currency.Coin) error {
 // reality, with regards to division errors
 func (sp *stakePool) slash(
 	alloc *StorageAllocation,
-	blobID string,
 	until common.Timestamp,
-	wp *writePool,
+	aps *allocationPools,
 	offer, slash currency.Coin,
 	balances chainstate.StateContextI,
 ) (move currency.Coin, err error) {
@@ -182,18 +181,6 @@ func (sp *stakePool) slash(
 
 	if slash > offer {
 		slash = offer // can't move the offer left
-	}
-
-	// the move is total movements, but it should be divided by all
-	// related stake holders, that can loose some tokens due to
-	// division error;
-	var ap = wp.allocPool(alloc.ID, until)
-	if ap == nil {
-		ap = new(allocationPool)
-		ap.AllocationID = alloc.ID
-		ap.ExpireAt = 0
-		alloc.addWritePoolOwner(alloc.Owner)
-		wp.Pools.add(ap)
 	}
 
 	// offer ratio of entire stake; we are slashing only part of the offer
@@ -208,6 +195,7 @@ func (sp *stakePool) slash(
 		}
 		dp.Balance -= dpSlash
 		ap.Balance += dpSlash
+		aps.moveToAllocationPools()
 
 		move += dpSlash
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)

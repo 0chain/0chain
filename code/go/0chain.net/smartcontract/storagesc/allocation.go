@@ -272,7 +272,7 @@ type blobberWithPool struct {
 
 // newAllocationRequest creates new allocation
 func (sc *StorageSmartContract) newAllocationRequestInternal(
-	t *transaction.Transaction,
+	txn *transaction.Transaction,
 	input []byte,
 	conf *Config,
 	mintNewTokens bool,
@@ -285,7 +285,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"getting blobber list: %v", err)
 	}
 
-	if t.ClientID == "" {
+	if txn.ClientID == "" {
 		return "", common.NewError("allocation_creation_failed",
 			"Invalid client in the transaction. No client id in transaction")
 	}
@@ -315,11 +315,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	if request.Owner == "" {
-		request.Owner = t.ClientID
-		request.OwnerPublicKey = t.PublicKey
+		request.Owner = txn.ClientID
+		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", t.Hash), zap.Strings("blobbers", request.Blobbers))
+	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	blobbers, err := sc.fetchPools(inputBlobbers, balances)
 	if err != nil {
@@ -327,7 +327,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("fetch_pools")
 
-	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(t.CreationDate), sa, balances, blobbers)
+	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(txn.CreationDate), sa, balances, blobbers)
 	bi := make([]string, 0, len(blobberNodes))
 	for _, b := range blobberNodes {
 		bi = append(bi, b.ID)
@@ -339,9 +339,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 
-	sa.ID = t.Hash
+	sa.ID = txn.Hash
 	for _, b := range blobberNodes {
-		balloc := newBlobberAllocation(bSize, sa, b.StorageNode, t.CreationDate)
+		balloc := newBlobberAllocation(bSize, sa, b.StorageNode, txn.CreationDate)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
@@ -363,16 +363,20 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("add_offer")
 
-	sa.StartTime = t.CreationDate
-	sa.Tx = t.Hash
+	sa.StartTime = txn.CreationDate
+	sa.Tx = txn.Hash
 
 	// create write pool and lock tokens
-	if err = sc.createWritePool(t, sa, mintNewTokens, balances); err != nil {
+	aps, err := createAllocationPools(txn, sa, mintNewTokens, balances)
+	if err != nil {
+		return "", common.NewError("allocation_creation_failed", err.Error())
+	}
+	if err := aps.save(sa.ID, balances); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_write_pool")
 
-	if err = sc.createChallengePool(t, sa, balances); err != nil {
+	if err = sc.createChallengePool(txn, sa, balances); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_challenge_pool")
@@ -854,7 +858,7 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 // challenge pool during allocation extending or reducing.
 func (sc *StorageSmartContract) adjustChallengePool(
 	alloc *StorageAllocation,
-	awp *allocationWritePools,
+	aps *allocationPools,
 	odr, ndr common.Timestamp,
 	oterms []Terms,
 	now common.Timestamp,
@@ -872,15 +876,14 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	var changed bool
 
-	for i, ch := range changes {
+	for _, ch := range changes {
 		_, err = ch.Int64()
 		if err != nil {
 			return err
 		}
-		var blobID = alloc.BlobberAllocs[i].BlobberID
 		switch {
 		case ch > 0:
-			err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
+			err = aps.moveToChallenge(alloc.ID, alloc.Owner, cp, now, ch)
 			changed = true
 		default:
 			// no changes for the blobber
@@ -1748,21 +1751,21 @@ func (sc *StorageSmartContract) finishAllocation(
 			return err
 		}
 
-		// write pool
-		var wp *writePool
-		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+		aps, err := getAllocationPools(alloc.ID, balances)
+		if err != nil {
 			return common.NewError("fini_alloc_failed",
-				"can't get user's write pools: "+err.Error())
+				"cannot find allocation pools for "+alloc.ID+": "+err.Error())
 		}
-		err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
+
+		err = cp.moveToAllocationPools(alloc.Owner, aps, cp.Balance)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"moving challenge pool rest back to write pool: "+err.Error())
 		}
 
-		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
+		if err = aps.save(alloc.ID, balances); err != nil {
 			return common.NewError("fini_alloc_failed",
-				"saving write pool: "+err.Error())
+				"saving allocation pools: "+err.Error())
 		}
 	}
 

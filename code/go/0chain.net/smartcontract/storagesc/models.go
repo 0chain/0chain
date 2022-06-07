@@ -1183,12 +1183,10 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
-
 		if d.Stats == nil || d.Stats.UsedSize == 0 {
 			values = append(values, 0) // no data, no changes
 			continue
 		}
-
 		var (
 			size = sizeInGB(d.Stats.UsedSize)  // in GB
 			nwp  = float64(d.Terms.WritePrice) // new write price

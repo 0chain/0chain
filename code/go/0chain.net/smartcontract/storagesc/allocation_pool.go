@@ -9,9 +9,8 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	chainState "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
@@ -34,24 +33,18 @@ import (
 type lockRequest struct {
 	Duration     time.Duration `json:"duration"`
 	AllocationID string        `json:"allocation_id"`
-	TargetId     string        `json:"target_id,omitempty"`
-	MintTokens   bool          `json:"mint_tokens,omitempty"`
 }
 
 func (lr *lockRequest) decode(input []byte) (err error) {
 	if err = json.Unmarshal(input, lr); err != nil {
 		return
 	}
-	if lr.AllocationID == "" {
-		return errors.New("missing allocation_id in request")
-	}
 	return // ok
 }
 
 // unlock request used to unlock all tokens of a read pool
 type unlockRequest struct {
-	PoolOwner string `json:"pool_owner,omitempty"`
-	PoolID    string `json:"pool_id"`
+	AllocationID string `json:"allocation_id"`
 }
 
 func (ur *unlockRequest) decode(input []byte) error {
@@ -64,139 +57,43 @@ func (ur *unlockRequest) decode(input []byte) error {
 
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPool struct {
-	tokenpool.ZcnPool `json:"pool"`
-	ExpireAt          common.Timestamp `json:"expire_at"`     // inclusive
-	AllocationID      string           `json:"allocation_id"` //
+	Balance  currency.Coin    `json:"balance"`
+	ExpireAt common.Timestamp `json:"expire_at"` // inclusive
+	//AllocationID string           `json:"allocation_id"` //
 }
 
 func newAllocationPool(
-	t *transaction.Transaction,
-	alloc *StorageAllocation,
+	txn *transaction.Transaction,
 	until common.Timestamp,
 	mintNewTokens bool,
-	balances chainState.StateContextI,
+	balances cstate.StateContextI,
 ) (*allocationPool, error) {
 	var err error
 	if !mintNewTokens {
-		if err = stakepool.CheckClientBalance(t, balances); err != nil {
+		if err = stakepool.CheckClientBalance(txn, balances); err != nil {
 			return nil, err
 		}
 	}
 
 	var ap allocationPool
-	var transfer *state.Transfer
-	if transfer, _, err = ap.DigPool(t.Hash, t); err != nil {
-		return nil, fmt.Errorf("digging write pool: %v", err)
-	}
+
 	if mintNewTokens {
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     currency.Coin(t.Value),
+			Amount:     currency.Coin(txn.Value),
 		}); err != nil {
 			return nil, fmt.Errorf("minting tokens for write pool: %v", err)
 		}
 	} else {
+		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
 		if err = balances.AddTransfer(transfer); err != nil {
-			return nil, fmt.Errorf("adding transfer to write pool: %v", err)
+			return nil, fmt.Errorf("adding transfer to allocation pool: %v", err)
 		}
 	}
-
-	// set fields
-	ap.AllocationID = alloc.ID
+	ap.Balance = currency.Coin(txn.Value)
 	ap.ExpireAt = until
-
-	// add the allocation pool
-	alloc.addWritePoolOwner(alloc.Owner)
 	return &ap, nil
-}
-
-//
-// allocation read/write pools (list)
-//
-
-// allocationPools is sorted list of read/write pools of allocations
-type allocationPools []*allocationPool
-
-func (aps allocationPools) getIndex(allocID string) (i int, ok bool) {
-	var ap *allocationPool
-	for i, ap = range aps {
-		if ap.AllocationID == allocID {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
-func (aps allocationPools) get(allocID string) (
-	ap *allocationPool, ok bool) {
-
-	var i = sort.Search(len(aps), func(i int) bool {
-		return aps[i].AllocationID >= allocID
-	})
-	if i == len(aps) {
-		return // not found
-	}
-	if aps[i].AllocationID == allocID {
-		return aps[i], true // found
-	}
-	return // not found
-}
-
-func (aps *allocationPools) add(ap *allocationPool) {
-	if len(*aps) == 0 {
-		*aps = append(*aps, ap)
-		return
-	}
-	var i = sort.Search(len(*aps), func(i int) bool {
-		return (*aps)[i].AllocationID >= ap.AllocationID
-	})
-	// out of bounds
-	if i == len(*aps) {
-		*aps = append(*aps, ap)
-		return
-	}
-	// insert next after the found one
-	*aps = append((*aps)[:i], append(allocationPools{ap},
-		(*aps)[i:]...)...)
-}
-
-func (aps allocationPools) allocationCut(allocID string) (
-	cut []*allocationPool) {
-
-	var i, ok = aps.getIndex(allocID)
-	if !ok {
-		return // nil
-	}
-
-	var j = i + 1
-	for ; j < len(aps) && aps[j].AllocationID == allocID; j++ {
-	}
-
-	if len(aps[i:j]) == 0 {
-		return // nil
-	}
-
-	cut = make([]*allocationPool, len(aps[i:j]))
-	copy(cut, aps[i:j])
-	return
-}
-
-func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
-	value currency.Coin) {
-
-	var cut = aps.allocationCut(allocID)
-	cut = removeExpired(cut, until)
-	for _, ap := range cut {
-		value += ap.Balance
-	}
-	return
-}
-
-func (aps allocationPools) sortExpiry() {
-	sort.Slice(aps, func(i, j int) bool {
-		return aps[i].ExpireAt < aps[j].ExpireAt
-	})
 }
 
 func isInTOMRList(torm []*allocationPool, ax *allocationPool) bool {
@@ -206,94 +103,6 @@ func isInTOMRList(torm []*allocationPool, ax *allocationPool) bool {
 		}
 	}
 	return false
-}
-
-// remove empty pools of an allocation (all given pools should belongs to
-// one allocation)
-func (aps *allocationPools) removeEmpty(allocID string,
-	torm []*allocationPool) {
-
-	if len(torm) == 0 {
-		return // nothing to remove
-	}
-
-	var i, ok = aps.getIndex(allocID)
-	if !ok {
-		return // not found, impossible case, but keep it here
-	}
-Outer:
-	for _, ax := range (*aps)[i:] {
-		if ax.AllocationID == allocID {
-			if isInTOMRList(torm, ax) {
-				continue Outer
-			}
-		}
-		(*aps)[i], i = ax, i+1
-	}
-	*aps = (*aps)[:i]
-}
-
-func (aps *allocationPools) moveToChallenge(
-	allocID, blobID string,
-	cp *challengePool,
-	now common.Timestamp,
-	value currency.Coin,
-) (err error) {
-	if value == 0 {
-		return // nothing to move, ok
-	}
-
-	var cut = aps.allocationCut(allocID)
-
-	if len(cut) == 0 {
-		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-
-	var torm []*allocationPool // to remove later (empty allocation pools)
-	for _, ap := range cut {
-		if value == 0 {
-			break // all required tokens has moved to the blobber
-		}
-		var move currency.Coin
-		if value >= ap.Balance {
-			move = ap.Balance
-		} else {
-			move = value
-		}
-		if _, _, err = ap.TransferTo(cp, move, nil); err != nil {
-			return // transferring error
-		}
-		value -= move
-		if ap.Balance == 0 {
-			torm = append(torm, ap) // remove the allocation pool later
-		}
-	}
-
-	if value != 0 {
-		return fmt.Errorf("not enough tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-
-	// remove empty allocation pools
-	aps.removeEmpty(allocID, torm)
-	return
-}
-
-func removeExpired(cut []*allocationPool, now common.Timestamp) (
-	clean []*allocationPool) {
-
-	var i int
-	for _, arp := range cut {
-		if arp.ExpireAt < now {
-			continue
-		}
-		if arp.Balance == 0 {
-			continue // no tokens for this blobber
-		}
-		cut[i], i = arp, i+1
-	}
-	return cut[:i]
 }
 
 func sortExpireAt(cut []*allocationPool) {
@@ -316,14 +125,32 @@ type allocationPoolStat struct {
 }
 
 func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
-
-	stat.ID = ap.ID
 	stat.Balance = ap.Balance
 	stat.ExpireAt = ap.ExpireAt
-	stat.AllocationID = ap.AllocationID
 	stat.Locked = ap.ExpireAt >= now
 
 	return
+}
+
+func (ap *allocationPool) moveToAllocationPool(
+	cp *challengePool,
+	value currency.Coin,
+) error {
+	if value == 0 {
+		return nil
+	}
+
+	if cp == nil {
+		return errors.New("invalid challenge pool")
+	}
+
+	if cp.Balance < value {
+		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+			cp.ID, cp.Balance, value)
+	}
+	cp.Balance -= value
+	ap.Balance += value
+	return nil
 }
 
 // swagger:model allocationPoolsStat
@@ -334,8 +161,8 @@ type allocationPoolsStat struct {
 func (aps allocationPools) stat(now common.Timestamp) (
 	stat allocationPoolsStat) {
 
-	stat.Pools = make([]allocationPoolStat, 0, len(aps))
-	for _, ap := range aps {
+	stat.Pools = make([]allocationPoolStat, 0, len(aps.Pools))
+	for _, ap := range aps.Pools {
 		stat.Pools = append(stat.Pools, ap.stat(now))
 	}
 	return
