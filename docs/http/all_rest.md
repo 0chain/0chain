@@ -501,7 +501,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 | /v1/_m2m/round/vrf-share |
 | /v1/_m2m/block/verify |
 | /v1/_m2m/block/notarized-block |
-| /v1/_m2m/block/verification_ticket |
+| /v1/_m2m/block/verification-ticket |
 | /v1/_m2m/block/notarization |
 
 
@@ -511,7 +511,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 | ------ | ------ |
 | /v1/_m2m/round/vrf-share | VRFShareHandler |
 | /v1/_m2m/block/verify | VerifyBlockHandler |
-| /v1/_m2m/block/verification_ticket | VerificationTicketReceiptHandler |
+| /v1/_m2m/block/verification-ticket | VerificationTicketReceiptHandler |
 | /v1/_m2m/block/notarization | NotarizationReceiptHandler |
 | /v1/_m2m/block/notarized-block | NotarizedBlockHandler |
 
