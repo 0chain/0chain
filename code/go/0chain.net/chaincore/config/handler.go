@@ -11,7 +11,7 @@ import (
 
 /*SetupHandlers - setup config related handlers */
 func SetupHandlers() {
-	http.HandleFunc("/v1/config/get", GetConfigHandler)
+	http.HandleFunc("/v1/config", GetConfigHandler)
 }
 
 /*GetConfigHandler - display configuration */

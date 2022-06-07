@@ -389,7 +389,7 @@ File: 0Chain/code/go/0chain.net/chaincore/config/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/config/get | GetConfigHandler |
+| /v1/config | GetConfigHandler |
 
 
 ```sh
