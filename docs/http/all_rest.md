@@ -256,7 +256,7 @@ File: 0Chain/code/go/0chain.net/smartcontract/vestingsc/sc.go
 | ------ | ------ |
 | /getConfig | vsc.getConfigHandler |
 | /pool-info | vsc.getPoolInfoHandler |
-| /getClientPools | vsc.getClientPoolsHandler |
+| /client-pools | vsc.getClientPoolsHandler |
 
 | Endpoint: fc.SmartContractExecutionStats | Handler |Comment|
 | ------ | ------ | ------ |

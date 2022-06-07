@@ -1512,7 +1512,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Vestingsc_/getClientPools_500",
+			name: "Vestingsc_/client-pools_500",
 			chain: func() *chain.Chain {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -1531,7 +1531,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/getClientPools")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/client-pools")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
