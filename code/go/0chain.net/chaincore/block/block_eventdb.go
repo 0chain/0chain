@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -16,10 +17,10 @@ func blockToBlockEvent(block *Block) *event.Block {
 		MinerID:               block.MinerID,
 		RoundRandomSeed:       block.RoundRandomSeed,
 		MerkleTreeRoot:        block.GetMerkleTree().GetRoot(),
-		StateHash:             string(block.ClientStateHash),
+		StateHash:             util.ToHex(block.ClientStateHash),
 		ReceiptMerkleTreeRoot: block.GetReceiptsMerkleTree().GetRoot(),
 		NumTxns:               len(block.Txns),
-		MagicBlockHash:        block.MagicBlock.Hash,
+		MagicBlockHash:        block.LatestFinalizedMagicBlockHash,
 		PrevHash:              block.PrevHash,
 		Signature:             block.Signature,
 		ChainId:               block.ChainID,
@@ -29,20 +30,18 @@ func blockToBlockEvent(block *Block) *event.Block {
 	}
 }
 
-func emitBlockEvent(block *Block) error {
+func CreateBlockEvent(block *Block) (error, event.Event) {
 	data, err := json.Marshal(blockToBlockEvent(block))
 	if err != nil {
-		return fmt.Errorf("error marshalling block: %v", err)
+		return fmt.Errorf("error marshalling block: %v", err), event.Event{}
 	}
 
-	block.Events = append(block.Events, event.Event{
+	return nil, event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
 		Type:        int(event.TypeStats),
 		Tag:         int(event.TagAddBlock),
 		Index:       block.Hash,
 		Data:        string(data),
-	})
-
-	return nil
+	}
 }

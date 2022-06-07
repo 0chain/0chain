@@ -1159,21 +1159,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name:  "Storagesc_/getReadPoolAllocBlobberStat_404",
-			chain: serverChain,
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/getReadPoolAllocBlobberStat")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
-		},
-		{
 			name:  "Storagesc_/getWritePoolStat_404",
 			chain: serverChain,
 			args: args{

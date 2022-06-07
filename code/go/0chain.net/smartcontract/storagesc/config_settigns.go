@@ -39,8 +39,6 @@ const (
 	MinBlobberCapacity
 
 	ReadPoolMinLock
-	ReadPoolMinLockPeriod
-	ReadPoolMaxLockPeriod
 
 	WritePoolMinLock
 	WritePoolMinLockPeriod
@@ -107,6 +105,7 @@ const (
 	CostChallengeResponse
 	CostGenerateChallenges
 	CostAddValidator
+	CostUpdateValidatorSettings
 	CostAddBlobber
 	CostNewReadPool
 	CostReadPoolLock
@@ -131,8 +130,6 @@ var (
 		"min_blobber_capacity",
 
 		"readpool.min_lock",
-		"readpool.min_lock_period",
-		"readpool.max_lock_period",
 
 		"writepool.min_lock",
 		"writepool.min_lock_period",
@@ -199,6 +196,7 @@ var (
 		"cost.challenge_response",
 		"cost.generate_challenges",
 		"cost.add_validator",
+		"cost.update_validator_settings",
 		"cost.add_blobber",
 		"cost.new_read_pool",
 		"cost.read_pool_lock",
@@ -227,8 +225,6 @@ var (
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
 		"readpool.min_lock":        {ReadPoolMinLock, smartcontract.Int64},
-		"readpool.min_lock_period": {ReadPoolMinLockPeriod, smartcontract.Duration},
-		"readpool.max_lock_period": {ReadPoolMaxLockPeriod, smartcontract.Duration},
 
 		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
@@ -295,6 +291,7 @@ var (
 		"cost.challenge_response":          {CostChallengeResponse, smartcontract.Cost},
 		"cost.generate_challenges":         {CostGenerateChallenges, smartcontract.Cost},
 		"cost.add_validator":               {CostAddValidator, smartcontract.Cost},
+		"cost.update_validator_settings":   {CostUpdateValidatorSettings, smartcontract.Cost},
 		"cost.add_blobber":                 {CostAddBlobber, smartcontract.Cost},
 		"cost.new_read_pool":               {CostNewReadPool, smartcontract.Cost},
 		"cost.read_pool_lock":              {CostReadPoolLock, smartcontract.Cost},
@@ -465,16 +462,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
 		conf.MinOfferDuration = change
-	case ReadPoolMinLockPeriod:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
-		}
-		conf.ReadPool.MinLockPeriod = change
-	case ReadPoolMaxLockPeriod:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
-		}
-		conf.ReadPool.MaxLockPeriod = change
 	case WritePoolMinLockPeriod:
 		if conf.WritePool == nil {
 			conf.WritePool = &writePoolConfig{}
@@ -621,10 +608,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
 		return conf.ReadPool.MinLock
-	case ReadPoolMinLockPeriod:
-		return conf.ReadPool.MinLockPeriod
-	case ReadPoolMaxLockPeriod:
-		return conf.ReadPool.MaxLockPeriod
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
 	case WritePoolMinLockPeriod:
@@ -739,6 +722,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostGenerateChallenges], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostAddValidator:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostUpdateValidatorSettings:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateValidatorSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostAddBlobber:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostNewReadPool:
