@@ -70,7 +70,7 @@ type runtimeValues struct {
 	phaseRound     int64
 	nextViewChange int64
 	minted         currency.Coin
-	fees           []int64
+	fees           []currency.Coin
 }
 
 type MinerDelegates []float64
@@ -106,7 +106,7 @@ var (
 		phaseRound:     35,
 		nextViewChange: 100,
 		minted:         0,
-		fees:           []int64{200, 300, 500},
+		fees:           []currency.Coin{200, 300, 500},
 	}
 )
 

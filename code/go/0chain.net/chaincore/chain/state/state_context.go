@@ -262,7 +262,7 @@ func (sc *StateContext) Validate() error {
 	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 
 	if isFeeEnabled {
-		totalValue, err = currency.AddInt64(totalValue, sc.txn.Fee)
+		totalValue, err = currency.AddCoin(totalValue, sc.txn.Fee)
 		if err != nil {
 			return err
 		}

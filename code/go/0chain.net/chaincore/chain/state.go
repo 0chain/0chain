@@ -310,7 +310,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("txn type", txn.TransactionType),
 				zap.Any("transaction_ClientID", txn.ClientID),
 				zap.Any("minersc_address", minersc.ADDRESS),
-				zap.Any("state_balance", currency.Coin(txn.Fee)),
+				zap.Any("state_balance", txn.Fee),
 				zap.Any("current_root", sctx.GetState().GetRoot()))
 			return
 		}
@@ -321,13 +321,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	if c.ChainConfig.IsFeeEnabled() {
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS,
-			currency.Coin(txn.Fee)))
+			txn.Fee))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
 				zap.Any("txn type", txn.TransactionType),
 				zap.Any("transaction_ClientID", txn.ClientID),
 				zap.Any("minersc_address", minersc.ADDRESS),
-				zap.Any("state_balance", currency.Coin(txn.Fee)))
+				zap.Any("state_balance", txn.Fee))
 			return
 		}
 	}
