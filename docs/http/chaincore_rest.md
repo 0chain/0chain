@@ -21,7 +21,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | /_diagnostics | DiagnosticsHomepageHandler |
 | /_diagnostics/dkg_process | DiagnosticsDKGHandler |
 | /_diagnostics/round_info | RoundInfoHandler |
-| /v1/transaction/put | PutTransaction |
+| /v1/transaction | PutTransaction |
 | /_diagnostics/state_dump | StateDumpHandler |
 | /v1/block/latest-finalized-ticket | LFBTicketHandler |
 

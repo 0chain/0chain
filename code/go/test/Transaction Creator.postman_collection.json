@@ -51,7 +51,7 @@
 					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": {{timestamp}},\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/transaction/put",
+					"raw": "http://localhost:7070/v1/transaction",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -114,7 +114,7 @@
 					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"to_client_id\": \"{{to_client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": {{timestamp}},\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/transaction/put",
+					"raw": "http://localhost:7070/v1/transaction",
 					"protocol": "http",
 					"host": [
 						"localhost"

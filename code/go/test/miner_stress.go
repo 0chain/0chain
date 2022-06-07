@@ -105,7 +105,7 @@ func CreateTransaction(httpclient *http.Client, client Client) bool {
 		}
 		txn["hash"] = hash
 		txn["signature"] = signature
-		ok := SendRequest(httpclient, GetURL("/v1/transaction/put"), txn)
+		ok := SendRequest(httpclient, GetURL("/v1/transaction"), txn)
 		if ok {
 			// time.Sleep(50 * time.Millisecond)
 			return true
