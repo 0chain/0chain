@@ -27,7 +27,7 @@ type pushDataCacheEntry struct {
 	EntityName string
 }
 
-var pullURL = "/v1/n2n/entity_pull/get"
+var pullURL = "/v1/n2n/entity-pull"
 
 func getPushToPullTime(n *Node) float64 {
 	var pullRequestTime float64
