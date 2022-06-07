@@ -303,14 +303,12 @@ var benchWritePoolExpire = common.Timestamp(viper.GetDuration(sc.StorageMinAlloc
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 	wps := make([]*writePool, len(clients))
-	amountPerBlobber := currency.Coin(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationID := getMockAllocationId(i)
 		owner := getMockOwnerFromAllocationIndex(i, len(clients))
 		if wps[owner] == nil {
 			wps[owner] = new(writePool)
 		}
-		startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 		for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 			wap := allocationPool{
 				ExpireAt:     benchWritePoolExpire,
@@ -319,12 +317,6 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 			wap.Balance = 100 * 1e10
 			wap.ID = getMockWritePoolId(i, owner, k)
 			wap.Balance = 100 * 1e10
-			for l := 0; l < viper.GetInt(sc.NumBlobbersPerAllocation); l++ {
-				wap.Blobbers.add(&blobberPool{
-					BlobberID: getMockBlobberId(startBlobbers + l),
-					Balance:   amountPerBlobber,
-				})
-			}
 			wps[owner].Pools = append(wps[owner].Pools, &wap)
 		}
 	}

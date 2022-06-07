@@ -194,15 +194,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getReadPoolStat,
 			},
 			{
-				FuncName: "getReadPoolAllocBlobberStat",
-				Params: map[string]string{
-					"client_id":     data.Clients[0],
-					"allocation_id": getMockAllocationId(0),
-					"blobber_id":    getMockBlobberId(0),
-				},
-				Endpoint: srh.getReadPoolAllocBlobberStat,
-			},
-			{
 				FuncName: "writemarkers",
 				Params: map[string]string{
 					"offset":        "",
@@ -225,15 +216,6 @@ func BenchmarkRestTests(
 					"client_id": data.Clients[0],
 				},
 				Endpoint: srh.getWritePoolStat,
-			},
-			{
-				FuncName: "getWritePoolAllocBlobberStat",
-				Params: map[string]string{
-					"client_id":     data.Clients[0],
-					"allocation_id": getMockAllocationId(0),
-					"blobber_id":    getMockBlobberId(0),
-				},
-				Endpoint: srh.getWritePoolAllocBlobberStat,
 			},
 			{
 				FuncName: "getStakePoolStat",
