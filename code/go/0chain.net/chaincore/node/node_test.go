@@ -125,7 +125,7 @@ func TestNode2NodeCommunication(t *testing.T) {
 	np.AddNode(n3)
 
 	options := SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true, CODEC: datastore.CodecMsgpack}
-	sendHandler := SendEntityHandler("/v1/_n2n/entity/post", &options)
+	sendHandler := SendEntityHandler("/v1/_n2n/entity", &options)
 	_ = np.SendAtleast(context.Background(), 2, sendHandler(entity))
 }
 

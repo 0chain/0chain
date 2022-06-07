@@ -137,7 +137,7 @@ File: 0Chain/code/go/0chain.net/chaincore/node/n2n_handler.go
 
 | Endpoint: http.HandleFunc | Handler: ToN2NReceiveEntityHandler|
 | ------ | ------ |
-| /v1/_n2n/entity/post| datastore.PrintEntityHandler |
+| /v1/_n2n/entity| datastore.PrintEntityHandler |
 
 | Endpoint: http.HandleFunc | Handler: ToN2NSendEntityHandler |
 | ------ | ------ |
