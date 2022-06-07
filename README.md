@@ -25,6 +25,7 @@
   - [Cleanup](#cleanup)
   - [Minio Setup](#minio)
 - [Integration tests](#integration-tests)
+- [Benchmarks](#benchmarks)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
 - [Swagger documentation](#swagger-documentation)
@@ -549,7 +550,12 @@ Integration testing combines individual 0chain modules and test them as a group.
 
 For integration testing, A conductor which is a RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
 
+## Benchmarks
+Benchmark 0chain smart-contract endpoints.
 
+Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access tha chain so a populated MPT database is enough to give a realistic benchmark.
+
+More info in [read.me](code/go/0chain.net/smartcontract/benchmark/main/readme.md)
 
 ### Architecture
 A conductor requires the nodes to be built in a certain order to control them during the tests. A config file is defined in [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml) which contains important details such as details of all nodes used and custom commands used in integration testing.
