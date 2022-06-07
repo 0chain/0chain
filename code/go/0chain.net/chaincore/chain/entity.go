@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/currency"
@@ -1144,17 +1145,17 @@ func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block
 
 //ResetRoundTimeoutCount - reset the counter
 func (c *Chain) ResetRoundTimeoutCount() {
-	c.crtCount = 0
+	atomic.SwapInt64(&c.crtCount, 0)
 }
 
 //IncrementRoundTimeoutCount - increment the counter
 func (c *Chain) IncrementRoundTimeoutCount() {
-	c.crtCount++
+	atomic.AddInt64(&c.crtCount, 1)
 }
 
 //GetRoundTimeoutCount - get the counter
 func (c *Chain) GetRoundTimeoutCount() int64 {
-	return c.crtCount
+	return atomic.LoadInt64(&c.crtCount)
 }
 
 //GetSignatureScheme - get the signature scheme used by this chain

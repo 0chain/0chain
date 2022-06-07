@@ -725,7 +725,7 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
-	//accumulated transaction cost
+	// accumulated transaction cost
 	cost int
 }
 
