@@ -304,7 +304,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
 | /v1/chain | GetChainHandler |
-| /v1/chain/put | PutChainHandler |
+| /v1/chain | PutChainHandler |
 | /v1/block | GetBlockHandler |
 | /v1/block/latest-finalized | LatestFinalizedBlockHandler |
 | /v1/block/latest-finalized-magic-block-summary | LatestFinalizedMagicBlockSummaryHandler |

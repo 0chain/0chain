@@ -49,7 +49,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
+		"/v1/chain": common.Recover(
 			datastore.ToJSONEntityReqResponse(
 				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
 				chainEntityMetadata,
