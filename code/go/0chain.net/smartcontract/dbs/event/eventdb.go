@@ -50,6 +50,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
+		&AllocationTerm{},
 		&Reward{},
 		&Authorizer{},
 		&Challenge{},

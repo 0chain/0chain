@@ -33,16 +33,16 @@ options:
     - "vesting_rest"
     - "zcnscbridge_rest"
   omitted_tests:
-  save_path: ./saved_data # do not add a load_path key, this is read from command line options
+  save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
 
 dbs:
   events:
     enabled: true
     name: events_db
-    user: zchain_user
-    password: zchian
-    host: localhost
+    user: postgres
+    password: postgres
+    host: postgres
     port: 5432
     max_idle_conns: 100
     max_open_conns: 200
@@ -172,5 +172,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: true
+  show_output: false
 

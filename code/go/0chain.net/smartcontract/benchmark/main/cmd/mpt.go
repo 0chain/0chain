@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/hex"
 	"fmt"
+	"golang.org/x/net/context"
 	"os"
 	"path"
 	"sync"
@@ -44,6 +45,7 @@ import (
 )
 
 var BenchDataKey = encryption.Hash("benchData")
+var executor = common.NewWithContextFunc(4)
 
 func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatriciaTrie {
 	pNode := mpt.GetNodeDB()
@@ -68,7 +70,7 @@ func getBalances(
 		PrevBlock: &block.Block{},
 	}
 	bk.Round = 2
-	bk.CreationDate = common.Timestamp(time.Now().Unix())
+	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
 	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
 	magicBlock := &block.MagicBlock{}
@@ -86,7 +88,7 @@ func getBalances(
 	)
 }
 
-func getMpt(loadPath, configPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in getMpt", r)
@@ -94,6 +96,7 @@ func getMpt(loadPath, configPath string) (*util.MerklePatriciaTrie, util.Key, be
 	}()
 	var mptDir string
 	savePath := viper.GetString(benchmark.OptionSavePath)
+	executor = exec
 
 	if len(savePath) > 0 {
 		if loadPath != savePath {
@@ -127,19 +130,29 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
 	root := viper.GetString(benchmark.MptRoot)
+	rootBytes, err := hex.DecodeString(root)
+	var eventDb *event.EventDb
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		eventDb = createEventsDb()
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	creationDate := common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
+	benchData := benchmark.BenchData{EventDb: eventDb}
 	_, balances := getBalances(
-		&transaction.Transaction{},
-		extractMpt(pMpt, util.Key(root)),
-		benchmark.BenchData{},
+		&transaction.Transaction{CreationDate: creationDate},
+		extractMpt(pMpt, rootBytes),
+		benchData,
 	)
 
-	var benchData benchmark.BenchData
 	err = balances.GetTrieNode(BenchDataKey, &benchData)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return pMpt, util.Key(root), benchData
+	return pMpt, rootBytes, benchData
 }
 
 func setUpMpt(
@@ -165,7 +178,7 @@ func setUpMpt(
 	log.Println("made empty blockchain")
 
 	timer := time.Now()
-	clients, publicKeys, privateKeys := addMockClients(pMpt)
+	clients, publicKeys, privateKeys := addMockClients(context.Background(), pMpt)
 	log.Println("added clients\t", time.Since(timer))
 
 	timer = time.Now()
@@ -186,6 +199,7 @@ func setUpMpt(
 			HashIDField: datastore.HashIDField{
 				Hash: encryption.Hash("mock transaction hash"),
 			},
+			CreationDate: common.Now(),
 		},
 		func(*block.Block) []string { return []string{} },
 		func() *block.Block { return bk },
@@ -199,31 +213,7 @@ func setUpMpt(
 
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
-		timer = time.Now()
-
-		eventDb, err = event.NewEventDb(config.DbAccess{
-			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-			Name:            viper.GetString(benchmark.EventDbName),
-			User:            viper.GetString(benchmark.EventDbUser),
-			Password:        viper.GetString(benchmark.EventDbPassword),
-			Host:            viper.GetString(benchmark.EventDbHost),
-			Port:            viper.GetString(benchmark.EventDbPort),
-			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = eventDb.Drop()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := eventDb.AutoMigrate(); err != nil {
-			log.Fatal(err)
-		}
-		log.Println("created event database\t", time.Since(timer))
+		eventDb = createEventsDb()
 	}
 
 	var wg sync.WaitGroup
@@ -235,15 +225,16 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		_ = storagesc.SetMockConfig(balances)
+		viper.Set(benchmark.MptCreationTime, timer.Unix())
 		log.Println("created storage config\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
 	}()
@@ -251,15 +242,15 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
-		log.Println("added blobbers\t", time.Since(timer))
+		log.Println("added validators\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()
@@ -267,7 +258,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		sharders = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
@@ -291,14 +282,14 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.GetMockValidatorStakePools(clients, balances)
 		log.Println("added validator stake pools\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockAllocations(clients, publicKeys, eventDb, balances)
 		log.Println("added allocations\t", time.Since(timer))
 	}()
@@ -306,7 +297,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockReadPools(clients, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
 	}()
@@ -314,7 +305,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockWritePools(clients, balances)
 		log.Println("added allocation write pools\t", time.Since(timer))
 	}()
@@ -322,7 +313,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockFundedPools(clients, balances)
 		log.Println("added allocation funded pools\t", time.Since(timer))
 	}()
@@ -330,7 +321,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockChallengePools(balances)
 		log.Println("added challenge pools\t", time.Since(timer))
 	}()
@@ -338,42 +329,42 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockChallenges(blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockClientAllocation(clients, balances)
 		log.Println("added client allocations\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.AddNodeDelegates(clients, miners, sharders, balances)
 		log.Println("adding miners and sharders delegates\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.AddMagicBlock(miners, sharders, balances)
 		log.Println("add magic block\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.SetUpNodes(miners, sharders)
 		log.Println("registering miners and sharders\t", time.Since(timer))
 	}()
@@ -381,7 +372,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		minersc.AddPhaseNode(balances)
 		log.Println("added miners phase node\t", time.Since(timer))
 	}()
@@ -389,28 +380,28 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
 		log.Println("added free storage assigners\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		storagesc.AddMockWriteRedeems(clients, publicKeys, eventDb, balances)
 		log.Println("added read redeems\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		faucetsc.AddMockGlobalNode(balances)
 		log.Println("added faucet global node\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		faucetsc.AddMockUserNodes(clients, balances)
 		log.Println("added faucet user nodes\t", time.Since(timer))
 	}()
@@ -418,21 +409,21 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		multisigsc.AddMockWallets(clients, publicKeys, balances)
 		log.Println("added client wallets\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		vestingsc.AddMockClientPools(clients, balances)
 		log.Println("added vesting client pools\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		vestingsc.AddMockVestingPools(clients, balances)
 		vestingsc.AddMockConfig(balances)
 		log.Println("added vesting pools\t", time.Since(timer))
@@ -441,7 +432,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		zcnsc.Setup(eventDb, clients, publicKeys, balances)
 		log.Println("added zcnsc\t", time.Since(timer))
 	}()
@@ -449,7 +440,7 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
+		timer := time.Now()
 		control.AddControlObjects(balances)
 		log.Println("added control objects\t", time.Since(timer))
 	}()
@@ -474,7 +465,6 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		timer = time.Now()
 		benchData.EventDb = eventDb
 		benchData.Clients = clients
 		benchData.PublicKeys = publicKeys
@@ -484,44 +474,103 @@ func setUpMpt(
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
 		}
-		root := balances.GetState().GetRoot()
-		viper.Set(benchmark.MptRoot, string((root)))
-		log.Println("saved simulation parameters\t", time.Since(timer))
 	}()
 
 	wg.Wait()
 
+	timer = time.Now()
+	root := balances.GetState().GetRoot()
+	hexBytes := make([]byte, hex.EncodedLen(len(root)))
+	hex.Encode(hexBytes, root)
+	viper.Set(benchmark.MptRoot, string(hexBytes))
+	log.Println("saved simulation parameters\t", time.Since(timer))
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
 	return pMpt, balances.GetState().GetRoot(), benchData
 }
 
-func addMockClients(
+func createEventsDb() *event.EventDb {
+	timer := time.Now()
+	var eventDb *event.EventDb
+	tick := func() (*event.EventDb, error) {
+		return event.NewEventDb(config.DbAccess{
+			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+			Name:            viper.GetString(benchmark.EventDbName),
+			User:            viper.GetString(benchmark.EventDbUser),
+			Password:        viper.GetString(benchmark.EventDbPassword),
+			Host:            viper.GetString(benchmark.EventDbHost),
+			Port:            viper.GetString(benchmark.EventDbPort),
+			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+		})
+
+	}
+
+	t := time.NewTicker(time.Second)
+	var err error
+	eventDb, err = tick()
+	if err != nil {
+		for {
+			<-t.C
+			eventDb, err = tick()
+			if err == nil {
+				break
+			} else {
+				log.Println("no connection to eventDB yet: " + err.Error())
+			}
+		}
+
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = eventDb.Drop()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := eventDb.AutoMigrate(); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("created event database\t", time.Since(timer))
+	return eventDb
+}
+
+func addMockClients(ctx context.Context,
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
-	blsScheme := BLS0ChainScheme{}
 	var clientIds, publicKeys, privateKeys []string
 	activeClients := viper.GetInt(benchmark.NumActiveClients)
 	for i := 0; i < viper.GetInt(benchmark.NumClients); i++ {
-		err := blsScheme.GenerateKeys()
-		if err != nil {
-			panic(err)
-		}
-		publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
-		if err != nil {
-			panic(err)
-		}
-		clientID := encryption.Hash(publicKeyBytes)
+		err := executor.Run(ctx, func(i int) func() error {
+			return func() error {
+				blsScheme := BLS0ChainScheme{}
+				err := blsScheme.GenerateKeys()
+				if err != nil {
+					return err
+				}
+				publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
+				if err != nil {
+					return err
+				}
+				clientID := encryption.Hash(publicKeyBytes)
 
-		if i < activeClients {
-			clientIds = append(clientIds, clientID)
-			publicKeys = append(publicKeys, blsScheme.GetPublicKey())
-			privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
-		}
-		is := &state.State{}
-		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
-		_, err = pMpt.Insert(util.Path(clientID), is)
+				if i < activeClients {
+					clientIds = append(clientIds, clientID)
+					publicKeys = append(publicKeys, blsScheme.GetPublicKey())
+					privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
+				}
+				is := &state.State{}
+				_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+				is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
+				_, err = pMpt.Insert(util.Path(clientID), is)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}(i))
 		if err != nil {
 			panic(err)
 		}
