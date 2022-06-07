@@ -125,7 +125,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/chain/get?id=0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe",
+					"raw": "http://localhost:7070/v1/chain?id=0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe",
 					"protocol": "http",
 					"host": [
 						"localhost"

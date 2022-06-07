@@ -63,7 +63,7 @@ func SetupS2SResponders() {
 }
 
 const (
-	getBlockX2SV1Pattern = "/v1/_x2s/block/get"
+	getBlockX2SV1Pattern = "/v1/_s2s/block"
 )
 
 func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {

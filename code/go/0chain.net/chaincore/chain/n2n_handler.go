@@ -69,7 +69,7 @@ func setupX2SRequestors() {
 		CODEC:    node.CODEC_MSGPACK,
 		Compress: true,
 	}
-	FBRequestor = node.RequestEntityHandler("/v1/_x2s/block/get", &opts,
+	FBRequestor = node.RequestEntityHandler("/v1/_s2s/block", &opts,
 		datastore.GetEntityMetadata("block"))
 }
 

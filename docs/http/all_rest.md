@@ -638,7 +638,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_x2s/block/get | RoundBlockRequestHandler |
+| /v1/_s2s/block | RoundBlockRequestHandler |
 
 
 
