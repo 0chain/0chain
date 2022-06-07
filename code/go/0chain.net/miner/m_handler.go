@@ -101,7 +101,7 @@ const (
 func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	sendHandlerMap := map[string]common.JSONResponderF{
 		getNotarizedBlockX2MV1Pattern: NotarizedBlockSendHandler,
-		"/v1/_x2m/state/get":          PartialStateHandler,
+		"/v1/_x2m/state":          PartialStateHandler,
 		"/v1/_m2m/dkg/share":          SignShareRequestHandler,
 		"/v1/_m2m/chain/start":        StartChainRequestHandler,
 	}
