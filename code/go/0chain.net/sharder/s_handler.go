@@ -39,7 +39,7 @@ func SetupS2SRequestors() {
 	RoundRequestor = node.RequestEntityHandler("/v1/_s2s/round/get", options, roundEntityMetadata)
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	BlockRequestor = node.RequestEntityHandler("/v1/_s2s/block/get", options, blockEntityMetadata)
+	BlockRequestor = node.RequestEntityHandler("/v1/_s2s/block", options, blockEntityMetadata)
 
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	BlockSummaryRequestor = node.RequestEntityHandler("/v1/_s2s/block-summary", options, blockSummaryEntityMetadata)
@@ -57,7 +57,7 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/latest-round", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
 	http.HandleFunc("/v1/_s2s/round/get", node.ToN2NSendEntityHandler(RoundRequestHandler))
 	http.HandleFunc("/v1/_s2s/roundsummaries/get", node.ToN2NSendEntityHandler(RoundSummariesHandler))
-	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
+	http.HandleFunc("/v1/_s2s/block", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
 	http.HandleFunc("/v1/_s2s/block-summary", node.ToN2NSendEntityHandler(BlockSummaryRequestHandler))
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }

@@ -110,7 +110,7 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 }
 
 func TestRoundBlockRequestHandler(t *testing.T) {
-	const baseUrl = "/v1/_s2s/block/get"
+	const baseUrl = "/v1/_s2s/block"
 
 	type test struct {
 		name       string
