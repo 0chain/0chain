@@ -22,7 +22,7 @@ func TestRequestEntityHandlerNotModified(t *testing.T) {
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	options := &SendOptions{Timeout: 3 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	LatestFinalizedMagicBlockRequestor := RequestEntityHandler("/v1/block/get/latest_finalized_magic_block",
+	LatestFinalizedMagicBlockRequestor := RequestEntityHandler("/v1/block/latest_finalized_magic_block",
 		options, blockEntityMetadata)
 
 	var value int

@@ -305,19 +305,19 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | ------ | ------ |
 | /v1/chain/get | GetChainHandler |
 | /v1/chain/put | PutChainHandler |
-| /v1/block/get | GetBlockHandler |
-| /v1/block/get/latest_finalized | LatestFinalizedBlockHandler |
-| /v1/block/get/latest_finalized_magic_block_summary | LatestFinalizedMagicBlockSummaryHandler |
-| /v1/block/get/latest_finalized_magic_block | LatestFinalizedMagicBlockHandler |
-| /v1/block/get/recent_finalized | RecentFinalizedBlockHandler |
-| /v1/block/get/fee_stats | LatestBlockFeeStatsHandler |
+| /v1/block | GetBlockHandler |
+| /v1/block/latest_finalized | LatestFinalizedBlockHandler |
+| /v1/block/latest_finalized_magic_block_summary | LatestFinalizedMagicBlockSummaryHandler |
+| /v1/block/latest_finalized_magic_block | LatestFinalizedMagicBlockHandler |
+| /v1/block/recent_finalized | RecentFinalizedBlockHandler |
+| /v1/block/fee_stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
 | /_diagnostics | DiagnosticsHomepageHandler |
 | /_diagnostics/dkg_process | DiagnosticsDKGHandler |
 | /_diagnostics/round_info | RoundInfoHandler |
 | /v1/transaction/put | PutTransaction |
 | /_diagnostics/state_dump | StateDumpHandler |
-| /v1/block/get/latest_finalized_ticket | LFBTicketHandler |
+| /v1/block/latest_finalized_ticket | LFBTicketHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
@@ -344,7 +344,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/block/get/latest_finalized_magic_block | blockEntityMetadata |
+| /v1/block/latest_finalized_magic_block | blockEntityMetadata |
 
 
 > SetupX2XResponders
@@ -531,7 +531,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
 | /v1/_m2s/block/latest_finalized/get | blockEntityMetadata |
-| /v1/block/get | blockEntityMetadata |
+| /v1/block | blockEntityMetadata |
 
 
 > SetupM2MRequestors
@@ -578,7 +578,7 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/block/get | BlockHandler |
+| /v1/block | BlockHandler |
 | /v1/block/magic/get | MagicBlockHandler |
 | /v1/transaction/get/confirmation | TransactionConfirmationHandler |
 | /v1/chain/get/stats | ChainStatsHandlerr |
@@ -613,7 +613,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | roundEntityMetadata |
+| /v1/_s2s/latest-round | roundEntityMetadata |
 | /v1/_s2s/round/get | roundEntityMetadata |
 | /v1/_s2s/block/get | blockEntityMetadata |
 | /v1/_s2s/blocksummary/get | blockSummaryEntityMetadata |
@@ -625,7 +625,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | LatestRoundRequestHandler |
+| /v1/_s2s/latest-round | LatestRoundRequestHandler |
 | /v1/_s2s/round/get | RoundRequestHandler |
 | /v1/_s2s/roundsummaries/get | RoundSummariesHandler) |
 | /v1/_s2s/block/get | RoundBlockRequestHandler |

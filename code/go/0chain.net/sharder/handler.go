@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	getBlockV1Pattern = "/v1/block"
 )
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {

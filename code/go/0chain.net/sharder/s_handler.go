@@ -54,7 +54,7 @@ func SetupS2SRequestors() {
 
 // SetupS2SResponders -
 func SetupS2SResponders() {
-	http.HandleFunc("/v1/_s2s/latest_round/get", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
+	http.HandleFunc("/v1/_s2s/latest-round", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
 	http.HandleFunc("/v1/_s2s/round/get", node.ToN2NSendEntityHandler(RoundRequestHandler))
 	http.HandleFunc("/v1/_s2s/roundsummaries/get", node.ToN2NSendEntityHandler(RoundSummariesHandler))
 	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))

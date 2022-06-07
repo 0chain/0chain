@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	getBlockV1Pattern = "/v1/block"
 )
 
 func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
@@ -55,27 +55,27 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				chainEntityMetadata,
 			),
 		),
-		"/v1/block/get/latest_finalized": common.UserRateLimit(
+		"/v1/block/latest_finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+		"/v1/block/latest_finalized_magic_block_summary": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+		"/v1/block/latest_finalized_magic_block": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),
 		),
-		"/v1/block/get/recent_finalized": common.UserRateLimit(
+		"/v1/block/recent_finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				RecentFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/fee_stats": common.UserRateLimit(
+		"/v1/block/fee_stats": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
@@ -107,7 +107,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
-		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+		"/v1/block/latest_finalized_ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
 			),

@@ -63,7 +63,7 @@ func setupX2MRequestors() {
 func setupX2SRequestors() {
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
+	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/latest_finalized_magic_block", options, blockEntityMetadata)
 
 	var opts = node.SendOptions{
 		Timeout:  node.TimeoutLargeMessage,

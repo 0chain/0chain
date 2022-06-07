@@ -13,7 +13,7 @@ import (
 )
 
 func TestLatestRoundRequestHandler(t *testing.T) {
-	const baseUrl = "/v1/_s2s/latest_round/get"
+	const baseUrl = "/v1/_s2s/latest-round"
 
 	sc := makeTestChain(t)
 	var num int64 = 1

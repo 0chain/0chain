@@ -21,7 +21,7 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/block/get | BlockHandler |
+| /v1/block | BlockHandler |
 | /v1/block/magic/get | MagicBlockHandler |
 | /v1/transaction/get/confirmation | TransactionConfirmationHandler |
 | /v1/chain/get/stats | ChainStatsHandlerr |
@@ -56,7 +56,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | roundEntityMetadata |
+| /v1/_s2s/latest-round | roundEntityMetadata |
 | /v1/_s2s/round/get | roundEntityMetadata |
 | /v1/_s2s/block/get | blockEntityMetadata |
 | /v1/_s2s/blocksummary/get | blockSummaryEntityMetadata |
@@ -68,7 +68,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | LatestRoundRequestHandler |
+| /v1/_s2s/latest-round | LatestRoundRequestHandler |
 | /v1/_s2s/round/get | RoundRequestHandler |
 | /v1/_s2s/roundsummaries/get | RoundSummariesHandler) |
 | /v1/_s2s/block/get | RoundBlockRequestHandler |
