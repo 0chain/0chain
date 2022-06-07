@@ -49,7 +49,7 @@ func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 
 /*SetupM2SResponders - setup handlers for all the requests from the miner */
 func SetupM2SResponders(sc Chainer) {
-	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(
+	http.HandleFunc("/v1/_m2s/block/latest-finalized", common.N2NRateLimit(
 		node.ToS2MSendEntityHandler(LatestFinalizedBlockHandler(sc))))
 }
 

@@ -69,7 +69,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_m2s/block/latest_finalized/get | blockEntityMetadata |
+| /v1/_m2s/block/latest-finalized | blockEntityMetadata |
 | /v1/block | blockEntityMetadata |
 
 

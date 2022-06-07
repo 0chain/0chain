@@ -127,7 +127,7 @@ func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request))
 func SetupM2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
+	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest-finalized", options, blockEntityMetadata)
 }
 
 func SetupM2MRequestors() {

@@ -44,7 +44,7 @@ File: 0Chain/code/go/0chain.net/sharder/m_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToS2MSendEntityHandler |
 | ------ | ------ |
-| /v1/_m2s/block/latest_finalized/get | LatestFinalizedBlockHandler |
+| /v1/_m2s/block/latest-finalized | LatestFinalizedBlockHandler |
 
 
 ```sh
