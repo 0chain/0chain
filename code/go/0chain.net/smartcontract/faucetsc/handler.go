@@ -37,7 +37,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	faucet := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(faucet+"/personal-periodic-limit", frh.getPersonalPeriodicLimit),
-		rest.MakeEndpoint(faucet+"/globalPeriodicLimit", frh.getGlobalPeriodicLimit),
+		rest.MakeEndpoint(faucet+"/global-periodic-limit", frh.getGlobalPeriodicLimit),
 		rest.MakeEndpoint(faucet+"/pourAmount", frh.getPourAmount),
 		rest.MakeEndpoint(faucet+"/faucet-config", frh.getConfig),
 	}
@@ -126,7 +126,7 @@ func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit globalPeriodicLimit
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/global-periodic-limit global-periodic-limit
 // list minersc config settings
 //
 // responses:

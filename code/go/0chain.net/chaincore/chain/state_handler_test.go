@@ -203,7 +203,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/global-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -231,7 +231,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/global-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
