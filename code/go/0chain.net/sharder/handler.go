@@ -28,7 +28,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/v1/chain/stats":              common.ToJSONResponse(ChainStatsHandler),
 		"/_chain_stats":                    ChainStatsWriter,
 		"/_health_check":                   HealthCheckWriter,
-		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
+		"/v1/sharder/stats":            common.ToJSONResponse(SharderStatsHandler),
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))

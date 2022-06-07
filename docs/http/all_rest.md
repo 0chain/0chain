@@ -584,7 +584,7 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 | /v1/chain/stats | ChainStatsHandlerr |
 | /_chain_stats | ChainStatsWriter |
 | /_health_check | HealthCheckWriter |
-| /v1/sharder/get/stats | SharderStatsHandler |
+| /v1/sharder/stats | SharderStatsHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/sharder/m_handler.go
