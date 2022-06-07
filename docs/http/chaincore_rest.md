@@ -152,7 +152,7 @@ File: 0Chain/code/go/0chain.net/chaincore/transaction/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/transaction/get | GetTransaction |
+| /v1/transaction | GetTransaction |
 
 
 

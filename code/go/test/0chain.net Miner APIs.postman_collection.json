@@ -280,7 +280,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/transaction/get?hash=3f4f3427c3b7abb7d51a77f552f7710cd23179d89d30aae25ac504b857f30b3e",
+					"raw": "http://localhost:7070/v1/transaction?hash=3f4f3427c3b7abb7d51a77f552f7710cd23179d89d30aae25ac504b857f30b3e",
 					"protocol": "http",
 					"host": [
 						"localhost"

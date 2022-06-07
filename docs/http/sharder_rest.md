@@ -23,7 +23,7 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 | ------ | ------ |
 | /v1/block | BlockHandler |
 | /v1/block/magic/get | MagicBlockHandler |
-| /v1/transaction/get/confirmation | TransactionConfirmationHandler |
+| /v1/transaction/confirmation | TransactionConfirmationHandler |
 | /v1/chain/stats | ChainStatsHandlerr |
 | /_chain_stats | ChainStatsWriter |
 | /_health_check | HealthCheckWriter |
