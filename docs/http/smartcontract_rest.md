@@ -11,7 +11,7 @@ File: 0Chain/code/go/0chain.net/smartcontract/faucetsc/sc.go
 
 | Endpoint: fc.SmartContract.RestHandlers | Handler |
 | ------ | ------ |
-| /personalPeriodicLimit | fc.personalPeriodicLimit |
+| /personal-periodic-limit | fc.personalPeriodicLimit |
 | /globalPerodicLimit | fc.globalPerodicLimit |
 | /pourAmount | fc.pourAmount |
 | /getConfig | fc.getConfigHandler |
