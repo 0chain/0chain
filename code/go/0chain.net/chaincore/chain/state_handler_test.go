@@ -1498,12 +1498,12 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:  "Vestingsc_/getPoolInfo_404",
+			name:  "Vestingsc_/pool-info_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/getPoolInfo")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/pool-info")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req

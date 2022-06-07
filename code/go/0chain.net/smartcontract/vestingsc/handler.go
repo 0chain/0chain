@@ -24,7 +24,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	vrh := NewVestingRestHandler(rh)
 	vesting := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(vesting+"/getPoolInfo", vrh.getPoolInfo),
+		rest.MakeEndpoint(vesting+"/pool-info", vrh.getPoolInfo),
 		rest.MakeEndpoint(vesting+"/getClientPools", vrh.getClientPools),
 		rest.MakeEndpoint(vesting+"/vesting-config", vrh.getConfig),
 	}
@@ -52,7 +52,7 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, cp, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolInfo getPoolInfo
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/pool-info getPoolInfo
 // get vesting configuration settings
 //
 // responses:
