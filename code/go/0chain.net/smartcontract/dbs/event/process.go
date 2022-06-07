@@ -36,6 +36,7 @@ const (
 	TagAddWriteMarker
 	TagAddBlock
 	TagAddOrOverwriteValidator
+	TagUpdateValidator
 	TagAddReadMarker
 	TagAddMiner
 	TagAddOrOverwriteMiner
@@ -159,6 +160,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addOrOverwriteValidator(vn)
+	case TagUpdateValidator:
+		var updates dbs.DbUpdates
+		err := json.Unmarshal([]byte(event.Data), &updates)
+		if err != nil {
+			return err
+		}
+		return edb.updateValidator(updates)
 	case TagAddMiner:
 		var miner Miner
 		err := json.Unmarshal([]byte(event.Data), &miner)
