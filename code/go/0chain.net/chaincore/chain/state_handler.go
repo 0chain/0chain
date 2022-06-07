@@ -65,7 +65,7 @@ func SetupStateHandlers() {
 	http.HandleFunc("/v1/scstate", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
 	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
-	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
+	http.HandleFunc("/_smart-contract-stats", common.UserRateLimit(c.SCStats))
 }
 
 func (c *Chain) GetQueryStateContext() state.QueryStateContextI {
