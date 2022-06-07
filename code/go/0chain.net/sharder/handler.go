@@ -25,7 +25,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
-		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
+		"/v1/chain/stats":              common.ToJSONResponse(ChainStatsHandler),
 		"/_chain_stats":                    ChainStatsWriter,
 		"/_health_check":                   HealthCheckWriter,
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
