@@ -39,7 +39,7 @@
 					"raw": "{\"id\":\"{{client_id}}\",\"public_key\":\"eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\"}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/client/put",
+					"raw": "http://localhost:7070/v1/client",
 					"protocol": "http",
 					"host": [
 						"localhost"

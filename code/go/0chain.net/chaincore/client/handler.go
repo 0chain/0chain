@@ -15,7 +15,7 @@ func SetupHandlers() {
 		common.UserRateLimit(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(GetClientHandler))))
-	http.HandleFunc("/v1/client/put",
+	http.HandleFunc("/v1/client",
 		common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				memorystore.WithConnectionEntityJSONHandler(

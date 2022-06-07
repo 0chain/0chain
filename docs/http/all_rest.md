@@ -378,7 +378,7 @@ File: 0Chain/code/go/0chain.net/chaincore/client/handler.go
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
 | /v1/client/get | GetClientHandler |
-| /v1/client/put | PutClient |
+| /v1/client | PutClient |
 
 
 ```sh

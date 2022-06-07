@@ -75,7 +75,7 @@ func CreateClients(numClients int) []Client {
 		clientID := encryption.Hash(publicKey)
 		client["id"] = clientID
 		for true {
-			ok := SendRequest(httpclient, GetURL("/v1/client/put"), client)
+			ok := SendRequest(httpclient, GetURL("/v1/client"), client)
 			if ok {
 				time.Sleep(5 * time.Millisecond)
 				break
