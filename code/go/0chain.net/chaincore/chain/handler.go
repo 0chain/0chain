@@ -55,7 +55,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				chainEntityMetadata,
 			),
 		),
-		"/v1/block/latest_finalized": common.UserRateLimit(
+		"/v1/block/latest-finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
