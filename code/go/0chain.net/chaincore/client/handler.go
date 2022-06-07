@@ -11,7 +11,7 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/client/get",
+	http.HandleFunc("/v1/client",
 		common.UserRateLimit(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(GetClientHandler))))

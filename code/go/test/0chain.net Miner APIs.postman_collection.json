@@ -64,7 +64,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/client/get?id=33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d",
+					"raw": "http://localhost:7070/v1/client?id=33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d",
 					"protocol": "http",
 					"host": [
 						"localhost"
