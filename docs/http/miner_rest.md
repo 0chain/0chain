@@ -60,7 +60,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
 | /v1/_x2m/block/notarized-block | NotarizedBlockSendHandler |
-| /v1/_x2m/block/state_change/get | BlockStateChangeHandler |
+| /v1/_x2m/block/state-change | BlockStateChangeHandler |
 | /v1/_x2m/state/get | PartialStateHandler |
 | /v1/_m2m/dkg/share | SignShareRequestHandler |
 | /v1/_m2m/chain/start | StartChainRequestHandler |
