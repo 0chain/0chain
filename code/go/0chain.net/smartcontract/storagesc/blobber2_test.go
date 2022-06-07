@@ -26,7 +26,6 @@ const (
 	CHUNK_SIZE = 64 * KB
 
 	allocationId         = "my allocation id"
-	payerId              = "peter"
 	delegateWallet       = "my wallet"
 	errCommitBlobber     = "commit_blobber_read"
 	errReadMarker        = "invalid_read_marker"
@@ -294,7 +293,6 @@ func testCommitBlobberRead(
 			BlobberID:       lastReadConnection.ReadMarker.BlobberID,
 			ClientID:        lastReadConnection.ReadMarker.ClientID,
 			Timestamp:       read.timestamp,
-			PayerID:         payerId,
 			AuthTicket:      nil,
 			AllocationID:    allocationId,
 		},
@@ -319,7 +317,7 @@ func testCommitBlobberRead(
 				},
 			},
 		},
-		Owner: payerId,
+		Owner: owner,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 	require.NoError(t, err)
@@ -361,7 +359,7 @@ func testCommitBlobberRead(
 			rPool.Pools[startBlock+i].Blobbers.add(pool)
 		}
 	}
-	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
+	require.NoError(t, rPool.save(ssc.ID, owner, ctx))
 
 	var sPool = stakePool{
 		StakePool: stakepool.StakePool{
@@ -387,7 +385,7 @@ func testCommitBlobberRead(
 		return err
 	}
 
-	newRp, err := ssc.getReadPool(payerId, ctx)
+	newRp, err := ssc.getReadPool(owner, ctx)
 	require.NoError(t, err)
 
 	newSp, err := ssc.getStakePool(blobberId, ctx)

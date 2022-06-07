@@ -769,7 +769,6 @@ func AddMockWriteRedeems(
 				AllocationID:    getMockAllocationId(i),
 				OwnerID:         clients[client],
 				ReadCounter:     viper.GetInt64(sc.NumWriteRedeemAllocation),
-				PayerID:         clients[client],
 			}
 			commitRead := &ReadConnection{
 				ReadMarker: &rm,
@@ -787,7 +786,6 @@ func AddMockWriteRedeems(
 					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, 1),
 					OwnerID:       rm.OwnerID,
 					ReadCounter:   rm.ReadCounter,
-					PayerID:       rm.PayerID,
 					ReadSize:      100,
 					BlockNumber:   mockBlockNumber,
 				}

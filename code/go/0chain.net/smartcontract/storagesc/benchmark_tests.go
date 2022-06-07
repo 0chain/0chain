@@ -113,7 +113,6 @@ func BenchmarkTests(
 					OwnerID:         data.Clients[0],
 					Timestamp:       now,
 					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
-					PayerID:         data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
