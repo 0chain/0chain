@@ -75,7 +75,7 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 				data = strings.NewReader(params.Encode())
 			}
 
-			req := httptest.NewRequest("POST", "/v1/block/latest_finalized_magic_block", data)
+			req := httptest.NewRequest("POST", "/v1/block/latest-finalized-magic-block", data)
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 			c.On("GetLatestFinalizedMagicBlockClone", req.Context()).Return(tc.retLFMB)
@@ -108,7 +108,7 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 	//
 	//lfmb := block.Block{}
 	//lfmb.Hash = "abcd"
-	//req := httptest.NewRequest("GET", "/v1/block/latest_finalized_magic_block", nil)
+	//req := httptest.NewRequest("GET", "/v1/block/latest-finalized-magic-block", nil)
 	//req.Header.Set(node.HeaderNodeLFMBHash, "abcd")
 	//
 	//c.On("GetLatestFinalizedMagicBlockClone", req.Context()).Return(&lfmb)
@@ -120,7 +120,7 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 	//require.Equal(t, http.StatusNotModified, resp.StatusCode)
 	//
 	//// modified
-	//req = httptest.NewRequest("GET", "/v1/block/latest_finalized_magic_block", nil)
+	//req = httptest.NewRequest("GET", "/v1/block/latest-finalized-magic-block", nil)
 	//handler(w, req)
 	//resp = w.Result()
 	//defer resp.Body.Close()

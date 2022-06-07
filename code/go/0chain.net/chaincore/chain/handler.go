@@ -65,7 +65,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
 		),
-		"/v1/block/latest_finalized_magic_block": common.UserRateLimit(
+		"/v1/block/latest-finalized-magic-block": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),

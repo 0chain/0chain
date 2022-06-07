@@ -308,7 +308,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | /v1/block | GetBlockHandler |
 | /v1/block/latest-finalized | LatestFinalizedBlockHandler |
 | /v1/block/latest_finalized_magic_block_summary | LatestFinalizedMagicBlockSummaryHandler |
-| /v1/block/latest_finalized_magic_block | LatestFinalizedMagicBlockHandler |
+| /v1/block/latest-finalized-magic-block | LatestFinalizedMagicBlockHandler |
 | /v1/block/recent_finalized | RecentFinalizedBlockHandler |
 | /v1/block/fee_stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
@@ -344,7 +344,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/block/latest_finalized_magic_block | blockEntityMetadata |
+| /v1/block/latest-finalized-magic-block | blockEntityMetadata |
 
 
 > SetupX2XResponders
