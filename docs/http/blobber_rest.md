@@ -15,7 +15,7 @@ File: blobber/code/go/0chain.net/blobbercore/handler/handler.go
 | /v1/file/copy/{allocation} | CopyHandler |
 | /v1/file/attributes/{allocation} | UpdateAttributesHandler |
 | /v1/connection/commit/{allocation} | CommitHandler |
-| /v1/file/commitmetatxn/{allocation} | CommitMetaTxnHandler |
+| /v1/file/commit-meta-txn/{allocation} | CommitMetaTxnHandler |
 | /v1/file/collaborator/{allocation} | CollaboratorHandler |
 | /v1/file/calculatehash/{allocation} | CalculateHashHandler |
 
@@ -29,7 +29,7 @@ File: blobber/code/go/0chain.net/blobbercore/handler/handler.go
 | /v1/file/copy/{allocation} | ListHandler |
 | /v1/file/attributes/{allocation} | ObjectPathHandler |
 | /v1/connection/commit/{allocation} | ReferencePathHandler |
-| /v1/file/commitmetatxn/{allocation} | ObjectTreeHandler |
+| /v1/file/commit-meta-txn/{allocation} | ObjectTreeHandler |
 
 
 > admin related
