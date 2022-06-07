@@ -810,7 +810,7 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return true
 		}
-		if int(tii.cost)+cost >= mc.Config.MaxBlockCost() {
+		if tii.cost+cost >= mc.Config.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true
 		}
@@ -933,7 +933,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			break
 		}
-		if int(iterInfo.cost)+cost >= mc.Config.MaxBlockCost() {
+		if iterInfo.cost+cost >= mc.Config.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			break
 		}
