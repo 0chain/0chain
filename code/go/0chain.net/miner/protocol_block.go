@@ -726,8 +726,8 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
-	//accumulated transaction cost
-	cost int64
+	// accumulated transaction cost
+	cost int
 }
 
 func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
@@ -816,7 +816,7 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
-			atomic.AddInt64(&tii.cost, int64(cost))
+			tii.cost += cost
 			if tii.idx >= mc.Config.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
 					zap.Bool("idx >= block size", tii.idx >= mc.Config.BlockSize()),
@@ -925,7 +925,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	var reusedTxns int32
 
 	rcount := 0
-	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < int64(mc.Config.MaxBlockCost()) &&
+	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.Config.MaxBlockCost() &&
 		blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
@@ -939,7 +939,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 		if txnProcessor(ctx, blockState, txn, iterInfo) {
 			rcount++
-			atomic.AddInt64(&iterInfo.cost, int64(cost))
+			iterInfo.cost += cost
 			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 				break
 			}
