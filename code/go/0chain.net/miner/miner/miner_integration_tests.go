@@ -22,6 +22,9 @@ func shutdownIntegrationTests() {
 	crpc.Shutdown()
 }
 
+func configureIntegrationsTestsFlags() {
+}
+
 func readMagicBlock(magicBlockConfig string) (*block.MagicBlock, error) {
 	magicBlockFromConductor := crpc.Client().MagicBlock()
 

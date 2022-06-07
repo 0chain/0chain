@@ -320,7 +320,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	state := crpc.Client().State()
 
-	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Round+1 == int(msg.VRFShare.Round) && chain.IsSpamReceiver(state, msg.VRFShare.Round-1) {
+	if state.RoundHasFinalizedConfig != nil && state.RoundHasFinalizedConfig.Round+1 == int(msg.VRFShare.Round) && chain.IsSpamReceiver(state, msg.VRFShare.Round-1) {
 		counter := int(atomic.LoadInt32(&waitForSpammingVRFCount))
 		logging.Logger.Sugar().Debugf("Unlocking notarization (%v)", counter)
 		for i := 0; i < counter; i++ {

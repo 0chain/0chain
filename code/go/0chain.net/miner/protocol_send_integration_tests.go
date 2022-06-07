@@ -17,7 +17,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc"
@@ -48,12 +48,13 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		state     = crpc.Client().State()
 		badVRFS   *round.VRFShare
 		good, bad []*node.Node
+		r         = mc.GetRound(vrfs.Round)
 	)
 
-	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Spammers != nil {
-		isSpammer := chain.IsSpammer(state.RoundHasFinalized.Spammers, vrfs.Round)
+	if state.RoundHasFinalizedConfig != nil && state.RoundHasFinalizedConfig.Spammers != nil && r.IsRanksComputed() {
+		isSpammer := chain.IsSpammer(state.RoundHasFinalizedConfig.Spammers, vrfs.Round)
 
-		if isSpammer && vrfs.Round == int64(state.RoundHasFinalized.Round) {
+		if isSpammer && vrfs.Round == int64(state.RoundHasFinalizedConfig.Round) {
 			mc.SendVRFSSpam(ctx, vrfs)
 			return
 		}
@@ -121,8 +122,6 @@ func (mc *Chain) SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
 		logging.Logger.Info("sendVRFSSpam() first send ", zap.Int64("Round", setup.Vrfs.Round))
 		setup.Miners.SendAll(ctx, RoundVRFSender(setup.Vrfs))
 	}
-
-	log.Printf("Completed %v", setup.completed)
 
 	// spam with next round VRF only once
 	if setup.completed {

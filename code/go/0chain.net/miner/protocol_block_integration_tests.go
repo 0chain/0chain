@@ -143,7 +143,7 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 }
 
 func isTestingRoundHasFinalized(s *crpc.State, blockRound int) bool {
-	return s.RoundHasFinalized != nil && s.RoundHasFinalized.Round == blockRound && chain.IsSpamReceiver(s, int64(blockRound))
+	return s.RoundHasFinalizedConfig != nil && s.RoundHasFinalizedConfig.Round == blockRound && chain.IsSpamReceiver(s, int64(blockRound))
 }
 
 func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {

@@ -21,7 +21,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/gosdk/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 // SetupX2MResponders - setup responders.
@@ -96,9 +96,9 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 
 	state := crpc.Client().State()
 
-	if state.RoundHasFinalized != nil && state.RoundHasFinalized.Round == int(not.Round) && chain.IsSpamReceiver(state, not.Round) {
+	if state.RoundHasFinalizedConfig != nil && state.RoundHasFinalizedConfig.Round == int(not.Round) && chain.IsSpamReceiver(state, not.Round) {
 		m := GetMinerChain()
-		mr := m.getOrCreateRound(ctx, (int64)(state.RoundHasFinalized.Round+1))
+		mr := m.getOrCreateRound(ctx, (int64)(state.RoundHasFinalizedConfig.Round+1))
 		// if already received VRF share of next round the miner does not need to wait for the spamming VRF share
 		if len(mr.vrfSharesCache.getAll()) == 0 {
 			logging.Logger.Sugar().Debugf("Waiting for spamming VRF")
