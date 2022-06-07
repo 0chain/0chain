@@ -38,7 +38,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	return []rest.Endpoint{
 		rest.MakeEndpoint(faucet+"/personal-periodic-limit", frh.getPersonalPeriodicLimit),
 		rest.MakeEndpoint(faucet+"/global-periodic-limit", frh.getGlobalPeriodicLimit),
-		rest.MakeEndpoint(faucet+"/pourAmount", frh.getPourAmount),
+		rest.MakeEndpoint(faucet+"/pour-amount", frh.getPourAmount),
 		rest.MakeEndpoint(faucet+"/faucet-config", frh.getConfig),
 	}
 }
@@ -111,7 +111,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount pourAmount
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pour-amount pourAmount
 // pour amount
 //
 // responses:
