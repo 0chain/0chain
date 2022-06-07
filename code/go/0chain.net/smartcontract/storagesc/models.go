@@ -967,44 +967,9 @@ func (sa *StorageAllocation) addWritePoolOwner(userId string) {
 }
 
 func (sa *StorageAllocation) getAllocationPools(
-	ssc *StorageSmartContract,
 	balances chainstate.StateContextI,
-) (*allocationWritePools, error) {
-	var awp = allocationWritePools{
-		ownerId: -1,
-	}
-
-	for i, wpOwner := range sa.WritePoolOwners {
-		wp, err := ssc.getWritePool(wpOwner, balances)
-		if err != nil {
-			return nil, err
-		}
-		awp.writePools = append(awp.writePools, wp)
-		cut := wp.Pools.allocationCut(sa.ID)
-		for _, ap := range cut {
-			awp.allocationPools.add(ap)
-		}
-		if wpOwner == sa.Owner {
-			awp.ownerId = i
-		}
-	}
-
-	if awp.ownerId < 0 {
-		wp, err := ssc.getWritePool(sa.Owner, balances)
-		if err != nil {
-			return nil, err
-		}
-		awp.writePools = append(awp.writePools, wp)
-		cut := wp.Pools.allocationCut(sa.ID)
-		for _, ap := range cut {
-			awp.allocationPools.add(ap)
-		}
-		awp.ownerId = len(awp.writePools) - 1
-		sa.WritePoolOwners = append(sa.WritePoolOwners, sa.Owner)
-	}
-	awp.ids = sa.WritePoolOwners
-
-	return &awp, nil
+) (*allocationPools, error) {
+	return getAllocationPools(sa.ID, balances)
 }
 
 func (sa *StorageAllocation) validate(now time.Time,

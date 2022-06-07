@@ -85,6 +85,34 @@ func getAllocationPools(
 	return aps, nil
 }
 
+func (aps *allocationPools) addToOrCreateAllocationPool(
+	txn *transaction.Transaction,
+	until common.Timestamp,
+	conf *Config,
+	mintTokens bool,
+	balances cstate.StateContextI,
+) error {
+	var err error
+	ap, found := aps.Pools[txn.ClientID]
+	if found {
+		if ap.ExpireAt > until {
+			return fmt.Errorf("cannot reduce expirety time from %v to %v", ap.ExpireAt, until)
+		}
+		ap.ExpireAt = until
+		ap.Balance += currency.Coin(txn.Value)
+		return nil
+	}
+	if len(aps.Pools) >= conf.MaxPoolsPerAllocation {
+		return fmt.Errorf("max allocation pools %v exceeded", conf.MaxPoolsPerAllocation)
+	}
+	ap, err = newAllocationPool(txn, until, mintTokens, balances)
+	if err != nil {
+		return err
+	}
+	aps.Pools[txn.ClientID] = ap
+	return nil
+}
+
 func (aps *allocationPools) getExpiresAfter(
 	now common.Timestamp,
 ) []*allocationPool {

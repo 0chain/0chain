@@ -903,11 +903,12 @@ func (sc *StorageSmartContract) adjustChallengePool(
 // extendAllocation extends size or/and expiration (one of them can be reduced);
 // here we use new terms of blobbers
 func (sc *StorageSmartContract) extendAllocation(
-	t *transaction.Transaction,
+	txn *transaction.Transaction,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
 	uar *updateAllocationRequest,
 	mintTokens bool,
+	conf *Config,
 	balances chainstate.StateContextI,
 ) (err error) {
 	var (
@@ -919,7 +920,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		// keep original terms to adjust challenge pool value
 		oterms = make([]Terms, 0, len(alloc.BlobberAllocs))
 		// original allocation duration remains
-		odr = alloc.Expiration - t.CreationDate
+		odr = alloc.Expiration - txn.CreationDate
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
@@ -952,7 +953,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		// update terms using weighted average
 		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
-			t.CreationDate, prevExpiration, alloc.Expiration, details.Size,
+			txn.CreationDate, prevExpiration, alloc.Expiration, details.Size,
 			diff)
 		if err != nil {
 			return err
@@ -1006,21 +1007,15 @@ func (sc *StorageSmartContract) extendAllocation(
 	alloc.ChallengeCompletionTime = cct
 
 	var until = alloc.Until()
-	wps, err := alloc.getAllocationPools(sc, balances)
+	aps, err := alloc.getAllocationPools(balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
 	// lock tokens if this transaction provides them
-	if t.Value > 0 {
-		ap, err := newAllocationPool(t, alloc, until, mintTokens, balances)
-		if err != nil {
-			return common.NewErrorf("allocation_extending_failed",
-				"write pool filling: %v", err)
-		}
-		if err := wps.addOwnerWritePool(ap); err != nil {
-			return common.NewErrorf("allocation_extending_failed",
-				"add write pool: %v", err)
+	if txn.Value > 0 {
+		if err := aps.addToOrCreateAllocationPool(txn, until, conf, mintTokens, balances); err != nil {
+			return err
 		}
 	}
 
@@ -1028,7 +1023,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	// pool has enough tokens
 	if diff > 0 {
 		if mldLeft := alloc.restMinLockDemand(); mldLeft > 0 {
-			if wps.allocUntil(alloc.ID, until) < mldLeft {
+			if aps.allocUntil(until) < mldLeft {
 				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
 			}
@@ -1036,13 +1031,13 @@ func (sc *StorageSmartContract) extendAllocation(
 	}
 
 	// add more tokens to related challenge pool, or move some tokens back
-	var ndr = alloc.Expiration - t.CreationDate
-	err = sc.adjustChallengePool(alloc, wps, odr, ndr, oterms, t.CreationDate, balances)
+	var ndr = alloc.Expiration - txn.CreationDate
+	err = sc.adjustChallengePool(alloc, aps, odr, ndr, oterms, txn.CreationDate, balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
-	if err := wps.saveWritePools(sc.ID, balances); err != nil {
+	if err := aps.save(alloc.ID, balances); err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
