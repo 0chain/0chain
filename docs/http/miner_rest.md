@@ -11,8 +11,8 @@ File: 0Chain/code/go/0chain.net/miner/handler.go
 | ------ | ------ |
 | /v1/chain/stats | ChainStatsHandler |
 | /_chain_stats | ChainStatsWriter |
-| /_diagnostics/wallet_stats | GetWalletStats |
-| /v1/miner/get/stats | MinerStatsHandler |
+| /_diagnostics/wallet-stats | GetWalletStats |
+| /v1/miner/stats | MinerStatsHandler |
 
 
 ```sh

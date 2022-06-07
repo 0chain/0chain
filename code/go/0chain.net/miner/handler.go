@@ -20,9 +20,9 @@ import (
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
 	http.HandleFunc("/v1/chain/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
-	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
-	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
-	http.HandleFunc("/v1/miner/get/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
+	http.HandleFunc("/_chain-stats", common.UserRateLimit(ChainStatsWriter))
+	http.HandleFunc("/_diagnostics/wallet-stats", common.UserRateLimit(GetWalletStats))
+	http.HandleFunc("/v1/miner/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */

@@ -23,11 +23,11 @@ const (
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
 		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
-		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
+		"/v1/block/magic":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
 		"/v1/chain/stats":              common.ToJSONResponse(ChainStatsHandler),
-		"/_chain_stats":                    ChainStatsWriter,
-		"/_health_check":                   HealthCheckWriter,
+		"/_chain-stats":                    ChainStatsWriter,
+		"/_health-check":                   HealthCheckWriter,
 		"/v1/sharder/stats":            common.ToJSONResponse(SharderStatsHandler),
 	}
 

@@ -86,13 +86,13 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
 		),
-		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+		"/_diagnostics/current-mb-nodes": common.UserRateLimit(
 			DiagnosticsNodesHandler,
 		),
-		"/_diagnostics/dkg_process": common.UserRateLimit(
+		"/_diagnostics/dkg-process": common.UserRateLimit(
 			DiagnosticsDKGHandler,
 		),
-		"/_diagnostics/round_info": common.UserRateLimit(
+		"/_diagnostics/round-info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
 		"/v1/transaction": common.UserRateLimit(
@@ -104,7 +104,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				transactionEntityMetadata,
 			),
 		),
-		"/_diagnostics/state_dump": common.UserRateLimit(
+		"/_diagnostics/state-dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
 		"/v1/block/latest-finalized-ticket": common.N2NRateLimit(
@@ -715,7 +715,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
+		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet-stats'>/_diagnostics/wallet-stats</a>")
 	}
 	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")
