@@ -70,7 +70,7 @@ func getBalances(
 		PrevBlock: &block.Block{},
 	}
 	bk.Round = 2
-	bk.CreationDate = common.Timestamp(time.Now().Unix())
+	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
 	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
 	magicBlock := &block.MagicBlock{}
