@@ -309,7 +309,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | /v1/block/latest-finalized | LatestFinalizedBlockHandler |
 | /v1/block/latest-finalized-magic-block-summary | LatestFinalizedMagicBlockSummaryHandler |
 | /v1/block/latest-finalized-magic-block | LatestFinalizedMagicBlockHandler |
-| /v1/block/recent_finalized | RecentFinalizedBlockHandler |
+| /v1/block/recent-finalized | RecentFinalizedBlockHandler |
 | /v1/block/fee_stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
 | /_diagnostics | DiagnosticsHomepageHandler |
