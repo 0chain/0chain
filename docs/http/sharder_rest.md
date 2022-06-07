@@ -59,7 +59,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 | /v1/_s2s/latest-round | roundEntityMetadata |
 | /v1/_s2s/round/get | roundEntityMetadata |
 | /v1/_s2s/block/get | blockEntityMetadata |
-| /v1/_s2s/blocksummary/get | blockSummaryEntityMetadata |
+| /v1/_s2s/block-summary | blockSummaryEntityMetadata |
 | /v1/_s2s/roundsummaries/get | roundSummariesEntityMetadata |
 | /v1/_s2s/blocksummaries/get | blockSummariesEntityMetadata |
 
@@ -72,7 +72,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 | /v1/_s2s/round/get | RoundRequestHandler |
 | /v1/_s2s/roundsummaries/get | RoundSummariesHandler) |
 | /v1/_s2s/block/get | RoundBlockRequestHandler |
-| /v1/_s2s/blocksummary/get | BlockSummaryRequestHandler |
+| /v1/_s2s/block-summary | BlockSummaryRequestHandler |
 | /v1/_s2s/blocksummaries/get | BlockSummariesHandler |
 
 > SetupX2SRespondes setups sharders responders for miner and sharders.

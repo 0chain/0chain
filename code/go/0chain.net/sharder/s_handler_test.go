@@ -60,7 +60,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 func TestBlockSummaryRequestHandler(t *testing.T) {
 	t.Parallel()
 
-	const baseUrl = "/v1/_s2s/blocksummary/get"
+	const baseUrl = "/v1/_s2s/block-summary"
 
 	b := block.NewBlock("", 1)
 	b.HashBlock()
