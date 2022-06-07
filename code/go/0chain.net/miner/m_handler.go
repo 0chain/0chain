@@ -45,7 +45,7 @@ func SetupM2MSenders() {
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
-	MinerNotarizedBlockSender = node.SendEntityHandler("/v1/_m2m/block/notarized_block", options)
+	MinerNotarizedBlockSender = node.SendEntityHandler("/v1/_m2m/block/notarized-block", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
@@ -81,7 +81,7 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 			NotarizationReceiptHandler,
 			nil,
 		),
-		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
+		"/v1/_m2m/block/notarized-block": node.ToN2NReceiveEntityHandler(
 			NotarizedBlockHandler,
 			nil,
 		),
