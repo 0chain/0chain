@@ -49,7 +49,7 @@ func setupX2MRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized_block/get", options, blockEntityMetadata)
+	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized-block", options, blockEntityMetadata)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")

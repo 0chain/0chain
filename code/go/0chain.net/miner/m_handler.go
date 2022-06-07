@@ -95,7 +95,7 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 }
 
 const (
-	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized_block/get"
+	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized-block"
 )
 
 func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {

@@ -107,7 +107,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
-		"/v1/block/latest_finalized_ticket": common.N2NRateLimit(
+		"/v1/block/latest-finalized-ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
 			),

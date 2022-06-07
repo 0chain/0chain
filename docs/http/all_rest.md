@@ -317,7 +317,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | /_diagnostics/round_info | RoundInfoHandler |
 | /v1/transaction/put | PutTransaction |
 | /_diagnostics/state_dump | StateDumpHandler |
-| /v1/block/latest_finalized_ticket | LFBTicketHandler |
+| /v1/block/latest-finalized-ticket | LFBTicketHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
@@ -335,7 +335,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_x2m/block/notarized_block/get | blockEntityMetadata |
+| /v1/_x2m/block/notarized-block | blockEntityMetadata |
 | /v1/_x2m/block/state_change/get | blockStateChangeEntityMetadata |
 | /v1/_x2m/state/get | partialStateEntityMetadata |
 | /v1/_x2x/state/get_nodes | stateNodesEntityMetadata |
@@ -520,7 +520,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_x2m/block/notarized_block/get | NotarizedBlockSendHandler |
+| /v1/_x2m/block/notarized-block | NotarizedBlockSendHandler |
 | /v1/_x2m/block/state_change/get | BlockStateChangeHandler |
 | /v1/_x2m/state/get | PartialStateHandler |
 | /v1/_m2m/dkg/share | SignShareRequestHandler |
