@@ -8,7 +8,6 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/rcrowley/go-metrics"
@@ -779,7 +778,7 @@ func txnIterHandlerFunc(mc *Chain,
 	txnProcessor txnProcessorHandler,
 	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
 	return func(ctx context.Context, qe datastore.CollectionEntity) bool {
-		atomic.AddInt32(&tii.count, 1)
+		tii.count++
 		if ctx.Err() != nil {
 			return false
 		}
