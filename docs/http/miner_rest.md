@@ -37,7 +37,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: node.SendEntityHandler |
 | ------ |
-| /v1/_m2m/round/vrf_share |
+| /v1/_m2m/round/vrf-share |
 | /v1/_m2m/block/verify |
 | /v1/_m2m/block/notarized-block |
 | /v1/_m2m/block/verification_ticket |
@@ -48,7 +48,7 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NReceiveEntityHandler |
 | ------ | ------ |
-| /v1/_m2m/round/vrf_share | VRFShareHandler |
+| /v1/_m2m/round/vrf-share | VRFShareHandler |
 | /v1/_m2m/block/verify | VerifyBlockHandler |
 | /v1/_m2m/block/verification_ticket | VerificationTicketReceiptHandler |
 | /v1/_m2m/block/notarization | NotarizationReceiptHandler |

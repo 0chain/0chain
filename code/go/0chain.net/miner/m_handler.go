@@ -41,7 +41,7 @@ var (
 func SetupM2MSenders() {
 
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf_share", options)
+	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf-share", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
@@ -56,7 +56,7 @@ func SetupM2MSenders() {
 }
 
 const (
-	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf_share"
+	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf-share"
 )
 
 func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
