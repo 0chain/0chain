@@ -71,7 +71,6 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
-	var now = common.Now()
 	var blobbers []string
 	for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
 		blobbers = append(blobbers, getMockBlobberId(i))
@@ -86,7 +85,7 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
-	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTimeRaw := viper.GetInt64(bk.MptCreationTime)
 	creationTime := common.Now()
 	if creationTimeRaw != 0 {
 		creationTime = common.Timestamp(creationTimeRaw)
@@ -117,7 +116,7 @@ func BenchmarkTests(
 					BlobberID:       getMockBlobberId(0),
 					AllocationID:    getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
-					Timestamp:       now,
+					Timestamp:       creationTime,
 					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
 					PayerID:         data.Clients[0],
 				}
@@ -176,7 +175,7 @@ func BenchmarkTests(
 					DataShards:                 len(blobbers) / 2,
 					ParityShards:               len(blobbers) / 2,
 					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],
 					Blobbers:                   blobbers,
@@ -221,7 +220,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-				CreationDate: creationTime + benchAllocationExpire() + 1,
+				CreationDate: creationTime + benchAllocationExpire(creationTime) + 1,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
@@ -525,7 +524,7 @@ func BenchmarkTests(
 				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: benchWritePoolExpire + 1,
+				CreationDate: benchWritePoolExpire(creationTime) + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
@@ -566,7 +565,7 @@ func BenchmarkTests(
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
 					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
-				CreationDate: creationTime + benchWritePoolExpire + 1,
+				CreationDate: benchWritePoolExpire(creationTime) + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
@@ -671,7 +670,7 @@ func BenchmarkTests(
 						Result:       true,
 						Message:      "mock message",
 						MessageCode:  "mock message code",
-						Timestamp:    now,
+						Timestamp:    creationTime,
 						Signature:    "",
 					}
 					hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,

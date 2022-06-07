@@ -138,9 +138,11 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	if err != nil {
 		panic(err)
 	}
+
+	creationDate := common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 	benchData := benchmark.BenchData{EventDb: eventDb}
 	_, balances := getBalances(
-		&transaction.Transaction{},
+		&transaction.Transaction{CreationDate: creationDate},
 		extractMpt(pMpt, rootBytes),
 		benchData,
 	)
@@ -197,6 +199,7 @@ func setUpMpt(
 			HashIDField: datastore.HashIDField{
 				Hash: encryption.Hash("mock transaction hash"),
 			},
+			CreationDate: common.Now(),
 		},
 		func(*block.Block) []string { return []string{} },
 		func() *block.Block { return bk },

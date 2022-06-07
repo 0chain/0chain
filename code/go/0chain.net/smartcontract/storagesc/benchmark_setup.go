@@ -49,8 +49,8 @@ func AddMockAllocations(
 	}
 }
 
-func benchAllocationExpire() common.Timestamp {
-	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+func benchAllocationExpire(now common.Timestamp) common.Timestamp {
+	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + now
 }
 
 func addMockAllocation(
@@ -67,7 +67,7 @@ func addMockAllocation(
 		DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 		ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 		Size:                       viper.GetInt64(sc.StorageMinAllocSize),
-		Expiration:                 benchAllocationExpire(),
+		Expiration:                 benchAllocationExpire(balances.GetTransaction().CreationDate),
 		Owner:                      clients[cIndex],
 		OwnerPublicKey:             publicKey,
 		ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
@@ -312,8 +312,10 @@ func AddMockClientAllocation(
 	}
 }
 
-var benchWritePoolExpire = common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
-	common.Now() + common.Timestamp(time.Hour*24*23)
+func benchWritePoolExpire(now common.Timestamp) common.Timestamp {
+	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
+		now + common.Timestamp(time.Hour*24*23)
+}
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 	wps := make([]*writePool, len(clients))
@@ -327,7 +329,7 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 		startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 		for k := 0; k < viper.GetInt(sc.NumAllocationPayerPools); k++ {
 			wap := allocationPool{
-				ExpireAt:     benchWritePoolExpire,
+				ExpireAt:     benchWritePoolExpire(balances.GetTransaction().CreationDate),
 				AllocationID: allocationID,
 			}
 			wap.Balance = 100 * 1e10
@@ -354,7 +356,7 @@ func AddMockWritePools(clients []string, balances cstate.StateContextI) {
 
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	rps := make([]*readPool, len(clients))
-	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+	expiration := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + balances.GetTransaction().CreationDate
 	amountPerBlobber := currency.Coin(100 * 1e10)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationID := getMockAllocationId(i)
@@ -453,7 +455,7 @@ func setupMockChallenge(
 	if viper.GetBool(sc.EventDbEnabled) {
 		challengeRow := event.Challenge{
 			ChallengeID:  challenge.ID,
-			CreatedAt:    common.Timestamp(time.Now().Unix()),
+			CreatedAt:    balances.GetTransaction().CreationDate,
 			AllocationID: challenge.AllocationID,
 			BlobberID:    challenge.BlobberID,
 		}
@@ -484,7 +486,6 @@ func AddMockBlobbers(
 	}.ID
 	var blobbers StorageNodes
 	var rtvBlobbers []*StorageNode
-	var now = common.Timestamp(time.Now().Unix())
 	const maxLatitude float64 = 88
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
@@ -502,7 +503,7 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Used:              mockUsedData,
-			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
+			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field

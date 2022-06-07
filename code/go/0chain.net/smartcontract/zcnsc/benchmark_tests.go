@@ -254,7 +254,7 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 }
 
 func createTransaction(clientId, publicKey string) *transaction.Transaction {
-	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTimeRaw := viper.GetInt64(benchmark.MptCreationTime)
 	creationTime := common.Now()
 	if creationTimeRaw != 0 {
 		creationTime = common.Timestamp(creationTimeRaw)
