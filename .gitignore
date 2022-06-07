@@ -1,4 +1,3 @@
-bin/mockery
 dev.local/build
 code/coverage.txt
 \.*
