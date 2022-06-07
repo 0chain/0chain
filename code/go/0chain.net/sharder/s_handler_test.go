@@ -17,7 +17,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 
 	sc := makeTestChain(t)
 	var num int64 = 1
-	r := round.NewRound(num)
+	r := round.NewRound(num§)
 	sc.AddRound(r)
 	sc.SetCurrentRound(num)
 

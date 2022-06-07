@@ -16,7 +16,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | /v1/block/latest-finalized-magic-block-summary | LatestFinalizedMagicBlockSummaryHandler |
 | /v1/block/latest-finalized-magic-block | LatestFinalizedMagicBlockHandler |
 | /v1/block/recent-finalized | RecentFinalizedBlockHandler |
-| /v1/block/fee_stats | LatestBlockFeeStatsHandler |
+| /v1/block/fee-stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
 | /_diagnostics | DiagnosticsHomepageHandler |
 | /_diagnostics/dkg_process | DiagnosticsDKGHandler |

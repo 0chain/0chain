@@ -75,7 +75,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				RecentFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/fee_stats": common.UserRateLimit(
+		"/v1/block/fee-stats": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
