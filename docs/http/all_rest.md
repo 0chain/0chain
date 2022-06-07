@@ -362,7 +362,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/state_handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/client/get/balance | c.GetBalanceHandler |
+| /v1/client/balance | c.GetBalanceHandler |
 | /v1/scstate/get | c.GetNodeFromSCState |
 | /v1/scstats/ | c.GetSCStats |
 | /v1/screst/ | c.HandleSCRest |
