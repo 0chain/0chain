@@ -60,7 +60,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				LatestFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/latest_finalized_magic_block_summary": common.UserRateLimit(
+		"/v1/block/latest-finalized-magic-block-summary": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
