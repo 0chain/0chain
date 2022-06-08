@@ -1664,6 +1664,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
 	conf.MaxBlobbersPerAllocation = 4
+	conf.TimeUnit = time.Hour * 1
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)

@@ -209,7 +209,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
 		mockReadPoolFraction     = 0.2
-		mockMinLock              = 10e10
+		mockMinLock              = 10
 		mockFreeTokens           = 5 * mockMinLock
 		mockIndividualTokenLimit = mockFreeTokens + 1
 		mockTotalTokenLimit      = mockIndividualTokenLimit * 300
