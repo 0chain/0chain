@@ -164,7 +164,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 			return fmt.Errorf("cannot find allocation pools for %s: %v " + alloc.ID + ": " + err.Error())
 		}
 
-		err = cp.moveToAllocationPools(alloc.Owner, aps, back)
+		err = aps.moveFromCP(alloc.Owner, cp, back)
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
@@ -325,7 +325,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			"cannot find allocation pools for "+alloc.ID+": "+err.Error())
 	}
 
-	err = cp.moveToAllocationPools(alloc.Owner, aps, move)
+	err = aps.moveFromCP(alloc.Owner, cp, move)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"moving challenge pool rest back to write pool: "+err.Error())

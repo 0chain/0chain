@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"0chain.net/chaincore/transaction"
 
@@ -85,6 +86,17 @@ func getAllocationPools(
 	return aps, nil
 }
 
+func (aps *allocationPools) sortExpiry() []string {
+	var clients []string
+	for client := range aps.Pools {
+		clients = append(clients, client)
+	}
+	sort.Slice(clients, func(i, j int) bool {
+		return aps.Pools[clients[i]].ExpireAt < aps.Pools[clients[j]].ExpireAt
+	})
+	return clients
+}
+
 func (aps *allocationPools) addToOrCreateAllocationPool(
 	txn *transaction.Transaction,
 	until common.Timestamp,
@@ -95,10 +107,9 @@ func (aps *allocationPools) addToOrCreateAllocationPool(
 	var err error
 	ap, found := aps.Pools[txn.ClientID]
 	if found {
-		if ap.ExpireAt > until {
-			return fmt.Errorf("cannot reduce expirety time from %v to %v", ap.ExpireAt, until)
+		if ap.ExpireAt < until {
+			ap.ExpireAt = until
 		}
-		ap.ExpireAt = until
 		ap.Balance += currency.Coin(txn.Value)
 		return nil
 	}
@@ -125,15 +136,23 @@ func (aps *allocationPools) getExpiresAfter(
 	return pools
 }
 
-func (aps *allocationPools) moveTo(
+func (aps *allocationPools) moveTo(client string, value currency.Coin) error {
+	ap, found := aps.Pools[client]
+	if !found {
+		return fmt.Errorf("cannot find clinet %s pool to transfer funds", client)
+	}
+	ap.Balance += value
+	return nil
+}
+
+func (aps *allocationPools) moveFromCP(
 	owner string,
 	cp *challengePool,
 	value currency.Coin,
 ) error {
 	ap, found := aps.Pools[owner]
 	if !found {
-		return common.NewError("fini_alloc_failed",
-			"cannot find owner "+owner+" allocation pool")
+		return fmt.Errorf("cannot find owner %s of allocation", owner)
 	}
 	return ap.moveToAllocationPool(cp, value)
 }

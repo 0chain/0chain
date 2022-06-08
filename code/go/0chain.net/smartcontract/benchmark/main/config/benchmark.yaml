@@ -28,10 +28,7 @@ options:
   verbose: true
   test_suites:
     - "storage_rest"
-    - "miner_rest"
-    - "faucet_rest"
-    - "vesting_rest"
-    - "zcnscbridge_rest"
+    - "storage"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
@@ -124,6 +121,7 @@ smart_contracts:
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
+    max_pools_per_allocation: 10
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000
@@ -172,5 +170,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: true
+  show_output: false
 

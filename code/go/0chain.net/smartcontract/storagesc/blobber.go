@@ -1,6 +1,10 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
@@ -11,9 +15,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -516,14 +517,11 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		return errors.New("can't get related challenge pool")
 	}
 
-	var (
-		until = alloc.Until()
-		move  currency.Coin
-	)
+	var move currency.Coin
 
 	// the details will be saved in caller with allocation object (the details
 	// is part of the allocation object)
-	wps, err := alloc.getAllocationPools(sc, balances)
+	aps, err := alloc.getAllocationPools(balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 	}
@@ -532,7 +530,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		move = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
 
-		err = wps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
+		err = aps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -540,13 +538,8 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		alloc.MovedToChallenge += move
 		details.Spent += move
 	} else {
-		// delete (challenge_pool -> write_pool)
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
-		wp, err := wps.getOwnerWP()
-		if err != nil {
-			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
-		}
-		err = cp.moveToWritePool(alloc, details.BlobberID, until, wp, move)
+		err = aps.moveFromCP(alloc.Owner, cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -554,7 +547,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	if err := wps.saveWritePools(sc.ID, balances); err != nil {
+	if err := aps.save(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 	}
 

@@ -3,11 +3,12 @@ package cmd
 import (
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/net/context"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/currency"
 
@@ -300,14 +301,6 @@ func setUpMpt(
 		timer := time.Now()
 		storagesc.AddMockReadPools(clients, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockWritePools(clients, balances)
-		log.Println("added allocation write pools\t", time.Since(timer))
 	}()
 
 	wg.Add(1)

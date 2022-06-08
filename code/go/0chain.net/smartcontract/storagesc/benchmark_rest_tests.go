@@ -1,8 +1,9 @@
 package storagesc
 
 import (
-	"0chain.net/core/encryption"
 	"time"
+
+	"0chain.net/core/encryption"
 
 	"0chain.net/smartcontract/dbs/benchmark"
 
@@ -58,6 +59,14 @@ func BenchmarkRestTests(
 			{
 				FuncName: "storage_config",
 				Endpoint: srh.getConfig,
+			},
+			{
+				FuncName: "allocation-pools",
+				Params: map[string]string{
+					"client_id":     data.Clients[getMockOwnerFromAllocationIndex(0, 0)],
+					"allocation_id": getMockAllocationId(0),
+				},
+				Endpoint: srh.getAllocationPools,
 			},
 			{
 				FuncName: "get_blocks",
@@ -210,13 +219,6 @@ func BenchmarkRestTests(
 					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
-			},
-			{
-				FuncName: "getWritePoolStat",
-				Params: map[string]string{
-					"client_id": data.Clients[0],
-				},
-				Endpoint: srh.getWritePoolStat,
 			},
 			{
 				FuncName: "getStakePoolStat",

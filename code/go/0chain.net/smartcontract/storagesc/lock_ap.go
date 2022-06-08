@@ -12,7 +12,7 @@ import (
 )
 
 // lock tokens for write pool of transaction's client
-func (ssc *StorageSmartContract) writePoolLock(
+func (ssc *StorageSmartContract) allocationPoolLock(
 	txn *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
@@ -94,7 +94,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 }
 
 // unlock tokens if expired
-func (ssc *StorageSmartContract) writePoolUnlock(
+func (ssc *StorageSmartContract) allocationPoolUnlock(
 	txn *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {

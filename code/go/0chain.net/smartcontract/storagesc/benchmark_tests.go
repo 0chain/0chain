@@ -540,7 +540,7 @@ func BenchmarkTests(
 				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: benchWritePoolExpire(creationTime) + 1,
+				CreationDate: benchAllocationPoolExpire(creationTime) + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&readPoolUnlockRequest{
@@ -551,8 +551,8 @@ func BenchmarkTests(
 		},
 		// write pool
 		{
-			name:     "storage.write_pool_lock",
-			endpoint: ssc.writePoolLock,
+			name:     "storage.allocation_pool_lock",
+			endpoint: ssc.allocationPoolLock,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -570,8 +570,8 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage.write_pool_unlock",
-			endpoint: ssc.writePoolUnlock,
+			name:     "storage.allocation_pool_unlock",
+			endpoint: ssc.allocationPoolUnlock,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -580,18 +580,11 @@ func BenchmarkTests(
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
 					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
-				CreationDate: benchWritePoolExpire(creationTime) + 1,
+				CreationDate: benchAllocationPoolExpire(creationTime) + 1,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: getMockWritePoolId(
-						viper.GetInt(bk.NumAllocations)-1,
-						getMockOwnerFromAllocationIndex(
-							viper.GetInt(bk.NumAllocations)-1,
-							viper.GetInt(bk.NumActiveClients),
-						),
-						0,
-					),
+					AllocationID: getMockAllocationId(viper.GetInt(bk.NumAllocations) - 1),
 				})
 				return bytes
 			}(),

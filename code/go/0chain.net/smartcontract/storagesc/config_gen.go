@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 34
+	// map header, size 35
 	// string "TimeUnit"
-	o = append(o, 0xde, 0x0, 0x22, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = append(o, 0xde, 0x0, 0x23, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
 	o = msgp.AppendDuration(o, z.TimeUnit)
 	// string "MaxMint"
 	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
@@ -39,6 +39,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MinOfferDuration"
 	o = append(o, 0xb0, 0x4d, 0x69, 0x6e, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendDuration(o, z.MinOfferDuration)
+	// string "MaxPoolsPerAllocation"
+	o = append(o, 0xb5, 0x4d, 0x61, 0x78, 0x50, 0x6f, 0x6f, 0x6c, 0x73, 0x50, 0x65, 0x72, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e)
+	o = msgp.AppendInt(o, z.MaxPoolsPerAllocation)
 	// string "MinBlobberCapacity"
 	o = append(o, 0xb2, 0x4d, 0x69, 0x6e, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79)
 	o = msgp.AppendInt64(o, z.MinBlobberCapacity)
@@ -262,6 +265,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.MinOfferDuration, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinOfferDuration")
+				return
+			}
+		case "MaxPoolsPerAllocation":
+			z.MaxPoolsPerAllocation, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MaxPoolsPerAllocation")
 				return
 			}
 		case "MinBlobberCapacity":
@@ -589,7 +598,7 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Config) Msgsize() (s int) {
-	s = 3 + 9 + msgp.DurationSize + 8 + z.MaxMint.Msgsize() + 7 + z.Minted.Msgsize() + 13 + msgp.Int64Size + 17 + msgp.DurationSize + 27 + msgp.DurationSize + 17 + msgp.DurationSize + 19 + msgp.Int64Size + 9
+	s = 3 + 9 + msgp.DurationSize + 8 + z.MaxMint.Msgsize() + 7 + z.Minted.Msgsize() + 13 + msgp.Int64Size + 17 + msgp.DurationSize + 27 + msgp.DurationSize + 17 + msgp.DurationSize + 22 + msgp.IntSize + 19 + msgp.Int64Size + 9
 	if z.ReadPool == nil {
 		s += msgp.NilSize
 	} else {

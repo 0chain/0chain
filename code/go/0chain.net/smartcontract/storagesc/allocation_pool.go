@@ -59,7 +59,6 @@ func (ur *unlockRequest) decode(input []byte) error {
 type allocationPool struct {
 	Balance  currency.Coin    `json:"balance"`
 	ExpireAt common.Timestamp `json:"expire_at"` // inclusive
-	//AllocationID string           `json:"allocation_id"` //
 }
 
 func newAllocationPool(

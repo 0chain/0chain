@@ -73,7 +73,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
-		rest.MakeEndpoint(storage+"/getWritePoolStat", srh.getWritePoolStat),
+		rest.MakeEndpoint(storage+"/allocation-pools", srh.getAllocationPools),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
 		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
 		rest.MakeEndpoint(storage+"/alloc_read_size", srh.getReadAmount),
@@ -539,28 +539,43 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, cp.stat(alloc), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolStat getWritePoolStat
-// Gets  statistic for all locked tokens of the write pool
+// swagger:model allocationPoolSlice
+type allocationPoolSlice []event.AllocationPool
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-pools allocation-pools
+// Gets a slice of allocation pools filtered by allocation and/or client
 //
 // parameters:
 //    + name: client_id
-//      description: client for which to get read pools statistics
+//      description: get allocation pools matching client
+//      required: true
+//      in: query
+//      type: string
+//    + name: allocation_id
+//      description: filter allocation pools returned by allocation id
 //      required: true
 //      in: query
 //      type: string
 //
 // responses:
-//  200: allocationPoolsStat
+//  200: allocationPoolSlice
 //  400:
-func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
-	var wp = &writePool{}
+func (srh *StorageRestHandler) getAllocationPools(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	common.Respond(w, r, wp.stat(common.Now()), nil)
+	var pools allocationPoolSlice
+	pools, err := edb.GetAllocationPools(clientID, allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("retrieving pools: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, pools, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat

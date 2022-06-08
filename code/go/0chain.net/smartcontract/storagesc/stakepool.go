@@ -170,6 +170,7 @@ func (sp *stakePool) removeOffer(amount currency.Coin) error {
 // reality, with regards to division errors
 func (sp *stakePool) slash(
 	alloc *StorageAllocation,
+	blobID string,
 	until common.Timestamp,
 	aps *allocationPools,
 	offer, slash currency.Coin,
@@ -194,9 +195,9 @@ func (sp *stakePool) slash(
 			continue
 		}
 		dp.Balance -= dpSlash
-		ap.Balance += dpSlash
-		aps.moveToAllocationPools()
-
+		if err := aps.moveTo(alloc.Owner, dpSlash); err != nil {
+			return 0, err
+		}
 		move += dpSlash
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}

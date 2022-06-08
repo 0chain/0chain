@@ -9,12 +9,12 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *allocationPool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
-	// string "ZcnPool"
-	o = append(o, 0x83, 0xa7, 0x5a, 0x63, 0x6e, 0x50, 0x6f, 0x6f, 0x6c)
-	o, err = z.ZcnPool.MarshalMsg(o)
+	// map header, size 2
+	// string "Balance"
+	o = append(o, 0x82, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
+	o, err = z.Balance.MarshalMsg(o)
 	if err != nil {
-		err = msgp.WrapError(err, "ZcnPool")
+		err = msgp.WrapError(err, "Balance")
 		return
 	}
 	// string "ExpireAt"
@@ -24,9 +24,6 @@ func (z *allocationPool) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "ExpireAt")
 		return
 	}
-	// string "AllocationID"
-	o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
-	o = msgp.AppendString(o, z.AllocationID)
 	return
 }
 
@@ -48,22 +45,16 @@ func (z *allocationPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "ZcnPool":
-			bts, err = z.ZcnPool.UnmarshalMsg(bts)
+		case "Balance":
+			bts, err = z.Balance.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "ZcnPool")
+				err = msgp.WrapError(err, "Balance")
 				return
 			}
 		case "ExpireAt":
 			bts, err = z.ExpireAt.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ExpireAt")
-				return
-			}
-		case "AllocationID":
-			z.AllocationID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "AllocationID")
 				return
 			}
 		default:
@@ -80,7 +71,7 @@ func (z *allocationPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *allocationPool) Msgsize() (s int) {
-	s = 1 + 8 + z.ZcnPool.Msgsize() + 9 + z.ExpireAt.Msgsize() + 13 + msgp.StringPrefixSize + len(z.AllocationID)
+	s = 1 + 8 + z.Balance.Msgsize() + 9 + z.ExpireAt.Msgsize()
 	return
 }
 
@@ -177,122 +168,6 @@ func (z *allocationPoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *allocationPoolStat) Msgsize() (s int) {
 	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 9 + z.ExpireAt.Msgsize() + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 7 + msgp.BoolSize
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z allocationPools) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendArrayHeader(o, uint32(len(z)))
-	for za0001 := range z {
-		if z[za0001] == nil {
-			o = msgp.AppendNil(o)
-		} else {
-			// map header, size 3
-			// string "ZcnPool"
-			o = append(o, 0x83, 0xa7, 0x5a, 0x63, 0x6e, 0x50, 0x6f, 0x6f, 0x6c)
-			o, err = z[za0001].ZcnPool.MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, za0001, "ZcnPool")
-				return
-			}
-			// string "ExpireAt"
-			o = append(o, 0xa8, 0x45, 0x78, 0x70, 0x69, 0x72, 0x65, 0x41, 0x74)
-			o, err = z[za0001].ExpireAt.MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, za0001, "ExpireAt")
-				return
-			}
-			// string "AllocationID"
-			o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
-			o = msgp.AppendString(o, z[za0001].AllocationID)
-		}
-	}
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *allocationPools) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var zb0002 uint32
-	zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	if cap((*z)) >= int(zb0002) {
-		(*z) = (*z)[:zb0002]
-	} else {
-		(*z) = make(allocationPools, zb0002)
-	}
-	for zb0001 := range *z {
-		if msgp.IsNil(bts) {
-			bts, err = msgp.ReadNilBytes(bts)
-			if err != nil {
-				return
-			}
-			(*z)[zb0001] = nil
-		} else {
-			if (*z)[zb0001] == nil {
-				(*z)[zb0001] = new(allocationPool)
-			}
-			var field []byte
-			_ = field
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, zb0001)
-				return
-			}
-			for zb0003 > 0 {
-				zb0003--
-				field, bts, err = msgp.ReadMapKeyZC(bts)
-				if err != nil {
-					err = msgp.WrapError(err, zb0001)
-					return
-				}
-				switch msgp.UnsafeString(field) {
-				case "ZcnPool":
-					bts, err = (*z)[zb0001].ZcnPool.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001, "ZcnPool")
-						return
-					}
-				case "ExpireAt":
-					bts, err = (*z)[zb0001].ExpireAt.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001, "ExpireAt")
-						return
-					}
-				case "AllocationID":
-					(*z)[zb0001].AllocationID, bts, err = msgp.ReadStringBytes(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001, "AllocationID")
-						return
-					}
-				default:
-					bts, err = msgp.Skip(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001)
-						return
-					}
-				}
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z allocationPools) Msgsize() (s int) {
-	s = msgp.ArrayHeaderSize
-	for zb0004 := range z {
-		if z[zb0004] == nil {
-			s += msgp.NilSize
-		} else {
-			s += 1 + 8 + z[zb0004].ZcnPool.Msgsize() + 9 + z[zb0004].ExpireAt.Msgsize() + 13 + msgp.StringPrefixSize + len(z[zb0004].AllocationID)
-		}
-	}
 	return
 }
 
