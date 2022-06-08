@@ -200,6 +200,14 @@ smart_contracts:
       trigger_period: 30
       blobber_capacity_ratio: 10
       blobber_usage_ratio: 40
+      gamma:
+        alpha: 1
+        a: 1
+        b: 1
+      zeta:
+        i: 1
+        k: 1
+        mu: 1
     expose_mpt: true
     cost:
       update_settings: 100
