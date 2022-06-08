@@ -13,11 +13,6 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
     chmod -R +w . && \
     make clean libzstd.a
 
-RUN go get github.com/vektra/mockery/v2/.../
-
 COPY ./code/go/0chain.net $SRC_DIR/code/go/0chain.net
-COPY ./generate_mocks.sh $SRC_DIR/generate_mocks.sh
-
-RUN cd $SRC_DIR && ls && ./generate_mocks.sh
 
 WORKDIR $SRC_DIR/code/go

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/encryption"
 	"time"
 
 	"0chain.net/smartcontract/dbs/benchmark"
@@ -171,7 +172,7 @@ func BenchmarkRestTests(
 				FuncName: "getchallenge",
 				Params: map[string]string{
 					"blobber":   getMockBlobberId(0),
-					"challenge": getMockChallengeId(0, 0),
+					"challenge": getMockChallengeId(encryption.Hash("0"), encryption.Hash("0")),
 				},
 				Endpoint: srh.getChallenge,
 			},
@@ -366,5 +367,6 @@ func BenchmarkRestTests(
 		},
 		ADDRESS,
 		srh,
+		bk.StorageRest,
 	)
 }

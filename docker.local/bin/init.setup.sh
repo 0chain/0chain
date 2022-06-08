@@ -1,5 +1,6 @@
 #!/bin/sh
 
+mkdir -p docker.local/benchmarks
 for i in $(seq 1 8)
 do
   mkdir -p docker.local/miner"$i"/data/redis/state
