@@ -185,7 +185,10 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) (*transaction.Transa
 	if err != nil {
 		return nil, err
 	}
-	value := prng.Int63n(maxValue-minValue) + minValue
+	value, err := currency.Int64ToCoin(prng.Int63n(maxValue-minValue) + minValue)
+	if err != nil {
+		return nil, err
+	}
 	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, fee)
 	return txn, nil
 }
@@ -267,7 +270,11 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 		if err != nil {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", fee)
+		val, err := currency.Int64ToCoin(prng.Int63n(100) * 10000000000)
+		if err != nil {
+			logging.Logger.Info("client generator", zap.Any("error", err))
+		}
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, val, "generous air drop! :)", fee)
 		_, err = transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Info("client generator", zap.Any("error", err))
@@ -275,7 +282,7 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 	}
 	if c.ChainConfig.IsFaucetEnabled() {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
-			viper.GetInt64("development.faucet.refill_amount"),
+			currency.Coin(viper.GetUint64("development.faucet.refill_amount")),
 			`{"name":"refill","input":{}}`, 0)
 		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {

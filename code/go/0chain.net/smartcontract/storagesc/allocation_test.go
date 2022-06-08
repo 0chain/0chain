@@ -566,7 +566,7 @@ func TestExtendAllocation(t *testing.T) {
 	type args struct {
 		request    updateAllocationRequest
 		expiration common.Timestamp
-		value      float64
+		value      currency.Coin
 		poolFunds  []float64
 		poolCount  []int
 	}
@@ -607,18 +607,18 @@ func TestExtendAllocation(t *testing.T) {
 			ClientID:     mockOwner,
 			ToClientID:   ADDRESS,
 			CreationDate: now,
-			Value:        zcnToInt64(args.value),
+			Value:        args.value,
 		}
 		txn.Hash = mockHash
 		if txn.Value > 0 {
 			balances.On(
 				"GetClientBalance", txn.ClientID,
-			).Return(currency.Coin(txn.Value+1), nil).Once()
+			).Return(txn.Value+1, nil).Once()
 			balances.On(
 				"AddTransfer", &state.Transfer{
 					ClientID:   txn.ClientID,
 					ToClientID: txn.ToClientID,
-					Amount:     currency.Coin(txn.Value),
+					Amount:     txn.Value,
 				},
 			).Return(nil).Once()
 		}
@@ -762,7 +762,7 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1,
+				value:      0.1e10,
 				poolFunds:  []float64{0.0, 5.0, 5.0},
 				poolCount:  []int{1, 3, 4},
 			},
@@ -778,7 +778,7 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1,
+				value:      0.1e10,
 				poolFunds:  []float64{7},
 				poolCount:  []int{5},
 			},
@@ -794,7 +794,7 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1,
+				value:      0.1e10,
 				poolFunds:  []float64{0.0, 0.0},
 				poolCount:  []int{1, 3},
 			},

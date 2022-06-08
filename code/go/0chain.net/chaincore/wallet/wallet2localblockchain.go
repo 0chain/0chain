@@ -33,13 +33,13 @@ func SetupWallet() {
 }
 
 /*CreateRandomSendTransaction - create a transaction */
-func (w *Wallet) CreateRandomSendTransaction(toClient string, value int64, fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateRandomSendTransaction(toClient string, value, fee currency.Coin) *transaction.Transaction {
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
 	return w.CreateSendTransaction(toClient, value, msg, fee)
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string, fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg string, fee currency.Coin) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
@@ -57,7 +57,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg string, fee currency.Coin) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient

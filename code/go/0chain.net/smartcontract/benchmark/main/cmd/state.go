@@ -11,7 +11,7 @@ import (
 
 func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, txn.ToClientID, currency.Coin(txn.Value)),
+		txn.ClientID, txn.ToClientID, txn.Value),
 	)
 	_ = balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, minersc.ADDRESS, txn.Fee),

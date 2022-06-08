@@ -3,8 +3,6 @@ package zcnsc
 import (
 	"fmt"
 
-	"0chain.net/chaincore/currency"
-
 	"0chain.net/core/util"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -41,11 +39,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// check burn amount
-	transSAS, err := currency.ParseZCN(float64(trans.Value))
-	if err != nil {
-		return "", err
-	}
-	if transSAS < gn.MinBurnAmount {
+	if trans.Value < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
 			"amount (value) requested (%v) is lower than min burn amount (%v), %s",
 			trans.Value,
@@ -105,7 +99,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// burn the tokens
-	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, currency.Coin(trans.Value)))
+	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, trans.Value))
 	if err != nil {
 		return "", err
 	}

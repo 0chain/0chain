@@ -224,7 +224,8 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		var readPoolFund = int64(len(alloc.BlobberAllocs)) * 2 * 1e10
+		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		require.NoError(t, err)
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
@@ -295,7 +296,9 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		readPoolFund := int64(len(alloc.BlobberAllocs)) * 2 * x10
+
+		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		require.NoError(t, err)
 		tx = newTransaction(reader.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{

@@ -889,8 +889,11 @@ func SetMockConfig(
 	conf.MaxMint = currency.Coin((viper.GetFloat64(sc.StorageMaxMint)) * 1e10)
 	conf.MaxTotalFreeAllocation = currency.Coin(viper.GetInt64(sc.StorageMaxTotalFreeAllocation) * 1e10)
 	conf.MaxIndividualFreeAllocation = currency.Coin(viper.GetInt64(sc.StorageMaxIndividualFreeAllocation) * 1e10)
-	conf.ReadPool = &readPoolConfig{
-		MinLock: int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
+	conf.ReadPool = &readPoolConfig{}
+	var err error
+	conf.ReadPool.MinLock, err = currency.ParseZCN(viper.GetFloat64(sc.StorageReadPoolMinLock))
+	if err != nil {
+		panic(err)
 	}
 	conf.WritePool = &writePoolConfig{
 		MinLock:       currency.Coin(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
@@ -898,8 +901,10 @@ func SetMockConfig(
 		MaxLockPeriod: viper.GetDuration(sc.StorageWritePoolMaxLockPeriod),
 	}
 	conf.OwnerId = viper.GetString(sc.FaucetOwner)
-	conf.StakePool = &stakePoolConfig{
-		MinLock: int64(viper.GetFloat64(sc.StorageStakePoolMinLock) * 1e10),
+	conf.StakePool = &stakePoolConfig{}
+	conf.StakePool.MinLock, err = currency.ParseZCN(viper.GetFloat64(sc.StorageStakePoolMinLock))
+	if err != nil {
+		panic(err)
 	}
 	conf.FreeAllocationSettings = freeAllocationSettings{
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),
@@ -932,7 +937,7 @@ func SetMockConfig(
 
 	conf.ExposeMpt = true
 
-	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
 	}

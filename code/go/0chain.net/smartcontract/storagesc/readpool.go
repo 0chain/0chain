@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
@@ -10,8 +13,6 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"fmt"
 )
 
 //msgp:ignore readPoolRedeem
@@ -168,7 +169,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_, err = ssc.getReadPool(t.ClientID, balances)
 	if err == nil {
 		return "", common.NewError("new_read_pool_failed", "already exist")
-	} else if err != util.ErrValueNotPresent{
+	} else if err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
@@ -215,7 +216,7 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 		if err = balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     currency.Coin(txn.Value),
+			Amount:     txn.Value,
 		}); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
