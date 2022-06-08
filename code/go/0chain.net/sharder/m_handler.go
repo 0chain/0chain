@@ -3,7 +3,6 @@ package sharder
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -27,9 +26,10 @@ func SetupM2SReceivers() {
 
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 type Chainer interface {
+	GetCurrentRound() int64
 	GetLatestFinalizedBlock() *block.Block
 	GetBlock(ctx context.Context, hash datastore.Key) (*block.Block, error)
-	GetBlockChannel() chan *block.Block
+	PushToBlockProcessor(b *block.Block) error
 	ForceFinalizeRound()
 }
 
@@ -86,10 +86,9 @@ func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return false, err
 		}
 
-		select {
-		case sc.GetBlockChannel() <- b:
-		case <-time.NewTimer(3 * time.Second).C: // TODO: make the timeout configurable
-			Logger.Error("Push notarized block to channel timeout")
+		if err := sc.PushToBlockProcessor(b); err != nil {
+			Logger.Error("NotarizedBlockHandler, push notarized block to channel failed",
+				zap.Int64("round", b.Round), zap.Error(err))
 			return false, nil
 		}
 
@@ -114,10 +113,11 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 			return false, err
 		}
 
-		sc.GetBlockChannel() <- b // even if we have the block
+		if err := sc.PushToBlockProcessor(b); err != nil {
+			Logger.Debug("Notarized block kick, push block to process channel failed",
+				zap.Int64("round", b.Round), zap.Error(err))
+		}
 
-		// force notify block finalization process
-		sc.ForceFinalizeRound()
 		return true, nil
 	}
 }
@@ -153,13 +153,6 @@ func (sc *Chain) cacheProcessingBlock(hash string) bool {
 	_, err := sc.processingBlocks.Get(hash)
 	switch err {
 	case cache.ErrKeyNotFound:
-		// check if block is processed
-		_, err := sc.GetBlock(context.Background(), hash)
-		if err == nil {
-			sc.pbMutex.Unlock()
-			return false
-		}
-
 		if err := sc.processingBlocks.Add(hash, struct{}{}); err != nil {
 			Logger.Warn("cache process block failed",
 				zap.String("block", hash),

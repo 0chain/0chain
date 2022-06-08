@@ -1,13 +1,12 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	"0chain.net/chaincore/currency"
-
-	"0chain.net/chaincore/smartcontractinterface"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -279,11 +278,10 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
 	}
 
-	var lr = lockRequest{
-		Duration:     conf.FreeAllocationSettings.Duration,
-		AllocationID: sa.ID,
-		TargetId:     marker.Recipient,
-		MintTokens:   true,
+	var lr = readPoolLockRequest{
+		TargetId: marker.Recipient,
+		IsOwner:  false,
+		MintTokens: true,
 	}
 	input, err = json.Marshal(lr)
 	if err != nil {

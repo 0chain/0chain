@@ -704,11 +704,6 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"unexpected error getting allocation: %v", err)
 	}
 
-	if alloc.Expiration < t.CreationDate {
-		return nil, common.NewErrorf("adding_challenge_error",
-			"allocation is already expired, alloc.Expiration: %d, t.CreationDate: %d",
-			alloc.Expiration, t.CreationDate)
-	}
 	if alloc.Stats == nil {
 		return nil, common.NewError("adding_challenge_error",
 			"found empty allocation stats")
@@ -814,18 +809,49 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
-	// get a random allocation
-	randomIndex := r.Intn(len(randBlobberAllocs))
-	allocID := randBlobberAllocs[randomIndex].ID
+	const findValidAllocRetries = 5
+	var (
+		alloc                       *StorageAllocation
+		blobberAllocPartitionLength = len(randBlobberAllocs)
+		foundAllocation             bool
+	)
 
-	// get the storage allocation from MPT
-	alloc, err := sc.getAllocationForChallenge(txn, allocID, balances)
-	if err != nil {
-		return nil, err
+	for i := 0; i < findValidAllocRetries; i++ {
+		// get a random allocation
+		randomIndex := r.Intn(blobberAllocPartitionLength)
+		allocID := randBlobberAllocs[randomIndex].ID
+
+		// get the storage allocation from MPT
+		alloc, err = sc.getAllocationForChallenge(txn, allocID, balances)
+		if err != nil {
+			return nil, err
+		}
+
+		if alloc == nil {
+			return nil, errors.New("empty allocation")
+		}
+
+		if alloc.Expiration >= txn.CreationDate {
+			foundAllocation = true
+			break
+		} else {
+			allocBlob, ok := alloc.BlobberAllocsMap[blobberID]
+			if !ok {
+				return nil, errors.New("invalid blobber for allocation")
+			}
+			if err := removeAllocationFromBlobber(sc,
+				blobberID,
+				allocBlob.BlobberAllocationsPartitionLoc,
+				allocID,
+				balances); err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	if alloc == nil {
-		return nil, errors.New("empty allocation")
+	if !foundAllocation {
+		logging.Logger.Error("populate_generate_challenge: all blobber partition allocations are already expired")
+		return nil, nil
 	}
 
 	allocBlobber, ok := alloc.BlobberAllocsMap[blobberID]
@@ -955,6 +981,11 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		balances)
 	if err != nil {
 		return common.NewErrorf("adding_challenge_error", err.Error())
+	}
+
+	if result == nil {
+		logging.Logger.Error("received empty data for challenge generation. Skipping challenge generation")
+		return nil
 	}
 
 	err = sc.addChallenge(result.alloc,

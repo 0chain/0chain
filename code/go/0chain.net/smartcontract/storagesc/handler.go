@@ -29,6 +29,9 @@ import (
 	"0chain.net/smartcontract"
 )
 
+// swagger:model stringArray
+type stringArray []string
+
 type StorageRestHandler struct {
 	rest.RestHandlerI
 }
@@ -49,7 +52,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
 		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes),
-		rest.MakeEndpoint(storage+"/get_blobber_lat_long", srh.getBlobberGeoLocation),
+		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
@@ -68,7 +71,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
 		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
-		rest.MakeEndpoint(storage+"/total_saved_data", srh.getTotalData),
+		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
@@ -82,7 +85,53 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber_ids", srh.getBlobberIdsByUrls),
 		rest.MakeEndpoint(storage+"/alloc_blobbers", srh.getAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
+		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
+		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
+// Gets the total blobber capacity across all blobbers. Note that this is not staked capacity.
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	totalCapacity, err := edb.BlobberTotalCapacity()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"total-blobber-capacity": totalCapacity,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
+// Gets the average write price across all blobbers
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	averageWritePrice, err := edb.BlobberAverageWritePrice()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"average-write-price": int64(averageWritePrice),
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids blobber_ids
@@ -96,7 +145,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //      type: string
 //
 // responses:
-//  200:
+//  200: stringArray
 //  400:
 func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *http.Request) {
 	urlsStr := r.URL.Query().Get("blobber_urls")
@@ -123,7 +172,8 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	ids, err := edb.GetBlobberIdsFromUrls(urls)
+	var ids stringArray
+	ids, err = edb.GetBlobberIdsFromUrls(urls)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -227,12 +277,12 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	}
 
 	blobberIDs, err := getBlobbersForRequest(request, edb, balances)
-	if len(blobberIDs) == 0 {
-		common.Respond(w, r, nil, nil)
-		return
-	}
 	if err != nil {
 		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(blobberIDs) == 0 {
+		common.Respond(w, r, nil, nil)
 		return
 	}
 
@@ -289,7 +339,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		return nil, errors.New("not enough blobbers to honor the allocation")
 	}
 
-	if err != nil || len(blobberIDs) < numberOfBlobbers {
+	if len(blobberIDs) < numberOfBlobbers {
 		return nil, errors.New("not enough blobbers to honor the allocation")
 	}
 	return blobberIDs, nil
@@ -581,21 +631,11 @@ func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.R
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolAllocBlobberStat getReadPoolAllocBlobberStat
-// Gets statistic for all locked tokens of the indicated read pools
+// Gets statistic locked tokens of the indicated read pools. This now a shortcut to readpool stats.
 //
 // parameters:
 //    + name: client_id
 //      description: client for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: allocation_id
-//      description: allocation for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: blobber_id
-//      description: blobber for which to get read pools statistics
 //      required: true
 //      in: query
 //      type: string
@@ -604,36 +644,7 @@ func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.R
 //  200: []untilStat
 //  400:
 func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	var (
-		clientID  = r.URL.Query().Get("client_id")
-		allocID   = r.URL.Query().Get("allocation_id")
-		blobberID = r.URL.Query().Get("blobber_id")
-		rp        = &readPool{}
-	)
-
-	if err := srh.GetQueryStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
-		return
-	}
-
-	var (
-		cut  = rp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	common.Respond(w, r, &stat, nil)
+	srh.getReadPoolStat(w, r)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
@@ -650,15 +661,16 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 //  200: allocationPoolsStat
 //  400:
 func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
-	var rp = &readPool{}
+	rp := readPool{}
 
 	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetQueryStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), rp); err != nil {
+	err := srh.GetQueryStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), &rp)
+	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
 	}
 
-	common.Respond(w, r, rp.stat(common.Now()), nil)
+	common.Respond(w, r, &rp, nil)
 }
 
 const cantGetConfigErrMsg = "can't get config"
@@ -702,14 +714,33 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total_saved_data total_saved_data
-// Gets the total data stored across all blobbers. Todo: We need to rewrite this to use event database not MPT
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
+//
+// Gets the total data stored across all blobbers.
+// Each change to files results in the blobber sending a WriteMarker to 0chain.
+// This WriteMarker has a Size filed indicated the change the data stored on the blobber.
+// Negative if data is removed.
+//
+// This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
+//
 //
 // responses:
 //  200: Int64Map
 //  400:
 func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, 0, fmt.Errorf("not implemented yet"))
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	total, err := edb.TotalUsedData()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"total-stored-data": total,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
@@ -1692,21 +1723,102 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, sns, nil)
 }
 
-// todo add filter or similar
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_lat_long get_blobber_lat_long
-// Gets list of latitude and longitude for all blobbers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation blobbers-by-geolocation
+//
+//  Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
+//
+//    + name: max_latitude
+//      description: maximum latitude value, defaults to 90
+//      in: query
+//      type: string
+//    + name: min_latitude
+//      description:  minimum latitude value, defaults to -90
+//      in: query
+//      type: string
+//    + name: max_longitude
+//      description: maximum max_longitude value, defaults to 180
+//      in: query
+//      type: string
+//    + name: min_longitude
+//      description: minimum max_longitude value, defaults to -180
+//      in: query
+//      type: string
 //
 // responses:
-//  200: BlobberLatLong
+//  200: stringArray
 //  500:
-func (srh *StorageRestHandler) getBlobberGeoLocation(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r *http.Request) {
+	var maxLatitude, minLatitude, maxLongitude, minLongitude float64
+	var err error
+
+	maxLatitudeString := r.URL.Query().Get("max_latitude")
+	if len(maxLatitudeString) > 0 {
+		maxLatitude, err = strconv.ParseFloat(maxLatitudeString, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
+			return
+		}
+		if maxLatitude > MaxLatitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxLatitudeString+" out of range -90,+90"))
+			return
+		}
+	} else {
+		maxLatitude = MaxLatitude
+	}
+
+	minLatitudeString := r.URL.Query().Get("min_latitude")
+	if len(minLatitudeString) > 0 {
+		minLatitude, err = strconv.ParseFloat(minLatitudeString, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
+			return
+		}
+		if minLatitude < MinLatitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minLatitudeString+" out of range -90,+90"))
+			return
+		}
+	} else {
+		minLatitude = MinLatitude
+	}
+
+	maxLongitudeString := r.URL.Query().Get("max_longitude")
+	if len(maxLongitudeString) > 0 {
+		maxLongitude, err = strconv.ParseFloat(maxLongitudeString, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude: "+err.Error()))
+			return
+		}
+		if maxLongitude > MaxLongitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxLongitudeString+" out of range -180,80"))
+			return
+		}
+	} else {
+		maxLongitude = MaxLongitude
+	}
+
+	minLongitudeString := r.URL.Query().Get("min_longitude")
+	if len(minLongitudeString) > 0 {
+		minLongitude, err = strconv.ParseFloat(minLongitudeString, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude: "+err.Error()))
+			return
+		}
+		if minLongitude < MinLongitude {
+			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minLongitudeString+" out of range -180,180"))
+			return
+		}
+	} else {
+		minLongitude = MinLongitude
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
-	blobbers, err := edb.GetAllBlobberLatLong()
+	blobbers, err := edb.GeBlobberByLatLong(maxLatitude, minLatitude, maxLongitude, minLongitude)
 	if err != nil {
-		err := common.NewErrInternal("cannot get blobber geolocation" + err.Error())
+		err := common.NewErrInternal("cannot get blobber geolocation: " + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}

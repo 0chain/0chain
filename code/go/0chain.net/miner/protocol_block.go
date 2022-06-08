@@ -725,7 +725,7 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
-	//accumulated transaction cost
+	// accumulated transaction cost
 	cost int
 }
 
@@ -893,7 +893,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Any("round", b.Round), zap.Strings("txn_hashes", keys))
+		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Any("round", b.Round), zap.Int("txn num", len(keys)))
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))

@@ -40,7 +40,7 @@ func emitAddOrOverwriteReadMarker(rm *ReadMarker, balances cstate.StateContextI,
 		return fmt.Errorf("failed to marshal readmarker: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteReadMarker, t.Hash, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddReadMarker, t.Hash, string(data))
 
 	return nil
 }

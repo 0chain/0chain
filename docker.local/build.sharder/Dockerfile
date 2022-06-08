@@ -11,10 +11,6 @@ COPY ./code/go/0chain.net/go.sum $SRC_DIR/
 RUN cd $SRC_DIR && go mod download -x
 
 COPY ./code/go/0chain.net $SRC_DIR
-COPY ./generate_mocks.sh $ROOT
-
-RUN go get github.com/vektra/mockery/v2/.../
-RUN cd $ROOT && ls && ./generate_mocks.sh
 
 # Set workdir
 WORKDIR $SRC_DIR

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/currency"
@@ -199,6 +200,8 @@ type Chain struct {
 
 	// compute state
 	computeBlockStateC chan struct{}
+
+	OnBlockAdded func(b *block.Block)
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -413,6 +416,7 @@ func NewChainFromConfig() *Chain {
 
 	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators()+1)
 	client.SetClientSignatureScheme(chain.ClientSignatureScheme())
+
 	return chain
 }
 
@@ -486,6 +490,8 @@ func (c *Chain) Initialize() {
 	c.minersStake = make(map[datastore.Key]int)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
+	c.OnBlockAdded = func(b *block.Block) {
+	}
 }
 
 /*SetupEntity - setup the entity */
@@ -594,6 +600,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.SetRoundRandomSeed(genesisRandomSeed)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
+	gr.BlockHash = gb.Hash
 	return gr, gb
 }
 
@@ -612,7 +619,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 }
 
 // AddLoadedFinalizedBlocks - adds the genesis block to the chain.
-func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
+func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block, r *round.Round) {
 	err := c.UpdateMagicBlock(lfmb.MagicBlock)
 	if err != nil {
 		logging.Logger.Warn("update magic block failed", zap.Error(err))
@@ -620,6 +627,7 @@ func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
 	c.blocks[lfb.Hash] = lfb
+	c.rounds[lfb.Round] = r
 }
 
 /*AddBlock - adds a block to the cache */
@@ -693,6 +701,7 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		return eb
 	}
 	c.blocks[b.Hash] = b
+
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
@@ -705,6 +714,8 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 			break
 		}
 	}
+
+	c.OnBlockAdded(b)
 	return b
 }
 
@@ -1134,17 +1145,17 @@ func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block
 
 //ResetRoundTimeoutCount - reset the counter
 func (c *Chain) ResetRoundTimeoutCount() {
-	c.crtCount = 0
+	atomic.SwapInt64(&c.crtCount, 0)
 }
 
 //IncrementRoundTimeoutCount - increment the counter
 func (c *Chain) IncrementRoundTimeoutCount() {
-	c.crtCount++
+	atomic.AddInt64(&c.crtCount, 1)
 }
 
 //GetRoundTimeoutCount - get the counter
 func (c *Chain) GetRoundTimeoutCount() int64 {
-	return c.crtCount
+	return atomic.LoadInt64(&c.crtCount)
 }
 
 //GetSignatureScheme - get the signature scheme used by this chain
@@ -1293,7 +1304,9 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(context.Background(), b)
-		go c.notifyToSyncFinalizedRoundState(bs)
+		if !node.Self.IsSharder() {
+			go c.notifyToSyncFinalizedRoundState(bs)
+		}
 	}
 	c.lfbMutex.Unlock()
 

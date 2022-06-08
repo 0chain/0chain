@@ -18,6 +18,9 @@ generate_mock "../miner/mocks"
 cd $BASEDIR/code/go/0chain.net/chaincore || exit
 generate_mock "../chaincore/mocks"
 
+cd $BASEDIR/code/go/0chain.net/chaincore/chain/state || exit
+generate_mock "../state/mocks"
+
 cd $BASEDIR/code/go/0chain.net/conductor || exit
 generate_mock "../conductor/mocks"
 
@@ -26,6 +29,9 @@ generate_mock "../sharder/mocks"
 
 cd $BASEDIR/code/go/0chain.net/smartcontract || exit
 generate_mock "../smartcontract/mocks"
+
+cd $BASEDIR/code/go/0chain.net/smartcontract/benchmark || exit
+generate_mock "../benchmark/mocks"
 
 cd $BASEDIR/code/go/0chain.net || exit
 go generate -run="mockery" ./...

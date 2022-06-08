@@ -59,6 +59,8 @@ func SetupMinerChain(c *chain.Chain) {
 	defer mcGuard.Unlock()
 
 	minerChain.Chain = c
+	minerChain.Chain.OnBlockAdded = func(b *block.Block) {
+	}
 	minerChain.Config = c.Config
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
