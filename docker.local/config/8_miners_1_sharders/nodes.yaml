@@ -1,0 +1,89 @@
+miners:
+- id: 04ce2fea0b1228747f16ba4decd1e60a9633157b99075bf043252cd26e6d34ba
+  public_key: 5d0f04c11535f5d649e29b6dadf38341900c819e3ac586c421a26d88079f050d2e00cc0e3c903e2e4baa95b85bea8eae0443d174892287e253a76c30975b2a01
+  n2n_ip: 192.18.0.71
+  public_ip: localhost
+  port: 7071
+  path: miner71
+  description: localhost.m1
+  set_index: 0
+  private_key: 887cba64bc9d0427473bf786db7e428abb0e2bc78c28dd46a18899caae4efc1e
+- id: fdabc3be8c38048ab6d95c59017f5b5a5296442edaff637cfcc0389a34b7ea91
+  public_key: 1485e5ad97dad5a3c75b0c44579df6dfdb9d443347d54e09945e3e7c56a5431f0ff3a9d5a73f048cebd85d4851ba0456be5c264854bbfe53ae032cc4d7c68f9b
+  n2n_ip: 192.18.0.72
+  public_ip: localhost
+  port: 7072
+  path: miner72
+  description: localhost.m2
+  set_index: 1
+  private_key: 45a514d815a55f8f9ffbfa11f0ea3c1ce3eb311e8fda06f9bd8e7009bac2f807
+- id: c365931de026246231d8e8cd4062e76de3cadede75443f4359e303b0a77e833c
+  public_key: dc5da635a20dcf197fe0dcedc49129b1b2303cddf8601c94da359aab6e3c8e119c8e502c831e5a48ef1acf3991cbaf1de8238092cb15f0277472cab778bea620
+  n2n_ip: 192.18.0.73
+  public_ip: localhost
+  port: 7073
+  path: miner73
+  description: localhost.m3
+  set_index: 2
+  private_key: 360dbe9ac04c6cb50cc2ac2172406d6f834c039ab1fc7b985ada39695cc1821c
+- id: 3ea8fe7696f42eeab09c3e9945c3ffe2d7bafa3923bad4cedb02d18b93df9b62
+  public_key: d0b90d7fee11dc8818111ed38485bb7431e547530c1eabc89491f98e2a91f7163813fa62130b537e50e7186fe7d139bfbbc27b0411527eedb682859931300e14
+  n2n_ip: 192.18.0.74
+  public_ip: localhost
+  port: 7074
+  path: miner74
+  description: localhost.m4
+  set_index: 3
+  private_key: 7f942b79573183768264b2f37d020bb09967d16c41826d410946d0cba2bf4e23
+- id: 67eddbfaa036440e20043c6d5489f1372ec641d1b72052669559ce2b50b47763
+  public_key: 70f889e16e85ded812746d58423db2b28bb7f9f59da347a6b8533bac0778cb196dd413765425bf853dd419f29ef822ede8b979ecd69ebe89e283ba576fd95f80
+  n2n_ip: 192.18.0.75
+  public_ip: localhost
+  port: 7075
+  path: miner75
+  description: localhost.m5
+  set_index: 4
+  private_key: c49d7d53a1a13b1c63368e42677d8162e9b32f2165243de3f81b4e9db753bd07
+- id: 8301a2cb7598f021142ba0859d8568066f1a6b9f5e4e91fd1b5adc2c5ef4dbd7
+  public_key: 28408c27305960b35a5fe54da916cbfa96eda7a8566c625a8cfa74a187e0e4064a2e3a4db59f62a8fc39ff580a9d328be8794be2fdaceb6b3df4671e307aa823
+  n2n_ip: 192.18.0.76
+  public_ip: localhost
+  port: 7076
+  path: miner76
+  description: localhost.m6
+  set_index: 5
+  private_key: 764a21c5a2a8aabc95694cb20f3b142d21cc34d2f99711033e03e56ce465cc0b
+- id: d4f6102fbaff8ebcfeb1dd0d16bb5085d7b5cf61a60b59a655e16c6ee847ab99
+  public_key: fd21d8889be02de54d766b6f4c338a44ab53bc4238d9951bc649284611d864216539bbf87b960a91dbac08586202d2623a9be367c4aad4d53dec66ba778aa513
+  n2n_ip: 192.18.0.77
+  public_ip: localhost
+  port: 7077
+  path: miner77
+  description: localhost.m7
+  set_index: 6
+  private_key: 83b979bd8662d4aee0059c1ddb33f8494c376149da3cd61840e675f4772e4606
+- id: 7627481e0c52b31a097091fc4efe72bc20e08e5c13048ae1135cf46f2db83c9c
+  public_key: 692e3ef4cafba40572ffef0e44e588fc46adc736d849789de38874ee8ddf05138c7d97e6ab9b79cb5361b8d71bb8c202c277745722b5328b78543842cc905e8f
+  n2n_ip: 192.18.0.78
+  public_ip: localhost
+  port: 7078
+  path: miner78
+  description: localhost.m8
+  set_index: 7
+  private_key: 10b161f093feada0fa07b06d944042958936f8007acbbf9b7f4ab6e9e406a40e
+sharders:
+- id: eca22be20361f3e8cd6480b2444606b1201c0c4ec7d7c2831a4fa23cdffa15e2
+  public_key: ca17ca136cbf04d0a84092b0c5a4d3b4fc8270d26bbbee18e5ef0fe4ec3257193168fc3e220518ef45074b7fba09ee095d3756d24b3b87aed69b575e60445e97
+  n2n_ip: 192.18.0.81
+  public_ip: localhost
+  port: 7171
+  path: sharder71
+  description: localhost.s1
+  set_index: 0
+  private_key: ""
+magic_block_number: 1
+starting_round: 0
+t_percent: 75
+k_percent: 81
+magic_block_filename: b0magicBlock
+dkg_summary_filename: dkg_summary
