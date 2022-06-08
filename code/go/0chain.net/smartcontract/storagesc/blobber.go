@@ -1,25 +1,20 @@
 package storagesc
 
 import (
+	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"0chain.net/chaincore/currency"
-	"0chain.net/core/datastore"
-
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/dbs/event"
-
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/util"
 )
 
 const (
@@ -71,10 +66,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// check params
 	if err = blobber.validate(conf); err != nil {
 		return fmt.Errorf("invalid blobber params: %v", err)
-	}
-
-	if err != nil {
-		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
 	if savedBlobber.BaseURL != blobber.BaseURL {
@@ -220,7 +211,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	return string(blobber.Encode()), nil
 }
 
-// update blobber settinngs by owner of DelegateWallet
+// update blobber settings by owner of DelegateWallet
 func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (resp string, err error) {
@@ -423,8 +414,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related stake pool: %v", err)
 	}
 
-	resp, err = rp.moveToBlobber(sc.ID, commitRead.ReadMarker.AllocationID,
-		commitRead.ReadMarker.BlobberID, sp, t.CreationDate, value, balances)
+	isOwner := alloc.Owner == userID
+	resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
+		commitRead.ReadMarker.BlobberID, sp, value, isOwner, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't transfer tokens from read pool to stake pool: %v", err)
@@ -467,7 +459,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			return "", common.NewError("commit_blobber_read",
 				"error saving ongoing blobber reward partition")
 		}
-
 	}
 
 	// save pools
@@ -675,12 +666,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	storageNode.SavedData += alloc.Stats.UsedSize
 
-	var sp *stakePool
-	if sp, err = sc.getStakePool(storageNode.ID, balances); err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"can't get stake pool")
-	}
-
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_connection_failed",
@@ -744,12 +729,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving allocation object: %v", err)
 	}
 
-	// emit blobber update event
-	if err = emitAddOrOverwriteBlobber(storageNode, sp, balances); err != nil {
-		logging.Logger.Error("error emitting blobber",
-			zap.Any("blobber", storageNode.ID), zap.Error(err))
-	}
-
 	// save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
@@ -763,7 +742,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"emitting allocation event: %v", err)
 	}
 
-	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
+	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"emitting write marker event: %v", err)
@@ -848,8 +827,6 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	if sc.hasBlobberUrl(blobber.BaseURL, balances) {
 		return fmt.Errorf("invalid blobber url, already used")
 	}
-
-	//return fmt.Errorf("only owner can update blobber")
 
 	// check params
 	if err = blobber.validate(conf); err != nil {

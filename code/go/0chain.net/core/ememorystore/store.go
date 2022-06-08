@@ -46,11 +46,7 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 		}
 	}
 	defer data.Free()
-	err = datastore.FromJSON(data.Data(), entity)
-	if err != nil {
-		return err
-	}
-	return nil
+	return datastore.FromJSON(data.Data(), entity)
 }
 
 func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {

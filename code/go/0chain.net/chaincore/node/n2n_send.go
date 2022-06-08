@@ -75,7 +75,7 @@ func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandl
 	for _, n := range nodes {
 		infos = append(infos, n.GetPseudoName())
 	}
-	logging.Logger.Debug("send at least", zap.Int("number_to_send", numNodes),
+	logging.N2n.Debug("send at least", zap.Int("number_to_send", numNodes),
 		zap.Int("num_of_nodes", len(nodes)), zap.Strings("nodes", infos))
 	return np.sendTo(ctx, numNodes, nodes, handler)
 }

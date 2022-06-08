@@ -1,14 +1,13 @@
-package sharder_test
+package sharder
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -20,14 +19,13 @@ import (
 	dmocks "0chain.net/core/datastore/mocks"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	bsmocks "0chain.net/sharder/blockstore/mocks"
 )
 
 func init() {
 	store := dmocks.NewStoreMock()
-	sharder.SetupBlockSummaries()
+	SetupBlockSummaries()
 	block.SetupBlockSummaryEntity(store)
 	block.SetupEntity(store)
 	block.SetupMagicBlockMapEntity(store)
@@ -97,28 +95,15 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 	return
 }
 
-func makeTestChain(t *testing.T) *sharder.Chain {
-	ch, ok := chain.Provider().(*chain.Chain)
-	if !ok {
-		t.Fatal("types missmatching")
-	}
-	conf := chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
-	ch.Config = conf
-	ch.Initialize()
-	sharder.SetupSharderChain(ch)
-	chain.SetServerChain(ch)
-	return sharder.GetSharderChain()
-}
-
 func TestNewBlockSummaries(t *testing.T) {
-	want, ok := datastore.GetEntityMetadata("block_summaries").Instance().(*sharder.BlockSummaries)
+	want, ok := datastore.GetEntityMetadata("block_summaries").Instance().(*BlockSummaries)
 	if !ok {
 		t.Fatal("types missmatching")
 	}
 
 	tests := []struct {
 		name string
-		want *sharder.BlockSummaries
+		want *BlockSummaries
 	}{
 		{
 			name: "Test_NewBlockSummaries_OK",
@@ -128,7 +113,7 @@ func TestNewBlockSummaries(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if got := sharder.NewBlockSummaries(); !reflect.DeepEqual(got, tt.want) {
+			if got := NewBlockSummaries(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewBlockSummaries() = %v, want %v", got, tt.want)
 			}
 		})
@@ -142,13 +127,13 @@ func TestBlockSummariesProvider(t *testing.T) {
 	}{
 		{
 			name: "Test_BlockSummariesProvider_OK",
-			want: &sharder.BlockSummaries{},
+			want: &BlockSummaries{},
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if got := sharder.BlockSummariesProvider(); !reflect.DeepEqual(got, tt.want) {
+			if got := BlockSummariesProvider(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BlockSummariesProvider() = %v, want %v", got, tt.want)
 			}
 		})
@@ -157,6 +142,9 @@ func TestBlockSummariesProvider(t *testing.T) {
 
 func TestChain_GetBlockBySummary(t *testing.T) {
 	b := block.NewBlock("", 1)
+	b.CreationDate = common.Now()
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Hash = encryption.Hash("random hash")
 	b.HashBlock()
 
 	makeTestChain(t)
@@ -168,9 +156,9 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   sharder.Stats
-		BlockSyncStats *sharder.SyncStats
-		TieringStats   *sharder.MinioStats
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -185,7 +173,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 	}{
 		{
 			name:    "Test_Chain_GetBlockBySummary_OK",
-			fields:  fields{Chain: sharder.GetSharderChain().Chain},
+			fields:  fields{Chain: GetSharderChain().Chain},
 			args:    args{bs: &block.BlockSummary{Hash: b.Hash}},
 			want:    b,
 			wantErr: false,
@@ -193,9 +181,9 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &sharder.Chain{
+			sc := &Chain{
 				Chain:          tt.fields.Chain,
-				BlockChannel:   tt.fields.BlockChannel,
+				blockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
 				BlockCache:     tt.fields.BlockCache,
 				BlockTxnCache:  tt.fields.BlockTxnCache,
@@ -217,9 +205,12 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 
 func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
+	b.CreationDate = common.Now()
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Hash = encryption.Hash("random hash")
 	b.HashBlock()
 	makeTestChain(t)
-	sharder.GetSharderChain().AddBlock(b)
+	GetSharderChain().AddBlock(b)
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -227,9 +218,9 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   sharder.Stats
-		BlockSyncStats *sharder.SyncStats
-		TieringStats   *sharder.MinioStats
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx      context.Context
@@ -245,7 +236,7 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 	}{
 		{
 			name:    "Test_Chain_GetBlockFromHash_OK",
-			fields:  fields{Chain: sharder.GetSharderChain().Chain},
+			fields:  fields{Chain: GetSharderChain().Chain},
 			args:    args{hash: b.Hash},
 			want:    b,
 			wantErr: false,
@@ -254,9 +245,9 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &sharder.Chain{
+			sc := &Chain{
 				Chain:          tt.fields.Chain,
-				BlockChannel:   tt.fields.BlockChannel,
+				blockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
 				BlockCache:     tt.fields.BlockCache,
 				BlockTxnCache:  tt.fields.BlockTxnCache,
@@ -291,9 +282,9 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   sharder.Stats
-		BlockSyncStats *sharder.SyncStats
-		TieringStats   *sharder.MinioStats
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -314,9 +305,9 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &sharder.Chain{
+			sc := &Chain{
 				Chain:          tt.fields.Chain,
-				BlockChannel:   tt.fields.BlockChannel,
+				blockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
 				BlockCache:     tt.fields.BlockCache,
 				BlockTxnCache:  tt.fields.BlockTxnCache,
@@ -344,9 +335,9 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   sharder.Stats
-		BlockSyncStats *sharder.SyncStats
-		TieringStats   *sharder.MinioStats
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -367,9 +358,9 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &sharder.Chain{
+			sc := &Chain{
 				Chain:          tt.fields.Chain,
-				BlockChannel:   tt.fields.BlockChannel,
+				blockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
 				BlockCache:     tt.fields.BlockCache,
 				BlockTxnCache:  tt.fields.BlockTxnCache,

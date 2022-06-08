@@ -28,5 +28,6 @@ func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) b
 		},
 		ADDRESS,
 		zrh,
+		benchmark.ZCNSCBridgeRest,
 	)
 }

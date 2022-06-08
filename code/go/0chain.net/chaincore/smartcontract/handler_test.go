@@ -1,7 +1,6 @@
 package smartcontract_test
 
 import (
-	"0chain.net/chaincore/chain"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"0chain.net/chaincore/chain"
 
 	"0chain.net/chaincore/currency"
 
@@ -42,7 +43,6 @@ func init() {
 	viper.Set("development.smart_contract.faucet", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.zcn", true)
-	viper.Set("development.smart_contract.interest", true)
 	viper.Set("development.smart_contract.multisig", true)
 	viper.Set("development.smart_contract.miner", true)
 	viper.Set("development.smart_contract.vesting", true)
@@ -50,7 +50,6 @@ func init() {
 	config.SmartContractConfig = viper.New()
 	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.interestpoolsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
 
@@ -141,7 +140,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 37,
+			restpoints: 39,
 		},
 		{
 			name:       "multisig",

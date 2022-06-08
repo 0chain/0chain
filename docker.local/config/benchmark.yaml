@@ -1,0 +1,176 @@
+simulation:
+  num_clients: 210
+  num_active_clients: 210
+  num_miners: 100
+  num_active_miners: 100
+  nun_sharders: 20
+  nun_active_sharders: 20
+  num_allocations: 300
+  num_blobbers: 100
+  num_validators: 10
+  num_allocation_payers: 1 # number of clients contributing pools to an allocation
+  num_allocation_payers_pools: 1  # number of allocation pools each contributor has
+  num_blobbers_per_Allocation: 4 # ideally make this even
+  num_blobber_delegates: 10
+  num_miner_delegates: 10
+  num_sharder_delegates: 10
+  num_curators: 1
+  num_free_storage_assigners: 1
+  num_vesting_destinations_client: 1
+  num_write_redeem_allocation: 1
+  num_challenges_blobber: 1
+  num_authorizers: 12
+  num_reward_partition_blobber: 5
+  num_blocks: 100
+  num_transactions_per_block: 10
+
+options:
+  verbose: true
+  test_suites:
+    - "storage_rest"
+    - "miner_rest"
+    - "faucet_rest"
+    - "vesting_rest"
+    - "zcnscbridge_rest"
+  omitted_tests:
+  save_path: /saved_data # do not add a load_path key, this is read from command line options
+  load_concurrency: 4
+
+dbs:
+  events:
+    enabled: true
+    name: events_db
+    user: postgres
+    password: postgres
+    host: postgres
+    port: 5432
+    max_idle_conns: 100
+    max_open_conns: 200
+    conn_max_lifetime: 20s
+
+smart_contracts:
+  minersc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_delegates: 0
+    max_delegates: 200
+    min_stakke: 0.0
+    max_stake: 170.0
+    max_n: 7 # 100
+    min_n: 3 # 3
+    max_s: 2 # 30
+    min_s: 1 # 1
+    t_percent: .66
+    k_percent: .75
+    x_percent: 0.70
+    reward_round_frequency: 250
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
+    interest_rate: 0.0 # [0; 1)
+    reward_rate: 1.0 # [0; 1)
+    share_ratio: 0.8 # [0; 1)
+    block_reward: 0.21 # tokens
+    max_charge: 0.5 # %
+    epoch: 15000000 # rounds
+    reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    max_mint: 1500000.0 # tokens
+
+  storagesc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_alloc_size: 1024
+    min_alloc_duration: 50h
+    max_read_price: 100.0
+    max_write_price: 100.0
+    max_challenge_completion_time: 3m
+    min_offer_duration: 10h
+    max_offer_duration: 10h
+    min_blobber_capacity: 1024
+    max_charge: 0.2
+    min_stake: 0.0
+    max_stake: 100.0
+    max_delegates: 200
+    diverse_blobbers: false
+    failed_challenges_to_cancel: 0
+    max_total_free_allocation: 10000
+    max_individual_free_allocation: 170
+    max_challenges_per_generation: 1
+    max_blobbers_per_allocation: 40
+    validators_per_challenge: 2
+    readpool:
+      min_lock: 0.3
+      min_lock_period: 1m
+      max_lock_period: 11000h
+    writepool:
+      min_lock: 0.1
+      min_lock_period: 2m
+      max_lock_period: 11000h
+    stakepool:
+      min_lock: 0.1
+    free_allocation_settings:
+      data_shards: 4
+      parity_shards: 4
+      size: 10000
+      duration: 50h
+      read_price_range:
+        min: 0.0
+        max: 0.1
+      write_price_range:
+        min: 0.0
+        max: 0.1
+      max_challenge_completion_time: 3m
+      read_pool_fraction: 0.2
+    max_mint: 1500000.0
+    challenge_enabled: true
+    block_reward:
+      block_reward: 1
+      block_reward_change_period: 10000
+      block_reward_change_ratio: 0.1
+      qualifying_stake: 1
+      sharder_ratio: 10
+      miner_ratio: 40
+      blobber_ratio: 50
+      trigger_period: 30
+  vestingsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_lock: 0.01
+    min_duration: 1m
+    max_duration: 1000h
+    max_destinations: 10
+    max_description_length: 100
+  zcnsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_mint: 1
+    min_burn: 1
+    min_stake: 0
+    min_lock: 0
+    min_authorizers: 1
+    percent_authorizers: 0
+    max_delegates: 10
+    max_fee: 100
+    burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
+    cost:
+      mint: 100
+      burn: 100
+      delete-authorizer: 100
+      add-authorizer: 100
+
+  faucetsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+
+internal:
+  t: 2
+  available_keys: 10
+  signature_scheme: bls0chain # don't change only bls0chian works
+  start_tokens: 100000000000000
+  bad: 50ms
+  worry: 10ms
+  satisfactory: 1ms
+  time_unit: 1ms
+  colour: true
+  control_m: 25000
+  control_n: 90
+  show_output: false
+

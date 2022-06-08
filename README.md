@@ -25,6 +25,7 @@
   - [Cleanup](#cleanup)
   - [Minio Setup](#minio)
 - [Integration tests](#integration-tests)
+- [Benchmarks](#benchmarks)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
 - [Swagger documentation](#swagger-documentation)
@@ -437,69 +438,6 @@ ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
 
 The above output shows 98.9% of code statements was covered with tests.
 
-Here is a sample output for all the unit test cases:
-
-```
-?       0chain.net/chaincore    [no test files]
-ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
-?       0chain.net/chaincore/block/magicBlock   [no test files]
-ok      0chain.net/chaincore/chain      0.254s  coverage: 6.0% of statements
-?       0chain.net/chaincore/chain/state        [no test files]
-ok      0chain.net/chaincore/client     0.328s  coverage: 30.8% of statements
-?       0chain.net/chaincore/config     [no test files]
-?       0chain.net/chaincore/diagnostics        [no test files]
-ok      0chain.net/chaincore/httpclientutil     2.048s  coverage: 91.7% of statements
-ok      0chain.net/chaincore/node       0.011s  coverage: 8.9% of statements
-ok      0chain.net/chaincore/round      0.048s  coverage: 97.1% of statements
-ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statements
-ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%
-?       0chain.net/chaincore/state      [no test files]
-ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem
-ok      0chain.net/chaincore/tokenpool  10.034s coverage: 100.0% of statements
-ok      0chain.net/chaincore/transaction        0.029s  coverage: 0.4% of statements [no tests to run]
-ok      0chain.net/chaincore/wallet     6.600s  coverage: 40.0% of statements
-?       0chain.net/conductor    [no test files]
-?       0chain.net/conductor/conductor  [no test files]
-?       0chain.net/conductor/conductrpc [no test files]
-?       0chain.net/conductor/config     [no test files]
-?       0chain.net/conductor/sdkproxy   [no test files]
-?       0chain.net/conductor/utils      [no test files]
-?       0chain.net/core [no test files]
-?       0chain.net/core/build   [no test files]
-ok      0chain.net/core/cache   0.004s  coverage: 100.0% of statements
-ok      0chain.net/core/common  0.238s  coverage: 87.4% of statements
-ok      0chain.net/core/datastore       0.033s  coverage: 92.0% of statements
-ok      0chain.net/core/ememorystore    1.018s  coverage: 91.7% of statements
-ok      0chain.net/core/encryption      1.290s  coverage: 95.3% of statements
-?       0chain.net/core/encryption/keys [no test files]
-ok      0chain.net/core/logging 0.069s  coverage: 96.5% of statements
-ok      0chain.net/core/memorystore     0.281s  coverage: 93.8% of statements
-?       0chain.net/core/metric  [no test files]
-ok      0chain.net/core/persistencestore        0.036s  coverage: 73.5% of statements
-ok      0chain.net/core/util    22.237s coverage: 76.5% of statements
-ok      0chain.net/miner        0.303s  coverage: 8.0% of statements
-?       0chain.net/miner/miner  [no test files]
-?       0chain.net/miner/mocks  [no test files]
-?       0chain.net/mocks        [no test files]
-?       0chain.net/mocks/core/datastore [no test files]
-?       0chain.net/mocks/core/encryption        [no test files]
-ok      0chain.net/sharder      0.168s  coverage: 20.8% of statements
-ok      0chain.net/sharder/blockdb      0.004s  coverage: 79.3% of statements
-ok      0chain.net/sharder/blockstore   0.045s  coverage: 79.7% of statements
-?       0chain.net/sharder/sharder      [no test files]
-?       0chain.net/smartcontract        [no test files]
-?       0chain.net/smartcontract/faucetsc       [no test files]
-ok      0chain.net/smartcontract/interestpoolsc 0.030s  coverage: 45.0% of statements
-ok      0chain.net/smartcontract/minersc        0.104s  coverage: 30.9% of statements
-?       0chain.net/smartcontract/multisigsc     [no test files]
-?       0chain.net/smartcontract/multisigsc/test        [no test files]
-?       0chain.net/smartcontract/setupsc        [no test files]
-ok      0chain.net/smartcontract/storagesc      1.877s  coverage: 58.8% of statements
-ok      0chain.net/smartcontract/vestingsc      0.034s  coverage: 81.8% of statements
-ok      0chain.net/smartcontract/zrc20sc        0.030s  coverage: 23.3% of statements
-
-```
-
 ## Creating The Magic Block
 
 First build the magic block image.
@@ -612,7 +550,12 @@ Integration testing combines individual 0chain modules and test them as a group.
 
 For integration testing, A conductor which is a RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
 
+## Benchmarks
+Benchmark 0chain smart-contract endpoints.
 
+Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access tha chain so a populated MPT database is enough to give a realistic benchmark.
+
+More info in [read.me](code/go/0chain.net/smartcontract/benchmark/main/readme.md)
 
 ### Architecture
 A conductor requires the nodes to be built in a certain order to control them during the tests. A config file is defined in [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml) which contains important details such as details of all nodes used and custom commands used in integration testing.

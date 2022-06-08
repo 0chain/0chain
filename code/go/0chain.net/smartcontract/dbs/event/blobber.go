@@ -56,14 +56,6 @@ type Blobber struct {
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
-// swagger:model BlobberLatLong
-type BlobberLatLong struct {
-	BlobberID string `json:"id" gorm:"uniqueIndex"`
-	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
 type BlobberPriceRange struct {
 	Min null.Int `json:"min"`
@@ -82,6 +74,34 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
 	return &blobber, nil
+}
+
+func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
+	blobber, err := edb.GetBlobber(id)
+	if err != nil {
+		return err
+	}
+	update := dbs.DbUpdates{
+		Id: id,
+		Updates: map[string]interface{}{
+			"total_data_stored": blobber.TotalDataStored + stored,
+		},
+	}
+	return edb.updateBlobber(update)
+}
+
+func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&Blobber{}).
+		Select("SUM(capacity)").
+		Find(&total).Error
+}
+
+func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
+	var average float64
+	return average, edb.Store.Get().Model(&Blobber{}).
+		Select("AVG(write_price)").
+		Find(&average).Error
 }
 
 func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
@@ -115,11 +135,18 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	return blobberIDs, result.Error
 }
 
-func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
-	var blobbers []BlobberLatLong
-	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+func (edb *EventDb) GeBlobberByLatLong(
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64,
+) ([]string, error) {
+	var blobberIDs []string
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Select("blobber_id").
+		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
+			maxLatitude, minLatitude, maxLongitude, minLongitude).
+		Find(&blobberIDs)
 
-	return blobbers, result.Error
+	return blobberIDs, result.Error
 }
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {

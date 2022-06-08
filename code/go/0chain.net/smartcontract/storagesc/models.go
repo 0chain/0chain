@@ -7,9 +7,7 @@ import (
 	"strings"
 	"time"
 
-
 	"0chain.net/chaincore/currency"
-
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -224,8 +222,22 @@ type ValidationNode struct {
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
 
+// validate the validator configurations
+func (sn *ValidationNode) validate(conf *Config) (err error) {
+	if strings.Contains(sn.BaseURL, "localhost") &&
+		node.Self.Host != "localhost" {
+		return errors.New("invalid validator base url")
+	}
+
+	return
+}
+
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey + "validator:" + sn.ID)
+}
+
+func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + sn.BaseURL)
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -877,6 +889,11 @@ func removeAllocationFromBlobber(
 	allocPartLoc *partitions.PartitionLocation,
 	allocID string,
 	balances chainstate.StateContextI) error {
+
+	if allocPartLoc == nil {
+		return errors.New("empty blobber allocation partition location")
+	}
+
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)

@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/core/common"
+	"encoding/json"
 	"testing"
 
 	"0chain.net/chaincore/currency"
@@ -82,6 +84,12 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
+	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTime := common.Now()
+	if creationTimeRaw != 0 {
+		creationTime = common.Timestamp(creationTimeRaw)
+	}
+
 	var msc = MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -90,7 +98,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.add_miner",
 			endpoint: msc.AddMiner,
-			txn:      &transaction.Transaction{},
+			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:        encryption.Hash("my new miner"),
@@ -113,7 +121,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.add_sharder",
 			endpoint: msc.AddSharder,
-			txn:      &transaction.Transaction{},
+			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:        encryption.Hash("my new sharder"),
@@ -137,15 +145,17 @@ func BenchmarkTests(
 			name:     "miner.update_globals",
 			endpoint: msc.minerHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID: GetMockNodeId(0, spenum.Miner),
+				ClientID:     GetMockNodeId(0, spenum.Miner),
+				CreationDate: creationTime,
 			},
 			input: nil,
 		},
 		{
-			name:     "miner.miner_heath_check",
+			name:     "miner.miner_health_check",
 			endpoint: msc.minerHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID: GetMockNodeId(0, spenum.Miner),
+				ClientID:     GetMockNodeId(0, spenum.Miner),
+				CreationDate: creationTime,
 			},
 			input: nil,
 		},
@@ -153,7 +163,8 @@ func BenchmarkTests(
 			name:     "miner.sharder_health_check",
 			endpoint: msc.sharderHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID: GetMockNodeId(0, spenum.Sharder),
+				ClientID:     GetMockNodeId(0, spenum.Sharder),
+				CreationDate: creationTime,
 			},
 			input: nil,
 		},
@@ -161,8 +172,9 @@ func BenchmarkTests(
 			name:     "miner.payFees",
 			endpoint: msc.payFees,
 			txn: &transaction.Transaction{
-				ClientID:   GetMockNodeId(0, spenum.Miner),
-				ToClientID: ADDRESS,
+				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ToClientID:   ADDRESS,
+				CreationDate: creationTime,
 			},
 			input: nil,
 		},
@@ -170,8 +182,9 @@ func BenchmarkTests(
 			name:     "miner.contributeMpk",
 			endpoint: msc.contributeMpk,
 			txn: &transaction.Transaction{
-				ClientID:   GetMockNodeId(0, spenum.Miner),
-				ToClientID: ADDRESS,
+				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ToClientID:   ADDRESS,
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				var mpks []string
@@ -187,7 +200,8 @@ func BenchmarkTests(
 			name:     "miner.shareSignsOrShares",
 			endpoint: msc.shareSignsOrShares,
 			txn: &transaction.Transaction{
-				ClientID: GetMockNodeId(0, spenum.Miner),
+				ClientID:     GetMockNodeId(0, spenum.Miner),
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				var sos = make(map[string]*bls.DKGKeyShare)
@@ -203,7 +217,8 @@ func BenchmarkTests(
 			name:     "miner.update_globals",
 			endpoint: msc.updateGlobals,
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID:     owner,
+				CreationDate: creationTime,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -234,7 +249,8 @@ func BenchmarkTests(
 			name:     "miner.update_settings",
 			endpoint: msc.updateSettings,
 			txn: &transaction.Transaction{
-				ClientID: owner,
+				ClientID:     owner,
+				CreationDate: creationTime,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -263,7 +279,8 @@ func BenchmarkTests(
 			name:     "miner.update_miner_settings",
 			endpoint: msc.UpdateMinerSettings,
 			txn: &transaction.Transaction{
-				ClientID: GetMockNodeId(0, spenum.Miner),
+				ClientID:     GetMockNodeId(0, spenum.Miner),
+				CreationDate: creationTime,
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
@@ -284,7 +301,8 @@ func BenchmarkTests(
 			name:     "miner.update_sharder_settings",
 			endpoint: msc.UpdateSharderSettings,
 			txn: &transaction.Transaction{
-				ClientID: GetMockNodeId(0, spenum.Sharder),
+				ClientID:     GetMockNodeId(0, spenum.Sharder),
+				CreationDate: creationTime,
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
@@ -308,8 +326,9 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("transaction hash"),
 				},
-				ClientID: data.Clients[0],
-				Value:    1e10,
+				ClientID:     data.Clients[0],
+				Value:        1e10,
+				CreationDate: creationTime,
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),
@@ -320,7 +339,8 @@ func BenchmarkTests(
 			name:     "miner.deleteFromDelegatePool",
 			endpoint: msc.deleteFromDelegatePool,
 			txn: &transaction.Transaction{
-				ClientID: data.Clients[0],
+				ClientID:     data.Clients[0],
+				CreationDate: creationTime,
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),
@@ -330,6 +350,17 @@ func BenchmarkTests(
 		{
 			name:     "miner.sharder_keep",
 			endpoint: msc.sharderKeep,
+			txn:      &transaction.Transaction{CreationDate: creationTime},
+			input: (&MinerNode{
+				SimpleNode: &SimpleNode{
+					ID:        GetMockNodeId(0, spenum.Sharder),
+					PublicKey: "my public key",
+				},
+			}).Encode(),
+		},
+		{
+			name:     "miner.delete_miner",
+			endpoint: msc.DeleteMiner,
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
@@ -337,6 +368,32 @@ func BenchmarkTests(
 					PublicKey: "my public key",
 				},
 			}).Encode(),
+		},
+		{
+			name:     "miner.delete_sharder",
+			endpoint: msc.DeleteSharder,
+			txn:      &transaction.Transaction{},
+			input: (&MinerNode{
+				SimpleNode: &SimpleNode{
+					ID:        GetMockNodeId(0, spenum.Sharder),
+					PublicKey: "my public key",
+				},
+			}).Encode(),
+		},
+		{
+			name:     "miner.collect_reward",
+			endpoint: msc.collectReward,
+			txn: &transaction.Transaction{
+				ClientID:   data.Clients[0],
+				ToClientID: ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
+					PoolId:       "", // todo add getMockMinerStakePoolId
+					ProviderType: spenum.Blobber,
+				})
+				return bytes
+			}(),
 		},
 	}
 	var testsI []bk.BenchTestI
