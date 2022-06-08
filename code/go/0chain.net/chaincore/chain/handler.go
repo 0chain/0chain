@@ -1313,6 +1313,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if err := txn.ValidateFee(sc.Config.TxnExempt(), sc.Config.MinTxnFee()); err != nil {
 		return nil, err
 	}
+	if err := txn.ValidateNonce(); err != nil {
+		return nil, err
+	}
 
 	// save validated transactions to cache for miners only
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
