@@ -40,9 +40,9 @@ const (
 
 	ReadPoolMinLock
 
-	WritePoolMinLock
-	WritePoolMinLockPeriod
-	WritePoolMaxLockPeriod
+	AllocationPoolMinLock
+	AllocationPoolMinLockPeriod
+	AllocationPoolMaxLockPeriod
 
 	StakePoolMinLock
 
@@ -110,8 +110,8 @@ const (
 	CostNewReadPool
 	CostReadPoolLock
 	CostReadPoolUnlock
-	CostWritePoolLock
-	CostWritePoolUnlock
+	CostAllocationPoolLock
+	CostAllocationPoolUnlock
 	CostStakePoolLock
 	CostStakePoolUnlock
 	CostStakePoolPayInterests
@@ -131,9 +131,9 @@ var (
 
 		"readpool.min_lock",
 
-		"writepool.min_lock",
-		"writepool.min_lock_period",
-		"writepool.max_lock_period",
+		"allocation_pool.min_lock",
+		"allocation_pool.min_lock_period",
+		"allocation_pool.max_lock_period",
 
 		"stakepool.min_lock",
 
@@ -201,8 +201,8 @@ var (
 		"cost.new_read_pool",
 		"cost.read_pool_lock",
 		"cost.read_pool_unlock",
-		"cost.write_pool_lock",
-		"cost.write_pool_unlock",
+		"cost.allocation_pool_lock",
+		"cost.allocation_pool_unlock",
 		"cost.stake_pool_lock",
 		"cost.stake_pool_unlock",
 		"cost.stake_pool_pay_interests",
@@ -224,11 +224,11 @@ var (
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
-		"readpool.min_lock":        {ReadPoolMinLock, smartcontract.Int64},
+		"readpool.min_lock": {ReadPoolMinLock, smartcontract.Int64},
 
-		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
-		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
-		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
+		"allocation_pool.min_lock":        {AllocationPoolMinLock, smartcontract.CurrencyCoin},
+		"allocation_pool.min_lock_period": {AllocationPoolMinLockPeriod, smartcontract.Duration},
+		"allocation_pool.max_lock_period": {AllocationPoolMaxLockPeriod, smartcontract.Duration},
 
 		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
 
@@ -296,8 +296,8 @@ var (
 		"cost.new_read_pool":               {CostNewReadPool, smartcontract.Cost},
 		"cost.read_pool_lock":              {CostReadPoolLock, smartcontract.Cost},
 		"cost.read_pool_unlock":            {CostReadPoolUnlock, smartcontract.Cost},
-		"cost.write_pool_lock":             {CostWritePoolLock, smartcontract.Cost},
-		"cost.write_pool_unlock":           {CostWritePoolUnlock, smartcontract.Cost},
+		"cost.allocation_pool_lock":        {CostAllocationPoolLock, smartcontract.Cost},
+		"cost.allocation_pool_unlock":      {CostAllocationPoolUnlock, smartcontract.Cost},
 		"cost.stake_pool_lock":             {CostStakePoolLock, smartcontract.Cost},
 		"cost.stake_pool_unlock":           {CostStakePoolUnlock, smartcontract.Cost},
 		"cost.stake_pool_pay_interests":    {CostStakePoolPayInterests, smartcontract.Cost},
@@ -384,11 +384,11 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.QualifyingStake = change
-	case WritePoolMinLock:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+	case AllocationPoolMinLock:
+		if conf.AllocationPool == nil {
+			conf.AllocationPool = &allocationPoolConfig{}
 		}
-		conf.WritePool.MinLock = change
+		conf.AllocationPool.MinLock = change
 	default:
 		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
@@ -462,16 +462,16 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
 		conf.MinOfferDuration = change
-	case WritePoolMinLockPeriod:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+	case AllocationPoolMinLockPeriod:
+		if conf.AllocationPool == nil {
+			conf.AllocationPool = &allocationPoolConfig{}
 		}
-		conf.WritePool.MinLockPeriod = change
-	case WritePoolMaxLockPeriod:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+		conf.AllocationPool.MinLockPeriod = change
+	case AllocationPoolMaxLockPeriod:
+		if conf.AllocationPool == nil {
+			conf.AllocationPool = &allocationPoolConfig{}
 		}
-		conf.WritePool.MaxLockPeriod = change
+		conf.AllocationPool.MaxLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
@@ -608,12 +608,12 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
 		return conf.ReadPool.MinLock
-	case WritePoolMinLock:
-		return conf.WritePool.MinLock
-	case WritePoolMinLockPeriod:
-		return conf.WritePool.MinLockPeriod
-	case WritePoolMaxLockPeriod:
-		return conf.WritePool.MaxLockPeriod
+	case AllocationPoolMinLock:
+		return conf.AllocationPool.MinLock
+	case AllocationPoolMinLockPeriod:
+		return conf.AllocationPool.MinLockPeriod
+	case AllocationPoolMaxLockPeriod:
+		return conf.AllocationPool.MaxLockPeriod
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
 	case MaxTotalFreeAllocation:
@@ -732,10 +732,10 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostReadPoolUnlock:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
-	case CostWritePoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
-	case CostWritePoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostAllocationPoolLock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAllocationPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostAllocationPoolUnlock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAllocationPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostStakePoolLock:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostStakePoolUnlock:

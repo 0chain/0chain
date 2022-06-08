@@ -124,18 +124,16 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		ReadPriceRange:             PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:            PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		MaxChallengeCompletionTime: time.Duration(alloc.MaxChallengeCompletionTime),
-		// todo: to be added with WritePool : select user_id from WritePools where allocation_id = ?
-		// WritePoolOwners:            nil,
-		ChallengeCompletionTime: time.Duration(alloc.ChallengeCompletionTime),
-		StartTime:               common.Timestamp(alloc.StartTime),
-		Finalized:               alloc.Finalized,
-		Canceled:                alloc.Cancelled,
-		UsedSize:                alloc.UsedSize,
-		MovedToChallenge:        alloc.MovedToChallenge,
-		MovedBack:               alloc.MovedBack,
-		MovedToValidators:       alloc.MovedToValidators,
-		TimeUnit:                time.Duration(alloc.TimeUnit),
-		Curators:                curators,
+		ChallengeCompletionTime:    time.Duration(alloc.ChallengeCompletionTime),
+		StartTime:                  common.Timestamp(alloc.StartTime),
+		Finalized:                  alloc.Finalized,
+		Canceled:                   alloc.Cancelled,
+		UsedSize:                   alloc.UsedSize,
+		MovedToChallenge:           alloc.MovedToChallenge,
+		MovedBack:                  alloc.MovedBack,
+		MovedToValidators:          alloc.MovedToValidators,
+		TimeUnit:                   time.Duration(alloc.TimeUnit),
+		Curators:                   curators,
 	}
 
 	return &StorageAllocationBlobbers{

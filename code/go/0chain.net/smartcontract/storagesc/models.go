@@ -690,9 +690,6 @@ type StorageAllocation struct {
 	WritePriceRange            PriceRange    `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
 
-	//AllocationPools allocationPools `json:"allocation_pools"`
-	WritePoolOwners []string `json:"write_pool_owners"`
-
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
@@ -955,15 +952,6 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
 		}
 	}
 	return
-}
-
-func (sa *StorageAllocation) addWritePoolOwner(userId string) {
-	for _, id := range sa.WritePoolOwners {
-		if userId == id {
-			return
-		}
-	}
-	sa.WritePoolOwners = append(sa.WritePoolOwners, userId)
 }
 
 func (sa *StorageAllocation) getAllocationPools(

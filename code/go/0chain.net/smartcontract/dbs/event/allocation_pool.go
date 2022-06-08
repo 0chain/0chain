@@ -7,8 +7,8 @@ import (
 
 type AllocationPool struct {
 	gorm.Model
-	AllocationId string `json:"allocation_id"`
-	ClientId     string `json:"client_id"`
+	AllocationID string `json:"allocation_id"`
+	ClientID     string `json:"client_id"`
 
 	Balance currency.Coin `json:"balance"`
 	Expires int64         `json:"expires"`
@@ -19,8 +19,8 @@ func (edb *EventDb) GetAllocationPools(allocationId, clientId string) ([]Allocat
 	result := edb.Store.Get().
 		Model(&AllocationPool{}).
 		Where(&AllocationPool{
-			AllocationId: allocationId,
-			ClientId:     clientId,
+			AllocationID: allocationId,
+			ClientID:     clientId,
 		}).
 		Find(&pools)
 
@@ -39,7 +39,7 @@ func (edb *EventDb) AddOrUpdatePools(aps []AllocationPool) error {
 func (edb *EventDb) DeleteAllocationPool(ap AllocationPool) error {
 	return edb.Store.Get().
 		Model(&AllocationPool{}).
-		Where("allocation_id = ? and client_id = ?", ap.AllocationId, ap.ClientId).
+		Where("allocation_id = ? and client_id = ?", ap.AllocationID, ap.ClientID).
 		Delete(&AllocationPool{}).
 		Error
 }
@@ -47,7 +47,7 @@ func (edb *EventDb) DeleteAllocationPool(ap AllocationPool) error {
 func (edb *EventDb) updateAllocationPool(ap AllocationPool) error {
 	return edb.Store.Get().
 		Model(&AllocationPool{}).
-		Where("allocation_id = ? and client_id = ?", ap.AllocationId, ap.ClientId).
+		Where("allocation_id = ? and client_id = ?", ap.AllocationID, ap.ClientID).
 		Updates(map[string]interface{}{
 			"balance": ap.Balance,
 			"expires": ap.Expires,
@@ -69,7 +69,7 @@ func (ap *AllocationPool) exists(edb *EventDb) (bool, error) {
 	var exists bool
 	err := edb.Store.Get().Model(&AllocationPool{}).
 		Select("count(*) > 0").
-		Where("allocation_id = ? and client_id = ?", ap.AllocationId, ap.ClientId).
+		Where("allocation_id = ? and client_id = ?", ap.AllocationID, ap.ClientID).
 		Find(&exists).
 		Error
 

@@ -115,8 +115,8 @@ smart_contracts:
       min_lock: 0.1 # tokens
       min_lock_period: 1m
       max_lock_period: 8760h
-    # users' write pool related configurations
-    writepool:
+    # users' allocation pool related configurations
+    allocation_pool:
       min_lock: 0.1 # tokens
       min_lock_period: 2m
       max_lock_period: 8760h
@@ -228,8 +228,8 @@ smart_contracts:
       new_read_pool: 100
       read_pool_lock: 100
       read_pool_unlock: 100
-      write_pool_lock: 100
-      write_pool_unlock: 100
+      allocation_pool_lock: 100
+      allocation_pool_unlock: 100
       stake_pool_lock: 100
       stake_pool_unlock: 100
       stake_pool_pay_interests: 100

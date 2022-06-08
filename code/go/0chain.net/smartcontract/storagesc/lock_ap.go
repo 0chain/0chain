@@ -38,21 +38,21 @@ func (ssc *StorageSmartContract) allocationPoolLock(
 	if err != nil {
 		return "", err
 	}
-	if iTxnVal < conf.WritePool.MinLock || txn.Value <= 0 {
+	if iTxnVal < conf.AllocationPool.MinLock || txn.Value <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
 
-	if lr.Duration < conf.WritePool.MinLockPeriod {
+	if lr.Duration < conf.AllocationPool.MinLockPeriod {
 		return "", common.NewError("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
-				lr.Duration.String(), conf.WritePool.MinLockPeriod.String()))
+				lr.Duration.String(), conf.AllocationPool.MinLockPeriod.String()))
 	}
 
-	if lr.Duration > conf.WritePool.MaxLockPeriod {
+	if lr.Duration > conf.AllocationPool.MaxLockPeriod {
 		return "", common.NewError("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
-				lr.Duration.String(), conf.WritePool.MaxLockPeriod.String()))
+				lr.Duration.String(), conf.AllocationPool.MaxLockPeriod.String()))
 	}
 
 	// check client balance

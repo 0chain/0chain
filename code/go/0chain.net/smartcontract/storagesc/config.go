@@ -38,7 +38,7 @@ type readPoolConfig struct {
 	MinLock int64 `json:"min_lock"`
 }
 
-type writePoolConfig struct {
+type allocationPoolConfig struct {
 	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
@@ -95,7 +95,7 @@ type Config struct {
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
-	WritePool *writePoolConfig `json:"writepool"`
+	AllocationPool *allocationPoolConfig `json:"allocation_pool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
@@ -377,15 +377,15 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
 	// write pool
-	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "writepool.min_lock"))
+	conf.AllocationPool = new(allocationPoolConfig)
+	conf.AllocationPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "allocation_pool.min_lock"))
 	if err != nil {
 		return nil, err
 	}
-	conf.WritePool.MinLockPeriod = scc.GetDuration(
-		pfx + "writepool.min_lock_period")
-	conf.WritePool.MaxLockPeriod = scc.GetDuration(
-		pfx + "writepool.max_lock_period")
+	conf.AllocationPool.MinLockPeriod = scc.GetDuration(
+		pfx + "allocation_pool.min_lock_period")
+	conf.AllocationPool.MaxLockPeriod = scc.GetDuration(
+		pfx + "allocation_pool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
@@ -482,18 +482,6 @@ func (ssc *StorageSmartContract) getConfig(
 	default:
 		return nil, err
 	}
-}
-
-// getWritePoolConfig
-func (ssc *StorageSmartContract) getWritePoolConfig(
-	balances chainState.StateContextI, setup bool) (
-	conf *writePoolConfig, err error) {
-
-	var scconf *Config
-	if scconf, err = ssc.getConfig(balances, setup); err != nil {
-		return
-	}
-	return scconf.WritePool, nil
 }
 
 // getReadPoolConfig

@@ -100,7 +100,7 @@ smart_contracts:
       min_lock: 0.3
       min_lock_period: 1m
       max_lock_period: 11000h
-    writepool:
+    allocation_pool:
       min_lock: 0.1
       min_lock_period: 2m
       max_lock_period: 11000h
