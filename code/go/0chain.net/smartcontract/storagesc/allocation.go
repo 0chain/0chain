@@ -1097,7 +1097,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		}
 	}
 
-	wps, err := alloc.getAllocationPools(sc, balances)
+	aps, err := alloc.getAllocationPools(balances)
 	if err != nil {
 		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
