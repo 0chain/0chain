@@ -130,7 +130,7 @@ func TestUpdateSettings(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
+					"readpool.min_lock": "10",
 
 					"writepool.min_lock":        "10",
 					"writepool.min_lock_period": "2m",
@@ -169,6 +169,12 @@ func TestUpdateSettings(t *testing.T) {
 					"block_reward.sharder_ratio":    "80.0",
 					"block_reward.miner_ratio":      "20.0",
 					"block_reward.blobber_ratio":    "20.0",
+					"block_reward.gamma.alpha":      "1",
+					"block_reward.gamma.a":          "1",
+					"block_reward.gamma.b":          "1",
+					"block_reward.zeta.i":           "1",
+					"block_reward.zeta.k":           "1",
+					"block_reward.zeta.mu":          "1",
 
 					"expose_mpt": "false",
 				},
@@ -332,7 +338,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
+					"readpool.min_lock": "10",
 
 					"writepool.min_lock":        "10",
 					"writepool.min_lock_period": "2m",
@@ -372,6 +378,12 @@ func TestCommitSettingChanges(t *testing.T) {
 					"block_reward.sharder_ratio":    "80.0",
 					"block_reward.miner_ratio":      "20.0",
 					"block_reward.blobber_ratio":    "100.0",
+					"block_reward.gamma.alpha":      "1",
+					"block_reward.gamma.a":          "1",
+					"block_reward.gamma.b":          "1",
+					"block_reward.zeta.i":           "1",
+					"block_reward.zeta.k":           "1",
+					"block_reward.zeta.mu":          "1",
 
 					"expose_mpt": "false",
 				},

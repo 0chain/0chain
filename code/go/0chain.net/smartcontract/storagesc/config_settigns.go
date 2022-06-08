@@ -79,6 +79,12 @@ const (
 	BlockRewardSharderWeight
 	BlockRewardMinerWeight
 	BlockRewardBlobberWeight
+	BlockRewardGammaAlpha
+	BlockRewardGammaA
+	BlockRewardGammaB
+	BlockRewardZetaI
+	BlockRewardZetaK
+	BlockRewardZetaMu
 
 	ExposeMpt
 
@@ -170,6 +176,12 @@ var (
 		"block_reward.sharder_ratio",
 		"block_reward.miner_ratio",
 		"block_reward.blobber_ratio",
+		"block_reward.gamma.alpha",
+		"block_reward.gamma.a",
+		"block_reward.gamma.b",
+		"block_reward.zeta.i",
+		"block_reward.zeta.k",
+		"block_reward.zeta.mu",
 
 		"expose_mpt",
 
@@ -264,6 +276,12 @@ var (
 		"block_reward.sharder_ratio":    {BlockRewardSharderWeight, smartcontract.Float64},
 		"block_reward.miner_ratio":      {BlockRewardMinerWeight, smartcontract.Float64},
 		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
+		"block_reward.gamma.alpha":      {BlockRewardGammaAlpha, smartcontract.Float64},
+		"block_reward.gamma.a":          {BlockRewardGammaA, smartcontract.Float64},
+		"block_reward.gamma.b":          {BlockRewardGammaB, smartcontract.Float64},
+		"block_reward.zeta.i":           {BlockRewardZetaI, smartcontract.Float64},
+		"block_reward.zeta.k":           {BlockRewardZetaK, smartcontract.Float64},
+		"block_reward.zeta.mu":          {BlockRewardZetaMu, smartcontract.Float64},
 
 		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
 
@@ -675,6 +693,18 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.MinerWeight
 	case BlockRewardBlobberWeight:
 		return conf.BlockReward.BlobberWeight
+	case BlockRewardGammaAlpha:
+		return conf.BlockReward.Gamma.Alpha
+	case BlockRewardGammaA:
+		return conf.BlockReward.Gamma.A
+	case BlockRewardGammaB:
+		return conf.BlockReward.Gamma.B
+	case BlockRewardZetaI:
+		return conf.BlockReward.Zeta.I
+	case BlockRewardZetaK:
+		return conf.BlockReward.Zeta.K
+	case BlockRewardZetaMu:
+		return conf.BlockReward.Zeta.Mu
 	case ExposeMpt:
 		return conf.ExposeMpt
 	case OwnerId:
