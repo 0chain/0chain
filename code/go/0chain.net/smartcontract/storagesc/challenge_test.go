@@ -615,24 +615,18 @@ func setupChallengeMocks(
 	}
 	require.NoError(t, cPool.save(ssc.ID, allocation.ID, ctx))
 
-	var wPool = writePool{
-		Pools: allocationPools{},
-	}
+	var aps = newAllocationPools()
 	for _, balance := range wpBalances {
 		var newPool = &allocationPool{}
 		newPool.Balance = currency.Coin(balance)
-		newPool.AllocationID = allocation.ID
-		newPool.Blobbers = blobberPools{}
-		newPool.Blobbers.add(&blobberPool{BlobberID: blobberId})
-		wPool.Pools.add(newPool)
+		aps.Pools[allocation.Owner] = newPool
 	}
 	for i := 0; i < otherWritePools; i++ {
 		var id = strconv.Itoa(i)
 		var newPool = &allocationPool{}
-		newPool.AllocationID = "alice" + id
-		wPool.Pools.add(newPool)
+		aps.Pools["alice"+id] = newPool
 	}
-	require.NoError(t, wPool.save(ssc.ID, allocation.Owner, ctx))
+	require.NoError(t, aps.save(allocationId, ctx))
 
 	var sp = newStakePool()
 	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge

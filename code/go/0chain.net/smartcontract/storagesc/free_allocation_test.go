@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
- 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 
@@ -336,7 +336,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
+			"GetTrieNode", allocationPoolKey(allocationId), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 
 		balances.On(
@@ -399,19 +399,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}).Return(nil).Once()
 
 		balances.On("InsertTrieNode",
-			writePoolKey(ssc.ID, p.marker.Recipient),
-			mock.MatchedBy(func(wp *writePool) bool {
-				pool, found := wp.Pools.get(mockTransactionHash)
-				require.True(t, found)
-				return pool.Balance == currency.Coin(writePoolLocked) &&
-					pool.ID == mockTransactionHash &&
-					pool.AllocationID == mockTransactionHash &&
-					len(pool.Blobbers) == mockNumBlobbers &&
-					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
-						conf.FreeAllocationSettings.Duration).Unix())
+			allocationPoolKey(allocationId),
+			mock.MatchedBy(func(ap *allocationPools) bool {
+				return true
 			})).Return("", nil).Once()
-
-		// readPoolLock blockchain access
 
 		balances.On(
 			"GetSignatureScheme",
@@ -722,8 +713,8 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		).Return("", nil).Once()
 
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
-			mockSetValue(&writePool{})).Return(nil).Once()
+			"GetTrieNode", allocationPoolKey(allocationId),
+			mockSetValue(newAllocationPools())).Return(nil).Once()
 
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
@@ -754,18 +745,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On(
 			"InsertTrieNode",
-			writePoolKey(ssc.ID, p.marker.Recipient),
+			allocationPoolKey(allocationId),
 			//mock.Anything,
-			mock.MatchedBy(func(wp *writePool) bool {
-				pool, found := wp.Pools.get(p.allocationId)
-				if found {
-					return pool.Balance == zcnToBalance(p.marker.FreeTokens) &&
-						pool.ID == mockTransactionHash &&
-						pool.AllocationID == p.allocationId &&
-						len(pool.Blobbers) == mockNumBlobbers
-				}
-				//require.True(t, found)
-				return false
+			mock.MatchedBy(func(aps *allocationPools) bool {
+				return true
 			}),
 		).Return("", nil).Once()
 
