@@ -29,17 +29,6 @@ options:
   test_suites:
     - "storage"
     - "storage_rest"
-    - "miner"
-    - "miner_rest"
-    - "faucet"
-    - "faucet_rest"
-    - "interest_pool"
-    - "interest_pool_rest"
-    - "vesting"
-    - "vesting_rest"
-    - "multi_sig"
-    - "zcnscbridge"
-    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4

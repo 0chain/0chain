@@ -175,6 +175,11 @@ func benchAllocationPoolEx5pire(now common.Timestamp) common.Timestamp {
 		now + common.Timestamp(time.Hour*24*23)
 }
 
+func benchAllocationPoolExpire(now common.Timestamp) common.Timestamp {
+	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
+		now + common.Timestamp(time.Hour*24*23)
+}
+
 func addMockAllocationPools(
 	clients []string,
 	ownerIndex int,
