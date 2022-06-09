@@ -40,6 +40,12 @@ func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 
 	logging.InitLogging("testing", "")
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	initBlockStore(usr.HomeDir)
 }
 
 func getContext() (context.Context, func()) {
@@ -65,13 +71,6 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 		mc.Config = chain.NewConfigImpl(data)
 	}
 
-	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-
-	initBlockStore(usr.HomeDir)
-
 	var rd *Round
 	switch rr := r.(type) {
 	case *MockRound:
@@ -82,7 +81,7 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 		log.Fatalf("unknow round type:%v", rr)
 	}
 
-	b, err = mc.GenerateRoundBlock(ctx, rd)
+	b, err := mc.GenerateRoundBlock(ctx, rd)
 	if err != nil {
 		return nil, err
 	}
@@ -157,17 +156,11 @@ func TestBlockGeneration(t *testing.T) {
 
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
-	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-
-	initBlockStore(usr.HomeDir)
 
 	r := CreateRound(1)
 	r.RandomSeed = time.Now().UnixNano()
 
-	b, err = mc.GenerateRoundBlock(ctx, r)
+	b, err := mc.GenerateRoundBlock(ctx, r)
 	if err != nil {
 		t.Errorf("Error generating block: %v\n", err)
 		return
@@ -541,31 +534,33 @@ func setupSelf() func() { //nolint
 }
 
 func initBlockStore(baseDir string) {
-	storageConfig := []byte(`
+	storageConfig := `
 storage:
   storage_type: 2
   mode: start
   block_movement_interval: 720h
   rocks:
-    path: ""
+    path: "%s"
     cache_size: 100*1024*1024
   disk:
     strategy: round_robin
     volumes:
-      -  path: ""
-         size_to_maintain: 1
-         inodes_to_maintain: 5
-         allowed_block_numbers: 10^3
-         allowed_block_size: 1
-	`)
+      - path: "%s"
+        size_to_maintain: 1
+        inodes_to_maintain: 5
+        allowed_block_numbers: 10^3
+        allowed_block_size: 1
+`
+	storageConfig = fmt.Sprintf(
+		storageConfig,
+		fmt.Sprintf("%v/bwr_rocks", baseDir),
+		fmt.Sprintf("%v/blocks", baseDir))
 
 	v := viper.New()
-	if err := v.ReadConfig(bytes.NewBuffer(storageConfig)); err != nil {
+	v.SetConfigType("yaml")
+	if err := v.ReadConfig(bytes.NewBuffer([]byte(storageConfig))); err != nil {
 		panic(err)
 	}
 
-	v.Set("storage.rocks.path", fmt.Sprintf("%v/rocks", baseDir))
-	v.Set("storage.disk.volumes.0.path", fmt.Sprintf("%v/blocks", baseDir))
-
-	blockstore.InitializeStore(context.Background(), v, baseDir)
+	blockstore.InitializeStore(context.Background(), v.Sub("storage"), baseDir)
 }
