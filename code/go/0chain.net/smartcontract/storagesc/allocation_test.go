@@ -690,8 +690,8 @@ func TestExtendAllocation(t *testing.T) {
 			aps.Pools[apOwner] = ap
 		}
 		balances.On(
-			"GetTrieNode", allocationPoolKey(sa.ID)).
-			Return(&aps).Once()
+			"GetTrieNode", allocationPoolKey(sa.ID), newAllocationPools()).
+			Return(nil).Once()
 
 		balances.On(
 			"InsertTrieNode",
@@ -894,12 +894,12 @@ func TestTransferAllocation(t *testing.T) {
 				aps.Pools[owner] = new(allocationPool)
 			}
 			balances.On("GetTrieNode",
-				allocationPoolKey(allocationId),
-			).Return(aps).Once()
+				allocationPoolKey(allocationId), newAllocationPools(),
+			).Return(nil).Maybe()
 		} else {
 			balances.On(
-				"GetTrieNode", allocationPoolKey(allocationId),
-			).Return(util.ErrValueNotPresent).Once()
+				"GetTrieNode", allocationPoolKey(allocationId), newAllocationPools(),
+			).Return(util.ErrValueNotPresent).Maybe()
 		}
 
 		balances.On(
