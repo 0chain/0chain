@@ -535,7 +535,7 @@ func TestExtendAllocation(t *testing.T) {
 		mockURL                     = "mock_url"
 		mockOwner                   = "mock owner"
 		mockNotTheOwner             = "mock not the owner"
-		mockWpOwner                 = "mock write pool owner"
+		mockApOwner                 = "mock allocation pool owner"
 		mockPublicKey               = "mock public key"
 		mockBlobberId               = "mock_blobber_id"
 		mockPoolId                  = "mock pool id"
@@ -679,49 +679,25 @@ func TestExtendAllocation(t *testing.T) {
 		}
 
 		require.EqualValues(t, len(args.poolFunds), len(args.poolCount))
+		var aps = newAllocationPools()
 		for i, funds := range args.poolFunds {
-			var wp writePool
-			for j := 0; j < args.poolCount[i]; j++ {
-				expiresAt := sa.Expiration + toSeconds(sa.ChallengeCompletionTime) + args.request.Expiration + 1
-				ap := allocationPool{
-					AllocationID: sa.ID,
-					ExpireAt:     expiresAt,
-				}
-				ap.Balance = zcnToBalance(funds)
-				for _, blobber := range blobbers {
-					ap.Blobbers.add(&blobberPool{
-						BlobberID: blobber.ID,
-						Balance:   ap.Balance / currency.Coin(bCount*args.poolCount[i]),
-					})
-				}
-				wp.Pools.add(&ap)
+			expiresAt := sa.Expiration + toSeconds(sa.ChallengeCompletionTime) + args.request.Expiration + 1
+			ap := &allocationPool{
+				ExpireAt: expiresAt,
 			}
-
-			if i == 0 {
-				sa.addWritePoolOwner(sa.Owner)
-				balances.On(
-					"GetTrieNode", writePoolKey(ssc.ID, sa.Owner),
-					mock.MatchedBy(func(w *writePool) bool {
-						*w = wp
-						return true
-					})).Return(nil).Once()
-				balances.On(
-					"InsertTrieNode", writePoolKey(ssc.ID, sa.Owner), mock.Anything,
-				).Return("", nil).Once()
-			} else {
-				wpOwner := mockWpOwner + strconv.Itoa(i)
-				sa.addWritePoolOwner(wpOwner)
-				balances.On(
-					"GetTrieNode", writePoolKey(ssc.ID, wpOwner),
-					mock.MatchedBy(func(w *writePool) bool {
-						*w = wp
-						return true
-					})).Return(nil).Once()
-				balances.On(
-					"InsertTrieNode", writePoolKey(ssc.ID, wpOwner), mock.Anything,
-				).Return("", nil).Once()
-			}
+			ap.Balance = zcnToBalance(funds)
+			apOwner := mockApOwner + strconv.Itoa(i)
+			aps.Pools[apOwner] = ap
 		}
+		balances.On(
+			"GetTrieNode", allocationPoolKey(sa.ID)).
+			Return(&aps).Once()
+
+		balances.On(
+			"InsertTrieNode",
+			mock.MatchedBy(func(aps *allocationPools) bool {
+				return true
+			})).Return(nil).Once()
 
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, sa.ID),
@@ -816,6 +792,7 @@ func TestExtendAllocation(t *testing.T) {
 				aBlobbers,
 				&tt.args.request,
 				false,
+				&Config{},
 				balances,
 			)
 			require.EqualValues(t, tt.want.err, err != nil)
@@ -866,7 +843,7 @@ func TestTransferAllocation(t *testing.T) {
 		mockOldOwner          = "mock old owner"
 		mockCuratorId         = "mock curator id"
 		mockAllocationId      = "mock allocation id"
-		mockNotAllocationId   = "mock not allocation id"
+		mockNotOwner          = "mock not owner id"
 	)
 	type args struct {
 		ssc      *StorageSmartContract
@@ -908,35 +885,28 @@ func TestTransferAllocation(t *testing.T) {
 				return true
 			})).Return(nil).Once()
 
-		var wp writePool
+		var aps = newAllocationPools()
 		if p.existingWPForAllocation || p.existingNoiseWPools > 0 {
 			for i := 0; i < p.existingNoiseWPools; i++ {
-				wp.Pools.add(&allocationPool{AllocationID: mockNotAllocationId + strconv.Itoa(i)})
+				aps.Pools[mockNotOwner+strconv.Itoa(i)] = new(allocationPool)
 			}
 			if p.existingWPForAllocation {
-				wp.Pools.add(&allocationPool{AllocationID: p.info.AllocationId})
+				aps.Pools[owner] = new(allocationPool)
 			}
 			balances.On("GetTrieNode",
-				writePoolKey(ssc.ID, p.info.NewOwnerId),
-				mock.MatchedBy(func(w *writePool) bool {
-					*w = wp
-					return true
-				})).Return(nil).Twice()
+				allocationPoolKey(allocationId),
+			).Return(aps).Once()
 		} else {
-			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId),
-				mock.AnythingOfType("*storagesc.writePool")).Return(util.ErrValueNotPresent).Twice()
+			balances.On(
+				"GetTrieNode", allocationPoolKey(allocationId),
+			).Return(util.ErrValueNotPresent).Once()
 		}
 
 		balances.On(
 			"InsertTrieNode",
-			writePoolKey(ssc.ID, p.info.NewOwnerId),
-			mock.MatchedBy(func(wp *writePool) bool {
-				if p.existingNoiseWPools+1 != len(wp.Pools) {
-					return false
-				}
-				_, ok := wp.Pools.get(p.info.AllocationId)
-				return ok
-
+			allocationPoolKey(allocationId),
+			mock.MatchedBy(func(_ *allocationPools) bool {
+				return true
 			})).Return("", nil).Once()
 
 		balances.On(
@@ -1559,17 +1529,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		assert.Equal(t, len(details), len(aresp.BlobberAllocs))
 
-		// check out pools created and changed:
-		//  - write pool, should be created and filled with value of transaction
-		//  - stake pool, offer should be added
-		//  - challenge pool, should be created
-
-		// 1. write pool
-		var wp *writePool
-		wp, err = ssc.getWritePool(clientID, balances)
-		require.NoError(t, err)
-		assert.Equal(t, currency.Coin(400), wp.allocUntil(aresp.ID, aresp.Until()))
-
 		_, err = ssc.getStakePool("b1", balances)
 		require.NoError(t, err)
 
@@ -2183,10 +2142,6 @@ func Test_finalize_allocation(t *testing.T) {
 	}
 
 	// balances
-	var wp *writePool
-	_, err = ssc.getWritePool(client.id, balances)
-	require.NoError(t, err)
-
 	var cp *challengePool
 	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
@@ -2206,17 +2161,11 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// check out all the balances
 
-	// reload
-	wp, err = ssc.getWritePool(client.id, balances)
-	require.NoError(t, err)
-
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
 	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
 	assert.Zero(t, cp.Balance, "should be drained")
-	assert.Zero(t, wp.allocUntil(allocID, common.Timestamp(tp)),
-		"should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)

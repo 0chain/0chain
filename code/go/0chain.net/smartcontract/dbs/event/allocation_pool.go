@@ -1,6 +1,8 @@
 package event
 
 import (
+	"encoding/json"
+
 	"0chain.net/chaincore/currency"
 	"gorm.io/gorm"
 )
@@ -12,6 +14,14 @@ type AllocationPool struct {
 
 	Balance currency.Coin `json:"balance"`
 	Expires int64         `json:"expires"`
+}
+
+func (ap *AllocationPool) Encode() []byte {
+	var b, err = json.Marshal(ap)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 func (edb *EventDb) GetAllocationPools(allocationId, clientId string) ([]AllocationPool, error) {
@@ -27,7 +37,7 @@ func (edb *EventDb) GetAllocationPools(allocationId, clientId string) ([]Allocat
 	return pools, result.Error
 }
 
-func (edb *EventDb) AddOrUpdatePools(aps []AllocationPool) error {
+func (edb *EventDb) addOrUpdatePools(aps []AllocationPool) error {
 	for _, ap := range aps {
 		if err := edb.addOrUpdatePool(ap); err != nil {
 			return err
@@ -36,7 +46,7 @@ func (edb *EventDb) AddOrUpdatePools(aps []AllocationPool) error {
 	return nil
 }
 
-func (edb *EventDb) DeleteAllocationPool(ap AllocationPool) error {
+func (edb *EventDb) deleteAllocationPool(ap AllocationPool) error {
 	return edb.Store.Get().
 		Model(&AllocationPool{}).
 		Where("allocation_id = ? and client_id = ?", ap.AllocationID, ap.ClientID).

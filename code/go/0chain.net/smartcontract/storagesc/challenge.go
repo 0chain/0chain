@@ -171,7 +171,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		alloc.MovedBack += back
 		blobAlloc.Returned += back
 		// save write pool
-		if err = aps.save(alloc.ID, balances); err != nil {
+		if err = aps.saveAndUpdate(alloc, balances); err != nil {
 			return fmt.Errorf("can't save allocation pools: %v", err)
 		}
 	}
@@ -331,7 +331,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			"moving challenge pool rest back to write pool: "+err.Error())
 	}
 
-	if err = aps.save(alloc.ID, balances); err != nil {
+	if err = aps.saveAndUpdate(alloc, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving allocation pools: "+err.Error())
 	}

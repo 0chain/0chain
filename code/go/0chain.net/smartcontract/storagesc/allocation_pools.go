@@ -51,6 +51,19 @@ func (aps *allocationPools) save(allocationId string, balances cstate.StateConte
 	return err
 }
 
+func (aps *allocationPools) saveAndUpdate(allocation *StorageAllocation, balances cstate.StateContextI) error {
+	for client, ap := range aps.Pools {
+		if ap.Balance > 0 || (client == allocation.Owner && !allocation.Finalized) {
+			ap.emitAddOrUpdate(allocation.ID, client, balances)
+			continue
+		}
+		ap.emitDelete(allocation.ID, client, balances)
+		delete(aps.Pools, client)
+	}
+
+	return aps.save(allocation.ID, balances)
+}
+
 func createAllocationPools(
 	txn *transaction.Transaction,
 	alloc *StorageAllocation,
@@ -188,21 +201,7 @@ func (aps *allocationPools) moveToChallenge(
 		return fmt.Errorf("not enough tokens for allocation: %s,", allocID)
 	}
 
-	// remove empty allocation pools
-	aps.removeSpentPools(owner, now)
 	return nil
-}
-
-// remove empty pools of an allocation (all given pools should belongs to
-// one allocation)
-func (aps *allocationPools) removeSpentPools(owner string, now common.Timestamp) {
-	for id, ap := range aps.Pools {
-		if ap.ExpireAt < now || ap.Balance == 0 {
-			if id != owner {
-				delete(aps.Pools, id)
-			}
-		}
-	}
 }
 
 func (aps *allocationPools) allocUntil(

@@ -87,9 +87,11 @@ func (ssc *StorageSmartContract) allocationPoolLock(
 	}
 	ap.Balance += currency.Coin(txn.Value)
 	ap.ExpireAt = txn.CreationDate + toSeconds(lr.Duration)
+	ap.emitAddOrUpdate(lr.AllocationID, txn.ClientID, balances)
 	if err := aps.save(lr.AllocationID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
+
 	return "", nil
 }
 
@@ -148,5 +150,16 @@ func (ssc *StorageSmartContract) allocationPoolUnlock(
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 
+	if ap.Balance == 0 && (txn.ClientID != alloc.Owner || alloc.Finalized) {
+		delete(aps.Pools, txn.ClientID)
+		ap.emitDelete(alloc.ID, txn.ClientID, balances)
+	} else {
+		ap.emitAddOrUpdate(alloc.ID, txn.ClientID, balances)
+	}
+
+	if err = aps.save(alloc.ID, balances); err != nil {
+		return "", common.NewError("write_pool_unlock_failed",
+			"saving allocation pools: "+err.Error())
+	}
 	return "", nil
 }

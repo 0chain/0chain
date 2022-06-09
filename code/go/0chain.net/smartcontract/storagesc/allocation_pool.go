@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -59,6 +61,34 @@ func (ur *unlockRequest) decode(input []byte) error {
 type allocationPool struct {
 	Balance  currency.Coin    `json:"balance"`
 	ExpireAt common.Timestamp `json:"expire_at"` // inclusive
+}
+
+func (ap *allocationPool) emitAddOrUpdate(allocation, client string, balances cstate.StateContextI) {
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagAddOrUpdateAllocationPool,
+		allocation+client,
+		string((&event.AllocationPool{
+			AllocationID: allocation,
+			ClientID:     client,
+			Balance:      ap.Balance,
+			Expires:      int64(ap.ExpireAt),
+		}).Encode()),
+	)
+}
+
+func (ap *allocationPool) emitDelete(allocation, client string, balances cstate.StateContextI) {
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagDeleteAllocationPool,
+		allocation+client,
+		string((&event.AllocationPool{
+			AllocationID: allocation,
+			ClientID:     client,
+			Balance:      ap.Balance,
+			Expires:      int64(ap.ExpireAt),
+		}).Encode()),
+	)
 }
 
 func newAllocationPool(

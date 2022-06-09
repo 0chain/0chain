@@ -547,7 +547,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	if err := aps.save(alloc.ID, balances); err != nil {
+	if err := aps.saveAndUpdate(alloc, balances); err != nil {
 		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 	}
 

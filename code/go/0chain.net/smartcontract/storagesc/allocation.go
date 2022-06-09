@@ -1039,7 +1039,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
-	if err := aps.save(alloc.ID, balances); err != nil {
+	if err := aps.saveAndUpdate(alloc, balances); err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
@@ -1128,7 +1128,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	if err := aps.save(alloc.ID, balances); err != nil {
+	if err := aps.saveAndUpdate(alloc, balances); err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
@@ -1741,19 +1741,13 @@ func (sc *StorageSmartContract) finishAllocation(
 			return err
 		}
 
-		aps, err := getAllocationPools(alloc.ID, balances)
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"cannot find allocation pools for "+alloc.ID+": "+err.Error())
-		}
-
 		err = aps.moveFromCP(alloc.Owner, cp, cp.Balance)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"moving challenge pool rest back to write pool: "+err.Error())
 		}
 
-		if err = aps.save(alloc.ID, balances); err != nil {
+		if err = aps.saveAndUpdate(alloc, balances); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving allocation pools: "+err.Error())
 		}
@@ -1830,7 +1824,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"cannot create allocation pool: %v", err)
 	}
 
-	if err := aps.save(alloc.ID, balances); err != nil {
+	if err := aps.saveAndUpdate(alloc, balances); err != nil {
 		return "", common.NewErrorf("curator_transfer_allocation_failed", "%v", err)
 	}
 
