@@ -86,7 +86,7 @@ func (sm *blockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block
 }
 
 func (sm *blockStore) Read(hash string, round int64) (b *block.Block, err error) {
-	logging.Logger.Info("Reading block: " + b.Hash)
+	logging.Logger.Info("Reading block: " + hash)
 	return sm.read(hash, round)
 }
 
