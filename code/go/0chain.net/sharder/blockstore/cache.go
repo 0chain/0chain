@@ -10,7 +10,6 @@ import (
 	"container/list"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -203,6 +202,7 @@ func (l *lru) Remove(key string) {
 // getKeysAndCleanList will take percent as argument.
 // so if percent is 50 then 50% of the elements in the list will be deleted
 // and those deleted items will be sent to the channel for further processing.
+/*
 func (l *lru) getKeysAndCleanList(percent int) <-chan *entry {
 	ch := make(chan *entry)
 	switch {
@@ -234,6 +234,7 @@ func (l *lru) getKeysAndCleanList(percent int) <-chan *entry {
 
 	return ch
 }
+*/
 
 /**********************************Initialization************************************/
 

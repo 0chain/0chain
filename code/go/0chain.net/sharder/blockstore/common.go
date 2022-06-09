@@ -194,7 +194,6 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 			for {
 				dirEntries, err := f.ReadDir(1000)
 				if errors.Is(err, io.EOF) {
-					err = nil
 					break
 				}
 
@@ -233,12 +232,11 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 // Converts integer and string representation of number to uint64.
 // 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
 func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case int:
-		return uint64(v.(int)), nil
+		return uint64(v), nil
 	case string:
-		vStr := v.(string)
-		vStr = strings.ReplaceAll(vStr, " ", "")
+		vStr := strings.ReplaceAll(v, " ", "")
 		if strings.Contains(vStr, "^") {
 			res := strings.Split(vStr, "^")
 			r1, err := strconv.Atoi(res[0])
@@ -268,18 +266,17 @@ func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 			return value, nil
 		}
 	}
-	return 0, errors.New(fmt.Sprintf("Type unsupported: %T", v))
+	return 0, fmt.Errorf("Type unsupported: %T", v)
 }
 
 // Converts integer and string representation of number to int.
 // 10 * 10 * 10 is returned as int(1000); 10^4 is returned as int(10000)
 func getintValueFromYamlConfig(v interface{}) (int, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case int:
-		return v.(int), nil
+		return v, nil
 	case string:
-		vStr := v.(string)
-		vStr = strings.ReplaceAll(vStr, " ", "")
+		vStr := strings.ReplaceAll(v, " ", "")
 		if strings.Contains(vStr, "^") {
 			res := strings.Split(vStr, "^")
 			r1, err := strconv.Atoi(res[0])
@@ -309,7 +306,7 @@ func getintValueFromYamlConfig(v interface{}) (int, error) {
 			return value, nil
 		}
 	}
-	return 0, errors.New(fmt.Sprintf("Type unsupported: %T", v))
+	return 0, fmt.Errorf("Type unsupported: %T", v)
 }
 
 func getVolumePathFromBlockPath(bPath string) string {

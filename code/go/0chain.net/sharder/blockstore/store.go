@@ -55,9 +55,8 @@ type blockStore struct {
 	diskTier *diskTier
 	coldTier *coldTier
 	// fields with registered functions as per the config files
-	write  func(b *block.Block) error
-	read   func(hash string, round int64) (b *block.Block, err error)
-	delete func(hash string) error
+	write func(b *block.Block) error
+	read  func(hash string, round int64) (b *block.Block, err error)
 
 	// blockMovementInterval interval to check for blocks to move to cold
 	// storage. This value also determines if a block is cold enough to move
@@ -153,6 +152,9 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 				return
 			}
 			bwr, err := getBWR(hash)
+			if err != nil {
+				return nil, err
+			}
 			b, err = store.diskTier.read(bwr.BlockPath)
 			if err == nil && b != nil {
 				go store.addToCache(b)

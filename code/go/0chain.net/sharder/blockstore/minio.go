@@ -51,7 +51,7 @@ type coldTier struct { //Cold tier
 func (ct *coldTier) read(coldPath, hash string) ([]byte, error) {
 	mc, ok := coldStoragesMap[coldPath]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Invalid cold path %v", coldPath))
+		return nil, fmt.Errorf("Invalid cold path %v", coldPath)
 	}
 
 	return mc.getBlock(hash)
@@ -181,9 +181,7 @@ func (mc *minioClient) moveBlock(hash, blockPath string) (string, error) {
 }
 
 func (mc *minioClient) getBlock(hash string) ([]byte, error) {
-	var ctx context.Context
-
-	ctx = context.Background()
+	ctx := context.Background()
 	statCtx, statCtxCncl := context.WithTimeout(ctx, Timeout)
 	defer statCtxCncl()
 

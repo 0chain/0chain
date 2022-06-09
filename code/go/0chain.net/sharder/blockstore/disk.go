@@ -271,28 +271,6 @@ func (v *volume) write(b *block.Block, data []byte, dTier *diskTier) (bPath stri
 	return
 }
 
-func (v *volume) read(hash, blockPath string) (*block.Block, error) {
-	f, err := os.Open(blockPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	r, err := zlib.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-
-	b := block.Block{}
-	err = datastore.ReadJSON(r, &b)
-	if err != nil {
-		return nil, err
-	}
-
-	return &b, nil
-}
-
 // When a block is moved to cold tier delete function will be called
 func (v *volume) delete(hash, path string) error {
 	finfo, err := os.Stat(path)

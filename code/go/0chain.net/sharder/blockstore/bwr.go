@@ -150,6 +150,9 @@ func initBWR(viper *viper.Viper, mode, workDir string) {
 
 		var cfHs gorocksdb.ColumnFamilyHandles
 		bmrDB, cfHs, err = ememorystore.OpenDB(dbPath, cfs, cfsOpts, cacheSize, false)
+		if err != nil {
+			panic(fmt.Errorf("error while opening rocksdb. Path: %s, error: %s", dbPath, err.Error()))
+		}
 		bwrHandle = cfHs[1]
 		ubrHandle = cfHs[2]
 
