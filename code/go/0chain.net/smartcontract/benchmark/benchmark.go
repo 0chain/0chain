@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"0chain.net/core/common"
 	"encoding/json"
 	"log"
 	"strconv"
@@ -154,8 +155,6 @@ const (
 	StorageDiverseBlobbers               = SmartContract + StorageSc + "diverse_blobbers"
 	StorageFailedChallengesToCancel      = SmartContract + StorageSc + "failed_challenges_to_cancel"
 	StorageReadPoolMinLock               = SmartContract + StorageSc + "readpool.min_lock"
-	StorageReadPoolMinLockPeriod         = SmartContract + StorageSc + "readpool.min_lock_period"
-	StorageReadPoolMaxLockPeriod         = SmartContract + StorageSc + "readpool.max_lock_period"
 	StorageWritePoolMinLock              = SmartContract + StorageSc + "writepool.min_lock"
 	StorageWritePoolMinLockPeriod        = SmartContract + StorageSc + "writepool.min_lock_period"
 	StorageWritePoolMaxLockPeriod        = SmartContract + StorageSc + "writepool.max_lock_period"
@@ -359,5 +358,6 @@ var MockBenchData = BenchData{
 		PublicKeys:  make([]string, 100),
 		PrivateKeys: make([]string, 100),
 		Sharders:    make([]string, 100),
+		Now:         common.Now(),
 	},
 }
