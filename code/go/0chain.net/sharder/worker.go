@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/remeh/sizedwaitgroup"
@@ -50,13 +51,183 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
+	const stuckDuration = 3 * time.Second
+	var (
+		endRound int64
+		syncing  bool
+
+		syncBlocksTimer  = time.NewTimer(7 * time.Second)
+		aheadN           = int64(config.GetLFBTicketAhead())
+		maxRequestBlocks = aheadN
+
+		// triggered after sync process is started
+		stuckCheckTimer = time.NewTimer(10 * time.Second)
+	)
+
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
-		case b := <-sc.GetBlockChannel():
-			sc.processBlock(ctx, b)
+		case <-stuckCheckTimer.C:
+			logging.Logger.Debug("process block, detected stuck, trigger sync",
+				zap.Int64("round", sc.GetCurrentRound()),
+				zap.Int64("lfb", sc.GetLatestFinalizedBlock().Round))
+			stuckCheckTimer.Reset(stuckDuration)
+			// trigger sync
+			syncBlocksTimer.Reset(0)
+		case <-syncBlocksTimer.C:
+			// reset sync timer to 1 minute
+			syncBlocksTimer.Reset(time.Minute)
+
+			var (
+				lfbTk = sc.GetLatestLFBTicket(ctx)
+				lfb   = sc.GetLatestFinalizedBlock()
+			)
+
+			cr := sc.GetCurrentRound()
+			if cr < lfb.Round {
+				sc.SetCurrentRound(lfb.Round)
+				cr = lfb.Round
+			}
+
+			endRound = lfbTk.Round + aheadN
+
+			if endRound <= cr {
+				continue
+			}
+
+			logging.Logger.Debug("process block, sync triggered",
+				zap.Int64("lfb", lfb.Round),
+				zap.Int64("lfb ticket", lfbTk.Round),
+				zap.Int64("current round", cr),
+				zap.Int64("end round", endRound))
+
+			// trunc to send maxRequestBlocks each time
+			reqNum := endRound - cr
+			if reqNum > maxRequestBlocks {
+				reqNum = maxRequestBlocks
+			}
+
+			endRound = cr + reqNum
+			syncing = true
+
+			logging.Logger.Debug("process block, sync blocks",
+				zap.Int64("start round", cr+1),
+				zap.Int64("end round", cr+reqNum+1))
+			go sc.requestBlocks(ctx, cr, reqNum)
+		case b := <-sc.blockChannel:
+			stuckCheckTimer.Reset(stuckDuration)
+			cr := sc.GetCurrentRound()
+			lfb := sc.GetLatestFinalizedBlock()
+			if b.Round > lfb.Round+aheadN {
+				// avoid the skipping logs when syncing blocks
+				if b.Round <= lfb.Round+2*aheadN {
+					logging.Logger.Debug("process block skip",
+						zap.Int64("block round", b.Round),
+						zap.Int64("current round", cr),
+						zap.Int64("lfb", lfb.Round),
+						zap.Bool("syncing", syncing))
+				}
+
+				// trigger sync process to pull the latest blocks when
+				// current round is > lfb.Round + aheadN to break the stuck if any.
+				if !syncing {
+					syncBlocksTimer.Reset(0)
+				}
+
+				continue
+			}
+
+			if err := sc.processBlock(ctx, b); err != nil {
+				logging.Logger.Error("process block failed",
+					zap.Error(err),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev block", b.PrevHash))
+				if err != ErrNoPreviousBlock {
+					continue
+				}
+
+				// fetch the previous block
+				pb, _ := sc.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+				if pb != nil {
+					if err := sc.processBlock(ctx, pb); err != nil {
+						logging.Logger.Error("process block, handle previous block failed",
+							zap.Int64("round", pb.Round),
+							zap.String("block", pb.Hash),
+							zap.Error(err))
+						continue
+					}
+
+					// process this block again
+					if err := sc.processBlock(ctx, b); err != nil {
+						logging.Logger.Error("process block, failed after getting previous block",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.Error(err))
+						continue
+					}
+				}
+			}
+
+			lfbTk := sc.GetLatestLFBTicket(ctx)
+			logging.Logger.Debug("process block successfully",
+				zap.Int64("round", b.Round),
+				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
+				zap.Int64("lfb ticket round", lfbTk.Round))
+
+			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {
+				syncing = false
+				if b.Round < lfbTk.Round {
+					logging.Logger.Debug("process block, hit end, trigger sync",
+						zap.Int64("round", b.Round),
+						zap.Int64("end round", endRound),
+						zap.Int64("current round", cr))
+					syncBlocksTimer.Reset(0)
+				}
+			}
+		}
+	}
+}
+
+func (sc *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
+	blocks := make([]*block.Block, reqNum)
+	wg := sync.WaitGroup{}
+	for i := int64(0); i < reqNum; i++ {
+		wg.Add(1)
+		go func(idx int64) {
+			defer wg.Done()
+			r := startRound + idx + 1
+			var cancel func()
+			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+			defer cancel()
+			b, err := sc.GetNotarizedBlockFromSharders(cctx, "", r)
+			if err != nil {
+				// fetch from miners
+				b, err = sc.GetNotarizedBlock(cctx, "", r)
+				if err != nil {
+					logging.Logger.Error("request block failed",
+						zap.Int64("round", r),
+						zap.Error(err))
+					return
+				}
+			}
+
+			blocks[idx] = b
+		}(i)
+	}
+	wg.Wait()
+
+	for _, b := range blocks {
+		if b == nil {
+			// return if block is not acquired, break here as we will redo the sync process from the missed one later
+			return
+		}
+
+		if err := sc.PushToBlockProcessor(b); err != nil {
+			logging.Logger.Debug("requested block, but failed to pushed to process channel",
+				zap.Int64("round", b.Round), zap.Error(err))
 		}
 	}
 }

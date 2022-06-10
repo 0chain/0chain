@@ -4,6 +4,9 @@ set -e
 GIT_COMMIT=$(git rev-list -1 HEAD)
 echo "$GIT_COMMIT"
 
+# generate mocks
+make build-mocks
+
 cmd="build"
 
 docker $cmd --build-arg GIT_COMMIT="$GIT_COMMIT" -f docker.local/build.sharder/Dockerfile . -t sharder

@@ -221,28 +221,22 @@ func Test_flow_reward(t *testing.T) {
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 		require.Error(t, err)
 
-		// create read pool
-		tp += 100
-		tx = newTransaction(client.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.newReadPool(tx, nil, balances)
-		require.NoError(t, err)
-
 		// read pool lock
 		tp += 100
 		var readPoolFund = int64(len(alloc.BlobberAllocs)) * 2 * 1e10
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
-		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     20 * time.Minute,
-			AllocationID: allocID,
+		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
+			IsOwner:    true,
+			TargetId:   client.id,
+			MintTokens: false,
 		}), balances)
 		require.NoError(t, err)
 
 		var rp *readPool
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10, rp.allocBlobberTotal(allocID, b1.id, tp))
+		require.EqualValues(t, readPoolFund, int64(rp.OwnerBalance))
 
 		// read
 		tp += 100
@@ -255,8 +249,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund-1e10, rp.allocTotal(allocID, tp))
-		require.EqualValues(t, 1e10, rp.allocBlobberTotal(allocID, b1.id, tp))
+		require.EqualValues(t, readPoolFund-1e10, int64(rp.OwnerBalance))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -298,23 +291,22 @@ func Test_flow_reward(t *testing.T) {
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 		require.Error(t, err)
 
-		// create read pool
-		tp += 100
-		tx = newTransaction(reader.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.newReadPool(tx, nil, balances)
-		require.NoError(t, err)
-
 		// read pool lock
 		tp += 100
-		tx = newTransaction(reader.id, ssc.ID,
-			int64(len(alloc.BlobberAllocs))*2*x10, tp)
+		readPoolFund := int64(len(alloc.BlobberAllocs)) * 2 * x10
+		tx = newTransaction(reader.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
-		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     20 * time.Minute,
-			AllocationID: allocID,
+		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
+			IsOwner:    false,
+			TargetId:   reader.id,
+			MintTokens: false,
 		}), balances)
 		require.NoError(t, err)
+
+		var rp *readPool
+		rp, err = ssc.getReadPool(reader.id, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, readPoolFund, int64(rp.VisitorBalance))
 
 		// read
 		tp += 100
@@ -330,12 +322,10 @@ func Test_flow_reward(t *testing.T) {
 
 		assert.EqualValues(t, 6e9, sp.Reward)
 
-		var rp *readPool
 		rp, err = ssc.getReadPool(reader.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 10000000000,
-			rp.allocBlobberTotal(allocID, b1.id, tp))
+		require.EqualValues(t, readPoolFund-1e10, int64(rp.VisitorBalance))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -353,10 +343,6 @@ func Test_flow_reward(t *testing.T) {
 	require.NotNil(t, b2)
 
 	var until = int64(alloc.Until())
-
-	// balances.balances[client.id] += 200e10
-	// addTokensToWritePool(t, ssc, allocID, client.id, 200e10, tp,
-	// 	20*time.Minute, balances)
 
 	t.Run("write", func(t *testing.T) {
 
@@ -433,8 +419,10 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		var wpb, cpb = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 149932183160, wpb)
-		require.EqualValues(t, 67816840, cpb)
+		//require.EqualValues(t, 149932183160, wpb)
+		//require.EqualValues(t, 67816840, cpb)
+		require.EqualValues(t, 149926531757, wpb)
+		require.EqualValues(t, 73468243, cpb)
 
 		tp += 100
 		var cc = &BlobberCloseConnection{
@@ -468,12 +456,12 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 36734122, cp.Balance)
+		require.EqualValues(t, 39559823, cp.Balance)
 
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 149963265878, wp.allocTotal(allocID, tp))
+		require.EqualValues(t, 149960440177, wp.allocTotal(allocID, tp))
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -509,8 +497,10 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 
 		var wpb1, cpb1 = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 149963265878, wpb1)
-		require.EqualValues(t, 36734122, cpb1)
+		//require.EqualValues(t, 149963265878, wpb1)
+		//require.EqualValues(t, 36734122, cpb1)
+		require.EqualValues(t, 149960440177, wpb1)
+		require.EqualValues(t, 39559823, cpb1)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		const allocRoot = "alloc-root-1"
@@ -554,8 +544,10 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 
 		var wpb2, cpb2 = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 149909577547, wpb2)
-		require.EqualValues(t, 90422453, cpb2)
+		//require.EqualValues(t, 149861540619, wpb2)
+		//require.EqualValues(t, 90422453, cpb2)
+		require.EqualValues(t, 149901100442, wpb2)
+		require.EqualValues(t, 98899558, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)
 
 		// until the end

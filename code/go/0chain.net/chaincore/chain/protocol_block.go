@@ -310,7 +310,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 	fr := c.GetRound(fb.Round)
 
-	logging.Logger.Info("finalize block -- round", zap.Any("round", fr))
+	logging.Logger.Info("finalize block -- round", zap.Any("round", fr), zap.String("block", fb.Hash))
 
 	if fr != nil {
 		generators := c.GetGenerators(fr)
@@ -371,6 +371,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 	go bsh.UpdateFinalizedBlock(ctx, fb)
+
+	fr.Finalize(fb)
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
 

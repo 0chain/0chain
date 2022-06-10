@@ -47,7 +47,7 @@ GitHub does not house these mock files, instead they will be auto-generated as
  part of the continuous integration unit test checks. To build the mock files
 for yourself run from the `0chain` repository root directory
 ```shell
-./generate_mocks.sh
+make build-mocks
 ```
 These will should be ignored when you commit to `git`.
 
@@ -513,8 +513,7 @@ interface objects using the
 
 As we autogenerate these mock object, we avoid keeping them under
 version control. Instead, we generate them when we run unit tests during 
-continuous integration. Developers can generate them using the 
-[0chain\generate_mocks.sh](https://github.com/0chain/0chain/blob/master/generate_mocks.sh) script.
+continuous integration. Developers can generate them using the `make build-mocks`
 
 To take advantage of autogenerating these `mocks` developers will need to install `vektra mockery` on
 their machines with `go get github.com/vektra/mockery/v2/.../` or otherwise
