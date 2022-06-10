@@ -634,9 +634,9 @@ func (z *Config) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *blockReward) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 8
+	// map header, size 10
 	// string "BlockReward"
-	o = append(o, 0x88, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
+	o = append(o, 0x8a, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
 	o, err = z.BlockReward.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "BlockReward")
@@ -667,6 +667,30 @@ func (z *blockReward) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "TriggerPeriod"
 	o = append(o, 0xad, 0x54, 0x72, 0x69, 0x67, 0x67, 0x65, 0x72, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
 	o = msgp.AppendInt64(o, z.TriggerPeriod)
+	// string "Gamma"
+	o = append(o, 0xa5, 0x47, 0x61, 0x6d, 0x6d, 0x61)
+	// map header, size 3
+	// string "Alpha"
+	o = append(o, 0x83, 0xa5, 0x41, 0x6c, 0x70, 0x68, 0x61)
+	o = msgp.AppendFloat64(o, z.Gamma.Alpha)
+	// string "A"
+	o = append(o, 0xa1, 0x41)
+	o = msgp.AppendFloat64(o, z.Gamma.A)
+	// string "B"
+	o = append(o, 0xa1, 0x42)
+	o = msgp.AppendFloat64(o, z.Gamma.B)
+	// string "Zeta"
+	o = append(o, 0xa4, 0x5a, 0x65, 0x74, 0x61)
+	// map header, size 3
+	// string "I"
+	o = append(o, 0x83, 0xa1, 0x49)
+	o = msgp.AppendFloat64(o, z.Zeta.I)
+	// string "K"
+	o = append(o, 0xa1, 0x4b)
+	o = msgp.AppendFloat64(o, z.Zeta.K)
+	// string "Mu"
+	o = append(o, 0xa2, 0x4d, 0x75)
+	o = msgp.AppendFloat64(o, z.Zeta.Mu)
 	return
 }
 
@@ -736,6 +760,88 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "TriggerPeriod")
 				return
 			}
+		case "Gamma":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Gamma")
+				return
+			}
+			for zb0002 > 0 {
+				zb0002--
+				field, bts, err = msgp.ReadMapKeyZC(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Gamma")
+					return
+				}
+				switch msgp.UnsafeString(field) {
+				case "Alpha":
+					z.Gamma.Alpha, bts, err = msgp.ReadFloat64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Gamma", "Alpha")
+						return
+					}
+				case "A":
+					z.Gamma.A, bts, err = msgp.ReadFloat64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Gamma", "A")
+						return
+					}
+				case "B":
+					z.Gamma.B, bts, err = msgp.ReadFloat64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Gamma", "B")
+						return
+					}
+				default:
+					bts, err = msgp.Skip(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Gamma")
+						return
+					}
+				}
+			}
+		case "Zeta":
+			var zb0003 uint32
+			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Zeta")
+				return
+			}
+			for zb0003 > 0 {
+				zb0003--
+				field, bts, err = msgp.ReadMapKeyZC(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Zeta")
+					return
+				}
+				switch msgp.UnsafeString(field) {
+				case "I":
+					z.Zeta.I, bts, err = msgp.ReadFloat64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Zeta", "I")
+						return
+					}
+				case "K":
+					z.Zeta.K, bts, err = msgp.ReadFloat64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Zeta", "K")
+						return
+					}
+				case "Mu":
+					z.Zeta.Mu, bts, err = msgp.ReadFloat64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Zeta", "Mu")
+						return
+					}
+				default:
+					bts, err = msgp.Skip(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "Zeta")
+						return
+					}
+				}
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -750,7 +856,147 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *blockReward) Msgsize() (s int) {
-	s = 1 + 12 + z.BlockReward.Msgsize() + 24 + msgp.Int64Size + 23 + msgp.Float64Size + 16 + z.QualifyingStake.Msgsize() + 14 + msgp.Float64Size + 12 + msgp.Float64Size + 14 + msgp.Float64Size + 14 + msgp.Int64Size
+	s = 1 + 12 + z.BlockReward.Msgsize() + 24 + msgp.Int64Size + 23 + msgp.Float64Size + 16 + z.QualifyingStake.Msgsize() + 14 + msgp.Float64Size + 12 + msgp.Float64Size + 14 + msgp.Float64Size + 14 + msgp.Int64Size + 6 + 1 + 6 + msgp.Float64Size + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 5 + 1 + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 3 + msgp.Float64Size
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z blockRewardGamma) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "Alpha"
+	o = append(o, 0x83, 0xa5, 0x41, 0x6c, 0x70, 0x68, 0x61)
+	o = msgp.AppendFloat64(o, z.Alpha)
+	// string "A"
+	o = append(o, 0xa1, 0x41)
+	o = msgp.AppendFloat64(o, z.A)
+	// string "B"
+	o = append(o, 0xa1, 0x42)
+	o = msgp.AppendFloat64(o, z.B)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *blockRewardGamma) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "Alpha":
+			z.Alpha, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Alpha")
+				return
+			}
+		case "A":
+			z.A, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "A")
+				return
+			}
+		case "B":
+			z.B, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "B")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z blockRewardGamma) Msgsize() (s int) {
+	s = 1 + 6 + msgp.Float64Size + 2 + msgp.Float64Size + 2 + msgp.Float64Size
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z blockRewardZeta) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "I"
+	o = append(o, 0x83, 0xa1, 0x49)
+	o = msgp.AppendFloat64(o, z.I)
+	// string "K"
+	o = append(o, 0xa1, 0x4b)
+	o = msgp.AppendFloat64(o, z.K)
+	// string "Mu"
+	o = append(o, 0xa2, 0x4d, 0x75)
+	o = msgp.AppendFloat64(o, z.Mu)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *blockRewardZeta) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "I":
+			z.I, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "I")
+				return
+			}
+		case "K":
+			z.K, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "K")
+				return
+			}
+		case "Mu":
+			z.Mu, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Mu")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z blockRewardZeta) Msgsize() (s int) {
+	s = 1 + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 3 + msgp.Float64Size
 	return
 }
 
