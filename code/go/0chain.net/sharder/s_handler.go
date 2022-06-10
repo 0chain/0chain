@@ -2,6 +2,8 @@ package sharder
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -220,23 +222,31 @@ func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface
 func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	hash := r.FormValue("hash")
-	var b *block.Block
-	var roundNumber int64
-	if hash == "" {
-		return nil, common.InvalidRequest("block hash is required")
-	}
-	b, err := sc.GetBlock(ctx, hash)
-	if err == nil {
-		return b, nil
-	}
-	roundNumber, err = strconv.ParseInt(r.FormValue("round"), 10, 64)
-	if err == nil {
-		b, err = sc.GetBlockFromStore(hash, roundNumber)
+	if hash != "" {
+		b, err := sc.GetBlock(ctx, hash)
 		if err == nil {
 			return b, nil
 		}
 	}
-	return nil, err
+
+	rs := r.FormValue("round")
+	if rs == "" {
+		return nil, errors.New("round number is missing")
+	}
+
+	roundNum, err := strconv.ParseInt(rs, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid round number: %v, err: %v", rs, err)
+	}
+
+	if hash == "" {
+		hash, err = sc.GetBlockHash(ctx, roundNum)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sc.GetBlockFromStore(hash, roundNum)
 }
 
 func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*round.Round {

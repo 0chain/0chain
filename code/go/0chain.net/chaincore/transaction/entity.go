@@ -100,6 +100,14 @@ type smartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
+func (t *Transaction) ValidateNonce() error {
+	if t.Nonce <= 0 {
+		return errors.New("invalid transaction nonce")
+	}
+
+	return nil
+}
+
 // ValidateFee - Validate fee
 func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) error {
 	if t.TransactionData != "" {
