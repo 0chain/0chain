@@ -276,7 +276,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
-	if err := UpdateDKGMinersList(balances, dmn); err != nil {
+	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't cleanup DKG miners: %v", err)
 	}

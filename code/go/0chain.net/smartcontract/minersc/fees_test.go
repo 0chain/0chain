@@ -114,7 +114,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 		dmn.Waited[mn.miner.id] = true
 	}
 
-	err = UpdateDKGMinersList(balances, dmn)
+	err = updateDKGMinersList(balances, dmn)
 	require.NoError(t, err)
 }
 

@@ -328,7 +328,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	dkgMiners.StartRound = gn.LastRound
-	if err := UpdateDKGMinersList(balances, dkgMiners); err != nil {
+	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
 		return err
 	}
 
@@ -368,7 +368,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 		return err
 	}
 
-	if err := UpdateDKGMinersList(balances, dkgMiners); err != nil {
+	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
 		Logger.Error("widdle dkg miners -- failed to insert dkg miners",
 			zap.Any("error", err))
 		return err
@@ -712,7 +712,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 			"saving group share of signs: %v", err)
 	}
 
-	if err := UpdateDKGMinersList(balances, dmn); err != nil {
+	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
 			"saving DKG miners: %v", err)
 	}
@@ -750,7 +750,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 
 	dmn.Waited[t.ClientID] = true
 
-	if err := UpdateDKGMinersList(balances, dmn); err != nil {
+	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return "", common.NewErrorf("msc - wait", "saving DKG miners: %v", err)
 	}
 
@@ -856,7 +856,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 	}
 	dkgMinersList := NewDKGMinerNodes()
 	dkgMinersList.StartRound = pn.CurrentRound
-	if err := UpdateDKGMinersList(balances, dkgMinersList); err != nil {
+	if err := updateDKGMinersList(balances, dkgMinersList); err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 

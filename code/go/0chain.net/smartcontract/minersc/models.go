@@ -956,8 +956,8 @@ func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodes, error) 
 	return dkgMiners, nil
 }
 
-// UpdateDKGMinersList update the dkg miners list
-func UpdateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
+// updateDKGMinersList update the dkg miners list
+func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
 	logging.Logger.Info("update dkg miners list", zap.Int("len", len(dkgMiners.SimpleNodes)))
 	_, err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
 	return err
