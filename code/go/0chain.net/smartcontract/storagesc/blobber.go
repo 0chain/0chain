@@ -1,6 +1,10 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
@@ -11,9 +15,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -90,7 +91,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	blobber.LastHealthCheck = t.CreationDate
-	blobber.Used = savedBlobber.Used
+	blobber.Allocated = savedBlobber.Allocated
 	blobber.SavedData = savedBlobber.SavedData
 
 	// update statistics

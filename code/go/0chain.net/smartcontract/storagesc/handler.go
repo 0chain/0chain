@@ -1662,7 +1662,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				ChallengeCompletionTime: time.Duration(blobber.ChallengeCompletionTime),
 			},
 			Capacity:        blobber.Capacity,
-			Used:            blobber.Used,
+			Allocated:       blobber.Allocated,
 			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     blobber.DelegateWallet,

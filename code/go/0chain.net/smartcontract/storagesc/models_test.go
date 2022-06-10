@@ -104,8 +104,8 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	// 4. filter all by size
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
-	list[0].Capacity, list[0].Used = 100, 90
-	list[1].Capacity, list[1].Used = 100, 50
+	list[0].Capacity, list[0].Allocated = 100, 90
+	list[1].Capacity, list[1].Allocated = 100, 50
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
 
 	// 5. filter all by max CCT
@@ -114,10 +114,10 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	// accept one
 	alloc.MaxChallengeCompletionTime = 30 * time.Second
-	list[0].Capacity, list[0].Used = 330, 100
+	list[0].Capacity, list[0].Allocated = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
 
 	// accept all
-	list[1].Capacity, list[1].Used = 330, 100
+	list[1].Capacity, list[1].Allocated = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
 }

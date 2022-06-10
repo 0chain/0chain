@@ -29,7 +29,7 @@ type Blobber struct {
 	ChallengeCompletionTime int64         `json:"challenge_completion_time"`
 
 	Capacity        int64 `json:"capacity"`          // total blobber capacity
-	Used            int64 `json:"used"`              // allocated capacity
+	Allocated       int64 `json:"allocated"`         // allocated capacity
 	TotalDataStored int64 `json:"total_data_stored"` // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"`
@@ -230,7 +230,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"max_offer_duration":        blobber.MaxOfferDuration,
 			"challenge_completion_time": blobber.ChallengeCompletionTime,
 			"capacity":                  blobber.Capacity,
-			"used":                      blobber.Used,
+			"allocated":                 blobber.Allocated,
 			"last_health_check":         blobber.LastHealthCheck,
 			"delegate_wallet":           blobber.DelegateWallet,
 			"min_stake":                 blobber.MinStake,

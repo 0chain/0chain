@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
- 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 
@@ -246,9 +246,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:       blob[i],
-			Capacity: 536870912,
-			Used:     73,
+			ID:        blob[i],
+			Capacity:  536870912,
+			Allocated: 73,
 			Terms: Terms{
 				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
@@ -610,9 +610,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
-			ID:       strconv.Itoa(i),
-			Capacity: 536870912,
-			Used:     73,
+			ID:        strconv.Itoa(i),
+			Capacity:  536870912,
+			Allocated: 73,
 			Terms: Terms{
 				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,

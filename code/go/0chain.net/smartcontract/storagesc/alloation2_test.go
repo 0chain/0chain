@@ -65,8 +65,8 @@ func TestNewAllocation(t *testing.T) {
 			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
-		Capacity: 536870912,
-		Used:     73,
+		Capacity:  536870912,
+		Allocated: 73,
 		Terms: Terms{
 			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
 			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
@@ -912,7 +912,7 @@ func (f formulaeCommitNewAllocation) sizePerUsedBlobber() int64 {
 func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string) int64 {
 	var thisBlobber, ok = f.blobbers.get(id)
 	require.True(t, ok)
-	var usedAlready = thisBlobber.Used
+	var usedAlready = thisBlobber.Allocated
 	var newAllocament = f.sizePerUsedBlobber()
 
 	return usedAlready + newAllocament
@@ -944,8 +944,8 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 	for _, blobber := range blobbers {
 		b, ok := f.blobbers.get(blobber.ID)
 		require.True(t, ok)
-		if blobber.Used > b.Used {
-			require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
+		if blobber.Allocated > b.Allocated {
+			require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Allocated)
 			countUsedBlobbers++
 		}
 	}
@@ -953,6 +953,6 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 
 	require.EqualValues(t, f.blobbersUsed(), len(blobbers))
 	for _, blobber := range blobbers {
-		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
+		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Allocated)
 	}
 }
