@@ -71,7 +71,7 @@ func GetNodeTypeAndTypeRank(roundNum int64) (nodeType, typeRank int) {
 	sChain := GetServerChain()
 
 	r := sChain.GetRound(roundNum)
-	if !r.IsRanksComputed() {
+	if r == nil || !r.IsRanksComputed() {
 		logging.Logger.Warn("Conductor: ranks is not computed yet", zap.Int64("round", roundNum))
 		return -1, -1
 	}
