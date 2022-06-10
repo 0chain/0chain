@@ -288,7 +288,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	if config.DevConfiguration.ViewChange {
+	isViewChange := config.Configuration().ChainConfig.IsViewChangeEnabled()
+	if isViewChange {
 		// TODO: cache the phase node so if when there's no view change happens, we
 		// can avoid unnecessary MPT access
 		var pn *PhaseNode

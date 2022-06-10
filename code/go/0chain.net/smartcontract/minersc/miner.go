@@ -323,7 +323,7 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 	}
 }
 
-func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
+func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI) (
 	all *MinerNodes, err error) {
 
 	lockAllMiners.Lock()
@@ -331,7 +331,6 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 	return getMinersList(balances)
 }
 
-// getMinerNode
 func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
 
 	mn := NewMinerNode()

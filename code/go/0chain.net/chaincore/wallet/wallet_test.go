@@ -14,6 +14,8 @@ import (
 
 	"0chain.net/core/logging"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -35,6 +37,7 @@ const (
 )
 
 func init() {
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	logging.InitLogging("development", "")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
