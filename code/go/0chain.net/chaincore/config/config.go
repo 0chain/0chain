@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
 )
@@ -178,10 +180,10 @@ type ChainConfig interface {
 	RoundTimeoutSofttoMult() int
 	RoundRestartMult() int
 	DbsEvents() DbAccess
-	FromViper()
+	FromViper() error
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
-	MinTxnFee() int64
+	MinTxnFee() currency.Coin
 }
 
 type DbAccess struct {
