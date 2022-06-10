@@ -4,17 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
-	"time"
-
-	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
 )
 
@@ -33,8 +29,7 @@ import (
 // all tokens divided for all blobbers of the allocation
 // automatically
 type lockRequest struct {
-	Duration     time.Duration `json:"duration"`
-	AllocationID string        `json:"allocation_id"`
+	AllocationID string `json:"allocation_id"`
 }
 
 func (lr *lockRequest) decode(input []byte) (err error) {
@@ -59,8 +54,7 @@ func (ur *unlockRequest) decode(input []byte) error {
 
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPool struct {
-	Balance  currency.Coin    `json:"balance"`
-	ExpireAt common.Timestamp `json:"expire_at"` // inclusive
+	Balance currency.Coin `json:"balance"`
 }
 
 func (ap *allocationPool) emitAddOrUpdate(allocation, client string, balances cstate.StateContextI) {
@@ -72,7 +66,6 @@ func (ap *allocationPool) emitAddOrUpdate(allocation, client string, balances cs
 			AllocationID: allocation,
 			ClientID:     client,
 			Balance:      ap.Balance,
-			Expires:      int64(ap.ExpireAt),
 		}).Encode()),
 	)
 }
@@ -86,14 +79,12 @@ func (ap *allocationPool) emitDelete(allocation, client string, balances cstate.
 			AllocationID: allocation,
 			ClientID:     client,
 			Balance:      ap.Balance,
-			Expires:      int64(ap.ExpireAt),
 		}).Encode()),
 	)
 }
 
 func newAllocationPool(
 	txn *transaction.Transaction,
-	until common.Timestamp,
 	mintNewTokens bool,
 	balances cstate.StateContextI,
 ) (*allocationPool, error) {
@@ -121,7 +112,6 @@ func newAllocationPool(
 		}
 	}
 	ap.Balance = currency.Coin(txn.Value)
-	ap.ExpireAt = until
 	return &ap, nil
 }
 
@@ -132,33 +122,6 @@ func isInTOMRList(torm []*allocationPool, ax *allocationPool) bool {
 		}
 	}
 	return false
-}
-
-func sortExpireAt(cut []*allocationPool) {
-	sort.Slice(cut, func(i, j int) bool {
-		return cut[i].ExpireAt < cut[j].ExpireAt
-	})
-}
-
-//
-// stat
-//
-
-// allocation read/write pool represents tokens locked for an allocation;
-type allocationPoolStat struct {
-	ID           string           `json:"id"`
-	Balance      currency.Coin    `json:"balance"`
-	ExpireAt     common.Timestamp `json:"expire_at"`
-	AllocationID string           `json:"allocation_id"`
-	Locked       bool             `json:"locked"`
-}
-
-func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
-	stat.Balance = ap.Balance
-	stat.ExpireAt = ap.ExpireAt
-	stat.Locked = ap.ExpireAt >= now
-
-	return
 }
 
 func (ap *allocationPool) moveToAllocationPool(
@@ -180,29 +143,4 @@ func (ap *allocationPool) moveToAllocationPool(
 	cp.Balance -= value
 	ap.Balance += value
 	return nil
-}
-
-// swagger:model allocationPoolsStat
-type allocationPoolsStat struct {
-	Pools []allocationPoolStat `json:"pools"`
-}
-
-func (aps allocationPools) stat(now common.Timestamp) (
-	stat allocationPoolsStat) {
-
-	stat.Pools = make([]allocationPoolStat, 0, len(aps.Pools))
-	for _, ap := range aps.Pools {
-		stat.Pools = append(stat.Pools, ap.stat(now))
-	}
-	return
-}
-
-//
-// until stat
-//
-// swagger:model untilStat
-type untilStat struct {
-	PoolID   string           `json:"pool_id"`
-	Balance  currency.Coin    `json:"balance"`
-	ExpireAt common.Timestamp `json:"expire_at"`
 }

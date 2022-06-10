@@ -3,7 +3,6 @@ package storagesc
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -34,7 +33,6 @@ func requireErrMsg(t *testing.T, err error, msg string) {
 
 func Test_lockRequest_decode(t *testing.T) {
 	var lre, lrd lockRequest
-	lre.Duration = time.Second * 60
 	lre.AllocationID = "alloc_hex"
 	require.NoError(t, lrd.decode(mustEncode(t, &lre)))
 	assert.EqualValues(t, lre, lrd)

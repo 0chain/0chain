@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/transaction"
 
 	"0chain.net/core/datastore"
@@ -71,19 +73,11 @@ func createAllocationPools(
 	balances cstate.StateContextI,
 ) (*allocationPools, error) {
 	aps := newAllocationPools()
-	var mld = alloc.restMinLockDemand()
-	if txn.Value < int64(mld) || txn.Value <= 0 {
-		return nil, fmt.Errorf("not enough tokens to honor the min lock demand"+
-			" (%d < %d)", txn.Value, mld)
-	}
-
-	var until = alloc.Until()
-	ap, err := newAllocationPool(txn, until, mintTokens, balances)
+	ap, err := newAllocationPool(txn, mintTokens, balances)
 	if err != nil {
 		return nil, err
 	}
 	aps.Pools[alloc.Owner] = ap
-
 	return aps, nil
 }
 
@@ -99,20 +93,19 @@ func getAllocationPools(
 	return aps, nil
 }
 
-func (aps *allocationPools) sortExpiry() []string {
+func (aps *allocationPools) sort() []string {
 	var clients []string
 	for client := range aps.Pools {
 		clients = append(clients, client)
 	}
 	sort.Slice(clients, func(i, j int) bool {
-		return aps.Pools[clients[i]].ExpireAt < aps.Pools[clients[j]].ExpireAt
+		return aps.Pools[clients[i]].Balance < aps.Pools[clients[j]].Balance
 	})
 	return clients
 }
 
 func (aps *allocationPools) addToOrCreateAllocationPool(
 	txn *transaction.Transaction,
-	until common.Timestamp,
 	conf *Config,
 	mintTokens bool,
 	balances cstate.StateContextI,
@@ -120,8 +113,8 @@ func (aps *allocationPools) addToOrCreateAllocationPool(
 	var err error
 	ap, found := aps.Pools[txn.ClientID]
 	if found {
-		if ap.ExpireAt < until {
-			ap.ExpireAt = until
+		if err = stakepool.CheckClientBalance(txn, balances); err != nil {
+			return err
 		}
 		ap.Balance += currency.Coin(txn.Value)
 		return nil
@@ -129,7 +122,7 @@ func (aps *allocationPools) addToOrCreateAllocationPool(
 	if len(aps.Pools) >= conf.MaxPoolsPerAllocation {
 		return fmt.Errorf("max allocation pools %v exceeded", conf.MaxPoolsPerAllocation)
 	}
-	ap, err = newAllocationPool(txn, until, mintTokens, balances)
+	ap, err = newAllocationPool(txn, mintTokens, balances)
 	if err != nil {
 		return err
 	}
@@ -137,16 +130,9 @@ func (aps *allocationPools) addToOrCreateAllocationPool(
 	return nil
 }
 
-func (aps *allocationPools) getExpiresAfter(
-	now common.Timestamp,
-) []*allocationPool {
-	var pools []*allocationPool
-	for _, ap := range aps.Pools {
-		if ap.ExpireAt >= now && ap.Balance > 0 {
-			pools = append(pools, ap)
-		}
-	}
-	return pools
+func (aps *allocationPools) enoughForMinLockDemand(allocation *StorageAllocation) bool {
+	mldLeft := allocation.restMinLockDemand()
+	return mldLeft <= 0 || aps.total() >= mldLeft
 }
 
 func (aps *allocationPools) moveTo(client string, value currency.Coin) error {
@@ -182,7 +168,8 @@ func (aps *allocationPools) moveToChallenge(
 		return err
 	}
 
-	for _, ap := range aps.Pools {
+	for _, client := range aps.sort() {
+		ap := aps.Pools[client]
 		if value == 0 {
 			break // all required tokens has moved to the blobber
 		}
@@ -204,10 +191,7 @@ func (aps *allocationPools) moveToChallenge(
 	return nil
 }
 
-func (aps *allocationPools) allocUntil(
-	until common.Timestamp,
-) currency.Coin {
-	aps.getExpiresAfter(until)
+func (aps *allocationPools) total() currency.Coin {
 	var value currency.Coin
 	for _, ap := range aps.Pools {
 		value += ap.Balance

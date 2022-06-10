@@ -43,18 +43,6 @@ func (ssc *StorageSmartContract) allocationPoolLock(
 			"insufficient amount to lock")
 	}
 
-	if lr.Duration < conf.AllocationPool.MinLockPeriod {
-		return "", common.NewError("write_pool_lock_failed",
-			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
-				lr.Duration.String(), conf.AllocationPool.MinLockPeriod.String()))
-	}
-
-	if lr.Duration > conf.AllocationPool.MaxLockPeriod {
-		return "", common.NewError("write_pool_lock_failed",
-			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
-				lr.Duration.String(), conf.AllocationPool.MaxLockPeriod.String()))
-	}
-
 	// check client balance
 	if err = stakepool.CheckClientBalance(txn, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
@@ -79,14 +67,8 @@ func (ssc *StorageSmartContract) allocationPoolLock(
 		}
 		ap = new(allocationPool)
 		aps.Pools[txn.ClientID] = ap
-	} else {
-		if ap.ExpireAt > txn.CreationDate+toSeconds(lr.Duration) {
-			return "", common.NewError("write_pool_lock_failed",
-				"can only decrease the expiry date  "+ap.ExpireAt.Duration().String())
-		}
 	}
 	ap.Balance += currency.Coin(txn.Value)
-	ap.ExpireAt = txn.CreationDate + toSeconds(lr.Duration)
 	ap.emitAddOrUpdate(lr.AllocationID, txn.ClientID, balances)
 	if err := aps.save(lr.AllocationID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
@@ -136,10 +118,9 @@ func (ssc *StorageSmartContract) allocationPoolUnlock(
 	if !alloc.Finalized && !alloc.Canceled {
 		var (
 			want  = alloc.restMinLockDemand()
-			unitl = alloc.Until()
-			leave = aps.allocUntil(unitl) - ap.Balance
+			leave = aps.total() - ap.Balance
 		)
-		if leave < want && ap.ExpireAt >= unitl {
+		if leave < want {
 			return "", common.NewError("write_pool_unlock_failed",
 				"can't unlock, because min lock demand is not paid yet")
 		}

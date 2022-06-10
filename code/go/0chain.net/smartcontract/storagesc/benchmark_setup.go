@@ -175,11 +175,6 @@ func benchAllocationPoolEx5pire(now common.Timestamp) common.Timestamp {
 		now + common.Timestamp(time.Hour*24*23)
 }
 
-func benchAllocationPoolExpire(now common.Timestamp) common.Timestamp {
-	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
-		now + common.Timestamp(time.Hour*24*23)
-}
-
 func addMockAllocationPools(
 	clients []string,
 	ownerIndex int,
@@ -191,8 +186,7 @@ func addMockAllocationPools(
 	var aps = newAllocationPools()
 	for i := 0; i < viper.GetInt(sc.StorageMaxPoolsPerAllocation); i++ {
 		ap := &allocationPool{
-			Balance:  currency.Coin(mockAllocationPoolBalance),
-			ExpireAt: benchAllocationPoolExpire(balances.GetTransaction().CreationDate),
+			Balance: currency.Coin(mockAllocationPoolBalance),
 		}
 		clientIndex := (ownerIndex + i) % len(clients)
 		aps.Pools[clients[clientIndex]] = ap
@@ -200,7 +194,6 @@ func addMockAllocationPools(
 		if viper.GetBool(sc.EventDbEnabled) {
 			ap := event.AllocationPool{
 				Balance:      ap.Balance,
-				Expires:      int64(ap.ExpireAt),
 				AllocationID: allocationId,
 				ClientID:     clients[clientIndex],
 			}

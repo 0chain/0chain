@@ -556,6 +556,7 @@ func TestExtendAllocation(t *testing.T) {
 		mockTimeUnit                = 1 * time.Hour
 		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
+		confMaxAllowedPools         = 100
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
@@ -681,10 +682,7 @@ func TestExtendAllocation(t *testing.T) {
 		require.EqualValues(t, len(args.poolFunds), len(args.poolCount))
 		var aps = newAllocationPools()
 		for i, funds := range args.poolFunds {
-			expiresAt := sa.Expiration + toSeconds(sa.ChallengeCompletionTime) + args.request.Expiration + 1
-			ap := &allocationPool{
-				ExpireAt: expiresAt,
-			}
+			ap := &allocationPool{}
 			ap.Balance = zcnToBalance(funds)
 			apOwner := mockApOwner + strconv.Itoa(i)
 			aps.Pools[apOwner] = ap
@@ -792,12 +790,18 @@ func TestExtendAllocation(t *testing.T) {
 				aBlobbers,
 				&tt.args.request,
 				false,
-				&Config{},
+				&Config{
+					MaxPoolsPerAllocation: confMaxAllowedPools,
+				},
 				balances,
 			)
-			require.EqualValues(t, tt.want.err, err != nil)
+			if tt.want.err != (err != nil) {
+				require.EqualValues(t, tt.want.err, err != nil)
+			}
 			if err != nil {
-				require.EqualValues(t, tt.want.errMsg, err.Error())
+				if tt.want.errMsg != err.Error() {
+					require.EqualValues(t, tt.want.errMsg, err.Error())
+				}
 			} else {
 				mock.AssertExpectationsForObjects(t, balances)
 			}

@@ -344,8 +344,6 @@ func Test_flow_reward(t *testing.T) {
 	}
 	require.NotNil(t, b2)
 
-	var until = int64(alloc.Until())
-
 	t.Run("write", func(t *testing.T) {
 
 		var cp *challengePool
@@ -356,7 +354,7 @@ func Test_flow_reward(t *testing.T) {
 		aps, err = getAllocationPools(allocID, balances)
 		require.NoError(t, err)
 
-		var apb, cpb = aps.allocTotal(allocID, until), cp.Balance
+		var apb, cpb = aps.total(), cp.Balance
 		require.EqualValues(t, 15*x10, apb)
 		require.EqualValues(t, 0, cpb)
 
@@ -414,7 +412,7 @@ func Test_flow_reward(t *testing.T) {
 		aps, err = getAllocationPools(allocID, balances)
 		require.NoError(t, err)
 
-		var wpb, cpb = aps.allocTotal(allocID, tp), cp.Balance
+		var wpb, cpb = aps.total(), cp.Balance
 		//require.EqualValues(t, 149932183160, wpb)
 		//require.EqualValues(t, 67816840, cpb)
 		require.EqualValues(t, 149926531757, wpb)
@@ -487,7 +485,7 @@ func Test_flow_reward(t *testing.T) {
 
 		var blobb1 = balances.balances[b3.id]
 
-		var wpb1, cpb1 = aps.allocTotal(allocID, tp), cp.Balance
+		var wpb1, cpb1 = aps.total(), cp.Balance
 		//require.EqualValues(t, 149963265878, wpb1)
 		//require.EqualValues(t, 36734122, cpb1)
 		require.EqualValues(t, 149960440177, wpb1)
@@ -534,7 +532,7 @@ func Test_flow_reward(t *testing.T) {
 
 		var blobb2 = balances.balances[b3.id]
 
-		var apb2, cpb2 = aps.allocTotal(allocID, tp), cp.Balance
+		var apb2, cpb2 = aps.total(), cp.Balance
 		//require.EqualValues(t, 149861540619, wpb2)
 		//require.EqualValues(t, 90422453, cpb2)
 		require.EqualValues(t, 149901100442, apb2)
@@ -852,7 +850,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	var aps *allocationPools
 	aps, err = getAllocationPools(allocID, balances)
 	require.NoError(t, err)
-	var wps = aps.allocUntil(alloc.Until())
+	var wps = aps.total()
 
 	t.Run("challenges without a response", func(t *testing.T) {
 
@@ -909,7 +907,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 		// values before
 		var (
-			wpb = aps.allocUntil(alloc.Until())
+			wpb = aps.total()
 			cpb = cp.Balance
 		)
 
@@ -1002,7 +1000,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 		// values before
 		var (
-			apa = aps.allocUntil(alloc.Until())
+			apa = aps.total()
 			cpa = cp.Balance
 		)
 
@@ -1076,7 +1074,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	var aps *allocationPools
 	aps, err = getAllocationPools(allocID, balances)
 	require.NoError(t, err)
-	var wps = aps.allocUntil(alloc.Until())
+	var wps = aps.total()
 
 	t.Run("challenges without a response", func(t *testing.T) {
 
@@ -1139,7 +1137,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		// values before
 		var (
-			wpb = aps.allocUntil(alloc.Until())
+			wpb = aps.total()
 			cpb = cp.Balance
 		)
 
@@ -1231,7 +1229,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		// values before
 		var (
-			wpa = aps.allocUntil(alloc.Until())
+			wpa = aps.total()
 			cpa = cp.Balance
 		)
 

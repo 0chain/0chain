@@ -366,6 +366,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	sa.Tx = txn.Hash
 
 	// create write pool and lock tokens
+	var mld = sa.restMinLockDemand()
+	if txn.Value < int64(mld) || txn.Value <= 0 {
+		return "", common.NewError("allocation_creation_failed",
+			fmt.Sprintf("not enough tokens to honor the min lock demand"+" (%d < %d)", txn.Value, mld))
+	}
+
 	aps, err := createAllocationPools(txn, sa, mintNewTokens, balances)
 	if err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
@@ -1005,7 +1011,6 @@ func (sc *StorageSmartContract) extendAllocation(
 	// update max challenge_completion_time
 	alloc.ChallengeCompletionTime = cct
 
-	var until = alloc.Until()
 	aps, err := alloc.getAllocationPools(balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
@@ -1013,10 +1018,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = stakepool.CheckClientBalance(txn, balances); err != nil {
-			return common.NewErrorf("allocation_reducing_failed", "%v", err)
-		}
-		if err := aps.addToOrCreateAllocationPool(txn, until, conf, mintTokens, balances); err != nil {
+		if err := aps.addToOrCreateAllocationPool(txn, conf, mintTokens, balances); err != nil {
 			return err
 		}
 	}
@@ -1025,7 +1027,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	// pool has enough tokens
 	if diff > 0 {
 		if mldLeft := alloc.restMinLockDemand(); mldLeft > 0 {
-			if aps.allocUntil(until) < mldLeft {
+			if aps.total() < mldLeft {
 				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
 			}
@@ -1113,9 +1115,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 		if err = stakepool.CheckClientBalance(txn, balances); err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
-		var until = alloc.Until()
-
-		if err := aps.addToOrCreateAllocationPool(txn, until, conf, false, balances); err != nil {
+		if err := aps.addToOrCreateAllocationPool(txn, conf, false, balances); err != nil {
 			return err
 		}
 	}
@@ -1607,7 +1607,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewErrorf("fini_alloc_failed", "%v", err)
 	}
 
-	clients := aps.sortExpiry()
+	clients := aps.sort()
 	clIndex := 0
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
@@ -1819,7 +1819,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"can't get SC configurations: "+err.Error())
 	}
 
-	if err := aps.addToOrCreateAllocationPool(txn, 0, conf, false, balances); err != nil {
+	if err := aps.addToOrCreateAllocationPool(txn, conf, false, balances); err != nil {
 		return "", common.NewErrorf("curator_transfer_allocation_failed",
 			"cannot create allocation pool: %v", err)
 	}

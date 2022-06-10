@@ -571,7 +571,6 @@ func setupMocksFinishAllocation(
 
 	var newPool = &allocationPool{}
 	newPool.Balance = currency.Coin(wpBalance)
-	newPool.ExpireAt = now
 
 	aps := newAllocationPools()
 	aps.Pools[sAllocation.Owner] = newPool
@@ -580,7 +579,6 @@ func setupMocksFinishAllocation(
 		var id = strconv.Itoa(i)
 		var newPool = &allocationPool{}
 		newPool.Balance = currency.Coin(wpBalance)
-		newPool.ExpireAt = now
 		aps.Pools[id] = newPool
 
 	}
