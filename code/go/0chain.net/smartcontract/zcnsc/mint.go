@@ -7,7 +7,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -57,7 +57,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	un, err := GetUserNode(trans.ClientID, ctx)
 	if err != nil {
 		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
-		Logger.Error(err.Error(), zap.Error(err))
+		logging.Logger.Error(err.Error(), zap.Error(err))
 		return
 	}
 

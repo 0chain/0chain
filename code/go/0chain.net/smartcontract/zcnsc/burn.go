@@ -8,7 +8,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -36,7 +36,7 @@ func (zcn *ZCNSmartContract) Burn(
 	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
-		Logger.Error(msg, zap.Error(err))
+		logging.Logger.Error(msg, zap.Error(err))
 		return "", common.NewError(code, msg)
 	}
 
@@ -51,7 +51,7 @@ func (zcn *ZCNSmartContract) Burn(
 			info,
 		)
 		err = common.NewError(code, msg)
-		Logger.Error(msg, zap.Error(err))
+		logging.Logger.Error(msg, zap.Error(err))
 		return
 	}
 
@@ -60,13 +60,13 @@ func (zcn *ZCNSmartContract) Burn(
 	if err != nil {
 		msg := fmt.Sprintf("payload decode error: %v, %s", err, info)
 		err = common.NewError(code, msg)
-		Logger.Error(msg, zap.Error(err))
+		logging.Logger.Error(msg, zap.Error(err))
 		return
 	}
 
 	if payload.EthereumAddress == "" {
 		err = common.NewError(code, "ethereum address is required, "+info)
-		Logger.Error(err.Error(), zap.Error(err))
+		logging.Logger.Error(err.Error(), zap.Error(err))
 		return
 	}
 
@@ -74,7 +74,7 @@ func (zcn *ZCNSmartContract) Burn(
 	un, err := GetUserNode(trans.ClientID, ctx)
 	if err != nil {
 		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
-		Logger.Error(err.Error(), zap.Error(err))
+		logging.Logger.Error(err.Error(), zap.Error(err))
 		return
 	}
 
