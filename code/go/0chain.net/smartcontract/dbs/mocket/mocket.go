@@ -1,7 +1,7 @@
 package mocket
 
 import (
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/event"
 	mocket "github.com/selvatico/go-mocket"
 	"gorm.io/driver/postgres"
@@ -13,7 +13,7 @@ import (
 func NewEventDb(logging bool) (*event.EventDb, error) {
 	mocketInstance := &Mocket{}
 	mocketInstance.logging = logging
-	if err := mocketInstance.Open(dbs.DbAccess{}); err != nil {
+	if err := mocketInstance.Open(config.DbAccess{}); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ func (store *Mocket) AutoMigrate() error {
 	return store.Get().AutoMigrate(&event.Event{})
 }
 
-func (store *Mocket) Open(config dbs.DbAccess) error {
+func (store *Mocket) Open(config config.DbAccess) error {
 
 	mocket.Catcher.Reset()
 	mocket.Catcher.Register()

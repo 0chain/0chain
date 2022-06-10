@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -21,7 +21,7 @@ func init() {
 func TestAuthorizers(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgres")
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",

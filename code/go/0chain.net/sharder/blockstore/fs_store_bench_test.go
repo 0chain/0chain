@@ -13,7 +13,7 @@ import (
 
 func BenchmarkFSBlockStore_getFileWithoutExtension(t *testing.B) {
 	serverChain := chain.NewChainFromConfig()
-	conf := serverChain.Config.(*chain.ConfigImpl)
+	conf := serverChain.ChainConfig.(*chain.ConfigImpl)
 	conf.ConfDataForTest().RoundRange = 1
 
 	chain.SetServerChain(serverChain)
