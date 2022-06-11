@@ -1,11 +1,12 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/rest"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/logging"
@@ -28,6 +29,7 @@ type MinerRestHandler struct {
 
 func NewMinerRestHandler(rh rest.RestHandlerI) *MinerRestHandler {
 	return &MinerRestHandler{rh}
+
 }
 
 func SetupRestHandler(rh rest.RestHandlerI) {

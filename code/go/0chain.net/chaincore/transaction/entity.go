@@ -100,6 +100,14 @@ type smartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
+func (t *Transaction) ValidateNonce() error {
+	if t.Nonce <= 0 {
+		return errors.New("invalid transaction nonce")
+	}
+
+	return nil
+}
+
 // ValidateFee - Validate fee
 func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) error {
 	if t.TransactionData != "" {
@@ -161,8 +169,10 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
 		return common.InvalidRequest("to client id must be a hexadecimal hash")
 	}
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
+
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
-	if config.DevConfiguration.IsFeeEnabled && t.Fee < 0 {
+	if isFeeEnabled && t.Fee < 0 {
 		return common.InvalidRequest("fee must be greater than or equal to zero")
 	}
 	err := config.ValidChain(t.ChainID)
@@ -204,7 +214,9 @@ func (t *Transaction) Validate(ctx context.Context) error {
 
 /*GetScore - score for write*/
 func (t *Transaction) GetScore() int64 {
-	if config.DevConfiguration.IsFeeEnabled {
+	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
+
+	if isFeeEnabled {
 		return t.Fee
 	}
 	return 0

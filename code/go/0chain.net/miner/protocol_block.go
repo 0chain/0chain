@@ -357,9 +357,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		cost += c
 		costs = append(costs, c)
 	}
-	if cost > mc.Config.MaxBlockCost() {
+	if cost > mc.ChainConfig.MaxBlockCost() {
 		logging.Logger.Error("cost limit exceeded", zap.Int("calculated_cost", cost),
-			zap.Int("cost_limit", mc.Config.MaxBlockCost()), zap.String("block_hash", b.Hash),
+			zap.Int("cost_limit", mc.ChainConfig.MaxBlockCost()), zap.String("block_hash", b.Hash),
 			zap.Int("txn_amount", len(b.Txns)), zap.Ints("txn_costs", costs))
 		return nil, block.ErrCostTooBig
 	}
@@ -809,21 +809,21 @@ func txnIterHandlerFunc(mc *Chain,
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return true
 		}
-		if tii.cost+cost >= mc.Config.MaxBlockCost() {
+		if tii.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
 			tii.cost += cost
-			if tii.idx >= mc.Config.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
+			if tii.idx >= mc.ChainConfig.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
-					zap.Bool("idx >= block size", tii.idx >= mc.Config.BlockSize()),
-					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.Config.MaxByteSize()),
+					zap.Bool("idx >= block size", tii.idx >= mc.ChainConfig.BlockSize()),
+					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
 					zap.Int32("idx", tii.idx),
-					zap.Int32("block size", mc.Config.BlockSize()),
+					zap.Int32("block size", mc.ChainConfig.BlockSize()),
 					zap.Int64("byte size", tii.byteSize),
-					zap.Int64("max byte size", mc.Config.MaxByteSize()),
+					zap.Int64("max byte size", mc.ChainConfig.MaxByteSize()),
 					zap.Int32("count", tii.count),
 					zap.Int("txns", len(b.Txns)))
 				return false
@@ -867,7 +867,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	//we use this context for transaction aggregation phase only
-	cctx, cancel := context.WithTimeout(ctx, mc.Config.BlockProposalMaxWaitTime())
+	cctx, cancel := context.WithTimeout(ctx, mc.ChainConfig.BlockProposalMaxWaitTime())
 	defer cancel()
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
@@ -924,7 +924,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	var reusedTxns int32
 
 	rcount := 0
-	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.Config.MaxBlockCost() &&
+	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
 		blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
@@ -932,7 +932,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			break
 		}
-		if iterInfo.cost+cost >= mc.Config.MaxBlockCost() {
+		if iterInfo.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			break
 		}
@@ -963,7 +963,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
 	}
 
-	if config.DevConfiguration.IsFeeEnabled {
+	if mc.ChainConfig.IsFeeEnabled() {
 		err = mc.processTxn(ctx, mc.createFeeTxn(b, blockState), b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
@@ -980,7 +980,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if config.DevConfiguration.IsBlockRewards &&
+	if mc.ChainConfig.IsBlockRewardsEnabled() &&
 		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b, blockState), b, blockState, iterInfo.clients)

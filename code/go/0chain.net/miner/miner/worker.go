@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
@@ -261,7 +260,7 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
 	}
-	if config.DevConfiguration.FaucetEnabled {
+	if c.ChainConfig.IsFaucetEnabled() {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
 			viper.GetInt64("development.faucet.refill_amount"),
 			`{"name":"refill","input":{}}`, 0)
