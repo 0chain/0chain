@@ -8,7 +8,7 @@ on:
     inputs:
       view_change: 
         description: 'Type true/false for setting view change.'
-        default: 'true'
+        default: 'false'
         required: true
 
 env:
