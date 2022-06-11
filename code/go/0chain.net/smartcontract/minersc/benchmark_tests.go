@@ -56,7 +56,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 	b.StopTimer()
 	if bt.name == "miner.shareSignsOrShares" {
 		var pn = PhaseNode{

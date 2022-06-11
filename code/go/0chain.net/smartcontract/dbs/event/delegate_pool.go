@@ -14,15 +14,15 @@ type DelegatePool struct {
 	gorm.Model
 
 	PoolID       string `json:"pool_id"`
-	ProviderType int    `json:"provider_type"`
-	ProviderID   string `json:"provider_id"`
+	ProviderType int    `json:"provider_type" gorm:"index:idx_prov_active,priority:2"`
+	ProviderID   string `json:"provider_id" gorm:"index:idx_prov_active,priority:1"`
 	DelegateID   string `json:"delegate_id"`
 
 	Balance      int64 `json:"balance"`
 	Reward       int64 `json:"reward"`       // unclaimed reward
 	TotalReward  int64 `json:"total_reward"` // total reward paid to pool
 	TotalPenalty int64 `json:"total_penalty"`
-	Status       int   `json:"status"`
+	Status       int   `json:"status" gorm:"index:idx_prov_active,priority:3"`
 	RoundCreated int64 `json:"round_created"`
 }
 

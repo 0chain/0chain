@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"time"
 
 	"0chain.net/chaincore/currency"
@@ -20,7 +21,7 @@ type Allocation struct {
 	Size                       int64         `json:"size"`
 	Expiration                 int64         `json:"expiration"`
 	Terms                      string        `json:"terms"`
-	Owner                      string        `json:"owner"`
+	Owner                      string        `json:"owner" gorm:"index:idx_owner"`
 	OwnerPublicKey             string        `json:"owner_public_key"`
 	IsImmutable                bool          `json:"is_immutable"`
 	ReadPriceMin               currency.Coin `json:"read_price_min"`
@@ -74,9 +75,26 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string) ([]Allocation, error) {
+func (edb EventDb) GetClientsAllocation(clientID string, offset int, limit int) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
-	result := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Find(&allocs)
+
+	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID)
+
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	} else {
+		query = query.Limit(DefaultQueryLimit)
+	}
+
+	query.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "start_time"},
+		Desc:   true,
+	})
+
+	result := query.Scan(&allocs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, result.Error)
 	}

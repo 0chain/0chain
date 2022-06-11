@@ -1,9 +1,8 @@
 package event
 
 import (
-	"fmt"
-
 	"0chain.net/smartcontract/dbs"
+	"fmt"
 
 	"0chain.net/core/common"
 	"gorm.io/gorm"
@@ -32,13 +31,24 @@ func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	return &ch, nil
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, offset int, limit int) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
 
-	result := edb.Store.Get().Model(&Challenge{}).
+	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			expiry, blobberID, false).Order("created_at asc").Find(&chs)
+			expiry, blobberID, false).Order("created_at asc")
+
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	} else {
+		query = query.Limit(DefaultQueryLimit)
+	}
+
+	result := query.Find(&chs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)

@@ -61,7 +61,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err

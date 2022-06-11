@@ -15,7 +15,7 @@ type ReadMarker struct {
 	gorm.Model
 	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
-	AllocationID  string  `json:"allocation_id"`
+	AllocationID  string  `json:"allocation_id" gorm:"index:idx_alloc_block,priority:1;index:idx_auth_alloc,priority:2"` //used in alloc_read_size, used in readmarkers
 	TransactionID string  `json:"transaction_id"`
 	OwnerID       string  `json:"owner_id"`
 	Timestamp     int64   `json:"timestamp"`
@@ -23,15 +23,15 @@ type ReadMarker struct {
 	ReadSize      float64 `json:"read_size"`
 	Signature     string  `json:"signature"`
 	PayerID       string  `json:"payer_id"`
-	AuthTicket    string  `json:"auth_ticket"`
-	BlockNumber   int64   `json:"block_number"`
+	AuthTicket    string  `json:"auth_ticket" gorm:"index:idx_auth_alloc,priority:1"`   //used in readmarkers
+	BlockNumber   int64   `json:"block_number" gorm:"index:idx_alloc_block,priority:2"` //used in alloc_read_size
 }
 
 func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&ReadMarker{}).
 		Select("sum(read_size)").
-		Where(&WriteMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
+		Where(&ReadMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
 		Find(&total).Error
 }
 

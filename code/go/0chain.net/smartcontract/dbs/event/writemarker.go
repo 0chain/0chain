@@ -16,7 +16,7 @@ type WriteMarker struct {
 	// todo: as user(ID), allocation(ID) and transaction(ID) tables are created, enable it
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
-	AllocationID  string `json:"allocation_id"`
+	AllocationID  string `json:"allocation_id" gorm:"index:idx_alloc_block,priority:1;index:idx_alloc_file,priority:2"` //used in alloc_write_marker_count, alloc_written_size
 	TransactionID string `json:"transaction_id"`
 
 	AllocationRoot         string `json:"allocation_root"`
@@ -24,11 +24,11 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number"`
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_alloc_block,priority:2"` //used in alloc_written_size
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name"`
+	Name        string `json:"name" gorm:"index:idx_alloc_file,priority:1"`
 	ContentHash string `json:"content_hash"`
 }
 
@@ -68,21 +68,25 @@ func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]Wri
 	}).Scan(&wm).Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit int, offset int, isDescending bool) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID}).
-		Find(&wms)
+		Where(&WriteMarker{AllocationID: allocationID}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   isDescending,
+	}).Scan(&wms)
 	return wms, result.Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit int, offset int, isDescending bool) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).
-		Find(&wms)
+		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   isDescending,
+	}).Scan(&wms)
 	return wms, result.Error
 }
 

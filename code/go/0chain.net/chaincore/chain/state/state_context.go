@@ -1,6 +1,7 @@
 package state
 
 import (
+	"0chain.net/core/common"
 	"fmt"
 	"sync"
 
@@ -63,6 +64,12 @@ type QueryStateContextI interface {
 	GetEventDB() *event.EventDb
 }
 
+//go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
+type TimedQueryStateContextI interface {
+	QueryStateContextI
+	Now() common.Timestamp
+}
+
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
@@ -107,6 +114,40 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+}
+
+type GetNow func() common.Timestamp
+
+type TimedQueryStateContext struct {
+	StateContextI
+	now GetNow
+}
+
+func (t TimedQueryStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	return t.StateContextI.GetTrieNode(key, v)
+}
+
+func (t TimedQueryStateContext) GetBlock() *block.Block {
+	return t.StateContextI.GetBlock()
+}
+
+func (t TimedQueryStateContext) GetLatestFinalizedBlock() *block.Block {
+	return t.StateContextI.GetLatestFinalizedBlock()
+}
+
+func (t TimedQueryStateContext) GetEventDB() *event.EventDb {
+	return t.StateContextI.GetEventDB()
+}
+
+func (t TimedQueryStateContext) Now() common.Timestamp {
+	return t.now()
+}
+
+func NewTimedQueryStateContext(i StateContextI, now GetNow) TimedQueryStateContext {
+	return TimedQueryStateContext{
+		StateContextI: i,
+		now:           now,
+	}
 }
 
 // NewStateContext - create a new state context

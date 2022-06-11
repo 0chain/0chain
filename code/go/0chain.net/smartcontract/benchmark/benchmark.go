@@ -288,7 +288,7 @@ var (
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.StateContextI, *testing.B) error
+	Run(state.TimedQueryStateContext, *testing.B) error
 }
 
 type WithTimings interface {

@@ -283,7 +283,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.CommonStateContextI) ([]string, error) {
+func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI) ([]string, error) {
 	var sa = request.storageAllocation()
 	var conf *Config
 	var err error
@@ -291,7 +291,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		return nil, fmt.Errorf("can't get config: %v", err)
 	}
 
-	var creationDate = time.Now()
+	var creationDate = balances.Now()
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
 
 	// number of blobbers required
@@ -302,7 +302,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
-	dur := common.ToTime(sa.Expiration).Sub(creationDate)
+	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
 		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
 		MaxOfferDuration:           dur,
@@ -1020,6 +1020,16 @@ type ChallengesResponse struct {
 //      required: true
 //      in: query
 //      type: string
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//      required: true
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//      required: true
 //
 // responses:
 //  200: ChallengesResponse
@@ -1028,18 +1038,29 @@ type ChallengesResponse struct {
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber")
+	offsetString := r.URL.Query().Get("offset")
+	limitString := r.URL.Query().Get("limit")
+
 	sctx := srh.GetQueryStateContext()
 	edb := sctx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
+
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("bad parameters format"))
+		return
+	}
+
 	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime),
+		offset, limit, sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -1096,6 +1117,23 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 //      required: true
 //      in: query
 //      type: string
+//    + name: filename
+//      description: file name
+//      required: true
+//      in: query
+//      type: string
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //
 // responses:
 //  200: []WriteMarker
@@ -1105,6 +1143,12 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
 		filename     = r.URL.Query().Get("filename")
+		offsetString = r.URL.Query().Get("offset")
+		limitString  = r.URL.Query().Get("limit")
+		sortString   = r.URL.Query().Get("sort")
+		limit        = event.DefaultQueryLimit
+		offset       = 0
+		isDescending = false
 	)
 
 	if allocationID == "" {
@@ -1115,15 +1159,45 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
+	if offsetString != "" {
+		o, err := strconv.Atoi(offsetString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("offset is invalid: "+err.Error()))
+			return
+		}
+		offset = o
+	}
+
+	if limitString != "" {
+		l, err := strconv.Atoi(limitString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("limit is invalid: "+err.Error()))
+			return
+		}
+		limit = l
+	}
+
+	if sortString != "" {
+		switch sortString {
+		case "desc":
+			isDescending = true
+		case "asc":
+			isDescending = false
+		default:
+			common.Respond(w, r, nil, common.NewErrBadRequest("sort is invalid: "+sortString))
+			return
+		}
+	}
+
 	if filename == "" {
-		writeMarkers, err := edb.GetWriteMarkersForAllocationID(allocationID)
+		writeMarkers, err := edb.GetWriteMarkersForAllocationID(allocationID, limit, offset, isDescending)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers", err.Error()))
 			return
 		}
 		common.Respond(w, r, writeMarkers, nil)
 	} else {
-		writeMarkers, err := edb.GetWriteMarkersForAllocationFile(allocationID, filename)
+		writeMarkers, err := edb.GetWriteMarkersForAllocationFile(allocationID, filename, limit, offset, isDescending)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers for file", err.Error()))
 			return
@@ -1209,7 +1283,7 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 		offsetString = r.URL.Query().Get("offset")
 		limitString  = r.URL.Query().Get("limit")
 		sortString   = r.URL.Query().Get("sort")
-		limit        = 0
+		limit        = event.DefaultQueryLimit
 		offset       = 0
 		isDescending = false
 	)
@@ -1375,6 +1449,16 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //      required: true
 //      in: query
 //      type: string
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//      required: true
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//      required: true
 //
 // responses:
 //  200: []StorageAllocation
@@ -1382,11 +1466,21 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //  500:
 func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client")
+	offsetString := r.URL.Query().Get("offset")
+	limitString := r.URL.Query().Get("limit")
+
 	edb := srh.GetQueryStateContext().GetEventDB()
+
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
-	allocations, err := getClientAllocationsFromDb(clientID, edb)
+	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("bad parameters format"))
+		return
+	}
+	allocations, err := getClientAllocationsFromDb(clientID, offset, limit, edb)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
 		return
@@ -1910,4 +2004,21 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 // swagger:model readMarkersCount
 type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
+}
+
+func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
+	if offsetString != "" {
+		offset, err = strconv.Atoi(offsetString)
+		if err != nil {
+			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
+		}
+	}
+	if limitString != "" {
+		limit, err = strconv.Atoi(limitString)
+		if err != nil {
+			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
+		}
+	}
+
+	return
 }

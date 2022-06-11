@@ -9,6 +9,7 @@ import (
 )
 
 const DefaultQueryTimeout = 5 * time.Second
+const DefaultQueryLimit = 20
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)

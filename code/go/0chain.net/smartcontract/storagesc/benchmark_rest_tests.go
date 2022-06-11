@@ -136,6 +136,8 @@ func BenchmarkRestTests(
 				FuncName: "allocations",
 				Params: map[string]string{
 					"client": data.Clients[0],
+					"limit":  "20",
+					"offset": "1",
 				},
 				Endpoint: srh.getAllocations,
 			},

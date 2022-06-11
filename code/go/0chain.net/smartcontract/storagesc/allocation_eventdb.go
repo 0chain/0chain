@@ -220,11 +220,11 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 	return nil
 }
 
-func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {
+func getClientAllocationsFromDb(clientID string, offset int, limit int, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {
 
 	sas := make([]*StorageAllocationBlobbers, 0)
 
-	allocs, err := eventDb.GetClientsAllocation(clientID)
+	allocs, err := eventDb.GetClientsAllocation(clientID, offset, limit)
 	if err != nil {
 		return nil, err
 	}
