@@ -551,7 +551,7 @@ func BenchmarkTests(
 		// write pool
 		{
 			name:     "storage.allocation_pool_lock",
-			endpoint: ssc.allocationPoolLock,
+			endpoint: ssc.writePoolLock,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -570,7 +570,7 @@ func BenchmarkTests(
 		},
 		{
 			name:     "storage.allocation_pool_unlock",
-			endpoint: ssc.allocationPoolUnlock,
+			endpoint: ssc.writePoolUnlock,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),

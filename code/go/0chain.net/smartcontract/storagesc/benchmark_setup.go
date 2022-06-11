@@ -61,6 +61,8 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
+	var mockAllocationPoolBalance = currency.Coin(4384578820)
+
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:                         id,
@@ -88,12 +90,11 @@ func addMockAllocation(
 		TimeUnit: 1 * time.Hour,
 		// make last allocation finalised
 		Finalized: i == viper.GetInt(sc.NumAllocations)-1,
+		WritePool: mockAllocationPoolBalance,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
 		sa.Curators = append(sa.Curators, clients[j])
 	}
-
-	addMockAllocationPools(clients, cIndex, sa.ID, eventDb, balances)
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
@@ -165,6 +166,7 @@ func addMockAllocation(
 			FailedChallenges:           sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn:   sa.Stats.LastestClosedChallengeTxn,
 			Terms:                      string(termsByte),
+			WritePool:                  sa.WritePool,
 		}
 		_ = eventDb.Store.Get().Create(&allocationDb)
 	}
@@ -173,39 +175,6 @@ func addMockAllocation(
 func benchAllocationPoolEx5pire(now common.Timestamp) common.Timestamp {
 	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
 		now + common.Timestamp(time.Hour*24*23)
-}
-
-func addMockAllocationPools(
-	clients []string,
-	ownerIndex int,
-	allocationId string,
-	eventDb *event.EventDb,
-	balances cstate.StateContextI,
-) {
-	var mockAllocationPoolBalance = currency.Coin(viper.GetFloat64(sc.StorageAllocationPoolMinLock) * 1e10)
-	var aps = newAllocationPools()
-	for i := 0; i < viper.GetInt(sc.StorageMaxPoolsPerAllocation); i++ {
-		ap := &allocationPool{
-			Balance: currency.Coin(mockAllocationPoolBalance),
-		}
-		clientIndex := (ownerIndex + i) % len(clients)
-		aps.Pools[clients[clientIndex]] = ap
-
-		if viper.GetBool(sc.EventDbEnabled) {
-			ap := event.AllocationPool{
-				Balance:      ap.Balance,
-				AllocationID: allocationId,
-				ClientID:     clients[clientIndex],
-			}
-			err := eventDb.Store.Get().Create(&ap).Error
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
-	if err := aps.save(allocationId, balances); err != nil {
-		log.Fatal(err)
-	}
 }
 
 func AddMockChallenges(

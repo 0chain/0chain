@@ -61,14 +61,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getConfig,
 			},
 			{
-				FuncName: "allocation-pools",
-				Params: map[string]string{
-					"client_id":     data.Clients[getMockOwnerFromAllocationIndex(0, 0)],
-					"allocation_id": getMockAllocationId(0),
-				},
-				Endpoint: srh.getAllocationPools,
-			},
-			{
 				FuncName: "get_blocks",
 				Endpoint: srh.getBlocks,
 			},

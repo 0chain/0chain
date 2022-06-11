@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -11,8 +12,31 @@ import (
 	"0chain.net/smartcontract/stakepool"
 )
 
-// lock tokens for write pool of transaction's client
-func (ssc *StorageSmartContract) allocationPoolLock(
+//
+// SC / API requests
+//
+
+// lock request
+type lockRequest struct {
+	AllocationID string `json:"allocation_id"`
+}
+
+func (lr *lockRequest) decode(input []byte) (err error) {
+	if err = json.Unmarshal(input, lr); err != nil {
+		return
+	}
+	return // ok
+}
+
+type unlockRequest struct {
+	AllocationID string `json:"allocation_id"`
+}
+
+func (ur *unlockRequest) decode(input []byte) error {
+	return json.Unmarshal(input, ur)
+}
+
+func (ssc *StorageSmartContract) writePoolLock(
 	txn *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
@@ -48,29 +72,19 @@ func (ssc *StorageSmartContract) allocationPoolLock(
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
-	aps, err := getAllocationPools(lr.AllocationID, balances)
-	if err != nil {
-		return "", common.NewError("write_pool_lock_failed",
-			"cannot find allocation pools for "+lr.AllocationID+": "+err.Error())
-	}
-
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
-	ap, found := aps.Pools[txn.ClientID]
-	if !found {
-		if len(aps.Pools) >= conf.MaxPoolsPerAllocation {
-			return "", common.NewError("write_pool_lock_failed",
-				fmt.Sprintf("exceeded the  maximum number of pools:  %v", conf.MaxPoolsPerAllocation))
-		}
-		ap = new(allocationPool)
-		aps.Pools[txn.ClientID] = ap
+	allocation, err := ssc.getAllocation(lr.AllocationID, balances)
+	if err != nil {
+		return "", common.NewError("write_pool_lock_failed",
+			"cannot find allocation pools for "+lr.AllocationID+": "+err.Error())
 	}
-	ap.Balance += currency.Coin(txn.Value)
-	ap.emitAddOrUpdate(lr.AllocationID, txn.ClientID, balances)
-	if err := aps.save(lr.AllocationID, balances); err != nil {
+
+	allocation.WritePool += currency.Coin(txn.Value)
+	if err := allocation.saveUpdatedAllocation(nil, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
@@ -78,7 +92,7 @@ func (ssc *StorageSmartContract) allocationPoolLock(
 }
 
 // unlock tokens if expired
-func (ssc *StorageSmartContract) allocationPoolUnlock(
+func (ssc *StorageSmartContract) writePoolUnlock(
 	txn *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -95,32 +109,16 @@ func (ssc *StorageSmartContract) allocationPoolUnlock(
 			"can't get related allocation: "+err.Error())
 	}
 
-	aps, err := getAllocationPools(req.AllocationID, balances)
-	if err != nil {
-		return "", common.NewError("write_pool_lock_failed",
-			"cannot find allocation pools for "+req.AllocationID+": "+err.Error())
-	}
-
-	ap, found := aps.Pools[txn.ClientID]
-	if !found {
+	if alloc.WritePool < currency.Coin(txn.Value) {
 		return "", common.NewError("write_pool_unlock_failed",
-			fmt.Sprintf("no write pool for user %s in allocation %s", txn.ClientID, req.AllocationID))
-	}
-
-	if ap.Balance < currency.Coin(txn.Value) {
-		return "", common.NewError("write_pool_unlock_failed",
-			fmt.Sprintf("insufficent funds %v in allocation pool", ap.Balance))
+			fmt.Sprintf("insufficent funds %v in allocation pool", alloc.WritePool))
 
 	}
-	ap.Balance -= currency.Coin(txn.Value)
+	alloc.WritePool -= currency.Coin(txn.Value)
 
 	// don't unlock over min lock demand left
 	if !alloc.Finalized && !alloc.Canceled {
-		var (
-			want  = alloc.restMinLockDemand()
-			leave = aps.total() - ap.Balance
-		)
-		if leave < want {
+		if alloc.WritePool < alloc.restMinLockDemand() {
 			return "", common.NewError("write_pool_unlock_failed",
 				"can't unlock, because min lock demand is not paid yet")
 		}
@@ -131,14 +129,7 @@ func (ssc *StorageSmartContract) allocationPoolUnlock(
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 
-	if ap.Balance == 0 && (txn.ClientID != alloc.Owner || alloc.Finalized) {
-		delete(aps.Pools, txn.ClientID)
-		ap.emitDelete(alloc.ID, txn.ClientID, balances)
-	} else {
-		ap.emitAddOrUpdate(alloc.ID, txn.ClientID, balances)
-	}
-
-	if err = aps.save(alloc.ID, balances); err != nil {
+	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
 		return "", common.NewError("write_pool_unlock_failed",
 			"saving allocation pools: "+err.Error())
 	}

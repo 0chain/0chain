@@ -172,7 +172,6 @@ func (sp *stakePool) slash(
 	alloc *StorageAllocation,
 	blobID string,
 	until common.Timestamp,
-	aps *allocationPools,
 	offer, slash currency.Coin,
 	balances chainstate.StateContextI,
 ) (move currency.Coin, err error) {
@@ -195,9 +194,7 @@ func (sp *stakePool) slash(
 			continue
 		}
 		dp.Balance -= dpSlash
-		if err := aps.moveTo(alloc.Owner, dpSlash); err != nil {
-			return 0, err
-		}
+		alloc.WritePool += dpSlash
 		move += dpSlash
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}

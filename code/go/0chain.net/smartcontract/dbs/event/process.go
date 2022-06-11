@@ -55,9 +55,6 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
-	TagAddOrUpdateAllocationPools
-	TagAddOrUpdateAllocationPool
-	TagDeleteAllocationPool
 	NumberOfTags
 )
 
@@ -281,8 +278,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.updateChallenge(updates)
-	//case TagAddOrUpdateAllocationPool:
-	//case TagDeleteAllocationPool:
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

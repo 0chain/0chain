@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
@@ -16,7 +19,7 @@ import (
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 
-	chainstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -163,7 +166,7 @@ func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool 
 }
 
 // Save saves the AllocationChallenges to MPT state
-func (acs *AllocationChallenges) Save(state chainstate.StateContextI, scAddress string) error {
+func (acs *AllocationChallenges) Save(state cstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(acs.GetKey(scAddress), acs)
 	return err
 }
@@ -210,7 +213,7 @@ func storageChallengeKey(globalKey, challengeID string) datastore.Key {
 }
 
 // Save saves the storage challenge to MPT state
-func (sc *StorageChallenge) Save(state chainstate.StateContextI, scAddress string) error {
+func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(sc.GetKey(scAddress), sc)
 	return err
 }
@@ -582,12 +585,12 @@ func (bpl *blobberPartitionsLocations) getKey(scAddress string) datastore.Key {
 	return fmt.Sprintf("%s:blobber_partitions_locations:%s", scAddress, bpl.ID)
 }
 
-func (bpl *blobberPartitionsLocations) save(state chainstate.StateContextI, scAddress string) error {
+func (bpl *blobberPartitionsLocations) save(state cstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(bpl.getKey(scAddress), bpl)
 	return err
 }
 
-func (bpl *blobberPartitionsLocations) load(state chainstate.StateContextI, scAddress string) error {
+func (bpl *blobberPartitionsLocations) load(state cstate.StateContextI, scAddress string) error {
 	return state.GetTrieNode(bpl.getKey(scAddress), bpl)
 }
 
@@ -685,6 +688,8 @@ type StorageAllocation struct {
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 	IsImmutable      bool                          `json:"is_immutable"`
 
+	WritePool currency.Coin `json:"write_pool"`
+
 	// Requested ranges.
 	ReadPriceRange             PriceRange    `json:"read_price_range"`
 	WritePriceRange            PriceRange    `json:"write_price_range"`
@@ -720,6 +725,68 @@ type StorageAllocation struct {
 	Curators []string `json:"curators"`
 	// Name is the name of an allocation
 	Name string `json:"name"`
+}
+
+func (sa *StorageAllocation) addToWritePool(
+	txn *transaction.Transaction,
+	mintNewTokens bool,
+	balances cstate.StateContextI,
+) error {
+	if !mintNewTokens {
+		if err := stakepool.CheckClientBalance(txn, balances); err != nil {
+			return fmt.Errorf("client balance check failed: %v", err)
+		}
+	}
+
+	if mintNewTokens {
+		if err := balances.AddMint(&state.Mint{
+			Minter:     ADDRESS,
+			ToClientID: ADDRESS,
+			Amount:     currency.Coin(txn.Value),
+		}); err != nil {
+			return fmt.Errorf("minting tokens for write pool: %v", err)
+		}
+	} else {
+		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+		if err := balances.AddTransfer(transfer); err != nil {
+			return fmt.Errorf("adding transfer to allocation pool: %v", err)
+		}
+	}
+
+	sa.WritePool += currency.Coin(txn.Value)
+	return nil
+}
+
+func (sa *StorageAllocation) moveToChallengePool(
+	cp *challengePool,
+	value currency.Coin,
+) error {
+	if cp == nil {
+		return errors.New("invalid challenge pool")
+	}
+	if value > sa.WritePool {
+		return fmt.Errorf("insufficent funds %v in write pool to pay %v", sa.WritePool, value)
+	}
+	cp.Balance += value
+	sa.WritePool -= value
+	return nil
+}
+
+func (sa *StorageAllocation) moveFromChallengePool(
+	cp *challengePool,
+	value currency.Coin,
+) error {
+	if cp == nil {
+		return errors.New("invalid challenge pool")
+	}
+
+	if cp.Balance < value {
+		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+			cp.ID, cp.Balance, value)
+	}
+	cp.Balance -= value
+	sa.WritePool += value
+	return nil
 }
 
 func (sa *StorageAllocation) validateAllocationBlobber(
@@ -777,7 +844,7 @@ func (sa *StorageAllocation) removeBlobber(
 	blobbers []*StorageNode,
 	blobberID string,
 	ssc *StorageSmartContract,
-	balances chainstate.StateContextI,
+	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
 	if !found {
@@ -834,7 +901,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	addId, removeId string,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
-	balances chainstate.StateContextI,
+	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
@@ -874,7 +941,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	return blobbers, nil
 }
 
-func (sa *StorageAllocation) Save(state chainstate.StateContextI, scAddress string) error {
+func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(sa.GetKey(scAddress), sa)
 	return err
 }
@@ -885,7 +952,7 @@ func removeAllocationFromBlobber(
 	blobberID string,
 	allocPartLoc *partitions.PartitionLocation,
 	allocID string,
-	balances chainstate.StateContextI) error {
+	balances cstate.StateContextI) error {
 
 	if allocPartLoc == nil {
 		return errors.New("empty blobber allocation partition location")
@@ -954,10 +1021,8 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
 	return
 }
 
-func (sa *StorageAllocation) getAllocationPools(
-	balances chainstate.StateContextI,
-) (*allocationPools, error) {
-	return getAllocationPools(sa.ID, balances)
+func (sa *StorageAllocation) fullAmount() currency.Coin {
+	return 0
 }
 
 func (sa *StorageAllocation) validate(now time.Time,
@@ -1039,7 +1104,7 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp, balances chainstate.StateContextI) (
+	creationDate common.Timestamp, balances cstate.StateContextI) (
 	[]*blobberWithPool, []string) {
 
 	var (
@@ -1334,7 +1399,7 @@ type WriteMarker struct {
 
 func (wm *WriteMarker) VerifySignature(
 	clientPublicKey string,
-	balances chainstate.StateContextI,
+	balances cstate.StateContextI,
 ) bool {
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
@@ -1424,7 +1489,7 @@ func (at *AuthTicket) verify(
 	alloc *StorageAllocation,
 	now common.Timestamp,
 	clientID string,
-	balances chainstate.StateContextI,
+	balances cstate.StateContextI,
 ) (err error) {
 
 	if at.AllocationID != alloc.ID {
@@ -1485,7 +1550,7 @@ type ReadMarker struct {
 	ReadSize        float64          `json:"read_size"`
 }
 
-func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
+func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances cstate.StateContextI) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
@@ -1502,7 +1567,7 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 	return true
 }
 
-func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances chainstate.StateContextI) (err error) {
+func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances cstate.StateContextI) (err error) {
 	// owner downloads, pays itself, no ticket needed
 	if rm.PayerID == alloc.Owner {
 		return
@@ -1521,7 +1586,7 @@ func (rm *ReadMarker) GetHashData() string {
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
+func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances cstate.StateContextI) error {
 	if rm.ReadCounter <= 0 || rm.BlobberID == "" || rm.ClientID == "" || rm.Timestamp == 0 {
 		return common.NewError("invalid_read_marker", "length validations of fields failed")
 	}
@@ -1555,7 +1620,7 @@ type ValidationTicket struct {
 	Signature    string           `json:"signature"`
 }
 
-func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool, error) {
+func (vt *ValidationTicket) VerifySign(balances cstate.StateContextI) (bool, error) {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)

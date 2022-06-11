@@ -187,6 +187,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		MovedBack:                  sa.MovedBack,
 		MovedToValidators:          sa.MovedToValidators,
 		TimeUnit:                   int64(sa.TimeUnit),
+		WritePool:                  sa.WritePool,
 	}
 
 	if sa.Stats != nil {

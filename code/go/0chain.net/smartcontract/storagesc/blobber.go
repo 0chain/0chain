@@ -519,18 +519,11 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var move currency.Coin
 
-	// the details will be saved in caller with allocation object (the details
-	// is part of the allocation object)
-	aps, err := alloc.getAllocationPools(balances)
-	if err != nil {
-		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
-	}
-
 	if size > 0 {
 		move = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
 
-		err = aps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
+		err = alloc.moveToChallengePool(cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -539,7 +532,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Spent += move
 	} else {
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
-		err = aps.moveFromCP(alloc.Owner, cp, move)
+		err = alloc.moveFromChallengePool(cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -547,7 +540,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	if err := aps.saveAndUpdate(alloc, balances); err != nil {
+	if err := alloc.saveUpdatedAllocation(nil, balances); err != nil {
 		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 	}
 
