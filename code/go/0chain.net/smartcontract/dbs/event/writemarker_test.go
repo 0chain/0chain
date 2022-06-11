@@ -97,7 +97,7 @@ func TestWriteMarker(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
 
-	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID)
+	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID, 20, 0, false)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(wms))
 	require.EqualValues(t, eWriteMarker.BlockNumber, (wms)[0].BlockNumber)
@@ -171,12 +171,12 @@ func TestGetWriteMarkers(t *testing.T) {
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("GetWriteMarkersForAllocationID", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id")
+		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id", 20, 0, false)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("GetWriteMarkersForAllocationFile", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt")
+		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt", 20, 0, false)
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
