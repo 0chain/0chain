@@ -259,24 +259,43 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
 			frchain = append(frchain, b)
 			if b.PrevBlock == nil {
-				pb := c.GetPreviousBlock(ctx, b)
-				if pb == nil {
-					// break to start finalizing blocks in frchain slice
-					if len(frchain) >= maxBackDepth {
-						break
+				if node.Self.IsSharder() {
+					pb := c.GetLocalPreviousBlock(ctx, b)
+					if pb == nil {
+						logging.Logger.Error("finalize round - previous block is missing",
+							zap.Int64("round", b.Round), zap.Int64("prev_lfb", plfb.Round))
+						return
 					}
+					b.SetPreviousBlock(pb)
+				} else {
+					pb := c.GetPreviousBlock(ctx, b)
+					if pb == nil {
+						// break to start finalizing blocks in frchain slice
+						if len(frchain) >= maxBackDepth {
+							break
+						}
 
-					// return and retry in next term
-					logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
-						zap.Int64("round", b.Round),
-						zap.Int64("prev round", b.Round-1),
-						zap.Int64("prev_lfb", plfb.Round),
-						zap.String("block", b.Hash))
-					return
+						// return and retry in next term
+						logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
+							zap.Int64("round", b.Round),
+							zap.Int64("prev round", b.Round-1),
+							zap.Int64("prev_lfb", plfb.Round),
+							zap.String("block", b.Hash))
+						return
+					}
 				}
 			}
 
 			b = b.PrevBlock
+			if b.Round == plfb.Round && b.Hash != plfb.Hash {
+				logging.Logger.Error("finalize round, computed lfb could not connect to prev lfb",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev lfb block", plfb.Hash),
+					zap.Int64("computed lfb", lfb.Round),
+					zap.String("computed lfb block", lfb.Hash))
+				return
+			}
 
 			if len(frchain) >= maxBackDepth {
 				break
@@ -308,6 +327,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.String("lfb block", lfb.Hash))
 		for idx := range frchain {
 			fb := frchain[len(frchain)-1-idx]
+			if roundNumber-fb.Round < 3 {
+				// finalize the block only when it has at least 3 confirmation
+				continue
+			}
+
 			if pb := c.GetLocalPreviousBlock(ctx, fb); pb == nil {
 				logging.Logger.Error("finalize round - get previous block failed",
 					zap.Int64("round", fb.Round))

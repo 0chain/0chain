@@ -25,6 +25,8 @@ func SetupWorkers(ctx context.Context) {
 	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
+	go mc.SyncLFBStateWorker(ctx)
+
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
 	go mc.UpdateMagicBlockWorker(ctx)
 	//TODO uncomment it, atm it breaks executing faucet pour somehow

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
@@ -104,7 +105,7 @@ func TestMiners(t *testing.T) {
 		}
 	}
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -232,7 +233,7 @@ func TestMiners(t *testing.T) {
 }
 
 func TestGetMiners(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -273,7 +274,7 @@ func TestGetMiners(t *testing.T) {
 }
 
 func TestGetMinerLocations(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),

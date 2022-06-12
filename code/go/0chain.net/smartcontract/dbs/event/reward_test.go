@@ -1,16 +1,17 @@
 package event
 
 import (
-	"0chain.net/smartcontract/dbs"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/config"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRewardEvents(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            os.Getenv("POSTGRES_USER"),

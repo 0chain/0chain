@@ -34,5 +34,6 @@ func BenchmarkRestTests(
 		},
 		ADDRESS,
 		frh,
+		benchmark.FaucetRest,
 	)
 }

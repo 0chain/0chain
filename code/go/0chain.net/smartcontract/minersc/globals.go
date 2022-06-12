@@ -39,7 +39,8 @@ const (
 	Multisig                          // todo from development
 
 	Vesting // todo from development
-	Owner   // do we want to set this.
+	Zcn
+	Owner // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
 	BlockMaxCost
@@ -113,15 +114,16 @@ const (
 // GlobalSettingName list of global settings keys. This key used to access each
 // global setting, either in smartcontract.StringMap or in the viper settings database.
 var GlobalSettingName = []string{
-	"development.state",
-	"development.dkg",
-	"development.view_change",
-	"development.block_rewards",
-	"development.smart_contract.storage",
-	"development.smart_contract.faucet",
-	"development.smart_contract.miner",
-	"development.smart_contract.multisig",
-	"development.smart_contract.vesting",
+	"server_chain.state.enabled",
+	"server_chain.dkg",
+	"server_chain.view_change",
+	"server_chain.block_rewards",
+	"server_chain.smart_contract.storage",
+	"server_chain.smart_contract.faucet",
+	"server_chain.smart_contract.miner",
+	"server_chain.smart_contract.multisig",
+	"server_chain.smart_contract.vesting",
+	"server_chain.smart_contract.zcn",
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
@@ -219,6 +221,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Miner]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Multisig]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Vesting]:                           {smartcontract.Boolean, false},
+	GlobalSettingName[Zcn]:                               {smartcontract.Boolean, false},
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},

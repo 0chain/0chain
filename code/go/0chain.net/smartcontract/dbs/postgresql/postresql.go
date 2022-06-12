@@ -8,13 +8,14 @@ import (
 
 	"gorm.io/gorm/logger"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func GetPostgresSqlDb(config dbs.DbAccess) (dbs.Store, error) {
+func GetPostgresSqlDb(config config.DbAccess) (dbs.Store, error) {
 	if !config.Enabled {
 		return nil, nil
 	}
@@ -30,7 +31,7 @@ type PostgresStore struct {
 	db *gorm.DB
 }
 
-func (store *PostgresStore) Open(config dbs.DbAccess) error {
+func (store *PostgresStore) Open(config config.DbAccess) error {
 	if !config.Enabled {
 		return errors.New("db_open_error, db disabled")
 	}
