@@ -414,6 +414,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return().Maybe()
 
 		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
 			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 		balances.On("InsertTrieNode",
@@ -726,6 +731,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}

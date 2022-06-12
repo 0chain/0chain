@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/logging"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -294,4 +296,45 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	}
 
 	return sas, nil
+}
+
+func (sa *StorageAllocation) ToAllocBlobberTerms() []event.AllocationBlobberTerm {
+	var terms []event.AllocationBlobberTerm
+
+	for _, blobber := range sa.BlobberAllocs {
+		terms = append(terms, event.AllocationBlobberTerm{
+			BlobberID:        blobber.BlobberID,
+			AllocationID:     blobber.AllocationID,
+			ReadPrice:        int64(blobber.Terms.ReadPrice),
+			WritePrice:       int64(blobber.Terms.WritePrice),
+			MinLockDemand:    blobber.Terms.MinLockDemand,
+			MaxOfferDuration: blobber.Terms.MaxOfferDuration,
+		})
+	}
+
+	return terms
+}
+
+func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting add or override terms event")
+
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
+}
+
+func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting update terms event")
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
+}
+
+func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting delete terms event")
+
+	balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
 }
