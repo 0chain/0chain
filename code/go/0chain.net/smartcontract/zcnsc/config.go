@@ -52,8 +52,8 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 		return "", errors.Wrap(err, Code)
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner(FuncName, func() bool {
-		return gn.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner(FuncName, func() (bool, error) {
+		return gn.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", errors.Wrap(err, Code)
 	}

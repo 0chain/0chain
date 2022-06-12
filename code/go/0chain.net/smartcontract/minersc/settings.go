@@ -108,7 +108,7 @@ var (
 
 	Settings = map[string]struct {
 		Setting    Setting
-		ConfigType smartcontract.ConfigType
+		ConfigType smartcontract.ConfigDataType
 	}{
 		"min_stake":                    {MinStake, smartcontract.CurrencyCoin},
 		"max_stake":                    {MaxStake, smartcontract.CurrencyCoin},
@@ -320,9 +320,9 @@ func (msc *MinerSmartContract) updateSettings(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() (bool, error) {
 		get, _ := gn.Get(OwnerId)
-		return get == t.ClientID
+		return get == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

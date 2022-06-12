@@ -7,14 +7,14 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z ConfigType) MarshalMsg(b []byte) (o []byte, err error) {
+func (z ConfigDataType) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	o = msgp.AppendInt(o, int(z))
 	return
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *ConfigType) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *ConfigDataType) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	{
 		var zb0001 int
 		zb0001, bts, err = msgp.ReadIntBytes(bts)
@@ -22,14 +22,14 @@ func (z *ConfigType) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			err = msgp.WrapError(err)
 			return
 		}
-		(*z) = ConfigType(zb0001)
+		(*z) = ConfigDataType(zb0001)
 	}
 	o = bts
 	return
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z ConfigType) Msgsize() (s int) {
+func (z ConfigDataType) Msgsize() (s int) {
 	s = msgp.IntSize
 	return
 }

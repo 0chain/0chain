@@ -111,8 +111,8 @@ func (fc *FaucetSmartContract) updateSettings(
 	balances c_state.StateContextI,
 	gn *GlobalNode,
 ) (string, error) {
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
-		return gn.FaucetConfig.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() (bool, error) {
+		return gn.FaucetConfig.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

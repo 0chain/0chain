@@ -10,10 +10,18 @@ import (
 	"0chain.net/chaincore/currency"
 )
 
-type ConfigType int
+type ConfigSecurityLevel int
 
 const (
-	Int ConfigType = iota
+	Immutable ConfigSecurityLevel = iota
+	Owner
+	Anyone
+)
+
+type ConfigDataType int
+
+const (
+	Int ConfigDataType = iota
 	Int64
 	Int32
 	Duration
@@ -24,6 +32,13 @@ const (
 	Key
 	Cost
 	Strings
+)
+
+type ConfigType int
+
+const (
+	Local ConfigType = iota
+	Global
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -64,7 +79,7 @@ func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
 	return out
 }
 
-func StringToInterface(input string, iType ConfigType) (interface{}, error) {
+func StringToInterface(input string, iType ConfigDataType) (interface{}, error) {
 	switch iType {
 	case Int:
 		return strconv.Atoi(input)

@@ -214,7 +214,7 @@ var (
 
 	Settings = map[string]struct {
 		setting    Setting
-		configType smartcontract.ConfigType
+		configType smartcontract.ConfigDataType
 	}{
 		"max_mint":                      {MaxMint, smartcontract.CurrencyCoin},
 		"time_unit":                     {TimeUnit, smartcontract.Duration},
@@ -224,7 +224,7 @@ var (
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
-		"readpool.min_lock":        {ReadPoolMinLock, smartcontract.Int64},
+		"readpool.min_lock": {ReadPoolMinLock, smartcontract.Int64},
 
 		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
@@ -774,8 +774,8 @@ func (ssc *StorageSmartContract) updateSettings(
 			"can't get config: "+err.Error())
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
-		return conf.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() (bool, error) {
+		return conf.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

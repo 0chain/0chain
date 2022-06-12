@@ -213,8 +213,8 @@ func (vsc *VestingSmartContract) updateConfig(
 			"can't get config: "+err.Error())
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner("update_config", func() bool {
-		return conf.OwnerId == txn.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("update_config", func() (bool, error) {
+		return conf.OwnerId == txn.ClientID, nil
 	}); err != nil {
 		return "", err
 	}

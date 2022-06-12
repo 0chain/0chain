@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/currency"
 
@@ -138,8 +139,8 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't get config: %v", err)
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner("add_free_storage_assigner", func() bool {
-		return conf.OwnerId == t.ClientID
+	if err := smartcontractinterface.AuthorizeWithOwner("add_free_storage_assigner", func() (bool, error) {
+		return conf.OwnerId == t.ClientID, nil
 	}); err != nil {
 		return "", err
 	}
@@ -279,8 +280,8 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	var lr = readPoolLockRequest{
-		TargetId: marker.Recipient,
-		IsOwner:  false,
+		TargetId:   marker.Recipient,
+		IsOwner:    false,
 		MintTokens: true,
 	}
 	input, err = json.Marshal(lr)
