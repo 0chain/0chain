@@ -16,7 +16,7 @@ type WriteMarker struct {
 	// todo: as user(ID), allocation(ID) and transaction(ID) tables are created, enable it
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
-	AllocationID  string `json:"allocation_id" gorm:"index:idx_alloc_block,priority:1;index:idx_alloc_file,priority:2"` //used in alloc_write_marker_count, alloc_written_size
+	AllocationID  string `json:"allocation_id" gorm:"index:idx_walloc_block,priority:1;index:idx_walloc_file,priority:2"` //used in alloc_write_marker_count, alloc_written_size
 	TransactionID string `json:"transaction_id"`
 
 	AllocationRoot         string `json:"allocation_root"`
@@ -24,11 +24,11 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number" gorm:"index:idx_alloc_block,priority:2"` //used in alloc_written_size
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name" gorm:"index:idx_alloc_file,priority:1"`
+	Name        string `json:"name" gorm:"index:idx_walloc_file,priority:1"`
 	ContentHash string `json:"content_hash"`
 }
 

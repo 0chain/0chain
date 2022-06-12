@@ -10,14 +10,14 @@ import (
 
 type Challenge struct {
 	gorm.Model
-	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id,unique"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:1"`
+	ChallengeID    string           `json:"challenge_id" gorm:"index:idx_cchallenge_id,unique"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_copen_challenge,priority:1"`
 	AllocationID   string           `json:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge,priority:2"`
+	BlobberID      string           `json:"blobber_id" gorm:"index:idx_copen_challenge,priority:2"`
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge,priority:3"`
+	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {

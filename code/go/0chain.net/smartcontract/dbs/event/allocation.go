@@ -21,7 +21,7 @@ type Allocation struct {
 	Size                       int64         `json:"size"`
 	Expiration                 int64         `json:"expiration"`
 	Terms                      string        `json:"terms"`
-	Owner                      string        `json:"owner" gorm:"index:idx_owner"`
+	Owner                      string        `json:"owner" gorm:"index:idx_aowner"`
 	OwnerPublicKey             string        `json:"owner_public_key"`
 	IsImmutable                bool          `json:"is_immutable"`
 	ReadPriceMin               currency.Coin `json:"read_price_min"`
@@ -30,7 +30,7 @@ type Allocation struct {
 	WritePriceMax              currency.Coin `json:"write_price_max"`
 	MaxChallengeCompletionTime int64         `json:"max_challenge_completion_time"`
 	ChallengeCompletionTime    int64         `json:"challenge_completion_time"`
-	StartTime                  int64         `json:"start_time"`
+	StartTime                  int64         `json:"start_time" gorm:"index:idx_astart_time"`
 	Finalized                  bool          `json:"finalized"`
 	Cancelled                  bool          `json:"cancelled"`
 	UsedSize                   int64         `json:"used_size"`
