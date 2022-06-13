@@ -44,8 +44,7 @@ type mockAllocation struct {
 }
 
 type mockReadPool struct {
-	OwnerBalance   currency.Coin `json:"owner_balance"`
-	VisitorBalance currency.Coin `json:"visitor_balance"`
+	Balance currency.Coin `json:"balance"`
 }
 
 type cbrResponse struct {
@@ -85,7 +84,6 @@ func TestCommitBlobberRead(t *testing.T) {
 	}
 	var rPool = mockReadPool{
 		11 * 1e10,
-		12 * 1e10,
 	}
 
 	t.Run("test commit blobber read", func(t *testing.T) {
@@ -96,7 +94,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	})
 
 	t.Run("check blobber sort needed", func(t *testing.T) {
-		var bRPool = mockReadPool{11 * 1e10, 12 * 1e10}
+		var bRPool = mockReadPool{11 * 1e10}
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, read, allocation, stakes, bRPool,
 		)
@@ -184,7 +182,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	})
 
 	t.Run(errNotEnoughTokens+" expired blobbers", func(t *testing.T) {
-		var stingyReadPool = mockReadPool{1, 0}
+		var stingyReadPool = mockReadPool{1}
 
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, read, allocation, stakes, stingyReadPool,
@@ -309,7 +307,7 @@ func testCommitBlobberRead(
 
 	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 
-	var rPool = readPool{readPoolIn.OwnerBalance, readPoolIn.VisitorBalance}
+	var rPool = readPool{readPoolIn.Balance}
 
 	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
 
@@ -340,9 +338,7 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	if storageAllocation.Owner == payerId {
-		require.NotEqualValues(t, rPool.OwnerBalance, newRp.OwnerBalance)
-	} else {
-		require.NotEqualValues(t, rPool.VisitorBalance, newRp.VisitorBalance)
+		require.NotEqualValues(t, rPool.Balance, newRp.Balance)
 	}
 
 	newSp, err := ssc.getStakePool(blobberId, ctx)
