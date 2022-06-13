@@ -198,24 +198,34 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		log.Printf("wait for %d nodes", len(r.waitNodes))
 		return tm, true
 	case !r.waitRound.IsZero():
+		log.Println("wait for round")
 		return tm, true
 	case !r.waitPhase.IsZero():
+		log.Println("wait for phase")
 		return tm, true
 	case !r.waitContributeMPK.IsZero():
+		log.Println("wait for mpk contributes")
 		return tm, true
 	case !r.waitShareSignsOrShares.IsZero():
+		log.Println("wait for share signs")
 		return tm, true
 	case !r.waitViewChange.IsZero():
+		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
+		log.Printf("wait for adding sharders (%+v) and miners (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
+		log.Println("wait for sharder keep")
 		return tm, true
 	case !r.waitNoProgress.IsZero():
+		log.Println("wait for no progress")
 		return tm, true
 	case !r.waitNoViewChange.IsZero():
+		log.Println("wait for no view change")
 		return tm, true
 	case r.waitCommand != nil:
+		log.Println("wait for command")
 		return tm, true
 	}
 
