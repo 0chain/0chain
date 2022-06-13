@@ -48,7 +48,7 @@ var (
 //SetupSmartContracts initializes smart contract addresses
 func SetupSmartContracts() {
 	for _, name := range SCNames {
-		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {
+		if viper.GetBool(fmt.Sprintf("server_chain.smart_contract.%v", name)) {
 			var contract = newSmartContract(name)
 			smartcontract.ContractMap[contract.GetAddress()] = contract
 		}

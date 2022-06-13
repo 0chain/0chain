@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
 )
 
 func TestAddEvents(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),

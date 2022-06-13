@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -15,9 +17,11 @@ import (
 )
 
 func init() {
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	common.SetupRootContext(node.GetNodeContext())
 
 	transaction.SetupEntity(memorystore.GetStorageProvider())
+
 }
 
 func initDefaultTxnPool(t *testing.T) {
