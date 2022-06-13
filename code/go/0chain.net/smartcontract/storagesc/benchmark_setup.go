@@ -358,8 +358,7 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	rps := make([]*readPool, len(clients))
 	for i := range clients {
 		rps[i] = &readPool{
-			OwnerBalance:   10 * 1e10,
-			VisitorBalance: 10 * 1e10,
+			Balance: 10 * 1e10,
 		}
 	}
 	for i := 0; i < len(rps); i++ {

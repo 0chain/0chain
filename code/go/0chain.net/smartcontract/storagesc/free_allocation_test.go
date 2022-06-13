@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
- 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 
@@ -441,7 +441,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("InsertTrieNode",
 			readPoolKey(ssc.ID, p.marker.Recipient),
 			mock.MatchedBy(func(rp *readPool) bool {
-				return rp.OwnerBalance == currency.Coin(readPoolLocked) || rp.VisitorBalance == currency.Coin(readPoolLocked)
+				return rp.Balance == currency.Coin(readPoolLocked)
 			})).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}

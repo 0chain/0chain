@@ -522,13 +522,7 @@ func BenchmarkTests(
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
-			input: func() []byte {
-				lr := &readPoolLockRequest{
-					IsOwner: true,
-				}
-				bytes, _ := json.Marshal(lr)
-				return bytes
-			}(),
+			input: []byte{},
 		},
 		{
 			name:     "storage.read_pool_unlock",
@@ -542,12 +536,7 @@ func BenchmarkTests(
 				ToClientID:   ADDRESS,
 				CreationDate: benchWritePoolExpire(creationTime) + 1,
 			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&readPoolUnlockRequest{
-					IsOwner: true,
-				})
-				return bytes
-			}(),
+			input: []byte{},
 		},
 		// write pool
 		{

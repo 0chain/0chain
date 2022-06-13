@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
@@ -22,7 +23,6 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -517,7 +517,7 @@ func newEventsDb() *event.EventDb {
 	timer := time.Now()
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
-		return event.NewEventDb(dbs.DbAccess{
+		return event.NewEventDb(config.DbAccess{
 			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
 			Name:            viper.GetString(benchmark.EventDbName),
 			User:            viper.GetString(benchmark.EventDbUser),
@@ -528,6 +528,7 @@ func newEventsDb() *event.EventDb {
 			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
 			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
 		})
+
 	}
 
 	t := time.NewTicker(time.Second)

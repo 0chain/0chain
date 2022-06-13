@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
@@ -11,7 +12,7 @@ import (
 const DefaultQueryTimeout = 5 * time.Second
 const DefaultQueryLimit = 20
 
-func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
+func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
 		return nil, err
