@@ -78,7 +78,7 @@ func TestUpdateGlobals(t *testing.T) {
 		return args{
 			msc:      msc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			gn:       &minersc.GlobalNode{OwnerId: owner},
 			balances: balances,
 		}

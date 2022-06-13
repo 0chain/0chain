@@ -1351,6 +1351,19 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 	return gl, nil
 }
 
+func saveConfigMap(clientState util.MerklePatriciaTrieI, gl *minersc.GlobalSettings) error {
+	if clientState == nil {
+		return errors.New("client state is nil")
+	}
+
+	_, err := clientState.Insert(util.Path(encryption.Hash(minersc.GLOBALS_KEY)), gl)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Chain) updateConfig(pb *block.Block) {
 	clientState, err := c.getClientState(pb)
 	if err != nil {
@@ -1364,11 +1377,27 @@ func (c *Chain) updateConfig(pb *block.Block) {
 
 	configMap, err := getConfigMap(clientState)
 	if err != nil {
-		logging.Logger.Info("cannot get global settings",
-			zap.Int64("start of round", pb.Round),
-			zap.Error(err),
-		)
-		return
+		if err == util.ErrValueNotPresent {
+			configMap = minersc.NewGlobalSettingsFromViper()
+			logging.Logger.Info("global settings are not available in mpt. creating new instance from viper...",
+				zap.Int64("start of round", pb.Round),
+				zap.Any("global settings:", configMap),
+				zap.Error(err),
+			)
+			err = saveConfigMap(clientState, configMap)
+			if err != nil {
+				logging.Logger.Error("new global settings instance cannot be save into mpt",
+					zap.Int64("start of round", pb.Round),
+					zap.Any("global settings:", configMap),
+					zap.Error(err))
+			}
+		} else {
+			logging.Logger.Info("cannot get global settings",
+				zap.Int64("start of round", pb.Round),
+				zap.Error(err),
+			)
+			return
+		}
 	}
 
 	err = c.ChainConfig.Update(configMap.Fields, configMap.Version)

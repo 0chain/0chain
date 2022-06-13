@@ -304,6 +304,12 @@ func newGlobalSettings() *GlobalSettings {
 	}
 }
 
+func NewGlobalSettingsFromViper() *GlobalSettings {
+	gl := newGlobalSettings()
+	gl.Fields = getStringMapFromViper()
+	return gl
+}
+
 // Encode implements util.Serializable interface.
 func (gl *GlobalSettings) Encode() []byte {
 	var b, err = json.Marshal(gl)
