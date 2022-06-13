@@ -35,19 +35,14 @@ func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, a
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, offset, limit int, isDescending bool) ([]ReadMarker, error) {
+func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit LimitData) ([]ReadMarker, error) {
 	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
-		Where(query)
-	if offset > 0 {
-		queryBuilder = queryBuilder.Offset(offset)
-	}
-	if limit > 0 {
-		queryBuilder = queryBuilder.Limit(limit)
-	}
+		Where(query).Offset(limit.Offset).Limit(limit.Limit)
+
 	queryBuilder.Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
-		Desc:   isDescending,
+		Desc:   limit.IsDescending,
 	})
 	var rms []ReadMarker
 	return rms, queryBuilder.Scan(&rms).Error

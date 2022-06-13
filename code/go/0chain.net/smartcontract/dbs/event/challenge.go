@@ -3,6 +3,7 @@ package event
 import (
 	"0chain.net/smartcontract/dbs"
 	"fmt"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 	"gorm.io/gorm"
@@ -31,22 +32,16 @@ func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	return &ch, nil
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, offset int, limit int) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit LimitData) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
 
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			expiry, blobberID, false).Order("created_at asc")
-
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	} else {
-		query = query.Limit(DefaultQueryLimit)
-	}
+			expiry, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   limit.IsDescending,
+	})
 
 	result := query.Find(&chs)
 	if result.Error != nil {

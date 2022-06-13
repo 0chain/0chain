@@ -75,24 +75,14 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string, offset int, limit int) ([]Allocation, error) {
+func (edb EventDb) GetClientsAllocation(clientID string, limit LimitData) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
 
-	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID)
-
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	} else {
-		query = query.Limit(DefaultQueryLimit)
-	}
-
-	query.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "start_time"},
-		Desc:   true,
-	})
+	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "start_time"},
+			Desc:   limit.IsDescending,
+		})
 
 	result := query.Scan(&allocs)
 	if result.Error != nil {

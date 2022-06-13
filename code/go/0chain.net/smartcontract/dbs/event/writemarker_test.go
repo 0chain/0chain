@@ -97,7 +97,7 @@ func TestWriteMarker(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
 
-	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID, 20, 0, false)
+	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID, LimitData{20, 0, false})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(wms))
 	require.EqualValues(t, eWriteMarker.BlockNumber, (wms)[0].BlockNumber)
@@ -141,42 +141,42 @@ func TestGetWriteMarkers(t *testing.T) {
 	addWriterMarkers(t, eventDb, "someHash")
 
 	t.Run("GetWriteMarkers ascending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 10, false)
+		gotWM, err := eventDb.GetWriteMarkers(LimitData{0, 10, false})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 10, false)
 	})
 	t.Run("GetWriteMarkers descending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 10, true)
+		gotWM, err := eventDb.GetWriteMarkers(LimitData{0, 10, true})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 10, true)
 	})
 	t.Run("GetWriteMarkers 5 limit asecending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 5, false)
+		gotWM, err := eventDb.GetWriteMarkers(LimitData{0, 5, false})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 5, false)
 	})
 	t.Run("GetWriteMarkers 5 limit descending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 5, true)
+		gotWM, err := eventDb.GetWriteMarkers(LimitData{0, 5, true})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 5, true)
 	})
 	t.Run("GetWriteMarkers 5 offset 5 limit asecending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(5, 5, false)
+		gotWM, err := eventDb.GetWriteMarkers(LimitData{5, 5, false})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, false)
 	})
 	t.Run("GetWriteMarkers 5 offset 5 limit descending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(5, 5, true)
+		gotWM, err := eventDb.GetWriteMarkers(LimitData{5, 5, true})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("GetWriteMarkersForAllocationID", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id", 20, 0, false)
+		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id", LimitData{20, 0, false})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("GetWriteMarkersForAllocationFile", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt", 20, 0, false)
+		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt", LimitData{20, 0, false})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})

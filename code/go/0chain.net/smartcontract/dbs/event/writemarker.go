@@ -60,32 +60,32 @@ func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
 	return total, edb.Store.Get().Model(&WriteMarker{}).Where("allocation_id = ?", allocationID).Count(&total).Error
 }
 
-func (edb *EventDb) GetWriteMarkers(offset, limit int, isDescending bool) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkers(limit LimitData) ([]WriteMarker, error) {
 	var wm []WriteMarker
-	return wm, edb.Get().Model(&WriteMarker{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+	return wm, edb.Get().Model(&WriteMarker{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
-		Desc:   isDescending,
+		Desc:   limit.IsDescending,
 	}).Scan(&wm).Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit int, offset int, isDescending bool) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit LimitData) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+		Where(&WriteMarker{AllocationID: allocationID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
-		Desc:   isDescending,
+		Desc:   limit.IsDescending,
 	}).Scan(&wms)
 	return wms, result.Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit int, offset int, isDescending bool) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit LimitData) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
-		Desc:   isDescending,
+		Desc:   limit.IsDescending,
 	}).Scan(&wms)
 	return wms, result.Error
 }

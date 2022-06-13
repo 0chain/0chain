@@ -2,6 +2,7 @@ package event
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Transaction model to save the transaction data
@@ -39,14 +40,17 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 }
 
 // GetTransactionByClientId searches for transaction by clientID
-func (edb *EventDb) GetTransactionByClientId(clientID string, offset, limit int) ([]Transaction, error) {
-	tr := []Transaction{}
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(offset).Limit(limit).Scan(&tr)
+func (edb *EventDb) GetTransactionByClientId(clientID string, limit LimitData) ([]Transaction, error) {
+	var tr []Transaction
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   limit.IsDescending,
+	}).Scan(&tr)
 	return tr, res.Error
 }
 
-func (edb *EventDb) GetTransactionByBlockHash(blockHash string, offset, limit int) ([]Transaction, error) {
-	tr := []Transaction{}
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(offset).Limit(limit).Scan(&tr)
+func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit LimitData) ([]Transaction, error) {
+	var tr []Transaction
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(limit.Offset).Limit(limit.Limit).Scan(&tr)
 	return tr, res.Error
 }

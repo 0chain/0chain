@@ -38,13 +38,13 @@ func TestAddAndGetError(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error was not inserted in the table")
 	}
-	gotErr, err := eventDb.GetErrorByTransactionHash("someTransaction")
+	gotErr, err := eventDb.GetErrorByTransactionHash("someTransaction", LimitData{0, 20, true})
 	require.Equal(t, 1, len(gotErr), "There should be 1 error")
 	gotErr[0].ID = wantErr.ID
 	gotErr[0].CreatedAt = wantErr.CreatedAt
 	gotErr[0].UpdatedAt = wantErr.UpdatedAt
 	require.Equal(t, []Error{wantErr}, gotErr, "The error should be equal")
 
-	gotErr, err = eventDb.GetErrorByTransactionHash("someT")
+	gotErr, err = eventDb.GetErrorByTransactionHash("someT", LimitData{0, 20, true})
 	require.Equal(t, 0, len(gotErr), "We should get 0 errors")
 }

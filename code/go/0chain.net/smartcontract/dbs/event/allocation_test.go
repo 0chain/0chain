@@ -392,7 +392,7 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.Size, sa.Size)
 
-	allocs, err := eventDb.GetClientsAllocation(sa.Owner, 0, 20)
+	allocs, err := eventDb.GetClientsAllocation(sa.Owner, LimitData{0, 20, true})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(allocs))
 	require.EqualValues(t, allocs[0].Size, sa.Size)
