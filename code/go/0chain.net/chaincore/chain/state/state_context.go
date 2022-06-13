@@ -17,7 +17,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-//msgp:ignore StateContext
+//msgp:ignore StateContext, TimedQueryStateContext
 //go:generate msgp -io=false -tests=false -v
 
 type ApprovedMinter int
