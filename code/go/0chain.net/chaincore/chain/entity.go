@@ -121,7 +121,7 @@ type Chain struct {
 
 	currentRound int64 `json:"-"`
 
-	FeeStats transaction.TransactionFeeStats `json:"fee_stats"`
+	FeeStats transaction.FeeStats `json:"fee_stats"`
 
 	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 	lfbMutex             sync.RWMutex

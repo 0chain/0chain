@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 	"go.uber.org/zap"
@@ -340,7 +342,7 @@ func (c *ConfigImpl) TxnExempt() map[string]bool {
 	return c.conf.TxnExempt
 }
 
-func (c *ConfigImpl) MinTxnFee() int64 {
+func (c *ConfigImpl) MinTxnFee() currency.Coin {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
 
@@ -373,7 +375,7 @@ type ConfigData struct {
 	ThresholdByStake      int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
 	ValidationBatchSize   int           `json:"validation_size"`         // Batch size of txns for crypto verification
 	TxnMaxPayload         int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
-	MinTxnFee             int64         `json:"min_txn_fee"`             // Minimum txn fee allowed
+	MinTxnFee             currency.Coin `json:"min_txn_fee"`             // Minimum txn fee allowed
 	PruneStateBelowCount  int           `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange            int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 
@@ -408,7 +410,7 @@ type ConfigData struct {
 	TxnExempt map[string]bool `json:"txn_exempt"`
 }
 
-func (c *ConfigImpl) FromViper() {
+func (c *ConfigImpl) FromViper() error {
 	c.guard.Lock()
 	defer c.guard.Unlock()
 
@@ -444,7 +446,11 @@ func (c *ConfigImpl) FromViper() {
 	conf.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
-	conf.MinTxnFee = viper.GetInt64("server_chain.transaction.min_fee")
+	var err error
+	conf.MinTxnFee, err = currency.Int64ToCoin(viper.GetInt64("server_chain.transaction.min_fee"))
+	if err != nil {
+		return err
+	}
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
@@ -514,6 +520,7 @@ func (c *ConfigImpl) FromViper() {
 	conf.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
+	return nil
 }
 
 //Updates the config fields from GlobalSettings fields
@@ -658,7 +665,7 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	if err != nil {
 		return err
 	}
-	conf.MinTxnFee, err = cf.GetInt64(minersc.TransactionMinFee)
+	conf.MinTxnFee, err = cf.GetCoin(minersc.TransactionMinFee)
 	if err != nil {
 		return err
 	}

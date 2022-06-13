@@ -73,19 +73,19 @@ type splResponse struct {
 }
 
 func TestStakePoolLock(t *testing.T) {
-	var err error
 	scYaml = &Config{
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
 
 		StakePool: &stakePoolConfig{
-			MinLock: int64(zcnToBalance(0.1)),
+			MinLock: 0.1e10,
 		},
 	}
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
-		var value = scYaml.StakePool.MinLock - 1
+		value, err := currency.MinusCoin(scYaml.StakePool.MinLock, 1)
+		require.NoError(t, err)
 		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
@@ -95,7 +95,8 @@ func TestStakePoolLock(t *testing.T) {
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		scYaml.Minted = scYaml.MaxMint
-		var value = scYaml.StakePool.MinLock - 1
+		value, err := currency.MinusCoin(scYaml.StakePool.MinLock, 1)
+		require.NoError(t, err)
 		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
@@ -104,7 +105,7 @@ func TestStakePoolLock(t *testing.T) {
 	})
 }
 
-func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []mockStakePool) error {
+func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegates []mockStakePool) error {
 	var f = formulaeStakePoolLock{
 		value:         value,
 		clientBalance: clientBalance,
@@ -115,7 +116,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 
 		ClientID:     clientId,
@@ -182,7 +183,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, newStakePool stakePool,
 	newUsp stakepool.UserStakePools, ctx cstate.StateContextI) {
 	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, f.value, int64(transfer.Amount))
+		require.EqualValues(t, f.value, transfer.Amount)
 		require.EqualValues(t, storageScId, transfer.ToClientID)
 		require.EqualValues(t, clientId, transfer.ClientID)
 		txPool, ok := newStakePool.Pools[transactionHash]
@@ -204,8 +205,8 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 }
 
 type formulaeStakePoolLock struct {
-	value         int64
-	clientBalance int64
+	value         currency.Coin
+	clientBalance currency.Coin
 	delegates     []mockStakePool
 	scYaml        Config
 	now           common.Timestamp

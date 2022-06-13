@@ -28,7 +28,7 @@ type ZCNSConfig struct {
 	MinMintAmount      currency.Coin  `json:"min_mint"`
 	MinBurnAmount      currency.Coin  `json:"min_burn"`
 	MinStakeAmount     currency.Coin  `json:"min_stake"`
-	MinLockAmount      int64          `json:"min_lock"`
+	MinLockAmount      currency.Coin  `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
 	MaxFee             currency.Coin  `json:"max_fee"`
@@ -105,10 +105,11 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 				return err
 			}
 		case MinLockAmount:
-			gn.MinLockAmount, err = strconv.ParseInt(value, 10, 64)
+			minLockAmount, err := strconv.ParseUint(value, 10, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to uint64", key, value)
 			}
+			gn.MinLockAmount = currency.Coin(minLockAmount)
 		case MaxDelegates:
 			gn.MaxDelegates, err = strconv.Atoi(value)
 			if err != nil {
@@ -173,8 +174,8 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
 	case gn.MaxDelegates <= 0:
 		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
-	case gn.MinLockAmount <= 0:
-		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is less than 0", gn.MinLockAmount))
+	case gn.MinLockAmount == 0:
+		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
 	}
 	return nil
 }

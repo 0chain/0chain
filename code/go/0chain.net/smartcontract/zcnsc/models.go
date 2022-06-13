@@ -184,10 +184,10 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) (err error) 
 // ---- BurnPayloadResponse ----------
 
 type BurnPayloadResponse struct {
-	TxnID           string `json:"0chain_txn_id"`
-	Nonce           int64  `json:"nonce"`
-	Amount          int64  `json:"amount"`
-	EthereumAddress string `json:"ethereum_address"`
+	TxnID           string        `json:"0chain_txn_id"`
+	Nonce           int64         `json:"nonce"`
+	Amount          currency.Coin `json:"amount"`
+	EthereumAddress string        `json:"ethereum_address"`
 }
 
 func (bp *BurnPayloadResponse) Encode() []byte {

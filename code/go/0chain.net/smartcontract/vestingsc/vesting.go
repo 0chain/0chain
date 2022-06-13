@@ -260,7 +260,7 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 		return errors.New("no tokens to lock")
 	}
 
-	if currency.Coin(t.Value) > balance {
+	if t.Value > balance {
 		return errors.New("lock amount is greater than balance")
 	}
 
@@ -597,12 +597,12 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	var vp = newVestingPoolFromReqeust(t.ClientID, &ar)
 	vp.ID = poolKey(vsc.ID, t.Hash) // set ID by this transaction
 
-	if currency.Coin(t.Value) < vp.want() {
+	if t.Value < vp.want() {
 		return "", common.NewError("create_vesting_pool_failed",
 			"not enough tokens to create pool provided")
 	}
 
-	if currency.Coin(t.Value) < conf.MinLock {
+	if t.Value < conf.MinLock {
 		return "", common.NewError("create_vesting_pool_failed",
 			"insufficient amount to lock")
 	}

@@ -106,22 +106,26 @@ func zcnToBalance(token float64) currency.Coin {
 }
 
 func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
-	var delegates = [][]float64{}
+	var delegates [][]float64
 	delegates = append(delegates, minerDelegates)
 	delegates = append(delegates, sharderDelegates...)
 	require.True(t, len(cNodes) <= len(delegates))
 	var count = 0
 	for i, node := range cNodes {
 		node.Pools = make(map[string]*stakepool.DelegatePool)
-		var staked int64 = 0
+		var (
+			staked currency.Coin
+			err    error
+		)
 		for j, delegate := range delegates[i] {
 			count++
 			var dp stakepool.DelegatePool
 			dp.Balance = zcnToBalance(delegate)
-			dp.DelegateID = datastore.Key(delegateId + " " + strconv.Itoa(i*maxDelegates+j))
+			dp.DelegateID = delegateId + " " + strconv.Itoa(i*maxDelegates+j)
 			dp.Status = spenum.Active
 			node.Pools[strconv.Itoa(j)] = &dp
-			staked += int64(zcnToBalance(delegate))
+			staked, err = currency.AddCoin(staked, zcnToBalance(delegate))
+			require.NoError(t, err)
 		}
 		node.TotalStaked = staked
 	}

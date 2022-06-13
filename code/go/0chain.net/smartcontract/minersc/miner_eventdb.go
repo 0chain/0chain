@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
-
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -29,7 +27,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		PublicKey:   edbMiner.PublicKey,
 		ShortName:   edbMiner.ShortName,
 		BuildTag:    edbMiner.BuildTag,
-		TotalStaked: int64(edbMiner.TotalStaked),
+		TotalStaked: edbMiner.TotalStaked,
 		Delete:      edbMiner.Delete,
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbMiner.Latitude,
@@ -66,7 +64,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		PublicKey:         mn.PublicKey,
 		ShortName:         mn.ShortName,
 		BuildTag:          mn.BuildTag,
-		TotalStaked:       currency.Coin(mn.TotalStaked),
+		TotalStaked:       mn.TotalStaked,
 		Delete:            mn.Delete,
 		DelegateWallet:    mn.Settings.DelegateWallet,
 		ServiceCharge:     mn.Settings.ServiceChargeRatio,

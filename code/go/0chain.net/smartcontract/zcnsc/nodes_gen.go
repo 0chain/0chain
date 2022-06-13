@@ -364,7 +364,11 @@ func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "MinLockAmount"
 	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
-	o = msgp.AppendInt64(o, z.MinLockAmount)
+	o, err = z.MinLockAmount.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MinLockAmount")
+		return
+	}
 	// string "MinAuthorizers"
 	o = append(o, 0xae, 0x4d, 0x69, 0x6e, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x7a, 0x65, 0x72, 0x73)
 	o = msgp.AppendInt64(o, z.MinAuthorizers)
@@ -440,7 +444,7 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinLockAmount":
-			z.MinLockAmount, bts, err = msgp.ReadInt64Bytes(bts)
+			bts, err = z.MinLockAmount.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLockAmount")
 				return
@@ -525,7 +529,7 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ZCNSConfig) Msgsize() (s int) {
-	s = 1 + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 14 + msgp.Int64Size + 15 + msgp.Int64Size + 19 + msgp.Float64Size + 7 + z.MaxFee.Msgsize() + 12 + msgp.StringPrefixSize + len(z.BurnAddress) + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 14 + z.MinLockAmount.Msgsize() + 15 + msgp.Int64Size + 19 + msgp.Float64Size + 7 + z.MaxFee.Msgsize() + 12 + msgp.StringPrefixSize + len(z.BurnAddress) + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

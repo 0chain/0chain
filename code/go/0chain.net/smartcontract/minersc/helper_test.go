@@ -111,7 +111,7 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	return mustEncode(t, mn)
 }
 
-func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
+func newTransaction(f, t string, val currency.Coin, now int64) (tx *transaction.Transaction) {
 	tx = new(transaction.Transaction)
 	tx.Hash = randString(32)
 	tx.ClientID = f
@@ -179,7 +179,7 @@ func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {
 
 // stake a miner or a sharder
 func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
-	now, val int64, nodeID string, balances cstate.StateContextI) (resp string,
+	now int64, val currency.Coin, nodeID string, balances cstate.StateContextI) (resp string,
 	err error) {
 
 	t.Helper()
