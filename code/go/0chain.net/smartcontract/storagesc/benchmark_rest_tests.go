@@ -2,8 +2,6 @@ package storagesc
 
 import (
 	"0chain.net/core/encryption"
-	"time"
-
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/chaincore/currency"
@@ -145,12 +143,11 @@ func BenchmarkRestTests(
 				FuncName: "allocation_min_lock",
 				Params: map[string]string{
 					"allocation_data": func() string {
-						now := common.Timestamp(time.Now().Unix())
 						nar, _ := (&newAllocationRequest{
 							DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+							Expiration:                 2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
@@ -302,12 +299,12 @@ func BenchmarkRestTests(
 				FuncName: "alloc_blobbers",
 				Params: map[string]string{
 					"allocation_data": func() string {
-						now := common.Timestamp(time.Now().Unix())
+						//now := common.Timestamp(time.Now().Unix())
 						nar, _ := (&newAllocationRequest{
 							DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+							Expiration:                 2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},

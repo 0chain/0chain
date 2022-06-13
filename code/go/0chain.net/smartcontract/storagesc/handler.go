@@ -393,7 +393,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		AllocationSize:    allocationSize,
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
-	}, limit)
+	}, limit, balances.Now())
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("not enough blobbers to honor the allocation")
