@@ -336,10 +336,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 
 		balances.On(
-			"GetTrieNode", allocationPoolKey(allocationId), mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-
-		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 		balances.On(
@@ -397,12 +393,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			ToClientID: ADDRESS,
 			Amount:     currency.Coin(writePoolLocked),
 		}).Return(nil).Once()
-
-		balances.On("InsertTrieNode",
-			allocationPoolKey(allocationId),
-			mock.MatchedBy(func(ap *allocationPools) bool {
-				return true
-			})).Return("", nil).Once()
 
 		balances.On(
 			"GetSignatureScheme",
@@ -713,10 +703,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		).Return("", nil).Once()
 
 		balances.On(
-			"GetTrieNode", allocationPoolKey(allocationId),
-			mockSetValue(newAllocationPools())).Return(nil).Once()
-
-		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
 			mockSetValue(&challengePool{})).Return(nil).Once()
 
@@ -742,15 +728,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			ToClientID: ADDRESS,
 			Amount:     zcnToBalance(p.marker.FreeTokens),
 		}).Return(nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			allocationPoolKey(allocationId),
-			//mock.Anything,
-			mock.MatchedBy(func(aps *allocationPools) bool {
-				return true
-			}),
-		).Return("", nil).Once()
 
 		balances.On(
 			"EmitEvent",

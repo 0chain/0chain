@@ -568,7 +568,7 @@ func TestExtendAllocation(t *testing.T) {
 		request    updateAllocationRequest
 		expiration common.Timestamp
 		value      float64
-		poolFunds  []float64
+		poolFunds  float64
 		poolCount  []int
 	}
 	type want struct {
@@ -636,8 +636,8 @@ func TestExtendAllocation(t *testing.T) {
 			WritePriceRange:         PriceRange{mockMinPrice, mockMaxPrice},
 			ChallengeCompletionTime: mockChallengeCompletionTime,
 			TimeUnit:                mockTimeUnit,
+			WritePool:               currency.Coin(args.poolFunds * 1e10),
 		}
-		require.True(t, len(args.poolFunds) > 0)
 
 		bCount := sa.DataShards + sa.ParityShards
 		var blobbers []*StorageNode
@@ -679,24 +679,6 @@ func TestExtendAllocation(t *testing.T) {
 			}
 		}
 
-		require.EqualValues(t, len(args.poolFunds), len(args.poolCount))
-		var aps = newAllocationPools()
-		for i, funds := range args.poolFunds {
-			ap := &allocationPool{}
-			ap.Balance = zcnToBalance(funds)
-			apOwner := mockApOwner + strconv.Itoa(i)
-			aps.Pools[apOwner] = ap
-		}
-		balances.On(
-			"GetTrieNode", allocationPoolKey(sa.ID), newAllocationPools()).
-			Return(nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			mock.MatchedBy(func(aps *allocationPools) bool {
-				return true
-			})).Return(nil).Once()
-
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, sa.ID),
 			mock.MatchedBy(func(p *challengePool) bool {
@@ -737,8 +719,7 @@ func TestExtendAllocation(t *testing.T) {
 				},
 				expiration: mockExpiration,
 				value:      0.1,
-				poolFunds:  []float64{0.0, 5.0, 5.0},
-				poolCount:  []int{1, 3, 4},
+				poolFunds:  10.0,
 			},
 		},
 		{
@@ -753,8 +734,7 @@ func TestExtendAllocation(t *testing.T) {
 				},
 				expiration: mockExpiration,
 				value:      0.1,
-				poolFunds:  []float64{7},
-				poolCount:  []int{5},
+				poolFunds:  7.0,
 			},
 		},
 		{
@@ -769,8 +749,7 @@ func TestExtendAllocation(t *testing.T) {
 				},
 				expiration: mockExpiration,
 				value:      0.1,
-				poolFunds:  []float64{0.0, 0.0},
-				poolCount:  []int{1, 3},
+				poolFunds:  0.0,
 			},
 			want: want{
 				err:    true,
@@ -879,8 +858,9 @@ func TestTransferAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		var sa = StorageAllocation{
-			Owner: mockOldOwner,
-			ID:    p.info.AllocationId,
+			Owner:     mockOldOwner,
+			ID:        p.info.AllocationId,
+			WritePool: currency.Coin(0.0),
 		}
 		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID),
@@ -888,30 +868,6 @@ func TestTransferAllocation(t *testing.T) {
 				*s = sa
 				return true
 			})).Return(nil).Once()
-
-		var aps = newAllocationPools()
-		if p.existingWPForAllocation || p.existingNoiseWPools > 0 {
-			for i := 0; i < p.existingNoiseWPools; i++ {
-				aps.Pools[mockNotOwner+strconv.Itoa(i)] = new(allocationPool)
-			}
-			if p.existingWPForAllocation {
-				aps.Pools[owner] = new(allocationPool)
-			}
-			balances.On("GetTrieNode",
-				allocationPoolKey(allocationId), newAllocationPools(),
-			).Return(nil).Maybe()
-		} else {
-			balances.On(
-				"GetTrieNode", allocationPoolKey(allocationId), newAllocationPools(),
-			).Return(util.ErrValueNotPresent).Maybe()
-		}
-
-		balances.On(
-			"InsertTrieNode",
-			allocationPoolKey(allocationId),
-			mock.MatchedBy(func(_ *allocationPools) bool {
-				return true
-			})).Return("", nil).Once()
 
 		balances.On(
 			"InsertTrieNode",
