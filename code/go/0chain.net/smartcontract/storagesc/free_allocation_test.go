@@ -443,7 +443,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("InsertTrieNode",
 			readPoolKey(ssc.ID, p.marker.Recipient),
 			mock.MatchedBy(func(rp *readPool) bool {
-				return rp.OwnerBalance == currency.Coin(readPoolLocked) || rp.VisitorBalance == currency.Coin(readPoolLocked)
+				return rp.Balance == currency.Coin(readPoolLocked)
 			})).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}

@@ -30,12 +30,10 @@ func readPoolKey(scKey, clientID string) datastore.Key {
 // one for the allocations that the client (client_id) owns
 // and the other for the allocations that the client (client_id) doesn't own
 type readPool struct {
-	OwnerBalance   currency.Coin `json:"owner_balance"`
-	VisitorBalance currency.Coin `json:"visitor_balance"`
+	Balance currency.Coin `json:"balance"`
 }
 
 type readPoolLockRequest struct {
-	IsOwner    bool   `json:"is_owner"`
 	TargetId   string `json:"target_id,omitempty"`
 	MintTokens bool   `json:"mint_tokens,omitempty"`
 }
@@ -45,15 +43,6 @@ func (lr *readPoolLockRequest) decode(input []byte) (err error) {
 		return
 	}
 	return // ok
-}
-
-// unlock request used to unlock all tokens of a read pool
-type readPoolUnlockRequest struct {
-	IsOwner bool `json:"is_owner"`
-}
-
-func (ur *readPoolUnlockRequest) decode(input []byte) error {
-	return json.Unmarshal(input, ur)
 }
 
 // The readPoolRedeem represents part of response of read markers redeeming.
@@ -67,7 +56,7 @@ type readPoolRedeem struct {
 func (rp *readPool) Encode() []byte {
 	var b, err = json.Marshal(rp)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err) // must never happen
 	}
 	return b
 }
@@ -77,22 +66,18 @@ func (rp *readPool) Decode(p []byte) error {
 	return json.Unmarshal(p, rp)
 }
 
-func (rp *readPool) add(isOwner bool, balance currency.Coin) {
-	if isOwner {
-		rp.OwnerBalance += balance
-		return
+func (rp *readPool) add(coin currency.Coin) error {
+	sum, err := currency.AddCoin(rp.Balance, coin)
+	if err != nil {
+		return err
 	}
-	rp.VisitorBalance += balance
+	rp.Balance = sum
+	return nil
 }
 
-func (rp *readPool) drain(isOwner bool) (diff currency.Coin) {
-	if isOwner {
-		diff = rp.OwnerBalance
-		rp.OwnerBalance = 0
-		return
-	}
-	diff = rp.VisitorBalance
-	rp.VisitorBalance = 0
+func (rp *readPool) drain() (diff currency.Coin) {
+	diff = rp.Balance
+	rp.Balance = 0
 	return
 }
 
@@ -123,10 +108,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
 	var moved currency.Coin
-	currentBalance := rp.OwnerBalance
-	if !isOwner {
-		currentBalance = rp.VisitorBalance
-	}
+	currentBalance := rp.Balance
 
 	if currentBalance == 0 {
 		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
@@ -144,11 +126,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 		Balance: moved,
 	})
 
-	if isOwner {
-		rp.OwnerBalance = currentBalance
-	} else {
-		rp.VisitorBalance = currentBalance
-	}
+	rp.Balance = currentBalance
 
 	err = sp.DistributeRewards(value, blobID, spenum.Blobber, balances)
 	if err != nil {
@@ -193,6 +171,11 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 			"insufficient amount to lock")
 	}
 
+	if txn.Value <= 0 {
+		return "", common.NewError("read_pool_lock_failed",
+			"invalid amount to lock [ensure token > 0].")
+	}
+
 	var req readPoolLockRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
@@ -231,8 +214,10 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 		}
 	}
 
-	//adjust balance
-	rp.add(req.IsOwner, currency.Coin(txn.Value))
+	//add to read pool balance
+	if err = rp.add(currency.Coin(txn.Value)); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
+	}
 
 	// save read pool
 	if err = rp.save(ssc.ID, req.TargetId, balances); err != nil {
@@ -244,18 +229,13 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 
 // unlock tokens if expired
 func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
-	var req readPoolUnlockRequest
-	if err := req.decode(input); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
-	}
-
 	rp, err := ssc.getReadPool(txn.ClientID, balances)
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", "no read pool found for clientID to unlock token")
 	}
 
 	// adjust balance
-	balance := rp.drain(req.IsOwner)
+	balance := rp.drain()
 	// transfer adjusted balance to client
 	transfer := state.NewTransfer(ssc.ID, txn.ClientID, balance)
 	if err = balances.AddTransfer(transfer); err != nil {
@@ -263,7 +243,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, in
 	}
 
 	// save read pool
-	if err := rp.save(ssc.ID, txn.ClientID, balances); err != nil {
+	if err = rp.save(ssc.ID, txn.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
