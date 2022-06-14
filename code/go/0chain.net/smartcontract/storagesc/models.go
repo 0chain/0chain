@@ -727,6 +727,26 @@ type StorageAllocation struct {
 	Name string `json:"name"`
 }
 
+func (sa *StorageAllocation) cost() currency.Coin {
+	var cost currency.Coin
+	for _, ba := range sa.BlobberAllocs {
+		cost += currency.Coin(ba.Size) * ba.Terms.WritePrice
+	}
+	return cost
+}
+
+func (sa *StorageAllocation) unusedCost() currency.Coin {
+	var cost currency.Coin
+	for _, ba := range sa.BlobberAllocs {
+		totalCost := currency.Coin(ba.Size) * ba.Terms.WritePrice
+		left := totalCost - ba.Spent
+		if left > 0 {
+			cost += left
+		}
+	}
+	return cost
+}
+
 func (sa *StorageAllocation) addToWritePool(
 	txn *transaction.Transaction,
 	mintNewTokens bool,
