@@ -71,8 +71,8 @@ func (ps *PartialState) Read(ctx context.Context, key datastore.Key) error {
 }
 
 /*GetScore - score for write*/
-func (ps *PartialState) GetScore() int64 {
-	return 0
+func (ps *PartialState) GetScore() (int64, error) {
+	return 0, nil
 }
 
 /*Write - store read */

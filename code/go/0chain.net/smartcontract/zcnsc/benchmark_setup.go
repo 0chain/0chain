@@ -42,7 +42,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	if err != nil {
 		panic(err)
 	}
-	gn.MinLockAmount = config.SmartContractConfig.GetInt64(benchmark.ZcnMinLockAmount)
+	gn.MinLockAmount = currency.Coin(config.SmartContractConfig.GetUint64(benchmark.ZcnMinLockAmount))
 	gn.MinMintAmount, err = currency.Float64ToCoin(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
 	if err != nil {
 		panic(err)

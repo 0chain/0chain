@@ -14,6 +14,8 @@ import (
 
 	"0chain.net/core/logging"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -35,6 +37,7 @@ const (
 )
 
 func init() {
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	logging.InitLogging("development", "")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
@@ -288,10 +291,13 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 		if wf == nil || wt == nil {
 			panic("expected non nil wallets")
 		}
-		value := prng.Int63n(wf.Balance) + 1
+		value, err := currency.Int64ToCoin(prng.Int63n(wf.Balance) + 1)
+		if err != nil {
+			panic(err)
+		}
 		txn := wf.CreateSendTransaction(wt.ClientID, value, "", 0)
 		data := common.ToMsgpack(txn)
-		err := ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
+		err = ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
 		if err != nil {
 			panic(err)
 		}

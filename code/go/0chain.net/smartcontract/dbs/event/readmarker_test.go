@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 )
 
 func init() {
@@ -19,7 +19,7 @@ func init() {
 }
 
 func TestReadMarkersPaginated(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),

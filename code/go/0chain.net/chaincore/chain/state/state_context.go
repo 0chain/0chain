@@ -258,9 +258,10 @@ func (sc *StateContext) Validate() error {
 			}
 		}
 	}
-	totalValue := currency.Coin(sc.txn.Value)
-	if config.DevConfiguration.IsFeeEnabled {
-		totalValue, err = currency.AddInt64(totalValue, sc.txn.Fee)
+
+	totalValue := sc.txn.Value
+	if config.Configuration().ChainConfig.IsFeeEnabled() {
+		totalValue, err = currency.AddCoin(totalValue, sc.txn.Fee)
 		if err != nil {
 			return err
 		}

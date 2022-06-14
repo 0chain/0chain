@@ -45,6 +45,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           round: 100
+          allow_beyond: true
           timeout: "5m"
       - stop: ["miner-1", "miner-2", "miner-3"]
       - magic_block:

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
 )
 
 func TestZcnPool_Encode(t *testing.T) {
@@ -102,56 +101,6 @@ func TestZcnPool_Decode(t *testing.T) {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want, p)
-		})
-	}
-}
-
-func TestZcnPool_DigPool_Err(t *testing.T) {
-	t.Parallel()
-
-	txn := transaction.Transaction{}
-	txn.Value = -1
-
-	type fields struct {
-		TokenPool TokenPool
-	}
-	type args struct {
-		id  string
-		txn *transaction.Transaction
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *state.Transfer
-		want1   string
-		wantErr bool
-	}{
-		{
-			name:    "ERR",
-			args:    args{txn: &txn},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			p := &ZcnPool{
-				TokenPool: tt.fields.TokenPool,
-			}
-			got, got1, err := p.DigPool(tt.args.id, tt.args.txn)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DigPool() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DigPool() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("DigPool() got1 = %v, want %v", got1, tt.want1)
-			}
 		})
 	}
 }

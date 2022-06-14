@@ -41,8 +41,8 @@ func (t *TransactionSummary) Read(ctx context.Context, key datastore.Key) error 
 }
 
 /*GetScore - score for write*/
-func (t *TransactionSummary) GetScore() int64 {
-	return t.Round
+func (t *TransactionSummary) GetScore() (int64, error) {
+	return t.Round, nil
 }
 
 /*Write - store read */

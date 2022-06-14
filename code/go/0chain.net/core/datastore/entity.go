@@ -20,7 +20,7 @@ type Entity interface {
 	GetEntityMetadata() EntityMetadata
 	SetKey(key Key)
 	GetKey() Key
-	GetScore() int64
+	GetScore() (int64, error)
 	ComputeProperties() error
 	Validate(ctx context.Context) error
 	Read(ctx context.Context, key Key) error

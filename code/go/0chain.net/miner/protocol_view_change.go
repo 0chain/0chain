@@ -14,7 +14,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
@@ -586,7 +585,7 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 // NextViewChangeOfBlock returns next view change value based on given block.
 func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
 
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return lfb.LatestFinalizedMagicBlockRound, nil
 	}
 
@@ -894,7 +893,7 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // previous MB and corresponding DKG. The previous MB can be useless in
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return
 	}
 

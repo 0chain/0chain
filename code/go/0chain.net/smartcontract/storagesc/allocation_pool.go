@@ -176,7 +176,7 @@ func newAllocationPool(
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     currency.Coin(t.Value),
+			Amount:     t.Value,
 		}); err != nil {
 			return nil, fmt.Errorf("minting tokens for write pool: %v", err)
 		}
@@ -189,7 +189,10 @@ func newAllocationPool(
 	// set fields
 	ap.AllocationID = alloc.ID
 	ap.ExpireAt = until
-	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
+	ap.Blobbers, err = makeCopyAllocationBlobbers(*alloc, t.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error creating blobber pools: %v", err)
+	}
 
 	// add the allocation pool
 	alloc.addWritePoolOwner(alloc.Owner)

@@ -70,6 +70,29 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
+	updateAllocVal, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMinAllocSize))
+	if err != nil {
+		panic(err)
+	}
+	maxIndividualFreeAlloc, err := currency.ParseZCN(viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation))
+	if err != nil {
+		panic(err)
+	}
+
+	rpMinLock, err := currency.ParseZCN(viper.GetFloat64(bk.StorageReadPoolMinLock))
+	if err != nil {
+		panic(err)
+	}
+
+	wpMinLock, err := currency.ParseZCN(viper.GetFloat64(bk.StorageWritePoolMinLock))
+	if err != nil {
+		panic(err)
+	}
+
+	spMinLock, err := currency.ParseZCN(viper.GetFloat64(bk.StorageStakePoolMinLock))
+	if err != nil {
+		panic(err)
+	}
 	var blobbers []string
 	for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
 		blobbers = append(blobbers, getMockBlobberId(i))
@@ -167,7 +190,7 @@ func BenchmarkTests(
 				},
 				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
-				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
+				Value:        currency.Coin(100 * viper.GetUint64(bk.StorageMinAllocSize)),
 			},
 			input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
@@ -195,7 +218,7 @@ func BenchmarkTests(
 				},
 				ClientID:     data.Clients[0],
 				CreationDate: creationTime - 1,
-				Value:        viper.GetInt64(bk.StorageMinAllocSize) * 1e10,
+				Value:        updateAllocVal,
 			},
 			input: func() []byte {
 				uar := updateAllocationRequest{
@@ -276,7 +299,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[1],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
-				Value:        int64(viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation) * 1e10),
+				Value:        maxIndividualFreeAlloc,
 			},
 			input: func() []byte {
 				var request = struct {
@@ -326,7 +349,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[1],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
-				Value:        int64(viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation) * 1e10),
+				Value:        maxIndividualFreeAlloc,
 			},
 			input: func() []byte {
 				var request = struct {
@@ -517,18 +540,12 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
+				Value:        rpMinLock,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
-			input: func() []byte {
-				lr := &readPoolLockRequest{
-					IsOwner: true,
-				}
-				bytes, _ := json.Marshal(lr)
-				return bytes
-			}(),
+			input: []byte{},
 		},
 		{
 			name:     "storage.read_pool_unlock",
@@ -537,17 +554,12 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value:        int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
+				Value:        rpMinLock,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 				CreationDate: benchWritePoolExpire(creationTime) + 1,
 			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&readPoolUnlockRequest{
-					IsOwner: true,
-				})
-				return bytes
-			}(),
+			input: []byte{},
 		},
 		// write pool
 		{
@@ -557,7 +569,7 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value:        int64(viper.GetFloat64(bk.StorageWritePoolMinLock) * 1e10),
+				Value:        wpMinLock,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
@@ -576,7 +588,7 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value: int64(viper.GetFloat64(bk.StorageReadPoolMinLock) * 1e10),
+				Value: rpMinLock,
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
 					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
@@ -603,7 +615,7 @@ func BenchmarkTests(
 			endpoint: ssc.stakePoolLock,
 			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
-				Value:        int64(viper.GetFloat64(bk.StorageStakePoolMinLock) * 1e10),
+				Value:        spMinLock,
 				CreationDate: creationTime,
 			},
 			input: func() []byte {
