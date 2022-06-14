@@ -1135,7 +1135,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg8 = "allocation_creation_failed: " +
 			"not enough tokens to honor the min lock demand (0 < 270)"
 		errMsg9 = "allocation_creation_failed: " +
-			"no tokens to lock"
+			"client balance check failed: no tokens to lock"
 	)
 
 	var (
