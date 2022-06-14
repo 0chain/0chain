@@ -42,7 +42,8 @@ func TestAddTransaction(t *testing.T) {
 }
 
 func SetupDatabase(t *testing.T) *EventDb {
-	access := dbs.DbAccess{
+
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
