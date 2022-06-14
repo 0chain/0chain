@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -160,13 +161,10 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 //  400:
 func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *http.Request) {
 	var (
-		urlsStr            = r.URL.Query().Get("blobber_urls")
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
+		urlsStr = r.URL.Query().Get("blobber_urls")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -231,13 +229,10 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 //  400:
 func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
 	var (
-		allocData          = r.URL.Query().Get("free_allocation_data")
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
+		allocData = r.URL.Query().Get("free_allocation_data")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -318,13 +313,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //  200:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
-	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-	)
-
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -353,7 +342,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit event.LimitData) ([]string, error) {
+func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit event.Pagination) ([]string, error) {
 	var sa = request.storageAllocation()
 	var conf *Config
 	var err error
@@ -831,13 +820,7 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-	)
-
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1097,13 +1080,10 @@ type ChallengesResponse struct {
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	var (
-		blobberID          = r.URL.Query().Get("blobber")
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
+		blobberID = r.URL.Query().Get("blobber")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1202,14 +1182,11 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 //  500:
 func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
-		allocationID       = r.URL.Query().Get("allocation_id")
-		filename           = r.URL.Query().Get("filename")
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
+		allocationID = r.URL.Query().Get("allocation_id")
+		filename     = r.URL.Query().Get("filename")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1313,14 +1290,11 @@ func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *htt
 //  500:
 func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
-		allocationID       = r.URL.Query().Get("allocation_id")
-		authTicket         = r.URL.Query().Get("auth_ticket")
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
+		allocationID = r.URL.Query().Get("allocation_id")
+		authTicket   = r.URL.Query().Get("auth_ticket")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1414,7 +1388,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := getBlobbersForRequest(req, edb, balances, event.LimitData{})
+	blobbers, err := getBlobbersForRequest(req, edb, balances, event.Pagination{})
 	if err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
@@ -1477,13 +1451,8 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //  500:
 func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client")
-	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1566,13 +1535,10 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request) {
 
 	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-		transactionHash    = r.URL.Query().Get("transaction_hash")
+		transactionHash = r.URL.Query().Get("transaction_hash")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1617,13 +1583,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 //  400:
 //  500:
 func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Request) {
-	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-	)
-
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1672,14 +1632,11 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //  500:
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID           = r.URL.Query().Get("client_id")
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		blockHash          = r.URL.Query().Get("block_hash")
-		isDescendingString = r.URL.Query().Get("is_descending")
+		clientID  = r.URL.Query().Get("client_id")
+		blockHash = r.URL.Query().Get("block_hash")
 	)
 
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1806,13 +1763,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 //  200: storageNodeResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
-	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-	)
-
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1895,13 +1846,7 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 		maxLatitude = MaxLatitude
 	}
 
-	var (
-		offsetString       = r.URL.Query().Get("offset")
-		limitString        = r.URL.Query().Get("limit")
-		isDescendingString = r.URL.Query().Get("is_descending")
-	)
-
-	limit, err := getOffsetLimitOrderParam(offsetString, limitString, isDescendingString)
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -2082,8 +2027,12 @@ func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, e
 	return
 }
 
-func getOffsetLimitOrderParam(offsetString, limitString, sortString string) (event.LimitData, error) {
+func getOffsetLimitOrderParam(values url.Values) (event.Pagination, error) {
 	var (
+		offsetString       = values.Get("offset")
+		limitString        = values.Get("limit")
+		isDescendingString = values.Get("is_descending")
+
 		limit        = event.DefaultQueryLimit
 		offset       = 0
 		isDescending = false
@@ -2093,27 +2042,27 @@ func getOffsetLimitOrderParam(offsetString, limitString, sortString string) (eve
 	if offsetString != "" {
 		offset, err = strconv.Atoi(offsetString)
 		if err != nil {
-			return event.LimitData{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("offset parameter is not valid")
+			return event.Pagination{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("offset parameter is not valid")
 		}
 	}
 
 	if limitString != "" {
 		limit, err = strconv.Atoi(limitString)
 		if err != nil {
-			return event.LimitData{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("limit parameter is not valid")
+			return event.Pagination{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("limit parameter is not valid")
 		}
 	}
 
-	if sortString != "" {
-		switch sortString {
+	if isDescendingString != "" {
+		switch isDescendingString {
 		case "desc":
 			isDescending = true
 		case "asc":
 			isDescending = false
 		default:
-			return event.LimitData{Limit: event.DefaultQueryLimit}, err
+			return event.Pagination{Limit: event.DefaultQueryLimit}, err
 		}
 	}
 
-	return event.LimitData{Offset: offset, Limit: limit, IsDescending: isDescending}, nil
+	return event.Pagination{Offset: offset, Limit: limit, IsDescending: isDescending}, nil
 }

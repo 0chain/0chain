@@ -35,7 +35,7 @@ func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, a
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit LimitData) ([]ReadMarker, error) {
+func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit Pagination) ([]ReadMarker, error) {
 	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
 		Where(query).Offset(limit.Offset).Limit(limit.Limit)

@@ -16,7 +16,7 @@ func (edb *EventDb) addError(err Error) error {
 	return edb.Store.Get().Create(&err).Error
 }
 
-func (edb *EventDb) GetErrorByTransactionHash(transactionID string, limit LimitData) ([]Error, error) {
+func (edb *EventDb) GetErrorByTransactionHash(transactionID string, limit Pagination) ([]Error, error) {
 	var transactionErrors []Error
 	return transactionErrors, edb.Store.Get().Model(&Error{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},

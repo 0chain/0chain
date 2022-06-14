@@ -83,38 +83,38 @@ func TestFindTransactionByHash(t *testing.T) {
 	})
 
 	t.Run("GetTransactionByClientId", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", LimitData{0, 10, true})
+		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", Pagination{0, 10, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClient", LimitData{0, 10, true})
+		gotTrs, err = eventDb.GetTransactionByClientId("someClient", Pagination{0, 10, true})
 		require.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", LimitData{0, 5, true})
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", Pagination{0, 5, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", LimitData{5, 5, true})
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", Pagination{5, 5, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 
 	})
 
 	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", LimitData{0, 10, true})
+		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", Pagination{0, 10, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", LimitData{0, 10, true})
+		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", Pagination{0, 10, true})
 		assert.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", LimitData{0, 5, true})
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", Pagination{0, 5, true})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", LimitData{5, 5, true})
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", Pagination{5, 5, true})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 	})

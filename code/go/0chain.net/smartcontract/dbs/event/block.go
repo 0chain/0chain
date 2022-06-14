@@ -1,8 +1,9 @@
 package event
 
 import (
-	"gorm.io/gorm/clause"
 	"time"
+
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
@@ -36,7 +37,7 @@ func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
 	return block, res.Error
 }
 
-func (edb *EventDb) GetBlocks(limit LimitData) ([]Block, error) {
+func (edb *EventDb) GetBlocks(limit Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},

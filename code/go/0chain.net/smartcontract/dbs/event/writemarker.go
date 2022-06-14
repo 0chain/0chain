@@ -60,7 +60,7 @@ func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
 	return total, edb.Store.Get().Model(&WriteMarker{}).Where("allocation_id = ?", allocationID).Count(&total).Error
 }
 
-func (edb *EventDb) GetWriteMarkers(limit LimitData) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkers(limit Pagination) ([]WriteMarker, error) {
 	var wm []WriteMarker
 	return wm, edb.Get().Model(&WriteMarker{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -68,7 +68,7 @@ func (edb *EventDb) GetWriteMarkers(limit LimitData) ([]WriteMarker, error) {
 	}).Scan(&wm).Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit LimitData) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
@@ -79,7 +79,7 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit Li
 	return wms, result.Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit LimitData) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).

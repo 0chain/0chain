@@ -3,8 +3,9 @@ package event
 import (
 	"errors"
 	"fmt"
-	"gorm.io/gorm/clause"
 	"time"
+
+	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
 
@@ -75,7 +76,7 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string, limit LimitData) ([]Allocation, error) {
+func (edb EventDb) GetClientsAllocation(clientID string, limit Pagination) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
 
 	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).

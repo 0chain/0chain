@@ -1,13 +1,14 @@
 package benchmark
 
 import (
-	"0chain.net/core/common"
 	"encoding/json"
 	"log"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/core/common"
 
 	"0chain.net/smartcontract/dbs/event"
 

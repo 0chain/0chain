@@ -1,9 +1,10 @@
 package state
 
 import (
-	"0chain.net/core/common"
 	"fmt"
 	"sync"
+
+	"0chain.net/core/common"
 
 	"0chain.net/chaincore/currency"
 
@@ -121,22 +122,6 @@ type GetNow func() common.Timestamp
 type TimedQueryStateContext struct {
 	StateContextI
 	now GetNow
-}
-
-func (t TimedQueryStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	return t.StateContextI.GetTrieNode(key, v)
-}
-
-func (t TimedQueryStateContext) GetBlock() *block.Block {
-	return t.StateContextI.GetBlock()
-}
-
-func (t TimedQueryStateContext) GetLatestFinalizedBlock() *block.Block {
-	return t.StateContextI.GetLatestFinalizedBlock()
-}
-
-func (t TimedQueryStateContext) GetEventDB() *event.EventDb {
-	return t.StateContextI.GetEventDB()
 }
 
 func (t TimedQueryStateContext) Now() common.Timestamp {

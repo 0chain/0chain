@@ -1,11 +1,12 @@
 package event
 
 import (
-	"0chain.net/core/common"
 	"errors"
 	"fmt"
-	"gorm.io/gorm/clause"
 	"time"
+
+	"0chain.net/core/common"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
@@ -123,7 +124,7 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetBlobbers(limit LimitData) ([]Blobber, error) {
+func (edb *EventDb) GetBlobbers(limit Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
@@ -141,7 +142,7 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 }
 
 func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit LimitData,
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit Pagination,
 ) ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().
@@ -205,7 +206,7 @@ type AllocationQuery struct {
 	NumberOfBlobbers  int
 }
 
-func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data LimitData) ([]string, error) {
+func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data Pagination) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("base_url IN ?", urls).Limit(data.Limit).Offset(data.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -215,7 +216,7 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data LimitData) ([]stri
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit LimitData, now common.Timestamp) ([]string, error) {
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit Pagination, now common.Timestamp) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)

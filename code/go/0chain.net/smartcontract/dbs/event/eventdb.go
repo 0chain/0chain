@@ -12,7 +12,7 @@ import (
 const DefaultQueryTimeout = 5 * time.Second
 const DefaultQueryLimit = 20
 
-type LimitData struct {
+type Pagination struct {
 	Offset       int
 	Limit        int
 	IsDescending bool
