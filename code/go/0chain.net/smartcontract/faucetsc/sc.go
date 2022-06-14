@@ -91,12 +91,22 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	if gn.PourAmount > smartContractBalance {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
 	}
-	if currency.Coin(gn.PourAmount)+un.Used > gn.PeriodicLimit {
+
+	totalAmount, err := currency.AddCoin(gn.PourAmount, un.Used)
+	if err != nil {
+		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus previous amount (%v) is not a valid currency. error: %v", gn.PourAmount, un.Used, err))
+	}
+	if totalAmount > gn.PeriodicLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
 				t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
 	}
-	if currency.Coin(gn.PourAmount)+gn.Used > gn.GlobalLimit {
+
+	totalGAmount, err := currency.AddCoin(gn.PourAmount, gn.Used)
+	if err != nil {
+		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) is not a valid currency. error: %v", gn.PourAmount, gn.Used, err))
+	}
+	if totalGAmount > gn.GlobalLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
 				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
@@ -146,8 +156,8 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		var pourAmount = gn.PourAmount
-		if t.Value > 0 && t.Value < int64(gn.MaxPourAmount) {
-			pourAmount = currency.Coin(t.Value)
+		if t.Value > 0 && t.Value < gn.MaxPourAmount {
+			pourAmount = t.Value
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
@@ -175,9 +185,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	if err != nil {
 		return "", err
 	}
-	if clientBalance >= currency.Coin(t.Value) {
+	if clientBalance >= t.Value {
 		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
-		transfer := state.NewTransfer(t.ClientID, t.ToClientID, currency.Coin(t.Value))
+		transfer := state.NewTransfer(t.ClientID, t.ToClientID, t.Value)
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", err
 		}

@@ -103,7 +103,7 @@ func emitAddOrOverwriteValidator(
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
 		Reward:       sp.Reward,
-		TotalStake:   int64(sp.stake()),
+		TotalStake:   sp.stake(),
 	})
 	if err != nil {
 		return fmt.Errorf("marshalling validator: %v", err)

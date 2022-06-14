@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/chaincore/currency"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -15,10 +16,10 @@ type Transaction struct {
 	ClientId          string
 	ToClientId        string
 	TransactionData   string
-	Value             int64
+	Value             currency.Coin
 	Signature         string
 	CreationDate      int64
-	Fee               int64
+	Fee               currency.Coin
 	TransactionType   int
 	TransactionOutput string
 	OutputHash        string

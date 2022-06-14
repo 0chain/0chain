@@ -119,20 +119,41 @@ func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	return
 }
 
-func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPools {
+func makeCopyAllocationBlobbers(alloc StorageAllocation, value currency.Coin) (blobberPools, error) {
 	var bps blobberPools
-	var total float64
-	for _, b := range alloc.BlobberAllocs {
-		total += float64(b.Terms.WritePrice)
+	var total currency.Coin
+	fValue, err := value.Float64()
+	if err != nil {
+		return nil, err
 	}
 	for _, b := range alloc.BlobberAllocs {
-		var ratio = float64(b.Terms.WritePrice) / total
+		total, err = currency.AddCoin(total, b.Terms.WritePrice)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fTotal, err := total.Float64()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, b := range alloc.BlobberAllocs {
+		fBlobWP, err := b.Terms.WritePrice.Float64()
+		if err != nil {
+			return nil, err
+		}
+		ratio := fBlobWP / fTotal
+		balance, err := currency.Float64ToCoin(fValue * ratio)
+		if err != nil {
+			return nil, err
+		}
 		bps.add(&blobberPool{
-			Balance:   currency.Coin(float64(value) * ratio),
+			Balance:   balance,
 			BlobberID: b.BlobberID,
 		})
 	}
-	return bps
+	return bps, nil
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
@@ -171,10 +192,14 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 		wp = new(writePool)
 	}
 
+	bps, err := makeCopyAllocationBlobbers(*alloc, txn.Value)
+	if err != nil {
+		return fmt.Errorf("error creating blobber pools: %v", err)
+	}
 	var ap = allocationPool{
 		AllocationID: alloc.ID,
 		ExpireAt:     alloc.Until(),
-		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
+		Blobbers:     bps,
 	}
 	ap.TokenPool.ID = txn.Hash
 	alloc.addWritePoolOwner(alloc.Owner)
@@ -205,7 +230,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if t.Value < int64(mld) || t.Value <= 0 {
+	if t.Value < mld || t.Value == 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
 	}
@@ -260,11 +285,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"missing allocation ID in request")
 	}
 
-	iTxnVal, err := currency.Int64ToCoin(t.Value)
-	if err != nil {
-		return "", err
-	}
-	if iTxnVal < conf.MinLock || t.Value <= 0 {
+	if t.Value < conf.MinLock || t.Value == 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
@@ -304,21 +325,41 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 					lr.BlobberID, lr.AllocationID))
 		}
 		bps = append(bps, &blobberPool{
-			Balance:   currency.Coin(t.Value),
+			Balance:   t.Value,
 			BlobberID: lr.BlobberID,
 		})
 	} else {
 		// divide depending write price range for all blobbers of the
 		// allocation
-		var total float64 // total write price
+		fTxnVal, err := t.Value.Float64()
+		if err != nil {
+			return "", common.NewErrorf("write_pool_lock_failed",
+				"converting transaction value to float64: %v", err)
+		}
+		var total currency.Coin // total write price
 		for _, b := range alloc.BlobberAllocs {
-			total += float64(b.Terms.WritePrice)
+			total += b.Terms.WritePrice
+		}
+		fTotal, err := total.Float64()
+		if err != nil {
+			return "", common.NewErrorf("write_pool_lock_failed",
+				"converting total write price to float64: %v", err)
 		}
 		// calculate (divide)
 		for _, b := range alloc.BlobberAllocs {
-			var ratio = float64(b.Terms.WritePrice) / total
+			fBlobWP, err := b.Terms.WritePrice.Float64()
+			if err != nil {
+				return "", common.NewErrorf("write_pool_lock_failed",
+					"converting blobber write price to float64: %v", err)
+			}
+			var ratio = fBlobWP / fTotal
+			bal, err := currency.Float64ToCoin(fTxnVal * ratio)
+			if err != nil {
+				return "", common.NewErrorf("write_pool_lock_failed",
+					"converting blobber pool balance to coin: %v", err)
+			}
 			bps.add(&blobberPool{
-				Balance:   currency.Coin(float64(t.Value) * ratio),
+				Balance:   bal,
 				BlobberID: b.BlobberID,
 			})
 		}

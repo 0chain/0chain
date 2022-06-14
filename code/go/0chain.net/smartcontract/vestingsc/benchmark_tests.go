@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -56,6 +58,10 @@ func BenchmarkTests(
 
 	var vsc = VestingSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
+	}
+	vestingMinLock, err := currency.ParseZCN(viper.GetFloat64(bk.VestingMinLock))
+	if err != nil {
+		panic(err)
 	}
 	vsc.setSC(vsc.SmartContract, &smartcontract.BCContext{})
 	var tests = []BenchTest{
@@ -109,7 +115,7 @@ func BenchmarkTests(
 			endpoint: vsc.add,
 			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
-				Value:        int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
+				Value:        vestingMinLock,
 				CreationDate: creationTime,
 			},
 			input: func() []byte {

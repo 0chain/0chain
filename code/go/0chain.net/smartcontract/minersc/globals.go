@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/util"
@@ -413,6 +415,28 @@ func (gl *GlobalSettings) GetInt64(field GlobalSetting) (int64, error) {
 	value, ok := iValue.(int64)
 	if !ok {
 		return value, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
+	}
+	return value, nil
+}
+
+// GetCoin returns a global setting as an currency.Coin, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetCoin(field GlobalSetting) (currency.Coin, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
+	if !found {
+		return currency.Coin(viper.GetUint64(key)), nil
+	}
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.CurrencyCoin)
+	if err != nil {
+		return currency.Coin(viper.GetUint64(key)), nil
+	}
+	value, ok := iValue.(currency.Coin)
+	if !ok {
+		return value, fmt.Errorf("cannot convert key %s value %v to type currency.Coin", key, value)
 	}
 	return value, nil
 }

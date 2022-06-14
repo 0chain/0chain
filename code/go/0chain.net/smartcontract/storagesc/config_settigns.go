@@ -223,14 +223,13 @@ var (
 		"max_challenge_completion_time": {MaxChallengeCompletionTime, smartcontract.Duration},
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
-
-		"readpool.min_lock":        {ReadPoolMinLock, smartcontract.Int64},
+		"readpool.min_lock":             {ReadPoolMinLock, smartcontract.CurrencyCoin},
 
 		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
+		"stakepool.min_lock": {StakePoolMinLock, smartcontract.CurrencyCoin},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
@@ -389,6 +388,16 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 			conf.WritePool = &writePoolConfig{}
 		}
 		conf.WritePool.MinLock = change
+	case ReadPoolMinLock:
+		if conf.ReadPool == nil {
+			conf.ReadPool = &readPoolConfig{}
+		}
+		conf.ReadPool.MinLock = change
+	case StakePoolMinLock:
+		if conf.StakePool == nil {
+			conf.StakePool = &stakePoolConfig{}
+		}
+		conf.StakePool.MinLock = change
 	default:
 		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
@@ -402,16 +411,6 @@ func (conf *Config) setInt64(key string, change int64) error {
 		conf.MinAllocSize = change
 	case MinBlobberCapacity:
 		conf.MinBlobberCapacity = change
-	case ReadPoolMinLock:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
-		}
-		conf.ReadPool.MinLock = change
-	case StakePoolMinLock:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.MinLock = change
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
 	default:

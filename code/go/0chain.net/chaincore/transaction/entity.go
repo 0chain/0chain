@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"encoding/json"
 
 	"0chain.net/chaincore/client"
@@ -61,10 +63,10 @@ type Transaction struct {
 	ToClientID      string           `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         string           `json:"chain_id,omitempty" msgpack:"chid"`
 	TransactionData string           `json:"transaction_data" msgpack:"d"`
-	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
+	Value           currency.Coin    `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
-	Fee             int64            `json:"transaction_fee" msgpack:"f"`
+	Fee             currency.Coin    `json:"transaction_fee" msgpack:"f"`
 	Nonce           int64            `json:"transaction_nonce" msgpack:"n"`
 
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
@@ -73,10 +75,10 @@ type Transaction struct {
 	Status            int    `json:"transaction_status" msgpack:"sot"`
 }
 
-type TransactionFeeStats struct {
-	MaxFees  int64 `json:"max_fees"`
-	MeanFees int64 `json:"mean_fees"`
-	MinFees  int64 `json:"min_fees"`
+type FeeStats struct {
+	MaxFees  currency.Coin `json:"max_fees"`
+	MeanFees currency.Coin `json:"mean_fees"`
+	MinFees  currency.Coin `json:"min_fees"`
 }
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
@@ -109,7 +111,7 @@ func (t *Transaction) ValidateNonce() error {
 }
 
 // ValidateFee - Validate fee
-func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee int64) error {
+func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currency.Coin) error {
 	if t.TransactionData != "" {
 		var smartContractData smartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
@@ -163,18 +165,12 @@ func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) 
 
 /*ValidateWrtTimeForBlock - validate entityt w.r.t given time (as now) */
 func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Timestamp, validateSignature bool) error {
-	if t.Value < 0 {
-		return common.InvalidRequest("value must be greater than or equal to zero")
-	}
 	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
 		return common.InvalidRequest("to client id must be a hexadecimal hash")
 	}
-	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
-	if isFeeEnabled && t.Fee < 0 {
-		return common.InvalidRequest("fee must be greater than or equal to zero")
-	}
+
 	err := config.ValidChain(t.ChainID)
 	if err != nil {
 		return err
@@ -213,13 +209,12 @@ func (t *Transaction) Validate(ctx context.Context) error {
 }
 
 /*GetScore - score for write*/
-func (t *Transaction) GetScore() int64 {
-	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 
-	if isFeeEnabled {
-		return t.Fee
+func (t *Transaction) GetScore() (int64, error) {
+	if config.Configuration().ChainConfig.IsFeeEnabled() {
+		return t.Fee.Int64()
 	}
-	return 0
+	return 0, nil
 }
 
 /*Read - store read */
@@ -274,7 +269,7 @@ func (t *Transaction) HashData() string {
 	s.WriteString(":")
 	s.WriteString(t.ToClientID)
 	s.WriteString(":")
-	s.WriteString(strconv.FormatInt(t.Value, 10))
+	s.WriteString(strconv.FormatUint(uint64(t.Value), 10))
 	s.WriteString(":")
 	s.WriteString(encryption.Hash(t.TransactionData))
 	return s.String()
