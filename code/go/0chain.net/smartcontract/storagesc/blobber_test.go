@@ -520,7 +520,7 @@ func Test_flow_reward(t *testing.T) {
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 		//require.EqualValues(t, 149861540619, wpb2)
 		//require.EqualValues(t, 90422453, cpb2)
-		require.EqualValues(t, 149901100442, apb2)
+		require.EqualValues(t, 149960440177, apb2)
 		require.EqualValues(t, 98899558, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)
 
@@ -1112,8 +1112,10 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			wpb = alloc.WritePool
 			cpb = cp.Balance
 		)
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
 
-		require.EqualValues(t, wps, wpb+cpb)
+		require.EqualValues(t, wps, afterAlloc.WritePool+cp.Balance)
 
 		// until the end
 		alloc, err = ssc.getAllocation(allocID, balances)
