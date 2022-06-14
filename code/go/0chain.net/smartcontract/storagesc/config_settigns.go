@@ -39,10 +39,7 @@ const (
 	MinBlobberCapacity
 
 	ReadPoolMinLock
-
-	AllocationPoolMinLock
-	AllocationPoolMinLockPeriod
-	AllocationPoolMaxLockPeriod
+	WritePoolMinLock
 
 	StakePoolMinLock
 
@@ -130,11 +127,7 @@ var (
 		"min_blobber_capacity",
 
 		"readpool.min_lock",
-
-		"allocation_pool.min_lock",
-		"allocation_pool.min_lock_period",
-		"allocation_pool.max_lock_period",
-
+		"write_pool.min_lock",
 		"stakepool.min_lock",
 
 		"max_total_free_allocation",
@@ -224,13 +217,9 @@ var (
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
-		"readpool.min_lock": {ReadPoolMinLock, smartcontract.Int64},
-
-		"allocation_pool.min_lock":        {AllocationPoolMinLock, smartcontract.CurrencyCoin},
-		"allocation_pool.min_lock_period": {AllocationPoolMinLockPeriod, smartcontract.Duration},
-		"allocation_pool.max_lock_period": {AllocationPoolMaxLockPeriod, smartcontract.Duration},
-
-		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
+		"readpool.min_lock":   {ReadPoolMinLock, smartcontract.Int64},
+		"write_pool.min_lock": {WritePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock":  {StakePoolMinLock, smartcontract.Int64},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
@@ -384,11 +373,11 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.QualifyingStake = change
-	case AllocationPoolMinLock:
-		if conf.AllocationPool == nil {
-			conf.AllocationPool = &allocationPoolConfig{}
+	case WritePoolMinLock:
+		if conf.WritePool == nil {
+			conf.WritePool = &writePoolConfig{}
 		}
-		conf.AllocationPool.MinLock = change
+		conf.WritePool.MinLock = change
 	default:
 		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
@@ -462,16 +451,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
 		conf.MinOfferDuration = change
-	case AllocationPoolMinLockPeriod:
-		if conf.AllocationPool == nil {
-			conf.AllocationPool = &allocationPoolConfig{}
-		}
-		conf.AllocationPool.MinLockPeriod = change
-	case AllocationPoolMaxLockPeriod:
-		if conf.AllocationPool == nil {
-			conf.AllocationPool = &allocationPoolConfig{}
-		}
-		conf.AllocationPool.MaxLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
@@ -608,12 +587,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
 		return conf.ReadPool.MinLock
-	case AllocationPoolMinLock:
-		return conf.AllocationPool.MinLock
-	case AllocationPoolMinLockPeriod:
-		return conf.AllocationPool.MinLockPeriod
-	case AllocationPoolMaxLockPeriod:
-		return conf.AllocationPool.MaxLockPeriod
+	case WritePoolMinLock:
+		return conf.WritePool.MinLock
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
 	case MaxTotalFreeAllocation:

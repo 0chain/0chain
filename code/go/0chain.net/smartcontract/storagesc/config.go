@@ -38,10 +38,8 @@ type readPoolConfig struct {
 	MinLock int64 `json:"min_lock"`
 }
 
-type allocationPoolConfig struct {
-	MinLock       currency.Coin `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
+type writePoolConfig struct {
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type blockReward struct {
@@ -88,14 +86,13 @@ type Config struct {
 	// MaxChallengeCompletionTime is max time to complete a challenge.
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
 	// MinOfferDuration represents lower boundary of blobber's MaxOfferDuration.
-	MinOfferDuration      time.Duration `json:"min_offer_duration"`
-	MaxPoolsPerAllocation int           `json:"max_pools_per_allocation"`
+	MinOfferDuration time.Duration `json:"min_offer_duration"`
 	// MinBlobberCapacity allowed to register in the SC.
 	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
-	AllocationPool *allocationPoolConfig `json:"allocation_pool"`
+	WritePool *writePoolConfig `json:"allocation_pool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
@@ -180,10 +177,6 @@ func (sc *Config) validate() (err error) {
 	if sc.MaxBlobbersPerAllocation <= 0 {
 		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
 			sc.MaxBlobbersPerAllocation)
-	}
-	if sc.MaxPoolsPerAllocation < 0 {
-		return fmt.Errorf("negative max_pools_per_allocation: %v",
-			sc.MaxPoolsPerAllocation)
 	}
 	if sc.MinBlobberCapacity < 0 {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
@@ -356,7 +349,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
 	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
-	conf.MaxPoolsPerAllocation = scc.GetInt(pfx + "max_pools_per_allocation")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
@@ -377,15 +369,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
 	// write pool
-	conf.AllocationPool = new(allocationPoolConfig)
-	conf.AllocationPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "allocation_pool.min_lock"))
+	conf.WritePool = new(writePoolConfig)
+	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "allocation_pool.min_lock"))
 	if err != nil {
 		return nil, err
 	}
-	conf.AllocationPool.MinLockPeriod = scc.GetDuration(
-		pfx + "allocation_pool.min_lock_period")
-	conf.AllocationPool.MaxLockPeriod = scc.GetDuration(
-		pfx + "allocation_pool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)

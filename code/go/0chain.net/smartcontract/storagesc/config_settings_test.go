@@ -130,13 +130,9 @@ func TestUpdateSettings(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock": "10",
-
-					"writepool.min_lock":        "10",
-					"writepool.min_lock_period": "2m",
-					"writepool.max_lock_period": "8760h",
-
-					"stakepool.min_lock": "10",
+					"readpool.min_lock":   "10",
+					"write_pool.min_lock": "10",
+					"stakepool.min_lock":  "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -332,12 +328,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock": "10",
-
-					"writepool.min_lock":        "10",
-					"writepool.min_lock_period": "2m",
-					"writepool.max_lock_period": "8760h",
-
+					"readpool.min_lock":  "10",
 					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
@@ -414,13 +405,8 @@ func getConfField(conf Config, field string) interface{} {
 
 	case ReadPoolMinLock:
 		return conf.ReadPool.MinLock
-
-	case AllocationPoolMinLock:
-		return conf.AllocationPool.MinLock
-	case AllocationPoolMinLockPeriod:
-		return conf.AllocationPool.MinLockPeriod
-	case AllocationPoolMaxLockPeriod:
-		return conf.AllocationPool.MaxLockPeriod
+	case WritePoolMinLock:
+		return conf.WritePool.MinLock
 
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock

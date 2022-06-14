@@ -62,7 +62,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 	if err != nil {
 		return "", err
 	}
-	if iTxnVal < conf.AllocationPool.MinLock || txn.Value <= 0 {
+	if iTxnVal < conf.WritePool.MinLock || txn.Value <= 0 {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}

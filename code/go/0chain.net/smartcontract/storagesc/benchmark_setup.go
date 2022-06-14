@@ -835,10 +835,8 @@ func SetMockConfig(
 	conf.ReadPool = &readPoolConfig{
 		MinLock: int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
 	}
-	conf.AllocationPool = &allocationPoolConfig{
-		MinLock:       currency.Coin(viper.GetFloat64(sc.StorageAllocationPoolMinLock) * 1e10),
-		MinLockPeriod: viper.GetDuration(sc.StorageAllocationPoolMinLockPeriod),
-		MaxLockPeriod: viper.GetDuration(sc.StorageAllocationPoolMaxLockPeriod),
+	conf.WritePool = &writePoolConfig{
+		MinLock: currency.Coin(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
 	}
 	conf.OwnerId = viper.GetString(sc.FaucetOwner)
 	conf.StakePool = &stakePoolConfig{

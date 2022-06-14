@@ -113,13 +113,9 @@ smart_contracts:
     # users' read pool related configurations
     readpool:
       min_lock: 0.1 # tokens
-      min_lock_period: 1m
-      max_lock_period: 8760h
     # users' allocation pool related configurations
-    allocation_pool:
+    write_pool:
       min_lock: 0.1 # tokens
-      min_lock_period: 2m
-      max_lock_period: 8760h
     # stake pool configurations
     stakepool:
       # minimal lock for a delegate pool
@@ -162,7 +158,6 @@ smart_contracts:
     max_read_price: 100.0
     max_write_price: 100.0
     # min_write_price: 0.1
-    max_pools_per_allocation: 10
     max_blobbers_per_allocation: 40
     # allocation cancellation
     #

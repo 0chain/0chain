@@ -769,9 +769,6 @@ func TestExtendAllocation(t *testing.T) {
 				aBlobbers,
 				&tt.args.request,
 				false,
-				&Config{
-					MaxPoolsPerAllocation: confMaxAllowedPools,
-				},
 				balances,
 			)
 			if tt.want.err != (err != nil) {
