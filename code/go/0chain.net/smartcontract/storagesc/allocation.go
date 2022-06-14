@@ -976,7 +976,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, false, balances); err != nil {
+		if err = alloc.addToWritePool(txn, mintTokens, balances); err != nil {
 			return common.NewErrorf("allocation_extending_failed", "%v", err)
 		}
 	}

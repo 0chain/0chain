@@ -664,7 +664,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				mockSetValue(p.assigner),
 			).Return(nil).Once()
 		}
-
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
 
