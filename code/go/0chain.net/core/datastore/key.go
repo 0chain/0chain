@@ -43,8 +43,8 @@ func (k *IDField) Read(ctx context.Context, key string) error {
 }
 
 /*GetScore - abstract method for score when writing*/
-func (k *IDField) GetScore() int64 {
-	return 0
+func (k *IDField) GetScore() (int64, error) {
+	return 0, nil
 }
 
 /*Write - abstract method for memory store write */
@@ -68,8 +68,8 @@ func (nif *NOIDField) Read(ctx context.Context, key string) error {
 }
 
 /*GetScore - abstract method for score when writing*/
-func (nif *NOIDField) GetScore() int64 {
-	return 0
+func (nif *NOIDField) GetScore() (int64, error) {
+	return 0, nil
 }
 
 /*Write - abstract method for memory store write */

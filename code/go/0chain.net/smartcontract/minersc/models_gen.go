@@ -836,7 +836,11 @@ func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.BuildTag)
 	// string "TotalStaked"
 	o = append(o, 0xab, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x64)
-	o = msgp.AppendInt64(o, z.TotalStaked)
+	o, err = z.TotalStaked.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "TotalStaked")
+		return
+	}
 	// string "Delete"
 	o = append(o, 0xa6, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65)
 	o = msgp.AppendBool(o, z.Delete)
@@ -958,7 +962,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "TotalStaked":
-			z.TotalStaked, bts, err = msgp.ReadInt64Bytes(bts)
+			bts, err = z.TotalStaked.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalStaked")
 				return
@@ -1005,7 +1009,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + msgp.Int64Size + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
 	return
 }
 

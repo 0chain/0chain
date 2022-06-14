@@ -47,16 +47,14 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	if z.ReadPool == nil {
 		o = msgp.AppendNil(o)
 	} else {
-		// map header, size 3
+		// map header, size 1
 		// string "MinLock"
-		o = append(o, 0x83, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
-		o = msgp.AppendInt64(o, z.ReadPool.MinLock)
-		// string "MinLockPeriod"
-		o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
-		o = msgp.AppendDuration(o, z.ReadPool.MinLockPeriod)
-		// string "MaxLockPeriod"
-		o = append(o, 0xad, 0x4d, 0x61, 0x78, 0x4c, 0x6f, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
-		o = msgp.AppendDuration(o, z.ReadPool.MaxLockPeriod)
+		o = append(o, 0x81, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
+		o, err = z.ReadPool.MinLock.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "ReadPool", "MinLock")
+			return
+		}
 	}
 	// string "WritePool"
 	o = append(o, 0xa9, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
@@ -86,7 +84,11 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 		// map header, size 1
 		// string "MinLock"
 		o = append(o, 0x81, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
-		o = msgp.AppendInt64(o, z.StakePool.MinLock)
+		o, err = z.StakePool.MinLock.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "StakePool", "MinLock")
+			return
+		}
 	}
 	// string "ValidatorReward"
 	o = append(o, 0xaf, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
@@ -302,21 +304,9 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					}
 					switch msgp.UnsafeString(field) {
 					case "MinLock":
-						z.ReadPool.MinLock, bts, err = msgp.ReadInt64Bytes(bts)
+						bts, err = z.ReadPool.MinLock.UnmarshalMsg(bts)
 						if err != nil {
 							err = msgp.WrapError(err, "ReadPool", "MinLock")
-							return
-						}
-					case "MinLockPeriod":
-						z.ReadPool.MinLockPeriod, bts, err = msgp.ReadDurationBytes(bts)
-						if err != nil {
-							err = msgp.WrapError(err, "ReadPool", "MinLockPeriod")
-							return
-						}
-					case "MaxLockPeriod":
-						z.ReadPool.MaxLockPeriod, bts, err = msgp.ReadDurationBytes(bts)
-						if err != nil {
-							err = msgp.WrapError(err, "ReadPool", "MaxLockPeriod")
 							return
 						}
 					default:
@@ -406,7 +396,7 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					}
 					switch msgp.UnsafeString(field) {
 					case "MinLock":
-						z.StakePool.MinLock, bts, err = msgp.ReadInt64Bytes(bts)
+						bts, err = z.StakePool.MinLock.UnmarshalMsg(bts)
 						if err != nil {
 							err = msgp.WrapError(err, "StakePool", "MinLock")
 							return
@@ -611,7 +601,7 @@ func (z *Config) Msgsize() (s int) {
 	if z.ReadPool == nil {
 		s += msgp.NilSize
 	} else {
-		s += 1 + 8 + msgp.Int64Size + 14 + msgp.DurationSize + 14 + msgp.DurationSize
+		s += 1 + 8 + z.ReadPool.MinLock.Msgsize()
 	}
 	s += 10
 	if z.WritePool == nil {
@@ -623,7 +613,7 @@ func (z *Config) Msgsize() (s int) {
 	if z.StakePool == nil {
 		s += msgp.NilSize
 	} else {
-		s += 1 + 8 + msgp.Int64Size
+		s += 1 + 8 + z.StakePool.MinLock.Msgsize()
 	}
 	s += 16 + msgp.Float64Size + 13 + msgp.Float64Size + 25 + msgp.IntSize + 13 + z.MaxReadPrice.Msgsize() + 14 + z.MaxWritePrice.Msgsize() + 14 + z.MinWritePrice.Msgsize() + 25 + msgp.IntSize + 32 + msgp.IntSize + 23 + z.MaxTotalFreeAllocation.Msgsize() + 28 + z.MaxIndividualFreeAllocation.Msgsize() + 23 + z.FreeAllocationSettings.Msgsize() + 17 + msgp.BoolSize + 27 + msgp.IntSize + 23 + msgp.IntSize + 24 + msgp.Float64Size + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 13 + msgp.IntSize + 10 + msgp.Float64Size + 12
 	if z.BlockReward == nil {
@@ -888,18 +878,16 @@ func (z *freeAllocationSettings) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z readPoolConfig) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *readPoolConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 1
 	// string "MinLock"
-	o = append(o, 0x83, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
-	o = msgp.AppendInt64(o, z.MinLock)
-	// string "MinLockPeriod"
-	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
-	o = msgp.AppendDuration(o, z.MinLockPeriod)
-	// string "MaxLockPeriod"
-	o = append(o, 0xad, 0x4d, 0x61, 0x78, 0x4c, 0x6f, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
-	o = msgp.AppendDuration(o, z.MaxLockPeriod)
+	o = append(o, 0x81, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
+	o, err = z.MinLock.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MinLock")
+		return
+	}
 	return
 }
 
@@ -922,21 +910,9 @@ func (z *readPoolConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "MinLock":
-			z.MinLock, bts, err = msgp.ReadInt64Bytes(bts)
+			bts, err = z.MinLock.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLock")
-				return
-			}
-		case "MinLockPeriod":
-			z.MinLockPeriod, bts, err = msgp.ReadDurationBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MinLockPeriod")
-				return
-			}
-		case "MaxLockPeriod":
-			z.MaxLockPeriod, bts, err = msgp.ReadDurationBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MaxLockPeriod")
 				return
 			}
 		default:
@@ -952,18 +928,22 @@ func (z *readPoolConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z readPoolConfig) Msgsize() (s int) {
-	s = 1 + 8 + msgp.Int64Size + 14 + msgp.DurationSize + 14 + msgp.DurationSize
+func (z *readPoolConfig) Msgsize() (s int) {
+	s = 1 + 8 + z.MinLock.Msgsize()
 	return
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z stakePoolConfig) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *stakePoolConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "MinLock"
 	o = append(o, 0x81, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
-	o = msgp.AppendInt64(o, z.MinLock)
+	o, err = z.MinLock.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MinLock")
+		return
+	}
 	return
 }
 
@@ -986,7 +966,7 @@ func (z *stakePoolConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "MinLock":
-			z.MinLock, bts, err = msgp.ReadInt64Bytes(bts)
+			bts, err = z.MinLock.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLock")
 				return
@@ -1004,8 +984,8 @@ func (z *stakePoolConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z stakePoolConfig) Msgsize() (s int) {
-	s = 1 + 8 + msgp.Int64Size
+func (z *stakePoolConfig) Msgsize() (s int) {
+	s = 1 + 8 + z.MinLock.Msgsize()
 	return
 }
 

@@ -14,7 +14,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -59,7 +58,10 @@ func SetupMinerChain(c *chain.Chain) {
 	defer mcGuard.Unlock()
 
 	minerChain.Chain = c
-	minerChain.Config = c.Config
+	minerChain.Chain.OnBlockAdded = func(b *block.Block) {
+	}
+	minerChain.ChainConfig = c.ChainConfig
+
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
@@ -302,7 +304,7 @@ func (mc *Chain) SaveClients(clients []*client.Client) error {
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return
 	}
 

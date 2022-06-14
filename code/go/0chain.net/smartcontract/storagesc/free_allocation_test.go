@@ -210,8 +210,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockTransactionHash      = "12345678"
 		mockReadPoolFraction     = 0.2
 		mockMinLock              = 10
-		mockMinLockPeriod        = 2 * time.Minute
-		mockMaxLockPeriod        = 8760 * time.Hour
 		mockFreeTokens           = 5 * mockMinLock
 		mockIndividualTokenLimit = mockFreeTokens + 1
 		mockTotalTokenLimit      = mockIndividualTokenLimit * 300
@@ -237,9 +235,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
 			ReadPool: &readPoolConfig{
-				MinLock:       zcnToInt64(mockMinLock),
-				MinLockPeriod: mockMinLockPeriod,
-				MaxLockPeriod: mockMaxLockPeriod,
+				MinLock: mockMinLock,
 			},
 			MaxBlobbersPerAllocation: 40,
 		}
@@ -290,8 +286,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 			ToClientID:   ADDRESS,
 			PublicKey:    mockUserPublicKey,
 			CreationDate: now,
-			Value:        zcnToInt64(p.marker.FreeTokens),
 		}
+		txn.Value, err = currency.ParseZCN(p.marker.FreeTokens)
+		require.NoError(t, err)
+
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
 
@@ -391,7 +389,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -416,23 +414,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			})).Return("", nil).Once()
 
 		// readPoolLock blockchain access
-		balances.On(
-			"GetTrieNode", fundedPoolsKey(ssc.ID, p.marker.Recipient), mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-		balances.On(
-			"InsertTrieNode", fundedPoolsKey(ssc.ID, p.marker.Recipient), mock.Anything,
-		).Return("", nil).Once()
-
-		balances.On(
-			"GetTrieNode",
-			mock.MatchedBy(func(key string) bool {
-				return balances.TestData()[newSaSaved].(bool) &&
-					key == allocation.GetKey(ssc.ID)
-			}),
-			mock.MatchedBy(func(a *StorageAllocation) bool {
-				*a = allocation
-				return true
-			})).Return(nil).Once()
 
 		balances.On(
 			"GetSignatureScheme",
@@ -462,12 +443,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("InsertTrieNode",
 			readPoolKey(ssc.ID, p.marker.Recipient),
 			mock.MatchedBy(func(rp *readPool) bool {
-				pool, found := rp.Pools.get(mockTransactionHash)
-				require.True(t, found)
-				return pool.Balance == currency.Coin(readPoolLocked) &&
-					pool.ID == mockTransactionHash &&
-					pool.AllocationID == mockTransactionHash &&
-					pool.ExpireAt == txn.CreationDate+toSeconds(conf.FreeAllocationSettings.Duration)
+				return rp.Balance == currency.Coin(readPoolLocked)
 			})).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}
@@ -492,6 +468,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 					IndividualLimit: zcnToBalance(mockIndividualTokenLimit),
 					TotalLimit:      zcnToBalance(mockTotalTokenLimit),
 				},
+			},
+			want: want{
+				err: false,
 			},
 		},
 		{
@@ -663,15 +642,16 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		doesNotExist bool
 	}
 
-	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
+	setExpectations := func(t *testing.T, name string, p parameters) args {
 		var err error
 		var balances = &mocks.StateContextI{}
 		var txn = &transaction.Transaction{
 			ClientID:     p.marker.Recipient,
 			PublicKey:    mockUserPublicKey,
 			CreationDate: now,
-			Value:        zcnToInt64(p.marker.FreeTokens),
 		}
+		txn.Value, err = currency.ParseZCN(p.marker.FreeTokens)
+		require.NoError(t, err)
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
 
@@ -764,7 +744,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -826,13 +806,15 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					TotalLimit:      zcnToBalance(mockTotalTokenLimit),
 				},
 			},
+			want: want{
+				err: false,
+			},
 		},
 		{
 			name: "Total_limit_exceeded",
 			parameters: parameters{
 				allocationId: mockAllocationId,
 				marker: freeStorageMarker{
-
 					Assigner:   mockCooperationId + "Total_limit_exceeded",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
@@ -893,7 +875,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			parameters: parameters{
 				allocationId: mockAllocationId,
 				marker: freeStorageMarker{
-
 					Assigner:   mockCooperationId + "repeated_old_timestamp",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
@@ -916,16 +897,14 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			args := setExpectations(t, test.name, test.parameters, test.want)
+			args := setExpectations(t, test.name, test.parameters)
 
 			_, err := args.ssc.updateFreeStorageRequest(args.txn, args.input, args.balances)
-
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
 			}
-			fmt.Println("-----------------after assert")
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}

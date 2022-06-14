@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
@@ -37,7 +36,7 @@ func init() {
 // SetDKG - starts the DKG process
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	mc := GetMinerChain()
-	if config.DevConfiguration.IsDkgEnabled {
+	if mc.ChainConfig.IsDkgEnabled() {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
 			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
@@ -191,7 +190,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error) {
 
 	r.SetVrfStartTime(time.Now())
-	if !config.DevConfiguration.IsDkgEnabled {
+	if !mc.ChainConfig.IsDkgEnabled() {
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain"), nil
 	}
@@ -408,7 +407,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	Logger.Debug("VRF Hurray we've threshold BLS shares",
 		zap.Int64("round", mr.GetRoundNumber()),
 		zap.String("round pointer", fmt.Sprintf("%p", mr)))
-	if !config.DevConfiguration.IsDkgEnabled {
+	if !mc.ChainConfig.IsDkgEnabled() {
 		// We're still waiting for threshold number of VRF shares,
 		// even though DKG is not enabled.
 
@@ -475,7 +474,7 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) error {
 
 	var seed int64
-	if config.DevConfiguration.IsDkgEnabled {
+	if mc.ChainConfig.IsDkgEnabled() {
 		useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
 		if err != nil {
 			panic(err)

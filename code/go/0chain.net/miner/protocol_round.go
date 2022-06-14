@@ -888,7 +888,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			minerStats.VerificationTicketsByRank[b.RoundRank]++
 		}
-		logging.Logger.Debug("verifyAndSend - finished successfully", zap.Any("block", b.Hash))
+		logging.Logger.Debug("verifyAndSend - finished successfully",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
 		return true
 	}
 	var sendVerification = false
@@ -1778,7 +1780,7 @@ func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
 	if mb == nil {
 		return
 	}
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return
 	}
 	var err error

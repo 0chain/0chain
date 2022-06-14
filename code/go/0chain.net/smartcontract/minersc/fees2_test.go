@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/config/mocks"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -12,7 +14,6 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -69,7 +70,7 @@ type runtimeValues struct {
 	phaseRound     int64
 	nextViewChange int64
 	minted         currency.Coin
-	fees           []int64
+	fees           []currency.Coin
 }
 
 type MinerDelegates []float64
@@ -105,7 +106,7 @@ var (
 		phaseRound:     35,
 		nextViewChange: 100,
 		minted:         0,
-		fees:           []int64{200, 300, 500},
+		fees:           []currency.Coin{200, 300, 500},
 	}
 )
 
@@ -357,12 +358,15 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	err = updateAllShardersList(ctx, allSharders)
 	require.NoError(t, err)
 
+	mockChainConfig := mocks.NewChainConfig(t)
+	mockChainConfig.On("IsViewChangeEnabled").Return(true)
 	// Add information only relevant to view change rounds
-	config.DevConfiguration.ViewChange = zChainYaml.viewChange
+	config.Configuration().ChainConfig = mockChainConfig
+
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
-		var allMinersList = NewDKGMinerNodes()
-		err = updateDKGMinersList(ctx, allMinersList)
+		var allMinersList = &MinerNodes{}
+		err = updateAllShardersList(ctx, allMinersList)
 	}
 
 	_, err = msc.payFees(txn, nil, globalNode, ctx)

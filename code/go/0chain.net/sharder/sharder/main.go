@@ -1,6 +1,7 @@
 package main
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"bufio"
 	"context"
 	"errors"
@@ -94,7 +95,7 @@ func main() {
 	flag.StringVar(&workdir, "work_dir", "", "work_dir")
 
 	flag.Parse()
-	config.Configuration.DeploymentMode = byte(*deploymentMode)
+	config.Configuration().DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig(workdir)
 	config.SetupSmartContractConfig(workdir)
@@ -116,7 +117,7 @@ func main() {
 	}
 	reader.Close()
 
-	config.Configuration.ChainID = viper.GetString("server_chain.id")
+	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
 	reader, err = os.Open(*keysFile)
@@ -124,7 +125,7 @@ func main() {
 		panic(err)
 	}
 
-	config.SetServerChainID(config.Configuration.ChainID)
+	config.SetServerChainID(config.Configuration().ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
 	initEntities(workdir)
@@ -142,6 +143,19 @@ func main() {
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
 		logging.Logger.Panic("Error setting up events database")
+	}
+
+	serverChain.OnBlockAdded = func(b *block.Block) {
+		err, ev := block.CreateBlockEvent(b)
+		if err != nil {
+			logging.Logger.Error("emit block event error", zap.Error(err))
+		}
+		go func() {
+			rootContext := common.GetRootContext()
+			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
+			defer cancel()
+			serverChain.GetEventDb().AddEvents(ctx, []event.Event{ev})
+		}()
 	}
 
 	sharder.SetupSharderChain(serverChain)
@@ -202,6 +216,12 @@ func main() {
 	var selfNode = node.Self.Underlying()
 	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
+	}
+
+	// start sharding from the LFB stored
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.Error("load latest blocks from store: " + err.Error())
+		return
 	}
 
 	var mb = sc.GetLatestMagicBlock()
@@ -270,12 +290,6 @@ func main() {
 	initN2NHandlers(sc)
 	initWorkers(ctx)
 
-	// start sharding from the LFB stored
-	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
-		return
-	}
-
 	startBlocksInfoLogs(sc)
 
 	if err := sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
@@ -292,7 +306,7 @@ func main() {
 	initHandlers(sc)
 
 	go sc.RegisterClient()
-	if config.DevConfiguration.IsFeeEnabled {
+	if sc.ChainConfig.IsFeeEnabled() {
 		go sc.SetupSC(ctx)
 	}
 

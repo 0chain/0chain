@@ -53,7 +53,7 @@ func AddMockNodes(
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = GetMockNodeId(i, nodeType)
-		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.Now))
+		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.PublicKey = "mockPublicKey"
 		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)

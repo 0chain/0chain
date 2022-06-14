@@ -7,19 +7,8 @@ logging:
   memlog: false
 
 development:
-  state: true
-  dkg: true
-  view_change: false
-  block_rewards: true
   smart_contract:
-    storage: true
-    faucet: true
     zrc20: true
-    interest: true
-    miner: true
-    multisig: true
-    vesting: true
-    zcn: true
   txn_generation:
     wallets: 50
     max_transactions: 0
@@ -68,7 +57,10 @@ server_chain:
     reuse_txns: false
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
+
   round_range: 10000000
+  dkg: true
+  view_change: false
   round_timeouts:
     softto_min: 1500 # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
@@ -95,15 +87,24 @@ server_chain:
   messages:
     verification_tickets_to: all_miners # generator or all_miners
   state:
+    enabled: true
     prune_below_count: 100 # rounds
     sync:
       timeout: 10 # seconds
+  block_rewards: true  
   stuck:
     check_interval: 10 # seconds
     time_threshold: 60 #seconds
   smart_contract:
     setting_update_period: 200 #rounds
     timeout: 8000ms
+    storage: true
+    faucet: true
+    interest: true
+    miner: true
+    multisig: true
+    vesting: true
+    zcn: true
   health_check:
     show_counters: true
     deep_scan:
@@ -133,8 +134,8 @@ server_chain:
       name: events_db
       user: zchain_user
       password: zchian
-      host: postgres #it will prefer to pick from env else it will be loaded from config
-      port: 5432 #it will prefer to pick from env else it will be loaded from config
+      host: postgres #localhost
+      port: 5432
       max_idle_conns: 100
       max_open_conns: 200
       conn_max_lifetime: 20s

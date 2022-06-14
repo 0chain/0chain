@@ -284,8 +284,8 @@ func (b *Block) Read(ctx context.Context, key datastore.Key) error {
 }
 
 /*GetScore - score for write*/
-func (b *Block) GetScore() int64 {
-	return b.Round
+func (b *Block) GetScore() (int64, error) {
+	return b.Round, nil
 }
 
 /*Write - store read */
@@ -1067,11 +1067,6 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 				return common.NewError("state_update_error", err.Error())
 			}
 		}
-	}
-
-	err := emitBlockEvent(b.PrevBlock)
-	if err != nil {
-		logging.Logger.Error("emit block event error", zap.Error(err))
 	}
 
 	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {

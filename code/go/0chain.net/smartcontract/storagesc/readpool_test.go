@@ -1,36 +1,18 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/currency"
-	// "context"
-	"encoding/json"
-	// "net/url"
-	"testing"
-	"time"
-
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
-
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 //
 // test extension
 //
-
-func (rp *readPool) allocTotal(allocID string,
-	now int64) currency.Coin {
-
-	return rp.Pools.allocTotal(allocID, now)
-}
-
-func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
-	now int64) currency.Coin {
-
-	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
-}
 
 func mustEncode(t testing.TB, val interface{}) []byte {
 	var err error
@@ -67,21 +49,7 @@ func Test_unlockRequest_decode(t *testing.T) {
 
 func Test_readPool_Encode_Decode(t *testing.T) {
 	var rpe, rpd readPool
-	rpe.Pools.add(&allocationPool{
-		ZcnPool: tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID: "IDENTIFIER", Balance: 100500,
-			},
-		},
-		AllocationID: "ALLOCATION ID",
-		Blobbers: blobberPools{
-			&blobberPool{
-				BlobberID: "BLOBBER ID",
-				Balance:   10300,
-			},
-		},
-		ExpireAt: 90210,
-	})
+	rpe.add(10)
 	require.NoError(t, json.Unmarshal(mustEncode(t, rpe), &rpd))
 	assert.EqualValues(t, rpe, rpd)
 }
@@ -100,8 +68,7 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		rp *readPool
-
+		rp     *readPool
 		_, err = ssc.getReadPool(clientID, balances)
 	)
 
@@ -177,18 +144,10 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 
 func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	const (
-		allocID, txHash = "alloc_hex", "tx_hash"
-
-		errMsg1 = "read_pool_lock_failed: unexpected end of JSON input"
+		txHash  = "tx_hash"
+		errMsg1 = "read_pool_lock_failed: insufficient amount to lock"
 		errMsg2 = "read_pool_lock_failed: " +
 			"invalid character '}' looking for beginning of value"
-		errMsg3 = "read_pool_lock_failed: no tokens to lock"
-		errMsg4 = "read_pool_lock_failed: insufficient amount to lock"
-		errMsg5 = "read_pool_lock_failed: " +
-			"duration (5s) is shorter than min lock period (10s)"
-		errMsg6 = "read_pool_lock_failed: " +
-			"duration (2m30s) is longer than max lock period (1m40s)"
-		errMsg7 = "read_pool_lock_failed: user already has this read pool"
 	)
 
 	var (
@@ -200,65 +159,44 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 			ToClientID: ssc.ID,
 			Value:      0,
 		}
-		lr   lockRequest
-		resp string
-		err  error
+		lr  readPoolLockRequest
+		err error
 	)
 
 	// setup transaction
-
 	balances.setTransaction(t, &tx)
 	tx.Hash = txHash
 
 	// setup config
-
 	testSetReadPoolConfig(t, &readPoolConfig{
-		MinLock:       10,
-		MinLockPeriod: 10 * time.Second,
-		MaxLockPeriod: 100 * time.Second,
+		MinLock: 10,
 	}, balances, ssc.ID)
 
 	var fp fundedPools = []string{client.id}
 	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
 	require.NoError(t, err)
 
-	// 1. no pool
+	// 1. 0 tx value
 	_, err = ssc.readPoolLock(&tx, nil, balances)
 	requireErrMsg(t, err, errMsg1)
 
 	tx.Hash = "new_read_pool_tx_hash"
-	_, err = ssc.newReadPool(&tx, nil, balances)
-	require.NoError(t, err)
 	tx.Hash = txHash
+	tx.Value = 50
 	// 2. malformed request
 	_, err = ssc.readPoolLock(&tx, []byte("} malformed {"), balances)
 	requireErrMsg(t, err, errMsg2)
 	// 3. min lock
 	tx.Value = 5
-	lr.Duration = 5 * time.Second
-	lr.AllocationID = allocID
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg4)
-	// 5. min lock period
+	requireErrMsg(t, err, errMsg1)
+	// 5. lock for owned allocations
+	var rp *readPool
 	tx.Value = 15
 	balances.balances[client.id] = 15
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg5)
-	// 6. max lock period
-	lr.Duration = 150 * time.Second
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg6)
-	// 7. no such allocation
-	lr.Duration = 15 * time.Second
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	require.Error(t, err)
-
-	balances.balances[client.id] = 200e10
-	var aid, _ = addAllocation(t, ssc, client, 10, int64(toSeconds(time.Hour)),
-		0, balances)
-	// lock
-	lr.AllocationID = aid
-	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	require.NoError(t, err)
-	assert.NotZero(t, resp)
+	rp, err = ssc.getReadPool(client.id, balances)
+	require.NoError(t, err)
+	assert.EqualValues(t, 15, rp.Balance)
 }

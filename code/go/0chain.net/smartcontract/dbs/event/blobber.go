@@ -44,8 +44,8 @@ type Blobber struct {
 	OffersTotal        currency.Coin `json:"offers_total"`
 	UnstakeTotal       currency.Coin `json:"unstake_total"`
 	Reward             currency.Coin `json:"reward"`
-	TotalServiceCharge int64         `json:"total_service_charge"`
-	TotalStake         int64         `json:"total_stake"`
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
+	TotalStake         currency.Coin `json:"total_stake"`
 
 	Name        string `json:"name" gorm:"name"`
 	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
@@ -56,14 +56,6 @@ type Blobber struct {
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
-// swagger:model BlobberLatLong
-type BlobberLatLong struct {
-	BlobberID string `json:"id" gorm:"uniqueIndex"`
-	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
 type BlobberPriceRange struct {
 	Min null.Int `json:"min"`
@@ -71,8 +63,8 @@ type BlobberPriceRange struct {
 }
 
 type blobberAggregateStats struct {
-	Reward             int64 `json:"reward"`
-	TotalServiceCharge int64 `json:"total_service_charge"`
+	Reward             currency.Coin `json:"reward"`
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
@@ -96,6 +88,20 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 		},
 	}
 	return edb.updateBlobber(update)
+}
+
+func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&Blobber{}).
+		Select("SUM(capacity)").
+		Find(&total).Error
+}
+
+func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
+	var average float64
+	return average, edb.Store.Get().Model(&Blobber{}).
+		Select("AVG(write_price)").
+		Find(&average).Error
 }
 
 func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
@@ -129,11 +135,18 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	return blobberIDs, result.Error
 }
 
-func (edb *EventDb) GetAllBlobberLatLong() ([]BlobberLatLong, error) {
-	var blobbers []BlobberLatLong
-	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+func (edb *EventDb) GeBlobberByLatLong(
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64,
+) ([]string, error) {
+	var blobberIDs []string
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Select("blobber_id").
+		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
+			maxLatitude, minLatitude, maxLongitude, minLongitude).
+		Find(&blobberIDs)
 
-	return blobbers, result.Error
+	return blobberIDs, result.Error
 }
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {

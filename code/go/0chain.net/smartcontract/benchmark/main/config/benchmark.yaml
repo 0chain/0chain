@@ -1,12 +1,12 @@
 simulation:
-  num_clients: 21
-  num_active_clients: 21
-  num_miners: 5
-  num_active_miners: 5
-  nun_sharders: 5
-  nun_active_sharders: 5
-  num_allocations: 30
-  num_blobbers: 10
+  num_clients: 210
+  num_active_clients: 210
+  num_miners: 100
+  num_active_miners: 100
+  nun_sharders: 20
+  nun_active_sharders: 20
+  num_allocations: 300
+  num_blobbers: 100
   num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
@@ -34,6 +34,7 @@ options:
     - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
+  load_concurrency: 4
 
 dbs:
   events:
@@ -80,11 +81,12 @@ smart_contracts:
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_alloc_size: 1024
-    min_alloc_duration: 1y
+    min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
     max_challenge_completion_time: 3m
     min_offer_duration: 10h
+    max_offer_duration: 10h
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0
@@ -100,11 +102,11 @@ smart_contracts:
     readpool:
       min_lock: 0.3
       min_lock_period: 1m
-      max_lock_period: 8760h
+      max_lock_period: 11000h
     writepool:
       min_lock: 0.1
       min_lock_period: 2m
-      max_lock_period: 8760h
+      max_lock_period: 11000h
     stakepool:
       min_lock: 0.1
     free_allocation_settings:
@@ -161,7 +163,6 @@ smart_contracts:
 internal:
   t: 2
   available_keys: 10
-  now: 100000
   signature_scheme: bls0chain # don't change only bls0chian works
   start_tokens: 100000000000000
   bad: 50ms
@@ -171,5 +172,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: false
+  show_output: true
 

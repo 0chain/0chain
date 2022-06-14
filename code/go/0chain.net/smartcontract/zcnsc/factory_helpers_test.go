@@ -63,15 +63,11 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 	if err != nil {
 		return nil, err
 	}
-	iValue, err := value.Int64()
-	if err != nil {
-		return nil, err
-	}
 	txn := &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
-		Value:             iValue,
+		Value:             value,
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
@@ -117,16 +113,11 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 		return nil, err
 	}
 
-	iValue, err := value.Int64()
-	if err != nil {
-		return nil, err
-	}
-
 	var txn = &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
-		Value:             iValue,
+		Value:             value,
 		CreationDate:      startTime,
 		PublicKey:         scheme.GetPublicKey(),
 		TransactionData:   "",
