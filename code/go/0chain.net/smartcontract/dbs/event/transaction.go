@@ -18,7 +18,7 @@ type Transaction struct {
 	TransactionData   string
 	Value             currency.Coin
 	Signature         string
-	CreationDate      int64
+	CreationDate      int64 `gorm:"index:idx_tcreation_date"`
 	Fee               currency.Coin
 	TransactionType   int
 	TransactionOutput string
@@ -44,7 +44,7 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 func (edb *EventDb) GetTransactionByClientId(clientID string, limit LimitData) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
+		Column: clause.Column{Name: "creation_date"},
 		Desc:   limit.IsDescending,
 	}).Scan(&tr)
 	return tr, res.Error

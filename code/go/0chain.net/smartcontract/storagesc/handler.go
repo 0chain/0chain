@@ -262,12 +262,13 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 			"can't get config: %v", err))
 		return
 	}
-
+	var creationDate = balances.Now()
+	dur := common.ToTime(creationDate).Add(conf.FreeAllocationSettings.Duration)
 	request := newAllocationRequest{
 		DataShards:                 conf.FreeAllocationSettings.DataShards,
 		ParityShards:               conf.FreeAllocationSettings.ParityShards,
 		Size:                       conf.FreeAllocationSettings.Size,
-		Expiration:                 common.Timestamp(time.Now().Add(conf.FreeAllocationSettings.Duration).Unix()),
+		Expiration:                 common.Timestamp(dur.Unix()),
 		Owner:                      marker.Recipient,
 		OwnerPublicKey:             inputObj.RecipientPublicKey,
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
