@@ -549,7 +549,7 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 //      type: string
 //
 // responses:
-//  200: allocationPoolsStat
+//  200: readPool
 //  400:
 func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
 	rp := readPool{}
