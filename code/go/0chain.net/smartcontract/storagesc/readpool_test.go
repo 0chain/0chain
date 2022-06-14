@@ -46,7 +46,7 @@ func Test_unlockRequest_decode(t *testing.T) {
 
 func Test_readPool_Encode_Decode(t *testing.T) {
 	var rpe, rpd readPool
-	rpe.add(true, 10)
+	rpe.add(10)
 	require.NoError(t, json.Unmarshal(mustEncode(t, rpe), &rpd))
 	assert.EqualValues(t, rpe, rpd)
 }
@@ -65,8 +65,7 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		rp *readPool
-
+		rp     *readPool
 		_, err = ssc.getReadPool(clientID, balances)
 	)
 
@@ -142,8 +141,7 @@ func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 
 func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	const (
-		allocID, txHash = "alloc_hex", "tx_hash"
-
+		txHash  = "tx_hash"
 		errMsg1 = "read_pool_lock_failed: insufficient amount to lock"
 		errMsg2 = "read_pool_lock_failed: " +
 			"invalid character '}' looking for beginning of value"
@@ -163,12 +161,10 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	)
 
 	// setup transaction
-
 	balances.setTransaction(t, &tx)
 	tx.Hash = txHash
 
 	// setup config
-
 	testSetReadPoolConfig(t, &readPoolConfig{
 		MinLock: 10,
 	}, balances, ssc.ID)
@@ -194,12 +190,10 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	// 5. lock for owned allocations
 	var rp *readPool
 	tx.Value = 15
-	lr.IsOwner = true
 	balances.balances[client.id] = 15
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	require.NoError(t, err)
 	rp, err = ssc.getReadPool(client.id, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, 15, rp.OwnerBalance)
-	assert.EqualValues(t, 0, rp.VisitorBalance)
+	assert.EqualValues(t, 15, rp.Balance)
 }

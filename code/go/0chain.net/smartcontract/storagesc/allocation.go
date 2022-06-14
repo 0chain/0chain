@@ -295,6 +295,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 	m.tick("fetch_pools")
+	sa.TimeUnit = conf.TimeUnit
 
 	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(txn.CreationDate), sa, balances, blobbers)
 	bi := make([]string, 0, len(blobberNodes))

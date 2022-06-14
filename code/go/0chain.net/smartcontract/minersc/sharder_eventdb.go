@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
-
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -29,7 +27,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		PublicKey:   edbSharder.PublicKey,
 		ShortName:   edbSharder.ShortName,
 		BuildTag:    edbSharder.BuildTag,
-		TotalStaked: int64(edbSharder.TotalStaked),
+		TotalStaked: edbSharder.TotalStaked,
 		Delete:      edbSharder.Delete,
 
 		LastHealthCheck: edbSharder.LastHealthCheck,
@@ -68,7 +66,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		PublicKey:         sn.PublicKey,
 		ShortName:         sn.ShortName,
 		BuildTag:          sn.BuildTag,
-		TotalStaked:       currency.Coin(sn.TotalStaked),
+		TotalStaked:       sn.TotalStaked,
 		Delete:            sn.Delete,
 		DelegateWallet:    sn.Settings.DelegateWallet,
 		ServiceCharge:     sn.Settings.ServiceChargeRatio,

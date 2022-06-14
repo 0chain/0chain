@@ -198,10 +198,8 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.Reward, err = value.Int64()
-		if err != nil {
-			return
-		}
+		spUpdate.Reward = value
+
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}
@@ -222,10 +220,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.Reward, err = reward.Int64()
-		if err != nil {
-			return err
-		}
+		spUpdate.Reward = reward
 	}
 
 	valueLeft := value - serviceCharge

@@ -714,11 +714,14 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		stakes:      stakes,
 	}
 
+	val, err := currency.Int64ToCoin(request.Size)
+	require.NoError(t, err)
+
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: transactionHash,
 		},
-		Value:        request.Size,
+		Value:        val,
 		ClientID:     clientId,
 		ToClientID:   storageScId,
 		CreationDate: creationDate,

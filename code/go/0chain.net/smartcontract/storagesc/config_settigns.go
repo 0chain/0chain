@@ -217,7 +217,7 @@ var (
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
-		"readpool.min_lock":   {ReadPoolMinLock, smartcontract.Int64},
+		"readpool.min_lock":   {ReadPoolMinLock, smartcontract.CurrencyCoin},
 		"write_pool.min_lock": {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"stakepool.min_lock":  {StakePoolMinLock, smartcontract.Int64},
 
@@ -378,6 +378,16 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 			conf.WritePool = &writePoolConfig{}
 		}
 		conf.WritePool.MinLock = change
+	case ReadPoolMinLock:
+		if conf.ReadPool == nil {
+			conf.ReadPool = &readPoolConfig{}
+		}
+		conf.ReadPool.MinLock = change
+	case StakePoolMinLock:
+		if conf.StakePool == nil {
+			conf.StakePool = &stakePoolConfig{}
+		}
+		conf.StakePool.MinLock = change
 	default:
 		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
@@ -391,16 +401,6 @@ func (conf *Config) setInt64(key string, change int64) error {
 		conf.MinAllocSize = change
 	case MinBlobberCapacity:
 		conf.MinBlobberCapacity = change
-	case ReadPoolMinLock:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
-		}
-		conf.ReadPool.MinLock = change
-	case StakePoolMinLock:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.MinLock = change
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
 	default:

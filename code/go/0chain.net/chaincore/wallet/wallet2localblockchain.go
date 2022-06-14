@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
@@ -31,13 +33,13 @@ func SetupWallet() {
 }
 
 /*CreateRandomSendTransaction - create a transaction */
-func (w *Wallet) CreateRandomSendTransaction(toClient string, value, fee int64) *transaction.Transaction {
+func (w *Wallet) CreateRandomSendTransaction(toClient string, value, fee currency.Coin) *transaction.Transaction {
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
 	return w.CreateSendTransaction(toClient, value, msg, fee)
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string, fee int64) *transaction.Transaction {
+func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg string, fee currency.Coin) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
@@ -55,7 +57,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, fee int64) *transaction.Transaction {
+func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg string, fee currency.Coin) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
@@ -74,13 +76,13 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 }
 
 /*CreateRandomDataTransaction - creat a random data transaction */
-func (w *Wallet) CreateRandomDataTransaction(fee int64) *transaction.Transaction {
+func (w *Wallet) CreateRandomDataTransaction(fee currency.Coin) *transaction.Transaction {
 	msg := fmt.Sprintf("storing some random data - 1234567890 abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ %v", rand.Int63())
 	return w.CreateDataTransaction(msg, fee)
 }
 
 /*CreateDataTransaction - create a data transaction */
-func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Transaction {
+func (w *Wallet) CreateDataTransaction(msg string, fee currency.Coin) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.TransactionData = msg

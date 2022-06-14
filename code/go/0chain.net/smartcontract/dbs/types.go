@@ -1,5 +1,7 @@
 package dbs
 
+import "0chain.net/chaincore/currency"
+
 type DbUpdates struct {
 	Id      string                 `json:"id"`
 	Updates map[string]interface{} `json:"updates"`
@@ -19,7 +21,7 @@ type StakePoolId struct {
 
 type StakePoolReward struct {
 	StakePoolId
-	Reward          int64            `json:"reward"`
+	Reward          currency.Coin    `json:"reward"`
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 }
 

@@ -735,33 +735,13 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
 		}
-		dps.Balance, err = currency.Int64ToCoin(pool.Balance)
-		if err != nil {
-			logging.Logger.Error("error converting balance", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool balance"))
-			return
-		}
+		dps.Balance = pool.Balance
 
-		dps.Rewards, err = currency.Int64ToCoin(pool.Reward)
-		if err != nil {
-			logging.Logger.Error("error converting reward", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool reward"))
-			return
-		}
+		dps.Rewards = pool.Reward
 
-		dps.TotalPenalty, err = currency.Int64ToCoin(pool.TotalPenalty)
-		if err != nil {
-			logging.Logger.Error("error converting total penalty", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool total penalty"))
-			return
-		}
+		dps.TotalPenalty = pool.TotalPenalty
 
-		dps.TotalReward, err = currency.Int64ToCoin(pool.TotalReward)
-		if err != nil {
-			logging.Logger.Error("error converting total reward", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool total reward"))
-			return
-		}
+		dps.TotalReward = pool.TotalReward
 
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dps)
 	}
@@ -773,7 +753,6 @@ func spStats(
 	blobber event.Blobber,
 	delegatePools []event.DelegatePool,
 ) (*stakePoolStat, error) {
-	var err error
 	stat := new(stakePoolStat)
 	stat.ID = blobber.BlobberID
 	stat.UnstakeTotal = blobber.UnstakeTotal
@@ -796,29 +775,13 @@ func spStats(
 			Status:       spenum.PoolStatus(dp.Status).String(),
 			RoundCreated: dp.RoundCreated,
 		}
-		dpStats.Balance, err = currency.Int64ToCoin(dp.Balance)
-		if err != nil {
-			logging.Logger.Error("error converting balance", zap.Error(err))
-			return nil, err
-		}
+		dpStats.Balance = dp.Balance
 
-		dpStats.Rewards, err = currency.Int64ToCoin(dp.Reward)
-		if err != nil {
-			logging.Logger.Error("error converting reward", zap.Error(err))
-			return nil, err
-		}
+		dpStats.Rewards = dp.Reward
 
-		dpStats.TotalPenalty, err = currency.Int64ToCoin(dp.TotalPenalty)
-		if err != nil {
-			logging.Logger.Error("error converting total penalty", zap.Error(err))
-			return nil, err
-		}
+		dpStats.TotalPenalty = dp.TotalPenalty
 
-		dpStats.TotalReward, err = currency.Int64ToCoin(dp.TotalReward)
-		if err != nil {
-			logging.Logger.Error("error converting total reward", zap.Error(err))
-			return nil, err
-		}
+		dpStats.TotalReward = dp.TotalReward
 
 		stat.Balance += dpStats.Balance
 		stat.Delegate = append(stat.Delegate, dpStats)
@@ -1542,7 +1505,7 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 type storageNodeResponse struct {
 	StorageNode
-	TotalStake int64 `json:"total_stake"`
+	TotalStake currency.Coin `json:"total_stake"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {

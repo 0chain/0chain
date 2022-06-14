@@ -224,11 +224,11 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		var readPoolFund = int64(len(alloc.BlobberAllocs)) * 2 * 1e10
+		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		require.NoError(t, err)
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
-			IsOwner:    true,
 			TargetId:   client.id,
 			MintTokens: false,
 		}), balances)
@@ -237,7 +237,7 @@ func Test_flow_reward(t *testing.T) {
 		var rp *readPool
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund, int64(rp.OwnerBalance))
+		require.EqualValues(t, readPoolFund, int64(rp.Balance))
 
 		// read
 		tp += 100
@@ -250,7 +250,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund-1e10, int64(rp.OwnerBalance))
+		require.EqualValues(t, readPoolFund-1e10, int64(rp.Balance))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -295,11 +295,12 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		readPoolFund := int64(len(alloc.BlobberAllocs)) * 2 * x10
+
+		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		require.NoError(t, err)
 		tx = newTransaction(reader.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
-			IsOwner:    false,
 			TargetId:   reader.id,
 			MintTokens: false,
 		}), balances)
@@ -308,7 +309,7 @@ func Test_flow_reward(t *testing.T) {
 		var rp *readPool
 		rp, err = ssc.getReadPool(reader.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund, int64(rp.VisitorBalance))
+		require.EqualValues(t, readPoolFund, int64(rp.Balance))
 
 		// read
 		tp += 100
@@ -327,7 +328,7 @@ func Test_flow_reward(t *testing.T) {
 		rp, err = ssc.getReadPool(reader.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, readPoolFund-1e10, int64(rp.VisitorBalance))
+		require.EqualValues(t, readPoolFund-1e10, int64(rp.Balance))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)

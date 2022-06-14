@@ -31,11 +31,11 @@ type freeAllocationSettings struct {
 }
 
 type stakePoolConfig struct {
-	MinLock int64 `json:"min_lock"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type readPoolConfig struct {
-	MinLock int64 `json:"min_lock"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type writePoolConfig struct {
@@ -367,7 +367,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
+	conf.ReadPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
+
 	// write pool
 	conf.WritePool = new(writePoolConfig)
 	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "allocation_pool.min_lock"))
@@ -376,7 +380,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
+	conf.StakePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
 
 	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
 	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
