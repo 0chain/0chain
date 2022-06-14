@@ -219,7 +219,7 @@ var (
 
 		"readpool.min_lock":   {ReadPoolMinLock, smartcontract.CurrencyCoin},
 		"write_pool.min_lock": {WritePoolMinLock, smartcontract.CurrencyCoin},
-		"stakepool.min_lock":  {StakePoolMinLock, smartcontract.Int64},
+		"stakepool.min_lock":  {StakePoolMinLock, smartcontract.CurrencyCoin},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
