@@ -58,7 +58,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 			"missing allocation ID in request")
 	}
 
-	iTxnVal, err := currency.Int64ToCoin(txn.Value)
+	iTxnVal := txn.Value
 	if err != nil {
 		return "", err
 	}

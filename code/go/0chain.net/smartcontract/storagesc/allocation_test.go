@@ -531,11 +531,8 @@ func TestChangeBlobbers(t *testing.T) {
 
 func TestExtendAllocation(t *testing.T) {
 	const (
-		randomSeed                  = 1
 		mockURL                     = "mock_url"
 		mockOwner                   = "mock owner"
-		mockNotTheOwner             = "mock not the owner"
-		mockApOwner                 = "mock allocation pool owner"
 		mockPublicKey               = "mock public key"
 		mockBlobberId               = "mock_blobber_id"
 		mockPoolId                  = "mock pool id"
@@ -552,11 +549,9 @@ func TestExtendAllocation(t *testing.T) {
 		mockExpiration              = common.Timestamp(17000)
 		mockStake                   = 3
 		mockChallengeCompletionTime = 1 * time.Hour
-		mockMinLockDemmand          = 0.1
+		mockMinLockDemand           = 0.1
 		mockTimeUnit                = 1 * time.Hour
-		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
-		confMaxAllowedPools         = 100
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
@@ -568,8 +563,7 @@ func TestExtendAllocation(t *testing.T) {
 		request    updateAllocationRequest
 		expiration common.Timestamp
 		value      currency.Coin
-		poolFunds  []float64
-		poolCount  []int
+		poolFunds  float64
 	}
 	type want struct {
 		err    bool
@@ -648,7 +642,7 @@ func TestExtendAllocation(t *testing.T) {
 				blobbers = append(blobbers, mockBlobber)
 				sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 					BlobberID:     mockBlobber.ID,
-					MinLockDemand: zcnToBalance(mockMinLockDemmand),
+					MinLockDemand: zcnToBalance(mockMinLockDemand),
 					Terms: Terms{
 						ChallengeCompletionTime: mockChallengeCompletionTime,
 						WritePrice:              mockWritePrice,
@@ -718,11 +712,8 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1,
-				poolFunds:  10.0,
 				value:      0.1e10,
-				poolFunds:  []float64{0.0, 5.0, 5.0},
-				poolCount:  []int{1, 3, 4},
+				poolFunds:  10.0,
 			},
 		},
 		{
@@ -737,8 +728,7 @@ func TestExtendAllocation(t *testing.T) {
 				},
 				expiration: mockExpiration,
 				value:      0.1e10,
-				poolFunds:  []float64{7},
-				poolCount:  []int{5},
+				poolFunds:  7,
 			},
 		},
 		{
@@ -753,8 +743,7 @@ func TestExtendAllocation(t *testing.T) {
 				},
 				expiration: mockExpiration,
 				value:      0.1e10,
-				poolFunds:  []float64{0.0, 0.0},
-				poolCount:  []int{1, 3},
+				poolFunds:  0.0,
 			},
 			want: want{
 				err:    true,
@@ -1585,7 +1574,6 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
 	conf.MaxBlobbersPerAllocation = 4
-	conf.TimeUnit = time.Hour * 1
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)

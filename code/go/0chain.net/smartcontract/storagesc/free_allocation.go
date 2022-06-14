@@ -292,7 +292,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 
 	var lr = readPoolLockRequest{
 		TargetId:   marker.Recipient,
-		IsOwner:    false,
 		MintTokens: true,
 	}
 	input, err = json.Marshal(lr)

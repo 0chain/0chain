@@ -557,7 +557,7 @@ func BenchmarkTests(
 				Value:        rpMinLock,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: benchWritePoolExpire(creationTime) + 1,
+				CreationDate: creationTime + 1,
 			},
 			input: []byte{},
 		},
