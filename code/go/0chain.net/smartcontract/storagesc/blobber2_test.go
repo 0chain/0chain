@@ -211,11 +211,19 @@ func testCommitBlobberRead(
 		stakes:      stakes,
 		readPool:    readPoolIn,
 	}
+	var client = &Client{
+		balance: 10000,
+		scheme:  encryption.NewBLS0ChainScheme(),
+	}
+	require.NoError(t, client.scheme.GenerateKeys())
+	client.pk = client.scheme.GetPublicKey()
+	client.id = encryption.Hash(client.pk)
+
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: datastore.Key(transactionHash),
 		},
-		ClientID:     clientId,
+		ClientID:     client.id,
 		ToClientID:   storageScId,
 		CreationDate: creationDate,
 	}
@@ -236,14 +244,6 @@ func testCommitBlobberRead(
 
 	setConfig(t, ctx)
 
-	var client = &Client{
-		balance: 10000,
-		scheme:  encryption.NewBLS0ChainScheme(),
-	}
-	require.NoError(t, client.scheme.GenerateKeys())
-	client.pk = client.scheme.GetPublicKey()
-	client.id = encryption.Hash(client.pk)
-
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
 			ID: storageScId,
@@ -258,7 +258,7 @@ func testCommitBlobberRead(
 			Timestamp:   lastRead.timestamp,
 		},
 	}
-	lastReadConnection.ReadMarker.ClientID = clientId
+	lastReadConnection.ReadMarker.ClientID = client.id
 
 	var readConnection = &ReadConnection{
 		ReadMarker: &ReadMarker{
@@ -291,7 +291,7 @@ func testCommitBlobberRead(
 				},
 			},
 		},
-		Owner: owner,
+		Owner: client.id,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 	require.NoError(t, err)
@@ -308,7 +308,7 @@ func testCommitBlobberRead(
 
 	var rPool = readPool{readPoolIn.Balance}
 
-	require.NoError(t, rPool.save(ssc.ID, owner, ctx))
+	require.NoError(t, rPool.save(ssc.ID, client.id, ctx))
 
 	var sPool = stakePool{
 		StakePool: stakepool.StakePool{
@@ -333,7 +333,7 @@ func testCommitBlobberRead(
 		return err
 	}
 
-	newRp, err := ssc.getReadPool(owner, ctx)
+	newRp, err := ssc.getReadPool(client.id, ctx)
 	require.NoError(t, err)
 
 	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
