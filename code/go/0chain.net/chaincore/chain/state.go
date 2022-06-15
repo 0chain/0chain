@@ -368,6 +368,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("to clientID", mint.ToClientID))
 			return
 		}
+		total += int64(mint.Amount)
 	}
 
 	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
