@@ -362,13 +362,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	total := int64(0)
 	for _, mint := range sctx.GetMints() {
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
-		total += int64(mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash),
 				zap.String("to clientID", mint.ToClientID))
 			return
 		}
+		total += int64(mint.Amount)
 	}
 	data, err := json.Marshal(event.Mint{
 		BlockHash: b.Hash,
