@@ -40,7 +40,8 @@ jobs:
         with:
           personal_token: ${{ secrets.ACCESS_TOKEN }}
           publish_dir: ./swaggerfiles
-          publish_branch: test_reports
+          destination_dir: ./swaggerfiles
+          publish_branch: swagger_report
           keep_files: true
           external_repository: "0chain/actions"
           user_name: "github-actions[bot]"
