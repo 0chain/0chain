@@ -38,7 +38,7 @@ func emitAddOrOverwriteBlobber(
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
 		Reward:       sp.Reward,
-		TotalStake:   int64(sp.stake()),
+		TotalStake:   sp.stake(),
 
 		Name:        sn.Information.Name,
 		WebsiteUrl:  sn.Information.WebsiteUrl,

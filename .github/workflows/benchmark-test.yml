@@ -1,0 +1,30 @@
+name: Benchmark Tests
+
+on:
+  push:
+    branches: [ master, staging ]
+  pull_request:
+    branches: [ master, staging ]
+
+jobs:
+  build:
+    runs-on: [self-hosted, build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.18'
+
+      - name: Run Init
+        run: ./docker.local/bin/init.setup.sh
+
+      - name: Build Base
+        run: ./docker.local/bin/build.base.sh
+
+      - name: Docker Build Image
+        run: ./docker.local/bin/build.benchmark.sh
+
+      - name: Run tests
+        run: |
+          cd docker.local/benchmarks
+          ../bin/start.benchmarks.sh

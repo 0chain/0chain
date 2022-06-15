@@ -44,8 +44,8 @@ func (mb *MagicBlockMap) Read(ctx context.Context, key datastore.Key) error {
 }
 
 /*GetScore - score for write*/
-func (mb *MagicBlockMap) GetScore() int64 {
-	return 0
+func (mb *MagicBlockMap) GetScore() (int64, error) {
+	return 0, nil
 }
 
 /*Write - store read */

@@ -284,8 +284,8 @@ func (b *Block) Read(ctx context.Context, key datastore.Key) error {
 }
 
 /*GetScore - score for write*/
-func (b *Block) GetScore() int64 {
-	return b.Round
+func (b *Block) GetScore() (int64, error) {
+	return b.Round, nil
 }
 
 /*Write - store read */

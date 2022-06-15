@@ -235,7 +235,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, currency.Coin(txn.Value), balances); err != nil {
+	if err := assigner.validate(marker, txn.CreationDate, txn.Value, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
@@ -259,9 +259,20 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	assigner.CurrentRedeemed += currency.Coin(txn.Value)
-	readPoolTokens := int64(float64(txn.Value) * conf.FreeAllocationSettings.ReadPoolFraction)
-	txn.Value -= readPoolTokens
+	assigner.CurrentRedeemed += txn.Value
+	fTxnVal, err := txn.Value.Float64()
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
+	}
+	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
+	}
+	txn.Value, err = currency.MinusCoin(txn.Value, readPoolTokens)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed",
+			"subtracting read pool token from transaction value: %v", err)
+	}
 
 	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances, nil)
 	if err != nil {
@@ -279,8 +290,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	var lr = readPoolLockRequest{
-		TargetId: marker.Recipient,
-		IsOwner:  false,
+		TargetId:   marker.Recipient,
 		MintTokens: true,
 	}
 	input, err = json.Marshal(lr)
@@ -327,7 +337,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, currency.Coin(txn.Value), balances); err != nil {
+	if err := assigner.validate(marker, txn.CreationDate, txn.Value, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"marker verification failed: %v", err)
 	}
@@ -349,7 +359,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		return "", common.NewErrorf("update_free_storage_request", err.Error())
 	}
 
-	assigner.CurrentRedeemed += currency.Coin(txn.Value)
+	assigner.CurrentRedeemed += txn.Value
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)

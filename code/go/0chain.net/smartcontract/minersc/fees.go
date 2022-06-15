@@ -26,7 +26,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for _, pool := range mn.Pools {
 		if pool.Status == spenum.Pending {
 			pool.Status = spenum.Active
-			mn.TotalStaked += int64(pool.Balance)
+			mn.TotalStaked += pool.Balance
 		}
 	}
 }
@@ -288,7 +288,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	if config.DevConfiguration.ViewChange {
+	isViewChange := config.Configuration().ChainConfig.IsViewChangeEnabled()
+	if isViewChange {
 		// TODO: cache the phase node so if when there's no view change happens, we
 		// can avoid unnecessary MPT access
 		var pn *PhaseNode
@@ -393,22 +394,29 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 func (msc *MinerSmartContract) sumFee(b *block.Block,
 	updateStats bool) (currency.Coin, error) {
 
-	var totalMaxFee int64
-	var feeStats metrics.Counter
+	var (
+		totalMaxFee currency.Coin
+		feeStats    metrics.Counter
+		err         error
+	)
 	if stat := msc.SmartContractExecutionStats["feesPaid"]; stat != nil {
 		feeStats = stat.(metrics.Counter)
 	}
 	for _, txn := range b.Txns {
-		if txn.Fee < 0 {
-			return 0, fmt.Errorf("found negative transaction fee: %d", txn.Fee)
+		totalMaxFee, err = currency.AddCoin(totalMaxFee, txn.Fee)
+		if err != nil {
+			return 0, err
 		}
-		totalMaxFee += txn.Fee
 	}
 
-	if updateStats && feeStats != nil {
-		feeStats.Inc(totalMaxFee)
+	intTotalMaxFee, err := totalMaxFee.Int64()
+	if err != nil {
+		return 0, err
 	}
-	return currency.Int64ToCoin(totalMaxFee)
+	if updateStats && feeStats != nil {
+		feeStats.Inc(intTotalMaxFee)
+	}
+	return totalMaxFee, nil
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
