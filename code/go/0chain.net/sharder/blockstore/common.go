@@ -264,7 +264,10 @@ func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 				value *= uint64(i)
 			}
 			return value, nil
+		} else {
+			return 0, fmt.Errorf("could not convert %s to uint64", vStr)
 		}
+
 	}
 	return 0, fmt.Errorf("Type unsupported: %T", v)
 }
@@ -304,6 +307,8 @@ func getintValueFromYamlConfig(v interface{}) (int, error) {
 				value *= i
 			}
 			return value, nil
+		} else {
+			return 0, fmt.Errorf("could not convert %s to int", vStr)
 		}
 	}
 	return 0, fmt.Errorf("Type unsupported: %T", v)
