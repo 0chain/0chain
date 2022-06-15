@@ -12,10 +12,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
+)
+
+const (
+	DefaultCacheBufferSize = 100
 )
 
 type cacher interface {
@@ -30,11 +33,11 @@ type cache struct {
 	// sizeLimit limit of total blocks size in the path
 	sizeLimit int
 
-	sizeMu *sync.Mutex
 	// size current total blocks size in the path
 	size int
 
-	lru *lru
+	lru      *lru
+	bufferCh chan *cacheEntry
 }
 
 // write will write block to the path and then run go routine to add its entry into
@@ -54,15 +57,13 @@ func (c *cache) Write(hash string, data []byte) error {
 		return err
 	}
 
-	c.sizeMu.Lock()
-	c.size += n
-	c.sizeMu.Unlock()
-
-	if c.size >= c.sizeLimit {
-		go c.replace(n)
+	c.bufferCh <- &cacheEntry{
+		listEntry: listEntry{
+			key:  hash,
+			size: n,
+		},
 	}
 
-	go c.lru.Add(hash, n)
 	return nil
 }
 
@@ -84,19 +85,51 @@ func (c *cache) Read(hash string) (data []byte, err error) {
 
 	go func() {
 		n := len(data)
-		isNew := c.lru.Add(hash, n)
-		if isNew {
-			if err := c.Write(hash, data); err != nil {
-				c.lru.Remove(hash)
-				return
-			}
-			c.sizeMu.Lock()
-			c.size += n
-			c.sizeMu.Unlock()
+		c.bufferCh <- &cacheEntry{
+			listEntry: listEntry{
+				key:  hash,
+				size: n,
+			},
+			data: data,
 		}
 	}()
 
 	return
+}
+
+func (c *cache) Add() {
+	for cEntry := range c.bufferCh {
+		if c.size >= c.sizeLimit {
+			c.replace(cEntry.size)
+		}
+
+		switch {
+		case cEntry.data == nil: // write
+			c.size += cEntry.size
+			c.lru.Add(cEntry.key, cEntry.size)
+		default: // read
+			isNew := c.lru.Add(cEntry.key, cEntry.size)
+			if isNew {
+				bPath := filepath.Join(c.path, cEntry.key)
+				f, err := os.Create(bPath)
+				if err != nil {
+					c.lru.Remove(cEntry.key)
+					continue
+				}
+
+				_, err = f.Write(cEntry.data)
+				if err != nil {
+					c.lru.Remove(cEntry.key)
+					f.Close()
+					continue
+				}
+				f.Close()
+
+				c.size += cEntry.size
+			}
+		}
+
+	}
 }
 
 // replace will take size as an argument.
@@ -110,14 +143,12 @@ func (c *cache) replace(size int) {
 			break
 		}
 
-		hash := e.Value.(*entry).key
-		delSize := e.Value.(*entry).size // delete size
+		hash := e.Value.(*listEntry).key
+		delSize := e.Value.(*listEntry).size
 		bPath := filepath.Join(c.path, hash)
 
-		go func(bPath string) {
-			os.Remove(bPath)
-			c.lru.list.Remove(e)
-		}(bPath)
+		os.Remove(bPath)
+		c.lru.Remove(hash)
 
 		sum += delSize
 		if sum > size {
@@ -125,68 +156,43 @@ func (c *cache) replace(size int) {
 		}
 	}
 
-	c.sizeMu.Lock()
 	c.size -= sum
-	c.sizeMu.Unlock()
 }
 
-/*
-// Comment now as its too much of lock contention
-func (c *cache) replaceHalfCaches() {
-	limitCh := make(chan struct{}, 10)
-	var sum int
-
-	for ent := range c.lru.getKeysAndCleanList(50) {
-		bPath := filepath.Join(c.path, ent.key)
-		sum += ent.size
-
-		limitCh <- struct{}{}
-		go func(bPath string) {
-			os.Remove(bPath)
-			<-limitCh
-		}(bPath)
-	}
-
-	c.sizeMu.Lock()
-	c.size -= sum
-	c.sizeMu.Unlock()
-}
-*/
-type entry struct {
+type listEntry struct {
 	key  string
 	size int
 }
 
+type cacheEntry struct {
+	listEntry
+	data []byte
+}
+
 // lru A combination of map and doubly linked list that provides simple mechanism
 // of implementing lru replacement policy.
-// For a key, space use by it will be: 2*len(key) + size_of(int).
+// For a key, space used by it will be: 2*len(key) + size_of(int).
 // Basically it is 2*64+64 = 192
 type lru struct {
-	lock  *sync.Mutex
 	list  *list.List
 	items map[string]*list.Element
 }
 
 // Add add/update entry to the list and map
 func (l *lru) Add(key string, size int) (isNew bool) {
-	l.lock.Lock()
 	if ent, ok := l.items[key]; ok {
 		l.list.MoveToFront(ent)
-		l.lock.Unlock()
 		return
 	}
-	e := &list.Element{Value: &entry{key: key, size: size}}
-	l.items[key] = e
-	l.list.PushFront(e)
+	e := &listEntry{key: key, size: size}
+	listElem := l.list.PushFront(e)
+	l.items[key] = listElem
 
-	l.lock.Unlock()
 	return true
 }
 
 // Remove will remove key from the items and element from list if exists
 func (l *lru) Remove(key string) {
-	l.lock.Lock()
-
 	var elem *list.Element
 	var ok bool
 	if elem, ok = l.items[key]; !ok {
@@ -196,45 +202,7 @@ func (l *lru) Remove(key string) {
 	l.list.Remove(elem)
 	delete(l.items, key)
 
-	l.lock.Unlock()
 }
-
-// getKeysAndCleanList will take percent as argument.
-// so if percent is 50 then 50% of the elements in the list will be deleted
-// and those deleted items will be sent to the channel for further processing.
-/*
-func (l *lru) getKeysAndCleanList(percent int) <-chan *entry {
-	ch := make(chan *entry)
-	switch {
-	case percent > 100:
-		percent = 100
-	case percent < 1:
-		close(ch)
-		return ch
-	}
-
-	listLength := int(math.Floor(float64(percent/100) * float64(l.list.Len())))
-	go func() {
-		l.lock.Lock()
-		for i := 0; i < listLength; i++ {
-			e := l.list.Back()
-			if e == nil {
-				break
-			}
-
-			ent := e.Value.(*entry)
-			l.list.Remove(e)
-			delete(l.items, ent.key)
-			ch <- ent
-		}
-
-		close(ch)
-		l.lock.Unlock()
-	}()
-
-	return ch
-}
-*/
 
 /**********************************Initialization************************************/
 
@@ -258,8 +226,28 @@ func initCache(viper *viper.Viper) cacher {
 		panic(err)
 	}
 
-	return &cache{
+	var bufferSize int
+	bufferSizeStr := viper.GetString("buffer_size")
+	if bufferSizeStr == "" {
+		bufferSize = DefaultCacheBufferSize
+	} else {
+		bufferSize, err = getintValueFromYamlConfig(viper.GetString("buffer_size"))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	c := &cache{
 		path:      cPath,
 		sizeLimit: size,
+		lru: &lru{
+			list:  list.New(),
+			items: make(map[string]*list.Element),
+		},
+		bufferCh: make(chan *cacheEntry, bufferSize),
 	}
+
+	go c.Add()
+
+	return c
 }
