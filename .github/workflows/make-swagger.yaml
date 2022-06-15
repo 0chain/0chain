@@ -24,7 +24,7 @@ jobs:
       - name: build swagger image
         run: docker build -f MakeswaggerDockerFile/Dockerfile . -t make_swagger
 
-      - name: create swagger image
+      - name: create swagger container and run make swagger
         run: |
           docker create -it --name makeswagger make_swagger:latest
           mkdir swaggerfiles
@@ -32,17 +32,22 @@ jobs:
           ls
           docker cp makeswagger:/0chain/code/go/0chain/docs/swagger.md ./swaggerfiles
           docker cp makeswagger:/0chain/code/go/0chain/docs/swagger.yaml ./swaggerfiles
-          docker rm swagger
+          docker rm makeswagger
+          docker rmi make_swagger
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.ACCESS_TOKEN }}
+          personal_token: ${{ secrets.ACCESS_TOKEN }}
           publish_dir: ./swaggerfiles
-          publish_branch: test_reports
+          destination_dir: ./swaggerfiles
+          publish_branch: swagger_report
           keep_files: true
           external_repository: "0chain/actions"
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
 
-
+      - name: Links for swagger files
+        run: |
+          echo "https://github.com/0chain/actions/blob/swagger_report/swaggerfiles/swagger.md"
+          echo "https://github.com/0chain/actions/blob/swagger_report/swaggerfiles/swagger.yaml"
