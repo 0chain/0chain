@@ -300,12 +300,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("block", b.Hash),
 			zap.Int64("round", b.Round),
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
-			zap.Any("txn_hash", txn.Hash),
+			zap.String("txn_hash", txn.Hash),
+			zap.Int64("txn_nonce", txn.Nonce),
 			zap.String("txn_func", scData.FunctionName),
 			zap.Int("txn_status", txn.Status),
-			zap.Any("txn_exec_time", time.Since(t)),
+			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
-			zap.Any("current_root", util.ToHex(sctx.GetState().GetRoot())))
+			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())))
 
 	case transaction.TxnTypeData:
 
