@@ -38,7 +38,7 @@ jobs:
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.PAT_TOKEN }}
+          personal_token: ${{ secrets.ACCESS_TOKEN }}
           publish_dir: ./swaggerfiles
           publish_branch: test_reports
           keep_files: true
