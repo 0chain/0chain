@@ -1,0 +1,48 @@
+name: "MAKE-SWAGGER-FILE"
+
+on: [workflow_dispatch]
+
+jobs:
+  swagger_file:
+    runs-on: make-swagger
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: "Desrired branch"
+        run: |
+          echo "Branch name is ${{ steps.extract_branch.outputs.branch }}"
+
+      - name: build zchain_build_base image
+        run: docker build -f docker.local/build.base/Dockerfile.build_base . -t zchain_build_base
+    
+      - name: build swagger image
+        run: docker build -f MakeswaggerDockerFile/Dockerfile . -t make_swagger
+
+      - name: create swagger image
+        run: |
+          docker create -it --name makeswagger make_swagger:latest
+          mkdir swaggerfiles
+          pwd
+          ls
+          docker cp makeswagger:/0chain/code/go/0chain/docs/swagger.md ./swaggerfiles
+          docker cp makeswagger:/0chain/code/go/0chain/docs/swagger.yaml ./swaggerfiles
+          docker rm swagger
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.ACCESS_TOKEN }}
+          publish_dir: ./swaggerfiles
+          publish_branch: test_reports
+          keep_files: true
+          external_repository: "0chain/actions"
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+
+
