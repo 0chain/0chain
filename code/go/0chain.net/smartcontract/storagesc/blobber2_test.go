@@ -1,6 +1,12 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
@@ -11,12 +17,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -307,7 +308,7 @@ func testCommitBlobberRead(
 
 	var rPool = readPool{readPoolIn.Balance}
 
-	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
+	require.NoError(t, rPool.save(ssc.ID, owner, ctx))
 
 	var sPool = stakePool{
 		StakePool: stakepool.StakePool{
@@ -335,9 +336,7 @@ func testCommitBlobberRead(
 	newRp, err := ssc.getReadPool(owner, ctx)
 	require.NoError(t, err)
 
-	if storageAllocation.Owner == payerId {
-		require.NotEqualValues(t, rPool.Balance, newRp.Balance)
-	}
+	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
 
 	newSp, err := ssc.getStakePool(blobberId, ctx)
 	require.NoError(t, err)
