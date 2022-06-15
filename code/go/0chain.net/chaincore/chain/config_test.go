@@ -3,6 +3,7 @@ package chain
 import (
 	"bytes"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/minersc"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -12,7 +13,7 @@ import (
 
 func TestUpdate(t *testing.T) {
 	type args struct {
-		config  Config
+		config  config.ChainConfig
 		updates minersc.GlobalSettings
 	}
 
@@ -22,7 +23,7 @@ func TestUpdate(t *testing.T) {
 		zChainYaml []byte
 	}
 	type want struct {
-		result Config
+		result config.ChainConfig
 	}
 	setExpectations := func(t *testing.T, p parameters, w *want) args {
 		viper.SetConfigType(p.configType)
@@ -31,7 +32,7 @@ func TestUpdate(t *testing.T) {
 		chain := NewChainFromConfig()
 
 		return args{
-			config:  chain.Config,
+			config:  chain.ChainConfig,
 			updates: p.updates,
 		}
 	}
@@ -96,7 +97,7 @@ func TestUpdate(t *testing.T) {
 			args := setExpectations(t, test.parameters, &test.want)
 			before := args.config
 
-			err := args.config.Update(&args.updates)
+			err := args.config.Update(args.updates.Fields, args.updates.Version)
 			require.NoError(t, err)
 			require.EqualValues(t, before, args.config)
 		})

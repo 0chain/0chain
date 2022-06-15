@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -24,37 +25,26 @@ import (
 
 	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
-	"0chain.net/chaincore/config"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 )
 
 func init() {
 	metrics.DefaultRegistry = metrics.NewRegistry()
-	viper.Set("development.smart_contract.faucet", true)
-	viper.Set("development.smart_contract.storage", true)
-	viper.Set("development.smart_contract.zcn", true)
-	viper.Set("development.smart_contract.multisig", true)
-	viper.Set("development.smart_contract.miner", true)
-	viper.Set("development.smart_contract.vesting", true)
-
-	config.SmartContractConfig = viper.New()
-	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-
+	viper.Set("server_chain.smart_contract.faucet", true)
+	viper.Set("server_chain.smart_contract.storage", true)
+	viper.Set("server_chain.smart_contract.zcn", true)
+	viper.Set("server_chain.smart_contract.multisig", true)
+	viper.Set("server_chain.smart_contract.miner", true)
+	viper.Set("server_chain.smart_contract.vesting", true)
 	setupsc.SetupSmartContracts()
-	logging.InitLogging("testing", "")
 }
 
 func TestExecuteStats(t *testing.T) {

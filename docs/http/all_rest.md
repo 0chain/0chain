@@ -95,7 +95,7 @@ File: 0Chain/code/go/0chain.net/smartcontract/setupsc/setupsc.go
 ```sh
 func SetupSmartContracts() {
 	for _, sc := range scs {
-		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", sc.GetName())) {
+		if viper.GetBool(fmt.Sprintf("server_chain.smart_contract.%v", sc.GetName())) {
 			sc.InitSC()
 			smartcontract.ContractMap[sc.GetAddress()] = sc
 		}

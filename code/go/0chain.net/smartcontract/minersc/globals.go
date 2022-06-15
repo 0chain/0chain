@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/util"
@@ -39,7 +41,8 @@ const (
 	Multisig                          // todo from development
 
 	Vesting // todo from development
-	Owner   // do we want to set this.
+	Zcn
+	Owner // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
 	BlockMaxCost
@@ -113,15 +116,16 @@ const (
 // GlobalSettingName list of global settings keys. This key used to access each
 // global setting, either in smartcontract.StringMap or in the viper settings database.
 var GlobalSettingName = []string{
-	"development.state",
-	"development.dkg",
-	"development.view_change",
-	"development.block_rewards",
-	"development.smart_contract.storage",
-	"development.smart_contract.faucet",
-	"development.smart_contract.miner",
-	"development.smart_contract.multisig",
-	"development.smart_contract.vesting",
+	"server_chain.state.enabled",
+	"server_chain.dkg",
+	"server_chain.view_change",
+	"server_chain.block_rewards",
+	"server_chain.smart_contract.storage",
+	"server_chain.smart_contract.faucet",
+	"server_chain.smart_contract.miner",
+	"server_chain.smart_contract.multisig",
+	"server_chain.smart_contract.vesting",
+	"server_chain.smart_contract.zcn",
 	"server_chain.owner",
 	"server_chain.block.min_block_size",
 	"server_chain.block.max_block_size",
@@ -219,6 +223,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[Miner]:                             {smartcontract.Boolean, false},
 	GlobalSettingName[Multisig]:                          {smartcontract.Boolean, false},
 	GlobalSettingName[Vesting]:                           {smartcontract.Boolean, false},
+	GlobalSettingName[Zcn]:                               {smartcontract.Boolean, false},
 	GlobalSettingName[Owner]:                             {smartcontract.String, false},
 	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
 	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
@@ -410,6 +415,28 @@ func (gl *GlobalSettings) GetInt64(field GlobalSetting) (int64, error) {
 	value, ok := iValue.(int64)
 	if !ok {
 		return value, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
+	}
+	return value, nil
+}
+
+// GetCoin returns a global setting as an currency.Coin, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetCoin(field GlobalSetting) (currency.Coin, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
+	if !found {
+		return currency.Coin(viper.GetUint64(key)), nil
+	}
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.CurrencyCoin)
+	if err != nil {
+		return currency.Coin(viper.GetUint64(key)), nil
+	}
+	value, ok := iValue.(currency.Coin)
+	if !ok {
+		return value, fmt.Errorf("cannot convert key %s value %v to type currency.Coin", key, value)
 	}
 	return value, nil
 }

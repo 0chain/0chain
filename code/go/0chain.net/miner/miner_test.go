@@ -65,10 +65,10 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 	}
 	b.ChainID = prevBlock.ChainID
 	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
-	if mc.Config != nil {
-		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	if mc.ChainConfig != nil {
+		chain.UpdateConfigImpl(mc.ChainConfig.(*chain.ConfigImpl), data)
 	} else {
-		mc.Config = chain.NewConfigImpl(data)
+		mc.ChainConfig = chain.NewConfigImpl(data)
 	}
 
 	var rd *Round
@@ -128,7 +128,7 @@ func setupMinerChain() (*Chain, func()) {
 		mc.Chain = chain.Provider().(*chain.Chain)
 	}
 
-	mc.Config = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
+	mc.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -341,10 +341,10 @@ func setupSelfNodeKeys() { //nolint
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
 	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
-	if mc.Config != nil {
-		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	if mc.ChainConfig != nil {
+		chain.UpdateConfigImpl(mc.ChainConfig.(*chain.ConfigImpl), data)
 	} else {
-		mc.Config = chain.NewConfigImpl(data)
+		mc.ChainConfig = chain.NewConfigImpl(data)
 	}
 
 	mb := mc.GetMagicBlock(0)
@@ -443,7 +443,7 @@ func SetUpSingleSelf() func() {
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
 	data := &chain.ConfigData{BlockSize: 1024}
-	c.Config = chain.NewConfigImpl(data)
+	c.ChainConfig = chain.NewConfigImpl(data)
 	data.BlockSize = int32(numOfTransactions)
 
 	data.MinGenerators = 1

@@ -93,9 +93,13 @@ tests:
     flow:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
+      - env:
+          CONFIG_SUBPATH: "/test.generators_failure"
+          CLI_ARGS: "--magic_block_file config/test.generators_failure/b0magicBlock_7_miners_1_sharder.json"
+          DKG_AFFIX: "7_miners_1_sharder_"
       - wait_add:
           sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6", "miner-7", "miner-8"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6", "miner-7"]
           start: true
       - wait_view_change:
           timeout: "10m"
