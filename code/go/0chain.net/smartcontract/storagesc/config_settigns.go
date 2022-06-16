@@ -463,6 +463,36 @@ func (conf *Config) setFloat64(key string, change float64) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.BlobberWeight = change
+	case BlockRewardGammaAlpha:
+		if conf.BlockReward == nil {
+			conf.BlockReward = &blockReward{}
+		}
+		conf.BlockReward.Gamma.Alpha = change
+	case BlockRewardGammaA:
+		if conf.BlockReward == nil {
+			conf.BlockReward = &blockReward{}
+		}
+		conf.BlockReward.Gamma.A = change
+	case BlockRewardGammaB:
+		if conf.BlockReward == nil {
+			conf.BlockReward = &blockReward{}
+		}
+		conf.BlockReward.Gamma.B = change
+	case BlockRewardZetaI:
+		if conf.BlockReward == nil {
+			conf.BlockReward = &blockReward{}
+		}
+		conf.BlockReward.Zeta.I = change
+	case BlockRewardZetaK:
+		if conf.BlockReward == nil {
+			conf.BlockReward = &blockReward{}
+		}
+		conf.BlockReward.Zeta.K = change
+	case BlockRewardZetaMu:
+		if conf.BlockReward == nil {
+			conf.BlockReward = &blockReward{}
+		}
+		conf.BlockReward.Zeta.Mu = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -865,12 +895,12 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	}
 
 	if err = conf.validate(); err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_settings_validate", err.Error())
 	}
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_settings_insert", err.Error())
 	}
 
 	return "", nil

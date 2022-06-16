@@ -376,6 +376,16 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		BlockRewardChangeRatio:  0.1,
 		TriggerPeriod:           30,
 		BlobberWeight:           0.5,
+		Gamma: blockRewardGamma{
+			Alpha: 1,
+			A:     1,
+			B:     1,
+		},
+		Zeta: blockRewardZeta{
+			Mu: 1,
+			I:  1,
+			K:  1,
+		},
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
