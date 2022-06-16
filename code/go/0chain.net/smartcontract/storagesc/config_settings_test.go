@@ -499,6 +499,18 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.BlobberWeight
 	case MaxBlobbersPerAllocation:
 		return conf.MaxBlobbersPerAllocation
+	case BlockRewardGammaAlpha:
+		return conf.BlockReward.Gamma.Alpha
+	case BlockRewardGammaA:
+		return conf.BlockReward.Gamma.A
+	case BlockRewardGammaB:
+		return conf.BlockReward.Gamma.B
+	case BlockRewardZetaI:
+		return conf.BlockReward.Zeta.I
+	case BlockRewardZetaK:
+		return conf.BlockReward.Zeta.K
+	case BlockRewardZetaMu:
+		return conf.BlockReward.Zeta.Mu
 
 	case ExposeMpt:
 		return conf.ExposeMpt
