@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
@@ -173,7 +174,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.Blobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
-	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
+	sa.MaxChallengeCompletionTime = config.Configuration().maxch
 	return
 }
 
@@ -296,6 +297,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
+	request.MaxChallengeCompletionTime = conf.MaxChallengeCompletionTime
+
 	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
 		return "", common.NewErrorf("allocation_creation_failed",

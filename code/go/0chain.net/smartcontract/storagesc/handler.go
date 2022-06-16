@@ -304,8 +304,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	var allocationSize = sa.bSize()
 	dur := common.ToTime(sa.Expiration).Sub(creationDate)
 	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
-		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		MaxOfferDuration:           dur,
+		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
