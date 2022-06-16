@@ -14,15 +14,14 @@ func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
 	data, err := json.Marshal(&event.Blobber{
-		BlobberID:               sn.ID,
-		BaseURL:                 sn.BaseURL,
-		Latitude:                sn.Geolocation.Latitude,
-		Longitude:               sn.Geolocation.Longitude,
-		ReadPrice:               sn.Terms.ReadPrice,
-		WritePrice:              sn.Terms.WritePrice,
-		MinLockDemand:           sn.Terms.MinLockDemand,
-		MaxOfferDuration:        sn.Terms.MaxOfferDuration.Nanoseconds(),
-		ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.Nanoseconds(),
+		BlobberID:        sn.ID,
+		BaseURL:          sn.BaseURL,
+		Latitude:         sn.Geolocation.Latitude,
+		Longitude:        sn.Geolocation.Longitude,
+		ReadPrice:        sn.Terms.ReadPrice,
+		WritePrice:       sn.Terms.WritePrice,
+		MinLockDemand:    sn.Terms.MinLockDemand,
+		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
 
 		Capacity:        sn.Capacity,
 		Used:            sn.Used,

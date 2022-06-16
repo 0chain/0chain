@@ -387,10 +387,6 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 		return errors.New("invalid blobber base url")
 	}
 
-	if sn.Terms.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge completion time exceeded")
-	}
-
 	if err := sn.Geolocation.validate(); err != nil {
 		return err
 	}
@@ -745,11 +741,6 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Used, bSize)
 	}
-	// filter by max challenge completion time
-	if blobber.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
-		return fmt.Errorf("blobber %s challenge compledtion time %v exceeds maximum challenge completeion time %v",
-			blobber.ID, blobber.Terms.ChallengeCompletionTime, sa.MaxChallengeCompletionTime)
-	}
 
 	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
 		return fmt.Errorf("blobber %s failed health check", blobber.ID)
@@ -1062,10 +1053,7 @@ List:
 		if b.Capacity-b.Used < bsize {
 			continue
 		}
-		// filter by max challenge completion time
-		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
-			continue
-		}
+
 		for _, filter := range filters {
 			if filter(b) {
 				continue List

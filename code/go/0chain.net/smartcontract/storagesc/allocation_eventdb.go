@@ -148,13 +148,12 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	allocationTerms := make([]event.AllocationTerm, 0)
 	for _, b := range sa.BlobberAllocs {
 		allocationTerms = append(allocationTerms, event.AllocationTerm{
-			BlobberID:               b.BlobberID,
-			AllocationID:            b.AllocationID,
-			ReadPrice:               b.Terms.ReadPrice,
-			WritePrice:              b.Terms.WritePrice,
-			MinLockDemand:           b.Terms.MinLockDemand,
-			MaxOfferDuration:        b.Terms.MaxOfferDuration,
-			ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
+			BlobberID:        b.BlobberID,
+			AllocationID:     b.AllocationID,
+			ReadPrice:        b.Terms.ReadPrice,
+			WritePrice:       b.Terms.WritePrice,
+			MinLockDemand:    b.Terms.MinLockDemand,
+			MaxOfferDuration: b.Terms.MaxOfferDuration,
 		})
 	}
 

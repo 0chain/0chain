@@ -112,13 +112,12 @@ func addMockAllocation(
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 		if viper.GetBool(sc.EventDbEnabled) {
 			terms := event.AllocationTerm{
-				BlobberID:               bId,
-				AllocationID:            sa.ID,
-				ReadPrice:               ba.Terms.ReadPrice,
-				WritePrice:              ba.Terms.WritePrice,
-				MinLockDemand:           ba.Terms.MinLockDemand,
-				MaxOfferDuration:        ba.Terms.MaxOfferDuration,
-				ChallengeCompletionTime: ba.Terms.ChallengeCompletionTime,
+				BlobberID:        bId,
+				AllocationID:     sa.ID,
+				ReadPrice:        ba.Terms.ReadPrice,
+				WritePrice:       ba.Terms.WritePrice,
+				MinLockDemand:    ba.Terms.MinLockDemand,
+				MaxOfferDuration: ba.Terms.MaxOfferDuration,
 			}
 			_ = eventDb.Store.Get().Create(&terms)
 		}
@@ -132,13 +131,12 @@ func addMockAllocation(
 		allocationTerms := make([]event.AllocationTerm, 0)
 		for _, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationTerm{
-				BlobberID:               b.BlobberID,
-				AllocationID:            b.AllocationID,
-				ReadPrice:               b.Terms.ReadPrice,
-				WritePrice:              b.Terms.WritePrice,
-				MinLockDemand:           b.Terms.MinLockDemand,
-				MaxOfferDuration:        b.Terms.MaxOfferDuration,
-				ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
+				BlobberID:        b.BlobberID,
+				AllocationID:     b.AllocationID,
+				ReadPrice:        b.Terms.ReadPrice,
+				WritePrice:       b.Terms.WritePrice,
+				MinLockDemand:    b.Terms.MinLockDemand,
+				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
 
@@ -496,24 +494,23 @@ func AddMockBlobbers(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
-				BlobberID:               blobber.ID,
-				BaseURL:                 blobber.BaseURL,
-				Latitude:                blobber.Geolocation.Latitude,
-				Longitude:               blobber.Geolocation.Longitude,
-				ReadPrice:               blobber.Terms.ReadPrice,
-				WritePrice:              blobber.Terms.WritePrice,
-				MinLockDemand:           blobber.Terms.MinLockDemand,
-				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.Nanoseconds(),
-				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.Nanoseconds(),
-				Capacity:                blobber.Capacity,
-				Used:                    blobber.Used,
-				TotalDataStored:         blobber.Used / 2,
-				LastHealthCheck:         int64(blobber.LastHealthCheck),
-				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
-				MinStake:                blobber.StakePoolSettings.MinStake,
-				MaxStake:                blobber.StakePoolSettings.MaxStake,
-				NumDelegates:            blobber.StakePoolSettings.MaxNumDelegates,
-				ServiceCharge:           blobber.StakePoolSettings.ServiceChargeRatio,
+				BlobberID:        blobber.ID,
+				BaseURL:          blobber.BaseURL,
+				Latitude:         blobber.Geolocation.Latitude,
+				Longitude:        blobber.Geolocation.Longitude,
+				ReadPrice:        blobber.Terms.ReadPrice,
+				WritePrice:       blobber.Terms.WritePrice,
+				MinLockDemand:    blobber.Terms.MinLockDemand,
+				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
+				Capacity:         blobber.Capacity,
+				Used:             blobber.Used,
+				TotalDataStored:  blobber.Used / 2,
+				LastHealthCheck:  int64(blobber.LastHealthCheck),
+				DelegateWallet:   blobber.StakePoolSettings.DelegateWallet,
+				MinStake:         blobber.StakePoolSettings.MinStake,
+				MaxStake:         blobber.StakePoolSettings.MaxStake,
+				NumDelegates:     blobber.StakePoolSettings.MaxNumDelegates,
+				ServiceCharge:    blobber.StakePoolSettings.ServiceChargeRatio,
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
