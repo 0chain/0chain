@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -339,7 +340,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
 	conf.MinAllocDuration = 1 * time.Minute
-	// conf.MaxChallengeCompletionTime = 15 * time.Second
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
@@ -349,6 +349,8 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
+	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "5m")
+
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
