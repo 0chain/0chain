@@ -284,9 +284,5 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 			"Invalid storage function '%s' called", funcName)
 	}
 
-	if err != nil {
-		logging.Logger.Error(funcName, zap.String("input", string(input)), zap.Error(err))
-	}
-
 	return
 }
