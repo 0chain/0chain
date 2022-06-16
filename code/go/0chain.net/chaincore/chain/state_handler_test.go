@@ -78,12 +78,12 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		setValidConfig bool
 	}{
 		{
-			name:  "Faucet_/personalPeriodicLimit_Empty_Global_Node_404",
+			name:  "Faucet_/personal-periodic-limit_Empty_Global_Node_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personal-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -92,7 +92,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Faucet_/personalPeriodicLimit_Decoding_Global_Node_Err_500",
+			name: "Faucet_/personal-periodic-limit_Decoding_Global_Node_Err_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -111,7 +111,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personal-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -120,7 +120,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Faucet_/personalPeriodicLimit_Empty_User_Node_404",
+			name: "Faucet_/personal-periodic-limit_Empty_User_Node_404",
 			chain: func() *chain.Chain {
 				gn := &faucetsc.GlobalNode{ID: faucetsc.ADDRESS}
 				blob, err := gn.MarshalMsg(nil)
@@ -144,7 +144,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personal-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -153,7 +153,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Faucet_/personalPeriodicLimit_Decoding_User_Node_Err_500",
+			name: "Faucet_/personal-periodic-limit_Decoding_User_Node_Err_500",
 			chain: func() *chain.Chain {
 				gn := &faucetsc.GlobalNode{ID: faucetsc.ADDRESS}
 				blob, err := gn.MarshalMsg(nil)
@@ -183,7 +183,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personal-periodic-limit")
 					u, err := url.Parse(tar)
 					if err != nil {
 						t.Fatal(err)
@@ -203,7 +203,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/global-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -231,7 +231,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/global-periodic-limit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -245,7 +245,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/pourAmount")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/pour-amount")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -273,7 +273,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/pourAmount")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/pour-amount")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -1498,12 +1498,12 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:  "Vestingsc_/getPoolInfo_404",
+			name:  "Vestingsc_/pool-info_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/getPoolInfo")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/pool-info")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -1512,7 +1512,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Vestingsc_/getClientPools_500",
+			name: "Vestingsc_/client-pools_500",
 			chain: func() *chain.Chain {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -1531,7 +1531,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/getClientPools")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", vestingsc.ADDRESS, "/client-pools")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req

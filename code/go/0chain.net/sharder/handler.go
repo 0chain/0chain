@@ -17,18 +17,18 @@ import (
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	getBlockV1Pattern = "/v1/block"
 )
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
 		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
-		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
-		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
-		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
-		"/_chain_stats":                    ChainStatsWriter,
-		"/_health_check":                   HealthCheckWriter,
-		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
+		"/v1/block/magic":              common.ToJSONResponse(MagicBlockHandler),
+		"/v1/transaction/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
+		"/v1/chain/stats":              common.ToJSONResponse(ChainStatsHandler),
+		"/_chain-stats":                    ChainStatsWriter,
+		"/_health-check":                   HealthCheckWriter,
+		"/v1/sharder/stats":            common.ToJSONResponse(SharderStatsHandler),
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))

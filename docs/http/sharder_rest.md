@@ -21,13 +21,13 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/block/get | BlockHandler |
-| /v1/block/magic/get | MagicBlockHandler |
-| /v1/transaction/get/confirmation | TransactionConfirmationHandler |
-| /v1/chain/get/stats | ChainStatsHandlerr |
+| /v1/block | BlockHandler |
+| /v1/block/magic | MagicBlockHandler |
+| /v1/transaction/confirmation | TransactionConfirmationHandler |
+| /v1/chain/stats | ChainStatsHandlerr |
 | /_chain_stats | ChainStatsWriter |
 | /_health_check | HealthCheckWriter |
-| /v1/sharder/get/stats | SharderStatsHandler |
+| /v1/sharder/stats | SharderStatsHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/sharder/m_handler.go
@@ -44,7 +44,7 @@ File: 0Chain/code/go/0chain.net/sharder/m_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToS2MSendEntityHandler |
 | ------ | ------ |
-| /v1/_m2s/block/latest_finalized/get | LatestFinalizedBlockHandler |
+| /v1/_m2s/block/latest-finalized | LatestFinalizedBlockHandler |
 
 
 ```sh
@@ -56,10 +56,10 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | roundEntityMetadata |
+| /v1/_s2s/latest-round | roundEntityMetadata |
 | /v1/_s2s/round/get | roundEntityMetadata |
-| /v1/_s2s/block/get | blockEntityMetadata |
-| /v1/_s2s/blocksummary/get | blockSummaryEntityMetadata |
+| /v1/_s2s/block | blockEntityMetadata |
+| /v1/_s2s/block-summary | blockSummaryEntityMetadata |
 | /v1/_s2s/roundsummaries/get | roundSummariesEntityMetadata |
 | /v1/_s2s/blocksummaries/get | blockSummariesEntityMetadata |
 
@@ -68,11 +68,11 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | LatestRoundRequestHandler |
+| /v1/_s2s/latest-round | LatestRoundRequestHandler |
 | /v1/_s2s/round/get | RoundRequestHandler |
 | /v1/_s2s/roundsummaries/get | RoundSummariesHandler) |
-| /v1/_s2s/block/get | RoundBlockRequestHandler |
-| /v1/_s2s/blocksummary/get | BlockSummaryRequestHandler |
+| /v1/_s2s/block | RoundBlockRequestHandler |
+| /v1/_s2s/block-summary | BlockSummaryRequestHandler |
 | /v1/_s2s/blocksummaries/get | BlockSummariesHandler |
 
 > SetupX2SRespondes setups sharders responders for miner and sharders.
@@ -81,7 +81,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_x2s/block/get | RoundBlockRequestHandler |
+| /v1/_s2s/block | RoundBlockRequestHandler |
 
 
 

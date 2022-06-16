@@ -37,7 +37,7 @@ import (
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
 
-const clientBalanceURL = "v1/client/get/balance?client_id="
+const clientBalanceURL = "v1/client/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
 const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
@@ -46,7 +46,7 @@ const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
 
 //RegisterClient path to RegisterClient
-const RegisterClient = "/v1/client/put"
+const RegisterClient = "/v1/client"
 
 var httpClient *http.Client
 

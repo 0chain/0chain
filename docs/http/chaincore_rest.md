@@ -9,21 +9,21 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/chain/get | GetChainHandler |
-| /v1/chain/put | PutChainHandler |
-| /v1/block/get | GetBlockHandler |
-| /v1/block/get/latest_finalized | LatestFinalizedBlockHandler |
-| /v1/block/get/latest_finalized_magic_block_summary | LatestFinalizedMagicBlockSummaryHandler |
-| /v1/block/get/latest_finalized_magic_block | LatestFinalizedMagicBlockHandler |
-| /v1/block/get/recent_finalized | RecentFinalizedBlockHandler |
-| /v1/block/get/fee_stats | LatestBlockFeeStatsHandler |
+| /v1/chain | GetChainHandler |
+| /v1/chain | PutChainHandler |
+| /v1/block | GetBlockHandler |
+| /v1/block/latest-finalized | LatestFinalizedBlockHandler |
+| /v1/block/latest-finalized-magic-block-summary | LatestFinalizedMagicBlockSummaryHandler |
+| /v1/block/latest-finalized-magic-block | LatestFinalizedMagicBlockHandler |
+| /v1/block/recent-finalized | RecentFinalizedBlockHandler |
+| /v1/block/fee-stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
 | /_diagnostics | DiagnosticsHomepageHandler |
 | /_diagnostics/dkg_process | DiagnosticsDKGHandler |
 | /_diagnostics/round_info | RoundInfoHandler |
-| /v1/transaction/put | PutTransaction |
+| /v1/transaction | PutTransaction |
 | /_diagnostics/state_dump | StateDumpHandler |
-| /v1/block/get/latest_finalized_ticket | LFBTicketHandler |
+| /v1/block/latest-finalized-ticket | LFBTicketHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
@@ -41,23 +41,23 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_x2m/block/notarized_block/get | blockEntityMetadata |
-| /v1/_x2m/block/state_change/get | blockStateChangeEntityMetadata |
-| /v1/_x2m/state/get | partialStateEntityMetadata |
-| /v1/_x2x/state/get_nodes | stateNodesEntityMetadata |
+| /v1/_x2m/block/notarized-block | blockEntityMetadata |
+| /v1/_x2m/block/state-change | blockStateChangeEntityMetadata |
+| /v1/_x2m/state | partialStateEntityMetadata |
+| /v1/_x2x/state/nodes | stateNodesEntityMetadata |
 
 > SetupX2SRequestors
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/block/get/latest_finalized_magic_block | blockEntityMetadata |
+| /v1/block/latest-finalized-magic-block | blockEntityMetadata |
 
 
 > SetupX2XResponders
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/_x2x/state/get_nodes | StateNodesHandler |
+| /v1/_x2x/state/nodes | StateNodesHandler |
 
 
 ```sh
@@ -68,8 +68,8 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/state_handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/client/get/balance | c.GetBalanceHandler |
-| /v1/scstate/get | c.GetNodeFromSCState |
+| /v1/client/balance | c.GetBalanceHandler |
+| /v1/scstate | c.GetNodeFromSCState |
 | /v1/scstats/ | c.GetSCStats |
 | /v1/screst/ | c.HandleSCRest |
 | /_smart_contract_stats | c.SCStats |
@@ -83,8 +83,8 @@ File: 0Chain/code/go/0chain.net/chaincore/client/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/client/get | GetClientHandler |
-| /v1/client/put | PutClient |
+| /v1/client | GetClientHandler |
+| /v1/client | PutClient |
 
 
 ```sh
@@ -95,7 +95,7 @@ File: 0Chain/code/go/0chain.net/chaincore/config/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/config/get | GetConfigHandler |
+| /v1/config | GetConfigHandler |
 
 
 ```sh
@@ -137,7 +137,7 @@ File: 0Chain/code/go/0chain.net/chaincore/node/n2n_handler.go
 
 | Endpoint: http.HandleFunc | Handler: ToN2NReceiveEntityHandler|
 | ------ | ------ |
-| /v1/_n2n/entity/post| datastore.PrintEntityHandler |
+| /v1/_n2n/entity| datastore.PrintEntityHandler |
 
 | Endpoint: http.HandleFunc | Handler: ToN2NSendEntityHandler |
 | ------ | ------ |
@@ -152,7 +152,7 @@ File: 0Chain/code/go/0chain.net/chaincore/transaction/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/transaction/get | GetTransaction |
+| /v1/transaction | GetTransaction |
 
 
 

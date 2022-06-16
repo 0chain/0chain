@@ -13,11 +13,11 @@ import (
 )
 
 func TestLatestRoundRequestHandler(t *testing.T) {
-	const baseUrl = "/v1/_s2s/latest_round/get"
+	const baseUrl = "/v1/_s2s/latest-round"
 
 	sc := makeTestChain(t)
 	var num int64 = 1
-	r := round.NewRound(num)
+	r := round.NewRound(num§)
 	sc.AddRound(r)
 	sc.SetCurrentRound(num)
 
@@ -60,7 +60,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 func TestBlockSummaryRequestHandler(t *testing.T) {
 	t.Parallel()
 
-	const baseUrl = "/v1/_s2s/blocksummary/get"
+	const baseUrl = "/v1/_s2s/block-summary"
 
 	b := block.NewBlock("", 1)
 	b.HashBlock()
@@ -110,7 +110,7 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 }
 
 func TestRoundBlockRequestHandler(t *testing.T) {
-	const baseUrl = "/v1/_s2s/block/get"
+	const baseUrl = "/v1/_s2s/block"
 
 	type test struct {
 		name       string

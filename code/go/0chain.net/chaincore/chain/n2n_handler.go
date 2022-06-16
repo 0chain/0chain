@@ -49,34 +49,33 @@ func setupX2MRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized_block/get", options, blockEntityMetadata)
+	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized-block", options, blockEntityMetadata)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
-	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
-	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
+	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state-change", options, blockStateChangeEntityMetadata)
 
 	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
-	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
+	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/nodes", options, stateNodesEntityMetadata)
 }
 
 func setupX2SRequestors() {
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
+	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/latest-finalized-magic-block", options, blockEntityMetadata)
 
 	var opts = node.SendOptions{
 		Timeout:  node.TimeoutLargeMessage,
 		CODEC:    node.CODEC_MSGPACK,
 		Compress: true,
 	}
-	FBRequestor = node.RequestEntityHandler("/v1/_x2s/block/get", &opts,
+	FBRequestor = node.RequestEntityHandler("/v1/_s2s/block", &opts,
 		datastore.GetEntityMetadata("block"))
 }
 
 func SetupX2XResponders(c *Chain) {
-	http.HandleFunc("/v1/_x2x/state/get_nodes", common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
-	http.HandleFunc("/v1/_x2x/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(c.BlockStateChangeHandler)))
+	http.HandleFunc("/v1/_x2x/state/nodes", common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
+	http.HandleFunc("/v1/_x2x/block/state-change", common.N2NRateLimit(node.ToN2NSendEntityHandler(c.BlockStateChangeHandler)))
 }
 
 //StateNodesHandler - return a list of state nodes

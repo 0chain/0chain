@@ -31,7 +31,7 @@ const (
 	//	Flow of this test case:
 	//		Replica0: Ignore proposal
 	//		Replica0: Gets Notarisation and starts requests.
-	//		All miners  ignores "/v1/_x2m/block/notarized_block/get" requests
+	//		All miners  ignores "/v1/_x2m/block/notarized-block" requests
 	//		Requested nodes: ignore requests.
 	//		Check: Replica0 must retry requesting.
 	FBRNoReplies FBRequestorType = iota
@@ -42,7 +42,7 @@ const (
 	//	Flow of this test case:
 	//		Replica0: Ignore proposal
 	//		Replica0: Gets Notarisation and starts requests.
-	//		All miners  ignores "/v1/_x2m/block/notarized_block/get" requests
+	//		All miners  ignores "/v1/_x2m/block/notarized-block" requests
 	//		Requested nodes: ignore requests, but only one node replies correctly.
 	//		Check: round must be finalized.
 	FBROnlyOneRepliesCorrectly
@@ -53,7 +53,7 @@ const (
 	//	Flow of this test case:
 	//		Replica0: Ignore proposal
 	//		Replica0: Gets Notarisation and starts requests.
-	//		All miners  ignores "/v1/_x2m/block/notarized_block/get" requests
+	//		All miners  ignores "/v1/_x2m/block/notarized-block" requests
 	//		Requested nodes: ignore requests, but only one node sends valid block (with changed hash).
 	//		Check: Replica0 must retry requesting.
 	FBRValidBlockWithChangedHash
@@ -64,7 +64,7 @@ const (
 	//	Flow of this test case:
 	//		Replica0: Ignore proposal
 	//		Replica0: Gets Notarisation and starts requests.
-	//		All miners  ignores "/v1/_x2m/block/notarized_block/get" requests
+	//		All miners  ignores "/v1/_x2m/block/notarized-block" requests
 	//		Requested nodes: ignore requests, but only one node sends invalid block (with changed hash).
 	//		Check: Replica0 must retry requesting.
 	FBRInvalidBlockWithChangedHash
@@ -75,7 +75,7 @@ const (
 	//	Flow of this test case:
 	//		Replica0: Ignore proposal
 	//		Replica0: Gets Notarisation and starts requests.
-	//		All miners  ignores "/v1/_x2m/block/notarized_block/get" requests
+	//		All miners  ignores "/v1/_x2m/block/notarized-block" requests
 	//		Requested nodes: ignore requests, but only one node sends block without verification tickets.
 	//		Check: round must be finalized.
 	FBRBlockWithoutVerTickets

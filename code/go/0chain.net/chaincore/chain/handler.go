@@ -36,46 +36,46 @@ import (
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	getBlockV1Pattern = "/v1/block"
 )
 
 func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
-		"/v1/chain/get": common.Recover(
+		"/v1/chain": common.Recover(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(
 					GetChainHandler,
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
+		"/v1/chain": common.Recover(
 			datastore.ToJSONEntityReqResponse(
 				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
 				chainEntityMetadata,
 			),
 		),
-		"/v1/block/get/latest_finalized": common.UserRateLimit(
+		"/v1/block/latest-finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+		"/v1/block/latest-finalized-magic-block-summary": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+		"/v1/block/latest-finalized-magic-block": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),
 		),
-		"/v1/block/get/recent_finalized": common.UserRateLimit(
+		"/v1/block/recent-finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				RecentFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/fee_stats": common.UserRateLimit(
+		"/v1/block/fee-stats": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
@@ -86,16 +86,16 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
 		),
-		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+		"/_diagnostics/current-mb-nodes": common.UserRateLimit(
 			DiagnosticsNodesHandler,
 		),
-		"/_diagnostics/dkg_process": common.UserRateLimit(
+		"/_diagnostics/dkg-process": common.UserRateLimit(
 			DiagnosticsDKGHandler,
 		),
-		"/_diagnostics/round_info": common.UserRateLimit(
+		"/_diagnostics/round-info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/transaction/put": common.UserRateLimit(
+		"/v1/transaction": common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
 					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
@@ -104,10 +104,10 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				transactionEntityMetadata,
 			),
 		),
-		"/_diagnostics/state_dump": common.UserRateLimit(
+		"/_diagnostics/state-dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
-		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+		"/v1/block/latest-finalized-ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
 			),
@@ -700,7 +700,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
+	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config</a></li>")
 	selfNodeType := node.Self.Underlying().Type
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
@@ -715,7 +715,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
+		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet-stats'>/_diagnostics/wallet-stats</a>")
 	}
 	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")

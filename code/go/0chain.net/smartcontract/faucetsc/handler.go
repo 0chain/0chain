@@ -36,9 +36,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	frh := NewFaucetscRestHandler(rh)
 	faucet := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(faucet+"/personalPeriodicLimit", frh.getPersonalPeriodicLimit),
-		rest.MakeEndpoint(faucet+"/globalPeriodicLimit", frh.getGlobalPeriodicLimit),
-		rest.MakeEndpoint(faucet+"/pourAmount", frh.getPourAmount),
+		rest.MakeEndpoint(faucet+"/personal-periodic-limit", frh.getPersonalPeriodicLimit),
+		rest.MakeEndpoint(faucet+"/global-periodic-limit", frh.getGlobalPeriodicLimit),
+		rest.MakeEndpoint(faucet+"/pour-amount", frh.getPourAmount),
 		rest.MakeEndpoint(faucet+"/faucet-config", frh.getConfig),
 	}
 }
@@ -111,7 +111,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount pourAmount
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pour-amount pourAmount
 // pour amount
 //
 // responses:
@@ -126,7 +126,7 @@ func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit globalPeriodicLimit
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/global-periodic-limit global-periodic-limit
 // list minersc config settings
 //
 // responses:
@@ -150,7 +150,7 @@ func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r 
 	common.Respond(w, r, resp, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit personalPeriodicLimit
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personal-periodic-limit personalPeriodicLimit
 // list minersc config settings
 //
 // responses:

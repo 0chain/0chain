@@ -11,9 +11,9 @@ File: 0Chain/code/go/0chain.net/smartcontract/faucetsc/sc.go
 
 | Endpoint: fc.SmartContract.RestHandlers | Handler |
 | ------ | ------ |
-| /personalPeriodicLimit | fc.personalPeriodicLimit |
+| /personal-periodic-limit | fc.personalPeriodicLimit |
 | /globalPerodicLimit | fc.globalPerodicLimit |
-| /pourAmount | fc.pourAmount |
+| /pour-amount | fc.pourAmount |
 | /getConfig | fc.getConfigHandler |
 
 | Endpoint: fc.SmartContractExecutionStats | Handler |
@@ -255,8 +255,8 @@ File: 0Chain/code/go/0chain.net/smartcontract/vestingsc/sc.go
 | Endpoint: ssc.SmartContract.RestHandlers | Handler |
 | ------ | ------ |
 | /getConfig | vsc.getConfigHandler |
-| /getPoolInfo | vsc.getPoolInfoHandler |
-| /getClientPools | vsc.getClientPoolsHandler |
+| /pool-info | vsc.getPoolInfoHandler |
+| /client-pools | vsc.getClientPoolsHandler |
 
 | Endpoint: fc.SmartContractExecutionStats | Handler |Comment|
 | ------ | ------ | ------ |
@@ -303,21 +303,21 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/chain/get | GetChainHandler |
-| /v1/chain/put | PutChainHandler |
-| /v1/block/get | GetBlockHandler |
-| /v1/block/get/latest_finalized | LatestFinalizedBlockHandler |
-| /v1/block/get/latest_finalized_magic_block_summary | LatestFinalizedMagicBlockSummaryHandler |
-| /v1/block/get/latest_finalized_magic_block | LatestFinalizedMagicBlockHandler |
-| /v1/block/get/recent_finalized | RecentFinalizedBlockHandler |
-| /v1/block/get/fee_stats | LatestBlockFeeStatsHandler |
+| /v1/chain | GetChainHandler |
+| /v1/chain | PutChainHandler |
+| /v1/block | GetBlockHandler |
+| /v1/block/latest-finalized | LatestFinalizedBlockHandler |
+| /v1/block/latest-finalized-magic-block-summary | LatestFinalizedMagicBlockSummaryHandler |
+| /v1/block/latest-finalized-magic-block | LatestFinalizedMagicBlockHandler |
+| /v1/block/recent-finalized | RecentFinalizedBlockHandler |
+| /v1/block/fee-stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
 | /_diagnostics | DiagnosticsHomepageHandler |
 | /_diagnostics/dkg_process | DiagnosticsDKGHandler |
 | /_diagnostics/round_info | RoundInfoHandler |
-| /v1/transaction/put | PutTransaction |
+| /v1/transaction | PutTransaction |
 | /_diagnostics/state_dump | StateDumpHandler |
-| /v1/block/get/latest_finalized_ticket | LFBTicketHandler |
+| /v1/block/latest-finalized-ticket | LFBTicketHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
@@ -335,23 +335,23 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/n2n_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_x2m/block/notarized_block/get | blockEntityMetadata |
-| /v1/_x2m/block/state_change/get | blockStateChangeEntityMetadata |
-| /v1/_x2m/state/get | partialStateEntityMetadata |
-| /v1/_x2x/state/get_nodes | stateNodesEntityMetadata |
+| /v1/_x2m/block/notarized-block | blockEntityMetadata |
+| /v1/_x2m/block/state-change | blockStateChangeEntityMetadata |
+| /v1/_x2m/state | partialStateEntityMetadata |
+| /v1/_x2x/state/nodes | stateNodesEntityMetadata |
 
 > SetupX2SRequestors
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/block/get/latest_finalized_magic_block | blockEntityMetadata |
+| /v1/block/latest-finalized-magic-block | blockEntityMetadata |
 
 
 > SetupX2XResponders
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/_x2x/state/get_nodes | StateNodesHandler |
+| /v1/_x2x/state/nodes | StateNodesHandler |
 
 
 ```sh
@@ -362,8 +362,8 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/state_handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/client/get/balance | c.GetBalanceHandler |
-| /v1/scstate/get | c.GetNodeFromSCState |
+| /v1/client/balance | c.GetBalanceHandler |
+| /v1/scstate | c.GetNodeFromSCState |
 | /v1/scstats/ | c.GetSCStats |
 | /v1/screst/ | c.HandleSCRest |
 | /_smart_contract_stats | c.SCStats |
@@ -377,8 +377,8 @@ File: 0Chain/code/go/0chain.net/chaincore/client/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/client/get | GetClientHandler |
-| /v1/client/put | PutClient |
+| /v1/client | GetClientHandler |
+| /v1/client | PutClient |
 
 
 ```sh
@@ -389,7 +389,7 @@ File: 0Chain/code/go/0chain.net/chaincore/config/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/config/get | GetConfigHandler |
+| /v1/config | GetConfigHandler |
 
 
 ```sh
@@ -431,7 +431,7 @@ File: 0Chain/code/go/0chain.net/chaincore/node/n2n_handler.go
 
 | Endpoint: http.HandleFunc | Handler: ToN2NReceiveEntityHandler|
 | ------ | ------ |
-| /v1/_n2n/entity/post| datastore.PrintEntityHandler |
+| /v1/_n2n/entity| datastore.PrintEntityHandler |
 
 | Endpoint: http.HandleFunc | Handler: ToN2NSendEntityHandler |
 | ------ | ------ |
@@ -446,7 +446,7 @@ File: 0Chain/code/go/0chain.net/chaincore/transaction/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/transaction/get | GetTransaction |
+| /v1/transaction | GetTransaction |
 
 
 
@@ -470,10 +470,10 @@ File: 0Chain/code/go/0chain.net/miner/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/chain/get/stats | ChainStatsHandler |
+| /v1/chain/stats | ChainStatsHandler |
 | /_chain_stats | ChainStatsWriter |
-| /_diagnostics/wallet_stats | GetWalletStats |
-| /v1/miner/get/stats | MinerStatsHandler |
+| /_diagnostics/wallet-stats | GetWalletStats |
+| /v1/miner/stats | MinerStatsHandler |
 
 
 ```sh
@@ -498,10 +498,10 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: node.SendEntityHandler |
 | ------ |
-| /v1/_m2m/round/vrf_share |
+| /v1/_m2m/round/vrf-share |
 | /v1/_m2m/block/verify |
-| /v1/_m2m/block/notarized_block |
-| /v1/_m2m/block/verification_ticket |
+| /v1/_m2m/block/notarized-block |
+| /v1/_m2m/block/verification-ticket |
 | /v1/_m2m/block/notarization |
 
 
@@ -509,20 +509,20 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NReceiveEntityHandler |
 | ------ | ------ |
-| /v1/_m2m/round/vrf_share | VRFShareHandler |
+| /v1/_m2m/round/vrf-share | VRFShareHandler |
 | /v1/_m2m/block/verify | VerifyBlockHandler |
-| /v1/_m2m/block/verification_ticket | VerificationTicketReceiptHandler |
+| /v1/_m2m/block/verification-ticket | VerificationTicketReceiptHandler |
 | /v1/_m2m/block/notarization | NotarizationReceiptHandler |
-| /v1/_m2m/block/notarized_block | NotarizedBlockHandler |
+| /v1/_m2m/block/notarized-block | NotarizedBlockHandler |
 
 
 > SetupX2MResponders - setup responders
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_x2m/block/notarized_block/get | NotarizedBlockSendHandler |
-| /v1/_x2m/block/state_change/get | BlockStateChangeHandler |
-| /v1/_x2m/state/get | PartialStateHandler |
+| /v1/_x2m/block/notarized-block | NotarizedBlockSendHandler |
+| /v1/_x2m/block/state-change | BlockStateChangeHandler |
+| /v1/_x2m/state | PartialStateHandler |
 | /v1/_m2m/dkg/share | SignShareRequestHandler |
 | /v1/_m2m/chain/start | StartChainRequestHandler |
 
@@ -530,8 +530,8 @@ File: 0Chain/code/go/0chain.net/miner/m_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_m2s/block/latest_finalized/get | blockEntityMetadata |
-| /v1/block/get | blockEntityMetadata |
+| /v1/_m2s/block/latest-finalized | blockEntityMetadata |
+| /v1/block | blockEntityMetadata |
 
 
 > SetupM2MRequestors
@@ -578,13 +578,13 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/block/get | BlockHandler |
-| /v1/block/magic/get | MagicBlockHandler |
-| /v1/transaction/get/confirmation | TransactionConfirmationHandler |
-| /v1/chain/get/stats | ChainStatsHandlerr |
+| /v1/block | BlockHandler |
+| /v1/block/magic | MagicBlockHandler |
+| /v1/transaction/confirmation | TransactionConfirmationHandler |
+| /v1/chain/stats | ChainStatsHandlerr |
 | /_chain_stats | ChainStatsWriter |
 | /_health_check | HealthCheckWriter |
-| /v1/sharder/get/stats | SharderStatsHandler |
+| /v1/sharder/stats | SharderStatsHandler |
 
 ```sh
 File: 0Chain/code/go/0chain.net/sharder/m_handler.go
@@ -601,7 +601,7 @@ File: 0Chain/code/go/0chain.net/sharder/m_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToS2MSendEntityHandler |
 | ------ | ------ |
-| /v1/_m2s/block/latest_finalized/get | LatestFinalizedBlockHandler |
+| /v1/_m2s/block/latest-finalized | LatestFinalizedBlockHandler |
 
 
 ```sh
@@ -613,10 +613,10 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: node.RequestEntityHandler | Entity Metadata |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | roundEntityMetadata |
+| /v1/_s2s/latest-round | roundEntityMetadata |
 | /v1/_s2s/round/get | roundEntityMetadata |
-| /v1/_s2s/block/get | blockEntityMetadata |
-| /v1/_s2s/blocksummary/get | blockSummaryEntityMetadata |
+| /v1/_s2s/block | blockEntityMetadata |
+| /v1/_s2s/block-summary | blockSummaryEntityMetadata |
 | /v1/_s2s/roundsummaries/get | roundSummariesEntityMetadata |
 | /v1/_s2s/blocksummaries/get | blockSummariesEntityMetadata |
 
@@ -625,11 +625,11 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_s2s/latest_round/get | LatestRoundRequestHandler |
+| /v1/_s2s/latest-round | LatestRoundRequestHandler |
 | /v1/_s2s/round/get | RoundRequestHandler |
 | /v1/_s2s/roundsummaries/get | RoundSummariesHandler) |
-| /v1/_s2s/block/get | RoundBlockRequestHandler |
-| /v1/_s2s/blocksummary/get | BlockSummaryRequestHandler |
+| /v1/_s2s/block | RoundBlockRequestHandler |
+| /v1/_s2s/block-summary | BlockSummaryRequestHandler |
 | /v1/_s2s/blocksummaries/get | BlockSummariesHandler |
 
 > SetupX2SRespondes setups sharders responders for miner and sharders.
@@ -638,7 +638,7 @@ File: 0Chain/code/go/0chain.net/sharder/s_handler.go
 
 | Endpoint: http.HandleFunc | Handler: node.ToN2NSendEntityHandler |
 | ------ | ------ |
-| /v1/_x2s/block/get | RoundBlockRequestHandler |
+| /v1/_s2s/block | RoundBlockRequestHandler |
 
 
 
@@ -666,7 +666,7 @@ File: blobber/code/go/0chain.net/blobbercore/handler/handler.go
 | /v1/file/copy/{allocation} | CopyHandler |
 | /v1/file/attributes/{allocation} | UpdateAttributesHandler |
 | /v1/connection/commit/{allocation} | CommitHandler |
-| /v1/file/commitmetatxn/{allocation} | CommitMetaTxnHandler |
+| /v1/file/commit-meta-txn/{allocation} | CommitMetaTxnHandler |
 | /v1/file/collaborator/{allocation} | CollaboratorHandler |
 | /v1/file/calculatehash/{allocation} | CalculateHashHandler |
 
@@ -680,7 +680,7 @@ File: blobber/code/go/0chain.net/blobbercore/handler/handler.go
 | /v1/file/copy/{allocation} | ListHandler |
 | /v1/file/attributes/{allocation} | ObjectPathHandler |
 | /v1/connection/commit/{allocation} | ReferencePathHandler |
-| /v1/file/commitmetatxn/{allocation} | ObjectTreeHandler |
+| /v1/file/commit-meta-txn/{allocation} | ObjectTreeHandler |
 
 
 > admin related

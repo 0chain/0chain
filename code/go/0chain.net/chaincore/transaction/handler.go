@@ -14,7 +14,7 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/transaction/get", common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction))))
+	http.HandleFunc("/v1/transaction", common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction))))
 }
 
 /*GetTransaction - given an id returns the transaction information */

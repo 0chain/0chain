@@ -27,7 +27,7 @@ func makeTestURL(url url.URL, values map[string]string) string {
 }
 
 func TestBlockHandler(t *testing.T) {
-	const baseUrl = "/v1/block/get"
+	const baseUrl = "/v1/block"
 
 	b := block.NewBlock("", 10)
 	b.Hash = encryption.Hash("data")

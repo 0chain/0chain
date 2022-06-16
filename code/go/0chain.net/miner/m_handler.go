@@ -41,14 +41,14 @@ var (
 func SetupM2MSenders() {
 
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf_share", options)
+	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf-share", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
-	MinerNotarizedBlockSender = node.SendEntityHandler("/v1/_m2m/block/notarized_block", options)
+	MinerNotarizedBlockSender = node.SendEntityHandler("/v1/_m2m/block/notarized-block", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
+	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification-ticket", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	BlockNotarizationSender = node.SendEntityHandler("/v1/_m2m/block/notarization", options)
@@ -56,7 +56,7 @@ func SetupM2MSenders() {
 }
 
 const (
-	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf_share"
+	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf-share"
 )
 
 func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
@@ -65,7 +65,7 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 			VRFShareHandler,
 			nil,
 		),
-		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
+		"/v1/_m2m/block/verification-ticket": node.StopOnBlockSyncingHandler(c,
 			node.ToN2NReceiveEntityHandler(
 				VerificationTicketReceiptHandler,
 				nil,
@@ -81,7 +81,7 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 			NotarizationReceiptHandler,
 			nil,
 		),
-		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
+		"/v1/_m2m/block/notarized-block": node.ToN2NReceiveEntityHandler(
 			NotarizedBlockHandler,
 			nil,
 		),
@@ -95,13 +95,13 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 }
 
 const (
-	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized_block/get"
+	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized-block"
 )
 
 func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	sendHandlerMap := map[string]common.JSONResponderF{
 		getNotarizedBlockX2MV1Pattern: NotarizedBlockSendHandler,
-		"/v1/_x2m/state/get":          PartialStateHandler,
+		"/v1/_x2m/state":          PartialStateHandler,
 		"/v1/_m2m/dkg/share":          SignShareRequestHandler,
 		"/v1/_m2m/chain/start":        StartChainRequestHandler,
 	}
@@ -127,7 +127,7 @@ func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request))
 func SetupM2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
+	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest-finalized", options, blockEntityMetadata)
 }
 
 func SetupM2MRequestors() {

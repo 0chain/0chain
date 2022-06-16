@@ -20,7 +20,7 @@ func BenchmarkRestTests(
 				Endpoint: frh.getGlobalPeriodicLimit,
 			},
 			{
-				FuncName: "globalPeriodicLimit",
+				FuncName: "global-periodic-limit",
 				Endpoint: frh.getGlobalPeriodicLimit,
 			},
 			{

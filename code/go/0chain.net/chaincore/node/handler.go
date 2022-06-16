@@ -17,7 +17,7 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
 	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
-	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
+	http.HandleFunc("/_nh/pool-members", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
 }
 
 //WhoAmIHandler - who am i?

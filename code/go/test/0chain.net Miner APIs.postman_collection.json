@@ -39,7 +39,7 @@
 					"raw": "{\"id\":\"{{client_id}}\",\"public_key\":\"eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\"}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/client/put",
+					"raw": "http://localhost:7070/v1/client",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -64,7 +64,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/client/get?id=33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d",
+					"raw": "http://localhost:7070/v1/client?id=33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -100,7 +100,7 @@
 					"raw": "{\n\t\"id\": \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"client_id\": \"33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/chain/put",
+					"raw": "http://localhost:7070/v1/chain",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -125,7 +125,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/chain/get?id=0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe",
+					"raw": "http://localhost:7070/v1/chain?id=0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -192,7 +192,7 @@
 					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": {{timestamp}},\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/transaction/put",
+					"raw": "http://localhost:7070/v1/transaction",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -255,7 +255,7 @@
 					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"to_client_id\": \"{{to_client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": {{timestamp}},\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/transaction/put",
+					"raw": "http://localhost:7070/v1/transaction",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -280,7 +280,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:7070/v1/transaction/get?hash=3f4f3427c3b7abb7d51a77f552f7710cd23179d89d30aae25ac504b857f30b3e",
+					"raw": "http://localhost:7070/v1/transaction?hash=3f4f3427c3b7abb7d51a77f552f7710cd23179d89d30aae25ac504b857f30b3e",
 					"protocol": "http",
 					"host": [
 						"localhost"
