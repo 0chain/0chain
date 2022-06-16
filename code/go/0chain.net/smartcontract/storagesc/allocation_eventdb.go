@@ -47,11 +47,10 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		}{
 			AllocationID: t.AllocationID,
 			Terms: Terms{
-				ReadPrice:               t.ReadPrice,
-				WritePrice:              t.WritePrice,
-				MinLockDemand:           t.MinLockDemand,
-				MaxOfferDuration:        t.MaxOfferDuration,
-				ChallengeCompletionTime: t.ChallengeCompletionTime,
+				ReadPrice:        t.ReadPrice,
+				WritePrice:       t.WritePrice,
+				MinLockDemand:    t.MinLockDemand,
+				MaxOfferDuration: t.MaxOfferDuration,
 			}}
 	}
 

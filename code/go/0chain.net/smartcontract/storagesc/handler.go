@@ -995,13 +995,20 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	blobber, err := edb.GetBlobber(blobberID)
+
+	conf, err := getConfig(sctx)
+	if err != nil && err != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
+		return
+	}
+
+	_, err = edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return

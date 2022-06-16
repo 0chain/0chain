@@ -846,7 +846,6 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	// just copy from next
 	avg.MinLockDemand = next.MinLockDemand
 	avg.MaxOfferDuration = next.MaxOfferDuration
-	avg.ChallengeCompletionTime = next.ChallengeCompletionTime
 	return
 }
 

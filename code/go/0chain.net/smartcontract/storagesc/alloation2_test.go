@@ -68,9 +68,8 @@ func TestNewAllocation(t *testing.T) {
 		Capacity: 536870912,
 		Used:     73,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -133,9 +132,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -175,9 +173,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
-				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-				},
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),
@@ -251,9 +247,8 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -293,9 +288,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
-				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-				},
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),

@@ -250,9 +250,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Capacity: 536870912,
 			Used:     73,
 			Terms: Terms{
-				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
-				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
-				ChallengeCompletionTime: mockChallengeCompletionTime,
+				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
+				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}
@@ -609,16 +608,15 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxBlobbersPerAllocation:   40,
 	}
 	var now = common.Timestamp(29000000)
-	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
+
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
 			ID:       strconv.Itoa(i),
 			Capacity: 536870912,
 			Used:     73,
 			Terms: Terms{
-				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
-				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
-				ChallengeCompletionTime: mockChallengeCompletionTime,
+				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
+				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}
