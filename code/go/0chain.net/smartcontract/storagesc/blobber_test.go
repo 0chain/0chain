@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -157,6 +158,8 @@ func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 // - delete
 // - challenge passed
 func Test_flow_reward(t *testing.T) {
+
+	config.SmartContractConfig.Set("confMaxChallengeCompletionTime", "3m")
 
 	var (
 		ssc            = newTestStorageSC()
@@ -640,6 +643,8 @@ func Test_flow_penalty(t *testing.T) {
 	require.NotNil(t, b4)
 
 	t.Run("challenge penalty", func(t *testing.T) {
+
+		config.SmartContractConfig.Set("confMaxChallengeCompletionTime", "3m")
 
 		const allocRoot = "alloc-root-1"
 
