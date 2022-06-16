@@ -162,7 +162,7 @@ func Test_flow_reward(t *testing.T) {
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
 		client         = newClient(100*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		tp, exp  int64 = 0, int64(toSeconds(getMaxChallengeCompletionTime()))
 
 		// no owner
 		reader = newClient(100*x10, balances)
