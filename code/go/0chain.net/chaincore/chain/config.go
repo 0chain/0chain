@@ -379,8 +379,6 @@ type ConfigData struct {
 	PruneStateBelowCount  int           `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange            int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"` // Maximum challenge completion time
-
 	// todo move BlocksToSharder out of ConfigData
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
 	VerificationTicketsTo int `json:"verification_tickets_to"` // send verification tickets to generator or all miners
@@ -520,8 +518,6 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
-
-	conf.MaxChallengeCompletionTime = viper.GetDuration("smart_contracts.storagesc.max_challenge_completion_time")
 
 	return nil
 }

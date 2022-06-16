@@ -130,7 +130,7 @@ func TestUpdateSettings(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
+					"readpool.min_lock": "10",
 
 					"writepool.min_lock":        "10",
 					"writepool.min_lock_period": "2m",
@@ -332,7 +332,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
+					"readpool.min_lock": "10",
 
 					"writepool.min_lock":        "10",
 					"writepool.min_lock_period": "2m",
@@ -405,8 +405,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MinAllocSize
 	case MinAllocDuration:
 		return conf.MinAllocDuration
-	case MaxChallengeCompletionTime:
-		return conf.MaxChallengeCompletionTime
 	case MinOfferDuration:
 		return conf.MinOfferDuration
 	case MinBlobberCapacity:

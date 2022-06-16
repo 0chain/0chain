@@ -146,17 +146,16 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 }
 
 type newAllocationRequest struct {
-	Name                       string           `json:"name"`
-	DataShards                 int              `json:"data_shards"`
-	ParityShards               int              `json:"parity_shards"`
-	Size                       int64            `json:"size"`
-	Expiration                 common.Timestamp `json:"expiration_date"`
-	Owner                      string           `json:"owner_id"`
-	OwnerPublicKey             string           `json:"owner_public_key"`
-	Blobbers                   []string         `json:"blobbers"`
-	ReadPriceRange             PriceRange       `json:"read_price_range"`
-	WritePriceRange            PriceRange       `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
+	Name            string           `json:"name"`
+	DataShards      int              `json:"data_shards"`
+	ParityShards    int              `json:"parity_shards"`
+	Size            int64            `json:"size"`
+	Expiration      common.Timestamp `json:"expiration_date"`
+	Owner           string           `json:"owner_id"`
+	OwnerPublicKey  string           `json:"owner_public_key"`
+	Blobbers        []string         `json:"blobbers"`
+	ReadPriceRange  PriceRange       `json:"read_price_range"`
+	WritePriceRange PriceRange       `json:"write_price_range"`
 }
 
 // storageAllocation from the request
@@ -173,7 +172,6 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.Blobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
-	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
 	return
 }
 
@@ -296,7 +294,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
-	request.MaxChallengeCompletionTime = conf.MaxChallengeCompletionTime
 
 	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {

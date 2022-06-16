@@ -116,7 +116,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	// time of this challenge
 	var tp = allocChallenges.LatestCompletedChallenge.Created
 
-	if tp > alloc.Expiration+toSeconds(alloc.MaxChallengeCompletionTime) {
+	if tp > alloc.Expiration+toSeconds(getMaxChallengeCompletionTime()) {
 		return errors.New("late challenge response")
 	}
 
@@ -268,7 +268,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	// time of this challenge
 	var tp = ac.LatestCompletedChallenge.Created
 
-	if tp > alloc.Expiration+toSeconds(alloc.MaxChallengeCompletionTime) {
+	if tp > alloc.Expiration+toSeconds(getMaxChallengeCompletionTime()) {
 		return errors.New("late challenge response")
 	}
 
@@ -491,7 +491,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		threshold = challenge.TotalValidators / 2
 		pass      = success > threshold ||
 			(success > failure && success+failure < threshold)
-		cct   = toSeconds(alloc.MaxChallengeCompletionTime)
+		cct   = toSeconds(getMaxChallengeCompletionTime())
 		fresh = challenge.Created+cct >= t.CreationDate
 	)
 

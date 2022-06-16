@@ -1268,8 +1268,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 
 		//_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 		//requireErrMsg(t, err, errMsg5p9)
@@ -1287,8 +1286,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 		nar.Owner = clientID
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg6)
@@ -1306,8 +1304,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
@@ -1327,8 +1324,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 		// 7. missing stake pools (not enough blobbers)
@@ -1360,8 +1356,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 		var allBlobbers = newTestAllBlobbers()
@@ -1402,8 +1397,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 		var allBlobbers = newTestAllBlobbers()
@@ -1448,8 +1442,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 		nar.Owner = "" // not set
 		nar.OwnerPublicKey = pubKey
-		nar.Blobbers = nil                               // not set
-		nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
+		nar.Blobbers = nil // not set
 		nar.Owner = clientID
 		nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 		var allBlobbers = newTestAllBlobbers()
@@ -1687,7 +1680,6 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
-	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 	nar.Blobbers = []string{"b1", "b2"}
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)

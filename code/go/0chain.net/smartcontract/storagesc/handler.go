@@ -218,16 +218,15 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 	}
 
 	request := newAllocationRequest{
-		DataShards:                 conf.FreeAllocationSettings.DataShards,
-		ParityShards:               conf.FreeAllocationSettings.ParityShards,
-		Size:                       conf.FreeAllocationSettings.Size,
-		Expiration:                 common.Timestamp(time.Now().Add(conf.FreeAllocationSettings.Duration).Unix()),
-		Owner:                      marker.Recipient,
-		OwnerPublicKey:             inputObj.RecipientPublicKey,
-		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
-		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
-		Blobbers:                   inputObj.Blobbers,
+		DataShards:      conf.FreeAllocationSettings.DataShards,
+		ParityShards:    conf.FreeAllocationSettings.ParityShards,
+		Size:            conf.FreeAllocationSettings.Size,
+		Expiration:      common.Timestamp(time.Now().Add(conf.FreeAllocationSettings.Duration).Unix()),
+		Owner:           marker.Recipient,
+		OwnerPublicKey:  inputObj.RecipientPublicKey,
+		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
+		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
+		Blobbers:        inputObj.Blobbers,
 	}
 
 	edb := balances.GetEventDB()
@@ -996,19 +995,13 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
 
-	conf, err := getConfig(sctx)
-	if err != nil && err != util.ErrValueNotPresent {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
-		return
-	}
-
-	_, err = edb.GetBlobber(blobberID)
+	_, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return

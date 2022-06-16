@@ -52,15 +52,14 @@ func TestNewAllocation(t *testing.T) {
 	}
 
 	var request = newAllocationRequest{
-		Owner:                      clientId,
-		OwnerPublicKey:             "my public key",
-		Size:                       scYaml.MinAllocSize,
-		DataShards:                 3,
-		ParityShards:               5,
-		Expiration:                 common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
-		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
-		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
-		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
+		Owner:           clientId,
+		OwnerPublicKey:  "my public key",
+		Size:            scYaml.MinAllocSize,
+		DataShards:      3,
+		ParityShards:    5,
+		Expiration:      common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
+		ReadPriceRange:  PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
+		WritePriceRange: PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		Blobbers: []string{"0", "1", "2", "3",
 			"4", "5", "6", "7"},
 	}

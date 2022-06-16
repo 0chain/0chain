@@ -674,9 +674,8 @@ type StorageAllocation struct {
 	IsImmutable      bool                          `json:"is_immutable"`
 
 	// Requested ranges.
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	ReadPriceRange  PriceRange `json:"read_price_range"`
+	WritePriceRange PriceRange `json:"write_price_range"`
 
 	//AllocationPools allocationPools `json:"allocation_pools"`
 	WritePoolOwners []string `json:"write_pool_owners"`

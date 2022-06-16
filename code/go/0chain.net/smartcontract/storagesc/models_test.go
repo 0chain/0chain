@@ -106,12 +106,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	list[1].Capacity, list[1].Used = 100, 50
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
 
-	// 5. filter all by max CCT
-	alloc.MaxChallengeCompletionTime = 5 * time.Second
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
-
 	// accept one
-	alloc.MaxChallengeCompletionTime = 30 * time.Second
 	list[0].Capacity, list[0].Used = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
 

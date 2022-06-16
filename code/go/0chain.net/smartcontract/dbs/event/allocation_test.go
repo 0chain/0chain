@@ -145,9 +145,8 @@ func TestAllocations(t *testing.T) {
 		IsImmutable       bool                          `json:"is_immutable"`
 
 		// Requested ranges.
-		ReadPriceRange             PriceRange    `json:"read_price_range"`
-		WritePriceRange            PriceRange    `json:"write_price_range"`
-		MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+		ReadPriceRange  PriceRange `json:"read_price_range"`
+		WritePriceRange PriceRange `json:"write_price_range"`
 
 		//AllocationPools allocationPools `json:"allocation_pools"`
 		WritePoolOwners []string `json:"write_pool_owners"`
@@ -198,37 +197,36 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err)
 
 		return Allocation{
-			AllocationID:               sa.ID,
-			TransactionID:              sa.Tx,
-			DataShards:                 sa.DataShards,
-			ParityShards:               sa.ParityShards,
-			Size:                       sa.Size,
-			Expiration:                 int64(sa.Expiration),
-			Terms:                      string(termsByte),
-			Owner:                      sa.Owner,
-			OwnerPublicKey:             sa.OwnerPublicKey,
-			IsImmutable:                sa.IsImmutable,
-			ReadPriceMin:               sa.ReadPriceRange.Min,
-			ReadPriceMax:               sa.ReadPriceRange.Max,
-			WritePriceMin:              sa.WritePriceRange.Min,
-			WritePriceMax:              sa.WritePriceRange.Max,
-			MaxChallengeCompletionTime: int64(sa.MaxChallengeCompletionTime),
-			ChallengeCompletionTime:    int64(sa.ChallengeCompletionTime),
-			StartTime:                  int64(sa.StartTime),
-			Finalized:                  sa.Finalized,
-			Cancelled:                  sa.Canceled,
-			UsedSize:                   sa.UsedSize,
-			MovedToChallenge:           sa.MovedToChallenge,
-			MovedBack:                  sa.MovedBack,
-			MovedToValidators:          sa.MovedToValidators,
-			TimeUnit:                   int64(sa.TimeUnit),
-			NumWrites:                  sa.Stats.NumWrites,
-			NumReads:                   sa.Stats.ReadSize / (64 * KB),
-			TotalChallenges:            sa.Stats.TotalChallenges,
-			OpenChallenges:             sa.Stats.OpenChallenges,
-			SuccessfulChallenges:       sa.Stats.SuccessChallenges,
-			FailedChallenges:           sa.Stats.FailedChallenges,
-			LatestClosedChallengeTxn:   sa.Stats.LastestClosedChallengeTxn,
+			AllocationID:             sa.ID,
+			TransactionID:            sa.Tx,
+			DataShards:               sa.DataShards,
+			ParityShards:             sa.ParityShards,
+			Size:                     sa.Size,
+			Expiration:               int64(sa.Expiration),
+			Terms:                    string(termsByte),
+			Owner:                    sa.Owner,
+			OwnerPublicKey:           sa.OwnerPublicKey,
+			IsImmutable:              sa.IsImmutable,
+			ReadPriceMin:             sa.ReadPriceRange.Min,
+			ReadPriceMax:             sa.ReadPriceRange.Max,
+			WritePriceMin:            sa.WritePriceRange.Min,
+			WritePriceMax:            sa.WritePriceRange.Max,
+			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
+			StartTime:                int64(sa.StartTime),
+			Finalized:                sa.Finalized,
+			Cancelled:                sa.Canceled,
+			UsedSize:                 sa.UsedSize,
+			MovedToChallenge:         sa.MovedToChallenge,
+			MovedBack:                sa.MovedBack,
+			MovedToValidators:        sa.MovedToValidators,
+			TimeUnit:                 int64(sa.TimeUnit),
+			NumWrites:                sa.Stats.NumWrites,
+			NumReads:                 sa.Stats.ReadSize / (64 * KB),
+			TotalChallenges:          sa.Stats.TotalChallenges,
+			OpenChallenges:           sa.Stats.OpenChallenges,
+			SuccessfulChallenges:     sa.Stats.SuccessChallenges,
+			FailedChallenges:         sa.Stats.FailedChallenges,
+			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 		}
 	}
 
@@ -334,17 +332,16 @@ func TestAllocations(t *testing.T) {
 			Min: 10,
 			Max: 20,
 		},
-		MaxChallengeCompletionTime: 20,
-		ChallengeCompletionTime:    12,
-		StartTime:                  10212,
-		Finalized:                  true,
-		Canceled:                   false,
-		UsedSize:                   50,
-		MovedToChallenge:           10,
-		MovedBack:                  1,
-		MovedToValidators:          1,
-		TimeUnit:                   12453,
-		Curators:                   []string{"curator1"},
+		ChallengeCompletionTime: 12,
+		StartTime:               10212,
+		Finalized:               true,
+		Canceled:                false,
+		UsedSize:                50,
+		MovedToChallenge:        10,
+		MovedBack:               1,
+		MovedToValidators:       1,
+		TimeUnit:                12453,
+		Curators:                []string{"curator1"},
 	}
 
 	saAllocation := convertSa(sa)
