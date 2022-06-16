@@ -1393,7 +1393,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			//if c.Responded || c.AllocationID != alloc.ID {
 			//	continue // already accepted, already rewarded/penalized
 			//}
-			var expire = oc.CreatedAt + toSeconds(alloc.MaxChallengeCompletionTime)
+			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
 			if expire < now {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
