@@ -58,8 +58,6 @@ func TestAllocations(t *testing.T) {
 		MinLockDemand float64 `json:"min_lock_demand"`
 		// MaxOfferDuration with this prices and the demand.
 		MaxOfferDuration time.Duration `json:"max_offer_duration"`
-		// ChallengeCompletionTime is duration required to complete a challenge.
-		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	}
 
 	type PriceRange struct {
@@ -188,13 +186,12 @@ func TestAllocations(t *testing.T) {
 		var allocationTerms []AllocationTerm
 		for _, b := range sa.BlobberDetails {
 			allocationTerms = append(allocationTerms, AllocationTerm{
-				BlobberID:               b.BlobberID,
-				AllocationID:            b.AllocationID,
-				ReadPrice:               b.Terms.ReadPrice,
-				WritePrice:              b.Terms.WritePrice,
-				MinLockDemand:           b.Terms.MinLockDemand,
-				MaxOfferDuration:        b.Terms.MaxOfferDuration,
-				ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
+				BlobberID:        b.BlobberID,
+				AllocationID:     b.AllocationID,
+				ReadPrice:        b.Terms.ReadPrice,
+				WritePrice:       b.Terms.WritePrice,
+				MinLockDemand:    b.Terms.MinLockDemand,
+				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
 		termsByte, err := json.Marshal(allocationTerms)

@@ -915,7 +915,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		diff   = uar.getBlobbersSizeDiff(alloc) // size difference
 		size   = uar.getNewBlobbersSize(alloc)  // blobber size
 		gbSize = sizeInGB(size)                 // blobber size in GB
-		cct    time.Duration                    // new challenge_completion_time
 
 		// keep original terms to adjust challenge pool value
 		oterms = make([]Terms, 0, len(alloc.BlobberAllocs))
@@ -966,10 +965,6 @@ func (sc *StorageSmartContract) extendAllocation(
 				"blobber %s doesn't allow so long offers", b.ID)
 		}
 
-		if b.Terms.ChallengeCompletionTime > cct {
-			cct = b.Terms.ChallengeCompletionTime // seek max CCT
-		}
-
 		// since, new terms is weighted average based on previous terms and
 		// past allocation time and new terms and new allocation time; then
 		// we can easily recalculate new min_lock_demand value from allocation
@@ -1002,9 +997,6 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		}
 	}
-
-	// update max challenge_completion_time
-	alloc.ChallengeCompletionTime = cct
 
 	var until = alloc.Until()
 	wps, err := alloc.getAllocationPools(sc, balances)

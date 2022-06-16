@@ -279,8 +279,6 @@ type Terms struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
-	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
@@ -300,13 +298,7 @@ func (t *Terms) validate(conf *Config) (err error) {
 	if t.MaxOfferDuration < conf.MinOfferDuration {
 		return errors.New("insufficient max_offer_duration")
 	}
-	if t.ChallengeCompletionTime < 0 {
-		return errors.New("negative challenge_completion_time")
-	}
-	if t.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge_completion_time is greater than max " +
-			"allowed by SC")
-	}
+
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}

@@ -35,11 +35,10 @@ func TestBlobbers(t *testing.T) {
 		Longitude float64 `json:"longitude"`
 	}
 	type Terms struct {
-		ReadPrice               currency.Coin `json:"read_price"`
-		WritePrice              currency.Coin `json:"write_price"`
-		MinLockDemand           float64       `json:"min_lock_demand"`
-		MaxOfferDuration        time.Duration `json:"max_offer_duration"`
-		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+		ReadPrice        currency.Coin `json:"read_price"`
+		WritePrice       currency.Coin `json:"write_price"`
+		MinLockDemand    float64       `json:"min_lock_demand"`
+		MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	}
 	type stakePoolSettings struct {
 		DelegateWallet string        `json:"delegate_wallet"`

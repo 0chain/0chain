@@ -60,8 +60,6 @@ type AllocationTerm struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
-	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
