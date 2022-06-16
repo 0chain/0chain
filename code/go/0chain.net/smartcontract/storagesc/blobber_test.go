@@ -97,9 +97,6 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	var conf, err = ssc.getConfig(balances, false)
 	require.NoError(t, err)
 
-	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
-	require.Error(t, err)
-
 	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)

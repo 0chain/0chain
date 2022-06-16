@@ -1526,7 +1526,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		assert.NotNil(t, aresp.PreferredBlobbers)
 		assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
 		assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
-		assert.Equal(t, 15*time.Second, aresp.ChallengeCompletionTime) // max
+
 		assert.Equal(t, tx.CreationDate, aresp.StartTime)
 		assert.False(t, aresp.Finalized)
 
