@@ -207,7 +207,7 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string) ([]string, error) {
 
 func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
+	//dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
