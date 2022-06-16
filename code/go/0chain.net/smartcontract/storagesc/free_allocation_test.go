@@ -239,8 +239,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			},
 			MaxBlobbersPerAllocation: 40,
 		}
-		now                         = common.Timestamp(23000000)
-		mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
+		now = common.Timestamp(23000000)
 	)
 	blob := make([]string, mockNumBlobbers)
 	for i := 0; i < mockNumBlobbers; i++ {
