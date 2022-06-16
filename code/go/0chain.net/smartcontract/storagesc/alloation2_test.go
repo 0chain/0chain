@@ -715,6 +715,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	}
 
 	val, err := currency.Int64ToCoin(request.Size)
+	val *= zcnToBalance(blobberYaml.writePrice)
 	require.NoError(t, err)
 
 	var txn = &transaction.Transaction{
@@ -738,7 +739,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 			nil,
 			nil,
 		),
-		clientBalance: zcnToBalance(3),
+		clientBalance: txn.Value,
 		store:         make(map[string]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
@@ -792,7 +793,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		newStakePools = append(newStakePools, sp)
 	}
 
-	confirmTestNewAllocation(t, f, individualBlobbers, newStakePools, ctx)
+	confirmTestNewAllocation(t, f, individualBlobbers, txn, ctx)
 
 	return nil
 }
@@ -847,13 +848,13 @@ func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
-	blobbers SortedBlobbers, stakes []*stakePool, ctx cstate.StateContextI,
+	blobbers SortedBlobbers, txn *transaction.Transaction, ctx cstate.StateContextI,
 ) {
 	var transfers = ctx.GetTransfers()
 	require.Len(t, transfers, 1)
 	require.EqualValues(t, clientId, transfers[0].ClientID)
 	require.EqualValues(t, storageScId, transfers[0].ToClientID)
-	require.EqualValues(t, f.request.Size, transfers[0].Amount)
+	require.EqualValues(t, txn.Value, transfers[0].Amount)
 
 	var countUsedBlobbers = 0
 	for _, blobber := range blobbers {

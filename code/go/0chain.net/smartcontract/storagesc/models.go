@@ -731,7 +731,14 @@ func (sa *StorageAllocation) cost() currency.Coin {
 	var cost currency.Coin
 	for _, ba := range sa.BlobberAllocs {
 		cost += currency.Coin(ba.Size) * ba.Terms.WritePrice
+		logging.Logger.Info("piers cost",
+			zap.String("blobber", ba.BlobberID),
+			zap.Any("size", ba.Size),
+			zap.Any("write price", ba.Terms.WritePrice),
+			zap.Any("cost", currency.Coin(ba.Size)*ba.Terms.WritePrice),
+		)
 	}
+	logging.Logger.Info("piers end", zap.Any("cost", cost))
 	return cost
 }
 
@@ -1036,8 +1043,15 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
 	for _, details := range sa.BlobberAllocs {
 		if details.MinLockDemand > details.Spent {
 			rest += details.MinLockDemand - details.Spent
+			logging.Logger.Info("piers restMinLockDemand",
+				zap.String("blobber id", details.BlobberID),
+				zap.Any("min lock demand", details.MinLockDemand),
+				zap.Any("spent", details.Spent),
+			)
 		}
 	}
+	logging.Logger.Info("piers end restMinLockDemand",
+		zap.Any("rest", rest))
 	return
 }
 
