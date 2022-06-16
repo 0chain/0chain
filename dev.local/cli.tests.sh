@@ -18,5 +18,5 @@ export CPPFLAGS="-I/usr/local/include"
 
 echo "Start testing..."
 cd ../code/go/0chain.net
-go test -mod mod -tags "bn256 development dev" ./...
+go test -mod mod -tags "bn256 development dev" -run ^Test_flow_reward$  ./...
 echo "Tests completed."
