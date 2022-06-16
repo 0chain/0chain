@@ -580,6 +580,9 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 			zap.Error(err))
 	}
 
+	
+	go mc.CleanTxns(ctx, b)
+
 	go mc.SendFinalizedBlock(context.Background(), b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
@@ -592,6 +595,32 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		txns = append(txns, txn)
 	}
 	transaction.RemoveFromPool(ctx, txns)
+}
+
+func (mc *Chain) CleanTxns(ctx context.Context, b *block.Block) {
+	tii := newTxnIterInfo(mc.BlockSize())
+	maxNonce := int64(0)
+	for _, txn := range b.Txns {
+		if txn.Nonce > maxNonce {
+			maxNonce = txn.Nonce
+		}
+	}
+
+	invalidTxns := []datastore.Entity{}
+
+	pastTxns := tii.pastTxns
+	
+
+	i:=0
+	for ; i < len(pastTxns); i++ {
+		if pastTxns[i].Nonce <= maxNonce {
+			invalidTxns = append(invalidTxns, pastTxns[i])
+		}
+	}
+
+	if len(invalidTxns) > 0 {
+		transaction.RemoveFromPool(ctx, invalidTxns)
+	}
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
