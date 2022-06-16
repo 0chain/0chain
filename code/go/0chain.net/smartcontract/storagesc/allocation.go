@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
@@ -174,7 +173,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.Blobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
-	sa.MaxChallengeCompletionTime = config.Configuration().maxch
+	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
 	return
 }
 
