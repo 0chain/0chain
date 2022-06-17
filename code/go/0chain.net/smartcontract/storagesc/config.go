@@ -307,6 +307,26 @@ func (sc *Config) validate() (err error) {
 	if len(sc.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
+
+	if sc.BlockReward.Gamma.A <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.a <= 0: %v", sc.BlockReward.Gamma.A)
+	}
+	if sc.BlockReward.Gamma.B <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.b <= 0: %v", sc.BlockReward.Gamma.B)
+	}
+	if sc.BlockReward.Gamma.Alpha <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.alpha <= 0: %v", sc.BlockReward.Gamma.Alpha)
+	}
+	if sc.BlockReward.Zeta.Mu <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.mu <= 0: %v", sc.BlockReward.Zeta.Mu)
+	}
+	if sc.BlockReward.Zeta.I <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.i <= 0: %v", sc.BlockReward.Zeta.I)
+	}
+	if sc.BlockReward.Zeta.K <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.k <=0: %v", sc.BlockReward.Zeta.K)
+	}
+
 	return
 }
 
