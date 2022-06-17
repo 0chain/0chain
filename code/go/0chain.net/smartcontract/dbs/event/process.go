@@ -161,6 +161,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addOrOverwriteValidator(vn)
+	case TagAddMint:
+		var mint Mint
+		err := json.Unmarshal([]byte(event.Data), &mint)
+		if err != nil {
+			return err
+		}
+		return edb.addOrUpdateTotalMint(mint)
 	case TagUpdateValidator:
 		var updates dbs.DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)

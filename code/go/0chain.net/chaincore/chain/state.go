@@ -370,15 +370,20 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 		total += int64(mint.Amount)
 	}
-	data, err := json.Marshal(event.Mint{
-		BlockHash: b.Hash,
-		Amount:    total,
-	})
-	if err != nil {
-		logging.Logger.Error("Failed to marshal mint")
-		return
+
+	if node.Self.IsSharder() {
+		data, _err := json.Marshal(event.Mint{
+			BlockHash: b.Hash,
+			Round:     b.Round,
+			Amount:    total,
+		})
+		if _err != nil {
+			logging.Logger.Error("Failed to marshal mint")
+			return
+		}
+
+		sctx.EmitEvent(event.TypeStats, event.TagAddMint, b.Hash, string(data))
 	}
-	sctx.EmitEvent(event.TypeStats, event.TagAddMint, b.Hash, string(data))
 
 	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
 		logging.Logger.Error("update nonce error", zap.Any("error", err),
