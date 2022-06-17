@@ -14,7 +14,7 @@ func setupVolumeRevivingWorker(ctx context.Context) {
 	logging.Logger.Info("Setting volume reviving worker")
 	t := time.NewTicker(time.Hour)
 
-	var dTier *diskTier
+	dTier := GetStore().(*blockStore).diskTier
 
 	for {
 		select {
@@ -23,7 +23,7 @@ func setupVolumeRevivingWorker(ctx context.Context) {
 		case <-t.C:
 			logging.Logger.Info("Checking if volume is able to store blocks")
 			for vPath, volume := range unableVolumes {
-				if volume.isAbleToStoreBlock(dTier) {
+				if volume.isAbleToStoreBlock() {
 					dTier.Mu.Lock()
 					dTier.Volumes = append(dTier.Volumes, volume)
 					delete(unableVolumes, vPath)
