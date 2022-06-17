@@ -613,8 +613,9 @@ func (mc *Chain) CleanTxns(ctx context.Context, b *block.Block) {
 
 	i:=0
 	for ; i < len(pastTxns); i++ {
-		if pastTxns[i].Nonce <= maxNonce {
-			invalidTxns = append(invalidTxns, pastTxns[i])
+		pastTxn := pastTxns[i].(*transaction.Transaction)
+		if pastTxn.Nonce <= maxNonce {
+			invalidTxns = append(invalidTxns, pastTxn)
 		}
 	}
 
