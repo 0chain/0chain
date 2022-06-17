@@ -15,7 +15,7 @@ type Block struct {
 	Hash                  string    `json:"hash"`
 	Version               string    `json:"version"`
 	CreationDate          int64     `json:"creation_date"`
-	Round                 int64     `json:"round"`
+	Round                 int64     `json:"round" gorm:"index:idx_bround,unique"`
 	MinerID               string    `json:"miner_id"`
 	RoundRandomSeed       int64     `json:"round_random_seed"`
 	MerkleTreeRoot        string    `json:"merkle_tree_root"`
@@ -40,7 +40,7 @@ func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
 func (edb *EventDb) GetBlocks(limit Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
+		Column: clause.Column{Name: "round"},
 		Desc:   limit.IsDescending,
 	}).Find(&blocks)
 	return blocks, res.Error

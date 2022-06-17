@@ -2029,9 +2029,9 @@ func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, e
 
 func getOffsetLimitOrderParam(values url.Values) (event.Pagination, error) {
 	var (
-		offsetString       = values.Get("offset")
-		limitString        = values.Get("limit")
-		isDescendingString = values.Get("is_descending")
+		offsetString = values.Get("offset")
+		limitString  = values.Get("limit")
+		sort         = values.Get("sort")
 
 		limit        = event.DefaultQueryLimit
 		offset       = 0
@@ -2053,8 +2053,8 @@ func getOffsetLimitOrderParam(values url.Values) (event.Pagination, error) {
 		}
 	}
 
-	if isDescendingString != "" {
-		switch isDescendingString {
+	if sort != "" {
+		switch sort {
 		case "desc":
 			isDescending = true
 		case "asc":
