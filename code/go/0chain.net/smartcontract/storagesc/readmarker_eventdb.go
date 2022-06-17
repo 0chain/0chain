@@ -23,7 +23,6 @@ func readMarkerToReadMarkerTable(rm *ReadMarker) *event.ReadMarker {
 		ReadCounter:  rm.ReadCounter,
 		ReadSize:     rm.ReadSize,
 		Signature:    rm.Signature,
-		PayerID:      rm.PayerID,
 	}
 
 	if rm.AuthTicket != nil {

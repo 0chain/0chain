@@ -891,7 +891,9 @@ func removeAllocationFromBlobber(
 	balances chainstate.StateContextI) error {
 
 	if allocPartLoc == nil {
-		return errors.New("empty blobber allocation partition location")
+		logging.Logger.Error("skipping removing allocation from blobber partition" +
+			"empty blobber allocation partition location")
+		return nil
 	}
 
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
@@ -1529,7 +1531,6 @@ type ReadMarker struct {
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
-	PayerID         string           `json:"payer_id"`
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
 	ReadSize        float64          `json:"read_size"`
 }
@@ -1553,14 +1554,14 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 
 func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances chainstate.StateContextI) (err error) {
 	// owner downloads, pays itself, no ticket needed
-	if rm.PayerID == alloc.Owner {
+	if rm.ClientID == alloc.Owner {
 		return
 	}
 	// 3rd party payment
 	if rm.AuthTicket == nil {
 		return common.NewError("invalid_read_marker", "missing auth. ticket")
 	}
-	return rm.AuthTicket.verify(alloc, now, rm.PayerID, balances)
+	return rm.AuthTicket.verify(alloc, now, rm.ClientID, balances)
 }
 
 func (rm *ReadMarker) GetHashData() string {
