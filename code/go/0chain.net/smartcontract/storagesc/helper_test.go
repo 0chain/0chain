@@ -358,7 +358,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxBlobbersPerAllocation = 50
 
 	conf.ReadPool = &readPoolConfig{
-		MinLock:       10,
+		MinLock: 10,
 	}
 	conf.WritePool = &writePoolConfig{
 		MinLock:       10,

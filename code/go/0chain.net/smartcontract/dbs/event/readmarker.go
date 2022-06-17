@@ -22,7 +22,6 @@ type ReadMarker struct {
 	ReadCounter   int64   `json:"read_counter"`
 	ReadSize      float64 `json:"read_size"`
 	Signature     string  `json:"signature"`
-	PayerID       string  `json:"payer_id"`
 	AuthTicket    string  `json:"auth_ticket"`
 	BlockNumber   int64   `json:"block_number"`
 }
