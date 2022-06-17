@@ -205,11 +205,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
-		logging.Logger.Error("update_state_failed",
-			zap.String("txn_hash", txn.Hash),
-			zap.Int64("txn_nonce", txn.Nonce),
-			zap.Error(err))
-
 		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
 			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(bState.GetRoot()), b.Round)
@@ -581,9 +576,6 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
 	s, err := c.GetStateById(sctx.GetState(), fromClient)
 	if !isValid(err) {
-		logging.Logger.Error("validate nonce - error",
-			zap.Int64("txn_nonce", txnNonce),
-			zap.Error(err))
 		return err
 	}
 	nonce := int64(0)
