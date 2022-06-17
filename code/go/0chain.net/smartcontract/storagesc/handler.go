@@ -64,6 +64,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/count_readmarkers", srh.getReadMarkersCount),
 		rest.MakeEndpoint(storage+"/getWriteMarkers", srh.getWriteMarkers),
 		rest.MakeEndpoint(storage+"/get_validator", srh.getValidator),
+		rest.MakeEndpoint(storage+"/validators,", srh.validators),
 		rest.MakeEndpoint(storage+"/openchallenges", srh.getOpenChallenges),
 		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
@@ -1048,6 +1049,27 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 	}
 
 	common.Respond(w, r, validator, nil)
+}
+
+// validators swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators validators
+// Gets list of all validators alive (e.g. excluding blobbers with zero capacity).
+//
+// responses:
+//  200: Validator
+//  400:
+func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	validators, err := edb.GetValidators()
+	if err != nil {
+		err := common.NewErrInternal("cannot get validator list" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, validators, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers

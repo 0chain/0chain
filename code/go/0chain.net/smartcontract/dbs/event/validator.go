@@ -67,6 +67,13 @@ func (edb *EventDb) overwriteValidator(vn Validator) error {
 	return result.Error
 }
 
+func (edb *EventDb) GetValidators() ([]Validator, error) {
+	var validators []Validator
+	result := edb.Store.Get().Model(&Validator{}).Find(&validators)
+
+	return validators, result.Error
+}
+
 func (edb *EventDb) addOrOverwriteValidator(vn Validator) error {
 	exists, err := vn.exists(edb)
 	if err != nil {
