@@ -60,7 +60,7 @@ func AddMockNodes(
 		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
-		newNode.Settings.DelegateWallet = newNode.ID
+		newNode.Settings.DelegateWallet = clients[0]
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes

@@ -1,9 +1,10 @@
 package minersc
 
 import (
-	"0chain.net/core/common"
 	"encoding/json"
 	"testing"
+
+	"0chain.net/core/common"
 
 	"0chain.net/chaincore/currency"
 
@@ -94,6 +95,7 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	msc.setSC(msc.SmartContract, &smartcontract.BCContext{})
+	miner00 := getMinerDelegatePoolId(0, 0, spenum.Miner)
 	var tests = []BenchTest{
 		{
 			name:     "miner.add_miner",
@@ -279,7 +281,7 @@ func BenchmarkTests(
 			name:     "miner.update_miner_settings",
 			endpoint: msc.UpdateMinerSettings,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
 			},
 			input: (&MinerNode{
@@ -301,7 +303,7 @@ func BenchmarkTests(
 			name:     "miner.update_sharder_settings",
 			endpoint: msc.UpdateSharderSettings,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Sharder),
+				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
 			},
 			input: (&MinerNode{
@@ -332,7 +334,7 @@ func BenchmarkTests(
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),
-				PoolID:  getMinerDelegatePoolId(0, 0, spenum.Miner),
+				PoolID:  miner00,
 			}).Encode(),
 		},
 		{
@@ -344,7 +346,7 @@ func BenchmarkTests(
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),
-				PoolID:  getMinerDelegatePoolId(0, 0, spenum.Miner),
+				PoolID:  miner00,
 			}).Encode(),
 		},
 		{
@@ -364,7 +366,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        GetMockNodeId(0, spenum.Sharder),
+					ID:        GetMockNodeId(1, spenum.Miner),
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -375,7 +377,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        GetMockNodeId(0, spenum.Sharder),
+					ID:        GetMockNodeId(1, spenum.Sharder),
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -389,8 +391,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
-					PoolId:       "", // todo add getMockMinerStakePoolId
-					ProviderType: spenum.Blobber,
+					PoolId:       miner00,
+					ProviderType: spenum.Miner,
+					ProviderId:   GetMockNodeId(0, spenum.Miner),
 				})
 				return bytes
 			}(),

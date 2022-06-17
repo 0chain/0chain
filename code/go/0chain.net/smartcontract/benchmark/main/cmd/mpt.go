@@ -3,11 +3,12 @@ package cmd
 import (
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/net/context"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
@@ -260,7 +261,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		sharders = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
+		sharders = minersc.AddMockNodes(clients, spenum.Sharder, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
