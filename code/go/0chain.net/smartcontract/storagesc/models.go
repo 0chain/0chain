@@ -891,7 +891,9 @@ func removeAllocationFromBlobber(
 	balances chainstate.StateContextI) error {
 
 	if allocPartLoc == nil {
-		return errors.New("empty blobber allocation partition location")
+		logging.Logger.Error("skipping removing allocation from blobber partition" +
+			"empty blobber allocation partition location")
+		return nil
 	}
 
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
