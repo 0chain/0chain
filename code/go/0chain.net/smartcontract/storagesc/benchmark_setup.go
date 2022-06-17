@@ -507,7 +507,7 @@ func AddMockBlobbers(
 				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.Nanoseconds(),
 				Capacity:                blobber.Capacity,
 				Allocated:               blobber.Allocated,
-				TotalDataStored:         blobber.Allocated / 2,
+				Used:                    blobber.Allocated / 2,
 				LastHealthCheck:         int64(blobber.LastHealthCheck),
 				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
 				MinStake:                blobber.StakePoolSettings.MinStake,
