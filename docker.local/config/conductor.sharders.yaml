@@ -26,6 +26,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           round: 100
+          allow_beyond: true
           timeout: "5m"
       - stop: ["miner-1", "miner-2", "miner-3"]
       - finalized_block:
@@ -35,6 +36,7 @@ tests:
       - wait_round:
           shift: 10
           timeout: "5m"
+          allow_beyond: true
 
   - name: "Send bad MB to miners when all miners are down and then they are brought up"
     flow:
