@@ -83,7 +83,7 @@ func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err err
 			return "", sdv.err
 		}
 
-		if blockPath, err = sdv.volume.write(b, data, d); err != nil {
+		if blockPath, err = sdv.volume.write(b, data); err != nil {
 			logging.Logger.Error(err.Error())
 			d.removeSelectedVolume()
 			go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
@@ -139,7 +139,7 @@ type volume struct {
 	CurDirBlockNums int
 }
 
-func (v *volume) selectDir(dTier *diskTier) error {
+func (v *volume) selectDir() error {
 	v.IndMu.Lock()
 	defer v.IndMu.Unlock()
 
@@ -225,7 +225,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd)
 }
 
-func (v *volume) write(b *block.Block, data []byte, dTier *diskTier) (bPath string, err error) {
+func (v *volume) write(b *block.Block, data []byte) (bPath string, err error) {
 	bPath = path.Join(v.Path,
 		fmt.Sprintf("%v%v/%v", DirPrefix, v.CurKInd, v.CurDirInd),
 		fmt.Sprintf("%v%v", b.Hash, fileExt))
@@ -296,7 +296,7 @@ func (v *volume) updateCountAndSize(count, size int64) {
 	v.CountMu.Unlock()
 }
 
-func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
+func (v *volume) isAbleToStoreBlock() (ableToStore bool) {
 	var volStat unix.Statfs_t
 	err := unix.Statfs(v.Path, &volStat)
 	if err != nil {
@@ -337,7 +337,7 @@ func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
 		return
 	}
 
-	if err := v.selectDir(dTier); err != nil {
+	if err := v.selectDir(); err != nil {
 		logging.Logger.Error(ErrSelectDir(v.Path, err))
 		return
 	}
@@ -408,7 +408,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 				ind := r.Intn(len(volumes))
 				sv := volumes[ind]
 
-				if sv.isAbleToStoreBlock(&dTier) {
+				if sv.isAbleToStoreBlock() {
 					selectedIndex = ind
 					selectedVolume = sv
 					break
@@ -458,7 +458,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 				}
 
 				v := volumes[i]
-				if v.isAbleToStoreBlock(&dTier) {
+				if v.isAbleToStoreBlock() {
 					selectedVolume = v
 					selectedIndex = i
 
@@ -478,7 +478,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 			}
 
 			if selectedVolume == nil {
-				if prevVolume.isAbleToStoreBlock(&dTier) {
+				if prevVolume.isAbleToStoreBlock() {
 					selectedVolume = prevVolume
 					selectedIndex = 0
 				}
@@ -512,7 +512,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 				}
 
 				v := volumes[i]
-				if !v.isAbleToStoreBlock(&dTier) {
+				if !v.isAbleToStoreBlock() {
 					unableVolumes[v.Path] = v
 
 					volumes = append(volumes[:i], volumes[i+1:]...)
@@ -561,7 +561,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 				}
 
 				v := volumes[i]
-				if !v.isAbleToStoreBlock(&dTier) {
+				if !v.isAbleToStoreBlock() {
 					unableVolumes[v.Path] = v
 
 					volumes = append(volumes[:i], volumes[i+1:]...)
