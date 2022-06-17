@@ -11,7 +11,7 @@ func TestGetUint64ValueFromYamlConfig(t *testing.T) {
 		12:  12,
 		120: "12*10",
 		130: "10*13",
-		8:   "2^8",
+		8:   "2^3",
 		1:   "1^10",
 	}
 
@@ -39,7 +39,7 @@ func TestGetIntValueFromYamlConfig(t *testing.T) {
 		12:  12,
 		120: "12*10",
 		130: "10*13",
-		8:   "2^8",
+		8:   "2^3",
 		1:   "1^10",
 	}
 
