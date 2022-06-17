@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -341,7 +343,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return
 	}
 	c.rebaseState(fb)
-	c.updateFeeStats(fb)
+	if err := c.updateFeeStats(fb); err != nil {
+		logging.Logger.Error("finalize block - update fee stats failed",
+			zap.Int64("round", fb.Round),
+			zap.Int64("mb_starting_round", fb.StartingRound),
+			zap.Error(err))
+	}
 
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
@@ -750,16 +757,25 @@ func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.B
 	return b1
 }
 
-func (c *Chain) updateFeeStats(fb *block.Block) {
-	var totalFees int64
+func (c *Chain) updateFeeStats(fb *block.Block) error {
+	var (
+		totalFees currency.Coin
+		err       error
+	)
 	if len(fb.Txns) == 0 {
-		return
+		return nil
 	}
 
 	for _, txn := range fb.Txns {
-		totalFees += txn.Fee
+		totalFees, err = currency.AddCoin(totalFees, txn.Fee)
+		if err != nil {
+			return err
+		}
 	}
-	meanFees := totalFees / int64(len(fb.Txns))
+	meanFees, _, err := currency.DivideCoin(totalFees, int64(len(fb.Txns)))
+	if err != nil {
+		return err
+	}
 	c.FeeStats.MeanFees = meanFees
 	if meanFees > c.FeeStats.MaxFees {
 		c.FeeStats.MaxFees = meanFees
@@ -767,4 +783,5 @@ func (c *Chain) updateFeeStats(fb *block.Block) {
 	if meanFees < c.FeeStats.MinFees {
 		c.FeeStats.MinFees = meanFees
 	}
+	return nil
 }

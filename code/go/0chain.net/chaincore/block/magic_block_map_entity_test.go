@@ -139,7 +139,9 @@ func TestMagicBlockMap_GetScore(t *testing.T) {
 				Hash:       tt.fields.Hash,
 				BlockRound: tt.fields.BlockRound,
 			}
-			if got := mb.GetScore(); got != tt.want {
+			got, err := mb.GetScore()
+			require.NoError(t, err)
+			if got != tt.want {
 				t.Errorf("GetScore() = %v, want %v", got, tt.want)
 			}
 		})

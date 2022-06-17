@@ -46,11 +46,11 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
 	}
 
-	if t.Value < int64(mn.Settings.MinStake) {
+	if t.Value < mn.Settings.MinStake {
 		return "", common.NewErrorf("delegate_pool_add",
 			"stake is less than min allowed: %d < %d", t.Value, mn.Settings.MinStake)
 	}
-	if t.Value > int64(mn.Settings.MaxStake) {
+	if t.Value > mn.Settings.MaxStake {
 		return "", common.NewErrorf("delegate_pool_add",
 			"stake is greater than max allowed: %d > %d", t.Value, mn.Settings.MaxStake)
 	}

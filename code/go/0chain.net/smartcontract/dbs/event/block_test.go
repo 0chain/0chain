@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
 )
 
 func TestAddBlock(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            os.Getenv("POSTGRES_USER"),
@@ -43,7 +43,7 @@ func TestAddBlock(t *testing.T) {
 
 func TestFindBlock(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            os.Getenv("POSTGRES_USER"),

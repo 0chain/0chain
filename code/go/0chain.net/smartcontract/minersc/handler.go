@@ -1,15 +1,12 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/rest"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"0chain.net/chaincore/currency"
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -28,6 +25,7 @@ type MinerRestHandler struct {
 
 func NewMinerRestHandler(rh rest.RestHandlerI) *MinerRestHandler {
 	return &MinerRestHandler{rh}
+
 }
 
 func SetupRestHandler(rh rest.RestHandlerI) {
@@ -734,26 +732,11 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 			ID:     pool.PoolID,
 			Status: spenum.PoolStatus(pool.Status).String(),
 		}
-		dp.Balance, err = currency.Int64ToCoin(pool.Balance)
-		if err != nil {
-			logging.Logger.Error("error converting balance", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool balance"))
-			return
-		}
+		dp.Balance = pool.Balance
 
-		dp.Reward, err = currency.Int64ToCoin(pool.Reward)
-		if err != nil {
-			logging.Logger.Error("error converting reward", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool reward"))
-			return
-		}
+		dp.Reward = pool.Reward
 
-		dp.RewardPaid, err = currency.Int64ToCoin(pool.TotalReward)
-		if err != nil {
-			logging.Logger.Error("error converting total reward", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool total reward"))
-			return
-		}
+		dp.RewardPaid = pool.TotalReward
 
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
@@ -764,26 +747,11 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 			Status: spenum.PoolStatus(pool.Status).String(),
 		}
 
-		dp.Balance, err = currency.Int64ToCoin(pool.Balance)
-		if err != nil {
-			logging.Logger.Error("error converting balance", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool balance"))
-			return
-		}
+		dp.Balance = pool.Balance
 
-		dp.Reward, err = currency.Int64ToCoin(pool.Reward)
-		if err != nil {
-			logging.Logger.Error("error converting reward", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool reward"))
-			return
-		}
+		dp.Reward = pool.Reward
 
-		dp.RewardPaid, err = currency.Int64ToCoin(pool.TotalReward)
-		if err != nil {
-			logging.Logger.Error("error converting total reward", zap.Error(err))
-			common.Respond(w, r, nil, common.NewErrInternal("invalid pool total reward"))
-			return
-		}
+		dp.RewardPaid = pool.TotalReward
 
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}

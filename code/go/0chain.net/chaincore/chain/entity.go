@@ -98,7 +98,7 @@ type Chain struct {
 	mutexViewChangeMB sync.RWMutex //nolint: structcheck, unused
 
 	//Chain config goes into this object
-	Config
+	config.ChainConfig
 	BlocksToSharder int
 
 	MagicBlockStorage round.RoundStorage `json:"-"`
@@ -121,7 +121,7 @@ type Chain struct {
 
 	currentRound int64 `json:"-"`
 
-	FeeStats transaction.TransactionFeeStats `json:"fee_stats"`
+	FeeStats transaction.FeeStats `json:"fee_stats"`
 
 	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 	lfbMutex             sync.RWMutex
@@ -220,14 +220,14 @@ func (c *Chain) SetupEventDatabase() error {
 		c.EventDb.Close()
 		c.EventDb = nil
 	}
-	if !c.DbsEvents().Enabled {
+	if !c.ChainConfig.DbsEvents().Enabled {
 		return nil
 	}
 
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents())
+	c.EventDb, err = event.NewEventDb(c.ChainConfig.DbsEvents())
 	if err != nil {
 		return err
 	}
@@ -409,10 +409,7 @@ const DefaultSmartContractTimeout = time.Second
 //NewChainFromConfig - create a new chain from config
 func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
-	chain.ID = datastore.ToKey(config.Configuration.ChainID)
-	//chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	chain.Config = NewConfigImpl(&ConfigData{})
-	chain.Config.FromViper()
+	chain.ID = datastore.ToKey(config.Configuration().ChainID)
 
 	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators()+1)
 	client.SetClientSignatureScheme(chain.ClientSignatureScheme())
@@ -423,7 +420,11 @@ func NewChainFromConfig() *Chain {
 /*Provider - entity provider for chain object */
 func Provider() datastore.Entity {
 	c := &Chain{}
-	c.Config = NewConfigImpl(&ConfigData{})
+	c.ChainConfig = NewConfigImpl(&ConfigData{})
+	c.ChainConfig.FromViper()
+
+	config.Configuration().ChainConfig = c.ChainConfig
+
 	c.Initialize()
 	c.Version = "1.0"
 
@@ -1370,7 +1371,7 @@ func (c *Chain) updateConfig(pb *block.Block) {
 		return
 	}
 
-	err = c.Config.Update(configMap)
+	err = c.ChainConfig.Update(configMap.Fields, configMap.Version)
 	if err != nil {
 		logging.Logger.Error("cannot update global settings",
 			zap.Int64("start of round", pb.Round),

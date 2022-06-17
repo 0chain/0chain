@@ -102,13 +102,13 @@ func (c Coin) Float64() (float64, error) {
 	return b, nil
 }
 
-// MultUint64 multiplies Coin c by b, returning an error if the values overflow
-func MultUint64(c Coin, b uint64) (Coin, error) {
-	a := uint64(c) * b
-	if a != 0 && a/uint64(c) != b {
+// MultCoin multiplies Coin c by b, returning an error if the values overflow
+func MultCoin(c, b Coin) (Coin, error) {
+	a := c * b
+	if a != 0 && a/c != b {
 		return 0, ErrUint64MultOverflow
 	}
-	return Coin(a), nil
+	return a, nil
 }
 
 // AddCoin adds c and b, returning an error if the values overflow

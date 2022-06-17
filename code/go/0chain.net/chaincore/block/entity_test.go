@@ -1037,7 +1037,9 @@ func TestBlock_GetScore(t *testing.T) {
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-			if got := b.GetScore(); got != tt.want {
+			got, err := b.GetScore()
+			require.NoError(t, err)
+			if got != tt.want {
 				t.Errorf("GetScore() = %v, want %v", got, tt.want)
 			}
 		})

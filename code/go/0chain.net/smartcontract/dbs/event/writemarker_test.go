@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -49,7 +49,7 @@ func TestWriteMarker(t *testing.T) {
 		}
 	}
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            os.Getenv("POSTGRES_USER"),
@@ -104,7 +104,7 @@ func TestWriteMarker(t *testing.T) {
 }
 
 func TestGetWriteMarkers(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),

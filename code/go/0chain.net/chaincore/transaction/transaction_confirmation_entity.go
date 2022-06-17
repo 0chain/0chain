@@ -69,8 +69,8 @@ func (c *Confirmation) Delete(ctx context.Context) error {
 }
 
 /*GetScore - score for write*/
-func (c *Confirmation) GetScore() int64 {
-	return c.Round
+func (c *Confirmation) GetScore() (int64, error) {
+	return c.Round, nil
 }
 
 /*GetHash - hashable implementation */

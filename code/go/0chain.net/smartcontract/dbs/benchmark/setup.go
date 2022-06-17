@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -55,17 +57,16 @@ func AddMockTransactions(
 		return
 	}
 	const txnTypeSmartContract = 1000
-	for block_number := int64(0); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
-		for i := int(0); i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
+	for blockNumber := int64(0); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
+		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			if viper.GetBool(benchmark.EventDbEnabled) {
 				transaction := event.Transaction{
-					Hash:              GetMockTransactionHash(block_number, i),
-					BlockHash:         GetMockBlockHash(block_number),
+					Hash:              GetMockTransactionHash(blockNumber, i),
+					BlockHash:         GetMockBlockHash(blockNumber),
 					Version:           "mock version",
 					ClientId:          clients[i%len(clients)],
-					ToClientId:        clients[int(block_number)%len(clients)],
+					ToClientId:        clients[int(blockNumber)%len(clients)],
 					TransactionData:   "mock transaction data",
-					Value:             block_number,
 					Signature:         "mock signature",
 					CreationDate:      int64(common.Now()),
 					Fee:               100,
@@ -73,6 +74,11 @@ func AddMockTransactions(
 					TransactionOutput: "mock output",
 					OutputHash:        "mock output hash",
 					Status:            0,
+				}
+				var err error
+				transaction.Value, err = currency.Int64ToCoin(blockNumber)
+				if err != nil {
+					panic(err)
 				}
 				_ = eventDb.Store.Get().Create(&transaction)
 			}

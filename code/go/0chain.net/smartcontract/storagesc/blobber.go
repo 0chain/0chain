@@ -1,6 +1,10 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
@@ -11,9 +15,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -413,9 +414,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related stake pool: %v", err)
 	}
 
-	isOwner := alloc.Owner == userID
 	resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
-		commitRead.ReadMarker.BlobberID, sp, value, isOwner, balances)
+		commitRead.ReadMarker.BlobberID, sp, value, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't transfer tokens from read pool to stake pool: %v", err)

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -13,7 +14,7 @@ import (
 
 func TestDelegatePoolsEvent(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -52,7 +53,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 
 func TestTagStakePoolReward(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",

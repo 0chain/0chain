@@ -223,11 +223,11 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		var readPoolFund = int64(len(alloc.BlobberAllocs)) * 2 * 1e10
+		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		require.NoError(t, err)
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
-			IsOwner:    true,
 			TargetId:   client.id,
 			MintTokens: false,
 		}), balances)
@@ -236,7 +236,7 @@ func Test_flow_reward(t *testing.T) {
 		var rp *readPool
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund, int64(rp.OwnerBalance))
+		require.EqualValues(t, readPoolFund, int64(rp.Balance))
 
 		// read
 		tp += 100
@@ -249,7 +249,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund-1e10, int64(rp.OwnerBalance))
+		require.EqualValues(t, readPoolFund-1e10, int64(rp.Balance))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -257,10 +257,10 @@ func Test_flow_reward(t *testing.T) {
 		require.EqualValues(t, 192418966, alloc.restMinLockDemand())
 	})
 
-	t.Run("read as separate user", func(t *testing.T) {
+	t.Run("read as unauthorized separate user", func(t *testing.T) {
 		tp += 100
 		var at = AuthTicket{
-			ClientID:     reader.id,
+			ClientID:     client.id,
 			OwnerID:      client.id,
 			AllocationID: alloc.ID,
 			Expiration:   common.Timestamp(tp + 1000),
@@ -293,11 +293,12 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		readPoolFund := int64(len(alloc.BlobberAllocs)) * 2 * x10
+
+		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		require.NoError(t, err)
 		tx = newTransaction(reader.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
-			IsOwner:    false,
 			TargetId:   reader.id,
 			MintTokens: false,
 		}), balances)
@@ -306,31 +307,14 @@ func Test_flow_reward(t *testing.T) {
 		var rp *readPool
 		rp, err = ssc.getReadPool(reader.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund, int64(rp.VisitorBalance))
+		require.EqualValues(t, readPoolFund, int64(rp.Balance))
 
 		// read
 		tp += 100
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
-		require.NoError(t, err)
-
-		// check out balances
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
-		require.NoError(t, err)
-
-		assert.EqualValues(t, 6e9, sp.Reward)
-
-		rp, err = ssc.getReadPool(reader.id, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, readPoolFund-1e10, int64(rp.VisitorBalance))
-
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 192418966, alloc.restMinLockDemand())
+		require.Error(t, err)
 	})
 
 	var b2 *Client

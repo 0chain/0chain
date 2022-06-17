@@ -83,7 +83,10 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		return input, nil
 	case CurrencyCoin:
 		value, err := strconv.ParseInt(input, 10, 64)
-		return currency.Coin(value), err
+		if err != nil {
+			return nil, err
+		}
+		return currency.Int64ToCoin(value)
 	case Strings:
 		return strings.Split(input, ","), nil
 	default:

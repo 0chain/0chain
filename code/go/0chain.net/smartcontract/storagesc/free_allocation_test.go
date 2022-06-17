@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
- 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 
@@ -235,7 +235,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
 			ReadPool: &readPoolConfig{
-				MinLock: zcnToInt64(mockMinLock),
+				MinLock: mockMinLock,
 			},
 			MaxBlobbersPerAllocation: 40,
 		}
@@ -286,8 +286,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 			ToClientID:   ADDRESS,
 			PublicKey:    mockUserPublicKey,
 			CreationDate: now,
-			Value:        zcnToInt64(p.marker.FreeTokens),
 		}
+		txn.Value, err = currency.ParseZCN(p.marker.FreeTokens)
+		require.NoError(t, err)
+
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
 
@@ -387,7 +389,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -441,7 +443,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On("InsertTrieNode",
 			readPoolKey(ssc.ID, p.marker.Recipient),
 			mock.MatchedBy(func(rp *readPool) bool {
-				return rp.OwnerBalance == currency.Coin(readPoolLocked) || rp.VisitorBalance == currency.Coin(readPoolLocked)
+				return rp.Balance == currency.Coin(readPoolLocked)
 			})).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}
@@ -647,8 +649,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			ClientID:     p.marker.Recipient,
 			PublicKey:    mockUserPublicKey,
 			CreationDate: now,
-			Value:        zcnToInt64(p.marker.FreeTokens),
 		}
+		txn.Value, err = currency.ParseZCN(p.marker.FreeTokens)
+		require.NoError(t, err)
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
 
@@ -741,7 +744,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + currency.Coin(txn.Value),
+				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()

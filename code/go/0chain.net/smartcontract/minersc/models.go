@@ -681,7 +681,7 @@ type SimpleNode struct {
 	PublicKey   string                `json:"public_key"`
 	ShortName   string                `json:"short_name"`
 	BuildTag    string                `json:"build_tag"`
-	TotalStaked int64                 `json:"total_stake"`
+	TotalStaked currency.Coin         `json:"total_stake"`
 	Delete      bool                  `json:"delete"`
 
 	// settings and statistic
@@ -921,7 +921,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 }
 
 // getMinersList returns miners list
-func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
+func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

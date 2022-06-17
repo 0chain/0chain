@@ -525,7 +525,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "DKG phase / restarts")
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "<td class='number'>")
-		if !config.DevConfiguration.ViewChange {
+		if !c.ChainConfig.IsViewChangeEnabled() {
 			fmt.Fprint(w, "DKG process disabled")
 		} else {
 			fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
@@ -938,8 +938,8 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 }
 
 func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
-
-	if !config.DevConfiguration.ViewChange {
+	c := GetServerChain()
+	if !c.ChainConfig.IsViewChangeEnabled() {
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 		ss := []byte(`<doctype html><html><head>
 <title>DKG process informations</title></head><body>
@@ -952,7 +952,6 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		c         = GetServerChain()
 		cmb       = c.GetCurrentMagicBlock()
 		dkgi, err = c.dkgInfo(cmb)
 	)
@@ -1310,7 +1309,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	// Calculate and update fee
-	if err := txn.ValidateFee(sc.Config.TxnExempt(), sc.Config.MinTxnFee()); err != nil {
+	if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), sc.ChainConfig.MinTxnFee()); err != nil {
 		return nil, err
 	}
 	if err := txn.ValidateNonce(); err != nil {

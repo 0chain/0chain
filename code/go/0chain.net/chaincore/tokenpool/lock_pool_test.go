@@ -287,7 +287,7 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 	txn.ClientID = "to client id"
 
 	p := tokenpool.ZcnPool{}
-	p.Balance, err = currency.AddInt64(p.Balance, txn.Value)
+	p.Balance, err = currency.AddCoin(p.Balance, txn.Value)
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -298,9 +298,9 @@ func TestZcnLockingPool_FillPool(t *testing.T) {
 		FromClient: txn.ClientID,
 		ToPool:     p.ID,
 		ToClient:   txn.ToClientID,
-		Value:      currency.Coin(txn.Value),
+		Value:      txn.Value,
 	}
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value)
 
 	type fields struct {
 		ZcnPool            tokenpool.ZcnPool
