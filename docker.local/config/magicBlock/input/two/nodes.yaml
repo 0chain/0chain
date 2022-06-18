@@ -1,25 +1,34 @@
 miners:
-- id: af0fc11d59bbbc5b6b5872366fabf8eadf335b548a7529b24b3d06cfee02b19b
-  public_key: cb6f81ec4fbd7d60a5ba689ad5a2580b937071c18537d5707b7e223f02e646062190271ae9bd29c4139b6d39daa3df4aa5a216d5b9b6f37bd37581acb36c0016
-  private_key: 44afbf3db5a26d07561bea5b94092d16f058c2b2f36d5af138804ec467049906
+- id: 70568f18bb40bf0f719e46fa4d5339c775c2a77a640444d5764287b671300115
+  public_key: 8bb84a2ddb47ba2c07b3956702930fdb24ba360c3a07ea24ebad1adb180adb1476a38b7ca4a07a685c6de9585c8e65bea9ec1f86befb1a8d2f05527562dcfa0d
+  private_key: a1face64420cf06f0d14bebcec6bfa6ae59e76ee9ae755b2b628096a94654c15
   n2n_ip: two.com
   public_ip: two.com
   port: 7071
   path: miner71
   description: two@gmail.com
   set_index: 0
-- id: 76621990d8ca394d150420f4c0a63ffe71049eaa1fb9a8f727162ad4b791cfdb
-  public_key: 34d36398c5cc8637680c2697fae2b7f3eed3d77414b9edfba46450c22dc58b10895a5ba2463f5bf34895ea725cdd27b04001fe47f9c0bb104c9290cbe0c36101
-  private_key: 0d85b7fe14879b2d0854544b7d862db4521d391962d7929e329c176e7b53940f
+- id: b1aebf00ed8c0688ebf891d713b75562b936c902801c8f2b912ff896a7bc8d7b
+  public_key: 133622ad9d97eca5a2936640a7d998d9a5d2d0efca55852625234ed06b1b6219a3b34aa8723ff20db9527411263a1eff11c2a826ca1ffaffd02500ebb6c21b20
+  private_key: d7e6b018b05edca01d9451f668fbc947c75b6198574b9e26f13b1fa0982dfa18
   n2n_ip: two.com
   public_ip: two.com
   port: 7072
   path: miner72
   description: two@gmail.com
   set_index: 1
+- id: d2f6f4c8a21550cf708beb2e1e63bffa120211c0e3970c10d7ca7abb1fbc7d90
+  public_key: 63a18338c497239d49504ad7e84210c1e5f37a9d131b68ba30d53df96be8c21bac042d9f658b2ba386fee4683728597462df9d08c12a179e7f29a495c6ab7c95
+  private_key: 27202e9665097b0972a10c1a0fbb614eb434de22935571ffbf94fed012a35210
+  n2n_ip: two.com
+  public_ip: two.com
+  port: 7073
+  path: miner73
+  description: two@gmail.com
+  set_index: 2
 sharders:
-- id: 9c15f86fd7da75d3f07896e3e38c8669f6012c6255cb39d38ee71f4ef57959e6
-  public_key: dd5b969870c345f52ef43334953c3346335a588b996f3ceb4cd6f4a641f9330acd117c9f4d04278e6646ba25abe42bac12b3c5828a6b63b7335bfe1739f5b415
+- id: d62c9f4cf202d5b944dd1b5c09e349fdbce89fc67403c5b66dafa8bfbf4fc50f
+  public_key: db4242a5bc321aa05bafb73aa377c20bd46ef352b183ece2a117dc5c15cfcc078442cde7e21f7bbf18f37d4c8e75af967a0da4ff2944f4ec510fbe965d712fa1
   n2n_ip: two.com
   public_ip: two.com
   port: 7171
