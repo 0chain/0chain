@@ -347,10 +347,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	if sa.WritePool < sa.cost() {
-		return "", common.NewErrorf("allocation_extending_failed",
-			"not enough tokens in write pool %v to cover allocation cost %v", sa.WritePool, sa.cost())
-	}
 	m.tick("create_write_pool")
 
 	if err = sc.createChallengePool(txn, sa, balances); err != nil {
@@ -1229,11 +1225,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	if request.SetImmutable {
 		alloc.IsImmutable = true
-	}
-
-	if alloc.WritePool < alloc.unusedCost() {
-		return "", common.NewErrorf("allocation_extending_failed",
-			"not enough tokens in write pool %v to cover allocation cost %v", alloc.WritePool, alloc.unusedCost())
 	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)

@@ -190,13 +190,13 @@ func BenchmarkTests(
 				},
 				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
-				Value:        currency.Coin(100 * viper.GetUint64(bk.StorageMinAllocSize)),
+				Value:        currency.Coin(100 * viper.GetUint64(bk.StorageMaxWritePrice) * 1e10),
 			},
 			input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
 					DataShards:                 len(blobbers) / 2,
 					ParityShards:               len(blobbers) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
+					Size:                       10 * viper.GetInt64(bk.StorageMinAllocSize),
 					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
 					Owner:                      data.Clients[0],
 					OwnerPublicKey:             data.PublicKeys[0],

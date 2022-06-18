@@ -92,7 +92,7 @@ smart_contracts:
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
-    max_individual_free_allocation: 170
+    max_individual_free_allocation: 1700
     max_challenges_per_generation: 1
     max_blobbers_per_allocation: 40
     validators_per_challenge: 2

@@ -124,11 +124,6 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 		}
 	}
 
-	if alloc.WritePool < alloc.unusedCost() {
-		return "", common.NewErrorf("allocation_extending_failed",
-			"not enough tokens in write pool %v to cover allocation cost %v", alloc.WritePool, alloc.unusedCost())
-	}
-
 	transfer := state.NewTransfer(ADDRESS, txn.ToClientID, currency.Coin(txn.Value))
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
