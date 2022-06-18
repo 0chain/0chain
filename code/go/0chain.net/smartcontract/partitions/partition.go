@@ -13,6 +13,10 @@ import (
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
+var (
+	ErrPartitionItemAlreadyExist = errors.New("item already exists")
+)
+
 // item represent the partition item
 type item struct {
 	ID   string
@@ -45,7 +49,7 @@ func (p *partition) load(state state.StateContextI, key datastore.Key) error {
 func (p *partition) add(it PartitionItem) error {
 	for _, bi := range p.Items {
 		if bi.ID == it.GetID() {
-			return errors.New("item already exists")
+			return ErrPartitionItemAlreadyExist
 		}
 	}
 
