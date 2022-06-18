@@ -130,9 +130,15 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 			cmd.summaries[nd.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
 			if mid != id {
 				var privateKey bls.Key
-				if err := privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey); err != nil {
+				privateKeyBytes, err := hex.DecodeString(cmd.yml.MinersMap[id].PrivateKey)
+				if err != nil {
 					log.Panic(err)
 				}
+
+				if err := privateKey.SetLittleEndian(privateKeyBytes); err != nil {
+					log.Panic(err)
+				}
+
 				message := encryption.Hash(share.GetHexString())
 				sos.ShareOrSigns[id] = &bls.DKGKeyShare{
 					Message: message,
