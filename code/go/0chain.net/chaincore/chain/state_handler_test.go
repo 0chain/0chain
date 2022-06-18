@@ -994,16 +994,15 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
 					type newAllocationRequest struct {
-						DataShards                 int                  `json:"data_shards"`
-						ParityShards               int                  `json:"parity_shards"`
-						Size                       int64                `json:"size"`
-						Expiration                 common.Timestamp     `json:"expiration_date"`
-						Owner                      string               `json:"owner_id"`
-						OwnerPublicKey             string               `json:"owner_public_key"`
-						PreferredBlobbers          []string             `json:"preferred_blobbers"`
-						ReadPriceRange             storagesc.PriceRange `json:"read_price_range"`
-						WritePriceRange            storagesc.PriceRange `json:"write_price_range"`
-						MaxChallengeCompletionTime time.Duration        `json:"max_challenge_completion_time"`
+						DataShards        int                  `json:"data_shards"`
+						ParityShards      int                  `json:"parity_shards"`
+						Size              int64                `json:"size"`
+						Expiration        common.Timestamp     `json:"expiration_date"`
+						Owner             string               `json:"owner_id"`
+						OwnerPublicKey    string               `json:"owner_public_key"`
+						PreferredBlobbers []string             `json:"preferred_blobbers"`
+						ReadPriceRange    storagesc.PriceRange `json:"read_price_range"`
+						WritePriceRange   storagesc.PriceRange `json:"write_price_range"`
 					}
 					allocReq := &newAllocationRequest{}
 					blob, err := json.Marshal(allocReq)
@@ -1042,16 +1041,15 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
 					type newAllocationRequest struct {
-						DataShards                 int                  `json:"data_shards"`
-						ParityShards               int                  `json:"parity_shards"`
-						Size                       int64                `json:"size"`
-						Expiration                 common.Timestamp     `json:"expiration_date"`
-						Owner                      string               `json:"owner_id"`
-						OwnerPublicKey             string               `json:"owner_public_key"`
-						PreferredBlobbers          []string             `json:"blobbers"`
-						ReadPriceRange             storagesc.PriceRange `json:"read_price_range"`
-						WritePriceRange            storagesc.PriceRange `json:"write_price_range"`
-						MaxChallengeCompletionTime time.Duration        `json:"max_challenge_completion_time"`
+						DataShards        int                  `json:"data_shards"`
+						ParityShards      int                  `json:"parity_shards"`
+						Size              int64                `json:"size"`
+						Expiration        common.Timestamp     `json:"expiration_date"`
+						Owner             string               `json:"owner_id"`
+						OwnerPublicKey    string               `json:"owner_public_key"`
+						PreferredBlobbers []string             `json:"blobbers"`
+						ReadPriceRange    storagesc.PriceRange `json:"read_price_range"`
+						WritePriceRange   storagesc.PriceRange `json:"write_price_range"`
 					}
 					allocReq := &newAllocationRequest{
 						Size:           2048,
