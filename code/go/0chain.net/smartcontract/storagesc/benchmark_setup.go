@@ -250,20 +250,12 @@ func AddMockChallenges(
 
 	// adding blobber challenge allocation partition
 	for blobberID, val := range blobAlloc {
-		blobberChallenges := BlobberChallenges{
-			BlobberID:     blobberID,
-			ChallengesMap: make(map[string]struct{}),
-		}
 
 		aPart, err := partitionsBlobberAllocations(blobberID, balances)
 		if err != nil {
 			panic(err)
 		}
-		for allocID, challenge := range val {
-			blobberChallenges.OpenChallenges = append(blobberChallenges.OpenChallenges, BlobOpenChallenge{
-				ID:        challenge.ID,
-				CreatedAt: common.Timestamp(time.Now().Unix()),
-			})
+		for allocID := range val {
 
 			_, err = aPart.AddItem(balances, &BlobberAllocationNode{
 				ID: allocID,
@@ -271,9 +263,6 @@ func AddMockChallenges(
 			if err != nil {
 				panic(err)
 			}
-		}
-		if err := blobberChallenges.save(balances, ADDRESS); err != nil {
-			log.Fatal(err)
 		}
 		err = aPart.Save(balances)
 
