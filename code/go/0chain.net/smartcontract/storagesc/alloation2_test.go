@@ -52,15 +52,14 @@ func TestNewAllocation(t *testing.T) {
 	}
 
 	var request = newAllocationRequest{
-		Owner:                      clientId,
-		OwnerPublicKey:             "my public key",
-		Size:                       scYaml.MinAllocSize,
-		DataShards:                 3,
-		ParityShards:               5,
-		Expiration:                 common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
-		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
-		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
-		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
+		Owner:           clientId,
+		OwnerPublicKey:  "my public key",
+		Size:            scYaml.MinAllocSize,
+		DataShards:      3,
+		ParityShards:    5,
+		Expiration:      common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
+		ReadPriceRange:  PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
+		WritePriceRange: PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		Blobbers: []string{"0", "1", "2", "3",
 			"4", "5", "6", "7"},
 	}
@@ -68,9 +67,8 @@ func TestNewAllocation(t *testing.T) {
 		Capacity: 536870912,
 		Used:     73,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -133,9 +131,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -176,9 +173,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
-				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-				},
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),
@@ -251,9 +246,8 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -293,9 +287,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
-				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-				},
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),

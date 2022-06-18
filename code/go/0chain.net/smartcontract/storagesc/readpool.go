@@ -103,8 +103,7 @@ func toJson(val interface{}) string {
 }
 
 func (rp *readPool) moveToBlobber(allocID, blobID string,
-	sp *stakePool, value currency.Coin, isOwner bool,
-	balances cstate.StateContextI) (resp string, err error) {
+	sp *stakePool, value currency.Coin, balances cstate.StateContextI) (resp string, err error) {
 
 	// all redeems to response at the end
 	var redeems []readPoolRedeem

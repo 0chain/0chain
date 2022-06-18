@@ -140,7 +140,6 @@ func BenchmarkTests(
 					OwnerID:         data.Clients[0],
 					Timestamp:       creationTime,
 					ReadCounter:     viper.GetInt64(bk.NumWriteRedeemAllocation) + 1,
-					PayerID:         data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
@@ -203,7 +202,6 @@ func BenchmarkTests(
 					Blobbers:                   blobbers,
 					ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 					WritePriceRange:            PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 				}).encode()
 				return bytes
 			}(),

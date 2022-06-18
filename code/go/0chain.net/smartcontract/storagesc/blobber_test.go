@@ -97,14 +97,6 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	var conf, err = ssc.getConfig(balances, false)
 	require.NoError(t, err)
 
-	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime +
-		1*time.Second
-
-	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
-	require.Error(t, err)
-
-	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime -
-		1*time.Second
 	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)
@@ -210,7 +202,6 @@ func Test_flow_reward(t *testing.T) {
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
 			ReadCounter:     1 * GB / (64 * KB),
-			PayerID:         client.id,
 		}
 		rm.ReadMarker.Signature, err = client.scheme.Sign(
 			encryption.Hash(rm.ReadMarker.GetHashData()))
@@ -258,10 +249,10 @@ func Test_flow_reward(t *testing.T) {
 		require.EqualValues(t, 192418966, alloc.restMinLockDemand())
 	})
 
-	t.Run("read as separate user", func(t *testing.T) {
+	t.Run("read as unauthorized separate user", func(t *testing.T) {
 		tp += 100
 		var at = AuthTicket{
-			ClientID:     reader.id,
+			ClientID:     client.id,
 			OwnerID:      client.id,
 			AllocationID: alloc.ID,
 			Expiration:   common.Timestamp(tp + 1000),
@@ -280,7 +271,6 @@ func Test_flow_reward(t *testing.T) {
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
 			ReadCounter:     1 * GB / (64 * KB),
-			PayerID:         reader.id,
 			AuthTicket:      &at,
 		}
 		rm.ReadMarker.Signature, err = reader.scheme.Sign(
@@ -316,24 +306,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
-		require.NoError(t, err)
-
-		// check out balances
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
-		require.NoError(t, err)
-
-		assert.EqualValues(t, 6e9, sp.Reward)
-
-		rp, err = ssc.getReadPool(reader.id, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, readPoolFund-1e10, int64(rp.Balance))
-
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 192418966, alloc.restMinLockDemand())
+		require.Error(t, err)
 	})
 
 	var b2 *Client
@@ -467,7 +440,6 @@ func Test_flow_reward(t *testing.T) {
 	}
 
 	t.Run("challenge pass", func(t *testing.T) {
-
 		var cp *challengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
@@ -933,7 +905,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
+		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1155,7 +1127,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
+		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)

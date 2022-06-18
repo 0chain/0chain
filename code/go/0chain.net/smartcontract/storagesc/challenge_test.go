@@ -84,7 +84,7 @@ func TestAddChallenge(t *testing.T) {
 			BlobberID:      blobberID,
 			AllocationRoot: "root " + blobberID,
 			Stats:          &StorageAllocationStats{},
-			Terms:          Terms{ChallengeCompletionTime: p.cct},
+			Terms:          Terms{},
 		}
 
 		blobberMap[blobberID] = blobberAllocs[0]
@@ -564,8 +564,7 @@ func setupChallengeMocks(
 		BlobberID:                  blobberId,
 		ChallengePoolIntegralValue: challengePoolIntegralValue,
 		Terms: Terms{
-			WritePrice:              zcnToBalance(blobberYaml.writePrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
 		Size: size,
 	}

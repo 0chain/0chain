@@ -47,11 +47,10 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		}{
 			AllocationID: t.AllocationID,
 			Terms: Terms{
-				ReadPrice:               t.ReadPrice,
-				WritePrice:              t.WritePrice,
-				MinLockDemand:           t.MinLockDemand,
-				MaxOfferDuration:        t.MaxOfferDuration,
-				ChallengeCompletionTime: t.ChallengeCompletionTime,
+				ReadPrice:        t.ReadPrice,
+				WritePrice:       t.WritePrice,
+				MinLockDemand:    t.MinLockDemand,
+				MaxOfferDuration: t.MaxOfferDuration,
 			}}
 	}
 
@@ -123,7 +122,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		IsImmutable:                alloc.IsImmutable,
 		ReadPriceRange:             PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:            PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
-		MaxChallengeCompletionTime: time.Duration(alloc.MaxChallengeCompletionTime),
 		ChallengeCompletionTime:    time.Duration(alloc.ChallengeCompletionTime),
 		StartTime:                  common.Timestamp(alloc.StartTime),
 		Finalized:                  alloc.Finalized,
@@ -146,13 +144,12 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	allocationTerms := make([]event.AllocationTerm, 0)
 	for _, b := range sa.BlobberAllocs {
 		allocationTerms = append(allocationTerms, event.AllocationTerm{
-			BlobberID:               b.BlobberID,
-			AllocationID:            b.AllocationID,
-			ReadPrice:               b.Terms.ReadPrice,
-			WritePrice:              b.Terms.WritePrice,
-			MinLockDemand:           b.Terms.MinLockDemand,
-			MaxOfferDuration:        b.Terms.MaxOfferDuration,
-			ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
+			BlobberID:        b.BlobberID,
+			AllocationID:     b.AllocationID,
+			ReadPrice:        b.Terms.ReadPrice,
+			WritePrice:       b.Terms.WritePrice,
+			MinLockDemand:    b.Terms.MinLockDemand,
+			MaxOfferDuration: b.Terms.MaxOfferDuration,
 		})
 	}
 
@@ -177,7 +174,6 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		ReadPriceMax:               sa.ReadPriceRange.Max,
 		WritePriceMin:              sa.WritePriceRange.Min,
 		WritePriceMax:              sa.WritePriceRange.Max,
-		MaxChallengeCompletionTime: int64(sa.MaxChallengeCompletionTime),
 		ChallengeCompletionTime:    int64(sa.ChallengeCompletionTime),
 		StartTime:                  int64(sa.StartTime),
 		Finalized:                  sa.Finalized,
