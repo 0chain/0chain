@@ -15,7 +15,7 @@ type Block struct {
 	Hash                  string    `json:"hash"`
 	Version               string    `json:"version"`
 	CreationDate          int64     `json:"creation_date"`
-	Round                 int64     `json:"round" gorm:"index:idx_bround,unique"`
+	Round                 int64     `json:"round" gorm:"index:idx_bround"`
 	MinerID               string    `json:"miner_id"`
 	RoundRandomSeed       int64     `json:"round_random_seed"`
 	MerkleTreeRoot        string    `json:"merkle_tree_root"`
