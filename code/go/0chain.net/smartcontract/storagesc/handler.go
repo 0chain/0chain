@@ -260,15 +260,15 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 	var creationDate = balances.Now()
 	dur := common.ToTime(creationDate).Add(conf.FreeAllocationSettings.Duration)
 	request := newAllocationRequest{
-		DataShards:                 conf.FreeAllocationSettings.DataShards,
-		ParityShards:               conf.FreeAllocationSettings.ParityShards,
-		Size:                       conf.FreeAllocationSettings.Size,
-		Expiration:                 common.Timestamp(dur.Unix()),
-		Owner:                      marker.Recipient,
-		OwnerPublicKey:             inputObj.RecipientPublicKey,
-		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
-		Blobbers:                   inputObj.Blobbers,
+		DataShards:      conf.FreeAllocationSettings.DataShards,
+		ParityShards:    conf.FreeAllocationSettings.ParityShards,
+		Size:            conf.FreeAllocationSettings.Size,
+		Expiration:      common.Timestamp(dur.Unix()),
+		Owner:           marker.Recipient,
+		OwnerPublicKey:  inputObj.RecipientPublicKey,
+		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
+		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
+		Blobbers:        inputObj.Blobbers,
 	}
 
 	edb := balances.GetEventDB()
@@ -1092,13 +1092,12 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), limit, sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
