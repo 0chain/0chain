@@ -13,16 +13,17 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
-
-	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"gopkg.in/yaml.v2"
@@ -42,14 +43,14 @@ type cmdMagicBlock struct {
 
 var (
 	defaultTokenSize int64 = 10000000000
-	//rootPath               = "/config"
-	rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
+	rootPath               = "/config"
+	//rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
 
 	output = fmt.Sprintf("%v/output", rootPath)
 	input  = fmt.Sprintf("%v/input", rootPath)
 )
 
-func newMagicBlock() *cmdMagicBlock {
+func new() *cmdMagicBlock {
 	return &cmdMagicBlock{dkgs: map[string]*bls.DKG{}, summaries: map[int]*bls.DKGSummary{}}
 }
 
@@ -255,7 +256,7 @@ func main() {
 		for e := range passes {
 			emails = append(emails, e)
 		}
-		configs := readConfigs(magicBlockConfig, passes)
+		configs, nodesToEmail := readConfigs(magicBlockConfig, passes)
 		merged, origInd := mergeConfigs(configs)
 		mbfile := fmt.Sprintf("%v/%v", output, *magicBlockConfig)
 		writeMergedYAml(&mbfile, merged)
@@ -265,7 +266,7 @@ func main() {
 		}
 		artifacts.originalIndices = origInd
 		generateStates(artifacts)
-		zipArtifacts(passes, artifacts)
+		zipArtifacts(passes, nodesToEmail, artifacts)
 	} else {
 		mbfile := fmt.Sprintf("%v/%v", rootPath, *magicBlockConfig)
 		output = rootPath
@@ -318,7 +319,7 @@ func getStatesFileName() string {
 	return "initial-states.yaml"
 }
 
-func zipArtifacts(passes map[string]string, cmd *cmdMagicBlock) {
+func zipArtifacts(passes map[string]string, nodesToEmail map[datastore.Key]string, cmd *cmdMagicBlock) {
 	log.Println("Preparing archives...")
 	//rename summaries for test purpose use
 	for _, miner := range cmd.block.Miners.Nodes {
@@ -334,7 +335,7 @@ func zipArtifacts(passes map[string]string, cmd *cmdMagicBlock) {
 		mappedNames := make(map[string]string)
 
 		for _, miner := range cmd.block.Miners.Nodes {
-			if miner.Description == email {
+			if nodesToEmail[miner.ID] == email {
 				index := cmd.originalIndices[miner.ID]
 				name := getSummariesName(index)
 				_, err := cmd.saveDKGSummary(miner.SetIndex, name)
@@ -408,7 +409,7 @@ func getNamesEmailFileName(email string) string {
 }
 
 func generateArtifacts(magicBlockConfig *string, emails []string) (*cmdMagicBlock, error) {
-	cmd := newMagicBlock()
+	cmd := new()
 	if err := cmd.setupYaml(*magicBlockConfig); err != nil {
 		log.Printf("Failed to read configuration file (%v) for magicBlock. Error: %v\n", *magicBlockConfig, err)
 		return nil, err
@@ -437,10 +438,11 @@ func generateArtifacts(magicBlockConfig *string, emails []string) (*cmdMagicBloc
 	return cmd, nil
 }
 
-func readConfigs(magicBlockConfig *string, passes map[string]string) []*configYaml {
+func readConfigs(magicBlockConfig *string, passes map[string]string) ([]*configYaml, map[datastore.Key]string) {
 	var configs []*configYaml
 	fmt.Println("unzipping archives")
 
+	nodesToEmail := make(map[datastore.Key]string)
 	nodesYaml := fmt.Sprintf("%v/%v.yaml", input, *magicBlockConfig)
 	for email, pass := range passes {
 		file := fmt.Sprintf("%v.zip", email)
@@ -471,12 +473,22 @@ func readConfigs(magicBlockConfig *string, passes map[string]string) []*configYa
 				fmt.Printf("bad miner %v\n", m.ID)
 				log.Panic(err)
 			}
+			if !isValidDescription(m.Description) {
+				fmt.Printf("miner %v has too long description\n", m.ID)
+				log.Panic(err)
+			}
+			nodesToEmail[m.ID] = email
 		}
 		for _, s := range conf.Sharders {
 			if err := verifyKeys(s.PrivateKey, s.PublicKey, s.ID); err != nil {
 				fmt.Printf("bad sharder with %v\n", s.ID)
 				log.Panic(err)
 			}
+			if !isValidDescription(s.Description) {
+				fmt.Printf("sharder %v has too long description\n", s.ID)
+				log.Panic(err)
+			}
+			nodesToEmail[s.ID] = email
 		}
 		configs = append(configs, conf)
 
@@ -486,7 +498,12 @@ func readConfigs(magicBlockConfig *string, passes map[string]string) []*configYa
 		}
 	}
 	fmt.Printf("parsed %v nodes.yaml files\n", len(configs))
-	return configs
+	return configs, nodesToEmail
+}
+
+func isValidDescription(s string) bool {
+	words := strings.Fields(s)
+	return len(words) < 200
 }
 
 func writeMergedYAml(magicBlockConfig *string, merged *configYaml) {
