@@ -57,13 +57,17 @@ func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit Pagination
 }
 
 // GetTransactionByBlockNumbers finds the transaction record between two block numbers
-func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int, offset, limit int) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int, limit Pagination) ([]Transaction, error) {
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(Transaction{}).
-		Joins("INNER JOIN  blocks on blocks.round >= ? AND blocks.round <= ? AND blocks.hash = transactions.block_hash", blockStart, blockEnd).
-		Offset(offset).
-		Limit(limit).
+		Joins("INNER JOIN blocks on blocks.round >= ? AND blocks.round <= ? AND blocks.hash = transactions.block_hash", blockStart, blockEnd).
+		Offset(limit.Limit).
+		Limit(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_date"},
+			Desc:   limit.IsDescending,
+		}).
 		Scan(&tr)
 
 	return tr, res.Error
