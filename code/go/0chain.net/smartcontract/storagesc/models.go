@@ -1263,21 +1263,13 @@ func getMaxChallengeCompletionTime() time.Duration {
 // return the expired challenge ids, or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	blobChallenges *BlobberChallenges, now common.Timestamp) ([]string, error) {
+	now common.Timestamp) ([]string, error) {
 	var (
-		expiredChallengeIDs     = make([]string, 0, len(allocChallenges.OpenChallenges))
-		expiredBlobChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
+		expiredChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
 	)
 
 	cct := getMaxChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
-		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
-		if !ok {
-			return nil, common.NewErrorf("remove_expired_challenges", "blobber not exist in allocation: %s", oc.BlobberID)
-		}
-
-		// TODO: Not sure how the terms.ChallengeCompletionTime being set, perhaps we should get
-		// ChallengeCompletionTime from global config instead of the allocation's terms
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
@@ -1286,23 +1278,16 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		// expired
 		expiredChallengeIDs = append(expiredChallengeIDs, oc.ID)
 
-		// update challenge stats
-		ba.Stats.FailedChallenges++
-		ba.Stats.OpenChallenges--
-
-		sa.Stats.FailedChallenges++
-		sa.Stats.OpenChallenges--
-
-		if oc.BlobberID == blobChallenges.BlobberID {
-			expiredBlobChallengeIDs = append(expiredBlobChallengeIDs, oc.ID)
+		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			sa.Stats.FailedChallenges++
+			sa.Stats.OpenChallenges--
 		}
 	}
 
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeIDs):]
-
-	if len(expiredBlobChallengeIDs) > 0 {
-		blobChallenges.removeChallenges(expiredBlobChallengeIDs)
-	}
 
 	return expiredChallengeIDs, nil
 }
