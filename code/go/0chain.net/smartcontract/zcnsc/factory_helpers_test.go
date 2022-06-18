@@ -207,7 +207,6 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 
 func createBurnPayload() *BurnPayload {
 	return &BurnPayload{
-		Nonce:           1,
 		EthereumAddress: ADDRESS,
 	}
 }
@@ -245,8 +244,8 @@ func createTransactionSignatures(ctx *mockStateContext, m *MintPayload) ([]*Auth
 
 func createUserNode(id string, nonce int64) *UserNode {
 	return &UserNode{
-		ID:    id,
-		Nonce: nonce,
+		ID:        id,
+		MintNonce: nonce,
 	}
 }
 

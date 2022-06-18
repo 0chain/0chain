@@ -64,7 +64,7 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce - 1
+	node.MintNonce = payload.Nonce - 1
 	require.NoError(t, node.Save(ctx))
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)

@@ -209,9 +209,7 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 }
 
 func createBurnPayloadForZCNSCBurn() []byte {
-	burnNonce = burnNonce + 1
 	payload := &BurnPayload{
-		Nonce:           burnNonce,
 		EthereumAddress: "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
 	}
 

@@ -22,7 +22,6 @@ func TestBurnPayload_Encode_Decode(t *testing.T) {
 	expected := createBurnPayload()
 	err := actual.Decode(expected.Encode())
 	require.NoError(t, err)
-	require.Equal(t, expected.Nonce, actual.Nonce)
 	require.Equal(t, expected.EthereumAddress, actual.EthereumAddress)
 }
 
@@ -44,11 +43,9 @@ func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
-	payload.Nonce = 1
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce - 1
 	require.NoError(t, node.Save(ctx))
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
@@ -62,13 +59,10 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
-	payload.Nonce = 1
-
 	// case 1
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce
 	require.NoError(t, node.Save(ctx))
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
@@ -80,7 +74,6 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 	node, err = GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce + 1
 	require.NoError(t, node.Save(ctx))
 
 	burn, err = contract.Burn(tr, payload.Encode(), ctx)
@@ -130,7 +123,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	nonce := node.Nonce
+	nonce := node.MintNonce
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -141,7 +134,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.Nonce, nonce+1)
+	require.Equal(t, node.MintNonce, nonce+1)
 }
 
 func Test_UpdateUserNode(t *testing.T) {
@@ -150,7 +143,7 @@ func Test_UpdateUserNode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	node.Nonce += 2
+	node.MintNonce += 2
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
@@ -158,7 +151,7 @@ func Test_UpdateUserNode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.Nonce, node2.Nonce)
+	require.Equal(t, node.MintNonce, node2.MintNonce)
 }
 
 func Test_UserNodeEncode_Decode(t *testing.T) {
@@ -167,7 +160,7 @@ func Test_UserNodeEncode_Decode(t *testing.T) {
 	err := actual.Decode(node.Encode())
 	require.NoError(t, err)
 	require.Equal(t, node.ID, actual.ID)
-	require.Equal(t, node.Nonce, actual.Nonce)
+	require.Equal(t, node.MintNonce, actual.MintNonce)
 }
 
 func Test_Burn_should_return_encoded_payload(t *testing.T) {

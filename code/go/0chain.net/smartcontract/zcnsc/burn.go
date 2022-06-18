@@ -76,17 +76,8 @@ func (zcn *ZCNSmartContract) Burn(
 		return
 	}
 
-	if un.Nonce+1 != payload.Nonce {
-		err = common.NewError(
-			code,
-			fmt.Sprintf(
-				"nonce given (%v) for burning client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-				payload.Nonce, trans.ClientID, un.Nonce, un.ID, info))
-		return
-	}
-
 	// increase the nonce
-	un.Nonce++
+	un.BurnNonce++
 
 	// Save the user node
 	err = un.Save(ctx)
@@ -103,7 +94,7 @@ func (zcn *ZCNSmartContract) Burn(
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,
 		Amount:          trans.Value,
-		Nonce:           payload.Nonce,
+		Nonce:           un.BurnNonce,
 		EthereumAddress: payload.EthereumAddress,
 	}
 

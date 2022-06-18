@@ -61,12 +61,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	if un.Nonce+1 != payload.Nonce {
+	if un.MintNonce+1 != payload.Nonce {
 		err = common.NewError(
 			code,
 			fmt.Sprintf(
 				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, un.Nonce, un.ID, info))
+				payload.Nonce, payload.ReceivingClientID, un.MintNonce, un.ID, info))
 		return
 	}
 
@@ -79,7 +79,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// increase the nonce
-	un.Nonce++
+	un.MintNonce++
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{

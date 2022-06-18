@@ -285,7 +285,7 @@ func (z UserNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ID)
 	// string "Nonce"
 	o = append(o, 0xa5, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
-	o = msgp.AppendInt64(o, z.Nonce)
+	o = msgp.AppendInt64(o, z.MintNonce)
 	return
 }
 
@@ -314,7 +314,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Nonce":
-			z.Nonce, bts, err = msgp.ReadInt64Bytes(bts)
+			z.MintNonce, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Nonce")
 				return

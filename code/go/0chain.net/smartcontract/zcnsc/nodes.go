@@ -352,14 +352,15 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID    string `json:"id"`
-	Nonce int64  `json:"nonce"`
+	ID        string `json:"id"`
+	MintNonce int64  `json:"mint_nonce"`
+	BurnNonce int64  `json:"burn_nonce"`
 }
 
 func NewUserNode(id string, nonce int64) *UserNode {
 	return &UserNode{
-		ID:    id,
-		Nonce: nonce,
+		ID:        id,
+		MintNonce: nonce,
 	}
 }
 
