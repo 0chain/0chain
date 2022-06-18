@@ -1,0 +1,58 @@
+miners:
+- id: b78e8eb751411bbd319154ec777025a5960a125c6194b5e55a003b71aa1a6b20
+  public_key: fd9c23a14f512c4d5326f55beb2a902474cb9ebbb4ee0ffd06595fcaa6a5a10ee1716a153b0417caf88d8e6a24f02ab185174c0e133d1986737a0d33865b4504
+  private_key: bca80487544481c7395dae3ee81f387674705480afc2fc96508a480585613f06
+  n2n_ip: one.com
+  public_ip: one.com
+  port: 7071
+  path: miner71
+  description: one@gmail.com
+  set_index: 0
+- id: 1b5b72c06f671747ef968e5fb96d696afb6cb098a1f0ab0fd2ddcff8ba07f0d3
+  public_key: dc5879034a1adee114a062a6bc07a8681ef2a512e5c631b7240291c73889210b6a9e5f05071bc024b698cf3d83605adac86c7fa2bc72e8a65db91ebf71ffc68e
+  private_key: ad9f0740ad6b344711203aae4cd8963ecc1f39f3eba8876cd2225b1c0d1b1e22
+  n2n_ip: one.com
+  public_ip: one.com
+  port: 7072
+  path: miner72
+  description: one@gmail.com
+  set_index: 1
+- id: 8f6ae05f86b7f5a75a07244901d064b3565f1d9fd2ecd7cf7567acdc2bd50b0f
+  public_key: d90f5557127ea3d6c021bf830bff4ed9915675d715245b5cc88ac4f08a445a228e02d1c2480be78b4e15b4179928f8ce4bc5c8f45494809fe534710cfbec0b95
+  private_key: 65be66d2ce9451d6ce571210767ee095074a77195e63783c3286ef4570525113
+  n2n_ip: one.com
+  public_ip: one.com
+  port: 7073
+  path: miner73
+  description: one@gmail.com
+  set_index: 2
+- id: 57a0328d5b66db17ab9ec3d9526e02f86029092c7eec6d7d3b9d46dfdf542523
+  public_key: 278085d04c6814579448a9f9d63fec1a3bff7fa393745070f8852a12aead621f7815e9f920b2653914dc1a83ec2b0bf568871227a8ad75e1a29ae4a292f5daa2
+  private_key: 390ac54303e0a6e1a21a52b6cd44bba313785fc41bf90d6270f23a24a22c6700
+  n2n_ip: one.com
+  public_ip: one.com
+  port: 7074
+  path: miner74
+  description: one@gmail.com
+  set_index: 3
+sharders:
+- id: 59004c50f17f60539551d867bb21fda17558ecd1fff03389a71c855001214413
+  public_key: 3ec9bc567ce85289b98243b90481bce0c18c99f88cd0a4a28aa94132c652a91a9b46c6aefee3656646f5913bfb2648e2e5604346ce27c112ce5965ffb4292f8e
+  n2n_ip: one.com
+  public_ip: one.com
+  port: 7171
+  path: sharder71
+  description: one@gmail.com
+- id: 4bcd15c03432852b512648064fc6316fe692e323544c90c84ef349098f01b52c
+  public_key: 2ff719df7737ce41bab5542d2dba778469327f144be506ec463f76b80cc34c0e17a87e87aecc3aab403e244f8d32cc9e24855fd9eeb8a2046b0ffe0bc6211b00
+  n2n_ip: one.com
+  public_ip: one.com
+  port: 7172
+  path: sharder72
+  description: one@gmail.com
+
+message: "Straight from development"
+magic_block_number: 1
+starting_round: 0
+t_percent: 66
+k_percent: 75

@@ -1,0 +1,33 @@
+miners:
+- id: af0fc11d59bbbc5b6b5872366fabf8eadf335b548a7529b24b3d06cfee02b19b
+  public_key: cb6f81ec4fbd7d60a5ba689ad5a2580b937071c18537d5707b7e223f02e646062190271ae9bd29c4139b6d39daa3df4aa5a216d5b9b6f37bd37581acb36c0016
+  private_key: 44afbf3db5a26d07561bea5b94092d16f058c2b2f36d5af138804ec467049906
+  n2n_ip: two.com
+  public_ip: two.com
+  port: 7071
+  path: miner71
+  description: two@gmail.com
+  set_index: 0
+- id: 76621990d8ca394d150420f4c0a63ffe71049eaa1fb9a8f727162ad4b791cfdb
+  public_key: 34d36398c5cc8637680c2697fae2b7f3eed3d77414b9edfba46450c22dc58b10895a5ba2463f5bf34895ea725cdd27b04001fe47f9c0bb104c9290cbe0c36101
+  private_key: 0d85b7fe14879b2d0854544b7d862db4521d391962d7929e329c176e7b53940f
+  n2n_ip: two.com
+  public_ip: two.com
+  port: 7072
+  path: miner72
+  description: two@gmail.com
+  set_index: 1
+sharders:
+- id: 9c15f86fd7da75d3f07896e3e38c8669f6012c6255cb39d38ee71f4ef57959e6
+  public_key: dd5b969870c345f52ef43334953c3346335a588b996f3ceb4cd6f4a641f9330acd117c9f4d04278e6646ba25abe42bac12b3c5828a6b63b7335bfe1739f5b415
+  n2n_ip: two.com
+  public_ip: two.com
+  port: 7171
+  path: sharder71
+  description: two@gmail.com
+
+message: "Straight from development"
+magic_block_number: 1
+starting_round: 0
+t_percent: 66
+k_percent: 75
