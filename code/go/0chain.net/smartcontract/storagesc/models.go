@@ -1270,13 +1270,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 
 	cct := getMaxChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
-		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
-		if !ok {
-			return nil, common.NewErrorf("remove_expired_challenges", "blobber not exist in allocation: %s", oc.BlobberID)
-		}
-
-		// TODO: Not sure how the terms.ChallengeCompletionTime being set, perhaps we should get
-		// ChallengeCompletionTime from global config instead of the allocation's terms
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
@@ -1285,12 +1278,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		// expired
 		expiredChallengeIDs = append(expiredChallengeIDs, oc.ID)
 
-		// update challenge stats
-		ba.Stats.FailedChallenges++
-		ba.Stats.OpenChallenges--
-
-		sa.Stats.FailedChallenges++
-		sa.Stats.OpenChallenges--
+		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			sa.Stats.FailedChallenges++
+			sa.Stats.OpenChallenges--
+		}
 	}
 
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeIDs):]
