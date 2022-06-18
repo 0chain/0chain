@@ -65,17 +65,16 @@ func addMockAllocation(
 
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
-		ID:                         id,
-		DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		Size:                       viper.GetInt64(sc.StorageMinAllocSize),
-		Expiration:                 benchAllocationExpire(balances.GetTransaction().CreationDate),
-		Owner:                      clients[cIndex],
-		OwnerPublicKey:             publicKey,
-		ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
-		WritePriceRange:            PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
-		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
-		ChallengeCompletionTime:    viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
+		ID:                      id,
+		DataShards:              viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		ParityShards:            viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		Size:                    viper.GetInt64(sc.StorageMinAllocSize),
+		Expiration:              benchAllocationExpire(balances.GetTransaction().CreationDate),
+		Owner:                   clients[cIndex],
+		OwnerPublicKey:          publicKey,
+		ReadPriceRange:          PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+		WritePriceRange:         PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,
