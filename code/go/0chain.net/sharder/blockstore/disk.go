@@ -360,13 +360,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 	volumesMapI := volumesI.([]interface{})
 	var volsMap []map[string]interface{}
 	for _, volumeI := range volumesMapI {
-		m := make(map[string]interface{})
-		volIMap := volumeI.(map[interface{}]interface{})
-		for k, v := range volIMap {
-			sK := k.(string)
-			m[sK] = v
-		}
-
+		m := volumeI.(map[string]interface{})
 		volsMap = append(volsMap, m)
 	}
 
