@@ -268,7 +268,6 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		OwnerPublicKey:             inputObj.RecipientPublicKey,
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
-		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
 		Blobbers:                   inputObj.Blobbers,
 	}
 
@@ -363,8 +362,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	var allocationSize = sa.bSize()
 	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
-		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		MaxOfferDuration:           dur,
+		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -1094,14 +1092,13 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-
 	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), limit, sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -1718,11 +1715,10 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				Longitude: blobber.Longitude,
 			},
 			Terms: Terms{
-				ReadPrice:               blobber.ReadPrice,
-				WritePrice:              blobber.WritePrice,
-				MinLockDemand:           blobber.MinLockDemand,
-				MaxOfferDuration:        time.Duration(blobber.MaxOfferDuration),
-				ChallengeCompletionTime: time.Duration(blobber.ChallengeCompletionTime),
+				ReadPrice:        blobber.ReadPrice,
+				WritePrice:       blobber.WritePrice,
+				MinLockDemand:    blobber.MinLockDemand,
+				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
 			},
 			Capacity:        blobber.Capacity,
 			Used:            blobber.Used,

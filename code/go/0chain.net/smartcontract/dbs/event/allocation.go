@@ -29,8 +29,7 @@ type Allocation struct {
 	ReadPriceMax               currency.Coin `json:"read_price_max"`
 	WritePriceMin              currency.Coin `json:"write_price_min"`
 	WritePriceMax              currency.Coin `json:"write_price_max"`
-	MaxChallengeCompletionTime int64         `json:"max_challenge_completion_time"`
-	ChallengeCompletionTime    int64         `json:"challenge_completion_time"`
+	ChallengeCompletionTime int64         `json:"challenge_completion_time"`
 	StartTime                  int64         `json:"start_time" gorm:"index:idx_astart_time"`
 	Finalized                  bool          `json:"finalized"`
 	Cancelled                  bool          `json:"cancelled"`
@@ -62,8 +61,6 @@ type AllocationTerm struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
-	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 func (edb EventDb) GetAllocation(id string) (*Allocation, error) {

@@ -148,7 +148,6 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 					nar.ReadPriceRange = PriceRange{1e10, 10e10}
 					nar.WritePriceRange = PriceRange{2e10, 20e10}
 					nar.Size = 1 * KB // 2 GB
-					nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 					input = mustEncode(b, nar)                        //
 					tx = newTransaction(client.id, ADDRESS, 1e10, tp) //
@@ -225,7 +224,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 1 * KB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
 			balances)
@@ -360,7 +358,6 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 1 * KB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
 			balances)

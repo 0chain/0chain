@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"time"
+
 	"0chain.net/core/encryption"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/chaincore/currency"
@@ -147,13 +150,12 @@ func BenchmarkRestTests(
 							DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:                 2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+							Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
 							ReadPriceRange:             PriceRange{0, maxReadPrice},
 							WritePriceRange:            PriceRange{0, maxWritePrice},
-							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)
 					}(),
@@ -304,13 +306,12 @@ func BenchmarkRestTests(
 							DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:                 2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+							Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 							Owner:                      data.Clients[0],
 							OwnerPublicKey:             data.PublicKeys[0],
 							Blobbers:                   []string{},
 							ReadPriceRange:             PriceRange{0, maxReadPrice},
 							WritePriceRange:            PriceRange{0, maxWritePrice},
-							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
 						}).encode()
 						return string(nar)
 					}(),

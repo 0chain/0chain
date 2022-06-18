@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -54,9 +53,8 @@ type cbrResponse struct {
 
 var (
 	blobberYaml = mockBlobberYaml{
-		serviceCharge:           0.3,
-		readPrice:               0.01,
-		challengeCompletionTime: 2 * time.Minute,
+		serviceCharge: 0.3,
+		readPrice:     0.01,
 	}
 )
 
