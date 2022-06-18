@@ -66,7 +66,7 @@ func (rs *randomSelector) Add(state state.StateContextI, item PartitionItem) (in
 		part = rs.addPartition()
 	}
 	if err := part.add(item); err != nil {
-		return 0, err
+		return rs.NumPartitions - 1, err
 	}
 	return len(rs.Partitions) - 1, nil
 }
