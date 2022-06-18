@@ -64,7 +64,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/count_readmarkers", srh.getReadMarkersCount),
 		rest.MakeEndpoint(storage+"/getWriteMarkers", srh.getWriteMarkers),
 		rest.MakeEndpoint(storage+"/get_validator", srh.getValidator),
-		rest.MakeEndpoint(storage+"/validators,", srh.validators),
+		rest.MakeEndpoint(storage+"/validators", srh.validators),
 		rest.MakeEndpoint(storage+"/openchallenges", srh.getOpenChallenges),
 		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
