@@ -531,26 +531,26 @@ func TestChangeBlobbers(t *testing.T) {
 
 func TestExtendAllocation(t *testing.T) {
 	const (
-		mockURL                     = "mock_url"
-		mockOwner                   = "mock owner"
-		mockPublicKey               = "mock public key"
-		mockBlobberId               = "mock_blobber_id"
-		mockPoolId                  = "mock pool id"
-		mockAllocationId            = "mock allocation id"
-		mockMinPrice                = 0
-		confTimeUnit                = 720 * time.Hour
-		confMinAllocSize            = 1024
-		confMinAllocDuration        = 5 * time.Minute
-		mockMaxOffDuration          = 744 * time.Hour
-		mocksSize                   = 10000000000
-		mockDataShards              = 2
-		mockParityShards            = 2
-		mockNumAllBlobbers          = 2 + mockDataShards + mockParityShards
-		mockExpiration              = common.Timestamp(17000)
-		mockStake                   = 3
-		mockMinLockDemand           = 0.1
-		mockTimeUnit                = 1 * time.Hour
-		mockHash                    = "mock hash"
+		mockURL              = "mock_url"
+		mockOwner            = "mock owner"
+		mockPublicKey        = "mock public key"
+		mockBlobberId        = "mock_blobber_id"
+		mockPoolId           = "mock pool id"
+		mockAllocationId     = "mock allocation id"
+		mockMinPrice         = 0
+		confTimeUnit         = 720 * time.Hour
+		confMinAllocSize     = 1024
+		confMinAllocDuration = 5 * time.Minute
+		mockMaxOffDuration   = 744 * time.Hour
+		mocksSize            = 10000000000
+		mockDataShards       = 2
+		mockParityShards     = 2
+		mockNumAllBlobbers   = 2 + mockDataShards + mockParityShards
+		mockExpiration       = common.Timestamp(17000)
+		mockStake            = 3
+		mockMinLockDemand    = 0.1
+		mockTimeUnit         = 1 * time.Hour
+		mockHash             = "mock hash"
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
@@ -618,17 +618,17 @@ func TestExtendAllocation(t *testing.T) {
 		}
 
 		var sa = StorageAllocation{
-			ID:                      mockAllocationId,
-			DataShards:              mockDataShards,
-			ParityShards:            mockParityShards,
-			Owner:                   mockOwner,
-			OwnerPublicKey:          mockPublicKey,
-			Expiration:              now + mockExpiration,
-			Size:                    mocksSize,
-			ReadPriceRange:          PriceRange{mockMinPrice, mockMaxPrice},
-			WritePriceRange:         PriceRange{mockMinPrice, mockMaxPrice},
-			TimeUnit:                mockTimeUnit,
-			WritePool:               currency.Coin(args.poolFunds * 1e10),
+			ID:              mockAllocationId,
+			DataShards:      mockDataShards,
+			ParityShards:    mockParityShards,
+			Owner:           mockOwner,
+			OwnerPublicKey:  mockPublicKey,
+			Expiration:      now + mockExpiration,
+			Size:            mocksSize,
+			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
+			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
+			TimeUnit:        mockTimeUnit,
+			WritePool:       currency.Coin(args.poolFunds * 1e10),
 		}
 
 		bCount := sa.DataShards + sa.ParityShards

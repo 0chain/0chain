@@ -43,7 +43,7 @@ type Allocation struct {
 	SuccessfulChallenges     int64         `json:"successful_challenges"`
 	FailedChallenges         int64         `json:"failed_challenges"`
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
-	WritePool                  currency.Coin `json:"write_pool"`
+	WritePool                currency.Coin `json:"write_pool"`
 }
 
 type AllocationTerm struct {
