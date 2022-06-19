@@ -127,3 +127,18 @@ func GetMockTransactionHash(blockNumber int64, index int) string {
 	return encryption.Hash("block" +
 		strconv.FormatInt(blockNumber, 10) + "index" + strconv.Itoa(index))
 }
+
+func GetMockWriteMarkerLookUpHash(allocationNum int, index int) string {
+	return encryption.Hash("write marker look up hash" + "block" +
+		strconv.Itoa(allocationNum) + "index" + strconv.Itoa(index))
+}
+
+func GetMockWriteMarkerContentHash(allocationNum int, index int) string {
+	return encryption.Hash("write marker content hash" + "block" +
+		strconv.Itoa(allocationNum) + "index" + strconv.Itoa(index))
+}
+
+func GetMockWriteMarkerFileName(index int) string {
+	return "mock write marker file_" + strconv.Itoa(index)
+
+}
