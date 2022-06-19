@@ -79,6 +79,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
 		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
+		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", srh.getWrittenAmountPerPeriod),
 		rest.MakeEndpoint(storage+"/alloc_read_size", srh.getReadAmount),
 		rest.MakeEndpoint(storage+"/alloc_write_marker_count", srh.getWriteMarkerCount),
 		rest.MakeEndpoint(storage+"/collected_reward", srh.getCollectedReward),
@@ -551,6 +552,65 @@ func (srh *StorageRestHandler) getWrittenAmount(w http.ResponseWriter, r *http.R
 		return
 	}
 	total, err := edb.GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+
+	common.Respond(w, r, map[string]int64{
+		"total": total,
+	}, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod allocWrittenSizePerPeriod
+// Total amount of data added during given blocks
+//
+// parameters:
+//    + name: block-start
+//      description:start block number
+//      required: true
+//      in: query
+//      type: string
+//    + name: block-end
+//      description:end block number
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, r *http.Request) {
+	startBlockNumberString := r.URL.Query().Get("block-start")
+	endBlockNumberString := r.URL.Query().Get("block-end")
+
+	if startBlockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is empty"))
+		return
+	}
+	if endBlockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block-end is empty"))
+		return
+	}
+
+	startBlockNumber, err := strconv.Atoi(startBlockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is not valid"))
+		return
+	}
+	endBlockNumber, err := strconv.Atoi(endBlockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block-end is not valid"))
+		return
+	}
+
+	if startBlockNumber > endBlockNumber {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is greater than block-end"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	total, err := edb.GetAllocationWrittenSizeInBlocks(int64(startBlockNumber), int64(endBlockNumber))
 
 	common.Respond(w, r, map[string]int64{
 		"total": total,
