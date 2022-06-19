@@ -94,7 +94,7 @@ func (zcn *ZCNSmartContract) Burn(
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,
 		Amount:          trans.Value,
-		Nonce:           un.BurnNonce,
+		Nonce:           un.BurnNonce, // it can be just the nonce of this transaction
 		EthereumAddress: payload.EthereumAddress,
 	}
 
