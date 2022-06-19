@@ -258,6 +258,7 @@ smart_contracts:
     min_stake: 0
     min_lock: 0
     min_authorizers: 1
+    max_signatures: 100
     percent_authorizers: 0.7
     max_delegates: 10
     max_fee: 100

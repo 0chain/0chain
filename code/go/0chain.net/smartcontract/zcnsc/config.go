@@ -32,6 +32,7 @@ const (
 	OwnerID            = "owner_id"
 	Cost               = "cost"
 	MaxDelegates       = "max_delegates"
+	MaxSignatures      = "max_signatures"
 )
 
 var CostFunctions = []string{
@@ -92,6 +93,7 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
 		MaxDelegates:       fmt.Sprintf("%v", gn.MaxDelegates),
+		MaxSignatures:      fmt.Sprintf("%v", gn.MaxSignatures),
 	}
 
 	for _, key := range CostFunctions {
@@ -120,6 +122,7 @@ func loadGlobalNode() (conf *ZCNSConfig) {
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
+	conf.MaxSignatures = cfg.GetInt(postfix(MaxSignatures))
 
 	return conf
 }

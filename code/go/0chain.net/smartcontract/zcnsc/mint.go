@@ -41,6 +41,11 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	// if number of slices exceeds limits the check only withing required range
+	if len(payload.Signatures) > gn.MaxSignatures {
+		payload.Signatures = payload.Signatures[0:gn.MaxSignatures]
+	}
+
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
 		msg := fmt.Sprintf(

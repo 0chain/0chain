@@ -36,6 +36,7 @@ type ZCNSConfig struct {
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
 	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
+	MaxSignatures      int            `json:"max_signatures"`
 }
 
 type GlobalNode struct {

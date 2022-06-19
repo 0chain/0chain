@@ -151,8 +151,8 @@ func (mp *MintPayload) GetStringToSign() string {
 
 func (mp *MintPayload) verifySignatures(state cstate.StateContextI) (err error) {
 	toSign := mp.GetStringToSign()
-	for _, v := range mp.Signatures {
-		authorizerID := v.ID
+	for _, signature := range mp.Signatures {
+		authorizerID := signature.ID
 		if authorizerID == "" {
 			return errors.New("authorizer ID is empty in a signature")
 		}
@@ -172,7 +172,7 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) (err error) 
 			return errors.Wrap(err, "failed to set public key")
 		}
 
-		ok, err := signatureScheme.Verify(v.Signature, toSign)
+		ok, err := signatureScheme.Verify(signature.Signature, toSign)
 		if !ok || err != nil {
 			return errors.Wrap(err, "failed to verify signature")
 		}
