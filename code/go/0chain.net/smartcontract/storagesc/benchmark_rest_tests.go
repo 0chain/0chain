@@ -272,6 +272,14 @@ func BenchmarkRestTests(
 				Endpoint: srh.getWrittenAmount,
 			},
 			{
+				FuncName: "allocWrittenSizePerPeriod",
+				Params: map[string]string{
+					"block-start": "1",
+					"block-end":   "100",
+				},
+				Endpoint: srh.getWrittenAmountPerPeriod,
+			},
+			{
 				FuncName: "alloc_read_size",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
