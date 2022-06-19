@@ -27,9 +27,9 @@ type WriteMarker struct {
 	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	// file info
-	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name" gorm:"index:idx_walloc_file,priority:1"`
-	ContentHash string `json:"content_hash"`
+	LookupHash  string `json:"lookup_hash" gorm:"index:idx_wlookup,priority:1"`
+	Name        string `json:"name" gorm:"index:idx_wname,priority:1;idx_walloc_file,priority:1"`
+	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
@@ -127,4 +127,22 @@ func (wm *WriteMarker) exists(edb *EventDb) (bool, error) {
 			wm.TransactionID, result.Error)
 	}
 	return true, nil
+}
+
+func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString string, limit Pagination) ([]interface{}, error) {
+	var wm []interface{}
+
+	edbRef := edb.Store.Get()
+	if len(selectString) > 0 {
+		edbRef = edbRef.Select(selectString)
+	}
+
+	res := edbRef.
+		Model(WriteMarker{}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Where(filters).
+		Scan(&wm)
+
+	return wm, res.Error
 }
