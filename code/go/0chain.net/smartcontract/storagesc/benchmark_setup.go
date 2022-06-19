@@ -105,8 +105,6 @@ func addMockAllocation(
 			Terms:          getMockBlobberTerms(),
 			MinLockDemand:  mockMinLockDemand,
 			AllocationRoot: encryption.Hash("allocation root"),
-			// We need a partition location for commit_connection but does not need to be correct.
-			BlobberAllocationsPartitionLoc: &partitions.PartitionLocation{},
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 		if viper.GetBool(sc.EventDbEnabled) {
