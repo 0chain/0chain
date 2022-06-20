@@ -218,16 +218,15 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 	}
 
 	request := newAllocationRequest{
-		DataShards:                 conf.FreeAllocationSettings.DataShards,
-		ParityShards:               conf.FreeAllocationSettings.ParityShards,
-		Size:                       conf.FreeAllocationSettings.Size,
-		Expiration:                 common.Timestamp(time.Now().Add(conf.FreeAllocationSettings.Duration).Unix()),
-		Owner:                      marker.Recipient,
-		OwnerPublicKey:             inputObj.RecipientPublicKey,
-		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
-		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
-		Blobbers:                   inputObj.Blobbers,
+		DataShards:      conf.FreeAllocationSettings.DataShards,
+		ParityShards:    conf.FreeAllocationSettings.ParityShards,
+		Size:            conf.FreeAllocationSettings.Size,
+		Expiration:      common.Timestamp(time.Now().Add(conf.FreeAllocationSettings.Duration).Unix()),
+		Owner:           marker.Recipient,
+		OwnerPublicKey:  inputObj.RecipientPublicKey,
+		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
+		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
+		Blobbers:        inputObj.Blobbers,
 	}
 
 	edb := balances.GetEventDB()
@@ -304,8 +303,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	var allocationSize = sa.bSize()
 	dur := common.ToTime(sa.Expiration).Sub(creationDate)
 	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
-		MaxChallengeCompletionTime: request.MaxChallengeCompletionTime,
-		MaxOfferDuration:           dur,
+		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -996,13 +994,14 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	blobber, err := edb.GetBlobber(blobberID)
+
+	_, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber"))
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(blobber.ChallengeCompletionTime), sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -1618,11 +1617,10 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				Longitude: blobber.Longitude,
 			},
 			Terms: Terms{
-				ReadPrice:               blobber.ReadPrice,
-				WritePrice:              blobber.WritePrice,
-				MinLockDemand:           blobber.MinLockDemand,
-				MaxOfferDuration:        time.Duration(blobber.MaxOfferDuration),
-				ChallengeCompletionTime: time.Duration(blobber.ChallengeCompletionTime),
+				ReadPrice:        blobber.ReadPrice,
+				WritePrice:       blobber.WritePrice,
+				MinLockDemand:    blobber.MinLockDemand,
+				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
 			},
 			Capacity:        blobber.Capacity,
 			Used:            blobber.Used,
