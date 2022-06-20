@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 
+	"0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
@@ -37,7 +38,7 @@ func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
 	return block, res.Error
 }
 
-func (edb *EventDb) GetBlocks(limit Pagination) ([]Block, error) {
+func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "round"},
