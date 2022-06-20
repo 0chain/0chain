@@ -34,7 +34,7 @@ sets:
   - name: "Complex scenarios"
     tests:
       #- "All nodes fail and recover randomly (scenario 2)"
-      - "Generators fail at start of round"
+      #- "Generators fail at start of round"
 
 tests:
   - name: "All nodes fail and recover randomly (scenario 2)"
