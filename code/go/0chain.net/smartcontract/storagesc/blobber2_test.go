@@ -265,7 +265,6 @@ func testCommitBlobberRead(
 			BlobberID:       lastReadConnection.ReadMarker.BlobberID,
 			ClientID:        lastReadConnection.ReadMarker.ClientID,
 			Timestamp:       read.timestamp,
-			AuthTicket:      nil,
 			AllocationID:    allocationId,
 		},
 	}

@@ -251,16 +251,6 @@ func Test_flow_reward(t *testing.T) {
 
 	t.Run("read as unauthorized separate user", func(t *testing.T) {
 		tp += 100
-		var at = AuthTicket{
-			ClientID:     client.id,
-			OwnerID:      client.id,
-			AllocationID: alloc.ID,
-			Expiration:   common.Timestamp(tp + 1000),
-			Timestamp:    common.Timestamp(tp - 10),
-		}
-		at.Signature, err = client.scheme.Sign(
-			encryption.Hash(at.getHashData()),
-		)
 		require.NoError(t, err)
 		var rm ReadConnection
 		rm.ReadMarker = &ReadMarker{
@@ -271,7 +261,6 @@ func Test_flow_reward(t *testing.T) {
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
 			ReadCounter:     1 * GB / (64 * KB),
-			AuthTicket:      &at,
 		}
 		rm.ReadMarker.Signature, err = reader.scheme.Sign(
 			encryption.Hash(rm.ReadMarker.GetHashData()))
