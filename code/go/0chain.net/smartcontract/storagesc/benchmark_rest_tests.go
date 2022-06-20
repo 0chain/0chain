@@ -1,8 +1,9 @@
 package storagesc
 
 import (
-	"0chain.net/core/encryption"
 	"time"
+
+	"0chain.net/core/encryption"
 
 	"0chain.net/smartcontract/dbs/benchmark"
 
@@ -145,16 +146,15 @@ func BenchmarkRestTests(
 					"allocation_data": func() string {
 						now := common.Timestamp(time.Now().Unix())
 						nar, _ := (&newAllocationRequest{
-							DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-							ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-							Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-							Owner:                      data.Clients[0],
-							OwnerPublicKey:             data.PublicKeys[0],
-							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, maxReadPrice},
-							WritePriceRange:            PriceRange{0, maxWritePrice},
-							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+							DataShards:      viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+							ParityShards:    viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+							Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
+							Expiration:      2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+							Owner:           data.Clients[0],
+							OwnerPublicKey:  data.PublicKeys[0],
+							Blobbers:        []string{},
+							ReadPriceRange:  PriceRange{0, maxReadPrice},
+							WritePriceRange: PriceRange{0, maxWritePrice},
 						}).encode()
 						return string(nar)
 					}(),
@@ -302,16 +302,15 @@ func BenchmarkRestTests(
 					"allocation_data": func() string {
 						now := common.Timestamp(time.Now().Unix())
 						nar, _ := (&newAllocationRequest{
-							DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-							ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-							Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:                 2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-							Owner:                      data.Clients[0],
-							OwnerPublicKey:             data.PublicKeys[0],
-							Blobbers:                   []string{},
-							ReadPriceRange:             PriceRange{0, maxReadPrice},
-							WritePriceRange:            PriceRange{0, maxWritePrice},
-							MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+							DataShards:      viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+							ParityShards:    viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
+							Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
+							Expiration:      2*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
+							Owner:           data.Clients[0],
+							OwnerPublicKey:  data.PublicKeys[0],
+							Blobbers:        []string{},
+							ReadPriceRange:  PriceRange{0, maxReadPrice},
+							WritePriceRange: PriceRange{0, maxWritePrice},
 						}).encode()
 						return string(nar)
 					}(),

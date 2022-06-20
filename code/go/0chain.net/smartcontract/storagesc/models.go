@@ -279,8 +279,6 @@ type Terms struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
-	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
@@ -300,13 +298,7 @@ func (t *Terms) validate(conf *Config) (err error) {
 	if t.MaxOfferDuration < conf.MinOfferDuration {
 		return errors.New("insufficient max_offer_duration")
 	}
-	if t.ChallengeCompletionTime < 0 {
-		return errors.New("negative challenge_completion_time")
-	}
-	if t.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge_completion_time is greater than max " +
-			"allowed by SC")
-	}
+
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
@@ -393,10 +385,6 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	if strings.Contains(sn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
 		return errors.New("invalid blobber base url")
-	}
-
-	if sn.Terms.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge completion time exceeded")
 	}
 
 	if err := sn.Geolocation.validate(); err != nil {
@@ -686,9 +674,8 @@ type StorageAllocation struct {
 	IsImmutable      bool                          `json:"is_immutable"`
 
 	// Requested ranges.
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	ReadPriceRange  PriceRange `json:"read_price_range"`
+	WritePriceRange PriceRange `json:"write_price_range"`
 
 	//AllocationPools allocationPools `json:"allocation_pools"`
 	WritePoolOwners []string `json:"write_pool_owners"`
@@ -752,11 +739,6 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	if blobber.Capacity-blobber.Allocated < bSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
-	}
-	// filter by max challenge completion time
-	if blobber.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
-		return fmt.Errorf("blobber %s challenge compledtion time %v exceeds maximum challenge completeion time %v",
-			blobber.ID, blobber.Terms.ChallengeCompletionTime, sa.MaxChallengeCompletionTime)
 	}
 
 	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
@@ -1070,10 +1052,7 @@ List:
 		if b.Capacity-b.Allocated < bsize {
 			continue
 		}
-		// filter by max challenge completion time
-		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
-			continue
-		}
+
 		for _, filter := range filters {
 			if filter(b) {
 				continue List
@@ -1284,21 +1263,13 @@ func getMaxChallengeCompletionTime() time.Duration {
 // return the expired challenge ids, or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	blobChallenges *BlobberChallenges, now common.Timestamp) ([]string, error) {
+	now common.Timestamp) ([]string, error) {
 	var (
-		expiredChallengeIDs     = make([]string, 0, len(allocChallenges.OpenChallenges))
-		expiredBlobChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
+		expiredChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
 	)
 
 	cct := getMaxChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
-		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
-		if !ok {
-			return nil, common.NewErrorf("remove_expired_challenges", "blobber not exist in allocation: %s", oc.BlobberID)
-		}
-
-		// TODO: Not sure how the terms.ChallengeCompletionTime being set, perhaps we should get
-		// ChallengeCompletionTime from global config instead of the allocation's terms
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
@@ -1307,23 +1278,16 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		// expired
 		expiredChallengeIDs = append(expiredChallengeIDs, oc.ID)
 
-		// update challenge stats
-		ba.Stats.FailedChallenges++
-		ba.Stats.OpenChallenges--
-
-		sa.Stats.FailedChallenges++
-		sa.Stats.OpenChallenges--
-
-		if oc.BlobberID == blobChallenges.BlobberID {
-			expiredBlobChallengeIDs = append(expiredBlobChallengeIDs, oc.ID)
+		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			sa.Stats.FailedChallenges++
+			sa.Stats.OpenChallenges--
 		}
 	}
 
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeIDs):]
-
-	if len(expiredBlobChallengeIDs) > 0 {
-		blobChallenges.removeChallenges(expiredBlobChallengeIDs)
-	}
 
 	return expiredChallengeIDs, nil
 }
