@@ -13,9 +13,9 @@ import (
 // swagger:model Validator
 type Validator struct {
 	gorm.Model
-	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
-	BaseUrl     string `json:"url" gorm:"index:url"`
-	Stake       int64  `json:"stake" gorm:"index:stake"`
+	ValidatorID string `json:"validator_id" gorm:"index:idx_vvalidator_id"`
+	BaseUrl     string `json:"url" gorm:"index:idx_vurl"`
+	Stake       int64  `json:"stake" gorm:"index:idx_vstake"`
 	PublicKey   string `json:"public_key" gorm:"public_key"`
 
 	// StakePoolSettings

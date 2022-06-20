@@ -44,7 +44,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 	defer eventDb.Drop()
 	insertMultipleReadMarker(t, eventDb)
 	t.Run("get all readmarker with allocationID", func(t *testing.T) {
-		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AllocationID: "1"}, -1, -1, false)
+		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AllocationID: "1"}, Pagination{-1, -1, false})
 		assert.NoError(t, err)
 		for _, rm := range rms {
 			assert.Equal(t, "1", rm.AllocationID, "Allocation ID was not correct")
@@ -52,7 +52,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 		assert.Equal(t, 10, len(rms), "Not all allocation ID was sent")
 	})
 	t.Run("get all readmarker with allocationID", func(t *testing.T) {
-		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AllocationID: "1"}, -1, -1, false)
+		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AllocationID: "1"}, Pagination{-1, -1, false})
 		assert.NoError(t, err)
 		for _, rm := range rms {
 			assert.Equal(t, "1", rm.AllocationID, "Allocation ID was not correct")
@@ -60,7 +60,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 		assert.Equal(t, 10, len(rms), "Not all allocation ID was sent")
 	})
 	t.Run("get all readmarker with authticket", func(t *testing.T) {
-		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AuthTicket: "1"}, -1, -1, false)
+		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{AuthTicket: "1"}, Pagination{-1, -1, false})
 		assert.NoError(t, err)
 		for _, rm := range rms {
 			assert.Equal(t, "1", rm.AuthTicket, "AuthTicket was not correct")
@@ -69,7 +69,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 	})
 
 	t.Run("get all readmarker with pagination limit", func(t *testing.T) {
-		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{}, 0, 10, false)
+		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{}, Pagination{0, 10, false})
 		assert.NoError(t, err)
 		for i, rm := range rms {
 			transactionHash := fmt.Sprintf("transactionHash %v 0", i)
@@ -83,7 +83,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 	})
 
 	t.Run("get all readmarker with pagination offset and limit", func(t *testing.T) {
-		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{}, 5, 5, false)
+		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{}, Pagination{5, 5, false})
 		assert.NoError(t, err)
 		for i, rm := range rms {
 			transactionHash := fmt.Sprintf("transactionHash %v 0", i+5)
@@ -97,7 +97,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 	})
 
 	t.Run("get all readmarker with pagination descending", func(t *testing.T) {
-		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{}, 0, 10, true)
+		rms, err := eventDb.GetReadMarkersFromQueryPaginated(ReadMarker{}, Pagination{0, 10, true})
 		assert.NoError(t, err)
 		for i, rm := range rms {
 			transactionHash := fmt.Sprintf("transactionHash %v 9", 9-i)
