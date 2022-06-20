@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/common"
+	"gorm.io/gorm/clause"
+
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
 
@@ -27,9 +30,9 @@ type Blobber struct {
 	MinLockDemand    float64       `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity        int64 `json:"capacity"`          // total blobber capacity
-	Used            int64 `json:"used"`              // allocated capacity
-	TotalDataStored int64 `json:"total_data_stored"` // total of files saved on blobber
+	Capacity        int64 `json:"capacity" gorm:"index:idx_bcapacity"` // total blobber capacity
+	Used            int64 `json:"used"`                                // allocated capacity
+	TotalDataStored int64 `json:"total_data_stored"`                   // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"`
 
@@ -120,9 +123,12 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
+func (edb *EventDb) GetBlobbers(limit Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+	result := edb.Store.Get().Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "capacity"},
+		Desc:   limit.IsDescending,
+	}).Find(&blobbers)
 
 	return blobbers, result.Error
 }
@@ -135,15 +141,17 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 }
 
 func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude float64,
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit Pagination,
 ) ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Select("blobber_id").
 		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).
-		Find(&blobberIDs)
+			maxLatitude, minLatitude, maxLongitude, minLongitude).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "capacity"},
+		Desc:   true,
+	}).Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -196,21 +204,28 @@ type AllocationQuery struct {
 	NumberOfBlobbers  int
 }
 
-func (edb *EventDb) GetBlobberIdsFromUrls(urls []string) ([]string, error) {
+func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data Pagination) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("base_url IN ?", urls)
+	dbStore = dbStore.Where("base_url IN ?", urls).Limit(data.Limit).Offset(data.Offset).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   data.IsDescending,
+	})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit Pagination, now common.Timestamp) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - used >= ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("last_health_check > ?", time.Now().Add(-time.Hour).Unix())
+	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
+	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "capacity"},
+		Desc:   limit.IsDescending,
+	})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }

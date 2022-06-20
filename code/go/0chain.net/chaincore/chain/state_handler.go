@@ -68,11 +68,13 @@ func SetupStateHandlers() {
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
 }
 
-func (c *Chain) GetQueryStateContext() state.QueryStateContextI {
-	return c.GetStateContextI()
+func (c *Chain) GetQueryStateContext() state.TimedQueryStateContextI {
+	return state.NewTimedQueryStateContext(c.GetStateContextI(), func() common.Timestamp {
+		return common.Now()
+	})
 }
 
-func (c *Chain) SetQueryStateContext(_ state.QueryStateContextI) {
+func (c *Chain) SetQueryStateContext(_ state.TimedQueryStateContextI) {
 }
 
 func (c *Chain) GetStateContextI() state.StateContextI {
