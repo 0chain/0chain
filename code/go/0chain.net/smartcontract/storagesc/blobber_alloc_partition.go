@@ -34,6 +34,9 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 
 	loc, err := blobAllocsParts.AddItem(state, &BlobberAllocationNode{ID: allocID})
 	if err != nil {
+		if err == partitions.ErrPartitionItemAlreadyExist {
+			return blobAllocsParts, &partitions.PartitionLocation{Location: loc}, nil
+		}
 		return nil, nil, fmt.Errorf("could not add blobber allocation node to partition, %v", err)
 	}
 

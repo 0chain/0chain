@@ -8,6 +8,8 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_USER: postgres
       POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "15432:5432" #for testing purpose only
     volumes:
       - ../benchmarks/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/

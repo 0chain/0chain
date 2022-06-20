@@ -101,8 +101,6 @@ smart_contracts:
     validators_per_challenge: 2
     readpool:
       min_lock: 0.3
-      min_lock_period: 1m
-      max_lock_period: 11000h
     writepool:
       min_lock: 0.1
       min_lock_period: 2m

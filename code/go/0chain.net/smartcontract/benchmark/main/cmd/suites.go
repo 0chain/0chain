@@ -3,6 +3,7 @@ package cmd
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
@@ -34,14 +35,14 @@ type suiteResults struct {
 }
 
 type chainer struct {
-	qsc cstate.QueryStateContextI
+	qsc cstate.TimedQueryStateContextI
 }
 
-func (ch *chainer) GetQueryStateContext() cstate.QueryStateContextI {
+func (ch *chainer) GetQueryStateContext() cstate.TimedQueryStateContextI {
 	return ch.qsc
 }
 
-func (ch *chainer) SetQueryStateContext(qsc cstate.QueryStateContextI) {
+func (ch *chainer) SetQueryStateContext(qsc cstate.TimedQueryStateContextI) {
 	ch.qsc = qsc
 }
 
@@ -59,9 +60,12 @@ func runSuites(
 		extractMpt(mpt, root),
 		data,
 	)
+	timedBalance := cstate.NewTimedQueryStateContext(readOnlyBalances, func() common.Timestamp {
+		return data.Now
+	})
 	restSetup := &rest.RestHandler{
 		QueryChainer: &chainer{
-			qsc: readOnlyBalances,
+			qsc: timedBalance,
 		},
 	}
 	faucetsc.SetupRestHandler(restSetup)
@@ -77,7 +81,7 @@ func runSuites(
 			defer wg.Done()
 			var suiteResult []benchmarkResults
 			if suite.ReadOnly {
-				suiteResult = runReadOnlySuite(suite, mpt, root, data, readOnlyBalances)
+				suiteResult = runReadOnlySuite(suite, mpt, root, data, timedBalance)
 			} else {
 				suiteResult = runSuite(suite, mpt, root, data)
 			}
@@ -99,7 +103,7 @@ func runReadOnlySuite(
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
 	data benchmark.BenchData,
-	balances cstate.StateContextI,
+	balances cstate.TimedQueryStateContext,
 ) []benchmarkResults {
 	if !viper.GetBool(benchmark.EventDbEnabled) || balances.GetEventDB() == nil {
 		log.Println("event database not enabled, skipping ", suite.Source.String())
@@ -170,8 +174,11 @@ func runSuite(
 						extractMpt(mpt, root),
 						data,
 					)
+					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
+						return data.Now
+					})
 					b.StartTimer()
-					err = bm.Run(balances, b)
+					err = bm.Run(timedBalance, b)
 					if err != nil {
 						mockUpdateState(bm.Transaction(), balances)
 					}

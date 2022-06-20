@@ -80,12 +80,11 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 	return nil
 }
 
-func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp,
-	edb *event.EventDb) ([]*StorageChallengeResponse, error) {
+func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit event.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID,
-		common.Timestamp(time.Now().Unix()), cct)
+		common.Timestamp(time.Now().Unix()), cct, limit)
 	if err != nil {
 		return nil, err
 	}

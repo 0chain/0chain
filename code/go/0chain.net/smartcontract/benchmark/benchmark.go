@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/chain/state"
@@ -154,8 +156,6 @@ const (
 	StorageDiverseBlobbers               = SmartContract + StorageSc + "diverse_blobbers"
 	StorageFailedChallengesToCancel      = SmartContract + StorageSc + "failed_challenges_to_cancel"
 	StorageReadPoolMinLock               = SmartContract + StorageSc + "readpool.min_lock"
-	StorageReadPoolMinLockPeriod         = SmartContract + StorageSc + "readpool.min_lock_period"
-	StorageReadPoolMaxLockPeriod         = SmartContract + StorageSc + "readpool.max_lock_period"
 	StorageWritePoolMinLock              = SmartContract + StorageSc + "writepool.min_lock"
 	StorageWritePoolMinLockPeriod        = SmartContract + StorageSc + "writepool.min_lock_period"
 	StorageWritePoolMaxLockPeriod        = SmartContract + StorageSc + "writepool.max_lock_period"
@@ -295,7 +295,7 @@ var (
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.StateContextI, *testing.B) error
+	Run(state.TimedQueryStateContext, *testing.B) error
 }
 
 type WithTimings interface {
@@ -365,5 +365,6 @@ var MockBenchData = BenchData{
 		PublicKeys:  make([]string, 100),
 		PrivateKeys: make([]string, 100),
 		Sharders:    make([]string, 100),
+		Now:         common.Now(),
 	},
 }

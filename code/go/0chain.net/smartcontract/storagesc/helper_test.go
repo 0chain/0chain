@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -274,11 +275,10 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 }
 
 var avgTerms = Terms{
-	ReadPrice:               1 * x10,
-	WritePrice:              5 * x10,
-	MinLockDemand:           0.1,
-	MaxOfferDuration:        1 * time.Hour,
-	ChallengeCompletionTime: 200 * time.Second,
+	ReadPrice:        1 * x10,
+	WritePrice:       5 * x10,
+	MinLockDemand:    0.1,
+	MaxOfferDuration: 1 * time.Hour,
 }
 
 // add allocation and 20 blobbers
@@ -301,7 +301,6 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 	nar.Size = 2 * GB // 2 GB
-	nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
@@ -341,7 +340,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
 	conf.MinAllocDuration = 1 * time.Minute
-	// conf.MaxChallengeCompletionTime = 15 * time.Second
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
@@ -351,6 +349,8 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
+	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "5m")
+
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
@@ -397,16 +397,6 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	valids *partitions.Partitions, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
-	blobberChall, err := ssc.getBlobberChallenges(blobberID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		t.Fatal("unexpected error:", err)
-	}
-
-	if err == util.ErrValueNotPresent {
-		blobberChall = new(BlobberChallenges)
-		blobberChall.BlobberID = blobberID
-	}
-
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		t.Fatal("unexpected error:", err)
@@ -429,10 +419,6 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 
 	storChall.AllocationID = allocID
 	storChall.BlobberID = blobber.ID
-
-	require.True(t, blobberChall.addChallenge(storChall.ID, common.Timestamp(10)))
-	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
-	require.NoError(t, err)
 
 	require.True(t, allocChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)

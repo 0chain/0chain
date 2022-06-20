@@ -97,14 +97,6 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	var conf, err = ssc.getConfig(balances, false)
 	require.NoError(t, err)
 
-	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime +
-		1*time.Second
-
-	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
-	require.Error(t, err)
-
-	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime -
-		1*time.Second
 	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)
@@ -469,7 +461,6 @@ func Test_flow_reward(t *testing.T) {
 	}
 
 	t.Run("challenge pass", func(t *testing.T) {
-
 		var cp *challengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
@@ -950,7 +941,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
+		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1180,7 +1171,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
+		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)

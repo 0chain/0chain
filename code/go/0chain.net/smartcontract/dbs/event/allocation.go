@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"gorm.io/gorm/clause"
+
 	"0chain.net/chaincore/currency"
 
 	"gorm.io/gorm"
@@ -20,16 +22,15 @@ type Allocation struct {
 	Size                       int64         `json:"size"`
 	Expiration                 int64         `json:"expiration"`
 	Terms                      string        `json:"terms"`
-	Owner                      string        `json:"owner"`
+	Owner                      string        `json:"owner" gorm:"index:idx_aowner"`
 	OwnerPublicKey             string        `json:"owner_public_key"`
 	IsImmutable                bool          `json:"is_immutable"`
 	ReadPriceMin               currency.Coin `json:"read_price_min"`
 	ReadPriceMax               currency.Coin `json:"read_price_max"`
 	WritePriceMin              currency.Coin `json:"write_price_min"`
 	WritePriceMax              currency.Coin `json:"write_price_max"`
-	MaxChallengeCompletionTime int64         `json:"max_challenge_completion_time"`
-	ChallengeCompletionTime    int64         `json:"challenge_completion_time"`
-	StartTime                  int64         `json:"start_time"`
+	ChallengeCompletionTime int64         `json:"challenge_completion_time"`
+	StartTime                  int64         `json:"start_time" gorm:"index:idx_astart_time"`
 	Finalized                  bool          `json:"finalized"`
 	Cancelled                  bool          `json:"cancelled"`
 	UsedSize                   int64         `json:"used_size"`
@@ -60,8 +61,6 @@ type AllocationTerm struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
-	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
@@ -74,9 +73,16 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string) ([]Allocation, error) {
+func (edb EventDb) GetClientsAllocation(clientID string, limit Pagination) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
-	result := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Find(&allocs)
+
+	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "start_time"},
+			Desc:   limit.IsDescending,
+		})
+
+	result := query.Scan(&allocs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, result.Error)
 	}
