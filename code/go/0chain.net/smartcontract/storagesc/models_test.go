@@ -107,7 +107,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
 
 	// accept one
-	list[0].Capacity, list[0].Used = 330, 100
+	list[0].Capacity, list[0].Allocated = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
 
 	// accept all
