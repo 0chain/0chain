@@ -86,7 +86,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 			"cannot find allocation pools for "+lr.AllocationID+": "+err.Error())
 	}
 
-	if !allocation.Finalized && !allocation.Canceled {
+	if allocation.Finalized || allocation.Canceled {
 		return "", common.NewError("write_pool_unlock_failed",
 			"can't lock tokens with a finalized or cancelled allocation")
 
@@ -110,7 +110,6 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
-	logging.Logger.Info("piers writePoolUnlock", zap.Any("input", req))
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(req.AllocationID, balances)
 	if err != nil {
@@ -118,13 +117,22 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 			"can't get related allocation: "+err.Error())
 	}
 
+	if alloc.Owner != txn.ClientID {
+		return "", common.NewError("write_pool_unlock_failed",
+			"only owner can unlock tokens")
+	}
+
 	if !alloc.Finalized && !alloc.Canceled {
 		return "", common.NewError("write_pool_unlock_failed",
 			"can't unlock until the allocation is finalized or cancelled")
-
 	}
 
-	transfer := state.NewTransfer(ADDRESS, txn.ToClientID, alloc.WritePool)
+	if alloc.WritePool == 0 {
+		return "", common.NewError("write_pool_unlock_failed",
+			"no tokens to unlock")
+	}
+
+	transfer := state.NewTransfer(ssc.ID, txn.ClientID, alloc.WritePool)
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
