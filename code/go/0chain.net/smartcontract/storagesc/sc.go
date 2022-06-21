@@ -172,7 +172,7 @@ func (ssc *StorageSmartContract) statDecr(name string) {
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances chainstate.StateContextI) (
 	resp string, err error) {
-	logging.Logger.Info("piers Execute", zap.String("funcName", funcName))
+
 	switch funcName {
 
 	// read/write markers
