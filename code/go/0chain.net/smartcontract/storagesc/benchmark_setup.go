@@ -461,7 +461,7 @@ func AddMockBlobbers(
 			},
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
-			Used:              mockUsedData,
+			Allocated:         mockUsedData,
 			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
@@ -488,8 +488,8 @@ func AddMockBlobbers(
 				MinLockDemand:    blobber.Terms.MinLockDemand,
 				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
 				Capacity:         blobber.Capacity,
-				Used:             blobber.Used,
-				TotalDataStored:  blobber.Used / 2,
+				Allocated:        blobber.Allocated,
+				Used:             blobber.Allocated / 2,
 				LastHealthCheck:  int64(blobber.LastHealthCheck),
 				DelegateWallet:   blobber.StakePoolSettings.DelegateWallet,
 				MinStake:         blobber.StakePoolSettings.MinStake,
@@ -545,9 +545,10 @@ func AddMockValidators(
 	validatorNodes := make([]*ValidationNode, 0, nv)
 	for i := 0; i < nv; i++ {
 		id := getMockValidatorId(i)
+		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
 			ID:                id,
-			BaseURL:           id + ".com",
+			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
@@ -820,6 +821,10 @@ func getMockBlobberUrl(index int) string {
 
 func getMockValidatorId(index int) string {
 	return encryption.Hash("mockValidator_" + strconv.Itoa(index))
+}
+
+func getMockValidatorUrl(index int) string {
+	return getMockValidatorId(index) + ".com"
 }
 
 func getMockAllocationId(allocation int) string {

@@ -51,9 +51,9 @@ func TestBlobbers(t *testing.T) {
 		ID              string                 `json:"id"`
 		BaseURL         string                 `json:"url"`
 		Geolocation     StorageNodeGeolocation `json:"geolocation"`
-		Terms           Terms                  `json:"terms"`    // terms
-		Capacity        int64                  `json:"capacity"` // total blobber capacity
-		Used            int64                  `json:"used"`     // allocated capacity
+		Terms           Terms                  `json:"terms"`     // terms
+		Capacity        int64                  `json:"capacity"`  // total blobber capacity
+		Allocated       int64                  `json:"allocated"` // allocated capacity
 		LastHealthCheck common.Timestamp       `json:"last_health_check"`
 		PublicKey       string                 `json:"-"`
 		SavedData       int64                  `json:"saved_data"`
@@ -71,7 +71,7 @@ func TestBlobbers(t *testing.T) {
 			MinLockDemand:    sn.Terms.MinLockDemand,
 			MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
 			Capacity:         sn.Capacity,
-			Used:             sn.Used,
+			Allocated:        sn.Allocated,
 			LastHealthCheck:  int64(sn.LastHealthCheck),
 			DelegateWallet:   sn.StakePoolSettings.DelegateWallet,
 			MinStake:         sn.StakePoolSettings.MaxStake,
@@ -116,7 +116,7 @@ func TestBlobbers(t *testing.T) {
 			MaxOfferDuration: 39 * time.Minute,
 		},
 		Capacity:        43,
-		Used:            47,
+		Allocated:       47,
 		LastHealthCheck: common.Timestamp(51),
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
@@ -186,7 +186,7 @@ func TestBlobbers(t *testing.T) {
 			MaxOfferDuration: 107 * time.Minute,
 		},
 		Capacity:        119,
-		Used:            127,
+		Allocated:       127,
 		LastHealthCheck: common.Timestamp(131),
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{

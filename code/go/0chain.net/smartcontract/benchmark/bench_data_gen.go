@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 5
 	// string "Clients"
-	o = append(o, 0x84, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
+	o = append(o, 0x85, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Clients)))
 	for za0001 := range z.Clients {
 		o = msgp.AppendString(o, z.Clients[za0001])
@@ -33,6 +33,13 @@ func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Sharders)))
 	for za0004 := range z.Sharders {
 		o = msgp.AppendString(o, z.Sharders[za0004])
+	}
+	// string "Now"
+	o = append(o, 0xa3, 0x4e, 0x6f, 0x77)
+	o, err = z.Now.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Now")
+		return
 	}
 	return
 }
@@ -131,6 +138,12 @@ func (z *BenchDataMpt) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "Now":
+			bts, err = z.Now.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Now")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -161,5 +174,6 @@ func (z *BenchDataMpt) Msgsize() (s int) {
 	for za0004 := range z.Sharders {
 		s += msgp.StringPrefixSize + len(z.Sharders[za0004])
 	}
+	s += 4 + z.Now.Msgsize()
 	return
 }
