@@ -186,26 +186,15 @@ func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
 		txns  []*transaction.Transaction
 	}
 	txs1 := []*transaction.Transaction{
-		{ClientID: "1", Fee: 0, Nonce: 0},
-		{ClientID: "1", Fee: 5, Nonce: 1},
-		{ClientID: "1", Fee: 6, Nonce: 1},
-		{ClientID: "1", Fee: 3, Nonce: 1},
-		{ClientID: "1", Fee: 5, Nonce: 2},
-		{ClientID: "1", Fee: 3, Nonce: 2},
-		{ClientID: "1", Fee: 0, Nonce: 3},
-		{ClientID: "1", Fee: 1, Nonce: 4},
-		{ClientID: "1", Fee: 0, Nonce: 5},
+		{ClientID: "1", Nonce: 0},
+		{ClientID: "1", Nonce: 1},
+		{ClientID: "1", Nonce: 1},
+		{ClientID: "1", Nonce: 1},
+		{ClientID: "1", Nonce: 2},
 	}
 	txs2 := []*transaction.Transaction{
-		{ClientID: "2", Fee: 0, Nonce: 0},
-		{ClientID: "2", Fee: 5, Nonce: 1},
-		{ClientID: "2", Fee: 6, Nonce: 1},
-		{ClientID: "2", Fee: 3, Nonce: 1},
-		{ClientID: "2", Fee: 5, Nonce: 2},
-		{ClientID: "2", Fee: 3, Nonce: 2},
-		{ClientID: "2", Fee: 0, Nonce: 3},
-		{ClientID: "2", Fee: 1, Nonce: 4},
-		{ClientID: "2", Fee: 0, Nonce: 5},
+		{ClientID: "2", Nonce: 0},
+		{ClientID: "2", Nonce: 1},
 	}
 
 	tests := []struct {
@@ -242,35 +231,35 @@ func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
 			},
 			want: []datastore.Entity{txs1[0], txs2[0]},
 		}, {
-			name: "test_for_pastTxns_with_txns_from_other_client",
+			name: "test_for_with_txns_and_pastTxns_from_different_clients",
 			fields: fields{
 				pastTxns:    []datastore.Entity{txs1[0]},
 				txns:  []*transaction.Transaction{txs2[1]},
 			},
 			want: []datastore.Entity{},
 		}, {
-			name: "test_for_pastTxns_with_no_txns",
+			name: "test_with_no_txns",
 			fields: fields{
 				pastTxns:    []datastore.Entity{txs1[0]},
 				txns:  nil,
 			},
 			want: []datastore.Entity{},
 		}, {
-			name: "test_for_pastTxns_with_equal_nonce",
+			name: "test_with_equal_nonce",
 			fields: fields{
 				pastTxns:    []datastore.Entity{txs1[1]},
 				txns:  []*transaction.Transaction{txs1[2]},
 			},
 			want: []datastore.Entity{txs1[1]},
 		}, {
-			name: "test_for_pastTxns_with_multiple_clashes",
+			name: "test_with_multiple_clashes",
 			fields: fields{
 				pastTxns:    []datastore.Entity{txs1[0], txs1[1], txs1[2]},
 				txns:  []*transaction.Transaction{txs1[3]},
 			},
 			want: []datastore.Entity{txs1[0], txs1[1], txs1[2]},
 		}, {
-			name: "test_for_pastTxns_with_smaller_nonce",
+			name: "test_for_pastTxns_with_larger_nonce",
 			fields: fields{
 				pastTxns:    []datastore.Entity{txs1[4]},
 				txns:  []*transaction.Transaction{txs1[1]},

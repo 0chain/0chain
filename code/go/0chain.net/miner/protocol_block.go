@@ -603,13 +603,9 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []datastore.Entity {
-
 	invalidTxns := []datastore.Entity{}
 	pastTxns := tii.pastTxns
 
-
-
-	
 	for _, txn := range txns {
 		for i:=0; i < len(pastTxns); i++ {
 			pastTxn := pastTxns[i].(*transaction.Transaction)
@@ -619,7 +615,6 @@ func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []d
 			}
 		}
 	}
-
 	return invalidTxns
 }
 
