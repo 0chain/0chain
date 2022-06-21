@@ -561,7 +561,7 @@ func BenchmarkTests(
 		},
 		// write pool
 		{
-			name:     "storage.allocation_pool_lock",
+			name:     "storage.write_pool_lock",
 			endpoint: ssc.writePoolLock,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -580,7 +580,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage.allocation_pool_unlock",
+			name:     "storage.write_pool_unlock",
 			endpoint: ssc.writePoolUnlock,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{

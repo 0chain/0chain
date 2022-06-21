@@ -3,6 +3,9 @@ package storagesc
 import (
 	"encoding/json"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
@@ -40,6 +43,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
+	logging.Logger.Info("piers writePoolLock begin")
 	var conf *Config
 	var err error
 	if conf, err = ssc.getConfig(balances, true); err != nil {
@@ -51,6 +55,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 	if err = lr.decode(input); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
+	logging.Logger.Info("piers writePoolLock", zap.Any("input", lr))
 
 	if lr.AllocationID == "" {
 		return "", common.NewError("write_pool_lock_failed",
@@ -100,6 +105,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
+	logging.Logger.Info("piers writePoolUnlock", zap.Any("input", req))
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(req.AllocationID, balances)
 	if err != nil {

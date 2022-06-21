@@ -107,8 +107,8 @@ const (
 	CostNewReadPool
 	CostReadPoolLock
 	CostReadPoolUnlock
-	CostAllocationPoolLock
-	CostAllocationPoolUnlock
+	CostWritePoolLock
+	CostWritePoolUnlock
 	CostStakePoolLock
 	CostStakePoolUnlock
 	CostStakePoolPayInterests
@@ -194,8 +194,8 @@ var (
 		"cost.new_read_pool",
 		"cost.read_pool_lock",
 		"cost.read_pool_unlock",
-		"cost.allocation_pool_lock",
-		"cost.allocation_pool_unlock",
+		"cost.write_pool_lock",
+		"cost.write_pool_unlock",
 		"cost.stake_pool_lock",
 		"cost.stake_pool_unlock",
 		"cost.stake_pool_pay_interests",
@@ -285,8 +285,8 @@ var (
 		"cost.new_read_pool":               {CostNewReadPool, smartcontract.Cost},
 		"cost.read_pool_lock":              {CostReadPoolLock, smartcontract.Cost},
 		"cost.read_pool_unlock":            {CostReadPoolUnlock, smartcontract.Cost},
-		"cost.allocation_pool_lock":        {CostAllocationPoolLock, smartcontract.Cost},
-		"cost.allocation_pool_unlock":      {CostAllocationPoolUnlock, smartcontract.Cost},
+		"cost.write_pool_lock":             {CostWritePoolLock, smartcontract.Cost},
+		"cost.write_pool_unlock":           {CostWritePoolUnlock, smartcontract.Cost},
 		"cost.stake_pool_lock":             {CostStakePoolLock, smartcontract.Cost},
 		"cost.stake_pool_unlock":           {CostStakePoolUnlock, smartcontract.Cost},
 		"cost.stake_pool_pay_interests":    {CostStakePoolPayInterests, smartcontract.Cost},
@@ -707,10 +707,10 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostReadPoolUnlock:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
-	case CostAllocationPoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAllocationPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
-	case CostAllocationPoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAllocationPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostWritePoolLock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostWritePoolUnlock:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostStakePoolLock:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostStakePoolUnlock:

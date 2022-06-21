@@ -223,8 +223,8 @@ smart_contracts:
       new_read_pool: 100
       read_pool_lock: 100
       read_pool_unlock: 100
-      allocation_pool_lock: 100
-      allocation_pool_unlock: 100
+      write_pool_lock: 100
+      write_pool_unlock: 100
       stake_pool_lock: 100
       stake_pool_unlock: 100
       stake_pool_pay_interests: 100
