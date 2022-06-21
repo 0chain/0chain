@@ -384,7 +384,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	}, limit, balances.Now())
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
-		return nil, errors.New("not enough blobbers to honor the allocation")
+		return nil, errors.New("failed to get blobbers: " + err.Error())
 	}
 
 	if len(blobberIDs) < numberOfBlobbers {
@@ -1720,7 +1720,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
 			},
 			Capacity:        blobber.Capacity,
-			Used:            blobber.Used,
+			Allocated:       blobber.Allocated,
 			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     blobber.DelegateWallet,

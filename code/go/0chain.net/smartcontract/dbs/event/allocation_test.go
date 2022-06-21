@@ -69,9 +69,9 @@ func TestAllocations(t *testing.T) {
 		ID              string                 `json:"id"`
 		BaseURL         string                 `json:"url"`
 		Geolocation     StorageNodeGeolocation `json:"geolocation"`
-		Terms           Terms                  `json:"terms"`    // terms
-		Capacity        int64                  `json:"capacity"` // total blobber capacity
-		Used            int64                  `json:"used"`     // allocated capacity
+		Terms           Terms                  `json:"terms"`     // terms
+		Capacity        int64                  `json:"capacity"`  // total blobber capacity
+		Allocated       int64                  `json:"allocated"` // allocated capacity
 		LastHealthCheck common.Timestamp       `json:"last_health_check"`
 		PublicKey       string                 `json:"-"`
 		// StakePoolSettings used initially to create and setup stake pool.
@@ -275,7 +275,7 @@ func TestAllocations(t *testing.T) {
 					MaxOfferDuration: 100,
 				},
 				Capacity:        100,
-				Used:            50,
+				Allocated:       50,
 				LastHealthCheck: 17456,
 				PublicKey:       "public_key",
 				StakePoolSettings: stakePoolSettings{

@@ -92,7 +92,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.BaseURL = getBlobberURL(c.id)
 	sn.Terms = c.terms
 	sn.Capacity = c.cap
-	sn.Used = 0
+	sn.Allocated = 0
 	sn.LastHealthCheck = 0
 	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
