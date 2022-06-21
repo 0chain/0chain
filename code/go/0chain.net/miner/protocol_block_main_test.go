@@ -1,10 +1,11 @@
 package miner
 
 import (
+	"testing"
+
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestTxnIterInfo_checkForCurrent(t *testing.T) {
@@ -175,6 +176,115 @@ func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 			require.Equal(t, tt.want.pastTxns, tii.pastTxns)
 			require.Equal(t, tt.want.futureTxns, tii.futureTxns)
 			require.Equal(t, tt.want.currentTxns, tii.currentTxns)
+		})
+	}
+}
+
+func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
+	type fields struct {
+		pastTxns    []datastore.Entity
+		txns  []*transaction.Transaction
+	}
+	txs1 := []*transaction.Transaction{
+		{ClientID: "1", Fee: 0, Nonce: 0},
+		{ClientID: "1", Fee: 5, Nonce: 1},
+		{ClientID: "1", Fee: 6, Nonce: 1},
+		{ClientID: "1", Fee: 3, Nonce: 1},
+		{ClientID: "1", Fee: 5, Nonce: 2},
+		{ClientID: "1", Fee: 3, Nonce: 2},
+		{ClientID: "1", Fee: 0, Nonce: 3},
+		{ClientID: "1", Fee: 1, Nonce: 4},
+		{ClientID: "1", Fee: 0, Nonce: 5},
+	}
+	txs2 := []*transaction.Transaction{
+		{ClientID: "2", Fee: 0, Nonce: 0},
+		{ClientID: "2", Fee: 5, Nonce: 1},
+		{ClientID: "2", Fee: 6, Nonce: 1},
+		{ClientID: "2", Fee: 3, Nonce: 1},
+		{ClientID: "2", Fee: 5, Nonce: 2},
+		{ClientID: "2", Fee: 3, Nonce: 2},
+		{ClientID: "2", Fee: 0, Nonce: 3},
+		{ClientID: "2", Fee: 1, Nonce: 4},
+		{ClientID: "2", Fee: 0, Nonce: 5},
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		want   []datastore.Entity
+	}{
+		{
+			name: "test_for_empty_pastTxns_and_no_txns",
+			fields: fields{
+				pastTxns:    nil,
+				txns:  nil,
+			},
+			want: []datastore.Entity{},
+		}, {
+			name: "test_for_empty_pastTxns",
+			fields: fields{
+				pastTxns:    nil,
+				txns:  []*transaction.Transaction{txs1[0], txs2[1]},
+			},
+			want: []datastore.Entity{},
+		}, {
+			name: "test_for_pastTxns_from_one_client",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[0]},
+				txns:  []*transaction.Transaction{txs1[1], txs2[1]},
+			},
+			want: []datastore.Entity{txs1[0]},
+		}, {
+			name: "test_for_pastTxns_from_two_client",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[0], txs2[0]},
+				txns:  []*transaction.Transaction{txs1[1], txs2[1]},
+			},
+			want: []datastore.Entity{txs1[0], txs2[0]},
+		}, {
+			name: "test_for_pastTxns_with_txns_from_other_client",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[0]},
+				txns:  []*transaction.Transaction{txs2[1]},
+			},
+			want: []datastore.Entity{},
+		}, {
+			name: "test_for_pastTxns_with_no_txns",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[0]},
+				txns:  nil,
+			},
+			want: []datastore.Entity{},
+		}, {
+			name: "test_for_pastTxns_with_equal_nonce",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[1]},
+				txns:  []*transaction.Transaction{txs1[2]},
+			},
+			want: []datastore.Entity{txs1[1]},
+		}, {
+			name: "test_for_pastTxns_with_multiple_clashes",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[0], txs1[1], txs1[2]},
+				txns:  []*transaction.Transaction{txs1[3]},
+			},
+			want: []datastore.Entity{txs1[0], txs1[1], txs1[2]},
+		}, {
+			name: "test_for_pastTxns_with_smaller_nonce",
+			fields: fields{
+				pastTxns:    []datastore.Entity{txs1[4]},
+				txns:  []*transaction.Transaction{txs1[1]},
+			},
+			want: []datastore.Entity{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tii := TxnIterInfo{
+				pastTxns: tt.fields.pastTxns,
+			}
+			invalidTxns:= tii.checkForInvalidTxns(tt.fields.txns)
+			require.Equal(t, tt.want, invalidTxns)
 		})
 	}
 }

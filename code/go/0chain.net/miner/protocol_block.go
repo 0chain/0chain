@@ -592,56 +592,35 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		txns = append(txns, txn)
 	}
 
-	logging.Logger.Info("===> here")
-	mc.CleanTxns(ctx, b)
+	tii := newTxnIterInfo(mc.BlockSize())
+	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
 	transaction.RemoveFromPool(ctx, txns)
-}
-
-func (mc *Chain) CleanTxns(ctx context.Context, b *block.Block) {
-	logging.Logger.Info("Inside CleanTxns", zap.String("block", b.Hash))
-	tii := newTxnIterInfo(mc.BlockSize())
 	
-	invalidTxns := []datastore.Entity{}
-	pastTxns := tii.pastTxns
-
-	// logging.Logger.Info("==> Here are PAST TXNS", zap.Any("pastTXNS", pastTxns))
-
-	if len(pastTxns) > 0 {
-		logging.Logger.Info("PAST TXNS ARE NOT EMPTY!")
-	} else {
-		logging.Logger.Info("PAST TXNS ARE EMPTY! " + strconv.Itoa(len(pastTxns)))
-	}
-	
-	for _, txn := range b.Txns {
-		logging.Logger.Info("==> a txn", zap.Any("txn", txn.Nonce), zap.Any("txn client", txn.ClientID))
-
-		if txn.ClientID == "7311a282aceb430f864f718737c6f00ad269775339f67ed5717663c14cab6325" {
-			logging.Logger.Info("CHECK!!", zap.Any("txn", txn.Nonce))
-		}
-
-		for i:=0; i < len(pastTxns); i++ {
-			pastTxn := pastTxns[i].(*transaction.Transaction)
-
-			if pastTxn.ClientID == "7311a282aceb430f864f718737c6f00ad269775339f67ed5717663c14cab6325" {
-				logging.Logger.Info("WE GOT IT!!", zap.Any("pastTxn", pastTxn.Nonce))
-			}
-
-			if pastTxn.Nonce == int64(1) {
-				logging.Logger.Info("CHECK", zap.Any("pastTxn", pastTxn.Nonce))
-			}
-
-			if txn.ClientID == pastTxn.ClientID && txn.Nonce >= pastTxn.Nonce {
-				invalidTxns = append(invalidTxns, pastTxn)
-				logging.Logger.Info("Deleting INVALID TXNS", zap.String("txn", pastTxn.Hash), zap.Any("nonce", pastTxn.Nonce))
-			}
-		}
-	}
-
-	logging.Logger.Info("==> Here are INVALID TXNS", zap.Any("invalidTxns", invalidTxns))
 	if len(invalidTxns) > 0 {
 		transaction.RemoveFromPool(ctx, invalidTxns)
 	}
+}
+
+func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []datastore.Entity {
+
+	invalidTxns := []datastore.Entity{}
+	pastTxns := tii.pastTxns
+
+
+
+	
+	for _, txn := range txns {
+		for i:=0; i < len(pastTxns); i++ {
+			pastTxn := pastTxns[i].(*transaction.Transaction)
+			if txn.ClientID == pastTxn.ClientID && txn.Nonce >= pastTxn.Nonce {
+
+				invalidTxns = append(invalidTxns, pastTxns[i])
+			}
+		}
+	}
+
+	return invalidTxns
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
