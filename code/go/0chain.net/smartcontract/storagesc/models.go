@@ -359,7 +359,7 @@ type StorageNode struct {
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`         // terms
 	Capacity                int64                  `json:"capacity"`      // total blobber capacity
-	Used                    int64                  `json:"used"`          // allocated capacity
+	Allocated               int64                  `json:"allocated"`     // allocated capacity
 	BytesWritten            int64                  `json:"bytes_written"` // in bytes
 	DataRead                float64                `json:"data_read"`     // in GB
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
@@ -736,9 +736,9 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
 	}
 	// filter by blobber's capacity left
-	if blobber.Capacity-blobber.Used < bSize {
+	if blobber.Capacity-blobber.Allocated < bSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
-			blobber.ID, blobber.Capacity-blobber.Used, bSize)
+			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
 	}
 
 	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
@@ -840,7 +840,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, err
 	}
-	addedBlobber.Used += sa.bSize()
+	addedBlobber.Allocated += sa.bSize()
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
@@ -1049,7 +1049,7 @@ List:
 			continue
 		}
 		// filter by blobber's capacity left
-		if b.Capacity-b.Used < bsize {
+		if b.Capacity-b.Allocated < bsize {
 			continue
 		}
 
