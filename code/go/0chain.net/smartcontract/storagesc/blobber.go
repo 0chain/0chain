@@ -516,7 +516,6 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	}
 
 	var move currency.Coin
-
 	if size > 0 {
 		move = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
@@ -528,6 +527,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 		alloc.MovedToChallenge += move
 		details.Spent += move
+
 	} else {
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
 		err = alloc.moveFromChallengePool(cp, move)

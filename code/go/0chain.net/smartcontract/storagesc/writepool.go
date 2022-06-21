@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"encoding/json"
-	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
@@ -101,7 +100,6 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
-
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(req.AllocationID, balances)
 	if err != nil {
@@ -109,26 +107,17 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 			"can't get related allocation: "+err.Error())
 	}
 
-	if alloc.WritePool < currency.Coin(txn.Value) {
-		return "", common.NewError("write_pool_unlock_failed",
-			fmt.Sprintf("insufficent funds %v in allocation pool", alloc.WritePool))
-
-	}
-	alloc.WritePool -= currency.Coin(txn.Value)
-
-	// don't unlock over min lock demand left
 	if !alloc.Finalized && !alloc.Canceled {
-		if alloc.WritePool < alloc.restMinLockDemand() {
-			return "", common.NewError("write_pool_unlock_failed",
-				"can't unlock, because min lock demand is not paid yet")
-		}
+		return "", common.NewError("write_pool_unlock_failed",
+			"can't unlock until the allocation is finalized or cancelled")
+
 	}
 
-	transfer := state.NewTransfer(ADDRESS, txn.ToClientID, currency.Coin(txn.Value))
+	transfer := state.NewTransfer(ADDRESS, txn.ToClientID, alloc.WritePool)
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
-
+	alloc.WritePool = 0
 	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
 		return "", common.NewError("write_pool_unlock_failed",
 			"saving allocation pools: "+err.Error())
