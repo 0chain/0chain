@@ -22,7 +22,7 @@ jobs:
         run: docker build -f docker.local/build.base/Dockerfile.build_base . -t zchain_build_base
     
       - name: build swagger image
-        run: docker build -f MakeswaggerDockerFile/Dockerfile . -t make_swagger
+        run: docker build -f docker.local/build.swagger/MakeswaggerDockerFile/Dockerfile . -t make_swagger
 
       - name: create swagger container and run make swagger
         run: |
