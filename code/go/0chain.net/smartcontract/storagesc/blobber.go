@@ -671,7 +671,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// the first time the allocation is added  to the blobber, created related resources
-	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
+	if blobAlloc.Stats.UsedSize == 0 {
+		err = removeAllocationFromBlobber(sc, t.ClientID, blobAlloc.BlobberAllocationsPartitionLoc, alloc.ID, balances)
+		if err != nil {
+			return "", common.NewErrorf("commit_connection_failed",
+				"removing allocation from blobAlloc partition: %v")
+		}
+	} else if blobAlloc.BlobberAllocationsPartitionLoc == nil {
 		if err := sc.blobberAddAllocation(t, blobAlloc, uint64(blobber.BytesWritten), balances); err != nil {
 			return "", common.NewErrorf("commit_connection_failed", err.Error())
 		}
