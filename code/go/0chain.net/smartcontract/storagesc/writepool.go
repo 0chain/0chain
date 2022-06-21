@@ -43,7 +43,6 @@ func (ssc *StorageSmartContract) writePoolLock(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	logging.Logger.Info("piers writePoolLock begin")
 	var conf *Config
 	var err error
 	if conf, err = ssc.getConfig(balances, true); err != nil {
@@ -85,6 +84,12 @@ func (ssc *StorageSmartContract) writePoolLock(
 	if err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			"cannot find allocation pools for "+lr.AllocationID+": "+err.Error())
+	}
+
+	if !allocation.Finalized && !allocation.Canceled {
+		return "", common.NewError("write_pool_unlock_failed",
+			"can't lock tokens with a finalized or cancelled allocation")
+
 	}
 
 	allocation.WritePool += currency.Coin(txn.Value)
