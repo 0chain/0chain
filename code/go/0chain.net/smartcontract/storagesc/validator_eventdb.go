@@ -70,7 +70,7 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 	if err != nil {
 		return fmt.Errorf("marshalling update: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, vn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, string(data))
 	return nil
 }
 
