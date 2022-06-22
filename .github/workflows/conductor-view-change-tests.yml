@@ -9,7 +9,7 @@ env:
   ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  fault_tolearance_tests:
+  fault_tolerance_tests:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
     runs-on: [self-hosted, conductor-test02]
     
@@ -74,7 +74,7 @@ jobs:
     runs-on: [self-hosted, conductor-test02]
     
     if: always()
-    needs: [fault_tolearance_tests]
+    needs: [fault_tolerance_tests]
 
     steps:
     - name: Creating Artifact con-ft-tests-logs.tar.gz file.
