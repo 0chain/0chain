@@ -25,7 +25,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	}
 	eventDb := &EventDb{
 		Store:         db,
-		eventsChannel: make(chan events, 1000000),
+		eventsChannel: make(chan events, 100),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 
