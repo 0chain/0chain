@@ -815,7 +815,6 @@ func (r *Runner) processReport() (success bool) {
 
 		if caseError != nil {
 			fmt.Printf("  - [ERR] %v\n", caseError)
-			break
 		}
 	}
 

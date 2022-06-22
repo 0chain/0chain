@@ -1,0 +1,133 @@
+name: Conductor No View Change Scenarios Tests
+
+on:
+  schedule:
+    - cron: '0 1 * * * '
+
+env:
+  ZCHAIN_BUILDBASE: zchain_build_base
+  ZCHAIN_BUILDRUN: zchain_run_base
+
+jobs:
+  fault_tolerance_tests:
+    name: CONDUCTOR-FAULT-TOLERANCE-TESTS
+    runs-on: [self-hosted, conductor-test02]
+    
+    steps:
+    - uses: actions/checkout@v1
+    
+    - name: Get Branch
+      id: get_branch
+      run: |
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+    
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+
+    - name: Running No VC Fault Tolerance Tests.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+
+  upload_artifacts_ft:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test02]
+    
+    if: always()
+    needs: [fault_tolerance_tests]
+
+    steps:
+    - name: Creating Artifact con-ft-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-ft-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-ft-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-ft-tests-logs.tar.gz
+    
+    - name: Cleanup
+      run: |
+        rm -rf ./*
+
+  conductor_byzantine_tests:
+    name: CONDUCTOR-BYZANTINE-TESTS
+    runs-on: [self-hosted, conductor-test03]
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+
+    - name: Running No VC Byzantine Tests.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+
+  upload_artifacts_byz:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test03]
+    
+    if: always()
+    needs: [conductor_byzantine_tests]
+    
+    steps:
+    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-byz-tests-logs.tar.gz
+
+    - name: Cleanup
+      run: |
+        rm -rf ./*
