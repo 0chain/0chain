@@ -251,7 +251,7 @@ func Test_flow_reward(t *testing.T) {
 
 	t.Run("read as unauthorized separate user", func(t *testing.T) {
 		tp += 100
-		// require.NoError(t, err)
+		require.NoError(t, err)
 		var rm ReadConnection
 		rm.ReadMarker = &ReadMarker{
 			ClientID:        reader.id,
