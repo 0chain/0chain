@@ -117,7 +117,7 @@ func (edb EventDb) GetActiveAllocsBlobberCount() (int64, error) {
 func (edb *EventDb) updateAllocation(updates *dbs.DbUpdates) error {
 	return edb.Store.Get().
 		Model(&Allocation{}).
-		Where("allocation_id = ?", updates.Id).
+		Where(&Allocation{AllocationID: updates.Id}).
 		Updates(updates.Updates).Error
 }
 
