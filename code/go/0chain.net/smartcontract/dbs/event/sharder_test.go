@@ -44,7 +44,7 @@ func TestSharders(t *testing.T) {
 		Port        int    `json:"port"`
 		Path        string `json:"path"`
 		PublicKey   string `json:"public_key"`
-		ShortName   string `json:"short_name"`
+		Description   string `json:"description"`
 		BuildTag    string `json:"build_tag"`
 		TotalStaked int64  `json:"total_stake"`
 		Delete      bool   `json:"delete"`
@@ -86,7 +86,7 @@ func TestSharders(t *testing.T) {
 			Port:              sn.Port,
 			Path:              sn.Path,
 			PublicKey:         sn.PublicKey,
-			ShortName:         sn.ShortName,
+			Description:         sn.Description,
 			BuildTag:          sn.BuildTag,
 			TotalStaked:       currency.Coin(sn.TotalStaked),
 			Delete:            sn.Delete,
@@ -132,7 +132,7 @@ func TestSharders(t *testing.T) {
 			Port:              1999,
 			Path:              "path sharder one",
 			PublicKey:         "pub key",
-			ShortName:         "mo",
+			Description:         "description",
 			BuildTag:          "build tag",
 			TotalStaked:       51,
 			Delete:            false,
@@ -195,7 +195,7 @@ func TestSharders(t *testing.T) {
 		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",
-			"short_name": "new short name",
+			"description": "new description",
 		},
 	}
 	data, err = json.Marshal(&update)
@@ -213,7 +213,7 @@ func TestSharders(t *testing.T) {
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, sharder.Path, update.Updates["path"])
-	require.EqualValues(t, sharder.ShortName, update.Updates["short_name"])
+	require.EqualValues(t, sharder.Description, update.Updates["description"])
 
 	// Sharder - Delete Event
 	deleteEvent := Event{

@@ -68,6 +68,7 @@ type Transaction struct {
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
 	Fee             currency.Coin    `json:"transaction_fee" msgpack:"f"`
 	Nonce           int64            `json:"transaction_nonce" msgpack:"n"`
+	Description     string            `json:"description" msgpack:"d"`
 
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
@@ -450,6 +451,7 @@ func (t *Transaction) Clone() *Transaction {
 		CreationDate:      t.CreationDate,
 		Fee:               t.Fee,
 		Nonce:             t.Nonce,
+		Description:       t.Description,
 		TransactionType:   t.TransactionType,
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,

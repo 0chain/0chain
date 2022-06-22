@@ -408,7 +408,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":null}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"description\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":null}",
 			wantErr: false,
 		},
 	}

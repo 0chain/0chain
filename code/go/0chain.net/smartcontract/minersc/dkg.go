@@ -793,7 +793,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		n.Port = v.Port
 		n.Path = v.Path
 		n.PublicKey = v.PublicKey
-		n.Description = v.ShortName
+		n.Description = v.Description
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive
@@ -818,7 +818,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		n.Port = v.Port
 		n.Path = v.Path
 		n.PublicKey = v.PublicKey
-		n.Description = v.ShortName
+		n.Description = v.Description
 		n.Type = node.NodeTypeSharder
 		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive

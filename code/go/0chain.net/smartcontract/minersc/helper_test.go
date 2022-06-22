@@ -101,7 +101,7 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.Host = c.id + ".host.miners"
 	mn.Port = 9081
 	mn.PublicKey = c.pk
-	mn.ShortName = "test_miner(" + c.id + ")"
+	mn.Description = "test_miner(" + c.id + ")"
 	mn.BuildTag = "commit"
 	mn.Settings.DelegateWallet = delegateWallet
 	mn.Settings.ServiceChargeRatio = minerServiceCharge

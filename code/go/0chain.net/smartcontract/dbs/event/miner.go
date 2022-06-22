@@ -20,7 +20,7 @@ type Miner struct {
 	Port              int
 	Path              string
 	PublicKey         string
-	ShortName         string
+	Description         string
 	BuildTag          string
 	TotalStaked       currency.Coin
 	Delete            bool
@@ -76,7 +76,7 @@ type MinerQuery struct {
 	Port              null.Int
 	Path              null.String
 	PublicKey         null.String
-	ShortName         null.String
+	Description       null.String
 	BuildTag          null.String
 	TotalStaked       currency.Coin
 	Delete            null.Bool
@@ -191,7 +191,7 @@ func (edb *EventDb) overwriteMiner(miner Miner) error {
 			"port":                miner.Port,
 			"path":                miner.Path,
 			"public_key":          miner.PublicKey,
-			"short_name":          miner.ShortName,
+			"description":         miner.Description,
 			"build_tag":           miner.BuildTag,
 			"total_staked":        miner.TotalStaked,
 			"delete":              miner.Delete,

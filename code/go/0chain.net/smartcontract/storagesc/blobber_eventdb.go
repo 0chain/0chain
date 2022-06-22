@@ -71,6 +71,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"num_delegates":      sn.StakePoolSettings.MaxNumDelegates,
 			"service_charge":     sn.StakePoolSettings.ServiceChargeRatio,
 			"saved_data":         sn.SavedData,
+			"description":        sn.Information.Description,
 		},
 	})
 	if err != nil {

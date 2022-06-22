@@ -17,6 +17,7 @@ func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator {
 		ValidatorID: vn.ID,
 		BaseUrl:     vn.BaseURL,
 		PublicKey:   vn.PublicKey,
+		Description: vn.Description,
 		// TO-DO: Update stake in eventDB
 		Stake: 0,
 
@@ -33,6 +34,7 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 		ID:        v.ValidatorID,
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
+		Description: v.Description,
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     v.DelegateWallet,
 			MinStake:           v.MinStake,

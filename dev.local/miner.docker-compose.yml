@@ -1,4 +1,11 @@
-version: '3'
+version: "3"
+
+info:
+  name: my_miner
+  logo_url: https://google.com
+  description: this is my test miner
+  website_url: https://google.com
+
 services:
   redis:
     container_name: "redis_${MINER}"
@@ -10,7 +17,7 @@ services:
     ports:
       - "63${MINER}0:6379"
     sysctls:
-      net.core.somaxconn: '511'
+      net.core.somaxconn: "511"
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
@@ -23,7 +30,7 @@ services:
     ports:
       - "63${MINER}1:6379"
     sysctls:
-      net.core.somaxconn: '511'
+      net.core.somaxconn: "511"
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
 volumes:

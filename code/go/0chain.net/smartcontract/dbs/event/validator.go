@@ -17,6 +17,7 @@ type Validator struct {
 	BaseUrl     string `json:"url" gorm:"index:url"`
 	Stake       int64  `json:"stake" gorm:"index:stake"`
 	PublicKey   string `json:"public_key" gorm:"public_key"`
+	Description string  
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`

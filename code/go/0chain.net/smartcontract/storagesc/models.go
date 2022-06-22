@@ -219,6 +219,7 @@ type ValidationNode struct {
 	ID                string             `json:"id"`
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
+	Description       string              `json:"description"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
 

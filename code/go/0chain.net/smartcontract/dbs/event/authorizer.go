@@ -21,6 +21,7 @@ type Authorizer struct {
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+	Description string
 
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
