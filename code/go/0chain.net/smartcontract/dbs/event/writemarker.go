@@ -142,6 +142,10 @@ func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString s
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Where(filters).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "block_number"},
+			Desc:   limit.IsDescending,
+		}).
 		Scan(&wm)
 
 	return wm, res.Error

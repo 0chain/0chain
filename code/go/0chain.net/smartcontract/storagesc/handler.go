@@ -1691,6 +1691,10 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 //      description: limit
 //      in: query
 //      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //
 // responses:
 //  200: stringArray
