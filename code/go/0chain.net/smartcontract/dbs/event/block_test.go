@@ -82,7 +82,7 @@ func TestFindBlock(t *testing.T) {
 	}
 	err = eventDb.addBlock(block2)
 	require.NoError(t, err, "Error while inserting Block to event Database")
-	gotBlocks, err := eventDb.GetBlocks()
+	gotBlocks, err := eventDb.GetBlocks(Pagination{0, 20, true})
 	if len(gotBlocks) != 2 {
 		require.Error(t, fmt.Errorf("got %v blocks but expected 2", len(gotBlocks)))
 	}

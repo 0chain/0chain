@@ -83,38 +83,38 @@ func TestFindTransactionByHash(t *testing.T) {
 	})
 
 	t.Run("GetTransactionByClientId", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", 0, 10)
+		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", Pagination{0, 10, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClient", 0, 10)
+		gotTrs, err = eventDb.GetTransactionByClientId("someClient", Pagination{0, 10, true})
 		require.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", 0, 5)
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", Pagination{0, 5, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", 5, 5)
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", Pagination{5, 5, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 
 	})
 
 	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", 0, 10)
+		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", Pagination{0, 10, true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 0, 10)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", Pagination{0, 10, true})
 		assert.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", 0, 5)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", Pagination{0, 5, true})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", 5, 5)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", Pagination{5, 5, true})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 	})

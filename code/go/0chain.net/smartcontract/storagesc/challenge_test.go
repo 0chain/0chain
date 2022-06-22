@@ -46,7 +46,6 @@ func TestAddChallenge(t *testing.T) {
 		balances        cstate.StateContextI
 		alloc           *StorageAllocation
 		allocChallenges *AllocationChallenges
-		blobChallenges  *BlobberChallenges
 		newChallenge    func(ts common.Timestamp) *StorageChallenge
 	}
 
@@ -102,12 +101,6 @@ func TestAddChallenge(t *testing.T) {
 			allocChallenges.AllocationID = allocID
 		}
 
-		blobChallenges, err := ssc.getBlobberChallenges(blobberID, balances)
-		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
-			blobChallenges = new(BlobberChallenges)
-			blobChallenges.BlobberID = blobberID
-		}
-
 		alloc := &StorageAllocation{
 			ID:               allocID,
 			BlobberAllocs:    blobberAllocs,
@@ -129,14 +122,13 @@ func TestAddChallenge(t *testing.T) {
 				AllocationRoot:   alloc.BlobberAllocsMap[blobberID].AllocationRoot,
 			}
 
-			err = ssc.addChallenge(alloc, c, allocChallenges, blobChallenges, challInfo, balances)
+			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, balances)
 			require.NoError(t, err)
 		}
 
 		return ssc, args{
 			alloc:           alloc,
 			allocChallenges: allocChallenges,
-			blobChallenges:  blobChallenges,
 			balances:        balances,
 		}
 	}
@@ -229,7 +221,6 @@ func TestAddChallenge(t *testing.T) {
 			err := ssc.addChallenge(args.alloc,
 				c,
 				args.allocChallenges,
-				args.blobChallenges,
 				challInfo,
 				args.balances)
 
@@ -263,15 +254,6 @@ func TestAddChallenge(t *testing.T) {
 
 			// assert the open challenge number is correct
 			require.Equal(t, tt.want.openChallengeNum, len(ac.OpenChallenges))
-
-			// assert the BlobberChallenges open challenge is correct
-			bc := &BlobberChallenges{
-				BlobberID: args.blobChallenges.BlobberID,
-			}
-			err = bc.load(args.balances, ssc.ID)
-			require.NoError(t, err)
-
-			require.Equal(t, tt.want.openChallengeNum, len(bc.OpenChallenges))
 		})
 	}
 }

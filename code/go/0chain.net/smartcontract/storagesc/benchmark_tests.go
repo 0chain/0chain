@@ -61,7 +61,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err
@@ -469,6 +469,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
 					ID:                getMockValidatorId(0),
+					BaseURL:           getMockValidatorUrl(0),
 					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
 				})
 				return bytes
@@ -543,7 +544,10 @@ func BenchmarkTests(
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
-			input: []byte{},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&readPoolLockRequest{})
+				return bytes
+			}(),
 		},
 		{
 			name:     "storage.read_pool_unlock",
@@ -575,6 +579,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: getMockAllocationId(0),
+					Duration:     10 * time.Minute,
 				})
 				return bytes
 			}(),
@@ -721,9 +726,7 @@ func BenchmarkTests(
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
-					"readpool.min_lock_period": "1h",
-					"readpool.max_lock_period": "8760h",
+					"readpool.min_lock": "10",
 
 					"writepool.min_lock":        "10",
 					"writepool.min_lock_period": "2m",

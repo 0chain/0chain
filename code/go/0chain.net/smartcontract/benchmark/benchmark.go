@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/chain/state"
@@ -286,7 +288,7 @@ var (
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.StateContextI, *testing.B) error
+	Run(state.TimedQueryStateContext, *testing.B) error
 }
 
 type WithTimings interface {
@@ -356,5 +358,6 @@ var MockBenchData = BenchData{
 		PublicKeys:  make([]string, 100),
 		PrivateKeys: make([]string, 100),
 		Sharders:    make([]string, 100),
+		Now:         common.Now(),
 	},
 }

@@ -80,8 +80,6 @@ smart_contracts:
     # users' read pool related configurations
     readpool:
       min_lock: 0.1 # toekns
-      min_lock_period: 1m
-      max_lock_period: 8760h
     # users' write pool related configurations
     writepool:
       min_lock: 0.1 # tokens

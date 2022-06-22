@@ -73,7 +73,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			},
 			Terms:           blobberIDTermMapping[b.BlobberID].Terms,
 			Capacity:        b.Capacity,
-			Used:            b.Used,
+			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.Settings{
@@ -89,7 +89,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		tempBlobberAllocation := &BlobberAllocation{
 			BlobberID:     b.BlobberID,
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
-			Size:          b.Used,
+			Size:          b.Allocated,
 			Terms:         terms,
 			MinLockDemand: currency.Coin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
 		}
@@ -216,11 +216,11 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 	return nil
 }
 
-func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {
+func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit event.Pagination) ([]*StorageAllocationBlobbers, error) {
 
 	sas := make([]*StorageAllocationBlobbers, 0)
 
-	allocs, err := eventDb.GetClientsAllocation(clientID)
+	allocs, err := eventDb.GetClientsAllocation(clientID, limit)
 	if err != nil {
 		return nil, err
 	}

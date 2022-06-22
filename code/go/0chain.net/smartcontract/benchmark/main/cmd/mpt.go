@@ -134,7 +134,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	rootBytes, err := hex.DecodeString(root)
 	var eventDb *event.EventDb
 	if viper.GetBool(benchmark.EventDbEnabled) {
-		eventDb = createEventsDb()
+		eventDb = openEventsDb()
 	}
 	if err != nil {
 		panic(err)
@@ -147,6 +147,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 		extractMpt(pMpt, rootBytes),
 		benchData,
 	)
+	benchData.Now = creationDate
 
 	err = balances.GetTrieNode(BenchDataKey, &benchData)
 	if err != nil {
@@ -260,7 +261,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		sharders = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
+		sharders = minersc.AddMockNodes(clients, spenum.Sharder, eventDb, balances)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
@@ -455,6 +456,7 @@ func setUpMpt(
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
 		benchData.Sharders = sharders
+		benchData.Now = common.Now()
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
@@ -474,7 +476,29 @@ func setUpMpt(
 	return pMpt, balances.GetState().GetRoot(), benchData
 }
 
+func openEventsDb() *event.EventDb {
+	timer := time.Now()
+	eventDb := newEventsDb()
+	log.Println("opened event database\t", time.Since(timer))
+	return eventDb
+}
+
 func createEventsDb() *event.EventDb {
+	timer := time.Now()
+	eventDb := newEventsDb()
+	err := eventDb.Drop()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := eventDb.AutoMigrate(); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("created event database\t", time.Since(timer))
+	return eventDb
+}
+
+func newEventsDb() *event.EventDb {
 	timer := time.Now()
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
@@ -508,14 +532,6 @@ func createEventsDb() *event.EventDb {
 
 	}
 	if err != nil {
-		log.Fatal(err)
-	}
-	err = eventDb.Drop()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := eventDb.AutoMigrate(); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("created event database\t", time.Since(timer))

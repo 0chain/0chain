@@ -29,6 +29,15 @@ options:
   test_suites:
     - "storage"
     - "storage_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
@@ -98,8 +107,6 @@ smart_contracts:
     validators_per_challenge: 2
     readpool:
       min_lock: 0.3
-      min_lock_period: 1m
-      max_lock_period: 11000h
     write_pool:
       min_lock: 0.1
     stakepool:

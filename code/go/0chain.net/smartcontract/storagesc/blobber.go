@@ -91,7 +91,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	blobber.LastHealthCheck = t.CreationDate
-	blobber.Used = savedBlobber.Used
+	blobber.Allocated = savedBlobber.Allocated
 	blobber.SavedData = savedBlobber.SavedData
 
 	// update statistics

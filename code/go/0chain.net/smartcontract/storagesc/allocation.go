@@ -313,7 +313,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		balloc := newBlobberAllocation(bSize, sa, b.StorageNode, txn.CreationDate)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
-		b.Used += bSize
+		b.Allocated += bSize
 		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b)
 		if err != nil {
 			return "", fmt.Errorf("can't save blobber: %v", err)
@@ -906,13 +906,13 @@ func (sc *StorageSmartContract) extendAllocation(
 				"blobber %s no longer provides its service", b.ID)
 		}
 		if uar.Size > 0 {
-			if b.Capacity-b.Used-diff < 0 {
+			if b.Capacity-b.Allocated-diff < 0 {
 				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s doesn't have enough free space", b.ID)
 			}
 		}
 
-		b.Used += diff // new capacity used
+		b.Allocated += diff // new capacity used
 
 		// update terms using weighted average
 		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
@@ -1014,8 +1014,8 @@ func (sc *StorageSmartContract) reduceAllocation(
 	for i, ba := range alloc.BlobberAllocs {
 		var b = blobbers[i]
 		oldOffer := ba.Offer()
-		b.Used += diff // new capacity used
-		ba.Size = size // new size
+		b.Allocated += diff // new capacity used
+		ba.Size = size      // new size
 		// update stake pool
 		newOffer := ba.Offer()
 		if newOffer != oldOffer {
@@ -1618,7 +1618,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, string(data))
 
 		// update the blobber
-		b.Used -= d.Size
+		b.Allocated -= d.Size
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving blobber "+d.BlobberID+": "+err.Error())
