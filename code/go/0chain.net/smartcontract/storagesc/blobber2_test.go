@@ -10,6 +10,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -215,7 +216,10 @@ func testCommitBlobberRead(
 	}
 	require.NoError(t, client.scheme.GenerateKeys())
 	client.pk = client.scheme.GetPublicKey()
-	client.id = encryption.Hash(client.pk)
+	pub := bls.PublicKey{}
+	err = pub.DeserializeHexStr(client.pk)
+	require.Nil(t, err)
+	client.id = encryption.Hash(pub.Serialize())
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
