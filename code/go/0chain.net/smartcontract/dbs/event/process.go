@@ -35,7 +35,7 @@ const (
 	TagAddTransaction
 	TagAddWriteMarker
 	TagAddBlock
-	TagAddOrOverwriteValidator
+	TagAddValidator
 	TagUpdateValidator
 	TagAddReadMarker
 	TagAddMiner
@@ -153,13 +153,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addBlock(block)
-	case TagAddOrOverwriteValidator:
+	case TagAddValidator:
 		var vn Validator
 		err := json.Unmarshal([]byte(event.Data), &vn)
 		if err != nil {
 			return err
 		}
-		return edb.addOrOverwriteValidator(vn)
+		return edb.addValidator(vn)
 	case TagUpdateValidator:
 		var updates dbs.DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)
