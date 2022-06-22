@@ -64,7 +64,7 @@ func main() {
 
 	log.Print("read configurations files: ", configFile, ", ", testsFile)
 	var (
-		conf = readConfigs(configFile, testsFile)
+		conf = readConfigs(configFile, strings.Fields(testsFile))
 		r    Runner
 		err  error
 	)
@@ -123,14 +123,18 @@ func readConfig(configFile string) (conf *config.Config) {
 	return
 }
 
-func readConfigs(configFile, testsFile string) (conf *config.Config) {
+func readConfigs(configFile string, testsFilesArr []string) (conf *config.Config) {
 	conf = readConfig(configFile)
-	matches, err := filepath.Glob(testsFile)
-	if err != nil {
-		panic(err)
-	}
-	for _, filename := range matches {
-		appendTests(conf, readConfig(filename))
+
+	for _, testsFile := range testsFilesArr {
+		matches, err := filepath.Glob(testsFile)
+		if err != nil {
+			panic(err)
+		}
+		for _, filename := range matches {
+			log.Printf("Adding tests of %s", filename)
+			appendTests(conf, readConfig(filename))
+		}
 	}
 	return
 }
