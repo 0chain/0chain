@@ -118,7 +118,7 @@ func (edb *EventDb) updateAllocation(updates *dbs.DbUpdates) error {
 	return edb.Store.Get().
 		Model(&Allocation{}).
 		Where("allocation_id = ?", updates.Id).
-		Updates(updates).Error
+		Updates(updates.Updates).Error
 }
 
 func (edb *EventDb) addAllocation(alloc *Allocation) error {
