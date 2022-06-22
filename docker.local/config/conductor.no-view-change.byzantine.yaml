@@ -55,8 +55,7 @@ tests:
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 70
-          allow_beyond: true
-      - make_test_case_check:
+- make_test_case_check:
           wait_time: 5m
       - save_logs: {}
 
@@ -70,8 +69,7 @@ tests:
             round: 50
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70      
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -86,8 +84,7 @@ tests:
             round: 50
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -104,8 +101,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -122,8 +118,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -139,8 +134,7 @@ tests:
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -158,8 +152,7 @@ tests:
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -192,8 +185,7 @@ tests:
             by_node_with_type_rank: 1
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -210,8 +202,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -228,11 +219,9 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
-          allow_beyond: true
       - save_logs: { }
 
   - name: "half nodes down"
@@ -279,8 +268,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -318,8 +306,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -357,8 +344,7 @@ tests:
 
         - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
         - wait_round:
-            round: 70
-            allow_beyond: true
+            round: 70      
         - make_test_case_check:
             wait_time: 5m
         - save_logs: { }
@@ -396,8 +382,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -435,8 +420,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -474,8 +458,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -511,8 +494,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -549,8 +531,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -588,8 +569,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -626,8 +606,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -664,8 +643,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 5m
 
@@ -687,8 +665,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -714,8 +691,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -742,8 +718,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -769,8 +744,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -796,8 +770,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70
-          allow_beyond: true
+          round: 70    
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }

@@ -20,20 +20,21 @@ jobs:
 
       - name: build zchain_build_base image
         run: docker build -f docker.local/build.base/Dockerfile.build_base . -t zchain_build_base
-    
-      - name: build swagger image
-        run: docker build -f MakeswaggerDockerFile/Dockerfile . -t make_swagger
 
-      - name: create swagger container and run make swagger
+      - name: build swagger image
+        run: docker build -f docker.local/build.swagger/Dockerfile . -t make_swagger
+
+      - name: build swagger docs
         run: |
-          docker create -it --name makeswagger make_swagger:latest
+          docker run -v $(pwd):/codecov make_swagger bash -c "\
+            cd /codecov/code/go/0chain.net/sharder/sharder; \
+            swagger generate spec -w . -m -o swagger.yaml; \
+            swagger generate markdown -f swagger.yaml --output=swagger.md"
+
           mkdir swaggerfiles
-          pwd
-          ls
-          docker cp makeswagger:/0chain/code/go/0chain/docs/swagger.md ./swaggerfiles
-          docker cp makeswagger:/0chain/code/go/0chain/docs/swagger.yaml ./swaggerfiles
-          docker rm makeswagger
-          docker rmi make_swagger
+          cp code/go/0chain.net/sharder/sharder/swagger.yaml ./swaggerfiles/
+          cp code/go/0chain.net/sharder/sharder/swagger.md ./swaggerfiles/
+          ls swaggerfiles/
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

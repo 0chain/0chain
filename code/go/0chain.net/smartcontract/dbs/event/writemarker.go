@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -98,41 +97,6 @@ func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filena
 	return wms, result.Error
 }
 
-func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {
-	result := edb.Store.Get().
-		Model(&WriteMarker{}).
-		Where(&WriteMarker{TransactionID: wm.TransactionID}).
-		Updates(&wm)
-	return result.Error
-}
-
-func (edb *EventDb) addOrOverwriteWriteMarker(wm WriteMarker) error {
-	exists, err := wm.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteWriteMarker(wm)
-	}
-
-	result := edb.Store.Get().Create(&wm)
-	return result.Error
-}
-
-func (wm *WriteMarker) exists(edb *EventDb) (bool, error) {
-
-	var writeMarker WriteMarker
-
-	result := edb.Get().
-		Model(&WriteMarker{}).
-		Where(&WriteMarker{TransactionID: wm.TransactionID}).
-		Take(&writeMarker)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if result.Error != nil {
-		return false, fmt.Errorf("error searching for write marker txn: %v, error %v",
-			wm.TransactionID, result.Error)
-	}
-	return true, nil
+func (edb *EventDb) addWriteMarker(wm WriteMarker) error {
+	return edb.Store.Get().Create(&wm).Error
 }
