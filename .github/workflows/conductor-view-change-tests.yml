@@ -1,4 +1,4 @@
-name: Conductor Complex Scenarios Tests
+name: Conductor View Change Tests
 
 on:
   schedule:
