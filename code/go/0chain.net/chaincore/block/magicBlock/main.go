@@ -44,7 +44,6 @@ type cmdMagicBlock struct {
 var (
 	defaultTokenSize int64 = 10000000000
 	rootPath               = "/config"
-	//rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
 
 	output = fmt.Sprintf("%v/output", rootPath)
 	input  = fmt.Sprintf("%v/input", rootPath)
