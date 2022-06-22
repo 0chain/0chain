@@ -174,8 +174,7 @@ tests:
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
           start: true
       - wait_round:
-          shift: 20
-          allow_beyond: true
+          shift: 20   
       - stop: ["sharder-1"]
       - wait_no_progress:
           timeout: "5m"
@@ -194,8 +193,7 @@ tests:
       - stop: ["sharder-1"]
       - start: ["sharder-1"]
       - wait_round:
-          shift: 50
-          allow_beyond: true
+          shift: 50    
 
   - name: "Sharder goes down for 3 minutes simultaneously with coming up of the previous one"
     flow:
@@ -256,21 +254,18 @@ tests:
           start: true
       - wait_round:
           shift: 20
-          allow_beyond: true
       - stop: ["sharder-1", "miner-4"] # all sharders and some miners go down
       - wait_no_progress:
           timeout: "1m"
       - start: ["sharder-1"] # sharder comes up, BC should move
       - wait_round:
           shift: 20
-          allow_beyond: true
       - stop: ["miner-3"] # more than consensus miners are down
       - wait_no_progress:
           timeout: "1m"
       - start: ["miner-4"] # consensus miners are back online
       - wait_round:
           shift: 20
-          allow_beyond: true
       # To be continued
 
   - name: "Generators fail at start of round"
