@@ -2,7 +2,6 @@ FROM zchain_build_base as magic_block_build
 ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
 
-#COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 COPY ./code/go/0chain.net/go.mod $SRC_DIR/go/0chain.net/go.mod
 COPY ./code/go/0chain.net/go.sum $SRC_DIR/go/0chain.net/go.sum
 
