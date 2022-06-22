@@ -105,8 +105,6 @@ func addMockAllocation(
 			Terms:          getMockBlobberTerms(),
 			MinLockDemand:  mockMinLockDemand,
 			AllocationRoot: encryption.Hash("allocation root"),
-			// We need a partition location for commit_connection but does not need to be correct.
-			BlobberAllocationsPartitionLoc: &partitions.PartitionLocation{},
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 		if viper.GetBool(sc.EventDbEnabled) {
@@ -463,7 +461,7 @@ func AddMockBlobbers(
 			},
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
-			Used:              mockUsedData,
+			Allocated:         mockUsedData,
 			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
@@ -490,8 +488,8 @@ func AddMockBlobbers(
 				MinLockDemand:    blobber.Terms.MinLockDemand,
 				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
 				Capacity:         blobber.Capacity,
-				Used:             blobber.Used,
-				TotalDataStored:  blobber.Used / 2,
+				Allocated:        blobber.Allocated,
+				Used:             blobber.Allocated / 2,
 				LastHealthCheck:  int64(blobber.LastHealthCheck),
 				DelegateWallet:   blobber.StakePoolSettings.DelegateWallet,
 				MinStake:         blobber.StakePoolSettings.MinStake,

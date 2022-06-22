@@ -65,7 +65,7 @@ tests:
           bad: ["miner-1", "miner-2"]
       - wait_round:
           shift: 10
-          timeout: "3m"
+          timeout: "1m"
           must_fail: true
   - name: "Send VRFS only to group"
     flow:
@@ -109,7 +109,7 @@ tests:
           bad: []
       - wait_round:
           shift: 10
-          timeout: "3m"
+          timeout: "1m"
           must_fail: true
 
   # Round timeout

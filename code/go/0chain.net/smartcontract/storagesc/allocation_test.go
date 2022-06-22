@@ -1159,7 +1159,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration: 200 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
-			Used:            5 * GB,  //  5 GB
+			Allocated:       5 * GB,  //  5 GB
 			LastHealthCheck: 0,
 		},
 		&StorageNode{
@@ -1172,7 +1172,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration: 250 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
-			Used:            10 * GB, // 10 GB
+			Allocated:       10 * GB, // 10 GB
 			LastHealthCheck: 0,
 		},
 	}
@@ -1406,8 +1406,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b0.LastHealthCheck = tx.CreationDate
 		b1 := allBlobbers.Nodes[1]
 		b1.LastHealthCheck = tx.CreationDate
-		b0.Used = 5 * GB
-		b1.Used = 10 * GB
+		b0.Allocated = 5 * GB
+		b1.Allocated = 10 * GB
 
 		nar.Blobbers = append(nar.Blobbers, b0.ID)
 		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
@@ -1451,8 +1451,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b0.LastHealthCheck = tx.CreationDate
 		b1 := allBlobbers.Nodes[1]
 		b1.LastHealthCheck = tx.CreationDate
-		b0.Used = 5 * GB
-		b1.Used = 10 * GB
+		b0.Allocated = 5 * GB
+		b1.Allocated = 10 * GB
 
 		nar.Blobbers = append(nar.Blobbers, b0.ID)
 		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
@@ -1489,8 +1489,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var sb = newTestAllBlobbers()
 		sb.Nodes[0].LastHealthCheck = tx.CreationDate
 		sb.Nodes[1].LastHealthCheck = tx.CreationDate
-		sb.Nodes[0].Used += 10 * GB
-		sb.Nodes[1].Used += 10 * GB
+		sb.Nodes[0].Allocated += 10 * GB
+		sb.Nodes[1].Allocated += 10 * GB
 
 		// blobbers saved in all blobbers list
 		var ab []*StorageNode
@@ -1663,8 +1663,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	b0.LastHealthCheck = tx.CreationDate
 	b1 := allBlobbers.Nodes[1]
 	b1.LastHealthCheck = tx.CreationDate
-	b0.Used = 5 * GB
-	b1.Used = 10 * GB
+	b0.Allocated = 5 * GB
+	b1.Allocated = 10 * GB
 
 	nar.Blobbers = append(nar.Blobbers, b0.ID)
 	_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
