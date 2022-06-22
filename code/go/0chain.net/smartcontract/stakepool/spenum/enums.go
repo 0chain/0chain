@@ -5,14 +5,14 @@ package spenum
 type Provider int
 
 const (
-	Miner Provider = iota
+	Miner Provider = iota + 1
 	Sharder
 	Blobber
 	Validator
 	Authorizer
 )
 
-var providerString = []string{"miner", "sharder", "blobber", "validator", "authorizer"}
+var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
 
 func (p Provider) String() string {
 	return providerString[p]

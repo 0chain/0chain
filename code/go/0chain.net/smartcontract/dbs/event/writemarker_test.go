@@ -200,7 +200,7 @@ func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}
-		err = eventDb.addOrOverwriteWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id", Name: "name.txt"})
+		err = eventDb.addWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id", Name: "name.txt"})
 		if !assert.NoError(t, err, "Error while writing read marker") {
 			return
 		}

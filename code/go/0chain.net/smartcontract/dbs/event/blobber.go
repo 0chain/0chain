@@ -31,9 +31,9 @@ type Blobber struct {
 	MinLockDemand    float64       `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity        int64 `json:"capacity" gorm:"index:idx_bcapacity"` // total blobber capacity
-	Used            int64 `json:"used"`                                // allocated capacity
-	TotalDataStored int64 `json:"total_data_stored"`                   // total of files saved on blobber
+	Capacity        int64 `json:"capacity"`  // total blobber capacity
+	Allocated       int64 `json:"allocated"` // allocated capacity
+	Used            int64 `json:"used"`      // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"`
 
@@ -87,7 +87,7 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 	update := dbs.DbUpdates{
 		Id: id,
 		Updates: map[string]interface{}{
-			"total_data_stored": blobber.TotalDataStored + stored,
+			"used": blobber.Used + stored,
 		},
 	}
 	return edb.updateBlobber(update)
@@ -120,7 +120,7 @@ func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, er
 func (edb *EventDb) TotalUsedData() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
-		Select("sum(total_data_stored)").
+		Select("sum(used)").
 		Find(&total).Error
 }
 
@@ -220,8 +220,8 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
-	dbStore = dbStore.Where("capacity - used >= ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
+	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
+	dbStore = dbStore.Where("last_health_check > ?", time.Now().Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},

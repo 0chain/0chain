@@ -35,7 +35,7 @@ const (
 	TagAddTransaction
 	TagAddWriteMarker
 	TagAddBlock
-	TagAddOrOverwriteValidator
+	TagAddValidator
 	TagUpdateValidator
 	TagAddReadMarker
 	TagAddMiner
@@ -126,7 +126,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		wm.TransactionID = event.TxHash
 		wm.BlockNumber = event.BlockNumber
-		if err := edb.addOrOverwriteWriteMarker(wm); err != nil {
+		if err := edb.addWriteMarker(wm); err != nil {
 			return err
 		}
 		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
@@ -153,13 +153,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addBlock(block)
-	case TagAddOrOverwriteValidator:
+	case TagAddValidator:
 		var vn Validator
 		err := json.Unmarshal([]byte(event.Data), &vn)
 		if err != nil {
 			return err
 		}
-		return edb.addOrOverwriteValidator(vn)
+		return edb.addValidator(vn)
 	case TagUpdateValidator:
 		var updates dbs.DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)
