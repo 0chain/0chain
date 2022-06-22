@@ -72,7 +72,7 @@ tests:
           shift: 20
       - stop: ["miner-3", "miner-4"]
       - wait_no_progress:
-          timeout: "5m"
+          timeout: "1m"
 
   - name: "All miners go down"
     flow:
@@ -86,7 +86,7 @@ tests:
           shift: 20
       - stop: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_no_progress:
-          timeout: "5m"
+          timeout: "1m"
 
   # MINERS GO DOWN AND COME UP
   - name: "Less than consensus miners go down and come up"
@@ -177,7 +177,7 @@ tests:
           shift: 20
       - stop: ["sharder-1"]
       - wait_no_progress:
-          timeout: "5m"
+          timeout: "1m"
 
   # SHARDERS GO DOWN AND COME UP
   - name: "All sharders go down and come up"
