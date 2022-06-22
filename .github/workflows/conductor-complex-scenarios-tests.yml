@@ -75,7 +75,7 @@ jobs:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
     
     - name: Running VC Fault Tolerance Tests.
-      if: ${{ github.event.inputs.view_change == 'true' || true }}
+      if: ${{ github.event.inputs.view_change == 'true' }}
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
@@ -167,12 +167,175 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
+  conductor_view_change_miners_tests:
+    if: ${{ github.event.inputs.view_change == 'true' }}
+    name: CONDUCTOR-VIEW-CHANGE-MINERS-TESTS
+    runs-on: [self-hosted, conductor-test02]
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: View Change Rounds
+      run: |
+        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+    
+    - name: Setting Up View Change
+      run: |
+        cd ./docker.local/config
+        filename='0chain.yaml'
+        # Check the new text is empty or not
+        if ! grep -q view_change "$filename"; then
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+        else
+          sed -i '/view_change/d' $filename
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+        fi
+
+    - name: Running VC Miners Tests.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.miners*
+
+  conductor_view_change_sharders_tests:
+    if: ${{ github.event.inputs.view_change == 'true' }}
+    name: CONDUCTOR-VIEW-CHANGE-SHARDERS-TESTS
+    runs-on: [self-hosted, conductor-test01]
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: View Change Rounds
+      run: |
+        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+    
+    - name: Setting Up View Change
+      run: |
+        cd ./docker.local/config
+        filename='0chain.yaml'
+        # Check the new text is empty or not
+        if ! grep -q view_change "$filename"; then
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+        else
+          sed -i '/view_change/d' $filename
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+        fi
+
+    - name: Running VC Sharders Tests.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.sharders*
+
+
+  conductor_view_change_others_tests:
+    name: CONDUCTOR-VIEW-CHANGE-OTHERS-TESTS
+    if: ${{ github.event.inputs.view_change == 'true' }}
+    runs-on: [self-hosted, conductor-test03]
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: View Change Rounds
+      run: |
+        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+    
+    - name: Setting Up View Change
+      run: |
+        cd ./docker.local/config
+        filename='0chain.yaml'
+        # Check the new text is empty or not
+        if ! grep -q view_change "$filename"; then
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+        else
+          sed -i '/view_change/d' $filename
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+        fi
+
+    - name: Running VC Other Tests.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.stress-test view-change.fault-tolerance.threshold
+
   upload_artifacts_byz:
     name: UPLOAD-LOGS-AS-ARTIFACTS
     runs-on: [self-hosted, conductor-test03]
     
     if: always()
-    needs: [conductor_byzantine_tests]
+    needs: [conductor_byzantine_tests, conductor_view_change_miners_tests, conductor_view_change_sharders_tests, conductor_view_change_others_tests]
     
     steps:
     - name: Creating Artifact con-byz-tests-logs.tar.gz file.
