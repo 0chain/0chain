@@ -579,7 +579,6 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: getMockAllocationId(0),
-					Duration:     10 * time.Minute,
 				})
 				return bytes
 			}(),
