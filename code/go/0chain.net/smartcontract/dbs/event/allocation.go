@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -124,17 +123,4 @@ func (edb *EventDb) updateAllocation(updates *dbs.DbUpdates) error {
 
 func (edb *EventDb) addAllocation(alloc *Allocation) error {
 	return edb.Store.Get().Create(&alloc).Error
-}
-
-func (alloc *Allocation) exists(edb *EventDb) (bool, error) {
-	var data Allocation
-	err := edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", alloc.AllocationID).Take(&data).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("error searching for allocation %v, error %v", alloc.AllocationID, err)
-	}
-
-	return true, nil
 }
