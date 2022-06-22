@@ -62,7 +62,6 @@ func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 }
 
 func (edb *EventDb) overwriteValidator(vn Validator) error {
-
 	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: vn.ValidatorID}).Updates(&vn)
 	return result.Error
 }
