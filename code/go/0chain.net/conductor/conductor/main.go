@@ -635,7 +635,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	switch {
 	case r.waitRound.Round > re.Round:
 		return // not this round
-	case !r.waitRound.AllowBeyond && r.waitRound.Round < re.Round:
+	case r.waitRound.ForbidBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
 			re.Round)
 	}
