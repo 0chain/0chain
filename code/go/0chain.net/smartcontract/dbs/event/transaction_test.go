@@ -168,25 +168,3 @@ func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
 		require.NoError(t, err, "Error while inserting Transaction to event Database")
 	}
 }
-
-func TestAddMint(t *testing.T) {
-	eventDb := SetupDatabase(t)
-	defer eventDb.Close()
-	err := eventDb.AutoMigrate()
-	defer eventDb.drop()
-	require.NoError(t, err)
-
-	SetUpTransactionData(t, eventDb)
-	eventDb.addMint(Mint{
-		TransactionHash: "something_9",
-		Amount:          40,
-	})
-	eventDb.addMint(Mint{
-		TransactionHash: "something_9",
-		Amount:          40,
-	})
-	tr, err := eventDb.GetTransactionByHash("something_9")
-	t.Log(tr)
-	require.NoError(t, err)
-	require.Equal(t, int64(80), tr.MintTotalAmount, "Total amount not correct")
-}
