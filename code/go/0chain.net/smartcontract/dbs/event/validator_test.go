@@ -52,7 +52,7 @@ func TestValidatorNode(t *testing.T) {
 		ServiceCharge:  61.0,
 	}
 
-	err = eventDb.addOrOverwriteValidator(vn)
+	err = eventDb.addValidator(vn)
 	require.NoError(t, err, "Error while inserting Validation Node to event Database")
 
 	var count int64
