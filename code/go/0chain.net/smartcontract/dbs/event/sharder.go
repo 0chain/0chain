@@ -21,7 +21,7 @@ type Sharder struct {
 	Port              int
 	Path              string
 	PublicKey         string
-	ShortName         string
+	Description         string
 	BuildTag          string
 	TotalStaked       currency.Coin
 	Delete            bool
@@ -142,7 +142,7 @@ func (edb *EventDb) overwriteSharder(sharder Sharder) error {
 			"port":                sharder.Port,
 			"path":                sharder.Path,
 			"public_key":          sharder.PublicKey,
-			"short_name":          sharder.ShortName,
+			"description":          sharder.Description,
 			"build_tag":           sharder.BuildTag,
 			"total_staked":        sharder.TotalStaked,
 			"delete":              sharder.Delete,

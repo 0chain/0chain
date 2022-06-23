@@ -59,6 +59,7 @@ type Transaction struct {
 
 	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string `json:"public_key,omitempty" msgpack:"puk,omitempty"`
+	Description string `json:"description" msgpack:"des"`
 
 	ToClientID      string           `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         string           `json:"chain_id,omitempty" msgpack:"chid"`
@@ -442,6 +443,7 @@ func (t *Transaction) Clone() *Transaction {
 		VersionField:      t.VersionField,
 		ClientID:          t.ClientID,
 		PublicKey:         t.PublicKey,
+		Description:       t.Description,
 		ToClientID:        t.ToClientID,
 		ChainID:           t.ChainID,
 		TransactionData:   t.TransactionData,

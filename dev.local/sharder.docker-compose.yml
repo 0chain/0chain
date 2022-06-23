@@ -1,13 +1,20 @@
-version: '3'
+version: "3"
+
+info:
+  name: my_sharder
+  logo_url: https://google.com
+  description: this is my test sharder
+  website_url: https://google.com
+
 services:
   cassandra:
     container_name: "cassandra${SHARDER}"
     image: cassandra:3.11.4
     network_mode: bridge
     ports:
-    - "904${SHARDER}:9042"
+      - "904${SHARDER}:9042"
     volumes:
-    - ./data/sharder${SHARDER}/cassandra:/var/lib/cassandra/data \
+      - ./data/sharder${SHARDER}/cassandra:/var/lib/cassandra/data \
 
   postgres:
     container_name: "postgres${SHARDER}"
@@ -23,9 +30,6 @@ services:
       - ./data/sharder${SHARDER}/postgres:/var/lib/postgresql/data \
       - ./data/sharder${SHARDER}/sql_script/:/docker-entrypoint-initdb.d/ \
     network_mode: bridge
-
-
-
 
 volumes:
   data:

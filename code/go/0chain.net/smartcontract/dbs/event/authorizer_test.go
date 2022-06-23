@@ -43,6 +43,7 @@ func TestAuthorizers(t *testing.T) {
 	authorizer_1 := Authorizer{
 		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 		URL:             "http://localhost:8080",
+		Description:      "description",
 		Latitude:        0.0,
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
@@ -56,6 +57,7 @@ func TestAuthorizers(t *testing.T) {
 	authorizer_2 := Authorizer{
 		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 		URL:             "http://localhost:8888",
+		Description:      "description",
 		Latitude:        1.0,
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),

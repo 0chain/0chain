@@ -14,6 +14,7 @@ type Authorizer struct {
 
 	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
 	URL          string `json:"url"`
+	Description  string  `json:"description"`
 
 	// Configuration
 	Fee currency.Coin `json:"fee"`

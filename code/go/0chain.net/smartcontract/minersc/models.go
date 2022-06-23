@@ -679,7 +679,7 @@ type SimpleNode struct {
 	Geolocation SimpleNodeGeolocation `json:"geolocation"`
 	Path        string                `json:"path"`
 	PublicKey   string                `json:"public_key"`
-	ShortName   string                `json:"short_name"`
+	Description   string               `json:"description"`
 	BuildTag    string                `json:"build_tag"`
 	TotalStaked currency.Coin         `json:"total_stake"`
 	Delete      bool                  `json:"delete"`

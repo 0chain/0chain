@@ -46,7 +46,7 @@ func TestMiners(t *testing.T) {
 		Port        int    `json:"port"`
 		Path        string `json:"path"`
 		PublicKey   string `json:"public_key"`
-		ShortName   string `json:"short_name"`
+		Description   string `json:"description"`
 		BuildTag    string `json:"build_tag"`
 		TotalStaked int64  `json:"total_stake"`
 		Delete      bool   `json:"delete"`
@@ -88,7 +88,7 @@ func TestMiners(t *testing.T) {
 			Port:              mn.Port,
 			Path:              mn.Path,
 			PublicKey:         mn.PublicKey,
-			ShortName:         mn.ShortName,
+			Description:         mn.Description,
 			BuildTag:          mn.BuildTag,
 			TotalStaked:       currency.Coin(mn.TotalStaked),
 			Delete:            mn.Delete,
@@ -134,7 +134,7 @@ func TestMiners(t *testing.T) {
 			Port:              1999,
 			Path:              "path miner one",
 			PublicKey:         "pub key",
-			ShortName:         "mo",
+			Description:         "description",
 			BuildTag:          "build tag",
 			TotalStaked:       51,
 			Delete:            false,
@@ -197,7 +197,7 @@ func TestMiners(t *testing.T) {
 		Id: mn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",
-			"short_name": "new short name",
+			"description": "new description",
 		},
 	}
 	data, err = json.Marshal(&update)
@@ -215,7 +215,7 @@ func TestMiners(t *testing.T) {
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, miner.Path, update.Updates["path"])
-	require.EqualValues(t, miner.ShortName, update.Updates["short_name"])
+	require.EqualValues(t, miner.Description, update.Updates["description"])
 
 	// Miner - Delete Event
 	deleteEvent := Event{
@@ -334,7 +334,7 @@ func TestGetMinerLocations(t *testing.T) {
 
 func createMiners(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		m := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
+		m := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", Description: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
 		err := eventDb.addOrOverwriteMiner(m)
 		assert.NoError(t, err, "inserting miners failed")
 	}
@@ -350,7 +350,7 @@ func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 
 func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 	for i := offset; i < offset+limit; i++ {
-		want := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
+		want := Miner{MinerID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i), N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", Description: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: (i%2 == 0)}
 		want.CreatedAt = miners[i].CreatedAt
 		want.ID = miners[i].ID
 		want.UpdatedAt = miners[i].UpdatedAt
@@ -383,9 +383,9 @@ func (edb *EventDb) GetMinerPointer(id string) (*Miner, error) {
 }
 
 func ReturnValue() Miner {
-	return Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true}
+	return Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", Description: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true}
 }
 
 func ReturnPointer() *Miner {
-	return &Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", ShortName: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true}
+	return &Miner{MinerID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", N2NHost: "198.18.0.73", Host: "198.18.0.73", Port: 7073, PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12", Description: "localhost.m2", BuildTag: "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820", Delete: false, DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8", ServiceCharge: 0.1, NumberOfDelegates: 10, MinStake: 0, MaxStake: 1000000000000, LastHealthCheck: 1644881505, Rewards: 9725520000000, Active: true}
 }
