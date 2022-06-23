@@ -45,14 +45,28 @@ type writePoolConfig struct {
 }
 
 type blockReward struct {
-	BlockReward             currency.Coin `json:"block_reward"`
-	BlockRewardChangePeriod int64         `json:"block_reward_change_period"`
-	BlockRewardChangeRatio  float64       `json:"block_reward_change_ratio"`
-	QualifyingStake         currency.Coin `json:"qualifying_stake"`
-	SharderWeight           float64       `json:"sharder_weight"`
-	MinerWeight             float64       `json:"miner_weight"`
-	BlobberWeight           float64       `json:"blobber_weight"`
-	TriggerPeriod           int64         `json:"trigger_period"`
+	BlockReward             currency.Coin    `json:"block_reward"`
+	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
+	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
+	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
+	SharderWeight           float64          `json:"sharder_weight"`
+	MinerWeight             float64          `json:"miner_weight"`
+	BlobberWeight           float64          `json:"blobber_weight"`
+	TriggerPeriod           int64            `json:"trigger_period"`
+	Gamma                   blockRewardGamma `json:"gamma"`
+	Zeta                    blockRewardZeta  `json:"zeta"`
+}
+
+type blockRewardGamma struct {
+	Alpha float64 `json:"alpha"`
+	A     float64 `json:"a"`
+	B     float64 `json:"b"`
+}
+
+type blockRewardZeta struct {
+	I  float64 `json:"i"`
+	K  float64 `json:"k"`
+	Mu float64 `json:"mu"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
@@ -293,6 +307,26 @@ func (sc *Config) validate() (err error) {
 	if len(sc.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
+
+	if sc.BlockReward.Gamma.A <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.a <= 0: %v", sc.BlockReward.Gamma.A)
+	}
+	if sc.BlockReward.Gamma.B <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.b <= 0: %v", sc.BlockReward.Gamma.B)
+	}
+	if sc.BlockReward.Gamma.Alpha <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.alpha <= 0: %v", sc.BlockReward.Gamma.Alpha)
+	}
+	if sc.BlockReward.Zeta.Mu <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.mu <= 0: %v", sc.BlockReward.Zeta.Mu)
+	}
+	if sc.BlockReward.Zeta.I <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.i <= 0: %v", sc.BlockReward.Zeta.I)
+	}
+	if sc.BlockReward.Zeta.K <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.k <=0: %v", sc.BlockReward.Zeta.K)
+	}
+
 	return
 }
 
@@ -437,13 +471,19 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
-
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
+	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
+	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
+	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")
+	conf.BlockReward.Zeta.I = scc.GetFloat64(pfx + "block_reward.zeta.i")
+	conf.BlockReward.Zeta.K = scc.GetFloat64(pfx + "block_reward.zeta.k")
+	conf.BlockReward.Zeta.Mu = scc.GetFloat64(pfx + "block_reward.zeta.mu")
+
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
