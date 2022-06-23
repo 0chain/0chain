@@ -1,8 +1,8 @@
 enable:
-  - "attack round transfer"
+  #- "attack round transfer"
   - "resend past messages"
-  - "restart"
-  - "attack fetching"
+  #- "restart"
+  #- "attack fetching"
 sets:
   - name: "attack round transfer"
     tests:
@@ -17,7 +17,7 @@ sets:
   - name: "resend past messages"
     tests:
       - "resend proposed block"
-      - "resend notarisation"
+      #- "resend notarisation"
   - name: "restart"
     tests:
       - "bad timeout VRF share"
@@ -181,13 +181,13 @@ tests:
       - configure_resend_proposed_block_test_case:
           test_report:
             round: 50
-            by_generator: true
-            by_node_with_type_rank: 1
+            by_generator: false
+            by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 70    
       - make_test_case_check:
-          wait_time: 5m
+          wait_time: 1m
       - save_logs: { }
 
   - name: "resend notarisation"
