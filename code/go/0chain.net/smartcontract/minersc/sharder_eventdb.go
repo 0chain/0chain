@@ -54,7 +54,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 	}
 
 }
-
+//
 func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 	return event.Sharder{
