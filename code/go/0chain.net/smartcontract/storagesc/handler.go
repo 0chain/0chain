@@ -363,7 +363,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 
 	if sa.DataShards <= 0 || sa.ParityShards <= 0 || numberOfBlobbers <= 0 {
 		return nil, common.NewErrorf("allocation_creation_failed",
-			"invalid data shards:%v or data parity:%v", sa.DataShards, sa.ParityShards)
+			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
