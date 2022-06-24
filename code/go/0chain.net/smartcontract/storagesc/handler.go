@@ -312,7 +312,9 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //  200:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	q := r.URL.Query()
+
+	limit, err := getOffsetLimitOrderParam(q)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -325,7 +327,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	allocData := r.URL.Query().Get("allocation_data")
+	allocData := q.Get("allocation_data")
 	var request newAllocationRequest
 	if err := request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
@@ -357,6 +359,11 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
+	}
+
+	if sa.DataShards <= 0 || sa.ParityShards <= 0 || numberOfBlobbers <= 0 {
+		return nil, common.NewErrorf("allocation_creation_failed",
+			"invalid data shards:%v or data parity:%v", sa.DataShards, sa.ParityShards)
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
