@@ -360,7 +360,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
-	if sa.DataShards <= 0 || sa.ParityShards <= 0 || numberOfBlobbers <= 0 {
+	if sa.DataShards <= 0 || sa.ParityShards < 0 {
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
 	}
