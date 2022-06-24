@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/core/datastore"
@@ -453,6 +455,9 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
+			Provider: provider.Provider{
+				LastHealthCheck: balances.GetTransaction().CreationDate,
+			},
 			ID:      id,
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
@@ -462,7 +467,6 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
-			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
@@ -654,28 +658,7 @@ func GetMockValidatorStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
-	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
-		bId := getMockValidatorId(i)
-		sp := &stakePool{
-			StakePool: stakepool.StakePool{
-				Pools:    make(map[string]*stakepool.DelegatePool),
-				Reward:   0,
-				Settings: getMockStakePoolSettings(bId),
-			},
-		}
-		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
-			id := getMockValidatorStakePoolId(i, j)
-			sp.Pools[id] = &stakepool.DelegatePool{}
-			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-			err := sp.save(sscId, getMockValidatorId(i), balances)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
+	// todo Implement once we have separated blobber and validator stake pools
 }
 
 func SaveMockStakePools(
@@ -807,10 +790,6 @@ func getMockBlobberStakePoolId(blobber, stake int) string {
 	return encryption.Hash(getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
 }
 
-func getMockValidatorStakePoolId(blobber, stake int) string {
-	return encryption.Hash(getMockValidatorId(blobber) + "pool" + strconv.Itoa(stake))
-}
-
 func getMockBlobberId(index int) string {
 	return encryption.Hash("mockBlobber_" + strconv.Itoa(index))
 }
@@ -820,7 +799,7 @@ func getMockBlobberUrl(index int) string {
 }
 
 func getMockValidatorId(index int) string {
-	return encryption.Hash("mockValidator_" + strconv.Itoa(index))
+	return getMockBlobberId(index)
 }
 
 func getMockValidatorUrl(index int) string {
@@ -905,6 +884,7 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
+	conf.HealthCheckPeriod = time.Hour * 1
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward = currency.Coin(viper.GetFloat64(sc.StorageBlockReward) * 1e10)
 	conf.BlockReward.BlockRewardChangePeriod = viper.GetInt64(sc.StorageBlockRewardChangePeriod)

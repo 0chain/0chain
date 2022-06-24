@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/partitions"
@@ -69,10 +71,12 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: common.Timestamp(now.Unix()),
+			ID:       mockBlobberId + strconv.Itoa(index),
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
+			Provider: provider.Provider{
+				LastHealthCheck: common.Timestamp(now.Unix()),
+			},
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -342,7 +346,9 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
-				LastHealthCheck: now,
+				Provider: provider.Provider{
+					LastHealthCheck: now,
+				},
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 			require.NoError(t, err)
@@ -518,7 +524,9 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(blobbers, addID, removeID, sc, now, balances)
+			_, err := sa.changeBlobbers(blobbers, addID, removeID, sc, now, &Config{
+				HealthCheckPeriod: time.Hour,
+			}, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -576,10 +584,12 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
+			ID:       mockBlobberId + strconv.Itoa(index),
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -1158,9 +1168,11 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.1,
 				MaxOfferDuration: 200 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Allocated:       5 * GB,  //  5 GB
-			LastHealthCheck: 0,
+			Capacity:  20 * GB, // 20 GB
+			Allocated: 5 * GB,  //  5 GB
+			Provider: provider.Provider{
+				LastHealthCheck: 0,
+			},
 		},
 		&StorageNode{
 			ID:      "b2",
@@ -1171,9 +1183,11 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.05,
 				MaxOfferDuration: 250 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Allocated:       10 * GB, // 10 GB
-			LastHealthCheck: 0,
+			Capacity:  20 * GB, // 20 GB
+			Allocated: 10 * GB, // 10 GB
+			Provider: provider.Provider{
+				LastHealthCheck: 0,
+			},
 		},
 	}
 	return

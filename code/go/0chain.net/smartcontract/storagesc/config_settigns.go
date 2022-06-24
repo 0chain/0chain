@@ -123,6 +123,7 @@ const (
 	CostStakePoolPayInterests
 	CostCommitSettingsChanges
 	CostCollectReward
+	HealthCheckPeriod
 )
 
 var (
@@ -220,6 +221,7 @@ var (
 		"cost.stake_pool_pay_interests",
 		"cost.commit_settings_changes",
 		"cost.collect_reward",
+		"health_check_period",
 	}
 
 	NumberOfSettings = len(SettingName)
@@ -320,6 +322,7 @@ var (
 		"cost.stake_pool_pay_interests":    {CostStakePoolPayInterests, smartcontract.Cost},
 		"cost.commit_settings_changes":     {CostCommitSettingsChanges, smartcontract.Cost},
 		"cost.collect_reward":              {CostCollectReward, smartcontract.Cost},
+		"health_check_period":              {HealthCheckPeriod, smartcontract.Duration},
 	}
 )
 
@@ -523,6 +526,8 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
 		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
+	case HealthCheckPeriod:
+		conf.HealthCheckPeriod = change
 	default:
 		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
@@ -805,7 +810,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitSettingsChanges], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostCollectReward:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCollectReward], fmt.Sprintf("%s.", SettingName[Cost])))]
-
+	case HealthCheckPeriod:
+		return conf.HealthCheckPeriod
 	default:
 		panic("Setting not implemented")
 	}

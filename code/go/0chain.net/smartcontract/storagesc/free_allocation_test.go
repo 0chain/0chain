@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -252,7 +254,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
@@ -617,7 +621,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
+			Provider: provider.Provider{
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}

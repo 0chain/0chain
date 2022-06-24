@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"0chain.net/core/encryption"
-
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/chaincore/currency"
@@ -185,6 +184,20 @@ func BenchmarkRestTests(
 					"blobber_id": getMockBlobberId(0),
 				},
 				Endpoint: srh.getBlobber,
+			},
+			{
+				FuncName: "blobber-status",
+				Params: map[string]string{
+					"id": getMockBlobberId(0),
+				},
+				Endpoint: srh.getBlobberStatus,
+			},
+			{
+				FuncName: "validator-status",
+				Params: map[string]string{
+					"id": getMockValidatorId(0),
+				},
+				Endpoint: srh.getValidatorStatus,
 			},
 			{
 				FuncName: "getReadPoolStat",

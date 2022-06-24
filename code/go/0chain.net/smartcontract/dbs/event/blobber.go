@@ -20,6 +20,11 @@ type Blobber struct {
 	BlobberID string `json:"id" gorm:"uniqueIndex"`
 	BaseURL   string `json:"url" gorm:"uniqueIndex"`
 
+	//provider
+	LastHealthCheck int64 `json:"last_health_check"`
+	IsKilled        bool  `json:"is_killed"`
+	IsShutDown      bool  `json:"is_shut_down"`
+
 	// geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -30,11 +35,10 @@ type Blobber struct {
 	MinLockDemand    float64       `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity        int64 `json:"capacity"`  // total blobber capacity
-	Allocated       int64 `json:"allocated"` // allocated capacity
-	Used            int64 `json:"used"`      // total of files saved on blobber
-	LastHealthCheck int64 `json:"last_health_check"`
-	SavedData       int64 `json:"saved_data"`
+	Capacity  int64 `json:"capacity"`  // total blobber capacity
+	Allocated int64 `json:"allocated"` // allocated capacity
+	Used      int64 `json:"used"`      // total of files saved on blobber
+	SavedData int64 `json:"saved_data"`
 
 	// stake_pool_settings
 	DelegateWallet string        `json:"delegate_wallet"`

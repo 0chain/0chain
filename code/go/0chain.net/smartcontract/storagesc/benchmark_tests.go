@@ -475,6 +475,58 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
+		{
+			name:     "storage.shut_down_blobber",
+			endpoint: ssc.shutDownBlobber,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: data.Now,
+				ClientID:     getMockBlobberId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
+			name:     "storage.shut_down_validator",
+			endpoint: ssc.shutDownValidator,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: data.Now,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
+			name:     "storage.kill_blobber",
+			endpoint: ssc.killBlobber,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: data.Now,
+				ClientID:     getMockBlobberId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
+			name:     "storage.kill_validator",
+			endpoint: ssc.killValidator,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: data.Now,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
 		// add_curator
 		{
 			name:     "storage.curator_transfer_allocation",

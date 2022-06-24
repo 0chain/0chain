@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
@@ -216,10 +218,15 @@ func (sc *StorageChallenge) Save(state chainstate.StateContextI, scAddress strin
 }
 
 type ValidationNode struct {
+	provider.Provider
 	ID                string             `json:"id"`
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+}
+
+func (sn *ValidationNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {
+	return sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
 }
 
 // validate the validator configurations
@@ -354,6 +361,7 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
+	provider.Provider
 	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
@@ -362,7 +370,6 @@ type StorageNode struct {
 	Allocated               int64                  `json:"allocated"`     // allocated capacity
 	BytesWritten            int64                  `json:"bytes_written"` // in bytes
 	DataRead                float64                `json:"data_read"`     // in GB
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -371,6 +378,30 @@ type StorageNode struct {
 	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
 	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
 	Information       Info                    `json:"info"`
+}
+
+func (sn *StorageNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {
+	status, reason := sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
+	if status == provider.Killed || status == provider.ShutDown {
+		return status, reason
+	}
+	if sn.Terms.WritePrice > conf.MaxWritePrice {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\twrite price %v, max write prive %v",
+			sn.Terms.WritePrice, conf.MaxWritePrice)
+	}
+	if sn.Terms.ReadPrice > conf.MaxReadPrice {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\tread price %v, max read prive %v",
+			sn.Terms.ReadPrice, conf.MaxReadPrice)
+	}
+	if sn.Capacity < conf.MinBlobberCapacity {
+		status = provider.Inactive
+		reason += fmt.Sprintf("\tcapacity %v, lsess than minimum blobber capcaity %v",
+			sn.Capacity, conf.MinBlobberCapacity)
+	}
+
+	return status, reason
 }
 
 // validate the blobber configurations
@@ -716,9 +747,14 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	blobber *StorageNode,
 	sp *stakePool,
 	now common.Timestamp,
+	conf *Config,
 ) error {
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+
+	if status, reason := blobber.Status(now, conf); status != provider.Active {
+		return fmt.Errorf("blobber status %s is not active: %v", status.String(), reason)
+	}
 
 	// filter by max offer duration
 	if blobber.Terms.MaxOfferDuration < duration {
@@ -819,6 +855,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	addId, removeId string,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
+	conf *Config,
 	balances chainstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
@@ -852,7 +889,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
-	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
+	if err := sa.validateAllocationBlobber(addedBlobber, sp, now, conf); err != nil {
 		return nil, err
 	}
 
@@ -1066,16 +1103,20 @@ List:
 }
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp, balances chainstate.StateContextI) (
-	[]*blobberWithPool, []string) {
+func (sa *StorageAllocation) validateEachBlobber(
+	ssc *StorageSmartContract,
+	blobbers []*blobberWithPool,
+	creationDate common.Timestamp,
+	conf *Config,
+	balances chainstate.StateContextI,
+) ([]*blobberWithPool, []string) {
 
 	var (
 		errors   = make([]string, 0, len(blobbers))
 		filtered = make([]*blobberWithPool, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
+		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate, conf)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errors = append(errors, err.Error())

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -70,7 +72,9 @@ func TestNewAllocation(t *testing.T) {
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
-		LastHealthCheck: now - blobberHealthTime,
+		Provider: provider.Provider{
+			LastHealthCheck: now - blobberHealthTime,
+		},
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = int64(scYaml.MaxStake)
@@ -134,7 +138,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
-		LastHealthCheck: now - blobberHealthTime,
+		Provider: provider.Provider{
+			LastHealthCheck: now - blobberHealthTime,
+		},
 	}
 	var allocation = StorageAllocation{
 		DataShards:    1,
@@ -249,7 +255,9 @@ func TestFinalizeAllocation(t *testing.T) {
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
-		LastHealthCheck: now - blobberHealthTime,
+		Provider: provider.Provider{
+			LastHealthCheck: now - blobberHealthTime,
+		},
 	}
 	var allocation = StorageAllocation{
 		DataShards:    5,

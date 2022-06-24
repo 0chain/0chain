@@ -18,6 +18,11 @@ type Validator struct {
 	Stake       int64  `json:"stake" gorm:"index:idx_vstake"`
 	PublicKey   string `json:"public_key" gorm:"public_key"`
 
+	//provider
+	LastHealthCheck int64 `json:"last_health_check"`
+	IsKilled        bool  `json:"is_killed,omitempty"`
+	IsShutDown      bool  `json:"is_shut_down,omitempty"`
+
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
 	MinStake       currency.Coin `json:"min_stake"`

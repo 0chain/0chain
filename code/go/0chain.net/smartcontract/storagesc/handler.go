@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
@@ -87,14 +89,111 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
+		rest.MakeEndpoint(storage+"/blobber-status", srh.getBlobberStatus),
+		rest.MakeEndpoint(storage+"/validator-status", srh.getValidatorStatus),
 	}
+}
+
+func validatorTableToValidatorNode(val event.Validator) ValidationNode {
+	return ValidationNode{
+		Provider: provider.Provider{
+			LastHealthCheck: common.Timestamp(val.LastHealthCheck),
+			IsShutDown:      val.IsShutDown,
+			IsKilled:        val.IsKilled,
+		},
+		ID:      val.ValidatorID,
+		BaseURL: val.BaseUrl,
+		StakePoolSettings: stakepool.Settings{
+			DelegateWallet:     val.DelegateWallet,
+			MinStake:           val.MinStake,
+			MaxStake:           val.MaxStake,
+			MaxNumDelegates:    val.NumDelegates,
+			ServiceChargeRatio: val.ServiceCharge,
+		},
+	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validator-status validator-status
+// Gets the current status of a validator. swagger:enum Status
+//
+// parameters:
+//    + name: id
+//      description: validator id
+//      in: query
+//      type: string
+//
+// responses:
+//  200: StatusInfo
+//  400:
+func (srh *StorageRestHandler) getValidatorStatus(w http.ResponseWriter, r *http.Request) {
+	var id = r.URL.Query().Get("id")
+	sctx := srh.GetQueryStateContext()
+	edb := sctx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	validator, err := edb.GetValidatorByValidatorID(id)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+
+	sn := validatorTableToValidatorNode(validator)
+	var status provider.StatusInfo
+	var conf *Config
+	if conf, err = getConfig(sctx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
+	status.Status, status.Reason = sn.Status(sctx.Now(), conf)
+
+	common.Respond(w, r, status, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-status blobber-status
+// Gets the current status of a blobber. swagger:enum Status
+//
+// parameters:
+//    + name: id
+//      description: blobber id
+//      in: query
+//      type: string
+//
+// responses:
+//  200: StatusInfo
+//  400:
+func (srh *StorageRestHandler) getBlobberStatus(w http.ResponseWriter, r *http.Request) {
+	var id = r.URL.Query().Get("id")
+	sctx := srh.GetQueryStateContext()
+	edb := sctx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobber, err := edb.GetBlobber(id)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+
+	sn := blobberTableToStorageNode(*blobber)
+	var status provider.StatusInfo
+	var conf *Config
+	if conf, err = getConfig(sctx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
+	status.Status, status.Reason = sn.Status(sctx.Now(), conf)
+
+	common.Respond(w, r, status, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
 // Gets the total blobber capacity across all blobbers. Note that this is not staked capacity.
 //
 // responses:
-//  200: Int64Map
+//  200: StatusInfo
 //  400:
 func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
@@ -1707,6 +1806,9 @@ type storageNodeResponse struct {
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: StorageNode{
+			Provider: provider.Provider{
+				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			},
 			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
@@ -1719,9 +1821,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				MinLockDemand:    blobber.MinLockDemand,
 				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
 			},
-			Capacity:        blobber.Capacity,
-			Allocated:       blobber.Allocated,
-			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			Capacity:  blobber.Capacity,
+			Allocated: blobber.Allocated,
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     blobber.DelegateWallet,
 				MinStake:           blobber.MinStake,
