@@ -17,8 +17,5 @@ done
 docker $cmd -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 
 #Set this to a value higher than the current number of linter errors. We should lower this number over time
-docker run zchain_unit_test bash -c '
-    apk add curl
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.44.2
-    (cd 0chain.net; golangci-lint run --build-tags bn256 --timeout 10m0s --skip-files '_test.go' --out-format tab)
+docker run zchain_unit_test bash -c '(cd 0chain.net; golangci-lint run --build-tags bn256 --timeout 10m0s --skip-files '_test.go' --out-format tab)
 '
