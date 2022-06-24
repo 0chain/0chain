@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine3.12 as zdns_build
+FROM golang:1.18.1-alpine3.15 as zdns_build
 
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl grep
 
