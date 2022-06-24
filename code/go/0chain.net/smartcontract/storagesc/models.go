@@ -920,6 +920,8 @@ func removeAllocationFromBlobber(
 		return fmt.Errorf("could not update blobber partitions locations node: %v", err)
 	}
 
+	allocPartLoc = nil
+
 	return nil
 }
 
