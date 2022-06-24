@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine as zdns_build
+FROM golang:1.18-alpine3.15 as zdns_build
 
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl grep
 
@@ -32,7 +32,7 @@ ADD ./code/go/0dns.io $SRC_DIR/go/0dns.io
 RUN go build -v -tags "bn256 development" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
 
 # Copy the build artifact into a minimal runtime image:
-FROM golang:1.18-alpine
+FROM alpine:3.15
 ENV APP_DIR=/0dns
 WORKDIR $APP_DIR
 RUN apk add gmp gmp-dev openssl-dev
