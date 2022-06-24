@@ -40,17 +40,19 @@ const (
 func TestNewAllocation(t *testing.T) {
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
+	var blobberYaml = mockBlobberYaml{
+		readPrice:               0.01,
+		writePrice:              0.10,
+		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
+	}
 	scYaml = &Config{
 		MinAllocSize:               1027,
 		MinAllocDuration:           5 * time.Minute,
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		MaxStake:                   zcnToBalance(100.0),
 		MaxBlobbersPerAllocation:   10,
-	}
-	var blobberYaml = mockBlobberYaml{
-		readPrice:               0.01,
-		writePrice:              0.10,
-		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
+		MaxReadPrice:               zcnToBalance(blobberYaml.readPrice) + 1,
+		MaxWritePrice:              zcnToBalance(blobberYaml.writePrice) + 1,
 	}
 
 	var request = newAllocationRequest{
@@ -60,8 +62,8 @@ func TestNewAllocation(t *testing.T) {
 		DataShards:      3,
 		ParityShards:    5,
 		Expiration:      common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
-		ReadPriceRange:  PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
-		WritePriceRange: PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
+		ReadPriceRange:  PriceRange{0, scYaml.MaxReadPrice},
+		WritePriceRange: PriceRange{0, scYaml.MaxWritePrice},
 		Blobbers: []string{"0", "1", "2", "3",
 			"4", "5", "6", "7"},
 	}
