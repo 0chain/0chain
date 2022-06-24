@@ -890,6 +890,8 @@ func removeAllocationFromBlobber(
 	if err := blobAllocsParts.Save(balances); err != nil {
 		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
 	}
+	// nullifying the blobber alloc challenge pasrtition location
+	allocPartLoc = nil
 
 	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {
@@ -919,8 +921,6 @@ func removeAllocationFromBlobber(
 	if err := blobPartsLocs.save(balances, ssc.ID); err != nil {
 		return fmt.Errorf("could not update blobber partitions locations node: %v", err)
 	}
-
-	allocPartLoc = nil
 
 	return nil
 }
