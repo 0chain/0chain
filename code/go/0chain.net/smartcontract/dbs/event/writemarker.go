@@ -23,7 +23,7 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum,priority:1;index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`
@@ -51,6 +51,14 @@ func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, all
 	return total, edb.Store.Get().Model(&WriteMarker{}).
 		Select("sum(size)").
 		Where(&WriteMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
+		Find(&total).Error
+}
+
+func (edb *EventDb) GetAllocationWrittenSizeInBlocks(startBlockNum, endBlockNum int64) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).
+		Select("sum(size)").
+		Where("block_number > ? AND block_number < ?", startBlockNum, endBlockNum).
 		Find(&total).Error
 }
 
