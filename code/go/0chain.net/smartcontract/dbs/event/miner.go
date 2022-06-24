@@ -76,7 +76,7 @@ type MinerQuery struct {
 	Port              null.Int
 	Path              null.String
 	PublicKey         null.String
-	ShortName         null.String
+	Description         null.String
 	BuildTag          null.String
 	TotalStaked       currency.Coin
 	Delete            null.Bool

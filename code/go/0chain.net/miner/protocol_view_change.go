@@ -374,7 +374,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		if err := n.SetPublicKey(v.PublicKey); err != nil {
 			return err
 		}
-		n.Description = v.ShortName
+		n.Description = v.Description
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
 		n.SetStatus(node.NodeStatusActive)

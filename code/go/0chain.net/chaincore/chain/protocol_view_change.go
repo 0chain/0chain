@@ -242,7 +242,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Port = selfNode.Port
 	mn.Path = selfNode.Path
 	mn.PublicKey = selfNode.PublicKey
-	mn.ShortName = selfNode.Description
+	mn.Description = selfNode.Description
 	mn.BuildTag = selfNode.Info.BuildTag
 
 	// miner SC configurations
@@ -295,7 +295,7 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	mn.Host = selfNode.Host
 	mn.Port = selfNode.Port
 	mn.PublicKey = selfNode.PublicKey
-	mn.ShortName = selfNode.Description
+	mn.Description = selfNode.Description
 	mn.BuildTag = selfNode.Info.BuildTag
 
 	scData := &httpclientutil.SmartContractTxnData{}
