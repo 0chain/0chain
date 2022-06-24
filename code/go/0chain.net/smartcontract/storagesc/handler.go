@@ -384,6 +384,8 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	}, limit, balances.Now())
+	logging.Logger.Debug("blobberIDs", zap.Strings("ids", blobberIDs))
+
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -1887,6 +1889,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
 // Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity).
+//
+// parameters:
 //    + name: offset
 //      description: offset
 //      in: query
