@@ -234,6 +234,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 
 	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
+		logging.Logger.Debug("get_assigner", zap.String("not found", marker.Assigner))
 		return "", common.NewErrorf("free_allocation_failed",
 			"error getting assigner details: %v", err)
 	}
