@@ -1,5 +1,5 @@
 # docker.local
-FROM golang:1.18.1-alpine3.15
+FROM golang:1.18.3-alpine3.16
 RUN apk add bash
 RUN apk add ca-certificates
 RUN apk add libbz2 lz4-libs snappy zstd-libs  # For RocksDB
