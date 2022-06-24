@@ -55,6 +55,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
+		rest.MakeEndpoint(storage+"/transaction-hashes", srh.getTransactionHashesByFilter),
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
 		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
 		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
@@ -76,6 +77,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
 		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
+		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", srh.getWrittenAmountPerPeriod),
 		rest.MakeEndpoint(storage+"/alloc_read_size", srh.getReadAmount),
 		rest.MakeEndpoint(storage+"/alloc_write_marker_count", srh.getWriteMarkerCount),
 		rest.MakeEndpoint(storage+"/collected_reward", srh.getCollectedReward),
@@ -548,6 +550,65 @@ func (srh *StorageRestHandler) getWrittenAmount(w http.ResponseWriter, r *http.R
 		return
 	}
 	total, err := edb.GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+
+	common.Respond(w, r, map[string]int64{
+		"total": total,
+	}, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod allocWrittenSizePerPeriod
+// Total amount of data added during given blocks
+//
+// parameters:
+//    + name: block-start
+//      description:start block number
+//      required: true
+//      in: query
+//      type: string
+//    + name: block-end
+//      description:end block number
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, r *http.Request) {
+	startBlockNumberString := r.URL.Query().Get("block-start")
+	endBlockNumberString := r.URL.Query().Get("block-end")
+
+	if startBlockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is empty"))
+		return
+	}
+	if endBlockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block-end is empty"))
+		return
+	}
+
+	startBlockNumber, err := strconv.Atoi(startBlockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is not valid"))
+		return
+	}
+	endBlockNumber, err := strconv.Atoi(endBlockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block-end is not valid"))
+		return
+	}
+
+	if startBlockNumber > endBlockNumber {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is greater than block-end"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	total, err := edb.GetAllocationWrittenSizeInBlocks(int64(startBlockNumber), int64(endBlockNumber))
 
 	common.Respond(w, r, map[string]int64{
 		"total": total,
@@ -1564,6 +1625,90 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
 
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
+// Gets filtered list of transaction hashes from file information
+//
+// parameters:
+//    + name: look-up-hash
+//      description: restrict to transactions by the specific look up hash on write marker
+//      in: query
+//      type: string
+//    + name: name
+//      description: restrict to transactions by the specific file name on write marker
+//      in: query
+//      type: string
+//    + name: content-hash
+//      description: restrict to transactions by the specific content hash on write marker
+//      in: query
+//      type: string
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
+//
+// responses:
+//  200: stringArray
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWriter, r *http.Request) {
+	var (
+		lookUpHash  = r.URL.Query().Get("look-up-hash")
+		name        = r.URL.Query().Get("name")
+		contentHash = r.URL.Query().Get("content-hash")
+	)
+
+	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+
+	if lookUpHash != "" {
+		rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{LookupHash: lookUpHash}, "transaction_id", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if contentHash != "" {
+		rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: contentHash}, "transaction_id", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if name != "" {
+		rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: name}, "transaction_id", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction

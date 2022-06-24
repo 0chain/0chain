@@ -185,6 +185,12 @@ const (
 	StorageBlockRewardMinerRatio      = SmartContract + StorageSc + BlockReward + "miner_ratio"
 	StorageBlockRewardSharderRatio    = SmartContract + StorageSc + BlockReward + "sharder_ratio"
 	StorageBlockRewardQualifyingStake = SmartContract + StorageSc + BlockReward + "qualifying_stake"
+	StorageBlockRewardGammaAlpha      = SmartContract + StorageSc + BlockReward + "gamma.alpha"
+	StorageBlockRewardGammaA          = SmartContract + StorageSc + BlockReward + "gamma.a"
+	StorageBlockRewardGammaB          = SmartContract + StorageSc + BlockReward + "gamma.b"
+	StorageBlockRewardZetaI           = SmartContract + StorageSc + BlockReward + "zeta.i"
+	StorageBlockRewardZetaK           = SmartContract + StorageSc + BlockReward + "zeta.k"
+	StorageBlockRewardZetaMu          = SmartContract + StorageSc + BlockReward + "zeta.mu"
 
 	VestingPoolOwner            = SmartContract + VestingSc + "owner_id"
 	VestingMinLock              = SmartContract + VestingSc + "min_lock"
