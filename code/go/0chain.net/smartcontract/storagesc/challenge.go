@@ -816,6 +816,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, err
 			}
 		}
+		err = alloc.Save(balances, sc.ID)
+		if err != nil {
+			return nil, common.NewErrorf("populate_challenge",
+				"error saving expired allocation: %v", err)
+		}
 	}
 
 	if !foundAllocation {
