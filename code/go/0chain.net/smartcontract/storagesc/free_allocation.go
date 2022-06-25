@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/chaincore/currency"
 
@@ -181,7 +179,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "error saving new assigner: %v", err)
 	}
-	logging.Logger.Debug("add_assigner", zap.String("added assigner with id", assigner.ClientId))
+
 	return "", nil
 }
 
@@ -234,7 +232,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 
 	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
-		logging.Logger.Debug("get_assigner", zap.String("not found", marker.Assigner))
 		return "", common.NewErrorf("free_allocation_failed",
 			"error getting assigner details: %v", err)
 	}
@@ -336,7 +333,6 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 
 	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
-		logging.Logger.Debug("get_assigner", zap.String("not found", marker.Assigner))
 		return "", common.NewErrorf("update_free_storage_request",
 			"error getting assigner details: %v", err)
 	}
