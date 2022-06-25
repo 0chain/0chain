@@ -381,7 +381,6 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	}, limit, balances.Now())
-	logging.Logger.Debug("blobberIDs", zap.Strings("ids", blobberIDs))
 
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
