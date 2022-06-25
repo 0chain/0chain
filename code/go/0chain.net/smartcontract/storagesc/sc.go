@@ -101,7 +101,8 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 
 	ssc.SmartContractExecutionStats["shut-down-blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "shut-down-blobber"), nil)
 	ssc.SmartContractExecutionStats["kill-blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "kill-blobber"), nil)
-	ssc.SmartContractExecutionStats["health-check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "health-check"), nil)
+	ssc.SmartContractExecutionStats["blobber_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "blobber_health_check"), nil)
+	ssc.SmartContractExecutionStats["validator-health-check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "validator-health-check"), nil)
 	ssc.SmartContractExecutionStats["shut-down-validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "shut-down-validator"), nil)
 	ssc.SmartContractExecutionStats["kill-validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "kill-validator"), nil)
 	// blobber statistic (not function calls)
@@ -232,16 +233,17 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.updateValidatorSettings(t, input, balances)
 	case "blobber_block_rewards":
 		err = sc.blobberBlockRewards(balances)
+	case "blobber_health_check":
+		resp, err = sc.blobberHealthCheck(t, input, balances)
 	case "shut-down-blobber":
 		_, err = sc.shutDownBlobber(t, input, balances)
 	case "kill-blobber":
 		_, err = sc.killBlobber(t, input, balances)
 
-	case "health-check":
-		resp, err = sc.healthCheck(t, input, balances)
-
 	case "add_validator":
 		resp, err = sc.addValidator(t, input, balances)
+	case "validator-health-check":
+		resp, err = sc.validatorHealthCheck(t, input, balances)
 	case "shut-down-validator":
 		_, err = sc.shutDownValidator(t, input, balances)
 	case "kill-validator":

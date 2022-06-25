@@ -435,6 +435,19 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
+			name:     "storage.validator-health-check",
+			endpoint: ssc.validatorHealthCheck,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: creationTime + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
 			name:     "storage.update_blobber_settings",
 			endpoint: ssc.updateBlobberSettings,
 			txn: &transaction.Transaction{
@@ -476,7 +489,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage.shut_down_blobber",
+			name:     "storage.shut-down-blobber",
 			endpoint: ssc.shutDownBlobber,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -489,7 +502,7 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
-			name:     "storage.shut_down_validator",
+			name:     "storage.shut-down-validator",
 			endpoint: ssc.shutDownValidator,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -502,7 +515,7 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
-			name:     "storage.kill_blobber",
+			name:     "storage.kill-blobber",
 			endpoint: ssc.killBlobber,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -515,7 +528,7 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
-			name:     "storage.kill_validator",
+			name:     "storage.kill-validator",
 			endpoint: ssc.killValidator,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -834,6 +847,12 @@ func BenchmarkTests(
 					"expose_mpt": "false",
 				},
 			}).Encode(),
+		},
+		{
+			name:     "storage.commit_settings_changes",
+			endpoint: ssc.commitSettingChanges,
+			txn:      &transaction.Transaction{},
+			input:    nil,
 		},
 		{
 			name: "storage.generate_challenge",

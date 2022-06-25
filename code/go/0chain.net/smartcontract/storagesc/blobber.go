@@ -279,34 +279,6 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 	})
 }
 
-func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
-	_ []byte, balances cstate.StateContextI,
-) (string, error) {
-	var (
-		blobber *StorageNode
-		err     error
-	)
-	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't get the blobber "+t.ClientID+": "+err.Error())
-	}
-
-	blobber.LastHealthCheck = t.CreationDate
-
-	err = emitUpdateBlobber(blobber, balances)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
-	}
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
-		blobber)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't save blobber: "+err.Error())
-	}
-
-	return string(blobber.Encode()), nil
-}
-
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
