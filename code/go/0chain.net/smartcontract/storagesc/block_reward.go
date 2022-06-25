@@ -34,19 +34,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		totalWeight float64
 	)
 
-	// TODO: move all the maths constants with right name once finalized to the sc.yaml
-	const (
-		// constants for gamma
-		alpha = 1
-		A     = 1
-		B     = 1
-
-		// constants for zeta
-		I  = 1
-		K  = 1
-		mu = 1
-	)
-
 	conf, err := ssc.getConfig(balances, true)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
@@ -131,8 +118,20 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		stake := float64(sp.stake())
 
-		gamma := maths.GetGamma(A, B, alpha, br.TotalData, br.DataRead)
-		zeta := maths.GetZeta(I, K, mu, float64(br.WritePrice), float64(br.ReadPrice))
+		gamma := maths.GetGamma(
+			conf.BlockReward.Gamma.A,
+			conf.BlockReward.Gamma.B,
+			conf.BlockReward.Gamma.Alpha,
+			br.TotalData,
+			br.DataRead,
+		)
+		zeta := maths.GetZeta(
+			conf.BlockReward.Zeta.I,
+			conf.BlockReward.Zeta.K,
+			conf.BlockReward.Zeta.Mu,
+			float64(br.WritePrice),
+			float64(br.ReadPrice),
+		)
 		qualifyingBlobberIds[i] = br.ID
 		totalQStake += stake
 		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges)
