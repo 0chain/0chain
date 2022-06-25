@@ -344,8 +344,8 @@ func TestCommitSettingChanges(t *testing.T) {
 					"writepool.min_lock_period": "2m",
 					"writepool.max_lock_period": "8760h",
 
-					"stakepool.min_lock": "10",
-
+					"stakepool.min_lock":             "10",
+					"health_check_period":            "1h",
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
 
@@ -511,7 +511,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.Zeta.K
 	case BlockRewardZetaMu:
 		return conf.BlockReward.Zeta.Mu
-
+	case HealthCheckPeriod:
+		return conf.HealthCheckPeriod
 	case ExposeMpt:
 		return conf.ExposeMpt
 	default:
