@@ -260,6 +260,7 @@ func TestChangeBlobbers(t *testing.T) {
 		*StorageSmartContract,
 		*StorageAllocation,
 		common.Timestamp,
+		*Config,
 		chainState.StateContextI) {
 		var (
 			blobbers             []*StorageNode
@@ -382,8 +383,14 @@ func TestChangeBlobbers(t *testing.T) {
 			_, err := balances.InsertTrieNode(stakePoolKey(sc.ID, arg.addBlobberID), &sp)
 			require.NoError(t, err)
 		}
-
-		return blobbers, arg.addBlobberID, arg.removeBlobberID, sc, alloc, now, balances
+		conf := &Config{
+			HealthCheckPeriod:          time.Hour,
+			MaxWritePrice:              10000000000,
+			MaxReadPrice:               1000000000,
+			MaxChallengeCompletionTime: time.Hour,
+			MinBlobberCapacity:         10,
+		}
+		return blobbers, arg.addBlobberID, arg.removeBlobberID, sc, alloc, now, conf, balances
 
 	}
 
@@ -523,10 +530,8 @@ func TestChangeBlobbers(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(blobbers, addID, removeID, sc, now, &Config{
-				HealthCheckPeriod: time.Hour,
-			}, balances)
+			blobbers, addID, removeID, sc, sa, now, conf, balances := setup(tt.args)
+			_, err := sa.changeBlobbers(blobbers, addID, removeID, sc, now, conf, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -1667,6 +1672,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MinAllocSize = 20 * GB
 	conf.MaxBlobbersPerAllocation = 4
 	conf.TimeUnit = time.Hour * 1
+	conf.MaxReadPrice = 40
+	conf.MaxWritePrice = 400
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
