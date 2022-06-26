@@ -259,45 +259,7 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 	default:
 		panic(ErrStrategyNotSupported(strategy))
 	case RoundRobin:
-		f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
-			cTier.Mu.Lock()
-
-			defer cTier.Mu.Unlock()
-
-			var selectedCloudStorage *minioClient
-			var selectedIndex int
-
-			if prevInd < 0 {
-				prevInd = -1
-			}
-
-			for i := prevInd + 1; i != prevInd; i++ {
-				if len(coldStorageProviders) == 0 {
-					break
-				}
-
-				if i >= len(coldStorageProviders) {
-					i = len(coldStorageProviders) - i
-				}
-				if i < 0 {
-					i = 0
-				}
-
-				selectedCloudStorage = coldStorageProviders[i].(*minioClient)
-				prevInd = i
-			}
-
-			if selectedCloudStorage == nil {
-				selectedColdStorageChan <- selectedColdStorage{
-					err: ErrUnableToSelectColdStorage,
-				}
-			} else {
-				selectedColdStorageChan <- selectedColdStorage{
-					coldStorage: selectedCloudStorage,
-					prevInd:     selectedIndex,
-				}
-			}
-		}
+		f = getColdRBStrategyFunc(cTier, selectedColdStorageChan)
 	}
 
 	cTier.DeleteLocal = cViper.GetBool("delete_local")
@@ -420,5 +382,54 @@ func startCloudStorages(cloudStorages []map[string]interface{},
 	wg.Wait()
 	if len(cTier.ColdStorages) < len(cloudStorages)/2 {
 		panic("At least 50%% cloud storages must be able to store blocks")
+	}
+}
+
+func getColdRBStrategyFunc(
+	cTier *coldTier,
+	ch chan selectedColdStorage,
+) func(
+	coldStorageProviders []coldStorageProvider,
+	prevInd int,
+) {
+
+	return func(coldStorageProviders []coldStorageProvider, prevInd int) {
+		cTier.Mu.Lock()
+
+		defer cTier.Mu.Unlock()
+
+		var selectedCloudStorage coldStorageProvider
+		var selectedIndex int
+
+		if prevInd <= 0 {
+			prevInd = -1
+		}
+
+		for i := prevInd + 1; i != prevInd; i++ {
+			if len(coldStorageProviders) == 0 {
+				break
+			}
+
+			if i >= len(coldStorageProviders) {
+				i = len(coldStorageProviders) - i
+			}
+			if i < 0 {
+				i = 0
+			}
+
+			selectedCloudStorage = coldStorageProviders[i]
+			prevInd = i
+		}
+
+		if selectedCloudStorage == nil {
+			ch <- selectedColdStorage{
+				err: ErrUnableToSelectColdStorage,
+			}
+		} else {
+			ch <- selectedColdStorage{
+				coldStorage: selectedCloudStorage,
+				prevInd:     selectedIndex,
+			}
+		}
 	}
 }
