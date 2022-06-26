@@ -1,12 +1,13 @@
 package miner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"testing"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -14,11 +15,13 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/go-redis/redis"
+	"github.com/gomodule/redigo/redis"
+	// "github.com/go-redis/redis"
 	// "github.com/stretchr/testify/require"
 )
 
@@ -311,6 +314,48 @@ func setupTempRocksDBDir() func() {
 	}
 }
 
+func setupClientEntity() {
+	em := datastore.EntityMetadataImpl{
+		Name:     "client",
+		DB:       "clientdb",
+		Store:    memorystore.GetStorageProvider(),
+		Provider: client.Provider,
+	}
+	// clientEntityMetadata = &em
+	datastore.RegisterEntityMetadata("client", &em)
+	memorystore.AddPool(em.DB, memorystore.DefaultPool)
+
+}
+
+func initDefaultPool() error {
+	mr, err := miniredis.Run()
+	if err != nil {
+		return err
+	}
+
+	memorystore.DefaultPool = &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", mr.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	}
+
+	return nil
+}
+
+func setupSelfNodeKeys() { //nolint
+	keys := "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0\naa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
+	breader := bytes.NewBuffer([]byte(keys))
+	sigScheme := encryption.NewED25519Scheme()
+	sigScheme.ReadKeys(breader)
+	node.Self.SetSignatureScheme(sigScheme)
+}
+
 func TestChain_deletingTxns(t *testing.T) {
 
 	txs1 := []*transaction.Transaction{
@@ -343,24 +388,51 @@ func TestChain_deletingTxns(t *testing.T) {
 		},
 	}
 
-	mr, err := miniredis.Run()
+	// memorystore.AddPool("txndb", memorystore.DefaultPool)
+	err := initDefaultPool()
 	if err != nil {
-		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		println(err.Error())
 	}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: mr.Addr(),
-	})
-	redisClient.FlushDB()
-	// memorystore.AddPool("txndb", memorystore.DefaultPool)
+	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
+	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
+	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
+	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
 
+	node.Self = &node.SelfNode{}
+	node.Self.Node = n1
+
+	setupSelfNodeKeys()
+
+	np := node.NewPool(node.NodeTypeMiner)
+	np.AddNode(n1)
+	np.AddNode(n2)
+	np.AddNode(n3)
+
+	mb := block.NewMagicBlock()
+	mb.Miners = np
+
+	c := chain.Provider().(*chain.Chain)
+	println("chain provider")
+	c.ID = datastore.ToKey(config.GetServerChainID())
+	c.SetMagicBlock(mb)
+	chain.SetServerChain(c)
+	SetupMinerChain(c)
 	mc := GetMinerChain()
+	mc.SetMagicBlock(mb)
+	SetupM2MSenders()
+
 	setupTempRocksDBDir()
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
+	setupClientEntity()
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider(), "")
+
+	ememorystore.AddPool("txndb", ememorystore.DefaultPool)
 
 	sigScheme := encryption.GetSignatureScheme("bls0chain")
 	err = sigScheme.GenerateKeys()
@@ -369,8 +441,8 @@ func TestChain_deletingTxns(t *testing.T) {
 		panic(err)
 	}
 
-	c := &client.Client{}
-	err = c.SetPublicKey(sigScheme.GetPublicKey())
+	cl := &client.Client{}
+	err = cl.SetPublicKey(sigScheme.GetPublicKey())
 	if err != nil {
 		println(err.Error())
 		panic(err)
@@ -382,7 +454,7 @@ func TestChain_deletingTxns(t *testing.T) {
 			// storing txns
 			for _, txn := range tt.fields.txns {
 				txn.(*transaction.Transaction).CreationDate = common.Now()
-				txn.(*transaction.Transaction).PublicKey = c.PublicKey
+				txn.(*transaction.Transaction).PublicKey = cl.PublicKey
 				txn.(*transaction.Transaction).Hash = txn.(*transaction.Transaction).ComputeHash()
 
 				sig, err := txn.(*transaction.Transaction).Sign(sigScheme)
@@ -399,7 +471,7 @@ func TestChain_deletingTxns(t *testing.T) {
 				out, err := transaction.PutTransaction(tt.fields.ctx, txn)
 				println("==> heyo")
 				if err != nil {
-					println(err)
+					println(err.Error())
 				} else {
 					if out != nil {
 						println("t is not nil!!!")
@@ -415,7 +487,7 @@ func TestChain_deletingTxns(t *testing.T) {
 			println("Stored txns")
 
 			// deleting txns
-			mc.deleteTxns(tt.fields.txns)
+			// mc.deleteTxns(tt.fields.txns)
 			println("Deleted txns")
 
 			// checking if txns are deleted
