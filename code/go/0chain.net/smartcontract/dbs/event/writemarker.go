@@ -23,12 +23,12 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum,priority:1;index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	// file info
-	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name" gorm:"index:idx_walloc_file,priority:1"`
-	ContentHash string `json:"content_hash"`
+	LookupHash  string `json:"lookup_hash" gorm:"index:idx_wlookup,priority:1"`
+	Name        string `json:"name" gorm:"index:idx_wname,priority:1;idx_walloc_file,priority:1"`
+	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
@@ -51,6 +51,14 @@ func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, all
 	return total, edb.Store.Get().Model(&WriteMarker{}).
 		Select("sum(size)").
 		Where(&WriteMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
+		Find(&total).Error
+}
+
+func (edb *EventDb) GetAllocationWrittenSizeInBlocks(startBlockNum, endBlockNum int64) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).
+		Select("sum(size)").
+		Where("block_number > ? AND block_number < ?", startBlockNum, endBlockNum).
 		Find(&total).Error
 }
 
@@ -91,4 +99,26 @@ func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filena
 
 func (edb *EventDb) addWriteMarker(wm WriteMarker) error {
 	return edb.Store.Get().Create(&wm).Error
+}
+
+func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString string, limit Pagination) ([]interface{}, error) {
+	var wm []interface{}
+
+	edbRef := edb.Store.Get()
+	if len(selectString) > 0 {
+		edbRef = edbRef.Select(selectString)
+	}
+
+	res := edbRef.
+		Model(WriteMarker{}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Where(filters).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "block_number"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&wm)
+
+	return wm, res.Error
 }
