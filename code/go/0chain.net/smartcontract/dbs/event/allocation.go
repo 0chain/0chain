@@ -1,9 +1,10 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"time"
+
+	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm/clause"
 
@@ -114,32 +115,13 @@ func (edb EventDb) GetActiveAllocsBlobberCount() (int64, error) {
 	return count, nil
 }
 
-func (edb *EventDb) overwriteAllocation(alloc *Allocation) error {
-	return edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", alloc.AllocationID).Updates(alloc).Error
+func (edb *EventDb) updateAllocation(updates *dbs.DbUpdates) error {
+	return edb.Store.Get().
+		Model(&Allocation{}).
+		Where(&Allocation{AllocationID: updates.Id}).
+		Updates(updates.Updates).Error
 }
 
-func (edb *EventDb) addOrOverwriteAllocation(alloc *Allocation) error {
-	exists, err := alloc.exists(edb)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return edb.overwriteAllocation(alloc)
-	}
-
+func (edb *EventDb) addAllocation(alloc *Allocation) error {
 	return edb.Store.Get().Create(&alloc).Error
-}
-
-func (alloc *Allocation) exists(edb *EventDb) (bool, error) {
-	var data Allocation
-	err := edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", alloc.AllocationID).Take(&data).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("error searching for allocation %v, error %v", alloc.AllocationID, err)
-	}
-
-	return true, nil
 }

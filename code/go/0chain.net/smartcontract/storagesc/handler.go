@@ -1582,6 +1582,14 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //      description: desc or asc
 //      in: query
 //      type: string
+//    + name: block-start
+//      description: restrict to transactions in specified start block and endblock
+//      in: query
+//      type: string
+//    + name: block-end
+//      description: restrict to transactions in specified start block and endblock
+//      in: query
+//      type: string
 //
 // responses:
 //  200: []Transaction
@@ -1589,8 +1597,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //  500:
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID  = r.URL.Query().Get("client_id")
-		blockHash = r.URL.Query().Get("block_hash")
+		clientID      = r.URL.Query().Get("client_id")
+		blockHash     = r.URL.Query().Get("block_hash")
+		startBlockNum = r.URL.Query().Get("block-start")
+		endBlockNum   = r.URL.Query().Get("block-end")
 	)
 
 	limit, err := getOffsetLimitOrderParam(r.URL.Query())
@@ -1615,6 +1625,32 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 
 	if blockHash != "" {
 		rtv, err := edb.GetTransactionByBlockHash(blockHash, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if startBlockNum != "" && endBlockNum != "" {
+		startBlockNumInt, err := strconv.Atoi(startBlockNum)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
+			return
+		}
+		endBlockNumInt, err := strconv.Atoi(endBlockNum)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("end_block_number is not valid"))
+			return
+		}
+
+		if startBlockNumInt > endBlockNumInt {
+			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is greater than end_block_number"))
+			return
+		}
+
+		rtv, err := edb.GetTransactionByBlockNumbers(startBlockNumInt, endBlockNumInt, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return

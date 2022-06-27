@@ -576,11 +576,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		err = emitAddOrOverwriteAllocation(alloc, balances)
+		updates, err := alloc.marshalUpdates(balances)
 		if err != nil {
 			return "", common.NewErrorf("verify_challenge",
 				"saving allocation in db: %v", err)
 		}
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
@@ -630,12 +631,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		err = emitAddOrOverwriteAllocation(alloc, balances)
+		updates, err := alloc.marshalUpdates(balances)
 		if err != nil {
 			return "", common.NewErrorf("challenge_reward_error",
 				"saving allocation in db: %v", err)
 		}
-
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 		if pass && !fresh {
 			return "late challenge (failed)", nil
 		}
@@ -1006,11 +1007,12 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return common.NewErrorf("add_challenge",
 			"error storing allocation: %v", err)
 	}
-
-	if err := emitAddOrOverwriteAllocation(alloc, balances); err != nil {
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
 		return common.NewErrorf("add_challenge",
 			"saving allocation in db: %v", err)
 	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	err = emitAddChallenge(challInfo, balances)
 	if err != nil {
