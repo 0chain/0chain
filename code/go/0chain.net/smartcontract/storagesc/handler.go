@@ -234,6 +234,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		allocData = r.URL.Query().Get("free_allocation_data")
 	)
 
+	logging.Logger.Debug("getFreeAllocationBlobbers", zap.String("free_allocation_data", allocData))
 	limit, err := getOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
