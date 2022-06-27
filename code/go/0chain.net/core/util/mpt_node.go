@@ -421,7 +421,10 @@ func (fn *FullNode) Clone() Node {
 	clone := &FullNode{}
 	clone.OriginTrackerNode = fn.OriginTrackerNode.Clone()
 	for idx, ckey := range fn.Children {
-		copy(clone.Children[idx], ckey) // ckey will never be updated inplace and so ok
+		if len(ckey) > 0 {
+			clone.Children[idx] = make([]byte, len(ckey))
+			copy(clone.Children[idx], ckey) // ckey will never be updated inplace and so ok
+		}
 	}
 	if fn.HasValue() {
 		clone.SetValue(fn.GetValue())
