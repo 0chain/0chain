@@ -72,10 +72,10 @@ func BenchmarkRestTests(
 			{
 				FuncName: "transactions",
 				Params: map[string]string{
-					"client_id":  data.Clients[1],
-					"offset":     "",
-					"limit":      "",
-					"block_hash": benchmark.GetMockBlockHash(1),
+					"client_id":   data.Clients[1],
+					"block_hash":  benchmark.GetMockBlockHash(1),
+					"block-start": "1",
+					"block-end":   "100",
 				},
 				Endpoint: srh.getTransactionByFilter,
 			},
