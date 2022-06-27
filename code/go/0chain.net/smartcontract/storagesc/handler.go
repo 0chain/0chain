@@ -116,7 +116,7 @@ func validatorTableToValidatorNode(val event.Validator) ValidationNode {
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validator-status validator-status
-// Gets the current status of a validator. swagger:enum Status
+// Gets the current status of a validator.
 //
 // parameters:
 //    + name: id
@@ -154,7 +154,7 @@ func (srh *StorageRestHandler) getValidatorStatus(w http.ResponseWriter, r *http
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-status blobber-status
-// Gets the current status of a blobber. swagger:enum Status
+// Gets the current status of a blobber.
 //
 // parameters:
 //    + name: id
