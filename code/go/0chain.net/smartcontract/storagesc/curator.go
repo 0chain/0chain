@@ -75,12 +75,12 @@ func (sc *StorageSmartContract) removeCurator(
 		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
 	}
 
-	err = emitAddOrOverwriteAllocation(alloc, balances)
+	updates, err := alloc.marshalUpdates(balances)
 	if err != nil {
 		return "", common.NewErrorf("remove_curator_failed",
 			"saving allocation in db: %v", err)
 	}
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 	return "", nil
 }
 
@@ -124,11 +124,13 @@ func (sc *StorageSmartContract) addCurator(
 	if err != nil {
 		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
 	}
-	err = emitAddOrOverwriteAllocation(alloc, balances)
+
+	updates, err := alloc.marshalUpdates(balances)
 	if err != nil {
 		return "", common.NewErrorf("add_curator_failed",
 			"saving allocation in db: %v", err)
 	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	return "", nil
 }
