@@ -6,8 +6,8 @@ import (
 
 	"0chain.net/smartcontract/dbs"
 
-	"gorm.io/gorm/clause"
 	"0chain.net/chaincore/currency"
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
