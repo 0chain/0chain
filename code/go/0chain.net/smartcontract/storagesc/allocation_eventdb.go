@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/dbs"
+
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -141,7 +143,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}, nil
 }
 
-func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
+func (sa *StorageAllocation) marshalTerms() ([]byte, error) {
 	allocationTerms := make([]event.AllocationTerm, 0)
 	for _, b := range sa.BlobberAllocs {
 		allocationTerms = append(allocationTerms, event.AllocationTerm{
@@ -157,6 +159,14 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	termsByte, err := json.Marshal(allocationTerms)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling terms: %v", err)
+	}
+	return termsByte, nil
+}
+
+func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
+	termsByte, err := sa.marshalTerms()
+	if err != nil {
+		return nil, err
 	}
 
 	alloc := &event.Allocation{
@@ -200,7 +210,43 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateContextI) error {
+func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]byte, error) {
+	termsByte, err := sa.marshalTerms()
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(&dbs.DbUpdates{
+		Id: sa.ID,
+		Updates: map[string]interface{}{
+			"allocation_name":           sa.Name,
+			"transaction_id":            sa.Tx,
+			"data_shards":               sa.DataShards,
+			"parity_shards":             sa.ParityShards,
+			"size":                      sa.Size,
+			"expiration":                int64(sa.Expiration),
+			"terms":                     string(termsByte),
+			"owner":                     sa.Owner,
+			"owner_public_key":          sa.OwnerPublicKey,
+			"is_immutable":              sa.IsImmutable,
+			"read_price_min":            sa.ReadPriceRange.Min,
+			"read_price_max":            sa.ReadPriceRange.Max,
+			"write_price_min":           sa.WritePriceRange.Min,
+			"write_price_max":           sa.WritePriceRange.Max,
+			"challenge_completion_time": int64(sa.ChallengeCompletionTime),
+			"start_time":                int64(sa.StartTime),
+			"finalized":                 sa.Finalized,
+			"cancelled":                 sa.Canceled,
+			"used_size":                 sa.UsedSize,
+			"moved_to_challenge":        sa.MovedToChallenge,
+			"moved_back":                sa.MovedBack,
+			"moved_to_validators":       sa.MovedToValidators,
+			"time_unit":                 int64(sa.TimeUnit),
+		},
+	})
+}
+
+func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 	alloc, err := storageAllocationToAllocationTable(sa)
 	if err != nil {
 		return err
@@ -211,7 +257,7 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 		return fmt.Errorf("error marshalling allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocation, alloc.AllocationID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, string(data))
 
 	return nil
 }

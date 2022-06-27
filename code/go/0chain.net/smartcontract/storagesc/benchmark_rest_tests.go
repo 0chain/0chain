@@ -72,12 +72,21 @@ func BenchmarkRestTests(
 			{
 				FuncName: "transactions",
 				Params: map[string]string{
-					"client_id":  data.Clients[1],
-					"offset":     "",
-					"limit":      "",
-					"block_hash": benchmark.GetMockBlockHash(1),
+					"client_id":   data.Clients[1],
+					"block_hash":  benchmark.GetMockBlockHash(1),
+					"block-start": "1",
+					"block-end":   "100",
 				},
 				Endpoint: srh.getTransactionByFilter,
+			},
+			{
+				FuncName: "transactions",
+				Params: map[string]string{
+					"look_up_hash": benchmark.GetMockWriteMarkerLookUpHash(1, 1),
+					"name":         benchmark.GetMockWriteMarkerContentHash(1, 1),
+					"content_hash": benchmark.GetMockWriteMarkerFileName(1),
+				},
+				Endpoint: srh.getTransactionHashesByFilter,
 			},
 			{
 				FuncName: "errors",
@@ -245,6 +254,14 @@ func BenchmarkRestTests(
 					"block_number":  "1",
 				},
 				Endpoint: srh.getWrittenAmount,
+			},
+			{
+				FuncName: "allocWrittenSizePerPeriod",
+				Params: map[string]string{
+					"block-start": "1",
+					"block-end":   "100",
+				},
+				Endpoint: srh.getWrittenAmountPerPeriod,
 			},
 			{
 				FuncName: "alloc_read_size",
