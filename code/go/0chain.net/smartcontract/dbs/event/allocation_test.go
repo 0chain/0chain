@@ -354,7 +354,7 @@ func TestAllocations(t *testing.T) {
 		BlockNumber: 1,
 		TxHash:      "txn_hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteAllocation),
+		Tag:         int(TagAddAllocation),
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
@@ -374,7 +374,7 @@ func TestAllocations(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "txn_hash2",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteAllocation),
+		Tag:         int(TagAddAllocation),
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
