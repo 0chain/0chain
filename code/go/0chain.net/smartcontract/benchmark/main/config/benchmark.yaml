@@ -108,17 +108,17 @@ smart_contracts:
     stakepool:
       min_lock: 0.1
     free_allocation_settings:
-      data_shards: 4
-      parity_shards: 4
-      size: 10000
+      data_shards: 2
+      parity_shards: 2
+      size: 10000000
       duration: 50h
       read_price_range:
         min: 0.0
-        max: 0.1
+        max: 2.0
       write_price_range:
         min: 0.0
-        max: 0.1
-      max_challenge_completion_time: 3m
+        max: 2.0
+      max_challenge_completion_time: 1m
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true

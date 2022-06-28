@@ -48,7 +48,7 @@ func GetSmartContract(scAddress string) sci.SmartContractInterface {
 
 func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
-	inter, err := smcoi.Execute(t, funcName, input, balances)
+	inter, err := smcoi.Execute(t.Clone(), funcName, input, balances)
 	if err == nil {
 		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
