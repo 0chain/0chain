@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -15,7 +16,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 
@@ -367,7 +367,6 @@ func TestChain_deletingTxns(t *testing.T) {
 	}
 
 	type fields struct {
-		ctx  context.Context
 		txns []datastore.Entity
 	}
 
@@ -380,7 +379,6 @@ func TestChain_deletingTxns(t *testing.T) {
 		{
 			name: "test_sample",
 			fields: fields{
-				ctx:  context.Background(),
 				txns: []datastore.Entity{txs1[0], txs1[1]},
 			},
 			arg:  txs1[4],
@@ -432,7 +430,7 @@ func TestChain_deletingTxns(t *testing.T) {
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 
-	ememorystore.AddPool("txndb", ememorystore.DefaultPool)
+	memorystore.AddPool("txndb", memorystore.DefaultPool)
 
 	sigScheme := encryption.GetSignatureScheme("bls0chain")
 	err = sigScheme.GenerateKeys()
@@ -441,12 +439,44 @@ func TestChain_deletingTxns(t *testing.T) {
 		panic(err)
 	}
 
-	cl := &client.Client{}
+	// cl := &client.Client{}
+	var cl *client.Client
+	cl = client.NewClient(client.SignatureScheme(encryption.SignatureSchemeBls0chain))
+	cl.ID = "1"
+	cl.EntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
 	err = cl.SetPublicKey(sigScheme.GetPublicKey())
 	if err != nil {
 		println(err.Error())
 		panic(err)
 	}
+
+	ctx := context.Background()
+	
+	_, err = client.PutClient(ctx, cl)
+
+	cl.IDField = datastore.IDField{ID: cl.ID}
+	println("before client id: " + cl.ID)
+	cl.ID = "1"
+	println("after client id: " + cl.ID)
+
+	if err != nil {
+		println("error in putting client" + err.Error())
+		panic(err)
+	} else {
+		println("client putted")
+	}
+
+	
+
+	err = client.PutClientCache(cl)
+	if err != nil {
+		println("error in putting client cache" + err.Error())
+		panic(err)
+	} else {
+		println("client cache putted")
+	}
+
+	mc.RegisterClient()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -468,10 +498,11 @@ func TestChain_deletingTxns(t *testing.T) {
 					println(err.Error())
 				}
 
-				out, err := transaction.PutTransaction(tt.fields.ctx, txn)
+				out, err := transaction.PutTransaction(ctx, txn)
 				println("==> heyo")
 				if err != nil {
 					println(err.Error())
+					panic(err)
 				} else {
 					if out != nil {
 						println("t is not nil!!!")
@@ -487,7 +518,7 @@ func TestChain_deletingTxns(t *testing.T) {
 			println("Stored txns")
 
 			// deleting txns
-			// mc.deleteTxns(tt.fields.txns)
+			mc.deleteTxns(tt.fields.txns)
 			println("Deleted txns")
 
 			// checking if txns are deleted
