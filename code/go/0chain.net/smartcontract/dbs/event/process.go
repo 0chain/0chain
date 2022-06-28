@@ -51,7 +51,8 @@ const (
 	TagAddOrOverwriteDelegatePool
 	TagStakePoolReward
 	TagUpdateDelegatePool
-	TagAddOrOverwriteAllocation
+	TagAddAllocation
+	TagUpdateAllocation
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
@@ -251,13 +252,20 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.rewardUpdate(spu)
-	case TagAddOrOverwriteAllocation:
+	case TagAddAllocation:
 		var alloc Allocation
 		err := json.Unmarshal([]byte(event.Data), &alloc)
 		if err != nil {
 			return err
 		}
-		return edb.addOrOverwriteAllocation(&alloc)
+		return edb.addAllocation(&alloc)
+	case TagUpdateAllocation:
+		var updates dbs.DbUpdates
+		err := json.Unmarshal([]byte(event.Data), &updates)
+		if err != nil {
+			return err
+		}
+		return edb.updateAllocation(&updates)
 	case TagAddReward:
 		var reward Reward
 		err := json.Unmarshal([]byte(event.Data), &reward)
