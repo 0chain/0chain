@@ -323,7 +323,6 @@ func setupClientEntity() {
 	}
 	// clientEntityMetadata = &em
 	datastore.RegisterEntityMetadata("client", &em)
-	memorystore.AddPool(em.DB, memorystore.DefaultPool)
 
 }
 
@@ -426,11 +425,12 @@ func TestChain_deletingTxns(t *testing.T) {
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
-	setupClientEntity()
+	// setupClientEntity()
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 
 	memorystore.AddPool("txndb", memorystore.DefaultPool)
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 
 	sigScheme := encryption.GetSignatureScheme("bls0chain")
 	err = sigScheme.GenerateKeys()
@@ -451,7 +451,7 @@ func TestChain_deletingTxns(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	
+
 	_, err = client.PutClient(ctx, cl)
 
 	cl.IDField = datastore.IDField{ID: cl.ID}
@@ -465,8 +465,6 @@ func TestChain_deletingTxns(t *testing.T) {
 	} else {
 		println("client putted")
 	}
-
-	
 
 	err = client.PutClientCache(cl)
 	if err != nil {
