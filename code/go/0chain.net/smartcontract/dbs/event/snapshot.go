@@ -16,8 +16,3 @@ func (edb *EventDb) addOrUpdateTotalMint(mint *Mint) error {
 	res := edb.Store.Get().Table("snapshots").Where("round = ?", mint.Round).Update("block_hash", "mint_total_amount")
 	return res.Error
 }
-
-func (edb *EventDb) addSnapshot(snapshot *Snapshot) error {
-	result := edb.Store.Get().Create(snapshot)
-	return result.Error
-}

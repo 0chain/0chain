@@ -421,7 +421,7 @@ func NewChainFromConfig() *Chain {
 func Provider() datastore.Entity {
 	c := &Chain{}
 	c.ChainConfig = NewConfigImpl(&ConfigData{})
-	c.ChainConfig.FromViper()
+	_ = c.ChainConfig.FromViper()
 
 	config.Configuration().ChainConfig = c.ChainConfig
 
