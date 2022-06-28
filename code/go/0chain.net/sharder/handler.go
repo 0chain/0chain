@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/build"
 	"0chain.net/core/common"
 )
 
@@ -25,6 +26,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
+		"/v1/healthcheck":                  common.ToJSONResponse(HealthcheckHandler),
 		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
 		"/_chain_stats":                    ChainStatsWriter,
 		"/_health_check":                   HealthCheckWriter,
@@ -36,6 +38,30 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		handlers[pattern] = common.UserRateLimit(handler)
 	}
 	return handlers
+}
+
+type ChainInfo struct {
+	LatestFinalizedBlock *block.BlockSummary `json:"latest_finalized_block"`
+}
+
+func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+
+	return struct {
+		//Version  string `json:"version"`
+		Name     string        `json:"name"`
+		BuildTag string        `json:"build_tag"`
+		Uptime   time.Duration `json:"uptime"`
+		NodeType string        `json:"node_type"`
+
+		Chain ChainInfo `json:"chain"`
+	}{
+		BuildTag: build.BuildTag,
+		Uptime:   time.Since(chain.StartTime),
+		NodeType: node.Self.Underlying().Type.String(),
+		Chain: ChainInfo{
+			LatestFinalizedBlock: chain.GetServerChain().GetLatestFinalizedBlockSummary(),
+		},
+	}, nil
 }
 
 /*BlockHandler - a handler to respond to block queries */
