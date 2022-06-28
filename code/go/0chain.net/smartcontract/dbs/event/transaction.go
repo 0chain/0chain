@@ -50,6 +50,16 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit Pagination) 
 	return tr, res.Error
 }
 
+// GetTransactionByToClientId searches for transaction by toClientID
+func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit Pagination) ([]Transaction, error) {
+	var tr []Transaction
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ToClientId: toClientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "creation_date"},
+		Desc:   limit.IsDescending,
+	}).Scan(&tr)
+	return tr, res.Error
+}
+
 func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(limit.Offset).Limit(limit.Limit).Scan(&tr)
