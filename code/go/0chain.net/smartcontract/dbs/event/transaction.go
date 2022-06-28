@@ -11,10 +11,10 @@ import (
 type Transaction struct {
 	gorm.Model
 	Hash              string `gorm:"uniqueIndex"`
-	BlockHash         string
+	BlockHash         string `gorm:"index:idx_tblock_hash"`
 	Version           string
-	ClientId          string
-	ToClientId        string
+	ClientId          string `gorm:"index:idx_tclient_id"`
+	ToClientId        string `gorm:"index:idx_tto_client_id"`
 	TransactionData   string
 	Value             currency.Coin
 	Signature         string
