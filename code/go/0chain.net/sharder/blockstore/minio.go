@@ -35,7 +35,7 @@ type coldTier struct { //Cold tier
 	ColdStorages []coldStorageProvider
 	// SelectedStorageChan will provide channel for selected storage
 	// as per strategy
-	SelectedStorageChan <-chan selectedColdStorage
+	StorageSelectorChan <-chan selectedColdStorage
 	// SelectNextStorage will select storage based on strategy and put
 	// the selected storage in SelectedStorageChan channel
 	SelectNextStorage func(coldStorageProviders []coldStorageProvider, prevInd int)
@@ -65,7 +65,7 @@ func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err err
 
 	for {
 		logging.Logger.Info("Waiting for channel to get selected cold storage")
-		sc := <-ct.SelectedStorageChan
+		sc := <-ct.StorageSelectorChan
 		if sc.err != nil {
 			return "", sc.err
 		}
@@ -221,19 +221,13 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 
 	cTier := new(coldTier)
 
-	selectedColdStorageChan := make(chan selectedColdStorage, 1)
+	storageSelectorChan := make(chan selectedColdStorage, 1)
 	var f func(coldVolumes []coldStorageProvider, prevInd int)
 
 	cloudStoragesMapI := cloudStoragesI.([]interface{})
 	var cloudStoragesMap []map[string]interface{}
 	for _, cloudI := range cloudStoragesMapI {
-		m := make(map[string]interface{})
-		cloudIMap := cloudI.(map[interface{}]interface{})
-		for k, v := range cloudIMap {
-			sK := k.(string)
-			m[sK] = v
-		}
-
+		m := cloudI.(map[string]interface{})
 		cloudStoragesMap = append(cloudStoragesMap, m)
 	}
 
@@ -259,13 +253,13 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 	default:
 		panic(ErrStrategyNotSupported(strategy))
 	case RoundRobin:
-		f = getColdRBStrategyFunc(cTier, selectedColdStorageChan)
+		f = getColdRBStrategyFunc(cTier, storageSelectorChan)
 	}
 
 	cTier.DeleteLocal = cViper.GetBool("delete_local")
 	cTier.SelectNextStorage = f
 	cTier.Mu = make(Mutex, 1)
-	cTier.SelectedStorageChan = selectedColdStorageChan
+	cTier.StorageSelectorChan = storageSelectorChan
 
 	logging.Logger.Info("Selecting first cold storage")
 	go cTier.SelectNextStorage(cTier.ColdStorages, cTier.PrevInd)
@@ -395,21 +389,16 @@ func getColdRBStrategyFunc(
 
 	return func(coldStorageProviders []coldStorageProvider, prevInd int) {
 		cTier.Mu.Lock()
-
 		defer cTier.Mu.Unlock()
 
-		var selectedCloudStorage coldStorageProvider
-		var selectedIndex int
+		var selectedStorage coldStorageProvider
 
-		if prevInd <= 0 {
+		if prevInd < 0 {
 			prevInd = -1
 		}
 
-		for i := prevInd + 1; i != prevInd; i++ {
-			if len(coldStorageProviders) == 0 {
-				break
-			}
-
+		i := prevInd + 1
+		if len(coldStorageProviders) != 0 {
 			if i >= len(coldStorageProviders) {
 				i = len(coldStorageProviders) - i
 			}
@@ -417,18 +406,18 @@ func getColdRBStrategyFunc(
 				i = 0
 			}
 
-			selectedCloudStorage = coldStorageProviders[i]
+			selectedStorage = coldStorageProviders[i]
 			prevInd = i
 		}
 
-		if selectedCloudStorage == nil {
+		if selectedStorage == nil {
 			ch <- selectedColdStorage{
 				err: ErrUnableToSelectColdStorage,
 			}
 		} else {
 			ch <- selectedColdStorage{
-				coldStorage: selectedCloudStorage,
-				prevInd:     selectedIndex,
+				coldStorage: selectedStorage,
+				prevInd:     prevInd,
 			}
 		}
 	}
