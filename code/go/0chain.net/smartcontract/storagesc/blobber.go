@@ -327,6 +327,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"malformed request: missing read_marker")
 	}
 
+	if err = commitRead.ReadMarker.VerifyClientID(); err != nil {
+		return "", common.NewError("commit_blobber_read", err.Error())
+	}
+
 	var (
 		lastCommittedRM = &ReadConnection{}
 		lastKnownCtr    int64
@@ -347,10 +351,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't verify read marker: %v", err)
-	}
-
-	if err = commitRead.ReadMarker.VerifyClientID(); err != nil {
-		return "", common.NewError("commit_blobber_read", err.Error())
 	}
 
 	// move tokens to blobber's stake pool from client's read pool
