@@ -314,7 +314,9 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //  200:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	q := r.URL.Query()
+
+	limit, err := common2.GetOffsetLimitOrderParam(q)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -327,7 +329,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	allocData := r.URL.Query().Get("allocation_data")
+	allocData := q.Get("allocation_data")
 	var request newAllocationRequest
 	if err := request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
@@ -359,6 +361,11 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
+	}
+
+	if sa.DataShards <= 0 || sa.ParityShards < 0 {
+		return nil, common.NewErrorf("allocation_creation_failed",
+			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
@@ -1667,6 +1674,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //      description: restrict to transactions sent by the specified client
 //      in: query
 //      type: string
+//    + name: to_client_id
+//      description: restrict to transactions sent to a specified client
+//      in: query
+//      type: string
 //    + name: block_hash
 //      description: restrict to transactions in indicated block
 //      in: query
@@ -1699,6 +1710,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
 		clientID      = r.URL.Query().Get("client_id")
+		toClientID    = r.URL.Query().Get("to_client_id")
 		blockHash     = r.URL.Query().Get("block_hash")
 		startBlockNum = r.URL.Query().Get("block-start")
 		endBlockNum   = r.URL.Query().Get("block-end")
@@ -1716,6 +1728,16 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 	if clientID != "" {
 		rtv, err := edb.GetTransactionByClientId(clientID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if toClientID != "" {
+		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
