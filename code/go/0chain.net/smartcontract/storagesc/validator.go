@@ -194,6 +194,8 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 		}
 	}
 
+	savedValidator.StakePoolSettings = inputValidator.StakePoolSettings
+
 	// update statistics
 	sc.statIncr(statUpdateValidator)
 
