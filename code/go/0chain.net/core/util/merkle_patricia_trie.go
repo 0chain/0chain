@@ -287,7 +287,7 @@ func (mpt *MerklePatriciaTrie) Iterate(ctx context.Context, handler MPTIteratorH
 
 	rootKey := mpt.root
 	// it might be nil or empty
-	if rootKey == nil || len(rootKey) == 0 { //nolint
+	if len(rootKey) == 0 { //nolint
 		return nil
 	}
 	return mpt.iterate(ctx, Path{}, rootKey, handler, visitNodeTypes)
