@@ -12,8 +12,13 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	logging.InitLogging("debug", ".")
+}
 
 func TestIsVolumeAbleToStoreBlock(t *testing.T) {
 	p := "./vol"
