@@ -45,7 +45,7 @@ func (bt benchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
-func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
+func (bt benchTest) Run(state cstate.TimedQueryStateContext, b *testing.B) error {
 	b.Logf("Running test '%s' from ZCNSC Bridge", bt.name)
 	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
 	return err

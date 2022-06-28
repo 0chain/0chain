@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/dbs"
+
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -47,11 +49,10 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		}{
 			AllocationID: t.AllocationID,
 			Terms: Terms{
-				ReadPrice:               t.ReadPrice,
-				WritePrice:              t.WritePrice,
-				MinLockDemand:           t.MinLockDemand,
-				MaxOfferDuration:        t.MaxOfferDuration,
-				ChallengeCompletionTime: t.ChallengeCompletionTime,
+				ReadPrice:        t.ReadPrice,
+				WritePrice:       t.WritePrice,
+				MinLockDemand:    t.MinLockDemand,
+				MaxOfferDuration: t.MaxOfferDuration,
 			}}
 	}
 
@@ -74,7 +75,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			},
 			Terms:           blobberIDTermMapping[b.BlobberID].Terms,
 			Capacity:        b.Capacity,
-			Used:            b.Used,
+			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.Settings{
@@ -90,7 +91,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		tempBlobberAllocation := &BlobberAllocation{
 			BlobberID:     b.BlobberID,
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
-			Size:          b.Used,
+			Size:          b.Allocated,
 			Terms:         terms,
 			MinLockDemand: currency.Coin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
 		}
@@ -118,12 +119,12 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
-		BlobberAllocs:              blobberDetails,
-		BlobberAllocsMap:           blobberMap,
-		IsImmutable:                alloc.IsImmutable,
-		ReadPriceRange:             PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
-		WritePriceRange:            PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
-		MaxChallengeCompletionTime: time.Duration(alloc.MaxChallengeCompletionTime),
+		BlobberAllocs:    blobberDetails,
+		BlobberAllocsMap: blobberMap,
+		IsImmutable:      alloc.IsImmutable,
+		ReadPriceRange:   PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
+		WritePriceRange:  PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
+
 		// todo: to be added with WritePool : select user_id from WritePools where allocation_id = ?
 		// WritePoolOwners:            nil,
 		ChallengeCompletionTime: time.Duration(alloc.ChallengeCompletionTime),
@@ -144,17 +145,16 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}, nil
 }
 
-func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
+func (sa *StorageAllocation) marshalTerms() ([]byte, error) {
 	allocationTerms := make([]event.AllocationTerm, 0)
 	for _, b := range sa.BlobberAllocs {
 		allocationTerms = append(allocationTerms, event.AllocationTerm{
-			BlobberID:               b.BlobberID,
-			AllocationID:            b.AllocationID,
-			ReadPrice:               b.Terms.ReadPrice,
-			WritePrice:              b.Terms.WritePrice,
-			MinLockDemand:           b.Terms.MinLockDemand,
-			MaxOfferDuration:        b.Terms.MaxOfferDuration,
-			ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
+			BlobberID:        b.BlobberID,
+			AllocationID:     b.AllocationID,
+			ReadPrice:        b.Terms.ReadPrice,
+			WritePrice:       b.Terms.WritePrice,
+			MinLockDemand:    b.Terms.MinLockDemand,
+			MaxOfferDuration: b.Terms.MaxOfferDuration,
 		})
 	}
 
@@ -162,33 +162,40 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling terms: %v", err)
 	}
+	return termsByte, nil
+}
+
+func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
+	termsByte, err := sa.marshalTerms()
+	if err != nil {
+		return nil, err
+	}
 
 	alloc := &event.Allocation{
-		AllocationID:               sa.ID,
-		AllocationName:             sa.Name,
-		TransactionID:              sa.Tx,
-		DataShards:                 sa.DataShards,
-		ParityShards:               sa.ParityShards,
-		Size:                       sa.Size,
-		Expiration:                 int64(sa.Expiration),
-		Terms:                      string(termsByte),
-		Owner:                      sa.Owner,
-		OwnerPublicKey:             sa.OwnerPublicKey,
-		IsImmutable:                sa.IsImmutable,
-		ReadPriceMin:               sa.ReadPriceRange.Min,
-		ReadPriceMax:               sa.ReadPriceRange.Max,
-		WritePriceMin:              sa.WritePriceRange.Min,
-		WritePriceMax:              sa.WritePriceRange.Max,
-		MaxChallengeCompletionTime: int64(sa.MaxChallengeCompletionTime),
-		ChallengeCompletionTime:    int64(sa.ChallengeCompletionTime),
-		StartTime:                  int64(sa.StartTime),
-		Finalized:                  sa.Finalized,
-		Cancelled:                  sa.Canceled,
-		UsedSize:                   sa.UsedSize,
-		MovedToChallenge:           sa.MovedToChallenge,
-		MovedBack:                  sa.MovedBack,
-		MovedToValidators:          sa.MovedToValidators,
-		TimeUnit:                   int64(sa.TimeUnit),
+		AllocationID:            sa.ID,
+		AllocationName:          sa.Name,
+		TransactionID:           sa.Tx,
+		DataShards:              sa.DataShards,
+		ParityShards:            sa.ParityShards,
+		Size:                    sa.Size,
+		Expiration:              int64(sa.Expiration),
+		Terms:                   string(termsByte),
+		Owner:                   sa.Owner,
+		OwnerPublicKey:          sa.OwnerPublicKey,
+		IsImmutable:             sa.IsImmutable,
+		ReadPriceMin:            sa.ReadPriceRange.Min,
+		ReadPriceMax:            sa.ReadPriceRange.Max,
+		WritePriceMin:           sa.WritePriceRange.Min,
+		WritePriceMax:           sa.WritePriceRange.Max,
+		ChallengeCompletionTime: int64(sa.ChallengeCompletionTime),
+		StartTime:               int64(sa.StartTime),
+		Finalized:               sa.Finalized,
+		Cancelled:               sa.Canceled,
+		UsedSize:                sa.UsedSize,
+		MovedToChallenge:        sa.MovedToChallenge,
+		MovedBack:               sa.MovedBack,
+		MovedToValidators:       sa.MovedToValidators,
+		TimeUnit:                int64(sa.TimeUnit),
 	}
 
 	if sa.Stats != nil {
@@ -204,7 +211,43 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateContextI) error {
+func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]byte, error) {
+	termsByte, err := sa.marshalTerms()
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(&dbs.DbUpdates{
+		Id: sa.ID,
+		Updates: map[string]interface{}{
+			"allocation_name":           sa.Name,
+			"transaction_id":            sa.Tx,
+			"data_shards":               sa.DataShards,
+			"parity_shards":             sa.ParityShards,
+			"size":                      sa.Size,
+			"expiration":                int64(sa.Expiration),
+			"terms":                     string(termsByte),
+			"owner":                     sa.Owner,
+			"owner_public_key":          sa.OwnerPublicKey,
+			"is_immutable":              sa.IsImmutable,
+			"read_price_min":            sa.ReadPriceRange.Min,
+			"read_price_max":            sa.ReadPriceRange.Max,
+			"write_price_min":           sa.WritePriceRange.Min,
+			"write_price_max":           sa.WritePriceRange.Max,
+			"challenge_completion_time": int64(sa.ChallengeCompletionTime),
+			"start_time":                int64(sa.StartTime),
+			"finalized":                 sa.Finalized,
+			"cancelled":                 sa.Canceled,
+			"used_size":                 sa.UsedSize,
+			"moved_to_challenge":        sa.MovedToChallenge,
+			"moved_back":                sa.MovedBack,
+			"moved_to_validators":       sa.MovedToValidators,
+			"time_unit":                 int64(sa.TimeUnit),
+		},
+	})
+}
+
+func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 	alloc, err := storageAllocationToAllocationTable(sa)
 	if err != nil {
 		return err
@@ -215,16 +258,16 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 		return fmt.Errorf("error marshalling allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocation, alloc.AllocationID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, string(data))
 
 	return nil
 }
 
-func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb) ([]*StorageAllocationBlobbers, error) {
+func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit event.Pagination) ([]*StorageAllocationBlobbers, error) {
 
 	sas := make([]*StorageAllocationBlobbers, 0)
 
-	allocs, err := eventDb.GetClientsAllocation(clientID)
+	allocs, err := eventDb.GetClientsAllocation(clientID, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -58,8 +58,6 @@ func TestAllocations(t *testing.T) {
 		MinLockDemand float64 `json:"min_lock_demand"`
 		// MaxOfferDuration with this prices and the demand.
 		MaxOfferDuration time.Duration `json:"max_offer_duration"`
-		// ChallengeCompletionTime is duration required to complete a challenge.
-		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	}
 
 	type PriceRange struct {
@@ -71,9 +69,9 @@ func TestAllocations(t *testing.T) {
 		ID              string                 `json:"id"`
 		BaseURL         string                 `json:"url"`
 		Geolocation     StorageNodeGeolocation `json:"geolocation"`
-		Terms           Terms                  `json:"terms"`    // terms
-		Capacity        int64                  `json:"capacity"` // total blobber capacity
-		Used            int64                  `json:"used"`     // allocated capacity
+		Terms           Terms                  `json:"terms"`     // terms
+		Capacity        int64                  `json:"capacity"`  // total blobber capacity
+		Allocated       int64                  `json:"allocated"` // allocated capacity
 		LastHealthCheck common.Timestamp       `json:"last_health_check"`
 		PublicKey       string                 `json:"-"`
 		// StakePoolSettings used initially to create and setup stake pool.
@@ -147,9 +145,8 @@ func TestAllocations(t *testing.T) {
 		IsImmutable       bool                          `json:"is_immutable"`
 
 		// Requested ranges.
-		ReadPriceRange             PriceRange    `json:"read_price_range"`
-		WritePriceRange            PriceRange    `json:"write_price_range"`
-		MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+		ReadPriceRange  PriceRange `json:"read_price_range"`
+		WritePriceRange PriceRange `json:"write_price_range"`
 
 		//AllocationPools allocationPools `json:"allocation_pools"`
 		WritePoolOwners []string `json:"write_pool_owners"`
@@ -188,50 +185,48 @@ func TestAllocations(t *testing.T) {
 		var allocationTerms []AllocationTerm
 		for _, b := range sa.BlobberDetails {
 			allocationTerms = append(allocationTerms, AllocationTerm{
-				BlobberID:               b.BlobberID,
-				AllocationID:            b.AllocationID,
-				ReadPrice:               b.Terms.ReadPrice,
-				WritePrice:              b.Terms.WritePrice,
-				MinLockDemand:           b.Terms.MinLockDemand,
-				MaxOfferDuration:        b.Terms.MaxOfferDuration,
-				ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
+				BlobberID:        b.BlobberID,
+				AllocationID:     b.AllocationID,
+				ReadPrice:        b.Terms.ReadPrice,
+				WritePrice:       b.Terms.WritePrice,
+				MinLockDemand:    b.Terms.MinLockDemand,
+				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
 		termsByte, err := json.Marshal(allocationTerms)
 		require.NoError(t, err)
 
 		return Allocation{
-			AllocationID:               sa.ID,
-			TransactionID:              sa.Tx,
-			DataShards:                 sa.DataShards,
-			ParityShards:               sa.ParityShards,
-			Size:                       sa.Size,
-			Expiration:                 int64(sa.Expiration),
-			Terms:                      string(termsByte),
-			Owner:                      sa.Owner,
-			OwnerPublicKey:             sa.OwnerPublicKey,
-			IsImmutable:                sa.IsImmutable,
-			ReadPriceMin:               sa.ReadPriceRange.Min,
-			ReadPriceMax:               sa.ReadPriceRange.Max,
-			WritePriceMin:              sa.WritePriceRange.Min,
-			WritePriceMax:              sa.WritePriceRange.Max,
-			MaxChallengeCompletionTime: int64(sa.MaxChallengeCompletionTime),
-			ChallengeCompletionTime:    int64(sa.ChallengeCompletionTime),
-			StartTime:                  int64(sa.StartTime),
-			Finalized:                  sa.Finalized,
-			Cancelled:                  sa.Canceled,
-			UsedSize:                   sa.UsedSize,
-			MovedToChallenge:           sa.MovedToChallenge,
-			MovedBack:                  sa.MovedBack,
-			MovedToValidators:          sa.MovedToValidators,
-			TimeUnit:                   int64(sa.TimeUnit),
-			NumWrites:                  sa.Stats.NumWrites,
-			NumReads:                   sa.Stats.ReadSize / (64 * KB),
-			TotalChallenges:            sa.Stats.TotalChallenges,
-			OpenChallenges:             sa.Stats.OpenChallenges,
-			SuccessfulChallenges:       sa.Stats.SuccessChallenges,
-			FailedChallenges:           sa.Stats.FailedChallenges,
-			LatestClosedChallengeTxn:   sa.Stats.LastestClosedChallengeTxn,
+			AllocationID:             sa.ID,
+			TransactionID:            sa.Tx,
+			DataShards:               sa.DataShards,
+			ParityShards:             sa.ParityShards,
+			Size:                     sa.Size,
+			Expiration:               int64(sa.Expiration),
+			Terms:                    string(termsByte),
+			Owner:                    sa.Owner,
+			OwnerPublicKey:           sa.OwnerPublicKey,
+			IsImmutable:              sa.IsImmutable,
+			ReadPriceMin:             sa.ReadPriceRange.Min,
+			ReadPriceMax:             sa.ReadPriceRange.Max,
+			WritePriceMin:            sa.WritePriceRange.Min,
+			WritePriceMax:            sa.WritePriceRange.Max,
+			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
+			StartTime:                int64(sa.StartTime),
+			Finalized:                sa.Finalized,
+			Cancelled:                sa.Canceled,
+			UsedSize:                 sa.UsedSize,
+			MovedToChallenge:         sa.MovedToChallenge,
+			MovedBack:                sa.MovedBack,
+			MovedToValidators:        sa.MovedToValidators,
+			TimeUnit:                 int64(sa.TimeUnit),
+			NumWrites:                sa.Stats.NumWrites,
+			NumReads:                 sa.Stats.ReadSize / (64 * KB),
+			TotalChallenges:          sa.Stats.TotalChallenges,
+			OpenChallenges:           sa.Stats.OpenChallenges,
+			SuccessfulChallenges:     sa.Stats.SuccessChallenges,
+			FailedChallenges:         sa.Stats.FailedChallenges,
+			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 		}
 	}
 
@@ -274,14 +269,13 @@ func TestAllocations(t *testing.T) {
 					Longitude: 141,
 				},
 				Terms: Terms{
-					ReadPrice:               10,
-					WritePrice:              10,
-					MinLockDemand:           2,
-					MaxOfferDuration:        100,
-					ChallengeCompletionTime: 21,
+					ReadPrice:        10,
+					WritePrice:       10,
+					MinLockDemand:    2,
+					MaxOfferDuration: 100,
 				},
 				Capacity:        100,
-				Used:            50,
+				Allocated:       50,
 				LastHealthCheck: 17456,
 				PublicKey:       "public_key",
 				StakePoolSettings: stakePoolSettings{
@@ -310,11 +304,10 @@ func TestAllocations(t *testing.T) {
 				BlobberID:    "blobber_1",
 				AllocationID: "storage_allocation_id",
 				Terms: Terms{
-					ReadPrice:               10,
-					WritePrice:              10,
-					MinLockDemand:           2,
-					MaxOfferDuration:        100,
-					ChallengeCompletionTime: 21,
+					ReadPrice:        10,
+					WritePrice:       10,
+					MinLockDemand:    2,
+					MaxOfferDuration: 100,
 				},
 			},
 		},
@@ -323,11 +316,10 @@ func TestAllocations(t *testing.T) {
 				BlobberID:    "blobber_1",
 				AllocationID: "storage_allocation_id",
 				Terms: Terms{
-					ReadPrice:               10,
-					WritePrice:              10,
-					MinLockDemand:           2,
-					MaxOfferDuration:        100,
-					ChallengeCompletionTime: 21,
+					ReadPrice:        10,
+					WritePrice:       10,
+					MinLockDemand:    2,
+					MaxOfferDuration: 100,
 				},
 			},
 		},
@@ -340,17 +332,16 @@ func TestAllocations(t *testing.T) {
 			Min: 10,
 			Max: 20,
 		},
-		MaxChallengeCompletionTime: 20,
-		ChallengeCompletionTime:    12,
-		StartTime:                  10212,
-		Finalized:                  true,
-		Canceled:                   false,
-		UsedSize:                   50,
-		MovedToChallenge:           10,
-		MovedBack:                  1,
-		MovedToValidators:          1,
-		TimeUnit:                   12453,
-		Curators:                   []string{"curator1"},
+		ChallengeCompletionTime: 12,
+		StartTime:               10212,
+		Finalized:               true,
+		Canceled:                false,
+		UsedSize:                50,
+		MovedToChallenge:        10,
+		MovedBack:               1,
+		MovedToValidators:       1,
+		TimeUnit:                12453,
+		Curators:                []string{"curator1"},
 	}
 
 	saAllocation := convertSa(sa)
@@ -362,7 +353,7 @@ func TestAllocations(t *testing.T) {
 		BlockNumber: 1,
 		TxHash:      "txn_hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteAllocation),
+		Tag:         int(TagAddAllocation),
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
@@ -382,7 +373,7 @@ func TestAllocations(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "txn_hash2",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteAllocation),
+		Tag:         int(TagAddAllocation),
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
@@ -392,7 +383,7 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.Size, sa.Size)
 
-	allocs, err := eventDb.GetClientsAllocation(sa.Owner)
+	allocs, err := eventDb.GetClientsAllocation(sa.Owner, Pagination{0, 20, true})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(allocs))
 	require.EqualValues(t, allocs[0].Size, sa.Size)

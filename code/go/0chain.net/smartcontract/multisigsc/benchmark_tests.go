@@ -39,7 +39,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, _ *testing.B) error {
 	var msc = MultiSigSmartContract{
 		SmartContract: sci.NewSC(Address),
 	}

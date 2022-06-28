@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/common"
+	"gorm.io/gorm/clause"
+
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
 
@@ -22,15 +25,14 @@ type Blobber struct {
 	Longitude float64 `json:"longitude"`
 
 	// terms
-	ReadPrice               currency.Coin `json:"read_price"`
-	WritePrice              currency.Coin `json:"write_price"`
-	MinLockDemand           float64       `json:"min_lock_demand"`
-	MaxOfferDuration        int64         `json:"max_offer_duration"`
-	ChallengeCompletionTime int64         `json:"challenge_completion_time"`
+	ReadPrice        currency.Coin `json:"read_price"`
+	WritePrice       currency.Coin `json:"write_price"`
+	MinLockDemand    float64       `json:"min_lock_demand"`
+	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity        int64 `json:"capacity"`          // total blobber capacity
-	Used            int64 `json:"used"`              // allocated capacity
-	TotalDataStored int64 `json:"total_data_stored"` // total of files saved on blobber
+	Capacity        int64 `json:"capacity"`  // total blobber capacity
+	Allocated       int64 `json:"allocated"` // allocated capacity
+	Used            int64 `json:"used"`      // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"`
 
@@ -84,7 +86,7 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 	update := dbs.DbUpdates{
 		Id: id,
 		Updates: map[string]interface{}{
-			"total_data_stored": blobber.TotalDataStored + stored,
+			"used": blobber.Used + stored,
 		},
 	}
 	return edb.updateBlobber(update)
@@ -117,13 +119,16 @@ func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, er
 func (edb *EventDb) TotalUsedData() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
-		Select("sum(total_data_stored)").
+		Select("sum(used)").
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
+func (edb *EventDb) GetBlobbers(limit Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Find(&blobbers)
+	result := edb.Store.Get().Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "capacity"},
+		Desc:   limit.IsDescending,
+	}).Find(&blobbers)
 
 	return blobbers, result.Error
 }
@@ -136,15 +141,17 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 }
 
 func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude float64,
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit Pagination,
 ) ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Select("blobber_id").
 		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).
-		Find(&blobberIDs)
+			maxLatitude, minLatitude, maxLongitude, minLongitude).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "capacity"},
+		Desc:   true,
+	}).Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -182,9 +189,8 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 }
 
 type AllocationQuery struct {
-	MaxChallengeCompletionTime time.Duration
-	MaxOfferDuration           time.Duration
-	ReadPriceRange             struct {
+	MaxOfferDuration time.Duration
+	ReadPriceRange   struct {
 		Min int64
 		Max int64
 	}
@@ -198,22 +204,28 @@ type AllocationQuery struct {
 	NumberOfBlobbers  int
 }
 
-func (edb *EventDb) GetBlobberIdsFromUrls(urls []string) ([]string, error) {
+func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data Pagination) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("base_url IN ?", urls)
+	dbStore = dbStore.Where("base_url IN ?", urls).Limit(data.Limit).Offset(data.Offset).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   data.IsDescending,
+	})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string, error) {
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit Pagination, now common.Timestamp) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("challenge_completion_time <= ?", allocation.MaxChallengeCompletionTime.Nanoseconds())
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
-	dbStore = dbStore.Where("capacity - used >= ?", allocation.AllocationSize)
+	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", time.Now().Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
+	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "capacity"},
+		Desc:   limit.IsDescending,
+	})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
@@ -221,31 +233,30 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery) ([]string,
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", blobber.BlobberID).
 		Updates(map[string]interface{}{
-			"base_url":                  blobber.BaseURL,
-			"latitude":                  blobber.Latitude,
-			"longitude":                 blobber.Longitude,
-			"read_price":                blobber.ReadPrice,
-			"write_price":               blobber.WritePrice,
-			"min_lock_demand":           blobber.MinLockDemand,
-			"max_offer_duration":        blobber.MaxOfferDuration,
-			"challenge_completion_time": blobber.ChallengeCompletionTime,
-			"capacity":                  blobber.Capacity,
-			"used":                      blobber.Used,
-			"last_health_check":         blobber.LastHealthCheck,
-			"delegate_wallet":           blobber.DelegateWallet,
-			"min_stake":                 blobber.MinStake,
-			"max_stake":                 blobber.MaxStake,
-			"num_delegates":             blobber.NumDelegates,
-			"service_charge":            blobber.ServiceCharge,
-			"offers_total":              blobber.OffersTotal,
-			"unstake_total":             blobber.UnstakeTotal,
-			"reward":                    blobber.Reward,
-			"total_service_charge":      blobber.TotalServiceCharge,
-			"saved_data":                blobber.SavedData,
-			"name":                      blobber.Name,
-			"website_url":               blobber.WebsiteUrl,
-			"logo_url":                  blobber.LogoUrl,
-			"description":               blobber.Description,
+			"base_url":             blobber.BaseURL,
+			"latitude":             blobber.Latitude,
+			"longitude":            blobber.Longitude,
+			"read_price":           blobber.ReadPrice,
+			"write_price":          blobber.WritePrice,
+			"min_lock_demand":      blobber.MinLockDemand,
+			"max_offer_duration":   blobber.MaxOfferDuration,
+			"capacity":             blobber.Capacity,
+			"used":                 blobber.Used,
+			"last_health_check":    blobber.LastHealthCheck,
+			"delegate_wallet":      blobber.DelegateWallet,
+			"min_stake":            blobber.MinStake,
+			"max_stake":            blobber.MaxStake,
+			"num_delegates":        blobber.NumDelegates,
+			"service_charge":       blobber.ServiceCharge,
+			"offers_total":         blobber.OffersTotal,
+			"unstake_total":        blobber.UnstakeTotal,
+			"reward":               blobber.Reward,
+			"total_service_charge": blobber.TotalServiceCharge,
+			"saved_data":           blobber.SavedData,
+			"name":                 blobber.Name,
+			"website_url":          blobber.WebsiteUrl,
+			"logo_url":             blobber.LogoUrl,
+			"description":          blobber.Description,
 		}).Error
 }
 

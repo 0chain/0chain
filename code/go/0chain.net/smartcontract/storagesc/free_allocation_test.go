@@ -239,20 +239,18 @@ func TestFreeAllocationRequest(t *testing.T) {
 			},
 			MaxBlobbersPerAllocation: 40,
 		}
-		now                         = common.Timestamp(23000000)
-		mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
+		now = common.Timestamp(23000000)
 	)
 	blob := make([]string, mockNumBlobbers)
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:       blob[i],
-			Capacity: 536870912,
-			Used:     73,
+			ID:        blob[i],
+			Capacity:  536870912,
+			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
-				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
-				ChallengeCompletionTime: mockChallengeCompletionTime,
+				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
+				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}
@@ -434,7 +432,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAddAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
@@ -609,16 +607,15 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxBlobbersPerAllocation:   40,
 	}
 	var now = common.Timestamp(29000000)
-	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
+
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
-			ID:       strconv.Itoa(i),
-			Capacity: 536870912,
-			Used:     73,
+			ID:        strconv.Itoa(i),
+			Capacity:  536870912,
+			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
-				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
-				ChallengeCompletionTime: mockChallengeCompletionTime,
+				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
+				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}
@@ -774,7 +771,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(

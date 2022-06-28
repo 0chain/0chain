@@ -52,25 +52,23 @@ func TestNewAllocation(t *testing.T) {
 	}
 
 	var request = newAllocationRequest{
-		Owner:                      clientId,
-		OwnerPublicKey:             "my public key",
-		Size:                       scYaml.MinAllocSize,
-		DataShards:                 3,
-		ParityShards:               5,
-		Expiration:                 common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
-		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
-		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
-		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
+		Owner:           clientId,
+		OwnerPublicKey:  "my public key",
+		Size:            scYaml.MinAllocSize,
+		DataShards:      3,
+		ParityShards:    5,
+		Expiration:      common.Timestamp(scYaml.MinAllocDuration.Seconds()) + now,
+		ReadPriceRange:  PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
+		WritePriceRange: PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		Blobbers: []string{"0", "1", "2", "3",
 			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
-		Capacity: 536870912,
-		Used:     73,
+		Capacity:  536870912,
+		Allocated: 73,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -133,9 +131,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -175,9 +172,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
-				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-				},
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),
@@ -251,9 +246,8 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
 		Terms: Terms{
-			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
-			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
-			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
+			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
 		LastHealthCheck: now - blobberHealthTime,
 	}
@@ -293,9 +287,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
-				Terms: Terms{
-					ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-				},
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),
@@ -363,24 +355,20 @@ func testCancelAllocation(
 
 	require.True(t, len(challenges) <= len(blobbers))
 	for i, blobberChallenges := range challenges {
-		var bc = BlobberChallenges{
-			BlobberID: strconv.Itoa(i),
-		}
+
+		blobberID := strconv.Itoa(i)
 
 		var ac = AllocationChallenges{
 			AllocationID: sAllocation.ID,
-			//OpenChallenges:   []*StorageChallenge{},
 		}
 		for _, created := range blobberChallenges {
 			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
 				//AllocationID: sAllocation.ID,
-				BlobberID: bc.BlobberID,
+				BlobberID: blobberID,
 				CreatedAt: created,
 			})
 		}
-		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
-		require.NoError(t, err)
-		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
+		_, err := ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
 		require.NoError(t, err)
 	}
 
@@ -915,7 +903,7 @@ func (f formulaeCommitNewAllocation) sizePerUsedBlobber() int64 {
 func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string) int64 {
 	var thisBlobber, ok = f.blobbers.get(id)
 	require.True(t, ok)
-	var usedAlready = thisBlobber.Used
+	var usedAlready = thisBlobber.Allocated
 	var newAllocament = f.sizePerUsedBlobber()
 
 	return usedAlready + newAllocament
@@ -947,8 +935,8 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 	for _, blobber := range blobbers {
 		b, ok := f.blobbers.get(blobber.ID)
 		require.True(t, ok)
-		if blobber.Used > b.Used {
-			require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
+		if blobber.Allocated > b.Allocated {
+			require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Allocated)
 			countUsedBlobbers++
 		}
 	}
@@ -956,6 +944,6 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 
 	require.EqualValues(t, f.blobbersUsed(), len(blobbers))
 	for _, blobber := range blobbers {
-		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
+		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Allocated)
 	}
 }

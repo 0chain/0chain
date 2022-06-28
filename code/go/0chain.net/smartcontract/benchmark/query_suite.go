@@ -52,7 +52,7 @@ func (qbt *QueryBenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{}
 }
 
-func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 	b.StopTimer()
 	req := httptest.NewRequest("GET", "http://localhost/v1/screst/"+qbt.address+"/"+qbt.FuncName, nil)
 	rec := httptest.NewRecorder()
@@ -64,7 +64,6 @@ func (qbt *QueryBenchTest) Run(balances cstate.StateContextI, b *testing.B) erro
 		req.URL.RawQuery = q.Encode()
 	}
 	b.StartTimer()
-
 	qbt.Receiver.SetQueryStateContext(balances)
 	qbt.Endpoint(rec, req)
 

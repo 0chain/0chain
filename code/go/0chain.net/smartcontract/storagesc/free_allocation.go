@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/currency"
 
@@ -241,16 +242,15 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	var request = newAllocationRequest{
-		DataShards:                 conf.FreeAllocationSettings.DataShards,
-		ParityShards:               conf.FreeAllocationSettings.ParityShards,
-		Size:                       conf.FreeAllocationSettings.Size,
-		Expiration:                 common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.FreeAllocationSettings.Duration).Unix()),
-		Owner:                      marker.Recipient,
-		OwnerPublicKey:             inputObj.RecipientPublicKey,
-		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
-		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
-		Blobbers:                   inputObj.Blobbers,
+		DataShards:      conf.FreeAllocationSettings.DataShards,
+		ParityShards:    conf.FreeAllocationSettings.ParityShards,
+		Size:            conf.FreeAllocationSettings.Size,
+		Expiration:      common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.FreeAllocationSettings.Duration).Unix()),
+		Owner:           marker.Recipient,
+		OwnerPublicKey:  inputObj.RecipientPublicKey,
+		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
+		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
+		Blobbers:        inputObj.Blobbers,
 	}
 
 	arBytes, err := request.encode()

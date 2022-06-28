@@ -1,12 +1,15 @@
 package cmd
 
 import (
-	"0chain.net/core/common"
 	"fmt"
-	"github.com/spf13/pflag"
 	"path"
 	"sort"
 	"time"
+
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
+	"github.com/spf13/pflag"
 
 	"0chain.net/smartcontract/zcnsc"
 
@@ -69,6 +72,10 @@ func init() {
 	_ = viper.BindEnv(bk.OptionOmittedTests, "OMIT")
 	_ = viper.BindPFlag(bk.OptionVerbose, pflag.Lookup("verbose"))
 	_ = viper.BindEnv(bk.OptionVerbose, "VERBOSE")
+
+	impl := chain.NewConfigImpl(&chain.ConfigData{})
+	config.Configuration().ChainConfig = impl
+
 	viper.AutomaticEnv()
 }
 
