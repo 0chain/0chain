@@ -3,7 +3,6 @@ package blockstore
 import (
 	"container/list"
 	"crypto/rand"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -146,7 +145,6 @@ func TestCacheRead(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 	e := c.(*cache).lru.list.Front()
-	fmt.Printf("\nElement: %v\n\n", e)
 	k := e.Value.(*listEntry).key
 	require.Equal(t, k, lastKey)
 
