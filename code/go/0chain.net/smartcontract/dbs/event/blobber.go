@@ -7,6 +7,8 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
@@ -221,13 +223,21 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("last_health_check > ?", time.Now().Add(-time.Hour).Unix())
+	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
 	})
 	var blobberIDs []string
+
+	logging.Logger.Debug("request params", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
+		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
+		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
+		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Int64("last_health_check", common.ToTime(now).Add(-time.Hour).Unix()),
+		zap.Int64("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers)),
+	)
+
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
