@@ -435,7 +435,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 			prevVolume := volumes[prevInd]
 			var selectedIndex int
 
-			if prevInd <= 0 {
+			if prevInd < 0 {
 				prevInd = -1
 			}
 
