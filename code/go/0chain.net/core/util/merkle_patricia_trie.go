@@ -286,7 +286,8 @@ func (mpt *MerklePatriciaTrie) Iterate(ctx context.Context, handler MPTIteratorH
 	defer mpt.mutex.RUnlock()
 
 	rootKey := mpt.root
-	if rootKey == nil {
+	// it might be nil or empty
+	if rootKey == nil || len(rootKey) == 0 { //nolint
 		return nil
 	}
 	return mpt.iterate(ctx, Path{}, rootKey, handler, visitNodeTypes)
