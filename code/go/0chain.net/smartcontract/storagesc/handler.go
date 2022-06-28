@@ -1674,6 +1674,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //      description: restrict to transactions sent by the specified client
 //      in: query
 //      type: string
+//    + name: to_client_id
+//      description: restrict to transactions sent to a specified client
+//      in: query
+//      type: string
 //    + name: block_hash
 //      description: restrict to transactions in indicated block
 //      in: query
@@ -1706,6 +1710,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
 		clientID      = r.URL.Query().Get("client_id")
+		toClientID    = r.URL.Query().Get("to_client_id")
 		blockHash     = r.URL.Query().Get("block_hash")
 		startBlockNum = r.URL.Query().Get("block-start")
 		endBlockNum   = r.URL.Query().Get("block-end")
@@ -1723,6 +1728,16 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 	if clientID != "" {
 		rtv, err := edb.GetTransactionByClientId(clientID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if toClientID != "" {
+		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
