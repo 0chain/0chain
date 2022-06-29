@@ -2211,7 +2211,7 @@ type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
 }
 
-func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
+func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) { //nolint
 	if offsetString != "" {
 		offset, err = strconv.Atoi(offsetString)
 		if err != nil {

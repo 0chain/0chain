@@ -109,8 +109,8 @@ func (ns *Nodes) unmarshalStateNodesJSON(obj map[string]interface{}) error {
 	if nodes, ok := obj["nodes"].([]interface{}); ok {
 		ns.Nodes = make([]util.Node, len(nodes))
 		for idx, nd := range nodes {
-			if nd, ok := nd.(string); ok {
-				buf, err := base64.StdEncoding.DecodeString(nd)
+			if node, ok := nd.(string); ok {
+				buf, err := base64.StdEncoding.DecodeString(node)
 				if err != nil {
 					logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 					return err
@@ -121,7 +121,7 @@ func (ns *Nodes) unmarshalStateNodesJSON(obj map[string]interface{}) error {
 					return err
 				}
 			} else {
-				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
+				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.String("node", node), zap.Any("obj", obj))
 				return common.ErrInvalidData
 			}
 		}

@@ -32,11 +32,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v1
 
-    - name: Setup go 1.16
+    - name: Setup go 1.18
       if: success()
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16.x
+        go-version: 1.18
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
