@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -358,7 +359,7 @@ func setupSelfNodeKeys() { //nolint
 func TestChain_deletingTxns(t *testing.T) {
 
 	txs1 := []*transaction.Transaction{
-		{ClientID: "1", Nonce: 0, TransactionData: "false"},
+		{ClientID: "1", Nonce: 0, TransactionData: "this better work!"},
 		{ClientID: "1", Nonce: 1, TransactionData: ""},
 		{ClientID: "1", Nonce: 2, TransactionData: ""},
 		{ClientID: "1", Nonce: 3, TransactionData: ""},
@@ -515,9 +516,31 @@ func TestChain_deletingTxns(t *testing.T) {
 			}
 			println("Stored txns")
 
+			// getting txns
+			thsh := tt.fields.txns[0].(*transaction.Transaction).Hash
+			println("thsh: " + thsh)
+			r, err := http.NewRequest("POST", "/api/v1/transactions?hash="+thsh, nil)
+			if err != nil {
+				println(err.Error())
+				panic(err)
+			}
+			out, err := transaction.GetTransaction(ctx, r)
+			if err != nil {
+				println(err.Error())
+				panic(err)
+			}
+			println("Got txn: " + out.(*transaction.Transaction).TransactionData)
+
 			// deleting txns
 			mc.deleteTxns(tt.fields.txns)
 			println("Deleted txns")
+
+			out, err = transaction.GetTransaction(ctx, r)
+			if err != nil {
+				println(err.Error())
+			} else {
+				panic(err)
+			}
 
 			// checking if txns are deleted
 			// memorystore.
