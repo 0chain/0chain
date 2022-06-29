@@ -7,16 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/cache"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/logging"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/logging"
 	"0chain.net/sharder/blockstore"
 
 	"github.com/0chain/gorocksdb"
@@ -192,7 +191,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		Logger.Info("load_lfb -- can't initialize stored block state",
+		Logger.Warn("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
 		// return common.NewErrorf("load_lfb",
 		//	"can't init block state: %v", err) // fatal
@@ -346,13 +345,21 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 		// Don't check the state. It can be missing if the state had synced.
 		// But it works fine anyway.
 
-		// if !sc.HasClientStateStored(lfb.ClientStateHash) {
-		// 	Logger.Warn("load_lfb, missing corresponding state",
-		// 		zap.Int64("round", r.Number),
-		// 		zap.String("block_hash", r.BlockHash))
-		// 	// we can't use this block, because of missing or malformed state
-		// 	continue
-		// }
+		if !sc.HasClientStateStored(lfb.ClientStateHash) {
+			Logger.Warn("load_lfb, missing corresponding state",
+				zap.Int64("round", r.Number),
+				zap.String("block_hash", r.BlockHash))
+			// we can't use this block, because of missing or malformed state
+			continue
+		}
+
+		// check if we can load config from the lfb, otherwise choose previous one
+		if lfb.Round > 0 && !sc.HasConfig(lfb) {
+			Logger.Warn("load_lfb, missing config",
+				zap.Int64("round", r.Number),
+				zap.String("block_hash", r.BlockHash))
+			continue
+		}
 
 		return // got it
 	}
@@ -468,4 +475,19 @@ func (sc *Chain) SaveMagicBlockHandler(ctx context.Context,
 // SaveMagicBlock function.
 func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 	return chain.MagicBlockSaveFunc(sc.SaveMagicBlockHandler)
+}
+
+func (sc *Chain) HasConfig(b *block.Block) bool {
+	if err := sc.InitBlockState(b); err != nil {
+		Logger.Warn("load_lfb, init block state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return false
+	}
+
+	_, err := chain.GetConfigMap(b.ClientState)
+	if err != nil {
+		Logger.Warn("load_lfb, can not load config from lfb", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return false
+	}
+
+	return true
 }
