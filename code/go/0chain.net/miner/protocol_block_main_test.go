@@ -333,11 +333,11 @@ func initDefaultPool() error {
 func TestChain_deletingTxns(t *testing.T) {
 
 	txs1 := []*transaction.Transaction{
-		{ClientID: "1", Nonce: 0, TransactionData: "this better work!"},
-		{ClientID: "1", Nonce: 1, TransactionData: ""},
-		{ClientID: "1", Nonce: 2, TransactionData: ""},
-		{ClientID: "1", Nonce: 3, TransactionData: ""},
-		{ClientID: "1", Nonce: 4, TransactionData: ""},
+		{Nonce: 0, TransactionData: "this better work!"},
+		{Nonce: 1, TransactionData: ""},
+		{Nonce: 2, TransactionData: ""},
+		{Nonce: 3, TransactionData: ""},
+		{Nonce: 4, TransactionData: ""},
 	}
 
 	type fields struct {
@@ -418,6 +418,7 @@ func TestChain_deletingTxns(t *testing.T) {
 	cl = client.NewClient(client.SignatureScheme(encryption.SignatureSchemeBls0chain))
 	cl.EntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
 	err = cl.SetPublicKey(sigScheme.GetPublicKey())
+	// cl.ID = "1"
 	if err != nil {
 		panic(err)
 	}
@@ -425,9 +426,6 @@ func TestChain_deletingTxns(t *testing.T) {
 	ctx := context.Background()
 
 	_, err = client.PutClient(ctx, cl)
-
-	cl.IDField = datastore.IDField{ID: cl.ID}
-	cl.ID = "1"
 
 	if err != nil {
 		panic(err)
@@ -447,6 +445,7 @@ func TestChain_deletingTxns(t *testing.T) {
 			for _, txn := range tt.fields.txns {
 				txn.(*transaction.Transaction).CreationDate = common.Now()
 				txn.(*transaction.Transaction).PublicKey = cl.PublicKey
+				txn.(*transaction.Transaction).ClientID = cl.ID
 				txn.(*transaction.Transaction).Hash = txn.(*transaction.Transaction).ComputeHash()
 
 				sig, err := txn.(*transaction.Transaction).Sign(sigScheme)
