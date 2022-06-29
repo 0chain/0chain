@@ -598,7 +598,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	transaction.RemoveFromPool(ctx, txns)
 
 	if len(invalidTxns) > 0 {
-		mc.deleteTxns(invalidTxns)
+		transaction.RemoveFromPool(ctx, invalidTxns)
 	}
 }
 
