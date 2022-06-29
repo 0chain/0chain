@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -38,7 +39,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	}
 
 	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-		return errors.New("previous block state is not computed")
+		return fmt.Errorf("previous block state is not computed, state status: %d, hash: %s",
+			pb.GetStateStatus(), pb.Hash)
 	}
 
 	errC := make(chan error)
