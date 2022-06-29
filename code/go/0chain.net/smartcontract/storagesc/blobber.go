@@ -540,7 +540,8 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	updates, err := alloc.marshalUpdates(balances)
 	if err != nil {
-		return
+		return common.NewErrorf("commit_move_tokens",
+			"emitting allocation event: %v", err)
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
