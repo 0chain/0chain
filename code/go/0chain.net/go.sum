@@ -251,10 +251,10 @@ github.com/hashicorp/golang-lru v0.5.4 h1:YDjusn29QI/Das2iO9M0BHnIbxPeyuCHsjMW+l
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef h1:jWyKgbg5RNrPE02JGGlbegGTszFryC1p6G7Pctwf1Do=
-github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef/go.mod h1:i4wRNUUFF1nNmYFHM9UDl13MGoxEQkMVCLAd82qZz4s=
-github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72 h1:9ld9NR0ZyRIrh6P4TAEETBMsG2OP5YcV4zCzyUBuGpA=
-github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72/go.mod h1:XegVNAXVOgj/0XnsW1j7XOe1zOopaaOfqHODIJBo+Ks=
+github.com/herumi/bls v0.0.0-20220420050213-cf2b578f1c41 h1:kc7/S+KqJsBtm7+hzwOEMies+j+ZlcYSzbIAdaGuUrU=
+github.com/herumi/bls v0.0.0-20220420050213-cf2b578f1c41/go.mod h1:CnmR5QZ/QBnBE8Z55O+OtmUc6ICUdrOW9fwSRQwz5Bo=
+github.com/herumi/mcl v0.0.0-20220629001240-ee933bc6505d h1:vNTn33M1B0ZRqzgW0+fm1Kq5MjhZbpJf9Z1qSIKNf2Y=
+github.com/herumi/mcl v0.0.0-20220629001240-ee933bc6505d/go.mod h1:h3LxvbUoOFYciRnV4Ycv9LNk6aqWFEyj115DV8aIrqw=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
