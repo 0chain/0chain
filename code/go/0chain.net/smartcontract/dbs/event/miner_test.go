@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
+	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
@@ -256,7 +257,7 @@ func TestGetMiners(t *testing.T) {
 	createMiners(t, eventDb, 10)
 
 	t.Run("Inactive miners should be returned", func(t *testing.T) {
-		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "Error should not be returned")
 		for _, miner := range miners {
 			assert.Equal(t, false, miner.Active, "Miner is active")
@@ -264,7 +265,7 @@ func TestGetMiners(t *testing.T) {
 		assert.Equal(t, 5, len(miners), "All miners were not returned")
 	})
 	t.Run("Active miners should be returned", func(t *testing.T) {
-		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "Error should not be returned")
 		for _, miner := range miners {
 			assert.Equal(t, true, miner.Active, "Miner is not active")
@@ -298,7 +299,7 @@ func TestGetMinerLocations(t *testing.T) {
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)
 	t.Run("miner locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, 0, 0)
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, common2.Pagination{})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all miners should be returned")
 		for _, location := range locations {
@@ -309,7 +310,7 @@ func TestGetMinerLocations(t *testing.T) {
 		}
 	})
 	t.Run("locations for miners which are active", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(true)}, 0, 10)
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
 		for _, location := range locations {
@@ -320,7 +321,7 @@ func TestGetMinerLocations(t *testing.T) {
 		}
 	})
 	t.Run("locations for miners which are inactive", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(false)}, 0, 10)
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
 		for _, location := range locations {

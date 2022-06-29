@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -23,12 +24,12 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum,priority:1;index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	// file info
-	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name" gorm:"index:idx_walloc_file,priority:1"`
-	ContentHash string `json:"content_hash"`
+	LookupHash  string `json:"lookup_hash" gorm:"index:idx_wlookup,priority:1"`
+	Name        string `json:"name" gorm:"index:idx_wname,priority:1;idx_walloc_file,priority:1"`
+	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
@@ -54,12 +55,20 @@ func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, all
 		Find(&total).Error
 }
 
+func (edb *EventDb) GetAllocationWrittenSizeInBlocks(startBlockNum, endBlockNum int64) (int64, error) {
+	var total int64
+	return total, edb.Store.Get().Model(&WriteMarker{}).
+		Select("COALESCE(SUM(size),0)").
+		Where("block_number > ? AND block_number < ?", startBlockNum, endBlockNum).
+		Find(&total).Error
+}
+
 func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&WriteMarker{}).Where("allocation_id = ?", allocationID).Count(&total).Error
 }
 
-func (edb *EventDb) GetWriteMarkers(limit Pagination) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkers(limit common.Pagination) ([]WriteMarker, error) {
 	var wm []WriteMarker
 	return wm, edb.Get().Model(&WriteMarker{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -67,7 +76,7 @@ func (edb *EventDb) GetWriteMarkers(limit Pagination) ([]WriteMarker, error) {
 	}).Scan(&wm).Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit Pagination) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
@@ -78,7 +87,7 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit Pa
 	return wms, result.Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit Pagination) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
@@ -91,4 +100,26 @@ func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filena
 
 func (edb *EventDb) addWriteMarker(wm WriteMarker) error {
 	return edb.Store.Get().Create(&wm).Error
+}
+
+func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString string, limit common.Pagination) ([]interface{}, error) {
+	var wm []interface{}
+
+	edbRef := edb.Store.Get()
+	if len(selectString) > 0 {
+		edbRef = edbRef.Select(selectString)
+	}
+
+	res := edbRef.
+		Model(WriteMarker{}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Where(filters).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "block_number"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&wm)
+
+	return wm, res.Error
 }

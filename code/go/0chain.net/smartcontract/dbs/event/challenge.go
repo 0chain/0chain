@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm/clause"
 
@@ -33,7 +34,7 @@ func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	return &ch, nil
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit Pagination) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit common2.Pagination) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
 

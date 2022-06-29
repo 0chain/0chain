@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
@@ -55,6 +55,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
+		rest.MakeEndpoint(storage+"/transaction-hashes", srh.getTransactionHashesByFilter),
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
 		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
 		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
@@ -79,6 +80,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
 		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
+		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", srh.getWrittenAmountPerPeriod),
 		rest.MakeEndpoint(storage+"/alloc_read_size", srh.getReadAmount),
 		rest.MakeEndpoint(storage+"/alloc_write_marker_count", srh.getWriteMarkerCount),
 		rest.MakeEndpoint(storage+"/collected_reward", srh.getCollectedReward),
@@ -164,7 +166,7 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 		urlsStr = r.URL.Query().Get("blobber_urls")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -232,7 +234,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		allocData = r.URL.Query().Get("free_allocation_data")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -312,7 +314,9 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //  200:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	q := r.URL.Query()
+
+	limit, err := common2.GetOffsetLimitOrderParam(q)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -325,7 +329,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	allocData := r.URL.Query().Get("allocation_data")
+	allocData := q.Get("allocation_data")
 	var request newAllocationRequest
 	if err := request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
@@ -341,7 +345,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit event.Pagination) ([]string, error) {
+func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
 	var sa = request.storageAllocation()
 	var conf *Config
 	var err error
@@ -357,6 +361,11 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
+	}
+
+	if sa.DataShards <= 0 || sa.ParityShards < 0 {
+		return nil, common.NewErrorf("allocation_creation_failed",
+			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
@@ -382,6 +391,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	}, limit, balances.Now())
+
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -551,6 +561,65 @@ func (srh *StorageRestHandler) getWrittenAmount(w http.ResponseWriter, r *http.R
 		return
 	}
 	total, err := edb.GetAllocationWrittenSizeInLastNBlocks(int64(blockNumber), allocationIDString)
+
+	common.Respond(w, r, map[string]int64{
+		"total": total,
+	}, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod allocWrittenSizePerPeriod
+// Total amount of data added during given blocks
+//
+// parameters:
+//    + name: block-start
+//      description:start block number
+//      required: true
+//      in: query
+//      type: string
+//    + name: block-end
+//      description:end block number
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, r *http.Request) {
+	startBlockNumberString := r.URL.Query().Get("block-start")
+	endBlockNumberString := r.URL.Query().Get("block-end")
+
+	if startBlockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is empty"))
+		return
+	}
+	if endBlockNumberString == "" {
+		common.Respond(w, r, nil, common.NewErrInternal("block-end is empty"))
+		return
+	}
+
+	startBlockNumber, err := strconv.Atoi(startBlockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is not valid"))
+		return
+	}
+	endBlockNumber, err := strconv.Atoi(endBlockNumberString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("block-end is not valid"))
+		return
+	}
+
+	if startBlockNumber > endBlockNumber {
+		common.Respond(w, r, nil, common.NewErrInternal("block-start is greater than block-end"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	total, err := edb.GetAllocationWrittenSizeInBlocks(int64(startBlockNumber), int64(endBlockNumber))
 
 	common.Respond(w, r, map[string]int64{
 		"total": total,
@@ -818,7 +887,7 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1081,7 +1150,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		blobberID = r.URL.Query().Get("blobber")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1182,7 +1251,7 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 		filename     = r.URL.Query().Get("filename")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1290,7 +1359,7 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 		authTicket   = r.URL.Query().Get("auth_ticket")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1384,7 +1453,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := getBlobbersForRequest(req, edb, balances, event.Pagination{})
+	blobbers, err := getBlobbersForRequest(req, edb, balances, common2.Pagination{})
 	if err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
@@ -1448,7 +1517,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client")
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1534,7 +1603,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 		transactionHash = r.URL.Query().Get("transaction_hash")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1579,7 +1648,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 //  400:
 //  500:
 func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1605,6 +1674,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //      description: restrict to transactions sent by the specified client
 //      in: query
 //      type: string
+//    + name: to_client_id
+//      description: restrict to transactions sent to a specified client
+//      in: query
+//      type: string
 //    + name: block_hash
 //      description: restrict to transactions in indicated block
 //      in: query
@@ -1621,6 +1694,14 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //      description: desc or asc
 //      in: query
 //      type: string
+//    + name: block-start
+//      description: restrict to transactions in specified start block and endblock
+//      in: query
+//      type: string
+//    + name: block-end
+//      description: restrict to transactions in specified start block and endblock
+//      in: query
+//      type: string
 //
 // responses:
 //  200: []Transaction
@@ -1628,11 +1709,14 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //  500:
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID  = r.URL.Query().Get("client_id")
-		blockHash = r.URL.Query().Get("block_hash")
+		clientID      = r.URL.Query().Get("client_id")
+		toClientID    = r.URL.Query().Get("to_client_id")
+		blockHash     = r.URL.Query().Get("block_hash")
+		startBlockNum = r.URL.Query().Get("block-start")
+		endBlockNum   = r.URL.Query().Get("block-end")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1652,6 +1736,16 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
+	if toClientID != "" {
+		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
 	if blockHash != "" {
 		rtv, err := edb.GetTransactionByBlockHash(blockHash, limit)
 		if err != nil {
@@ -1662,8 +1756,118 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
+	if startBlockNum != "" && endBlockNum != "" {
+		startBlockNumInt, err := strconv.Atoi(startBlockNum)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
+			return
+		}
+		endBlockNumInt, err := strconv.Atoi(endBlockNum)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("end_block_number is not valid"))
+			return
+		}
+
+		if startBlockNumInt > endBlockNumInt {
+			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is greater than end_block_number"))
+			return
+		}
+
+		rtv, err := edb.GetTransactionByBlockNumbers(startBlockNumInt, endBlockNumInt, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
 
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
+// Gets filtered list of transaction hashes from file information
+//
+// parameters:
+//    + name: look-up-hash
+//      description: restrict to transactions by the specific look up hash on write marker
+//      in: query
+//      type: string
+//    + name: name
+//      description: restrict to transactions by the specific file name on write marker
+//      in: query
+//      type: string
+//    + name: content-hash
+//      description: restrict to transactions by the specific content hash on write marker
+//      in: query
+//      type: string
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
+//
+// responses:
+//  200: stringArray
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWriter, r *http.Request) {
+	var (
+		lookUpHash  = r.URL.Query().Get("look-up-hash")
+		name        = r.URL.Query().Get("name")
+		contentHash = r.URL.Query().Get("content-hash")
+	)
+
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+
+	if lookUpHash != "" {
+		rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{LookupHash: lookUpHash}, "transaction_id", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if contentHash != "" {
+		rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: contentHash}, "transaction_id", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if name != "" {
+		rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: name}, "transaction_id", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
@@ -1742,6 +1946,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
 // Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity).
+//
+// parameters:
 //    + name: offset
 //      description: offset
 //      in: query
@@ -1758,7 +1964,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 //  200: storageNodeResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1841,7 +2047,7 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 		maxLatitude = MaxLatitude
 	}
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -2003,61 +2209,4 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 // swagger:model readMarkersCount
 type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
-}
-
-func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
-		}
-	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
-
-	return
-}
-
-func getOffsetLimitOrderParam(values url.Values) (event.Pagination, error) {
-	var (
-		offsetString = values.Get("offset")
-		limitString  = values.Get("limit")
-		sort         = values.Get("sort")
-
-		limit        = event.DefaultQueryLimit
-		offset       = 0
-		isDescending = false
-		err          error
-	)
-
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return event.Pagination{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("offset parameter is not valid")
-		}
-	}
-
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return event.Pagination{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
-
-	if sort != "" {
-		switch sort {
-		case "desc":
-			isDescending = true
-		case "asc":
-			isDescending = false
-		default:
-			return event.Pagination{Limit: event.DefaultQueryLimit}, err
-		}
-	}
-
-	return event.Pagination{Offset: offset, Limit: limit, IsDescending: isDescending}, nil
 }

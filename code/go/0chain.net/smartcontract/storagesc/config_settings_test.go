@@ -169,6 +169,12 @@ func TestUpdateSettings(t *testing.T) {
 					"block_reward.sharder_ratio":    "80.0",
 					"block_reward.miner_ratio":      "20.0",
 					"block_reward.blobber_ratio":    "20.0",
+					"block_reward.gamma.alpha":      "0.2",
+					"block_reward.gamma.a":          "10",
+					"block_reward.gamma.b":          "9",
+					"block_reward.zeta.i":           "1",
+					"block_reward.zeta.k":           "0.9",
+					"block_reward.zeta.mu":          "0.2",
 
 					"expose_mpt": "false",
 				},
@@ -372,6 +378,12 @@ func TestCommitSettingChanges(t *testing.T) {
 					"block_reward.sharder_ratio":    "80.0",
 					"block_reward.miner_ratio":      "20.0",
 					"block_reward.blobber_ratio":    "100.0",
+					"block_reward.gamma.alpha":      "0.2",
+					"block_reward.gamma.a":          "10",
+					"block_reward.gamma.b":          "9",
+					"block_reward.zeta.i":           "1",
+					"block_reward.zeta.k":           "0.9",
+					"block_reward.zeta.mu":          "0.2",
 
 					"expose_mpt": "false",
 				},
@@ -487,6 +499,18 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.BlobberWeight
 	case MaxBlobbersPerAllocation:
 		return conf.MaxBlobbersPerAllocation
+	case BlockRewardGammaAlpha:
+		return conf.BlockReward.Gamma.Alpha
+	case BlockRewardGammaA:
+		return conf.BlockReward.Gamma.A
+	case BlockRewardGammaB:
+		return conf.BlockReward.Gamma.B
+	case BlockRewardZetaI:
+		return conf.BlockReward.Zeta.I
+	case BlockRewardZetaK:
+		return conf.BlockReward.Zeta.K
+	case BlockRewardZetaMu:
+		return conf.BlockReward.Zeta.Mu
 
 	case ExposeMpt:
 		return conf.ExposeMpt

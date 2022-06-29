@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -35,7 +36,7 @@ func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, a
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit Pagination) ([]ReadMarker, error) {
+func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit common2.Pagination) ([]ReadMarker, error) {
 	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
 		Where(query).Offset(limit.Offset).Limit(limit.Limit)
