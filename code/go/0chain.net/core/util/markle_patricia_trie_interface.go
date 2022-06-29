@@ -8,7 +8,10 @@ import (
 )
 
 //ErrIteratingChildNodes - indicates an error iterting the child nodes
-var ErrIteratingChildNodes = errors.New("Error iterating child nodes")
+var (
+	ErrIteratingChildNodes = errors.New("Error iterating child nodes")
+	ErrMissingNodes        = errors.New("missing nodes")
+)
 
 //Path - a type for the path of the merkle patricia trie
 type Path []byte
@@ -54,6 +57,7 @@ type MerklePatriciaTrieI interface {
 
 	// FindMissingNodes find all missing nodes in a MPT tree
 	FindMissingNodes(ctx context.Context) ([]Path, []Key, error)
+	HasMissingNodes(ctx context.Context) (bool, error)
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
 

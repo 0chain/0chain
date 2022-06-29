@@ -355,10 +355,16 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 		}
 
 		// check if lfb has full state
-		if !sc.HasFullState(lfb) {
-			Logger.Warn("load_lfb, missing config",
+		if !sc.ValidateState(lfb) {
+			Logger.Warn("load_lfb, lfb state missing nodes",
 				zap.Int64("round", r.Number),
 				zap.String("block_hash", r.BlockHash))
+			// go back 50 rounds if
+			if lfb.Round > 50 {
+				for i := 0; i < 50; i++ {
+					iter.Prev()
+				}
+			}
 			continue
 		}
 
@@ -478,20 +484,20 @@ func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 	return chain.MagicBlockSaveFunc(sc.SaveMagicBlockHandler)
 }
 
-func (sc *Chain) HasFullState(b *block.Block) bool {
+func (sc *Chain) ValidateState(b *block.Block) bool {
 	if err := sc.InitBlockState(b); err != nil {
 		Logger.Warn("load_lfb, init block state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return false
 	}
 
-	_, keys, err := b.ClientState.FindMissingNodes(context.Background())
+	missing, err := b.ClientState.HasMissingNodes(context.Background())
 	if err != nil {
 		Logger.Warn("load_lfb, find missing nodes failed",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return false
 	}
 
-	if len(keys) > 0 {
+	if missing {
 		Logger.Warn("load_lfb, lfb has missing nodes",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return false

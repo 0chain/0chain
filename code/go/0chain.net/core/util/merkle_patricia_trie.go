@@ -994,6 +994,36 @@ func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []
 	return paths, keys, nil
 }
 
+// HasMissingNodes returns immediately when a missing node is detected
+func (mpt *MerklePatriciaTrie) HasMissingNodes(ctx context.Context) (bool, error) {
+	paths := make([]Path, 0, BatchSize)
+	keys := make([]Key, 0, BatchSize)
+	handler := func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			paths = append(paths, path)
+			keys = append(keys, key)
+			return ErrMissingNodes
+		}
+		return nil
+	}
+
+	st := time.Now()
+	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	switch err {
+	case nil:
+		Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+		// full state
+		return false, nil
+	case ErrMissingNodes, ErrNodeNotFound, ErrIteratingChildNodes:
+		// find missing nodes
+		Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+		return true, nil
+	default:
+		Logger.Error("Find missing node with unexpected err", zap.Error(err))
+		return false, err
+	}
+}
+
 /*IsMPTValid - checks if the merkle tree is in valid state or not */
 func IsMPTValid(mpt MerklePatriciaTrieI) error {
 	return mpt.Iterate(context.TODO(), func(ctxt context.Context, path Path, key Key, node Node) error { return nil }, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
