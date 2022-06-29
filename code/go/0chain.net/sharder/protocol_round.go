@@ -39,8 +39,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	}
 
 	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-		return fmt.Errorf("previous block state is not computed, state status: %d, hash: %s",
-			pb.GetStateStatus(), pb.Hash)
+		return fmt.Errorf("previous block state is not computed, round: %d, hash: %s, ptr: %p, state status: %d",
+			pb.Round, pb.Hash, pb, pb.GetStateStatus())
 	}
 
 	errC := make(chan error)
