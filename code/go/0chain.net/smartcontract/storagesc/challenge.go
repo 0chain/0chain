@@ -809,8 +809,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, errors.New("invalid blobber for allocation")
 			}
 			if err := removeAllocationFromBlobber(sc,
-				blobberID,
-				allocBlob.BlobberAllocationsPartitionLoc,
+				allocBlob,
 				allocID,
 				balances); err != nil {
 				return nil, err
