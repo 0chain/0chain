@@ -2,6 +2,7 @@ package common
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/didip/tollbooth"
@@ -47,7 +48,11 @@ func UserRateLimit(handler ReqRespHandlerf) ReqRespHandlerf {
 		return Recover(handler)
 	}
 	return func(writer http.ResponseWriter, request *http.Request) {
-		tollbooth.LimitFuncHandler(userRateLimit.Limiter, Recover(handler)).ServeHTTP(writer, request)
+		if strings.HasPrefix(request.URL.Path, "/_") {
+			handler(writer, request)
+		} else {
+			tollbooth.LimitFuncHandler(userRateLimit.Limiter, Recover(handler)).ServeHTTP(writer, request)
+		}
 	}
 }
 
