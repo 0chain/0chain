@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -137,5 +138,7 @@ func TestMinerNodeEncode(t *testing.T) {
 	require.NoError(t, err)
 
 	data2 := mn.Encode()
+	str := string(data2)
+	fmt.Println(str)
 	require.Equal(t, v, data2)
 }
