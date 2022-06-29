@@ -314,7 +314,9 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 //  200:
 //  400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	q := r.URL.Query()
+
+	limit, err := getOffsetLimitOrderParam(q)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -327,7 +329,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	allocData := r.URL.Query().Get("allocation_data")
+	allocData := q.Get("allocation_data")
 	var request newAllocationRequest
 	if err := request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
@@ -360,6 +362,11 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
+
+	if sa.DataShards <= 0 || sa.ParityShards < 0 {
+		return nil, common.NewErrorf("allocation_creation_failed",
+			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
+	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
 	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
@@ -384,6 +391,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		PreferredBlobbers: request.Blobbers,
 		NumberOfBlobbers:  numberOfBlobbers,
 	}, limit, balances.Now())
+
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -1666,6 +1674,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //      description: restrict to transactions sent by the specified client
 //      in: query
 //      type: string
+//    + name: to_client_id
+//      description: restrict to transactions sent to a specified client
+//      in: query
+//      type: string
 //    + name: block_hash
 //      description: restrict to transactions in indicated block
 //      in: query
@@ -1698,6 +1710,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
 		clientID      = r.URL.Query().Get("client_id")
+		toClientID    = r.URL.Query().Get("to_client_id")
 		blockHash     = r.URL.Query().Get("block_hash")
 		startBlockNum = r.URL.Query().Get("block-start")
 		endBlockNum   = r.URL.Query().Get("block-end")
@@ -1715,6 +1728,16 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 	if clientID != "" {
 		rtv, err := edb.GetTransactionByClientId(clientID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if toClientID != "" {
+		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1923,6 +1946,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
 // Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity).
+//
+// parameters:
 //    + name: offset
 //      description: offset
 //      in: query
@@ -2186,7 +2211,7 @@ type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
 }
 
-func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
+func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) { //nolint
 	if offsetString != "" {
 		offset, err = strconv.Atoi(offsetString)
 		if err != nil {
