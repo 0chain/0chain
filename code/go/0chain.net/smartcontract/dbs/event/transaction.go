@@ -11,10 +11,10 @@ import (
 type Transaction struct {
 	gorm.Model
 	Hash              string `gorm:"uniqueIndex"`
-	BlockHash         string
+	BlockHash         string `gorm:"index:idx_tblock_hash"`
 	Version           string
-	ClientId          string
-	ToClientId        string
+	ClientId          string `gorm:"index:idx_tclient_id"`
+	ToClientId        string `gorm:"index:idx_tto_client_id"`
 	TransactionData   string
 	Value             currency.Coin
 	Signature         string
@@ -44,6 +44,16 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 func (edb *EventDb) GetTransactionByClientId(clientID string, limit Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "creation_date"},
+		Desc:   limit.IsDescending,
+	}).Scan(&tr)
+	return tr, res.Error
+}
+
+// GetTransactionByToClientId searches for transaction by toClientID
+func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit Pagination) ([]Transaction, error) {
+	var tr []Transaction
+	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ToClientId: toClientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "creation_date"},
 		Desc:   limit.IsDescending,
 	}).Scan(&tr)

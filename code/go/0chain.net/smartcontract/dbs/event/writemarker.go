@@ -57,7 +57,7 @@ func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, all
 func (edb *EventDb) GetAllocationWrittenSizeInBlocks(startBlockNum, endBlockNum int64) (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&WriteMarker{}).
-		Select("sum(size)").
+		Select("COALESCE(SUM(size),0)").
 		Where("block_number > ? AND block_number < ?", startBlockNum, endBlockNum).
 		Find(&total).Error
 }
