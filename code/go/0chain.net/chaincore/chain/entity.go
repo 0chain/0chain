@@ -1311,10 +1311,9 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 	c.lfbMutex.Unlock()
 
-	c.updateConfig(b)
-
 	// add LFB to blocks cache
 	if b != nil {
+		c.updateConfig(b)
 		c.blocksMutex.Lock()
 		defer c.blocksMutex.Unlock()
 		cb, ok := c.blocks[b.Hash]
