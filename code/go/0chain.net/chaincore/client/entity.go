@@ -239,6 +239,7 @@ func (c *Client) GetBLSPublicKey() (*bls.PublicKey, error) {
 func SetupEntity(store datastore.Store) {
 	clientEntityMetadata = datastore.MetadataProvider()
 	clientEntityMetadata.Name = "client"
+	clientEntityMetadata.DB = "clientdb"
 	clientEntityMetadata.Provider = Provider
 	clientEntityMetadata.Store = store
 
