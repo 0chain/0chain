@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,11 +21,9 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
-	// "github.com/go-redis/redis"
-	// "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
-/*
 func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 	type fields struct {
 		pastTxns    []datastore.Entity
@@ -199,8 +198,8 @@ func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 
 func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
 	type fields struct {
-		pastTxns    []datastore.Entity
-		txns  []*transaction.Transaction
+		pastTxns []datastore.Entity
+		txns     []*transaction.Transaction
 	}
 	txs1 := []*transaction.Transaction{
 		{ClientID: "1", Nonce: 0},
@@ -222,64 +221,64 @@ func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
 		{
 			name: "test_for_empty_pastTxns_and_no_txns",
 			fields: fields{
-				pastTxns:    nil,
-				txns:  nil,
+				pastTxns: nil,
+				txns:     nil,
 			},
 			want: []datastore.Entity{},
 		}, {
 			name: "test_for_empty_pastTxns",
 			fields: fields{
-				pastTxns:    nil,
-				txns:  []*transaction.Transaction{txs1[0], txs2[1]},
+				pastTxns: nil,
+				txns:     []*transaction.Transaction{txs1[0], txs2[1]},
 			},
 			want: []datastore.Entity{},
 		}, {
 			name: "test_for_pastTxns_from_one_client",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[0]},
-				txns:  []*transaction.Transaction{txs1[1], txs2[1]},
+				pastTxns: []datastore.Entity{txs1[0]},
+				txns:     []*transaction.Transaction{txs1[1], txs2[1]},
 			},
 			want: []datastore.Entity{txs1[0]},
 		}, {
 			name: "test_for_pastTxns_from_two_client",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[0], txs2[0]},
-				txns:  []*transaction.Transaction{txs1[1], txs2[1]},
+				pastTxns: []datastore.Entity{txs1[0], txs2[0]},
+				txns:     []*transaction.Transaction{txs1[1], txs2[1]},
 			},
 			want: []datastore.Entity{txs1[0], txs2[0]},
 		}, {
 			name: "test_for_with_txns_and_pastTxns_from_different_clients",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[0]},
-				txns:  []*transaction.Transaction{txs2[1]},
+				pastTxns: []datastore.Entity{txs1[0]},
+				txns:     []*transaction.Transaction{txs2[1]},
 			},
 			want: []datastore.Entity{},
 		}, {
 			name: "test_with_no_txns",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[0]},
-				txns:  nil,
+				pastTxns: []datastore.Entity{txs1[0]},
+				txns:     nil,
 			},
 			want: []datastore.Entity{},
 		}, {
 			name: "test_with_equal_nonce",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[1]},
-				txns:  []*transaction.Transaction{txs1[2]},
+				pastTxns: []datastore.Entity{txs1[1]},
+				txns:     []*transaction.Transaction{txs1[2]},
 			},
 			want: []datastore.Entity{txs1[1]},
 		}, {
 			name: "test_with_multiple_clashes",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[0], txs1[1], txs1[2]},
-				txns:  []*transaction.Transaction{txs1[3]},
+				pastTxns: []datastore.Entity{txs1[0], txs1[1], txs1[2]},
+				txns:     []*transaction.Transaction{txs1[3]},
 			},
 			want: []datastore.Entity{txs1[0], txs1[1], txs1[2]},
 		}, {
 			name: "test_for_pastTxns_with_larger_nonce",
 			fields: fields{
-				pastTxns:    []datastore.Entity{txs1[4]},
-				txns:  []*transaction.Transaction{txs1[1]},
+				pastTxns: []datastore.Entity{txs1[4]},
+				txns:     []*transaction.Transaction{txs1[1]},
 			},
 			want: []datastore.Entity{},
 		},
@@ -289,24 +288,10 @@ func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
 			tii := TxnIterInfo{
 				pastTxns: tt.fields.pastTxns,
 			}
-			invalidTxns:= tii.checkForInvalidTxns(tt.fields.txns)
+			invalidTxns := tii.checkForInvalidTxns(tt.fields.txns)
 			require.Equal(t, tt.want, invalidTxns)
 		})
 	}
-}
-
-*/
-
-func setupClientEntity() {
-	em := datastore.EntityMetadataImpl{
-		Name:     "client",
-		DB:       "clientdb",
-		Store:    memorystore.GetStorageProvider(),
-		Provider: client.Provider,
-	}
-	// clientEntityMetadata = &em
-	datastore.RegisterEntityMetadata("client", &em)
-
 }
 
 func initDefaultPool() error {
@@ -333,38 +318,27 @@ func initDefaultPool() error {
 func TestChain_deletingTxns(t *testing.T) {
 
 	txs1 := []*transaction.Transaction{
-		{Nonce: 0, TransactionData: "this better work!"},
-		{Nonce: 1, TransactionData: ""},
-		{Nonce: 2, TransactionData: ""},
-		{Nonce: 3, TransactionData: ""},
-		{Nonce: 4, TransactionData: ""},
-	}
-
-	type fields struct {
-		txns []datastore.Entity
+		{Nonce: 0},
+		{Nonce: 1},
+		{Nonce: 2},
+		{Nonce: 3},
+		{Nonce: 4},
 	}
 
 	tests := []struct {
-		name   string
-		fields fields
-		arg    *transaction.Transaction
-		want   []datastore.Entity
+		name string
+		txns []*transaction.Transaction
 	}{
 		{
 			name: "test_sample",
-			fields: fields{
-				txns: []datastore.Entity{txs1[0], txs1[1]},
-			},
-			arg:  txs1[4],
-			want: []datastore.Entity{txs1[0], txs1[1]},
+			txns: []*transaction.Transaction{txs1[0], txs1[1]},
 		},
 	}
 
-	// memorystore.AddPool("txndb", memorystore.DefaultPool)
-	err := initDefaultPool()
-	if err != nil {
-		panic(err)
-	}
+	var err error
+
+	require.NoError(t, initDefaultPool())
+
 	logging.InitLogging("testing", "")
 
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
@@ -400,7 +374,6 @@ func TestChain_deletingTxns(t *testing.T) {
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
-	// setupClientEntity()
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider(), "")
 
@@ -408,33 +381,19 @@ func TestChain_deletingTxns(t *testing.T) {
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 
 	sigScheme := encryption.GetSignatureScheme("bls0chain")
-	err = sigScheme.GenerateKeys()
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, sigScheme.GenerateKeys())
 
-	// cl := &client.Client{}
 	var cl *client.Client
 	cl = client.NewClient(client.SignatureScheme(encryption.SignatureSchemeBls0chain))
 	cl.EntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
-	err = cl.SetPublicKey(sigScheme.GetPublicKey())
-	// cl.ID = "1"
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, cl.SetPublicKey(sigScheme.GetPublicKey()))
 
 	ctx := context.Background()
 
 	_, err = client.PutClient(ctx, cl)
+	require.NoError(t, err)
 
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.PutClientCache(cl)
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, client.PutClientCache(cl))
 
 	mc.RegisterClient()
 
@@ -442,53 +401,51 @@ func TestChain_deletingTxns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// storing txns
-			for _, txn := range tt.fields.txns {
-				txn.(*transaction.Transaction).CreationDate = common.Now()
-				txn.(*transaction.Transaction).PublicKey = cl.PublicKey
-				txn.(*transaction.Transaction).ClientID = cl.ID
-				txn.(*transaction.Transaction).Hash = txn.(*transaction.Transaction).ComputeHash()
+			for _, txn := range tt.txns {
+				txn.CreationDate = common.Now()
+				txn.PublicKey = cl.PublicKey
+				txn.ClientID = cl.ID
+				txn.Hash = txn.ComputeHash()
 
-				sig, err := txn.(*transaction.Transaction).Sign(sigScheme)
-				if err != nil {
-					panic(err)
-				}
+				sig, err := txn.Sign(sigScheme)
+				require.NoError(t, err)
 
-				txn.(*transaction.Transaction).Signature = sig
-
-				if err != nil {
-					panic(err)
-				}
+				txn.Signature = sig
 
 				_, err = transaction.PutTransaction(ctx, txn)
-				if err != nil {
-					panic(err)
-				}
+				require.NoError(t, err)
 
 			}
 
-			// getting txns
-			thsh := tt.fields.txns[0].(*transaction.Transaction).Hash
-			r, err := http.NewRequest("POST", "/api/v1/transactions?hash="+thsh, nil)
-			if err != nil {
-				panic(err)
-			}
-			_, err = transaction.GetTransaction(ctx, r)
-			if err != nil {
-				panic(err)
+			// verifying that txns exist
+			for _, txn := range tt.txns {
+				r, err := http.NewRequest("POST", "/api/v1/transactions?hash="+txn.Hash, nil)
+				require.NoError(t, err)
+
+				_, err = transaction.GetTransaction(ctx, r)
+				require.NoError(t, err)
 			}
 
 			// deleting txns
-			mc.deleteTxns(tt.fields.txns)
+			var txnsEntity []datastore.Entity
+			for _, txn := range tt.txns {
+				txnsEntity = append(txnsEntity, txn)
+			}
+			require.NoError(t, mc.deleteTxns(txnsEntity))
 
 			// checking if txns are deleted
-			_, err = transaction.GetTransaction(ctx, r)
-			if err != nil {
-				println(err.Error())
-			} else {
-				panic(err)
+			for _, txn := range tt.txns {
+				r, err := http.NewRequest("POST", "/api/v1/transactions?hash="+txn.Hash, nil)
+				require.NoError(t, err)
+
+				_, err = transaction.GetTransaction(ctx, r)
+				if err != nil && strings.HasPrefix(err.Error(), "entity_not_found: txn not found") {
+					t.Log("txn deleted")
+				} else {
+					t.Error("txn not deleted")
+				}
 			}
 		})
-
 	}
 
 }

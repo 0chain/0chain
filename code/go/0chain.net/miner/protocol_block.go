@@ -596,9 +596,9 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
 	transaction.RemoveFromPool(ctx, txns)
-	
+
 	if len(invalidTxns) > 0 {
-		transaction.RemoveFromPool(ctx, invalidTxns)
+		mc.deleteTxns(invalidTxns)
 	}
 }
 
@@ -607,7 +607,7 @@ func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []d
 	pastTxns := tii.pastTxns
 
 	for _, txn := range txns {
-		for i:=0; i < len(pastTxns); i++ {
+		for i := 0; i < len(pastTxns); i++ {
 			pastTxn := pastTxns[i].(*transaction.Transaction)
 			if txn.ClientID == pastTxn.ClientID && txn.Nonce >= pastTxn.Nonce {
 
