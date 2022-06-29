@@ -1,11 +1,8 @@
 package miner
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -18,6 +15,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 
 	"github.com/alicebob/miniredis/v2"
@@ -299,22 +297,6 @@ func TestTxnIterInfo_checkForInvalidTxns(t *testing.T) {
 
 */
 
-func setupTempRocksDBDir() func() {
-	if err := os.MkdirAll("data/rocksdb/state", 0766); err != nil {
-		panic(err)
-	}
-
-	return func() {
-		if err := os.RemoveAll("data/rocksdb/state"); err != nil {
-			panic(err)
-		}
-
-		if err := os.RemoveAll("log"); err != nil {
-			panic(err)
-		}
-	}
-}
-
 func setupClientEntity() {
 	em := datastore.EntityMetadataImpl{
 		Name:     "client",
@@ -346,14 +328,6 @@ func initDefaultPool() error {
 	}
 
 	return nil
-}
-
-func setupSelfNodeKeys() { //nolint
-	keys := "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0\naa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
-	breader := bytes.NewBuffer([]byte(keys))
-	sigScheme := encryption.NewED25519Scheme()
-	sigScheme.ReadKeys(breader)
-	node.Self.SetSignatureScheme(sigScheme)
 }
 
 func TestChain_deletingTxns(t *testing.T) {
@@ -389,8 +363,9 @@ func TestChain_deletingTxns(t *testing.T) {
 	// memorystore.AddPool("txndb", memorystore.DefaultPool)
 	err := initDefaultPool()
 	if err != nil {
-		println(err.Error())
+		panic(err)
 	}
+	logging.InitLogging("testing", "")
 
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
 	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
@@ -413,7 +388,6 @@ func TestChain_deletingTxns(t *testing.T) {
 	mb.Miners = np
 
 	c := chain.Provider().(*chain.Chain)
-	println("chain provider")
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
 	chain.SetServerChain(c)
@@ -436,18 +410,15 @@ func TestChain_deletingTxns(t *testing.T) {
 	sigScheme := encryption.GetSignatureScheme("bls0chain")
 	err = sigScheme.GenerateKeys()
 	if err != nil {
-		println(err.Error())
 		panic(err)
 	}
 
 	// cl := &client.Client{}
 	var cl *client.Client
 	cl = client.NewClient(client.SignatureScheme(encryption.SignatureSchemeBls0chain))
-	cl.ID = "1"
 	cl.EntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
 	err = cl.SetPublicKey(sigScheme.GetPublicKey())
 	if err != nil {
-		println(err.Error())
 		panic(err)
 	}
 
@@ -456,30 +427,22 @@ func TestChain_deletingTxns(t *testing.T) {
 	_, err = client.PutClient(ctx, cl)
 
 	cl.IDField = datastore.IDField{ID: cl.ID}
-	println("before client id: " + cl.ID)
 	cl.ID = "1"
-	println("after client id: " + cl.ID)
 
 	if err != nil {
-		println("error in putting client" + err.Error())
 		panic(err)
-	} else {
-		println("client putted")
 	}
 
 	err = client.PutClientCache(cl)
 	if err != nil {
-		println("error in putting client cache" + err.Error())
 		panic(err)
-	} else {
-		println("client cache putted")
 	}
 
 	mc.RegisterClient()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			println("Starting test: " + tt.name)
+
 			// storing txns
 			for _, txn := range tt.fields.txns {
 				txn.(*transaction.Transaction).CreationDate = common.Now()
@@ -488,62 +451,43 @@ func TestChain_deletingTxns(t *testing.T) {
 
 				sig, err := txn.(*transaction.Transaction).Sign(sigScheme)
 				if err != nil {
-					fmt.Printf("Error signing\n")
+					panic(err)
 				}
 
 				txn.(*transaction.Transaction).Signature = sig
 
 				if err != nil {
-					println(err.Error())
+					panic(err)
 				}
 
-				out, err := transaction.PutTransaction(ctx, txn)
-				println("==> heyo")
+				_, err = transaction.PutTransaction(ctx, txn)
 				if err != nil {
-					println(err.Error())
 					panic(err)
-				} else {
-					if out != nil {
-						println("t is not nil!!!")
-						t := out.(*transaction.Transaction)
-						println("Stored txn: " + t.ClientID)
-					} else {
-						println("t is nil!!!")
-					}
-
 				}
 
 			}
-			println("Stored txns")
 
 			// getting txns
 			thsh := tt.fields.txns[0].(*transaction.Transaction).Hash
-			println("thsh: " + thsh)
 			r, err := http.NewRequest("POST", "/api/v1/transactions?hash="+thsh, nil)
 			if err != nil {
-				println(err.Error())
 				panic(err)
 			}
-			out, err := transaction.GetTransaction(ctx, r)
+			_, err = transaction.GetTransaction(ctx, r)
 			if err != nil {
-				println(err.Error())
 				panic(err)
 			}
-			println("Got txn: " + out.(*transaction.Transaction).TransactionData)
 
 			// deleting txns
 			mc.deleteTxns(tt.fields.txns)
-			println("Deleted txns")
 
-			out, err = transaction.GetTransaction(ctx, r)
+			// checking if txns are deleted
+			_, err = transaction.GetTransaction(ctx, r)
 			if err != nil {
 				println(err.Error())
 			} else {
 				panic(err)
 			}
-
-			// checking if txns are deleted
-			// memorystore.
 		})
 
 	}
