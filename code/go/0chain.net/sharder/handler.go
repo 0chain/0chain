@@ -29,7 +29,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/v1/healthcheck":                  common.ToJSONResponse(HealthcheckHandler),
 		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
 		"/_chain_stats":                    ChainStatsWriter,
-		"/_health_check":                   HealthCheckWriter,
+		"/_healthcheck":                    HealthCheckWriter,
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
 	}
 
@@ -48,7 +48,6 @@ func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, erro
 
 	return struct {
 		//Version  string `json:"version"`
-		Name     string        `json:"name"`
 		BuildTag string        `json:"build_tag"`
 		Uptime   time.Duration `json:"uptime"`
 		NodeType string        `json:"node_type"`
