@@ -349,19 +349,19 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.Error(err))
 	}
 
-	missing, err := fb.ClientState.HasMissingNodes(context.Background())
-	if err != nil {
-		logging.Logger.Error("checking missing node failed",
-			zap.Error(err),
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash))
-	}
-
-	if missing {
-		logging.Logger.Error("detected missing nodes",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash))
-	}
+	//missing, err := fb.ClientState.HasMissingNodes(context.Background())
+	//if err != nil {
+	//	logging.Logger.Error("checking missing node failed",
+	//		zap.Error(err),
+	//		zap.Int64("round", fb.Round),
+	//		zap.String("block", fb.Hash))
+	//}
+	//
+	//if missing {
+	//	logging.Logger.Error("detected missing nodes",
+	//		zap.Int64("round", fb.Round),
+	//		zap.String("block", fb.Hash))
+	//}
 
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
