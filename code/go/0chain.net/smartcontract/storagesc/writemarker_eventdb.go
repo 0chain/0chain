@@ -1,9 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
@@ -28,12 +25,7 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 
 func emitAddWriteMarker(wm *WriteMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
 
-	data, err := json.Marshal(writeMarkerToWriteMarkerTable(wm))
-	if err != nil {
-		return fmt.Errorf("failed to marshal writemarker: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker, t.Hash, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker, t.Hash, writeMarkerToWriteMarkerTable(wm))
 
 	return nil
 }

@@ -165,6 +165,22 @@ func (sa *StorageAllocation) marshalTerms() ([]byte, error) {
 	return termsByte, nil
 }
 
+func (sa *StorageAllocation) buildTermUpdates() []event.AllocationTerm {
+	allocationTerms := make([]event.AllocationTerm, 0)
+	for _, b := range sa.BlobberAllocs {
+		allocationTerms = append(allocationTerms, event.AllocationTerm{
+			BlobberID:        b.BlobberID,
+			AllocationID:     b.AllocationID,
+			ReadPrice:        b.Terms.ReadPrice,
+			WritePrice:       b.Terms.WritePrice,
+			MinLockDemand:    b.Terms.MinLockDemand,
+			MaxOfferDuration: b.Terms.MaxOfferDuration,
+		})
+	}
+
+	return allocationTerms
+}
+
 func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
 	termsByte, err := sa.marshalTerms()
 	if err != nil {
@@ -211,13 +227,9 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]byte, error) {
-	termsByte, err := sa.marshalTerms()
-	if err != nil {
-		return nil, err
-	}
+func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.DbUpdates {
 
-	return json.Marshal(&dbs.DbUpdates{
+	return &dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
 			"allocation_name":           sa.Name,
@@ -226,7 +238,7 @@ func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]by
 			"parity_shards":             sa.ParityShards,
 			"size":                      sa.Size,
 			"expiration":                int64(sa.Expiration),
-			"terms":                     string(termsByte),
+			"terms":                     sa.buildTermUpdates(),
 			"owner":                     sa.Owner,
 			"owner_public_key":          sa.OwnerPublicKey,
 			"is_immutable":              sa.IsImmutable,
@@ -244,7 +256,7 @@ func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]by
 			"moved_to_validators":       sa.MovedToValidators,
 			"time_unit":                 int64(sa.TimeUnit),
 		},
-	})
+	}
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
@@ -253,12 +265,7 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 		return err
 	}
 
-	data, err := json.Marshal(alloc)
-	if err != nil {
-		return fmt.Errorf("error marshalling allocation: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
 }

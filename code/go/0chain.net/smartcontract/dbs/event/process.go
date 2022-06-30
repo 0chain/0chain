@@ -1,7 +1,7 @@
 package event
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 
 	"golang.org/x/net/context"
@@ -59,6 +59,8 @@ const (
 	NumberOfTags
 )
 
+var ErrInvalidEventData = errors.New("invalid event data")
+
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 	edb.eventsChannel <- events
 }
@@ -75,7 +77,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
-					Error:         event.Data,
+					Error:         event.Data.(string),
 				})
 			default:
 			}
@@ -94,37 +96,44 @@ func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddOrOverwriteBlobber:
-		var blobber Blobber
-		err := json.Unmarshal([]byte(event.Data), &blobber)
-		if err != nil {
-			return err
+		blobber, ok := event.Data.(Blobber)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addOrOverwriteBlobber(blobber)
 	case TagUpdateBlobber:
-		var updates dbs.DbUpdates
-		err := json.Unmarshal([]byte(event.Data), &updates)
-		if err != nil {
-			return err
+		updates, ok := event.Data.(dbs.DbUpdates)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateBlobber(updates)
 	case TagDeleteBlobber:
-		return edb.deleteBlobber(event.Data)
+		blobberID, ok := event.Data.(string)
+
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.deleteBlobber(blobberID)
 	// authorizer
 	case TagAddAuthorizer:
-		var auth *Authorizer
-		err := json.Unmarshal([]byte(event.Data), &auth)
-		if err != nil {
-			return err
+		auth, ok := event.Data.(Authorizer)
+
+		if !ok {
+			return ErrInvalidEventData
 		}
-		return edb.AddAuthorizer(auth)
+		return edb.AddAuthorizer(&auth)
 	case TagDeleteAuthorizer:
-		return edb.DeleteAuthorizer(event.Data)
-	case TagAddWriteMarker:
-		var wm WriteMarker
-		err := json.Unmarshal([]byte(event.Data), &wm)
-		if err != nil {
-			return err
+		id, ok := event.Data.(string)
+		if !ok {
+			return ErrInvalidEventData
 		}
+		return edb.DeleteAuthorizer(id)
+	case TagAddWriteMarker:
+		wm, ok := event.Data.(WriteMarker)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
 		wm.TransactionID = event.TxHash
 		wm.BlockNumber = event.BlockNumber
 		if err := edb.addWriteMarker(wm); err != nil {
@@ -132,158 +141,149 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
 	case TagAddReadMarker:
-		var rm ReadMarker
-		err := json.Unmarshal([]byte(event.Data), &rm)
-		if err != nil {
-			return err
+		rm, ok := event.Data.(ReadMarker)
+		if !ok {
+			return ErrInvalidEventData
 		}
+
 		rm.TransactionID = event.TxHash
 		rm.BlockNumber = event.BlockNumber
 		return edb.addOrOverwriteReadMarker(rm)
 	case TagAddTransaction:
-		var transaction Transaction
-		err := json.Unmarshal([]byte(event.Data), &transaction)
-		if err != nil {
-			return err
+		transaction, ok := event.Data.(Transaction)
+
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addTransaction(transaction)
 	case TagAddBlock:
-		var block Block
-		err := json.Unmarshal([]byte(event.Data), &block)
-		if err != nil {
-			return err
+		block, ok := event.Data.(Block)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addBlock(block)
 	case TagAddValidator:
-		var vn Validator
-		err := json.Unmarshal([]byte(event.Data), &vn)
-		if err != nil {
-			return err
+		vn, ok := event.Data.(Validator)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addValidator(vn)
 	case TagUpdateValidator:
-		var updates dbs.DbUpdates
-		err := json.Unmarshal([]byte(event.Data), &updates)
-		if err != nil {
-			return err
+		updates, ok := event.Data.(dbs.DbUpdates)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateValidator(updates)
 	case TagAddMiner:
-		var miner Miner
-		err := json.Unmarshal([]byte(event.Data), &miner)
-		if err != nil {
-			return err
+		miner, ok := event.Data.(Miner)
+
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addMiner(miner)
 	case TagAddOrOverwriteMiner:
-		var miner Miner
-		err := json.Unmarshal([]byte(event.Data), &miner)
-		if err != nil {
-			return err
+		miner, ok := event.Data.(Miner)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addOrOverwriteMiner(miner)
 	case TagUpdateMiner:
-		var updates dbs.DbUpdates
-		err := json.Unmarshal([]byte(event.Data), &updates)
-		if err != nil {
-			return err
+		updates, ok := event.Data.(dbs.DbUpdates)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateMiner(updates)
 	case TagDeleteMiner:
-		return edb.deleteMiner(event.Data)
+		minerID, ok := event.Data.(string)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.deleteMiner(minerID)
 	case TagAddSharder:
-		var sharder Sharder
-		err := json.Unmarshal([]byte(event.Data), &sharder)
-		if err != nil {
-			return err
+		sharder, ok := event.Data.(Sharder)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addSharder(sharder)
 	case TagAddOrOverwriteSharder:
-		var sharder Sharder
-		err := json.Unmarshal([]byte(event.Data), &sharder)
-		if err != nil {
-			return err
+		sharder, ok := event.Data.(Sharder)
+		if !ok {
+			return ErrInvalidEventData
 		}
+
 		return edb.addOrOverwriteSharder(sharder)
 	case TagUpdateSharder:
-		var updates dbs.DbUpdates
-		err := json.Unmarshal([]byte(event.Data), &updates)
-		if err != nil {
-			return err
+		updates, ok := event.Data.(dbs.DbUpdates)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateSharder(updates)
 	case TagDeleteSharder:
-		return edb.deleteSharder(event.Data)
+		sharderID, ok := event.Data.(string)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.deleteSharder(sharderID)
 	case TagAddOrOverwriteCurator:
-		var c Curator
-		err := json.Unmarshal([]byte(event.Data), &c)
-		if err != nil {
-			return err
+		c, ok := event.Data.(Curator)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addOrOverwriteCurator(c)
 	case TagRemoveCurator:
-		var c Curator
-		err := json.Unmarshal([]byte(event.Data), &c)
-		if err != nil {
-			return err
+		c, ok := event.Data.(Curator)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.removeCurator(c)
 
 	//stake pool
 	case TagAddOrOverwriteDelegatePool:
-		var sp DelegatePool
-		err := json.Unmarshal([]byte(event.Data), &sp)
-		if err != nil {
-			return err
+		sp, ok := event.Data.(DelegatePool)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addOrOverwriteDelegatePool(sp)
 	case TagUpdateDelegatePool:
-		var spUpdate dbs.DelegatePoolUpdate
-		err := json.Unmarshal([]byte(event.Data), &spUpdate)
-		if err != nil {
-			return err
+		spUpdate, ok := event.Data.(dbs.DelegatePoolUpdate)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateDelegatePool(spUpdate)
 	case TagStakePoolReward:
-		var spu dbs.StakePoolReward
-		err := json.Unmarshal([]byte(event.Data), &spu)
-		if err != nil {
-			return err
+		spu, ok := event.Data.(dbs.StakePoolReward)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.rewardUpdate(spu)
 	case TagAddAllocation:
-		var alloc Allocation
-		err := json.Unmarshal([]byte(event.Data), &alloc)
-		if err != nil {
-			return err
+		alloc, ok := event.Data.(Allocation)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addAllocation(&alloc)
 	case TagUpdateAllocation:
-		var updates dbs.DbUpdates
-		err := json.Unmarshal([]byte(event.Data), &updates)
-		if err != nil {
-			return err
+		updates, ok := event.Data.(dbs.DbUpdates)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateAllocation(&updates)
 	case TagAddReward:
-		var reward Reward
-		err := json.Unmarshal([]byte(event.Data), &reward)
-		if err != nil {
-			return err
+		reward, ok := event.Data.(Reward)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addReward(reward)
 	case TagAddChallenge:
-		var chall Challenge
-		err := json.Unmarshal([]byte(event.Data), &chall)
-		if err != nil {
-			return err
+		chall, ok := event.Data.(Challenge)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.addChallenge(&chall)
 	case TagUpdateChallenge:
-		var updates dbs.DbUpdates
-		err := json.Unmarshal([]byte(event.Data), &updates)
-		if err != nil {
-			return err
+		updates, ok := event.Data.(dbs.DbUpdates)
+		if !ok {
+			return ErrInvalidEventData
 		}
 		return edb.updateChallenge(updates)
 	default:
