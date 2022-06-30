@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -139,21 +140,19 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	return retObj, nil
 }
 
-/*GetBalanceHandler - get the balance of a client */
+// GetBalanceHandler - get the balance of a client
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
-	lfb := c.GetLatestFinalizedBlock()
-	if lfb == nil {
-		return nil, common.ErrTemporaryFailure
+	if c.GetEventDb() == nil {
+		return nil, common.NewError("get_balance_error", "event database not enabled")
 	}
-	state, err := c.GetState(lfb, clientID)
+
+	user, err := c.GetEventDb().GetUser(clientID)
 	if err != nil {
 		return nil, err
 	}
-	if err := state.ComputeProperties(); err != nil {
-		return nil, err
-	}
-	return state, nil
+	log.Println("user is okay:", *user)
+	return userToState(user), nil
 }
 
 func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {

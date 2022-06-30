@@ -512,6 +512,14 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
+
+	if err = c.emitEvent(sctx,stateToUser(fromClient, fs), event.TagAddOrOverwriteUser); err != nil {
+		return common.NewError("transfer_amount", "could not emit event")
+	}
+	if err = c.emitEvent(sctx,stateToUser(toClient, ts), event.TagAddOrOverwriteUser); err != nil {
+		return common.NewError("transfer_amount", "could not emit event")
+	}
+
 	return nil
 }
 
@@ -570,6 +578,11 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return common.NewError("mint_amount - insert", err.Error())
 	}
+
+	if err = c.emitEvent(sctx,stateToUser(toClient, ts), event.TagAddOrOverwriteUser); err != nil {
+		return common.NewError("mint_amount", "could not emit event")
+	}
+
 	return nil
 }
 
@@ -610,6 +623,11 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		return err
 	}
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
+
+	if err = c.emitEvent(sctx,stateToUser(fromClient, s), event.TagAddOrOverwriteUser); err != nil {
+		return common.NewError("increment_nonce", "could not emit event")
+	}
+
 	return nil
 }
 
@@ -664,4 +682,39 @@ func isValid(err error) bool {
 		return true
 	}
 	return false
+}
+
+
+func userToState(u *event.User ) *state.State {
+	return &state.State{
+		TxnHash: u.TxnHash,
+		Balance: u.Balance,
+		Round:   u.Round,
+		Nonce:   u.Nonce,
+	}
+}
+
+func stateToUser(clientID string, s *state.State) *event.User {
+	return &event.User{
+		UserID:  clientID,
+		TxnHash: s.TxnHash,
+		Balance: s.Balance,
+		Round:   s.Round,
+		Nonce:   s.Nonce,
+	}
+}
+
+func (c *Chain) emitEvent(sc bcstate.StateContextI, in interface{}, eventTag event.EventTag) error {
+	if c.GetEventDb() == nil {
+		return nil
+	}
+
+	data, err := json.Marshal(in)
+	if err != nil {
+		return common.NewError("emit_user_event", fmt.Sprintf("failed to marshal event data: %v", err))
+	}
+
+	sc.EmitEvent(event.TypeStats, eventTag, "", string(data))
+
+	return nil
 }

@@ -1,14 +1,11 @@
 package event
 
 import (
+	"0chain.net/smartcontract/dbs"
 	"encoding/json"
 	"fmt"
-
-	"golang.org/x/net/context"
-
-	"0chain.net/smartcontract/dbs"
-
 	"go.uber.org/zap"
+	"golang.org/x/net/context"
 
 	"0chain.net/core/logging"
 )
@@ -33,6 +30,7 @@ const (
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
+	TagAddOrOverwriteUser
 	TagAddWriteMarker
 	TagAddBlock
 	TagAddValidator
@@ -140,6 +138,13 @@ func (edb *EventDb) addStat(event Event) error {
 		rm.TransactionID = event.TxHash
 		rm.BlockNumber = event.BlockNumber
 		return edb.addOrOverwriteReadMarker(rm)
+	case TagAddOrOverwriteUser:
+		var usr User
+		err := json.Unmarshal([]byte(event.Data), &usr)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteUser(usr)
 	case TagAddTransaction:
 		var transaction Transaction
 		err := json.Unmarshal([]byte(event.Data), &transaction)

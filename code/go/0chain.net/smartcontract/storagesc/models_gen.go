@@ -2415,6 +2415,80 @@ func (z *Terms) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *Users) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "TransactionID"
+	o = append(o, 0x83, 0xad, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
+	o = msgp.AppendUint(o, z.TransactionID)
+	// string "Balance"
+	o = append(o, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
+	o, err = z.Balance.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Balance")
+		return
+	}
+	// string "UserID"
+	o = append(o, 0xa6, 0x55, 0x73, 0x65, 0x72, 0x49, 0x44)
+	o = msgp.AppendString(o, z.UserID)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Users) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "TransactionID":
+			z.TransactionID, bts, err = msgp.ReadUintBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "TransactionID")
+				return
+			}
+		case "Balance":
+			bts, err = z.Balance.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Balance")
+				return
+			}
+		case "UserID":
+			z.UserID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "UserID")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *Users) Msgsize() (s int) {
+	s = 1 + 14 + msgp.UintSize + 8 + z.Balance.Msgsize() + 7 + msgp.StringPrefixSize + len(z.UserID)
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
