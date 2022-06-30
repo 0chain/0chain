@@ -134,7 +134,7 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	}
 	err := pndb.db.Write(pndb.wo, wb)
 	if err != nil {
-		logging.Logger.Debug("pnode save nodes failed",
+		logging.Logger.Error("pnode save nodes failed",
 			zap.Int64("round", pndb.version),
 			zap.Any("duration", ts),
 			zap.Error(err))
