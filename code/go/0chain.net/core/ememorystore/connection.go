@@ -3,6 +3,7 @@ package ememorystore
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -23,6 +24,7 @@ type dbpool struct {
 
 /*Connection - a struct that manages an underlying connection */
 type Connection struct {
+	sync.Mutex
 	Conn               *gorocksdb.Transaction
 	ReadOptions        *gorocksdb.ReadOptions
 	WriteOptions       *gorocksdb.WriteOptions
@@ -32,6 +34,8 @@ type Connection struct {
 
 /*Commit - delegates the commit call to underlying connection */
 func (c *Connection) Commit() error {
+	c.Lock()
+	defer c.Unlock()
 	err := c.Conn.Commit()
 	c.shouldRollback = err != nil
 	return err
