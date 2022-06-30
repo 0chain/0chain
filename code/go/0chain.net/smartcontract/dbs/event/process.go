@@ -85,7 +85,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				} else {
 					err = edb.addError(Error{
 						TransactionID: event.TxHash,
-						Error:         fmt.Sprint("%s", event.Data),
+						Error:         fmt.Sprint(event.Data),
 					})
 				}
 
