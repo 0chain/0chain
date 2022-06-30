@@ -57,6 +57,7 @@ const (
 	TagAddChallenge
 	TagUpdateChallenge
 	NumberOfTags
+	TagAddMint
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -286,6 +287,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.updateChallenge(updates)
+	case TagAddMint:
+		var mint Mint
+		err := json.Unmarshal([]byte(event.Data), &mint)
+		if err != nil {
+			return err
+		}
+		return edb.addMint(mint)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
