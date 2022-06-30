@@ -188,8 +188,8 @@ func MakeMockStateContext() *mockStateContext {
 	ctx.On("EmitEvent",
 		mock.AnythingOfType("event.EventType"),
 		mock.AnythingOfType("event.EventTag"),
-		mock.AnythingOfType("string"),      // authorizerID
-		mock.AnythingOfType("interface{}"), // authorizer payload
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
 	).Return(
 		func(_ event.EventType, _ event.EventTag, id string, body string) {
 			fmt.Println(".")
@@ -198,11 +198,11 @@ func MakeMockStateContext() *mockStateContext {
 	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagAddAuthorizer,
-		mock.AnythingOfType("string"),      // authorizerID
-		mock.AnythingOfType("interface{}"), // authorizer payload
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
 	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, body string) {
-			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.Authorizer) {
+			authorizerNode, err := AuthorizerFromEvent(ev)
 			if err != nil {
 				panic(err)
 			}
@@ -215,11 +215,11 @@ func MakeMockStateContext() *mockStateContext {
 	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagUpdateAuthorizer,
-		mock.AnythingOfType("string"),      // authorizerID
-		mock.AnythingOfType("interface{}"), // authorizer payload
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
 	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, body string) {
-			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.Authorizer) {
+			authorizerNode, err := AuthorizerFromEvent(ev)
 			if err != nil {
 				panic(err)
 			}

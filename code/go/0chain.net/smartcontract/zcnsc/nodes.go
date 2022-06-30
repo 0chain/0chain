@@ -334,12 +334,7 @@ func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 	}
 }
 
-func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
-	ev := &event.Authorizer{}
-	err := json.Unmarshal(buf, ev)
-	if err != nil {
-		return nil, err
-	}
+func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 
 	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
 }
