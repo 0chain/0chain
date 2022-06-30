@@ -227,10 +227,15 @@ smart_contracts:
       update_blobber_settings: 100
       update_validator_settings: 100
       pay_blobber_block_rewards: 100
+      shut-down-blobber: 100
+      kill-blobber: 100
       curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
       add_validator: 100
+      validator-health-check: 100
+      shut-down-validator: 100
+      kill-validator: 100
       add_blobber: 100
       new_read_pool: 100
       read_pool_lock: 100

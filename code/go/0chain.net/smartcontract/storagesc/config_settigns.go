@@ -104,6 +104,12 @@ const (
 	CostAddCurator
 	CostRemoveCurator
 	CostBlobberHealthCheck
+	CostShutDownBlobber
+	CostKillBlobber
+	CostValidatorHealthCheck
+	CostShutDownValidator
+	CostKillValidator
+
 	CostUpdateBlobberSettings
 	CostPayBlobberBlockRewards
 	CostCuratorTransferAllocation
@@ -202,6 +208,11 @@ var (
 		"cost.add_curator",
 		"cost.remove_curator",
 		"cost.blobber_health_check",
+		"cost.shut-down-blobber",
+		"cost.kill-blobber",
+		"cost.validator-health-check",
+		"cost.shut-down-validator",
+		"cost.kill-validator",
 		"cost.update_blobber_settings",
 		"cost.pay_blobber_block_rewards",
 		"cost.curator_transfer_allocation",
@@ -303,6 +314,11 @@ var (
 		"cost.add_curator":                 {CostAddCurator, smartcontract.Cost},
 		"cost.remove_curator":              {CostRemoveCurator, smartcontract.Cost},
 		"cost.blobber_health_check":        {CostBlobberHealthCheck, smartcontract.Cost},
+		"cost.shut-down-blobber":           {CostShutDownBlobber, smartcontract.Cost},
+		"cost.kill-blobber":                {CostKillBlobber, smartcontract.Cost},
+		"cost.validator-health-check":      {CostValidatorHealthCheck, smartcontract.Cost},
+		"cost.shut-down-validator":         {CostShutDownValidator, smartcontract.Cost},
+		"cost.kill-validator":              {CostKillValidator, smartcontract.Cost},
 		"cost.update_blobber_settings":     {CostUpdateBlobberSettings, smartcontract.Cost},
 		"cost.pay_blobber_block_rewards":   {CostPayBlobberBlockRewards, smartcontract.Cost},
 		"cost.curator_transfer_allocation": {CostCuratorTransferAllocation, smartcontract.Cost},
@@ -772,6 +788,17 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostRemoveCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostBlobberHealthCheck:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostBlobberHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostShutDownBlobber:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShutDownBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostKillBlobber:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostKillBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostValidatorHealthCheck:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostValidatorHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostShutDownValidator:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShutDownValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+	case CostKillValidator:
+		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostKillValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+
 	case CostUpdateBlobberSettings:
 		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateBlobberSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
 	case CostPayBlobberBlockRewards:
