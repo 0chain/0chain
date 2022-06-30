@@ -9,6 +9,7 @@ import (
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/chaincore/currency"
+	common2 "0chain.net/smartcontract/common"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -266,7 +267,7 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 	return nil
 }
 
-func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit event.Pagination) ([]*StorageAllocationBlobbers, error) {
+func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit common2.Pagination) ([]*StorageAllocationBlobbers, error) {
 
 	sas := make([]*StorageAllocationBlobbers, 0)
 

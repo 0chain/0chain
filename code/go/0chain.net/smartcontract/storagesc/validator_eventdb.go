@@ -11,7 +11,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator {
+func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator { //nolint
 	return &event.Validator{
 		ValidatorID: vn.ID,
 		BaseUrl:     vn.BaseURL,

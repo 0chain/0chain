@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	common2 "0chain.net/smartcontract/common"
+	"gorm.io/gorm/clause"
 
 	"github.com/guregu/null"
 	"gorm.io/gorm"
@@ -221,27 +223,22 @@ type SharderQuery struct {
 	Latitude          null.Int
 }
 
-func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, offset, limit int) ([]Sharder, error) {
+func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p common2.Pagination) ([]Sharder, error) {
 	var sharders []Sharder
-	query := edb.Get().Model(&Sharder{}).Where(&filter)
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
+	query := edb.Get().Model(&Sharder{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   p.IsDescending,
+	})
 	return sharders, query.Scan(&sharders).Error
 }
 
-func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, offset, limit int) ([]SharderGeolocation, error) {
+func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagination) ([]SharderGeolocation, error) {
 	var sharderLocations []SharderGeolocation
-	query := edb.Get().Model(&Sharder{}).Where(&filter)
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
+	query := edb.Get().Model(&Sharder{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   p.IsDescending,
+	})
+
 	result := query.Scan(&sharderLocations)
 
 	return sharderLocations, result.Error
