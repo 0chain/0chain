@@ -242,6 +242,7 @@ func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]by
 			"moved_back":                sa.MovedBack,
 			"moved_to_validators":       sa.MovedToValidators,
 			"time_unit":                 int64(sa.TimeUnit),
+			"write_pool":                sa.WritePool,
 		},
 	})
 }
