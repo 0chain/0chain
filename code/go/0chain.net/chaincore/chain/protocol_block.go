@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -365,9 +366,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		//go func(events []event.Event) {
-		c.GetEventDb().AddEvents(ctx, fb.Events)
-		//}(fb.Events)
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, fb.Events)
+		}(fb.Events)
 		fb.Events = nil
 	}
 

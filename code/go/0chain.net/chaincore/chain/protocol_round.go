@@ -351,7 +351,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				frchain[len(frchain)-1-idx] = fb
 			}
 
-			_, _ = c.createRoundIfNotExist(ctx, fb)
+			//_, _ = c.createRoundIfNotExist(ctx, fb)
 
 			logging.Logger.Info("finalize round",
 				zap.Int64("round", fb.Round),

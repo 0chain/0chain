@@ -889,13 +889,13 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 	}
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
-		_, _ = fmt.Fprintf(w, "L:%v (prefix:%v path:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Prefix), string(nodeImpl.Path), node.GetOrigin())
+		_, _ = fmt.Fprintf(w, "L:%v (prefix:%v path:%v, origin:%v, version:%v)\n", ToHex(key), string(nodeImpl.Prefix), string(nodeImpl.Path), node.GetOrigin(), node.GetVersion())
 	case *ExtensionNode:
-		_, _ = fmt.Fprintf(w, "E:%v (path:%v,child:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin())
+		_, _ = fmt.Fprintf(w, "E:%v (path:%v,child:%v, origin:%v, version:%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin(), node.GetVersion())
 		_ = mpt.pp(w, nodeImpl.NodeKey, depth+2, true)
 	case *FullNode:
 		_, _ = w.Write([]byte("F:"))
-		_, _ = fmt.Fprintf(w, "%v (,origin:%v)", ToHex(key), node.GetOrigin())
+		_, _ = fmt.Fprintf(w, "%v (,origin:%v, version:%v)", ToHex(key), node.GetOrigin(), node.GetVersion())
 		_, _ = w.Write([]byte("\n"))
 		for idx, cnode := range nodeImpl.Children {
 			if cnode == nil {

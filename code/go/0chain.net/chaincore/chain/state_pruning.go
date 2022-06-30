@@ -95,14 +95,16 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		t  = time.Now()
 		wg = sizedwaitgroup.New(2)
 
-		missingKeys []util.Key
+		missingKeys    []util.Key
+		missingKeyStrs []string
 	)
 
 	var missingNodesHandler = func(ctx context.Context, path util.Path,
 		key util.Key) error {
 
 		missingKeys = append(missingKeys, key)
-		if len(missingKeys) == 1000 {
+		missingKeyStrs = append(missingKeyStrs, util.ToHex(key))
+		if !node.Self.IsSharder() && len(missingKeys) == 1000 {
 			ps.Stage = util.PruneStateSynch
 			wg.Add()
 			go func(nodes []util.Key) {
@@ -131,9 +133,10 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			zap.Int64("current_round", c.GetCurrentRound()),
 			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
 			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+			zap.Strings("missing nodes", missingKeyStrs),
 			zap.Any("prune_stats", ps), zap.Error(err))
 
-		if ps.MissingNodes > 0 {
+		if !node.Self.IsSharder() && ps.MissingNodes > 0 {
 			if len(missingKeys) > 0 {
 				c.GetStateNodes(ctx, missingKeys[:])
 			}
@@ -145,6 +148,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			zap.Int64("current_round", c.GetCurrentRound()),
 			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
 			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+			zap.Strings("missing nodes", missingKeyStrs),
 			zap.Any("prune_stats", ps))
 	}
 

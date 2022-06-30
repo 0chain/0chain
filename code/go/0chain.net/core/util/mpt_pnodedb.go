@@ -196,6 +196,7 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 	var count int64
 	var leaves int64
 	batch := make([]Key, 0, BatchSize)
+	keys := make([]string, 0, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
 		if node.GetVersion() >= version {
@@ -208,9 +209,12 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 		tkey := make([]byte, len(key))
 		copy(tkey, key)
 		batch = append(batch, tkey)
+		keys = append(keys, ToHex(tkey))
 		if len(batch) == BatchSize {
+			logging.Logger.Debug("prune batch keys", zap.Strings("keys", keys))
 			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
+			keys = keys[:0]
 			if err != nil {
 				Logger.Error("prune below origin - error deleting node",
 					zap.String("key", ToHex(key)),
@@ -227,6 +231,7 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 		return err
 	}
 	if len(batch) > 0 {
+		logging.Logger.Debug("prune batch keys", zap.Strings("keys", keys))
 		err := pndb.MultiDeleteNode(batch)
 		if err != nil {
 			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
