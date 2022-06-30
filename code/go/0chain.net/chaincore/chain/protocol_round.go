@@ -351,12 +351,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				frchain[len(frchain)-1-idx] = fb
 			}
 
-			_, _, err := c.createRoundIfNotExist(ctx, fb)
-			if err != nil {
-				logging.Logger.Error("create round for finalize block failed",
-					zap.Int64("round", fb.Round),
-					zap.String("hash", fb.Hash))
-			}
+			_, fb = c.createRoundIfNotExist(ctx, fb)
 
 			logging.Logger.Info("finalize round",
 				zap.Int64("round", fb.Round),
@@ -462,10 +457,10 @@ type finalizeBlockWithReply struct {
 	resultC chan error
 }
 
-func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block, error) {
+func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block) {
 	if r := c.GetRound(b.Round); r != nil {
-		_, r = c.AddNotarizedBlockToRound(r, b)
-		return r, b, nil
+		b, r = c.AddNotarizedBlockToRound(r, b)
+		return r, b
 	}
 
 	// create the round if it does not exist
@@ -474,7 +469,7 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 
 	// Add the round if chain does not have it
 	r = c.AddRound(r)
-	return r, b, nil
+	return r, b
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.
