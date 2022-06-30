@@ -75,10 +75,20 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			case TypeStats:
 				err = edb.addStat(event)
 			case TypeError:
-				err = edb.addError(Error{
-					TransactionID: event.TxHash,
-					Error:         event.Data.(string),
-				})
+
+				msg, ok := fromEvent[string](event.Data)
+				if ok {
+					err = edb.addError(Error{
+						TransactionID: event.TxHash,
+						Error:         *msg,
+					})
+				} else {
+					err = edb.addError(Error{
+						TransactionID: event.TxHash,
+						Error:         fmt.Sprint("%s", event.Data),
+					})
+				}
+
 			default:
 			}
 			if err != nil {
@@ -96,32 +106,32 @@ func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddOrOverwriteBlobber:
-		blobber, ok := event.Data.(Blobber)
+		blobber, ok := fromEvent[Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteBlobber(blobber)
+		return edb.addOrOverwriteBlobber(*blobber)
 	case TagUpdateBlobber:
-		updates, ok := event.Data.(dbs.DbUpdates)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobber(updates)
+		return edb.updateBlobber(*updates)
 	case TagDeleteBlobber:
-		blobberID, ok := event.Data.(string)
+		blobberID, ok := fromEvent[string](event.Data)
 
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.deleteBlobber(blobberID)
+		return edb.deleteBlobber(*blobberID)
 	// authorizer
 	case TagAddAuthorizer:
-		auth, ok := event.Data.(Authorizer)
+		auth, ok := fromEvent[Authorizer](event.Data)
 
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.AddAuthorizer(&auth)
+		return edb.AddAuthorizer(auth)
 	case TagDeleteAuthorizer:
 		id, ok := event.Data.(string)
 		if !ok {
@@ -129,164 +139,182 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.DeleteAuthorizer(id)
 	case TagAddWriteMarker:
-		wm, ok := event.Data.(WriteMarker)
+		wm, ok := fromEvent[WriteMarker](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
 		wm.TransactionID = event.TxHash
 		wm.BlockNumber = event.BlockNumber
-		if err := edb.addWriteMarker(wm); err != nil {
+		if err := edb.addWriteMarker(*wm); err != nil {
 			return err
 		}
 		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
 	case TagAddReadMarker:
-		rm, ok := event.Data.(ReadMarker)
+		rm, ok := fromEvent[ReadMarker](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
 		rm.TransactionID = event.TxHash
 		rm.BlockNumber = event.BlockNumber
-		return edb.addOrOverwriteReadMarker(rm)
+		return edb.addOrOverwriteReadMarker(*rm)
 	case TagAddTransaction:
-		transaction, ok := event.Data.(Transaction)
+		transaction, ok := fromEvent[Transaction](event.Data)
 
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addTransaction(transaction)
+		return edb.addTransaction(*transaction)
 	case TagAddBlock:
-		block, ok := event.Data.(Block)
+		block, ok := fromEvent[Block](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addBlock(block)
+		return edb.addBlock(*block)
 	case TagAddValidator:
-		vn, ok := event.Data.(Validator)
+		vn, ok := fromEvent[Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addValidator(vn)
+		return edb.addValidator(*vn)
 	case TagUpdateValidator:
-		updates, ok := event.Data.(dbs.DbUpdates)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidator(updates)
+		return edb.updateValidator(*updates)
 	case TagAddMiner:
-		miner, ok := event.Data.(Miner)
+		miner, ok := fromEvent[Miner](event.Data)
 
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addMiner(miner)
+		return edb.addMiner(*miner)
 	case TagAddOrOverwriteMiner:
-		miner, ok := event.Data.(Miner)
+		miner, ok := fromEvent[Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteMiner(miner)
+		return edb.addOrOverwriteMiner(*miner)
 	case TagUpdateMiner:
-		updates, ok := event.Data.(dbs.DbUpdates)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateMiner(updates)
+		return edb.updateMiner(*updates)
 	case TagDeleteMiner:
-		minerID, ok := event.Data.(string)
+		minerID, ok := fromEvent[string](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.deleteMiner(minerID)
+		return edb.deleteMiner(*minerID)
 	case TagAddSharder:
-		sharder, ok := event.Data.(Sharder)
+		sharder, ok := fromEvent[Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addSharder(sharder)
+		return edb.addSharder(*sharder)
 	case TagAddOrOverwriteSharder:
-		sharder, ok := event.Data.(Sharder)
+		sharder, ok := fromEvent[Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		return edb.addOrOverwriteSharder(sharder)
+		return edb.addOrOverwriteSharder(*sharder)
 	case TagUpdateSharder:
-		updates, ok := event.Data.(dbs.DbUpdates)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateSharder(updates)
+		return edb.updateSharder(*updates)
 	case TagDeleteSharder:
-		sharderID, ok := event.Data.(string)
+		sharderID, ok := fromEvent[string](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.deleteSharder(sharderID)
+		return edb.deleteSharder(*sharderID)
 	case TagAddOrOverwriteCurator:
-		c, ok := event.Data.(Curator)
+		c, ok := fromEvent[Curator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteCurator(c)
+		return edb.addOrOverwriteCurator(*c)
 	case TagRemoveCurator:
-		c, ok := event.Data.(Curator)
+		c, ok := fromEvent[Curator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.removeCurator(c)
+		return edb.removeCurator(*c)
 
 	//stake pool
 	case TagAddOrOverwriteDelegatePool:
-		sp, ok := event.Data.(DelegatePool)
+		sp, ok := fromEvent[DelegatePool](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteDelegatePool(sp)
+		return edb.addOrOverwriteDelegatePool(*sp)
 	case TagUpdateDelegatePool:
-		spUpdate, ok := event.Data.(dbs.DelegatePoolUpdate)
+		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateDelegatePool(spUpdate)
+		return edb.updateDelegatePool(*spUpdate)
 	case TagStakePoolReward:
-		spu, ok := event.Data.(dbs.StakePoolReward)
+		spu, ok := fromEvent[dbs.StakePoolReward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.rewardUpdate(spu)
+		return edb.rewardUpdate(*spu)
 	case TagAddAllocation:
-		alloc, ok := event.Data.(Allocation)
+		alloc, ok := fromEvent[Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addAllocation(&alloc)
+		return edb.addAllocation(alloc)
 	case TagUpdateAllocation:
-		updates, ok := event.Data.(dbs.DbUpdates)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateAllocation(&updates)
+		return edb.updateAllocation(updates)
 	case TagAddReward:
-		reward, ok := event.Data.(Reward)
+		reward, ok := fromEvent[Reward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addReward(reward)
+		return edb.addReward(*reward)
 	case TagAddChallenge:
-		chall, ok := event.Data.(Challenge)
+		chall, ok := fromEvent[Challenge](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addChallenge(&chall)
+		return edb.addChallenge(chall)
 	case TagUpdateChallenge:
-		updates, ok := event.Data.(dbs.DbUpdates)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateChallenge(updates)
+		return edb.updateChallenge(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
+}
+
+func fromEvent[T any](eventData interface{}) (*T, bool) {
+	if eventData == nil {
+		return nil, false
+	}
+
+	t, ok := eventData.(T)
+	if ok {
+		return &t, true
+	}
+
+	t2, ok := eventData.(*T)
+	if ok {
+		return t2, true
+	}
+
+	return nil, false
 }
