@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm/clause"
@@ -74,7 +75,7 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string, limit Pagination) ([]Allocation, error) {
+func (edb EventDb) GetClientsAllocation(clientID string, limit common.Pagination) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
 
 	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).

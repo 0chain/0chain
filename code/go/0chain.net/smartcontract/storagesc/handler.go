@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
@@ -166,7 +166,7 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 		urlsStr = r.URL.Query().Get("blobber_urls")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -234,7 +234,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		allocData = r.URL.Query().Get("free_allocation_data")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -316,7 +316,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
-	limit, err := getOffsetLimitOrderParam(q)
+	limit, err := common2.GetOffsetLimitOrderParam(q)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -345,7 +345,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit event.Pagination) ([]string, error) {
+func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
 	var sa = request.storageAllocation()
 	var conf *Config
 	var err error
@@ -887,7 +887,7 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1150,7 +1150,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		blobberID = r.URL.Query().Get("blobber")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1251,7 +1251,7 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 		filename     = r.URL.Query().Get("filename")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1359,7 +1359,7 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 		authTicket   = r.URL.Query().Get("auth_ticket")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1453,7 +1453,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := getBlobbersForRequest(req, edb, balances, event.Pagination{})
+	blobbers, err := getBlobbersForRequest(req, edb, balances, common2.Pagination{})
 	if err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
@@ -1517,7 +1517,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client")
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1603,7 +1603,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 		transactionHash = r.URL.Query().Get("transaction_hash")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1648,7 +1648,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 //  400:
 //  500:
 func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1716,7 +1716,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		endBlockNum   = r.URL.Query().Get("block-end")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1826,7 +1826,7 @@ func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWrite
 		contentHash = r.URL.Query().Get("content-hash")
 	)
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -1964,7 +1964,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 //  200: storageNodeResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -2047,7 +2047,7 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 		maxLatitude = MaxLatitude
 	}
 
-	limit, err := getOffsetLimitOrderParam(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -2209,61 +2209,4 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 // swagger:model readMarkersCount
 type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
-}
-
-func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) { //nolint
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
-		}
-	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
-
-	return
-}
-
-func getOffsetLimitOrderParam(values url.Values) (event.Pagination, error) {
-	var (
-		offsetString = values.Get("offset")
-		limitString  = values.Get("limit")
-		sort         = values.Get("sort")
-
-		limit        = event.DefaultQueryLimit
-		offset       = 0
-		isDescending = false
-		err          error
-	)
-
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return event.Pagination{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("offset parameter is not valid")
-		}
-	}
-
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return event.Pagination{Limit: event.DefaultQueryLimit}, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
-
-	if sort != "" {
-		switch sort {
-		case "desc":
-			isDescending = true
-		case "asc":
-			isDescending = false
-		default:
-			return event.Pagination{Limit: event.DefaultQueryLimit}, err
-		}
-	}
-
-	return event.Pagination{Offset: offset, Limit: limit, IsDescending: isDescending}, nil
 }
