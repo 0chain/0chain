@@ -28,7 +28,15 @@ func (spu StakePoolReward) Emit(
 		event.TypeStats,
 		tag,
 		spu.ProviderId,
-		spu,
+		stakePoolRewardToStakePoolRewardEvent(spu),
 	)
 	return nil
+}
+
+func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
+	return &dbs.StakePoolReward{
+		StakePoolId:     spu.StakePoolId,
+		Reward:          spu.Reward,
+		DelegateRewards: spu.DelegateRewards,
+	}
 }
