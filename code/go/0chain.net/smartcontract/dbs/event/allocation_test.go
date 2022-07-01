@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
+	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
@@ -383,7 +384,7 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.Size, sa.Size)
 
-	allocs, err := eventDb.GetClientsAllocation(sa.Owner, Pagination{0, 20, true})
+	allocs, err := eventDb.GetClientsAllocation(sa.Owner, common2.Pagination{Limit: 20, IsDescending: true})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(allocs))
 	require.EqualValues(t, allocs[0].Size, sa.Size)

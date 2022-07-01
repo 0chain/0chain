@@ -1631,7 +1631,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"emitting blobber "+b.ID+": "+err.Error())
 		}
-		err = removeAllocationFromBlobber(sc, d.BlobberID, d.BlobberAllocationsPartitionLoc, alloc.ID, balances)
+		err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"removing allocation from blobber challenge partition "+b.ID+": "+err.Error())
