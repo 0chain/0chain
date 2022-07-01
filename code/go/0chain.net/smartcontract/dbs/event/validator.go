@@ -13,9 +13,9 @@ import (
 // swagger:model Validator
 type Validator struct {
 	gorm.Model
-	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
-	BaseUrl     string `json:"url" gorm:"index:url"`
-	Stake       int64  `json:"stake" gorm:"index:stake"`
+	ValidatorID string `json:"validator_id" gorm:"index:idx_vvalidator_id"`
+	BaseUrl     string `json:"url" gorm:"index:idx_vurl"`
+	Stake       int64  `json:"stake" gorm:"index:idx_vstake"`
 	PublicKey   string `json:"public_key" gorm:"public_key"`
 
 	// StakePoolSettings
@@ -27,19 +27,6 @@ type Validator struct {
 
 	Rewards     int64 `json:"rewards"`
 	TotalReward int64 `json:"total_reward"`
-}
-
-func (vn *Validator) exists(edb *EventDb) (bool, error) {
-	var count int64
-	result := edb.Get().
-		Model(&Validator{}).
-		Where(&Validator{ValidatorID: vn.ValidatorID}).
-		Count(&count)
-	if result.Error != nil {
-		return false, fmt.Errorf("error searching for Validator %v, error %v",
-			vn.ValidatorID, result.Error)
-	}
-	return count > 0, nil
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
@@ -61,9 +48,8 @@ func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 	return validators, result.Error
 }
 
-func (edb *EventDb) overwriteValidator(vn Validator) error {
-
-	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: vn.ValidatorID}).Updates(&vn)
+func (edb *EventDb) addValidator(vn Validator) error {
+	result := edb.Store.Get().Create(&vn)
 	return result.Error
 }
 
@@ -72,20 +58,6 @@ func (edb *EventDb) GetValidators() ([]Validator, error) {
 	result := edb.Store.Get().Model(&Validator{}).Find(&validators)
 
 	return validators, result.Error
-}
-
-func (edb *EventDb) addOrOverwriteValidator(vn Validator) error {
-	exists, err := vn.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteValidator(vn)
-	}
-
-	result := edb.Store.Get().Create(&vn)
-
-	return result.Error
 }
 
 func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats, error) {
@@ -103,20 +75,9 @@ func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats,
 }
 
 func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
-	var validator = Validator{ValidatorID: updates.Id}
-	exists, err := validator.exists(edb)
-
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("validator %v not in database cannot update",
-			validator.ValidatorID)
-	}
-
 	result := edb.Store.Get().
 		Model(&Validator{}).
-		Where(&Validator{ValidatorID: validator.ValidatorID}).
+		Where(&Validator{ValidatorID: updates.Id}).
 		Updates(updates.Updates)
 	return result.Error
 }

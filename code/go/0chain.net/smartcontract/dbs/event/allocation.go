@@ -1,9 +1,13 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"time"
+
+	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
+
+	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
 
@@ -12,38 +16,37 @@ import (
 
 type Allocation struct {
 	gorm.Model
-	AllocationID               string        `json:"allocation_id" gorm:"uniqueIndex"`
-	AllocationName             string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
-	TransactionID              string        `json:"transaction_id"`
-	DataShards                 int           `json:"data_shards"`
-	ParityShards               int           `json:"parity_shards"`
-	Size                       int64         `json:"size"`
-	Expiration                 int64         `json:"expiration"`
-	Terms                      string        `json:"terms"`
-	Owner                      string        `json:"owner"`
-	OwnerPublicKey             string        `json:"owner_public_key"`
-	IsImmutable                bool          `json:"is_immutable"`
-	ReadPriceMin               currency.Coin `json:"read_price_min"`
-	ReadPriceMax               currency.Coin `json:"read_price_max"`
-	WritePriceMin              currency.Coin `json:"write_price_min"`
-	WritePriceMax              currency.Coin `json:"write_price_max"`
-	MaxChallengeCompletionTime int64         `json:"max_challenge_completion_time"`
-	ChallengeCompletionTime    int64         `json:"challenge_completion_time"`
-	StartTime                  int64         `json:"start_time"`
-	Finalized                  bool          `json:"finalized"`
-	Cancelled                  bool          `json:"cancelled"`
-	UsedSize                   int64         `json:"used_size"`
-	MovedToChallenge           currency.Coin `json:"moved_to_challenge"`
-	MovedBack                  currency.Coin `json:"moved_back"`
-	MovedToValidators          currency.Coin `json:"moved_to_validators"`
-	TimeUnit                   int64         `json:"time_unit"`
-	NumWrites                  int64         `json:"num_writes"`
-	NumReads                   int64         `json:"num_reads"`
-	TotalChallenges            int64         `json:"total_challenges"`
-	OpenChallenges             int64         `json:"open_challenges"`
-	SuccessfulChallenges       int64         `json:"successful_challenges"`
-	FailedChallenges           int64         `json:"failed_challenges"`
-	LatestClosedChallengeTxn   string        `json:"latest_closed_challenge_txn"`
+	AllocationID             string        `json:"allocation_id" gorm:"uniqueIndex"`
+	AllocationName           string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
+	TransactionID            string        `json:"transaction_id"`
+	DataShards               int           `json:"data_shards"`
+	ParityShards             int           `json:"parity_shards"`
+	Size                     int64         `json:"size"`
+	Expiration               int64         `json:"expiration"`
+	Terms                    string        `json:"terms"`
+	Owner                    string        `json:"owner" gorm:"index:idx_aowner"`
+	OwnerPublicKey           string        `json:"owner_public_key"`
+	IsImmutable              bool          `json:"is_immutable"`
+	ReadPriceMin             currency.Coin `json:"read_price_min"`
+	ReadPriceMax             currency.Coin `json:"read_price_max"`
+	WritePriceMin            currency.Coin `json:"write_price_min"`
+	WritePriceMax            currency.Coin `json:"write_price_max"`
+	ChallengeCompletionTime  int64         `json:"challenge_completion_time"`
+	StartTime                int64         `json:"start_time" gorm:"index:idx_astart_time"`
+	Finalized                bool          `json:"finalized"`
+	Cancelled                bool          `json:"cancelled"`
+	UsedSize                 int64         `json:"used_size"`
+	MovedToChallenge         currency.Coin `json:"moved_to_challenge"`
+	MovedBack                currency.Coin `json:"moved_back"`
+	MovedToValidators        currency.Coin `json:"moved_to_validators"`
+	TimeUnit                 int64         `json:"time_unit"`
+	NumWrites                int64         `json:"num_writes"`
+	NumReads                 int64         `json:"num_reads"`
+	TotalChallenges          int64         `json:"total_challenges"`
+	OpenChallenges           int64         `json:"open_challenges"`
+	SuccessfulChallenges     int64         `json:"successful_challenges"`
+	FailedChallenges         int64         `json:"failed_challenges"`
+	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
 }
 
 type AllocationTerm struct {
@@ -60,8 +63,6 @@ type AllocationTerm struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
-	// ChallengeCompletionTime is duration required to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
 func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
@@ -74,9 +75,16 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string) ([]Allocation, error) {
+func (edb EventDb) GetClientsAllocation(clientID string, limit common.Pagination) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
-	result := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Find(&allocs)
+
+	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "start_time"},
+			Desc:   limit.IsDescending,
+		})
+
+	result := query.Scan(&allocs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, result.Error)
 	}
@@ -107,32 +115,13 @@ func (edb EventDb) GetActiveAllocsBlobberCount() (int64, error) {
 	return count, nil
 }
 
-func (edb *EventDb) overwriteAllocation(alloc *Allocation) error {
-	return edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", alloc.AllocationID).Updates(alloc).Error
+func (edb *EventDb) updateAllocation(updates *dbs.DbUpdates) error {
+	return edb.Store.Get().
+		Model(&Allocation{}).
+		Where(&Allocation{AllocationID: updates.Id}).
+		Updates(updates.Updates).Error
 }
 
-func (edb *EventDb) addOrOverwriteAllocation(alloc *Allocation) error {
-	exists, err := alloc.exists(edb)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return edb.overwriteAllocation(alloc)
-	}
-
+func (edb *EventDb) addAllocation(alloc *Allocation) error {
 	return edb.Store.Get().Create(&alloc).Error
-}
-
-func (alloc *Allocation) exists(edb *EventDb) (bool, error) {
-	var data Allocation
-	err := edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", alloc.AllocationID).Take(&data).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("error searching for allocation %v, error %v", alloc.AllocationID, err)
-	}
-
-	return true, nil
 }

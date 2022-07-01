@@ -3,6 +3,9 @@ package event
 import (
 	"time"
 
+	"0chain.net/smartcontract/common"
+	"gorm.io/gorm/clause"
+
 	"gorm.io/gorm"
 )
 
@@ -13,7 +16,7 @@ type Block struct {
 	Hash                  string    `json:"hash"`
 	Version               string    `json:"version"`
 	CreationDate          int64     `json:"creation_date"`
-	Round                 int64     `json:"round"`
+	Round                 int64     `json:"round" gorm:"index:idx_bround"`
 	MinerID               string    `json:"miner_id"`
 	RoundRandomSeed       int64     `json:"round_random_seed"`
 	MerkleTreeRoot        string    `json:"merkle_tree_root"`
@@ -35,9 +38,12 @@ func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
 	return block, res.Error
 }
 
-func (edb *EventDb) GetBlocks() ([]Block, error) {
+func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	var blocks []Block
-	res := edb.Store.Get().Table("blocks").Find(&blocks)
+	res := edb.Store.Get().Table("blocks").Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "round"},
+		Desc:   limit.IsDescending,
+	}).Find(&blocks)
 	return blocks, res.Error
 }
 

@@ -32,7 +32,7 @@ func makeTestChain(t *testing.T) *Chain {
 }
 
 func TestHealthCheckWriter(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "/_health_check", nil)
+	req, err := http.NewRequest(http.MethodGet, "/_healthcheck", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

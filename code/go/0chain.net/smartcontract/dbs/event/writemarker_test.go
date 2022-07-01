@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
+	common2 "0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -97,7 +98,7 @@ func TestWriteMarker(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
 
-	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID)
+	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID, common2.Pagination{Offset: 20})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, len(wms))
 	require.EqualValues(t, eWriteMarker.BlockNumber, (wms)[0].BlockNumber)
@@ -141,42 +142,42 @@ func TestGetWriteMarkers(t *testing.T) {
 	addWriterMarkers(t, eventDb, "someHash")
 
 	t.Run("GetWriteMarkers ascending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 10, false)
+		gotWM, err := eventDb.GetWriteMarkers(common2.Pagination{Limit: 10})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 10, false)
 	})
 	t.Run("GetWriteMarkers descending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 10, true)
+		gotWM, err := eventDb.GetWriteMarkers(common2.Pagination{Limit: 10})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 10, true)
 	})
 	t.Run("GetWriteMarkers 5 limit asecending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 5, false)
+		gotWM, err := eventDb.GetWriteMarkers(common2.Pagination{Limit: 5})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 5, false)
 	})
 	t.Run("GetWriteMarkers 5 limit descending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(0, 5, true)
+		gotWM, err := eventDb.GetWriteMarkers(common2.Pagination{Limit: 5})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 0, 5, true)
 	})
 	t.Run("GetWriteMarkers 5 offset 5 limit asecending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(5, 5, false)
+		gotWM, err := eventDb.GetWriteMarkers(common2.Pagination{Offset: 5, Limit: 10})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, false)
 	})
 	t.Run("GetWriteMarkers 5 offset 5 limit descending", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkers(5, 5, true)
+		gotWM, err := eventDb.GetWriteMarkers(common2.Pagination{Offset: 5, Limit: 10, IsDescending: true})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("GetWriteMarkersForAllocationID", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id")
+		gotWM, err := eventDb.GetWriteMarkersForAllocationID("allocation_id", common2.Pagination{Offset: 20})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 	t.Run("GetWriteMarkersForAllocationFile", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt")
+		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt", common2.Pagination{Offset: 20})
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
@@ -199,7 +200,7 @@ func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}
-		err = eventDb.addOrOverwriteWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id", Name: "name.txt"})
+		err = eventDb.addWriteMarker(WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id", Name: "name.txt"})
 		if !assert.NoError(t, err, "Error while writing read marker") {
 			return
 		}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"0chain.net/core/common"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/block"
@@ -16,7 +18,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-//msgp:ignore StateContext
+//msgp:ignore StateContext, TimedQueryStateContext
 //go:generate msgp -io=false -tests=false -v
 
 type ApprovedMinter int
@@ -63,6 +65,12 @@ type QueryStateContextI interface {
 	GetEventDB() *event.EventDb
 }
 
+//go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
+type TimedQueryStateContextI interface {
+	QueryStateContextI
+	Now() common.Timestamp
+}
+
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
@@ -107,6 +115,24 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+}
+
+type GetNow func() common.Timestamp
+
+type TimedQueryStateContext struct {
+	StateContextI
+	now GetNow
+}
+
+func (t TimedQueryStateContext) Now() common.Timestamp {
+	return t.now()
+}
+
+func NewTimedQueryStateContext(i StateContextI, now GetNow) TimedQueryStateContext {
+	return TimedQueryStateContext{
+		StateContextI: i,
+		now:           now,
+	}
 }
 
 // NewStateContext - create a new state context

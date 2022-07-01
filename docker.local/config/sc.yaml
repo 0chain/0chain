@@ -113,8 +113,6 @@ smart_contracts:
     # users' read pool related configurations
     readpool:
       min_lock: 0.1 # tokens
-      min_lock_period: 1m
-      max_lock_period: 8760h
     # users' write pool related configurations
     writepool:
       min_lock: 0.1 # tokens
@@ -202,6 +200,14 @@ smart_contracts:
       trigger_period: 30
       blobber_capacity_ratio: 10
       blobber_usage_ratio: 40
+      gamma:
+        alpha: 0.2
+        a: 10
+        b: 9
+      zeta:
+        i: 1
+        k: 0.9
+        mu: 0.2
     expose_mpt: true
     cost:
       update_settings: 100

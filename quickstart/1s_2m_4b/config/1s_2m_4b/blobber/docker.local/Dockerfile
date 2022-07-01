@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine3.12 as blobber_build
+FROM golang:1.18-alpine3.15 as blobber_build
 
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl grep
 
@@ -36,7 +36,7 @@ ENV GIT_COMMIT=$GIT_COMMIT
 RUN go build -v -tags "bn256 development" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
 
 # Copy the build artifact into a minimal runtime image:
-FROM golang:1.16-alpine3.12
+FROM alpine:3.15
 RUN apk add gmp gmp-dev openssl-dev
 COPY --from=blobber_build  /usr/local/lib/libmcl*.so \
                         /usr/local/lib/libbls*.so \

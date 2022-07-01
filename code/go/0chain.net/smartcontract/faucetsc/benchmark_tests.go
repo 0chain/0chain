@@ -40,7 +40,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 	var fsc = FaucetSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}

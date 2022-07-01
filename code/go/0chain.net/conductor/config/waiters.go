@@ -64,10 +64,10 @@ func (wp *WaitPhase) IsZero() bool {
 
 // WaitRound waits a round.
 type WaitRound struct {
-	Round       Round     `json:"round" yaml:"round" mapstructure:"round"`
-	Name        RoundName `json:"name" yaml:"name" mapstructure:"name"`
-	Shift       Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
-	AllowBeyond bool      `json:"allow_beyond" yaml:"allow_beyond" mapstructure:"allow_beyond"`
+	Round        Round     `json:"round" yaml:"round" mapstructure:"round"`
+	Name         RoundName `json:"name" yaml:"name" mapstructure:"name"`
+	Shift        Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
+	ForbidBeyond bool      `json:"forbid_beyond" yaml:"forbid_beyond" mapstructure:"forbid_beyond"`
 }
 
 func (wr *WaitRound) IsZero() bool {

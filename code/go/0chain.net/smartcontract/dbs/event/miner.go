@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	common2 "0chain.net/smartcontract/common"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -93,27 +95,21 @@ type MinerQuery struct {
 	Latitude          null.Float
 }
 
-func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, offset, limit int) ([]Miner, error) {
+func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
 	var miners []Miner
-	query := edb.Get().Model(&Miner{}).Where(&filter)
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
+	query := edb.Get().Model(&Miner{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   p.IsDescending,
+	})
 	return miners, query.Scan(&miners).Error
 }
 
-func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, offset, limit int) ([]MinerGeolocation, error) {
+func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, p common2.Pagination) ([]MinerGeolocation, error) {
 	var minerLocations []MinerGeolocation
-	query := edb.Get().Model(&Miner{}).Where(&filter)
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
+	query := edb.Get().Model(&Miner{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   p.IsDescending,
+	})
 	result := query.Scan(&minerLocations)
 
 	return minerLocations, result.Error

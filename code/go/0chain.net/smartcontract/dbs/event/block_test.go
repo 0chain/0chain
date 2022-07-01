@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
@@ -82,7 +83,7 @@ func TestFindBlock(t *testing.T) {
 	}
 	err = eventDb.addBlock(block2)
 	require.NoError(t, err, "Error while inserting Block to event Database")
-	gotBlocks, err := eventDb.GetBlocks()
+	gotBlocks, err := eventDb.GetBlocks(common.Pagination{Limit: 20, IsDescending: true})
 	if len(gotBlocks) != 2 {
 		require.Error(t, fmt.Errorf("got %v blocks but expected 2", len(gotBlocks)))
 	}

@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"fmt"
 
 	state "0chain.net/chaincore/chain/state"
@@ -9,8 +8,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
@@ -79,16 +76,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
-	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: t.ClientID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
-		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
 
-	err = emitAddOrOverwriteValidatorTable(newValidator, balances, t)
-	if err != nil {
+	if err = newValidator.emitAdd(balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
 	}
 
@@ -155,18 +144,12 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 	if err = sc.updateValidator(t, conf, updatedValidator, validator, balances); err != nil {
 		return "", common.NewError("update_validator_settings_failed", err.Error())
 	}
-	validator.StakePoolSettings = updatedValidator.StakePoolSettings
 
 	// save validator
 	_, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator)
 	if err != nil {
 		return "", common.NewError("update_validator_settings_failed",
 			"saving validator: "+err.Error())
-	}
-
-	if err := emitUpdateValidator(validator, balances); err != nil {
-		return "", common.NewError("update_validator_settings_failed",
-			"emitting update validator: "+err.Error())
 	}
 
 	return string(validator.Encode()), nil
@@ -182,22 +165,22 @@ func (sc *StorageSmartContract) hasValidatorUrl(validatorURL string,
 
 // update existing validator, or reborn a deleted one
 func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
-	conf *Config, validator *ValidationNode, savedValidator *ValidationNode,
+	conf *Config, inputValidator *ValidationNode, savedValidator *ValidationNode,
 	balances state.StateContextI,
 ) (err error) {
 	// check params
-	if err = validator.validate(conf); err != nil {
+	if err = inputValidator.validate(conf); err != nil {
 		return fmt.Errorf("invalid validator params: %v", err)
 	}
 
-	if savedValidator.BaseURL != validator.BaseURL {
+	if savedValidator.BaseURL != inputValidator.BaseURL {
 		//if updating url
-		if sc.hasValidatorUrl(validator.BaseURL, balances) {
+		if sc.hasValidatorUrl(inputValidator.BaseURL, balances) {
 			return fmt.Errorf("invalid validator url update, already used")
 		}
 		// save url
-		if validator.BaseURL != "" {
-			_, err = balances.InsertTrieNode(validator.GetUrlKey(sc.ID), &datastore.NOIDField{})
+		if inputValidator.BaseURL != "" {
+			_, err = balances.InsertTrieNode(inputValidator.GetUrlKey(sc.ID), &datastore.NOIDField{})
 			if err != nil {
 				return fmt.Errorf("saving validator url: " + err.Error())
 			}
@@ -211,40 +194,34 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 		}
 	}
 
+	savedValidator.StakePoolSettings = inputValidator.StakePoolSettings
+
 	// update statistics
 	sc.statIncr(statUpdateValidator)
 
 	// update stake pool settings
 	var sp *stakePool
-	if sp, err = sc.getStakePool(validator.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(inputValidator.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
-	if err = validateStakePoolSettings(validator.StakePoolSettings, conf); err != nil {
+	if err = validateStakePoolSettings(inputValidator.StakePoolSettings, conf); err != nil {
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
 
-	sp.Settings.MinStake = validator.StakePoolSettings.MinStake
-	sp.Settings.MaxStake = validator.StakePoolSettings.MaxStake
-	sp.Settings.ServiceChargeRatio = validator.StakePoolSettings.ServiceChargeRatio
-	sp.Settings.MaxNumDelegates = validator.StakePoolSettings.MaxNumDelegates
+	sp.Settings.MinStake = inputValidator.StakePoolSettings.MinStake
+	sp.Settings.MaxStake = inputValidator.StakePoolSettings.MaxStake
+	sp.Settings.ServiceChargeRatio = inputValidator.StakePoolSettings.ServiceChargeRatio
+	sp.Settings.MaxNumDelegates = inputValidator.StakePoolSettings.MaxNumDelegates
 
-	if err := emitAddOrOverwriteValidator(validator, sp, balances); err != nil {
-		return fmt.Errorf("emmiting validator %v: %v", validator, err)
+	if err := inputValidator.emitUpdate(balances); err != nil {
+		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 
 	// save stake pool
-	if err = sp.save(sc.ID, validator.ID, balances); err != nil {
+	if err = sp.save(sc.ID, inputValidator.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
-
-	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: validator.ID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
-		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, validator.ID, string(data))
 
 	return
 }

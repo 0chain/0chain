@@ -3,7 +3,9 @@ package event
 import (
 	"fmt"
 
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 	"gorm.io/gorm"
@@ -11,14 +13,14 @@ import (
 
 type Challenge struct {
 	gorm.Model
-	ChallengeID    string           `json:"challenge_id" gorm:"index:challenge_id,unique"`
-	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_open_challenge,priority:1"`
+	ChallengeID    string           `json:"challenge_id" gorm:"index:idx_cchallenge_id,unique"`
+	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_copen_challenge,priority:1"`
 	AllocationID   string           `json:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"index:idx_open_challenge,priority:2"`
+	BlobberID      string           `json:"blobber_id" gorm:"index:idx_copen_challenge,priority:2"`
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_open_challenge,priority:3"`
+	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
@@ -32,13 +34,18 @@ func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	return &ch, nil
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit common2.Pagination) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
 
-	result := edb.Store.Get().Model(&Challenge{}).
+	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			expiry, blobberID, false).Order("created_at asc").Find(&chs)
+			expiry, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   limit.IsDescending,
+	})
+
+	result := query.Find(&chs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)

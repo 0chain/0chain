@@ -61,7 +61,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err
@@ -193,16 +193,15 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
-					DataShards:                 len(blobbers) / 2,
-					ParityShards:               len(blobbers) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					Blobbers:                   blobbers,
-					ReadPriceRange:             PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
+					DataShards:      len(blobbers) / 2,
+					ParityShards:    len(blobbers) / 2,
+					Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
+					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
+					Owner:           data.Clients[0],
+					OwnerPublicKey:  data.PublicKeys[0],
+					Blobbers:        blobbers,
+					ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
 				}).encode()
 				return bytes
 			}(),
@@ -470,6 +469,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
 					ID:                getMockValidatorId(0),
+					BaseURL:           getMockValidatorUrl(0),
 					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
 				})
 				return bytes
@@ -544,7 +544,10 @@ func BenchmarkTests(
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
-			input: []byte{},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&readPoolLockRequest{})
+				return bytes
+			}(),
 		},
 		{
 			name:     "storage.read_pool_unlock",
@@ -576,6 +579,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: getMockAllocationId(0),
+					Duration:     10 * time.Minute,
 				})
 				return bytes
 			}(),
@@ -730,9 +734,7 @@ func BenchmarkTests(
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
-					"readpool.min_lock_period": "1h",
-					"readpool.max_lock_period": "8760h",
+					"readpool.min_lock": "10",
 
 					"writepool.min_lock":        "10",
 					"writepool.min_lock_period": "2m",
@@ -770,6 +772,12 @@ func BenchmarkTests(
 					"block_reward.qualifying_stake": "1",
 					"block_reward.sharder_ratio":    "80.0",
 					"block_reward.miner_ratio":      "20.0",
+					"block_reward.gamma.alpha":      "0.2",
+					"block_reward.gamma.a":          "10",
+					"block_reward.gamma.b":          "9",
+					"block_reward.zeta.i":           "1",
+					"block_reward.zeta.k":           "0.9",
+					"block_reward.zeta.mu":          "0.2",
 
 					"expose_mpt": "false",
 				},
