@@ -125,6 +125,13 @@ func (msc *MinerSmartContract) AddSharder(
 
 	// if found
 	if err == nil {
+		if existing.IsShutDown {
+			return "", common.NewError("add_miner", "cannot add a shut-down sharder")
+		}
+		if existing.IsKilled {
+			return "", common.NewError("add_miner", "cannot add a killed sharder")
+		}
+
 		// and found in all
 		if allSharders.FindNodeById(newSharder.ID) != nil {
 			return string(newSharder.Encode()), nil
