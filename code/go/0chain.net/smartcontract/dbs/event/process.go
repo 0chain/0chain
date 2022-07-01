@@ -293,7 +293,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return edb.addMint(mint)
+		return edb.addOrUpdateTotalMint(mint)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

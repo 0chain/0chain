@@ -399,11 +399,11 @@ func BenchmarkRestTests(
 				Endpoint: srh.getFreeAllocationBlobbers,
 			},
 			{
-				FuncName: "get_block_mint_total",
+				FuncName: "get_rounds_mint_total",
 				Params: map[string]string{
 					"from": "0",
 				},
-				Endpoint: srh.getBlockTotalByBlockRange,
+				Endpoint: srh.getRoundsTotalMint,
 			},
 		},
 		ADDRESS,

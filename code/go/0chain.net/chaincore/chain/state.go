@@ -360,6 +360,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
+	total := int64(0)
 	for _, mint := range sctx.GetMints() {
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
@@ -369,6 +370,20 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return
 		}
 		total += int64(mint.Amount)
+	}
+
+	if node.Self.IsSharder() {
+		data, _err := json.Marshal(event.Mint{
+			BlockHash: b.Hash,
+			Round:     b.Round,
+			Amount:    total,
+		})
+		if _err != nil {
+			logging.Logger.Error("Failed to marshal mint")
+			return
+		}
+
+		sctx.EmitEvent(event.TypeStats, event.TagAddMint, b.Hash, string(data))
 	}
 
 	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
