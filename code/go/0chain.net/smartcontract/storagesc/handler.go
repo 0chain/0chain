@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -89,7 +90,40 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
+		rest.MakeEndpoint(storage+"/get_block_mint_total", srh.getBlockTotalByBlockRange),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_block_mint_total get_block_mint_total
+// Gets the total amount minted on all blocks til the current round.
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getBlockTotalByBlockRange(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = 0
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = math.MaxInt64
+	}
+	total, err := edb.GetBlocksMintTotal(from, to)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting total minted amount for blocks "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"get_block_mint_total": total,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
