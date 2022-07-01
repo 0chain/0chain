@@ -267,9 +267,8 @@ func (pndb *PNodeDB) GetDBVersions() []int64 {
 	pndb.mutex.Lock()
 	defer pndb.mutex.Unlock()
 	vs := make([]int64, len(pndb.versions))
-	for i, v := range pndb.versions {
-		vs[i] = v
-	}
+	copy(vs, pndb.versions)
+
 	return vs
 }
 
