@@ -166,22 +166,6 @@ func (sa *StorageAllocation) marshalTerms() ([]byte, error) {
 	return termsByte, nil
 }
 
-func (sa *StorageAllocation) buildTermUpdates() []event.AllocationTerm {
-	allocationTerms := make([]event.AllocationTerm, 0)
-	for _, b := range sa.BlobberAllocs {
-		allocationTerms = append(allocationTerms, event.AllocationTerm{
-			BlobberID:        b.BlobberID,
-			AllocationID:     b.AllocationID,
-			ReadPrice:        b.Terms.ReadPrice,
-			WritePrice:       b.Terms.WritePrice,
-			MinLockDemand:    b.Terms.MinLockDemand,
-			MaxOfferDuration: b.Terms.MaxOfferDuration,
-		})
-	}
-
-	return allocationTerms
-}
-
 func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
 	termsByte, err := sa.marshalTerms()
 	if err != nil {
@@ -230,6 +214,8 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 
 func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.DbUpdates {
 
+	termsByte, _ := sa.marshalTerms() //err always is nil
+
 	return &dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
@@ -239,7 +225,7 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.
 			"parity_shards":             sa.ParityShards,
 			"size":                      sa.Size,
 			"expiration":                int64(sa.Expiration),
-			"terms":                     sa.buildTermUpdates(),
+			"terms":                     string(termsByte),
 			"owner":                     sa.Owner,
 			"owner_public_key":          sa.OwnerPublicKey,
 			"is_immutable":              sa.IsImmutable,
