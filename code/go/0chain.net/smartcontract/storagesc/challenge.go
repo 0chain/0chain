@@ -800,12 +800,16 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, errors.New("invalid blobber for allocation")
 			}
 			if err := removeAllocationFromBlobber(sc,
-				blobberID,
-				allocBlob.BlobberAllocationsPartitionLoc,
+				allocBlob,
 				allocID,
 				balances); err != nil {
 				return nil, err
 			}
+		}
+		err = alloc.Save(balances, sc.ID)
+		if err != nil {
+			return nil, common.NewErrorf("populate_challenge",
+				"error saving expired allocation: %v", err)
 		}
 	}
 

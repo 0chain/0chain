@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/smartcontract/dbs"
 
@@ -73,7 +74,7 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 	return nil
 }
 
-func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit event.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
+func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID,

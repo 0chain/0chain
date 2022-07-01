@@ -10,13 +10,6 @@ import (
 )
 
 const DefaultQueryTimeout = 5 * time.Second
-const DefaultQueryLimit = 20
-
-type Pagination struct {
-	Offset       int
-	Limit        int
-	IsDescending bool
-}
 
 func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)

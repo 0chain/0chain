@@ -3,7 +3,9 @@ package event
 import (
 	"errors"
 
+	"0chain.net/smartcontract/common"
 	"golang.org/x/net/context"
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
@@ -18,7 +20,7 @@ type Event struct {
 	Data        interface{} `json:"data" gorm:"-"`
 }
 
-func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, error) {
+func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
 	if edb.Store == nil {
 		return nil, errors.New("cannot find event database")
 	}
@@ -42,6 +44,11 @@ func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, erro
 	if EventTag(search.Tag) != TagNone {
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
+
+	db = db.Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   p.IsDescending,
+	})
 
 	var events []Event
 	db.WithContext(ctx).Find(&events)

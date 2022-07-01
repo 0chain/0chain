@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
+	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
@@ -256,7 +257,7 @@ func TestSharderFilter(t *testing.T) {
 	assert.NoError(t, err, "error while migrating database")
 	createSharders(t, eventDb, 10)
 	t.Run("sharders which are active", func(t *testing.T) {
-		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
+		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		for _, sharder := range sharders {
 			assert.Equal(t, true, sharder.Active, "all sharder should be active")
@@ -264,7 +265,7 @@ func TestSharderFilter(t *testing.T) {
 		assert.Equal(t, 5, len(sharders), "only active sharders should be returned")
 	})
 	t.Run("sharders which are not active", func(t *testing.T) {
-		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
+		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		for _, sharder := range sharders {
 			assert.Equal(t, false, sharder.Active, "all sharder should be inactive")
@@ -298,7 +299,7 @@ func TestGetSharderLocations(t *testing.T) {
 	assert.NoError(t, err, "error while migrating database")
 	createShardersWithLocation(t, eventDb, 12)
 	t.Run("sharder locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{}, 0, 0)
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{}, common2.Pagination{})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all sharders should be returned")
 		for _, location := range locations {
@@ -309,7 +310,7 @@ func TestGetSharderLocations(t *testing.T) {
 		}
 	})
 	t.Run("locations for sharders which are active", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
@@ -320,7 +321,7 @@ func TestGetSharderLocations(t *testing.T) {
 		}
 	})
 	t.Run("locations for sharders which are inactive", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
