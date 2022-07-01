@@ -828,8 +828,7 @@ func (sa *StorageAllocation) removeBlobber(
 			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
 
 			if err := removeAllocationFromBlobber(ssc,
-				blobberID,
-				d.BlobberAllocationsPartitionLoc,
+				d,
 				d.AllocationID,
 				balances); err != nil {
 				return nil, err
@@ -904,12 +903,12 @@ func (sa *StorageAllocation) Save(state chainstate.StateContextI, scAddress stri
 // removeAllocationFromBlobber removes the allocation from blobber
 func removeAllocationFromBlobber(
 	ssc *StorageSmartContract,
-	blobberID string,
-	allocPartLoc *partitions.PartitionLocation,
+	blobAlloc *BlobberAllocation,
 	allocID string,
 	balances chainstate.StateContextI) error {
 
-	if allocPartLoc == nil {
+	blobberID := blobAlloc.BlobberID
+	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
 		logging.Logger.Error("skipping removing allocation from blobber partition" +
 			"empty blobber allocation partition location")
 		return nil
@@ -920,13 +919,15 @@ func removeAllocationFromBlobber(
 		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
 	}
 
-	if err := blobAllocsParts.RemoveItem(balances, allocPartLoc.Location, allocID); err != nil {
+	if err := blobAllocsParts.RemoveItem(balances, blobAlloc.BlobberAllocationsPartitionLoc.Location, allocID); err != nil {
 		return fmt.Errorf("could not remove allocation from blobber allocations partitions: %v", err)
 	}
 
 	if err := blobAllocsParts.Save(balances); err != nil {
 		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
 	}
+	// nullifying the blobber alloc challenge pasrtition location
+	blobAlloc.BlobberAllocationsPartitionLoc = nil
 
 	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {

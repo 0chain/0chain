@@ -1335,7 +1335,7 @@ func (c *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error
 	return pb.ClientState, nil
 }
 
-func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings, error) {
+func GetConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings, error) {
 	if clientState == nil {
 		return nil, errors.New("client state is nil")
 	}
@@ -1362,7 +1362,7 @@ func (c *Chain) updateConfig(pb *block.Block) {
 		return
 	}
 
-	configMap, err := getConfigMap(clientState)
+	configMap, err := GetConfigMap(clientState)
 	if err != nil {
 		logging.Logger.Info("cannot get global settings",
 			zap.Int64("start of round", pb.Round),
