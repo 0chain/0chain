@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAddMint(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -28,14 +28,14 @@ func TestAddMint(t *testing.T) {
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
-	defer eventDb.drop()
+	defer eventDb.Drop()
 	require.NoError(t, err)
-	m := Mint{
-		Minter:     "someMint",
-		ToClientID: "someClientID",
-		Amount:     39,
+	m := &Mint{
+		BlockHash: "some_hash",
+		Round:     100,
+		Amount:    39,
 	}
-	eventDb.addMint(m)
+	eventDb.addOrUpdateTotalMint(m)
 	var gotMint *Mint
 
 	require.NoError(t, eventDb.Get().Model(&Mint{}).Where(&m).Scan(&gotMint).Error, "Mint was not found")
