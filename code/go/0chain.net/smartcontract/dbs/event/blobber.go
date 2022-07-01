@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
@@ -125,7 +126,7 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetBlobbers(limit Pagination) ([]Blobber, error) {
+func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
@@ -143,7 +144,7 @@ func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 }
 
 func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit Pagination,
+	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit common2.Pagination,
 ) ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().
@@ -206,7 +207,7 @@ type AllocationQuery struct {
 	NumberOfBlobbers  int
 }
 
-func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data Pagination) ([]string, error) {
+func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("base_url IN ?", urls).Limit(data.Limit).Offset(data.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -216,7 +217,7 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data Pagination) ([]str
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit Pagination, now common.Timestamp) ([]string, error) {
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)

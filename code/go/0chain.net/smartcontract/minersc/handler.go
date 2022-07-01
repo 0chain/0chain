@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/smartcontract"
@@ -74,6 +75,10 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //      in: query
 //      type: string
 //      required: true
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //    + name: active
 //      description: active
 //      in: query
@@ -86,12 +91,10 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //  484:
 func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
-		offsetString = r.URL.Query().Get("offset")
-		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
 	)
 
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -112,7 +115,7 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	geolocations, err := edb.GetSharderGeolocations(filter, offset, limit)
+	geolocations, err := edb.GetSharderGeolocations(filter, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -135,6 +138,10 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //      in: query
 //      type: string
 //      required: true
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //    + name: active
 //      description: active
 //      in: query
@@ -147,12 +154,10 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //  484:
 func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
-		offsetString = r.URL.Query().Get("offset")
-		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
 	)
 
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -172,7 +177,7 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	geolocations, err := edb.GetMinerGeolocations(filter, offset, limit)
+	geolocations, err := edb.GetMinerGeolocations(filter, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -203,7 +208,7 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 //
 // parameters:
 //    + name: id
-//      description: offset
+//      description: id
 //      in: query
 //      type: string
 //      required: true
@@ -296,6 +301,18 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 //      description: hash of transaction
 //      in: query
 //      type: string
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //
 // responses:
 //  200: eventList
@@ -303,6 +320,9 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 	var blockNumber = 0
 	var blockNumberString = r.URL.Query().Get("block_number")
+
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+
 	if len(blockNumberString) > 0 {
 		var err error
 		blockNumber, err = strconv.Atoi(blockNumberString)
@@ -333,7 +353,7 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	events, err := edb.FindEvents(r.Context(), filter)
+	events, err := edb.FindEvents(r.Context(), filter, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -504,6 +524,10 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 //      description: limit
 //      in: query
 //      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //    + name: active
 //      description: active
 //      in: query
@@ -515,12 +539,10 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 //  484:
 func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Request) {
 	var (
-		offsetString = r.URL.Query().Get("offset")
-		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
 	)
 
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -540,7 +562,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	sharders, err := edb.GetShardersWithFilterAndPagination(filter, offset, limit)
+	sharders, err := edb.GetShardersWithFilterAndPagination(filter, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return
@@ -618,6 +640,10 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 //      description: limit
 //      in: query
 //      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
 //    + name: active
 //      description: active
 //      in: query
@@ -629,11 +655,9 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 //  484:
 func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request) {
 	var (
-		offsetString = r.URL.Query().Get("offset")
-		limitString  = r.URL.Query().Get("limit")
 		activeString = r.URL.Query().Get("active")
 	)
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -653,7 +677,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.GetMinersWithFiltersAndPagination(filter, offset, limit)
+	miners, err := edb.GetMinersWithFiltersAndPagination(filter, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return
@@ -665,23 +689,6 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": minersArr,
 	}, nil)
-}
-
-func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
-		if err != nil {
-			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
-		}
-	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
-		if err != nil {
-			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
-		}
-	}
-
-	return
 }
 
 // swagger:model userPools

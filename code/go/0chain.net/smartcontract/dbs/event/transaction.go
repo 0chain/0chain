@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -41,7 +42,7 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 }
 
 // GetTransactionByClientId searches for transaction by clientID
-func (edb *EventDb) GetTransactionByClientId(clientID string, limit Pagination) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "creation_date"},
@@ -51,7 +52,7 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit Pagination) 
 }
 
 // GetTransactionByToClientId searches for transaction by toClientID
-func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit Pagination) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ToClientId: toClientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "creation_date"},
@@ -60,14 +61,14 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit Paginati
 	return tr, res.Error
 }
 
-func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit Pagination) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(limit.Offset).Limit(limit.Limit).Scan(&tr)
 	return tr, res.Error
 }
 
 // GetTransactionByBlockNumbers finds the transaction record between two block numbers
-func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int, limit Pagination) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int, limit common.Pagination) ([]Transaction, error) {
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(Transaction{}).
