@@ -51,7 +51,14 @@ func (dpu DelegatePoolUpdate) emitUpdate(
 		event.TypeStats,
 		event.TagUpdateDelegatePool,
 		dpu.PoolId,
-		dpu,
+		delegatePoolUpdateToDbsDelegatePoolUpdate(dpu),
 	)
 	return nil
+}
+
+func delegatePoolUpdateToDbsDelegatePoolUpdate(dpu DelegatePoolUpdate) dbs.DelegatePoolUpdate {
+	return dbs.DelegatePoolUpdate{
+		DelegatePoolId: dpu.DelegatePoolId,
+		Updates:        dpu.Updates,
+	}
 }
