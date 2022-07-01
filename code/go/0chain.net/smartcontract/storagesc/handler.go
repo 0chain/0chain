@@ -101,8 +101,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //  200: Int64Map
 //  400:
 func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, "Hello World!", nil)
-	return
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
