@@ -333,7 +333,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	// create write pool and lock tokens
 	var mld = sa.restMinLockDemand()
-	if txn.Value < mld || txn.Value <= 0 {
+	if txn.Value < mld {
 		return "", common.NewError("allocation_creation_failed",
 			fmt.Sprintf("not enough tokens to honor the min lock demand"+" (%d < %d)", txn.Value, mld))
 	}
@@ -872,29 +872,29 @@ func (sc *StorageSmartContract) extendAllocation(
 	txn *transaction.Transaction,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
-	uar *updateAllocationRequest,
+	req *updateAllocationRequest,
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (err error) {
 	var (
-		diff   = uar.getBlobbersSizeDiff(alloc) // size difference
-		size   = uar.getNewBlobbersSize(alloc)  // blobber size
+		diff   = req.getBlobbersSizeDiff(alloc) // size difference
+		size   = req.getNewBlobbersSize(alloc)  // blobber size
 		gbSize = sizeInGB(size)                 // blobber size in GB
 
 		// keep original terms to adjust challenge pool value
-		oterms = make([]Terms, 0, len(alloc.BlobberAllocs))
+		originalTerms = make([]Terms, 0, len(alloc.BlobberAllocs))
 		// original allocation duration remains
-		odr = alloc.Expiration - txn.CreationDate
+		originalRemainingDuration = alloc.Expiration - txn.CreationDate
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
 	var prevExpiration = alloc.Expiration
-	alloc.Expiration += uar.Expiration // new expiration
-	alloc.Size += uar.Size             // new size
+	alloc.Expiration += req.Expiration // new expiration
+	alloc.Size += req.Size             // new size
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
-		oterms = append(oterms, details.Terms) // keep original terms will be changed
+		originalTerms = append(originalTerms, details.Terms) // keep original terms will be changed
 		oldOffer := details.Offer()
 		var b = blobbers[i]
 		if b.ID != details.BlobberID {
@@ -906,7 +906,7 @@ func (sc *StorageSmartContract) extendAllocation(
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s no longer provides its service", b.ID)
 		}
-		if uar.Size > 0 {
+		if req.Size > 0 {
 			if b.Capacity-b.Allocated-diff < 0 {
 				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s doesn't have enough free space", b.ID)
@@ -925,7 +925,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		details.Size = size // new size
 
-		if uar.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
+		if req.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s doesn't allow so long offers", b.ID)
 		}
@@ -982,8 +982,8 @@ func (sc *StorageSmartContract) extendAllocation(
 	}
 
 	// add more tokens to related challenge pool, or move some tokens back
-	var ndr = alloc.Expiration - txn.CreationDate
-	err = sc.adjustChallengePool(alloc, odr, ndr, oterms, txn.CreationDate, balances)
+	var remainingDuration = alloc.Expiration - txn.CreationDate
+	err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, txn.CreationDate, balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
@@ -996,20 +996,20 @@ func (sc *StorageSmartContract) reduceAllocation(
 	txn *transaction.Transaction,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
-	uar *updateAllocationRequest,
+	req *updateAllocationRequest,
 	balances chainstate.StateContextI,
 ) (err error) {
 	var (
-		diff = uar.getBlobbersSizeDiff(alloc) // size difference
-		size = uar.getNewBlobbersSize(alloc)  // blobber size
+		diff = req.getBlobbersSizeDiff(alloc) // size difference
+		size = req.getNewBlobbersSize(alloc)  // blobber size
 
 		// original allocation duration remains
-		odr = alloc.Expiration - txn.CreationDate
+		originalRemainingDuration = alloc.Expiration - txn.CreationDate
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
-	alloc.Expiration += uar.Expiration
-	alloc.Size += uar.Size
+	alloc.Expiration += req.Expiration
+	alloc.Size += req.Size
 
 	// 1. update terms
 	for i, ba := range alloc.BlobberAllocs {
@@ -1054,8 +1054,8 @@ func (sc *StorageSmartContract) reduceAllocation(
 	}
 
 	// new allocation duration remains
-	var ndr = alloc.Expiration - txn.CreationDate
-	err = sc.adjustChallengePool(alloc, odr, ndr, nil, txn.CreationDate,
+	var remainingDuration = alloc.Expiration - txn.CreationDate
+	err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, nil, txn.CreationDate,
 		balances)
 	if err != nil {
 		return common.NewErrorf("allocation_reducing_failed", "%v", err)
