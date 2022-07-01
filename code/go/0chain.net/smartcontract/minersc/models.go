@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract"
@@ -672,6 +674,7 @@ type SimpleNodeGeolocation struct {
 
 // swagger:model SimpleNode
 type SimpleNode struct {
+	provider.Provider
 	ID          string                `json:"id" validate:"hexadecimal,len=64"`
 	N2NHost     string                `json:"n2n_host"`
 	Host        string                `json:"host"`
@@ -688,9 +691,6 @@ type SimpleNode struct {
 
 	// NodeType used for delegate pools statistic.
 	NodeType NodeType `json:"node_type,omitempty"`
-
-	// LastHealthCheck used to check for active node
-	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
 	Status int `json:"-" msg:"-"`

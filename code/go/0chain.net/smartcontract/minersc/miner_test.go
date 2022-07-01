@@ -144,7 +144,7 @@ func TestDeleteMiner(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.msc.DeleteMiner(
+			_, err := args.msc.KillMiner(
 				&transaction.Transaction{},
 				args.inputData,
 				args.gn,

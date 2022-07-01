@@ -8,7 +8,7 @@ import (
 )
 
 func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 	all, err := getMinersList(balances)
 	if err != nil {
@@ -57,7 +57,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 	all, err := getAllShardersList(balances)
 	if err != nil {

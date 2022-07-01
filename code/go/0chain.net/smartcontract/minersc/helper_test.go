@@ -324,3 +324,21 @@ func (msc *MinerSmartContract) UpdateGlobals(
 ) (resp string, err error) {
 	return msc.updateGlobals(txn, inputData, gn, balances)
 }
+
+func (msc *MinerSmartContract) KillMiner(
+	txn *transaction.Transaction,
+	input []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (string, error) {
+	return msc.killMiner(txn, input, gn, balances)
+}
+
+func (msc *MinerSmartContract) KillSharder(
+	txn *transaction.Transaction,
+	input []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (string, error) {
+	return msc.killSharder(txn, input, gn, balances)
+}

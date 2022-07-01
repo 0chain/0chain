@@ -15,9 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func doesMinerExist(pkey datastore.Key,
-	balances cstate.CommonStateContextI) bool {
-
+func doesMinerExist(
+	pkey datastore.Key,
+	balances cstate.CommonStateContextI,
+) (bool, *MinerNode) {
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
 	if err != nil {
@@ -25,10 +26,10 @@ func doesMinerExist(pkey datastore.Key,
 			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 				zap.String("key", pkey))
 		}
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, mn
 }
 
 // AddMiner Function to handle miner register
@@ -120,8 +121,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 		update = true
 	}
-
-	if !doesMinerExist(newMiner.GetKey(), balances) {
+	exists, mn := doesMinerExist(newMiner.GetKey(), balances)
+	if !exists {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}
@@ -129,6 +130,13 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
 
 		update = true
+	} else {
+		if mn.IsShutDown {
+			return "", common.NewError("add_miner", "cannot add a shut-down miner")
+		}
+		if mn.IsKilled {
+			return "", common.NewError("add_miner", "cannot add a killed miner")
+		}
 	}
 
 	if !update {
@@ -139,43 +147,25 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 }
 
 // deleteMiner Function to handle removing a miner from the chain
-func (msc *MinerSmartContract) DeleteMiner(
-	_ *transaction.Transaction,
-	inputData []byte,
+func deleteMiner(
+	mn *MinerNode,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
-) (string, error) {
+) error {
 	var err error
-	var deleteMiner = NewMinerNode()
-	if err = deleteMiner.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delete_miner",
-			"decoding request: %v", err)
-	}
-
-	var mn *MinerNode
-	mn, err = getMinerNode(deleteMiner.ID, balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		mn = NewMinerNode()
-		mn.ID = deleteMiner.ID
-	default:
-		return "", common.NewError("delete_miner", err.Error())
-	}
-
-	updatedMn, err := msc.deleteNode(gn, mn, balances)
+	updatedMn, err := deleteNode(gn, mn, balances)
 	if err != nil {
-		return "", common.NewError("delete_miner", err.Error())
+		return common.NewError("delete_miner", err.Error())
 	}
 
-	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
-		return "", common.NewError("delete_miner", err.Error())
+	if err = deleteMinerFromViewChange(updatedMn, balances); err != nil {
+		return common.NewError("delete_miner", err.Error())
 	}
 
-	return "", nil
+	return nil
 }
 
-func (msc *MinerSmartContract) deleteNode(
+func deleteNode(
 	gn *GlobalNode,
 	deleteNode *MinerNode,
 	balances cstate.StateContextI,
@@ -222,7 +212,7 @@ func (msc *MinerSmartContract) deleteNode(
 	return deleteNode, nil
 }
 
-func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
+func deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
 		return

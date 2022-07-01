@@ -163,38 +163,22 @@ func (msc *MinerSmartContract) AddSharder(
 }
 
 // DeleteSharder Function to handle removing a sharder from the chain
-func (msc *MinerSmartContract) DeleteSharder(
-	_ *transaction.Transaction,
-	inputData []byte,
+func deleteSharder(
+	sn *MinerNode,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
-) (string, error) {
-	var err error
-	var deleteSharder = NewMinerNode()
-	if err = deleteSharder.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delete_sharder",
-			"decoding request: %v", err)
-	}
-
-	var sn *MinerNode
-	sn, err = msc.getSharderNode(deleteSharder.ID, balances)
+) error {
+	updatedSn, err := deleteNode(gn, sn, balances)
 	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
+		return common.NewError("delete_sharder", err.Error())
 	}
-
-	updatedSn, err := msc.deleteNode(gn, sn, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
+	if err = deleteSharderFromViewChange(updatedSn, balances); err != nil {
+		return common.NewError("delete_sharder", err.Error())
 	}
-
-	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	return "", nil
+	return nil
 }
 
-func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
+func deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
 	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return err
