@@ -78,8 +78,6 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return // already done with pruning this
 	}
 
-	//var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion, bs.ClientStateHash)
-
 	var (
 		pctx = util.WithPruneStats(ctx)
 		ps   = util.GetPruneStats(pctx)
@@ -158,7 +156,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	ps.Stage = util.PruneStateDelete
 	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
-		logging.Logger.Info("prune client state error", zap.Error(err))
+		logging.Logger.Error("prune client state error", zap.Error(err))
 	}
 	ps.Stage = util.PruneStateCommplete
 
