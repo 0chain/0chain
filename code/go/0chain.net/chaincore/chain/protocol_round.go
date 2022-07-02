@@ -384,11 +384,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 							zap.Error(err))
 						return
 					}
-					logging.Logger.Info("finalize round - finalize block success",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash))
 
 					du := time.Since(ts)
+					logging.Logger.Info("finalize round - finalize block success",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Duration("duration", du))
+
 					if du > 3*time.Second {
 						logging.Logger.Debug("finalize round slow",
 							zap.Int64("round", roundNumber),

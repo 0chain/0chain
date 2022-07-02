@@ -172,9 +172,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			lfbTk := sc.GetLatestLFBTicket(ctx)
+			lfb = sc.GetLatestFinalizedBlock()
 			logging.Logger.Debug("process block successfully",
 				zap.Int64("round", b.Round),
-				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
+				zap.Int64("lfb round", lfb.Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
 			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {
