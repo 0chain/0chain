@@ -1546,7 +1546,14 @@ func (sc *StorageSmartContract) finishAllocation(
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
 					"ammount was short by %v", d.BlobberID, d.MinLockDemand-d.Spent)
 			}
-			alloc.WritePool -= d.MinLockDemand - d.Spent
+			delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
+			if err != nil {
+				return err
+			}
+			alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, delta)
+			if err != nil {
+				return err
+			}
 			err = sps[i].DistributeRewards(d.MinLockDemand-d.Spent, d.BlobberID, spenum.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock %v for blobber "+
@@ -1554,8 +1561,18 @@ func (sc *StorageSmartContract) finishAllocation(
 					d.MinLockDemand-d.Spent, d.BlobberID, alloc.WritePool, d.MinLockDemand, d.Spent, err.Error())
 			}
 		}
-		d.Spent += d.MinLockDemand - d.Spent
-		d.FinalReward += d.MinLockDemand - d.Spent
+		delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
+		if err != nil {
+			return err
+		}
+		d.Spent, err = currency.AddCoin(d.Spent, delta)
+		if err != nil {
+			return err
+		}
+		d.FinalReward, err = currency.AddCoin(d.FinalReward, delta)
+		if err != nil {
+			return err
+		}
 	}
 
 	var blobbers []*StorageNode

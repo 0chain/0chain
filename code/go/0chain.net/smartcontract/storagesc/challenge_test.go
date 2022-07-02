@@ -271,7 +271,7 @@ func TestBlobberReward(t *testing.T) {
 		"vallery", "vincent", "vivian",
 	}
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
-	var writePoolBalance int64 = 23423 + 33333333 + 234234234
+	var writePoolBalance currency.Coin = 23423 + 33333333 + 234234234
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		ValidatorReward:            0.025,
@@ -342,7 +342,7 @@ func TestBlobberPenalty(t *testing.T) {
 		"vallery", "vincent", "vivian",
 	}
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
-	var writePoolBalance int64 = 234234234
+	var writePoolBalance currency.Coin = 234234234
 	var size = int64(123000)
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
@@ -410,7 +410,7 @@ func testBlobberPenalty(
 	stakes []int64,
 	validators []string,
 	validatorStakes [][]int64,
-	wpBalance int64,
+	wpBalance currency.Coin,
 	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	partial float64,
 	size int64,
@@ -465,7 +465,7 @@ func testBlobberReward(
 	stakes []int64,
 	validators []string,
 	validatorStakes [][]int64,
-	wpBalance int64,
+	wpBalance currency.Coin,
 	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	partial float64,
 	previous, thisChallange, thisExpires, now common.Timestamp,
@@ -520,7 +520,7 @@ func setupChallengeMocks(
 	stakes []int64,
 	validators []string,
 	validatorStakes [][]int64,
-	wpBalance int64,
+	wpBalance currency.Coin,
 	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	thisChallange, thisExpires, now common.Timestamp,
 	size int64,
@@ -630,7 +630,7 @@ type formulaeBlobberReward struct {
 	stakes                                             []int64
 	validators                                         []string
 	validatorStakes                                    [][]int64
-	wpBalance                                          int64
+	wpBalance                                          currency.Coin
 	challengePoolIntegralValue, challengePoolBalance   int64
 	partial                                            float64
 	previousChallange, thisChallange, thisExpires, now common.Timestamp

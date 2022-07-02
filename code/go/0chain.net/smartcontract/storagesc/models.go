@@ -729,7 +729,7 @@ func (sa *StorageAllocation) addToWritePool(
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     currency.Coin(txn.Value),
+			Amount:     txn.Value,
 		}); err != nil {
 			return fmt.Errorf("minting tokens for write pool: %v", err)
 		}
@@ -740,8 +740,9 @@ func (sa *StorageAllocation) addToWritePool(
 		}
 	}
 
-	sa.WritePool += currency.Coin(txn.Value)
-	return nil
+	var err error
+	sa.WritePool, err = currency.AddCoin(sa.WritePool, txn.Value)
+	return err
 }
 
 func (sa *StorageAllocation) moveToChallengePool(
@@ -754,9 +755,13 @@ func (sa *StorageAllocation) moveToChallengePool(
 	if value > sa.WritePool {
 		return fmt.Errorf("insufficent funds %v in write pool to pay %v", sa.WritePool, value)
 	}
-	cp.Balance += value
-	sa.WritePool -= value
-	return nil
+	var err error
+	cp.Balance, err = currency.AddCoin(cp.Balance, value)
+	if err != nil {
+		return err
+	}
+	sa.WritePool, err = currency.MinusCoin(sa.WritePool, value)
+	return err
 }
 
 func (sa *StorageAllocation) moveFromChallengePool(
@@ -771,9 +776,13 @@ func (sa *StorageAllocation) moveFromChallengePool(
 		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
 			cp.ID, cp.Balance, value)
 	}
-	cp.Balance -= value
-	sa.WritePool += value
-	return nil
+	var err error
+	cp.Balance, err = currency.MinusCoin(cp.Balance, value)
+	if err != nil {
+		return err
+	}
+	sa.WritePool, err = currency.AddCoin(sa.WritePool, value)
+	return err
 }
 
 func (sa *StorageAllocation) validateAllocationBlobber(
@@ -1004,10 +1013,6 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
 		}
 	}
 	return
-}
-
-func (sa *StorageAllocation) fullAmount() currency.Coin {
-	return 0
 }
 
 func (sa *StorageAllocation) validate(now time.Time,

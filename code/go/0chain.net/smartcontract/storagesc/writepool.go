@@ -57,11 +57,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 			"missing allocation ID in request")
 	}
 
-	iTxnVal := txn.Value
-	if err != nil {
-		return "", err
-	}
-	if iTxnVal < conf.WritePool.MinLock {
+	if txn.Value < conf.WritePool.MinLock {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
@@ -88,7 +84,10 @@ func (ssc *StorageSmartContract) writePoolLock(
 
 	}
 
-	allocation.WritePool += currency.Coin(txn.Value)
+	allocation.WritePool, err = currency.AddCoin(allocation.WritePool, txn.Value)
+	if err != nil {
+		return "", common.NewError("write_pool_unlock_failed", err.Error())
+	}
 	if err := allocation.saveUpdatedAllocation(nil, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}

@@ -562,7 +562,7 @@ func TestExtendAllocation(t *testing.T) {
 		request    updateAllocationRequest
 		expiration common.Timestamp
 		value      currency.Coin
-		poolFunds  float64
+		poolFunds  currency.Coin
 	}
 	type want struct {
 		err    bool
@@ -628,7 +628,7 @@ func TestExtendAllocation(t *testing.T) {
 			ReadPriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
 			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
 			TimeUnit:        mockTimeUnit,
-			WritePool:       currency.Coin(args.poolFunds * 1e10),
+			WritePool:       args.poolFunds * 1e10,
 		}
 
 		bCount := sa.DataShards + sa.ParityShards
@@ -848,7 +848,7 @@ func TestTransferAllocation(t *testing.T) {
 		var sa = StorageAllocation{
 			Owner:     mockOldOwner,
 			ID:        p.info.AllocationId,
-			WritePool: currency.Coin(0.0),
+			WritePool: 0,
 		}
 		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID),
