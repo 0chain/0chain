@@ -86,66 +86,11 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	ps.Stage = util.PruneStateUpdate
 	c.pruneStats = ps
 
-	var (
-		t = time.Now()
-		//wg = sizedwaitgroup.New(2)
-
-		//missingKeys    []util.Key
-		//missingKeyStrs []string
-	)
-
-	//var missingNodesHandler = func(ctx context.Context, path util.Path,
-	//	key util.Key) error {
-	//
-	//	missingKeys = append(missingKeys, key)
-	//	missingKeyStrs = append(missingKeyStrs, util.ToHex(key))
-	//	if !node.Self.IsSharder() && len(missingKeys) == 1000 {
-	//		ps.Stage = util.PruneStateSynch
-	//		wg.Add()
-	//		go func(nodes []util.Key) {
-	//			c.GetStateNodes(ctx, nodes)
-	//			wg.Done()
-	//		}(missingKeys[:])
-	//		missingKeys = nil
-	//	}
-	//	return nil
-	//}
-
-	//var (
-	//	stage = ps.Stage
-	//err   = mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
-	//)
-	//wg.Wait()
-	//ps.Stage = stage
+	t := time.Now()
 
 	var d1 = time.Since(t)
 	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
-	//node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
-
-	//if err != nil {
-	//	logging.Logger.Error("prune client state (update version)",
-	//		zap.Int64("current_round", c.GetCurrentRound()),
-	//		zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
-	//		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
-	//		zap.Strings("missing nodes", missingKeyStrs),
-	//		zap.Any("prune_stats", ps), zap.Error(err))
-	//
-	//	if !node.Self.IsSharder() && ps.MissingNodes > 0 {
-	//		if len(missingKeys) > 0 {
-	//			c.GetStateNodes(ctx, missingKeys[:])
-	//		}
-	//	}
-	//	ps.Stage = util.PruneStateAbandoned
-	//	return
-	//} else {
-	//	logging.Logger.Info("prune client state (update version)",
-	//		zap.Int64("current_round", c.GetCurrentRound()),
-	//		zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
-	//		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
-	//		zap.Strings("missing nodes", missingKeyStrs),
-	//		zap.Any("prune_stats", ps))
-	//}
 
 	if lfb.Round-int64(c.PruneStateBelowCount()) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
@@ -172,8 +117,6 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		logf = logging.Logger.Error
 		logMsg = logMsg + " - slow"
 	}
-
-	ps = util.GetPruneStats(pctx)
 
 	logf(logMsg, zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
