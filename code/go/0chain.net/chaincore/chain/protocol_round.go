@@ -136,9 +136,9 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if !r.SetFinalizing() {
 		logging.Logger.Debug("finalize_round: already finalizing",
 			zap.Int64("round", r.GetRoundNumber()))
-		if node.Self.Type == node.NodeTypeSharder {
-			return
-		}
+		//if node.Self.Type == node.NodeTypeSharder {
+		//	return
+		//}
 	}
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
