@@ -112,7 +112,7 @@ func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
 	defer data.Free()
 	buf := data.Data()
 
-	var dn deadNodes
+	dn := deadNodes{Nodes: make(map[string]int64)}
 	if len(buf) > 0 {
 		if err := json.Unmarshal(buf, &dn); err != nil {
 			return nil, err
