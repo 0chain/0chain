@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"0chain.net/core/common"
-	common2 "0chain.net/smartcontract/common"
 	"0chain.net/core/logging"
+	common2 "0chain.net/smartcontract/common"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
@@ -103,6 +103,7 @@ func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
 		Select("SUM(capacity)").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
 		Find(&total).Error
 }
 
@@ -110,6 +111,7 @@ func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
 	var average float64
 	return average, edb.Store.Get().Model(&Blobber{}).
 		Select("AVG(write_price)").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
 		Find(&average).Error
 }
 
@@ -127,22 +129,32 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
 		Select("sum(used)").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
 		Find(&total).Error
 }
 
 func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
+		Offset(limit.Offset).
+		Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
-	}).Find(&blobbers)
+	},
+	).Find(&blobbers)
 
 	return blobbers, result.Error
 }
 
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	var blobberIDs []string
-	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Select("blobber_id").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
+		Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -154,11 +166,13 @@ func (edb *EventDb) GeBlobberByLatLong(
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Select("blobber_id").
-		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND is_killed = ? AND is_shut_down = ?",
+			maxLatitude, minLatitude, maxLongitude, minLongitude, false, false).
+		Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   true,
-	}).Find(&blobberIDs)
+	},
+	).Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -166,7 +180,6 @@ func (edb *EventDb) GeBlobberByLatLong(
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).Order("id").Where("blobber_id IN ?", ids).Find(&blobbers)
-
 	return blobbers, result.Error
 }
 
@@ -229,6 +242,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
+	dbStore = dbStore.Where("is_killed = ? AND is_shut_down = ?", false, false)
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
