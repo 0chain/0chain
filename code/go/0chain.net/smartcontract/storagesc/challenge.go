@@ -299,8 +299,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	err = alloc.moveFromChallengePool(cp, move)
 	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"moving challenge pool rest back to write pool: "+err.Error())
+		return fmt.Errorf("moving challenge pool rest back to write pool: %v", err)
 	}
 	alloc.MovedBack += move
 	blobAlloc.Returned += move
@@ -807,7 +806,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, err
 			}
 		}
-		err = alloc.Save(balances, sc.ID)
+		err = alloc.save(balances, sc.ID)
 		if err != nil {
 			return nil, common.NewErrorf("populate_challenge",
 				"error saving expired allocation: %v", err)

@@ -408,7 +408,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 
 	// write pool
 	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "allocation_pool.min_lock"))
+	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "writepool.min_lock"))
 	if err != nil {
 		return nil, err
 	}

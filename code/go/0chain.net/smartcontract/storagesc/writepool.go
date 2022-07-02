@@ -3,9 +3,6 @@ package storagesc
 import (
 	"encoding/json"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
@@ -54,7 +51,6 @@ func (ssc *StorageSmartContract) writePoolLock(
 	if err = lr.decode(input); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
-	logging.Logger.Info("piers writePoolLock", zap.Any("input", lr))
 
 	if lr.AllocationID == "" {
 		return "", common.NewError("write_pool_lock_failed",
@@ -65,7 +61,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 	if err != nil {
 		return "", err
 	}
-	if iTxnVal < conf.WritePool.MinLock || txn.Value <= 0 {
+	if iTxnVal < conf.WritePool.MinLock {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
