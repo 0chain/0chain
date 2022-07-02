@@ -46,6 +46,7 @@ type MerklePatriciaTrieI interface {
 
 	// get root, changes and deletes
 	GetChanges() (Key, []*NodeChange, []Node, Key)
+	GetDeletes() []Node
 	GetChangeCount() int
 	SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error
 

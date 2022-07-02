@@ -4,13 +4,10 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/chaincore/node"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
-	"github.com/remeh/sizedwaitgroup"
 	"go.uber.org/zap"
 )
 
@@ -81,7 +78,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return // already done with pruning this
 	}
 
-	var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion, bs.ClientStateHash)
+	//var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion, bs.ClientStateHash)
 
 	var (
 		pctx = util.WithPruneStats(ctx)
@@ -92,65 +89,65 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	c.pruneStats = ps
 
 	var (
-		t  = time.Now()
-		wg = sizedwaitgroup.New(2)
+		t = time.Now()
+		//wg = sizedwaitgroup.New(2)
 
-		missingKeys    []util.Key
-		missingKeyStrs []string
+		//missingKeys    []util.Key
+		//missingKeyStrs []string
 	)
 
-	var missingNodesHandler = func(ctx context.Context, path util.Path,
-		key util.Key) error {
+	//var missingNodesHandler = func(ctx context.Context, path util.Path,
+	//	key util.Key) error {
+	//
+	//	missingKeys = append(missingKeys, key)
+	//	missingKeyStrs = append(missingKeyStrs, util.ToHex(key))
+	//	if !node.Self.IsSharder() && len(missingKeys) == 1000 {
+	//		ps.Stage = util.PruneStateSynch
+	//		wg.Add()
+	//		go func(nodes []util.Key) {
+	//			c.GetStateNodes(ctx, nodes)
+	//			wg.Done()
+	//		}(missingKeys[:])
+	//		missingKeys = nil
+	//	}
+	//	return nil
+	//}
 
-		missingKeys = append(missingKeys, key)
-		missingKeyStrs = append(missingKeyStrs, util.ToHex(key))
-		if !node.Self.IsSharder() && len(missingKeys) == 1000 {
-			ps.Stage = util.PruneStateSynch
-			wg.Add()
-			go func(nodes []util.Key) {
-				c.GetStateNodes(ctx, nodes)
-				wg.Done()
-			}(missingKeys[:])
-			missingKeys = nil
-		}
-		return nil
-	}
-
-	var (
-		stage = ps.Stage
-		err   = mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
-	)
-	wg.Wait()
-	ps.Stage = stage
+	//var (
+	//	stage = ps.Stage
+	//err   = mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
+	//)
+	//wg.Wait()
+	//ps.Stage = stage
 
 	var d1 = time.Since(t)
 	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
-	node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
+	//node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
 
-	if err != nil {
-		logging.Logger.Error("prune client state (update version)",
-			zap.Int64("current_round", c.GetCurrentRound()),
-			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
-			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
-			zap.Strings("missing nodes", missingKeyStrs),
-			zap.Any("prune_stats", ps), zap.Error(err))
-
-		if !node.Self.IsSharder() && ps.MissingNodes > 0 {
-			if len(missingKeys) > 0 {
-				c.GetStateNodes(ctx, missingKeys[:])
-			}
-		}
-		ps.Stage = util.PruneStateAbandoned
-		return
-	} else {
-		logging.Logger.Info("prune client state (update version)",
-			zap.Int64("current_round", c.GetCurrentRound()),
-			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
-			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
-			zap.Strings("missing nodes", missingKeyStrs),
-			zap.Any("prune_stats", ps))
-	}
+	//if err != nil {
+	//	logging.Logger.Error("prune client state (update version)",
+	//		zap.Int64("current_round", c.GetCurrentRound()),
+	//		zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
+	//		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+	//		zap.Strings("missing nodes", missingKeyStrs),
+	//		zap.Any("prune_stats", ps), zap.Error(err))
+	//
+	//	if !node.Self.IsSharder() && ps.MissingNodes > 0 {
+	//		if len(missingKeys) > 0 {
+	//			c.GetStateNodes(ctx, missingKeys[:])
+	//		}
+	//	}
+	//	ps.Stage = util.PruneStateAbandoned
+	//	return
+	//} else {
+	//	logging.Logger.Info("prune client state (update version)",
+	//		zap.Int64("current_round", c.GetCurrentRound()),
+	//		zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
+	//		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+	//		zap.Strings("missing nodes", missingKeyStrs),
+	//		zap.Any("prune_stats", ps))
+	//}
 
 	if lfb.Round-int64(c.PruneStateBelowCount()) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
@@ -159,7 +156,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 
 	var t1 = time.Now()
 	ps.Stage = util.PruneStateDelete
-	err = c.stateDB.PruneBelowVersion(pctx, newVersion)
+	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		logging.Logger.Info("prune client state error", zap.Error(err))
 	}

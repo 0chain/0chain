@@ -236,6 +236,14 @@ func (mpt *MerklePatriciaTrie) GetChanges() (Key, []*NodeChange, []Node, Key) {
 	return mpt.root, mpt.ChangeCollector.GetChanges(), mpt.ChangeCollector.GetDeletes(), mpt.ChangeCollector.GetStartRoot()
 }
 
+func (mpt *MerklePatriciaTrie) GetDeletes() []Node {
+	var nodes []Node
+	mpt.mutex.RLock()
+	nodes = mpt.ChangeCollector.GetDeletes()
+	mpt.mutex.RUnlock()
+	return nodes
+}
+
 /*GetChangeCount - implement interface */
 func (mpt *MerklePatriciaTrie) GetChangeCount() int {
 	mpt.mutex.RLock()
