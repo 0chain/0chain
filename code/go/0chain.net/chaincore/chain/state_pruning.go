@@ -64,56 +64,44 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	}
 
-	logging.Logger.Info("prune client state - new version",
+	logging.Logger.Info("prune client state",
 		zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("latest_finalized_round", lfb.Round),
 		zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 
-	var newVersion = util.Sequence(bs.Round)
-
-	if c.pruneStats != nil && c.pruneStats.Version == newVersion &&
-		c.pruneStats.MissingNodes == 0 {
-		return // already done with pruning this
-	}
-
 	var (
-		pctx = util.WithPruneStats(ctx)
-		ps   = util.GetPruneStats(pctx)
+		newVersion = util.Sequence(bs.Round)
+		pctx       = util.WithPruneStats(ctx)
+		ps         = util.GetPruneStats(pctx)
 	)
 
-	ps.Stage = util.PruneStateUpdate
+	ps.Stage = util.PruneStateDelete
 	c.pruneStats = ps
-
-	t := time.Now()
-
-	var d1 = time.Since(t)
-	ps.UpdateTime = d1
-	StatePruneUpdateTimer.Update(d1)
 
 	if lfb.Round-int64(c.PruneStateBelowCount()) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
 		return
 	}
 
-	var t1 = time.Now()
-	ps.Stage = util.PruneStateDelete
+	var t = time.Now()
 	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		logging.Logger.Error("prune client state error", zap.Error(err))
 	}
 	ps.Stage = util.PruneStateCommplete
 
-	var d2 = time.Since(t1)
-	ps.DeleteTime = d2
-	StatePruneDeleteTimer.Update(d2)
+	var d = time.Since(t)
+	ps.DeleteTime = d
+	StatePruneDeleteTimer.Update(d)
 
 	var (
 		logf   = logging.Logger.Info
 		logMsg = "prune client state stats"
 	)
-	if d1 > time.Second || d2 > time.Second {
+
+	if d > time.Second {
 		logf = logging.Logger.Error
 		logMsg = logMsg + " - slow"
 	}
@@ -123,8 +111,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
 		zap.Int64("prune_deleted", ps.Deleted),
 		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps),
-		zap.Duration("update_version_after", d1),
-		zap.Duration("prune_below_version_after", d2))
+		zap.Duration("prune_below_version_after", d))
 
 	/*
 		if stateOut != nil {

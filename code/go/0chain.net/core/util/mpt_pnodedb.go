@@ -35,6 +35,7 @@ const (
 
 var (
 	PNodeDBCompression = gorocksdb.LZ4Compression
+	deadNodesKey       = []byte("dead_nodes")
 )
 
 var sstType = SSTTypeBlockBasedTable
@@ -104,7 +105,7 @@ type deadNodes struct {
 }
 
 func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
-	data, err := pndb.db.Get(pndb.ro, []byte("dead_nodes"))
+	data, err := pndb.db.Get(pndb.ro, deadNodesKey)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes) error {
 		return err
 	}
 
-	return pndb.db.Put(pndb.wo, []byte("dead_nodes"), d)
+	return pndb.db.Put(pndb.wo, deadNodesKey, d)
 }
 
 func (pndb *PNodeDB) RecordDeadNodes(nodes []Node) error {
@@ -256,6 +257,9 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 		key := it.Key()
 		value := it.Value()
 		kdata := key.Data()
+		if bytes.Equal(kdata, deadNodesKey) {
+			continue
+		}
 		vdata := value.Data()
 		node, err := CreateNode(bytes.NewReader(vdata))
 		if err != nil {

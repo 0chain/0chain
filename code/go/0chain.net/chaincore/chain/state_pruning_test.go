@@ -62,6 +62,10 @@ func (fndb *failingNodeDB) PruneBelowVersion(ctx context.Context, version util.S
 	return fndb.underlying.PruneBelowVersion(ctx, version)
 }
 
+func (fndb *failingNodeDB) RecordDeadNodes(nodes []util.Node) error {
+	return fndb.underlying.RecordDeadNodes(nodes)
+}
+
 func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
 	db, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	require.NoError(t, err)
