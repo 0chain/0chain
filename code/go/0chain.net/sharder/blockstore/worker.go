@@ -43,8 +43,7 @@ func setupColdWorker(ctx context.Context) {
 		case <-ctx.Done():
 			break
 		case <-ticker.C:
-			logging.Logger.Info("Moving blocks to cold tier")
-			upto := time.Now().Add(-store.blockMovementInterval).UnixNano()
+			upto := time.Now().Add(-store.blockMovementInterval).Unix()
 			maxPrefix := strconv.FormatInt(upto, 10)
 			ch := getUnmovedBlockRecords([]byte(maxPrefix))
 			guideCh := make(chan struct{}, 10)
@@ -52,7 +51,6 @@ func setupColdWorker(ctx context.Context) {
 			for ubr := range ch {
 				guideCh <- struct{}{}
 				wg.Add(1)
-				logging.Logger.Info(fmt.Sprintf("Moving block %v to cold tier", ubr.Hash))
 
 				go func(ubr *unmovedBlockRecord) {
 					defer func() {
@@ -65,12 +63,12 @@ func setupColdWorker(ctx context.Context) {
 						logging.Logger.Error(fmt.Sprintf("Unexpected error; Error: %v", err))
 						return
 					}
+					logging.Logger.Info("Moving block " + bwr.Hash)
 					newColdPath, err := store.coldTier.moveBlock(bwr.Hash, bwr.BlockPath)
 					if err != nil {
 						logging.Logger.Error(err.Error())
 						return
 					}
-
 					logging.Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
 
 					bwr.Tiering = newTiering(store.coldTier.DeleteLocal)

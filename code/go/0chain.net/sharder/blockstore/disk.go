@@ -83,6 +83,8 @@ func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err err
 			return "", sdv.err
 		}
 
+		d.PrevVolInd = sdv.prevInd
+
 		if blockPath, err = sdv.volume.write(b, data); err != nil {
 			logging.Logger.Error(err.Error())
 			d.removeSelectedVolume()
@@ -474,7 +476,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 			if selectedVolume == nil {
 				if prevVolume.isAbleToStoreBlock() {
 					selectedVolume = prevVolume
-					selectedIndex = 0
+					selectedIndex = prevInd
 				}
 			}
 

@@ -319,12 +319,12 @@ func getVolumePathFromBlockPath(bPath string) string {
 	splittedPaths := strings.Split(bPath, "/")
 
 	/*
-		Example bPath = /path/to/blocks/HK0/199/blockname.dat
+		Example bPath = /path/to/blocks/blocks/HK0/199/blockname.dat
 		path returned --> /path/to/blocks
-		bPath = /another/path/to/blocks/HK0/199/blockname.dat
+		bPath = /another/path/to/blocks/blocks/HK0/199/blockname.dat
 		path returned --> /another/path/to/blocks
 	*/
-	return strings.Join(splittedPaths[:len(splittedPaths)-3], "/")
+	return strings.Join(splittedPaths[:len(splittedPaths)-4], "/")
 }
 
 type Mutex chan struct{}

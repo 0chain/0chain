@@ -330,6 +330,7 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 
 	switch Tiering(storageType) {
 	case DiskAndCold, CacheDiskAndCold:
+		logging.Logger.Info("Setting up cold storage worker")
 		go setupColdWorker(ctx)
 	}
 
@@ -382,10 +383,10 @@ func (store *blockStore) addToCache(b *block.Block) {
 func (store *blockStore) addToUBR(b *block.Block) {
 	ubr := &unmovedBlockRecord{
 		Hash:      b.Hash,
-		CreatedAt: b.CreationDate.Duration(),
+		CreatedAt: b.CreationDate,
 	}
 
 	if err := ubr.Add(); err != nil {
-		logging.Logger.Error(err.Error())
+		logging.Logger.Error("Error while adding %s to ubr. " + err.Error())
 	}
 }

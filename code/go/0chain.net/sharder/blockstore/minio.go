@@ -374,7 +374,7 @@ func startCloudStorages(cloudStorages []map[string]interface{},
 	}
 
 	wg.Wait()
-	if len(cTier.ColdStorages) < len(cloudStorages)/2 {
+	if len(cTier.ColdStorages) == 0 || len(cTier.ColdStorages) < len(cloudStorages)/2 {
 		panic("At least 50%% cloud storages must be able to store blocks")
 	}
 }

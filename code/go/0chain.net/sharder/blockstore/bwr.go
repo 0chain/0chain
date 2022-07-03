@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/viper"
 	"github.com/0chain/gorocksdb"
@@ -67,6 +67,7 @@ func getBWR(hash string) (*blockWhereRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+	bwr.Hash = hash
 	return bwr, nil
 }
 
@@ -74,7 +75,7 @@ func getBWR(hash string) (*blockWhereRecord, error) {
 type unmovedBlockRecord struct {
 	Hash string `json:"h"`
 	// CreateAt duration passed from epoch date
-	CreatedAt time.Duration `json:"c"`
+	CreatedAt common.Timestamp `json:"c"`
 }
 
 func (ubr *unmovedBlockRecord) Add() error {
@@ -94,7 +95,7 @@ func (ubr *unmovedBlockRecord) Delete() error {
 }
 
 // getUnmovedBlockRecords will return a channel where it will pass
-// all the unmoved blocks
+// all the unmoved blocks that is older than the block movement time interval
 func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
 	ch := make(chan *unmovedBlockRecord)
 
@@ -113,7 +114,7 @@ func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
 			createdAt, _ := strconv.ParseInt(string(keyS.Data()), 10, 64)
 			ch <- &unmovedBlockRecord{
 				Hash:      string(valueS.Data()),
-				CreatedAt: time.Duration(createdAt),
+				CreatedAt: common.Timestamp(createdAt),
 			}
 			keyS.Free()
 			valueS.Free()
