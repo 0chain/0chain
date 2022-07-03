@@ -1541,37 +1541,32 @@ func (sc *StorageSmartContract) finishAllocation(
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
 		if d.MinLockDemand > d.Spent {
-			//for clIndex < len(clients) && lack > 0 {
-			if alloc.WritePool < d.MinLockDemand-d.Spent {
-				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
-					"ammount was short by %v", d.BlobberID, d.MinLockDemand-d.Spent)
-			}
 			delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
 			if err != nil {
 				return err
+			}
+			if alloc.WritePool < delta {
+				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
+					"ammount was short by %v", d.BlobberID, d.MinLockDemand-d.Spent)
 			}
 			alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, delta)
 			if err != nil {
 				return err
 			}
-			err = sps[i].DistributeRewards(d.MinLockDemand-d.Spent, d.BlobberID, spenum.Blobber, balances)
+			err = sps[i].DistributeRewards(delta, d.BlobberID, spenum.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock %v for blobber "+
 					"%v from write pool %v, minlock demand %v spent %v error %v",
 					d.MinLockDemand-d.Spent, d.BlobberID, alloc.WritePool, d.MinLockDemand, d.Spent, err.Error())
 			}
-		}
-		delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
-		if err != nil {
-			return err
-		}
-		d.Spent, err = currency.AddCoin(d.Spent, delta)
-		if err != nil {
-			return err
-		}
-		d.FinalReward, err = currency.AddCoin(d.FinalReward, delta)
-		if err != nil {
-			return err
+			d.Spent, err = currency.AddCoin(d.Spent, delta)
+			if err != nil {
+				return err
+			}
+			d.FinalReward, err = currency.AddCoin(d.FinalReward, delta)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
