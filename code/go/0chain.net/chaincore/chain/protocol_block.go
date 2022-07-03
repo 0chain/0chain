@@ -341,12 +341,17 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
-	if err := c.stateDB.RecordDeadNodes(deletedNode); err != nil {
+	deadNodesCount, err := c.stateDB.RecordDeadNodes(deletedNode)
+	if err != nil {
 		logging.Logger.Error("finalize block - record dead nodes failed",
 			zap.Int64("round", fb.Round),
 			zap.String("block", fb.Hash),
 			zap.Error(err))
 		return
+	}
+
+	if deadNodesCount >= c.MaxDeadNodesCount() {
+		go c.StartPruneClientState()
 	}
 
 	if err := c.updateFeeStats(fb); err != nil {
@@ -356,27 +361,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.Error(err))
 	}
 
-	//missing, err := fb.ClientState.HasMissingNodes(context.Background())
-	//if err != nil {
-	//	logging.Logger.Error("checking missing node failed",
-	//		zap.Error(err),
-	//		zap.Int64("round", fb.Round),
-	//		zap.String("block", fb.Hash))
-	//}
-	//
-	//if missing {
-	//	logging.Logger.Error("detected missing nodes",
-	//		zap.Int64("round", fb.Round),
-	//		zap.String("block", fb.Hash))
-	//}
-
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		//go func(events []event.Event) {
 		c.GetEventDb().AddEvents(ctx, fb.Events)
-		//}(fb.Events)
 		fb.Events = nil
 	}
 

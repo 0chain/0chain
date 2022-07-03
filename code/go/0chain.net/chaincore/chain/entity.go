@@ -167,6 +167,8 @@ type Chain struct {
 	magicBlockSaver              MagicBlockSaver
 
 	pruneStats *util.PruneStats
+	// channel to trigger the worker to start prunce process immediately
+	pruneClientStateC chan struct{}
 
 	configInfoDB string
 
@@ -460,6 +462,7 @@ func Provider() datastore.Entity {
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncLFBStateNowC = make(chan struct{})
+	c.pruneClientStateC = make(chan struct{}, 1)
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
@@ -1755,4 +1758,9 @@ func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// MaxDeadNodesCount represents the max allowed dead nodes number in state db
+func (c *Chain) MaxDeadNodesCount() int {
+	return 10000
 }

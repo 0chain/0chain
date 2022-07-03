@@ -101,7 +101,7 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 }
 
 type deadNodes struct {
-	Nodes map[string]int64 `json:"nodes"`
+	Nodes map[string]Sequence `json:"nodes"`
 }
 
 func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
@@ -113,7 +113,7 @@ func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
 	defer data.Free()
 	buf := data.Data()
 
-	dn := deadNodes{Nodes: make(map[string]int64)}
+	dn := deadNodes{Nodes: make(map[string]Sequence)}
 	if len(buf) > 0 {
 		if err := json.Unmarshal(buf, &dn); err != nil {
 			return nil, err
@@ -132,16 +132,21 @@ func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes) error {
 	return pndb.db.Put(pndb.wo, deadNodesKey, d)
 }
 
-func (pndb *PNodeDB) RecordDeadNodes(nodes []Node) error {
+func (pndb *PNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
 	dn, err := pndb.getDeadNodes()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, n := range nodes {
-		dn.Nodes[n.GetHash()] = int64(n.GetVersion())
+		dn.Nodes[n.GetHash()] = n.GetVersion()
 	}
-	return pndb.saveDeadNodes(dn)
+
+	if err := pndb.saveDeadNodes(dn); err != nil {
+		return 0, err
+	}
+
+	return len(dn.Nodes), nil
 }
 
 func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
@@ -157,7 +162,7 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 
 	keys := make([]Key, 0, len(dn.Nodes))
 	for k, v := range dn.Nodes {
-		if v < int64(version) {
+		if v < version {
 			key, err := fromHex(k)
 			if err != nil {
 				return fmt.Errorf("decode node hash key failed: %v", err)
