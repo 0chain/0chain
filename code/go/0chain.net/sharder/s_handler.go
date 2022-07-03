@@ -112,12 +112,13 @@ func elapsedHandler(handler func(http.ResponseWriter, *http.Request)) func(w htt
 		handler(lrw, r)
 
 		if lrw.statusCode != http.StatusTooManyRequests {
-			Logger.Debug("API",
+			N2n.Debug("API",
 				zap.String("src", r.RemoteAddr),
 				zap.Int("status", lrw.statusCode),
 				zap.String("method", r.Method),
 				zap.String("url", r.URL.Path),
-				zap.Any("time", time.Since(start)))
+				zap.Duration("time", time.Since(start)),
+				zap.String("rsp", lrw.response.String()))
 		}
 	}
 }
