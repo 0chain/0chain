@@ -1,7 +1,7 @@
 #docker.aws
 ARG image_tag
 FROM 0chain_build_base:${image_tag} as zchain_build_base
-FROM alpine:3.9
+FROM alpine:3.15
 RUN apk add bash
 RUN apk add libbz2 lz4-libs snappy zstd-libs  # For RocksDB
 RUN apk add gmp libcrypto1.1 libssl1.1                 # For Herumi

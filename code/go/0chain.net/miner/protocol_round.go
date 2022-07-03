@@ -511,7 +511,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				}
 			}
 			if startLogging.IsZero() || time.Since(startLogging) > time.Second {
-				startLogging = time.Now()
 				logging.Logger.Info("generate block", zap.Any("round", roundNumber),
 					zap.Any("txn_count", txnCount),
 					zap.Any("t.txn_count", transaction.GetTransactionCount()),

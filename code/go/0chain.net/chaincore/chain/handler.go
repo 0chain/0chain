@@ -710,7 +710,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
-		fmt.Fprintf(w, "<li><a href='_health_check'>/_health_check</a></li>")
+		fmt.Fprintf(w, "<li><a href='_healthcheck'>/_healthcheck</a></li>")
 	}
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
