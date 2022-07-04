@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/common"
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
 
@@ -11,24 +14,13 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator { //nolint
-	return &event.Validator{
-		ValidatorID: vn.ID,
-		BaseUrl:     vn.BaseURL,
-		PublicKey:   vn.PublicKey,
-		// TO-DO: Update stake in eventDB
-		Stake: 0,
-
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-	}
-}
-
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
+		Provider: provider.Provider{
+			LastHealthCheck: common.Timestamp(v.LastHealthCheck),
+			IsKilled:        v.IsKilled,
+			IsShutDown:      v.IsShutDown,
+		},
 		ID:        v.ValidatorID,
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
@@ -59,12 +51,15 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 	data, err := json.Marshal(&dbs.DbUpdates{
 		Id: vn.ID,
 		Updates: map[string]interface{}{
-			"base_url":        vn.BaseURL,
-			"delegate_wallet": vn.StakePoolSettings.DelegateWallet,
-			"min_stake":       vn.StakePoolSettings.MinStake,
-			"max_stake":       vn.StakePoolSettings.MaxStake,
-			"num_delegates":   vn.StakePoolSettings.MaxNumDelegates,
-			"service_charge":  vn.StakePoolSettings.ServiceChargeRatio,
+			"base_url":          vn.BaseURL,
+			"delegate_wallet":   vn.StakePoolSettings.DelegateWallet,
+			"min_stake":         vn.StakePoolSettings.MinStake,
+			"max_stake":         vn.StakePoolSettings.MaxStake,
+			"num_delegates":     vn.StakePoolSettings.MaxNumDelegates,
+			"service_charge":    vn.StakePoolSettings.ServiceChargeRatio,
+			"last_health_check": int64(vn.LastHealthCheck),
+			"is_killed":         vn.IsKilled,
+			"is_shut_down":      vn.IsShutDown,
 		},
 	})
 	if err != nil {
@@ -76,13 +71,16 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 
 func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 	data, err := json.Marshal(&event.Validator{
-		ValidatorID:    vn.ID,
-		BaseUrl:        vn.BaseURL,
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		ValidatorID:     vn.ID,
+		BaseUrl:         vn.BaseURL,
+		DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
+		MinStake:        vn.StakePoolSettings.MinStake,
+		MaxStake:        vn.StakePoolSettings.MaxStake,
+		NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
+		ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+		LastHealthCheck: int64(vn.LastHealthCheck),
+		IsShutDown:      vn.IsShutDown,
+		IsKilled:        vn.IsKilled,
 	})
 	if err != nil {
 		return fmt.Errorf("marshalling validator: %v", err)

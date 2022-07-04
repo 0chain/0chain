@@ -27,6 +27,8 @@ func emitAddOrOverwriteBlobber(
 		Allocated:       sn.Allocated,
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
+		IsShutDown:      sn.IsShutDown,
+		IsKilled:        sn.IsKilled,
 
 		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 		MinStake:       sn.StakePoolSettings.MinStake,
@@ -65,6 +67,8 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"capacity":           sn.Capacity,
 			"allocated":          sn.Allocated,
 			"last_health_check":  int64(sn.LastHealthCheck),
+			"is_killed":          sn.IsKilled,
+			"is_shut_down":       sn.IsShutDown,
 			"delegate_wallet":    sn.StakePoolSettings.DelegateWallet,
 			"min_stake":          int64(sn.StakePoolSettings.MinStake),
 			"max_stake":          int64(sn.StakePoolSettings.MaxStake),

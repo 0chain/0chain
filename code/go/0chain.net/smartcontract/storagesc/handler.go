@@ -2011,6 +2011,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			Provider: provider.Provider{
+				IsKilled:        blobber.IsKilled,
+				IsShutDown:      blobber.IsShutDown,
 				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
 			},
 			ID:      blobber.BlobberID,
