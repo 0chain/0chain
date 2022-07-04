@@ -64,7 +64,7 @@ func MakeMockStateContext() *mockStateContext {
 
 	ctx.userNodes = make(map[string]*UserNode)
 	for _, client := range clients {
-		userNode := createUserNode(client, int64(0))
+		userNode := createUserNode(client)
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 
