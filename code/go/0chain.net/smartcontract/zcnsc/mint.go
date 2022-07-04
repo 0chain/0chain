@@ -69,13 +69,13 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	prevNonce := gn.UserNonceMinted[trans.ClientID]
-	if prevNonce+1 != payload.Nonce { // global nonce from ETH SC
+	_, exists := gn.WZCNNonceMinted[payload.Nonce]
+	if exists { // global nonce from ETH SC has already been minted
 		err = common.NewError(
 			code,
 			fmt.Sprintf(
-				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, prevNonce, un.ID, info))
+				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
+				payload.Nonce, payload.ReceivingClientID, un.ID, info))
 		return
 	}
 
@@ -87,8 +87,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// increase the nonce
-	gn.UserNonceMinted[trans.ClientID] = prevNonce + 1
+	// record the global nonce from solidity smart contract
+	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
