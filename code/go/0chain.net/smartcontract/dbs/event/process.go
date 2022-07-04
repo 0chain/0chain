@@ -33,6 +33,7 @@ const (
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
 	TagAddTransaction
+	TagAddOrOverwriteUser
 	TagAddWriteMarker
 	TagAddBlock
 	TagAddValidator
@@ -140,6 +141,13 @@ func (edb *EventDb) addStat(event Event) error {
 		rm.TransactionID = event.TxHash
 		rm.BlockNumber = event.BlockNumber
 		return edb.addOrOverwriteReadMarker(rm)
+	case TagAddOrOverwriteUser:
+		var usr User
+		err := json.Unmarshal([]byte(event.Data), &usr)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteUser(usr)
 	case TagAddTransaction:
 		var transaction Transaction
 		err := json.Unmarshal([]byte(event.Data), &transaction)
