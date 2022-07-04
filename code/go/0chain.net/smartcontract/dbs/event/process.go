@@ -1,11 +1,14 @@
 package event
 
 import (
-	"0chain.net/smartcontract/dbs"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
+
 	"golang.org/x/net/context"
+
+	"0chain.net/smartcontract/dbs"
+
+	"go.uber.org/zap"
 
 	"0chain.net/core/logging"
 )

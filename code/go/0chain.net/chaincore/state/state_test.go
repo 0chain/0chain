@@ -173,6 +173,7 @@ func TestState_Decode(t *testing.T) {
 	st := makeTestState()
 	st.TxnHash = ""
 	blob := st.Encode()
+
 	type fields struct {
 		TxnHash      string
 		TxnHashBytes []byte

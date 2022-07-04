@@ -516,6 +516,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if err = c.emitEvent(sctx,stateToUser(fromClient, fs), event.TagAddOrOverwriteUser); err != nil {
 		return common.NewError("transfer_amount", "could not emit event")
 	}
+
 	if err = c.emitEvent(sctx,stateToUser(toClient, ts), event.TagAddOrOverwriteUser); err != nil {
 		return common.NewError("transfer_amount", "could not emit event")
 	}

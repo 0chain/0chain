@@ -11,7 +11,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -151,7 +150,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	log.Println("user is okay:", *user)
+
 	return userToState(user), nil
 }
 
