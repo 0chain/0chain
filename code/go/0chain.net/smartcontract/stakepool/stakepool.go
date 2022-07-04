@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"0chain.net/chaincore/currency"
 
@@ -46,6 +47,8 @@ type DelegatePool struct {
 	Balance      currency.Coin     `json:"balance"`
 	Reward       currency.Coin     `json:"reward"`
 	Status       spenum.PoolStatus `json:"status"`
+	LockPeriod   time.Duration     `json:"lock_period"`
+	LockAt       time.Time         `json:"lock_at"`
 	RoundCreated int64             `json:"round_created"` // used for cool down
 	DelegateID   string            `json:"delegate_id"`
 }

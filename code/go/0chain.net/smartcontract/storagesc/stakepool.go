@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/currency"
 
@@ -345,8 +346,9 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 }
 
 type stakePoolRequest struct {
-	BlobberID string `json:"blobber_id,omitempty"`
-	PoolID    string `json:"pool_id,omitempty"`
+	BlobberID  string        `json:"blobber_id,omitempty"`
+	PoolID     string        `json:"pool_id,omitempty"`
+	LockPeriod time.Duration `json:"lock_period"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
@@ -383,6 +385,11 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"invalid request: %v", err)
+	}
+
+	if spr.LockPeriod < conf.StakePool.MinLockPeriod {
+		return "", common.NewError("stake_pool_lock_failed",
+			"too short period to lock")
 	}
 
 	var sp *stakePool
