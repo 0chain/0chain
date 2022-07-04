@@ -230,6 +230,11 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"can't get config: %v", err)
 	}
 
+	if txn.ClientID != marker.Recipient {
+		return "", common.NewErrorf("free_allocation_failed",
+			"marker can be used only by its recipient")
+	}
+
 	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed",

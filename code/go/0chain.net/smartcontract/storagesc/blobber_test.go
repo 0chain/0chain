@@ -215,7 +215,8 @@ func Test_flow_reward(t *testing.T) {
 
 		// read pool lock
 		tp += 100
-		readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+		var readPoolFund currency.Coin
+		readPoolFund, err = currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
 		require.NoError(t, err)
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
@@ -251,16 +252,6 @@ func Test_flow_reward(t *testing.T) {
 
 	t.Run("read as unauthorized separate user", func(t *testing.T) {
 		tp += 100
-		var at = AuthTicket{
-			ClientID:     client.id,
-			OwnerID:      client.id,
-			AllocationID: alloc.ID,
-			Expiration:   common.Timestamp(tp + 1000),
-			Timestamp:    common.Timestamp(tp - 10),
-		}
-		at.Signature, err = client.scheme.Sign(
-			encryption.Hash(at.getHashData()),
-		)
 		require.NoError(t, err)
 		var rm ReadConnection
 		rm.ReadMarker = &ReadMarker{
@@ -271,7 +262,6 @@ func Test_flow_reward(t *testing.T) {
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
 			ReadCounter:     1 * GB / (64 * KB),
-			AuthTicket:      &at,
 		}
 		rm.ReadMarker.Signature, err = reader.scheme.Sign(
 			encryption.Hash(rm.ReadMarker.GetHashData()))
@@ -306,7 +296,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	var b2 *Client

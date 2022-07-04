@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/transaction"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/threshold/bls"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -1434,80 +1435,6 @@ func (rc *ReadConnection) GetHashBytes() []byte {
 	return encryption.RawHash(rc.Encode())
 }
 
-type AuthTicket struct {
-	ClientID        string           `json:"client_id"`
-	OwnerID         string           `json:"owner_id"`
-	AllocationID    string           `json:"allocation_id"`
-	FilePathHash    string           `json:"file_path_hash"`
-	ActualFileHash  string           `json:"actual_file_hash"`
-	FileName        string           `json:"file_name"`
-	RefType         string           `json:"reference_type"`
-	Expiration      common.Timestamp `json:"expiration"`
-	Timestamp       common.Timestamp `json:"timestamp"`
-	ReEncryptionKey string           `json:"re_encryption_key"`
-	Signature       string           `json:"signature"`
-	Encrypted       bool             `json:"encrypted"`
-}
-
-func (at *AuthTicket) getHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v",
-		at.AllocationID, at.ClientID, at.OwnerID, at.FilePathHash,
-		at.FileName, at.RefType, at.ReEncryptionKey, at.Expiration, at.Timestamp,
-		at.ActualFileHash, at.Encrypted)
-	return hashData
-}
-
-func (at *AuthTicket) verify(
-	alloc *StorageAllocation,
-	now common.Timestamp,
-	clientID string,
-	balances cstate.StateContextI,
-) (err error) {
-
-	if at.AllocationID != alloc.ID {
-		return common.NewError("invalid_read_marker",
-			"Invalid auth ticket. Allocation ID mismatch")
-	}
-
-	if at.ClientID != clientID && len(at.ClientID) > 0 {
-		return common.NewError("invalid_read_marker",
-			"Invalid auth ticket. Client ID mismatch")
-	}
-
-	if at.Expiration > 0 && (at.Expiration < at.Timestamp || at.Expiration < now) {
-		return common.NewError("invalid_read_marker",
-			"Invalid auth ticket. Expired ticket")
-	}
-
-	if at.OwnerID != alloc.Owner {
-		return common.NewError("invalid_read_marker",
-			"Invalid auth ticket. Owner ID mismatch")
-	}
-
-	if at.Timestamp > now+2 {
-		return common.NewError("invalid_read_marker",
-			"Invalid auth ticket. Timestamp in future")
-	}
-
-	var ss = balances.GetSignatureScheme()
-
-	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
-		return common.NewErrorf("invalid_read_marker",
-			"setting owner public key: %v", err)
-	}
-
-	var (
-		sighash = encryption.Hash(at.getHashData())
-		ok      bool
-	)
-	if ok, err = ss.Verify(at.Signature, sighash); err != nil || !ok {
-		return common.NewError("invalid_read_marker",
-			"Invalid auth ticket. Signature verification failed")
-	}
-
-	return
-}
-
 type ReadMarker struct {
 	ClientID        string           `json:"client_id"`
 	ClientPublicKey string           `json:"client_public_key"`
@@ -1517,7 +1444,6 @@ type ReadMarker struct {
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
-	AuthTicket      *AuthTicket      `json:"auth_ticket"`
 	ReadSize        float64          `json:"read_size"`
 }
 
@@ -1536,18 +1462,6 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances cstate.St
 		return false
 	}
 	return true
-}
-
-func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation, now common.Timestamp, balances cstate.StateContextI) (err error) {
-	// owner downloads, pays itself, no ticket needed
-	if rm.ClientID == alloc.Owner {
-		return
-	}
-	// 3rd party payment
-	if rm.AuthTicket == nil {
-		return common.NewError("invalid_read_marker", "missing auth. ticket")
-	}
-	return rm.AuthTicket.verify(alloc, now, rm.ClientID, balances)
 }
 
 func (rm *ReadMarker) GetHashData() string {
@@ -1574,6 +1488,21 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances cstate.StateContextI) 
 
 	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); !ok {
 		return common.NewError("invalid_read_marker", "Signature verification failed for the read marker")
+	}
+
+	return nil
+}
+
+func (rm *ReadMarker) VerifyClientID() error {
+	pk := rm.ClientPublicKey
+
+	pub := bls.PublicKey{}
+	if err := pub.DeserializeHexStr(pk); err != nil {
+		return err
+	}
+
+	if encryption.Hash(pub.Serialize()) != rm.ClientID {
+		return common.NewError("invalid_read_marker", "Client ID verification failed")
 	}
 
 	return nil
