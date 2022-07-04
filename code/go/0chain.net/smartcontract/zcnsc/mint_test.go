@@ -37,7 +37,7 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
-	payload, err := CreateMintPayload(ctx, defaultAuthorizer)
+	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
 	for _, client := range clients {
