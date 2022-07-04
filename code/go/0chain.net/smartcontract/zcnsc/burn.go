@@ -40,6 +40,14 @@ func (zcn *ZCNSmartContract) Burn(
 		return "", common.NewError(code, msg)
 	}
 
+	// get user node
+	un, err := GetUserNode(trans.ClientID, ctx)
+	if err != nil {
+		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
+		logging.Logger.Error(err.Error(), zap.Error(err))
+		return
+	}
+
 	// check burn amount
 	if trans.Value < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
@@ -69,12 +77,12 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// increase the nonce
-	gn.BurnNonce++
+	un.BurnNonce++
 
 	// Save the user node
-	err = gn.Save(ctx)
+	err = un.Save(ctx)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, user node failed to be saved, %s", code, info))
 		return
 	}
 
@@ -87,7 +95,7 @@ func (zcn *ZCNSmartContract) Burn(
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,
 		Amount:          trans.Value,
-		Nonce:           gn.BurnNonce, // it can be just the nonce of this transaction
+		Nonce:           un.BurnNonce, // it can be just the nonce of this transaction
 		EthereumAddress: payload.EthereumAddress,
 	}
 
