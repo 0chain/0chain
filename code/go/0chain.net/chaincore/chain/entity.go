@@ -167,7 +167,7 @@ type Chain struct {
 	magicBlockSaver              MagicBlockSaver
 
 	pruneStats *util.PruneStats
-	// channel to trigger the worker to start prunce process immediately
+	// channel to trigger client state prune process
 	pruneClientStateC chan struct{}
 
 	configInfoDB string

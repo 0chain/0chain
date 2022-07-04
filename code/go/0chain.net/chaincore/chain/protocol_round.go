@@ -126,8 +126,8 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 	return fb
 }
 
-/*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
-that extend from a single block in that round. */
+// FinalizeRoundImpl - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
+// that extend from a single block in that round.
 func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
@@ -136,10 +136,8 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if !r.SetFinalizing() {
 		logging.Logger.Debug("finalize_round: already finalizing",
 			zap.Int64("round", r.GetRoundNumber()))
-		//if node.Self.Type == node.NodeTypeSharder {
-		//	return
-		//}
 	}
+
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
