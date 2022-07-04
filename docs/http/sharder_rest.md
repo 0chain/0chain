@@ -26,7 +26,7 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 | /v1/transaction/get/confirmation | TransactionConfirmationHandler |
 | /v1/chain/get/stats | ChainStatsHandlerr |
 | /_chain_stats | ChainStatsWriter |
-| /_health_check | HealthCheckWriter |
+| /_healthcheck | HealthCheckWriter |
 | /v1/sharder/get/stats | SharderStatsHandler |
 
 ```sh
