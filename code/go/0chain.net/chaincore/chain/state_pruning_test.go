@@ -62,7 +62,7 @@ func (fndb *failingNodeDB) PruneBelowVersion(ctx context.Context, version util.S
 	return fndb.underlying.PruneBelowVersion(ctx, version)
 }
 
-func (fndb *failingNodeDB) RecordDeadNodes(nodes []util.Node) error {
+func (fndb *failingNodeDB) RecordDeadNodes(nodes []util.Node) (int, error) {
 	return fndb.underlying.RecordDeadNodes(nodes)
 }
 
