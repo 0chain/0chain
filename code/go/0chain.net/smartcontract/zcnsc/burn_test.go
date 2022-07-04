@@ -119,7 +119,7 @@ func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
 
-	node, err := GetGlobalNode(ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -130,16 +130,16 @@ func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	require.NotNil(t, burn)
 	require.NotEmpty(t, burn)
 
-	node, err = GetGlobalNode(ctx)
+	node, err = GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
 	require.Equal(t, node.BurnNonce, nonce+1)
 }
 
-func Test_UpdateUserNode(t *testing.T) {
+func Test_UserNodeSaveTest(t *testing.T) {
 	ctx := MakeMockStateContext()
-	node, err := GetGlobalNode(ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -147,7 +147,7 @@ func Test_UpdateUserNode(t *testing.T) {
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
-	node2, err := GetGlobalNode(ctx)
+	node2, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -156,8 +156,8 @@ func Test_UpdateUserNode(t *testing.T) {
 
 func Test_UserNodeEncode_Decode(t *testing.T) {
 	ctx := MakeMockStateContext()
-	node, err := GetGlobalNode(ctx)
-	actual := GlobalNode{}
+	node, err := GetUserNode(defaultClient, ctx)
+	actual := UserNode{}
 	err = actual.Decode(node.Encode())
 	require.NoError(t, err)
 	require.Equal(t, node.ID, actual.ID)
