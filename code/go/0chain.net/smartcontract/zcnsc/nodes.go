@@ -39,8 +39,10 @@ type ZCNSConfig struct {
 }
 
 type GlobalNode struct {
-	ID          string `json:"id"`
-	*ZCNSConfig `json:"zcnsc_config"`
+	*ZCNSConfig     `json:"zcnsc_config"`
+	ID              string           `json:"id"`
+	UserNonceMinted map[string]int64 `json:"user_nonce_minted"`
+	BurnNonce       int64            `json:"burn_nonce"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
@@ -352,15 +354,12 @@ func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID        string `json:"id"`
-	MintNonce int64  `json:"mint_nonce"`
-	BurnNonce int64  `json:"burn_nonce"`
+	ID string `json:"id"`
 }
 
-func NewUserNode(id string, nonce int64) *UserNode {
+func NewUserNode(id string) *UserNode {
 	return &UserNode{
-		ID:        id,
-		MintNonce: nonce,
+		ID: id,
 	}
 }
 

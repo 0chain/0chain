@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
-
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -68,20 +68,13 @@ func (zcn *ZCNSmartContract) Burn(
 		return
 	}
 
-	// get user node
-	un, err := GetUserNode(trans.ClientID, ctx)
-	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
-		logging.Logger.Error(err.Error(), zap.Error(err))
-		return
-	}
-
 	// increase the nonce
-	un.BurnNonce++
+	gn.BurnNonce++
 
 	// Save the user node
-	err = un.Save(ctx)
+	err = gn.Save(ctx)
 	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
 		return
 	}
 
@@ -94,7 +87,7 @@ func (zcn *ZCNSmartContract) Burn(
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,
 		Amount:          trans.Value,
-		Nonce:           un.BurnNonce, // it can be just the nonce of this transaction
+		Nonce:           gn.BurnNonce, // it can be just the nonce of this transaction
 		EthereumAddress: payload.EthereumAddress,
 	}
 

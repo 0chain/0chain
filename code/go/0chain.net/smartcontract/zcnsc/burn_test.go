@@ -112,55 +112,56 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 	require.NotEmpty(t, resp)
 }
 
-func Test_UserNodeNonceShouldIncrement(t *testing.T) {
+func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	ctx := MakeMockStateContext()
 
 	payload := createBurnPayload()
 	contract := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
 
-	node, err := GetUserNode(tr.ClientID, ctx)
+	node, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	nonce := node.MintNonce
+	nonce := node.BurnNonce
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, burn)
 	require.NotEmpty(t, burn)
 
-	node, err = GetUserNode(tr.ClientID, ctx)
+	node, err = GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.MintNonce, nonce+1)
+	require.Equal(t, node.BurnNonce, nonce+1)
 }
 
 func Test_UpdateUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
-	node, err := GetUserNode(defaultClient, ctx)
+	node, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	node.MintNonce += 2
+	node.BurnNonce += 2
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
-	node2, err := GetUserNode(defaultClient, ctx)
+	node2, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.MintNonce, node2.MintNonce)
+	require.Equal(t, node.BurnNonce, node2.BurnNonce)
 }
 
 func Test_UserNodeEncode_Decode(t *testing.T) {
-	node := createUserNode(defaultClient, 10)
-	actual := UserNode{}
-	err := actual.Decode(node.Encode())
+	ctx := MakeMockStateContext()
+	node, err := GetGlobalNode(ctx)
+	actual := GlobalNode{}
+	err = actual.Decode(node.Encode())
 	require.NoError(t, err)
 	require.Equal(t, node.ID, actual.ID)
-	require.Equal(t, node.MintNonce, actual.MintNonce)
+	require.Equal(t, node.BurnNonce, actual.BurnNonce)
 }
 
 func Test_Burn_should_return_encoded_payload(t *testing.T) {

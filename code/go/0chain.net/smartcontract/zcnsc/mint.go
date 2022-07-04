@@ -41,6 +41,14 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	// ClientID - is a client who broadcasts this transaction to mint token
+	// ToClientID - is an address of the smart contract
+	if payload.ReceivingClientID != trans.ClientID {
+		msg := fmt.Sprintf("transaction made from different account who made burn,  Oririnal: %s, Current: %s",
+			payload.ReceivingClientID, trans.ClientID)
+		err = common.NewError(code, msg)
+	}
+
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
 		msg := fmt.Sprintf(
@@ -61,12 +69,13 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	if un.MintNonce+1 != payload.Nonce {
+	prevNonce := gn.UserNonceMinted[trans.ClientID]
+	if prevNonce+1 != payload.Nonce { // global nonce from ETH SC
 		err = common.NewError(
 			code,
 			fmt.Sprintf(
 				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, un.MintNonce, un.ID, info))
+				payload.Nonce, payload.ReceivingClientID, prevNonce, un.ID, info))
 		return
 	}
 
@@ -79,7 +88,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// increase the nonce
-	un.MintNonce++
+	gn.UserNonceMinted[trans.ClientID] = prevNonce + 1
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
@@ -93,9 +102,9 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// Save the user node
-	err = un.Save(ctx)
+	err = gn.Save(ctx)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, save MPR operation, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
 		return
 	}
 

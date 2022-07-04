@@ -24,7 +24,7 @@ func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, err
 
 // GetUserNode returns error if node not found
 func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
-	node := NewUserNode(id, 0)
+	node := NewUserNode(id)
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:

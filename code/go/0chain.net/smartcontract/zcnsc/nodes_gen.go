@@ -194,12 +194,9 @@ func (z *AuthorizerNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
-	// string "ID"
-	o = append(o, 0x82, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
+	// map header, size 4
 	// string "ZCNSConfig"
-	o = append(o, 0xaa, 0x5a, 0x43, 0x4e, 0x53, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67)
+	o = append(o, 0x84, 0xaa, 0x5a, 0x43, 0x4e, 0x53, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67)
 	if z.ZCNSConfig == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -209,6 +206,25 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
+	// string "ID"
+	o = append(o, 0xa2, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ID)
+	// string "UserNonceMinted"
+	o = append(o, 0xaf, 0x55, 0x73, 0x65, 0x72, 0x4e, 0x6f, 0x6e, 0x63, 0x65, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
+	o = msgp.AppendMapHeader(o, uint32(len(z.UserNonceMinted)))
+	keys_za0001 := make([]string, 0, len(z.UserNonceMinted))
+	for k := range z.UserNonceMinted {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.UserNonceMinted[k]
+		o = msgp.AppendString(o, k)
+		o = msgp.AppendInt64(o, za0002)
+	}
+	// string "BurnNonce"
+	o = append(o, 0xa9, 0x42, 0x75, 0x72, 0x6e, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
+	o = msgp.AppendInt64(o, z.BurnNonce)
 	return
 }
 
@@ -230,12 +246,6 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ID")
-				return
-			}
 		case "ZCNSConfig":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
@@ -253,6 +263,48 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "ID":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		case "UserNonceMinted":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "UserNonceMinted")
+				return
+			}
+			if z.UserNonceMinted == nil {
+				z.UserNonceMinted = make(map[string]int64, zb0002)
+			} else if len(z.UserNonceMinted) > 0 {
+				for key := range z.UserNonceMinted {
+					delete(z.UserNonceMinted, key)
+				}
+			}
+			for zb0002 > 0 {
+				var za0001 string
+				var za0002 int64
+				zb0002--
+				za0001, bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "UserNonceMinted")
+					return
+				}
+				za0002, bts, err = msgp.ReadInt64Bytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "UserNonceMinted", za0001)
+					return
+				}
+				z.UserNonceMinted[za0001] = za0002
+			}
+		case "BurnNonce":
+			z.BurnNonce, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BurnNonce")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -267,28 +319,30 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 11
+	s = 1 + 11
 	if z.ZCNSConfig == nil {
 		s += msgp.NilSize
 	} else {
 		s += z.ZCNSConfig.Msgsize()
 	}
+	s += 3 + msgp.StringPrefixSize + len(z.ID) + 16 + msgp.MapHeaderSize
+	if z.UserNonceMinted != nil {
+		for za0001, za0002 := range z.UserNonceMinted {
+			_ = za0002
+			s += msgp.StringPrefixSize + len(za0001) + msgp.Int64Size
+		}
+	}
+	s += 10 + msgp.Int64Size
 	return
 }
 
 // MarshalMsg implements msgp.Marshaler
 func (z UserNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 1
 	// string "ID"
-	o = append(o, 0x83, 0xa2, 0x49, 0x44)
+	o = append(o, 0x81, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
-	// string "MintNonce"
-	o = append(o, 0xa9, 0x4d, 0x69, 0x6e, 0x74, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
-	o = msgp.AppendInt64(o, z.MintNonce)
-	// string "BurnNonce"
-	o = append(o, 0xa9, 0x42, 0x75, 0x72, 0x6e, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
-	o = msgp.AppendInt64(o, z.BurnNonce)
 	return
 }
 
@@ -316,18 +370,6 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "ID")
 				return
 			}
-		case "MintNonce":
-			z.MintNonce, bts, err = msgp.ReadInt64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MintNonce")
-				return
-			}
-		case "BurnNonce":
-			z.BurnNonce, bts, err = msgp.ReadInt64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "BurnNonce")
-				return
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -342,7 +384,7 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z UserNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.Int64Size + 10 + msgp.Int64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID)
 	return
 }
 
