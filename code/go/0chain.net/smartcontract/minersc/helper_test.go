@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/threshold/bls"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -85,7 +86,9 @@ func newClient(balance currency.Coin, balances cstate.StateContextI) (
 	client.scheme = scheme
 
 	client.pk = scheme.GetPublicKey()
-	client.id = encryption.Hash(client.pk)
+	pub := bls.PublicKey{}
+	pub.DeserializeHexStr(client.pk)
+	client.id = encryption.Hash(pub.Serialize())
 
 	balances.(*testBalances).balances[client.id] = balance
 	return
