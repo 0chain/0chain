@@ -299,6 +299,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"malformed request: missing read_marker")
 	}
 
+	if err = commitRead.ReadMarker.VerifyClientID(); err != nil {
+		return "", common.NewError("commit_blobber_read", err.Error())
+	}
+
 	var (
 		lastCommittedRM = &ReadConnection{}
 		lastKnownCtr    int64
@@ -366,15 +370,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	commitRead.ReadMarker.ReadSize = sizeRead
 
-	// if 3rd party pays
-	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
-	if err != nil {
-		return "", common.NewError("commit_blobber_read", err.Error())
-	}
-
 	// move tokens from read pool to blobber
 	var rp *readPool
-	if rp, err = sc.getReadPool(alloc.Owner, balances); err != nil {
+	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}

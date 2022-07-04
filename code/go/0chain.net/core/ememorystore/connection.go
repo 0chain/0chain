@@ -3,6 +3,7 @@ package ememorystore
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -23,15 +24,21 @@ type dbpool struct {
 
 /*Connection - a struct that manages an underlying connection */
 type Connection struct {
+	sync.Mutex
 	Conn               *gorocksdb.Transaction
 	ReadOptions        *gorocksdb.ReadOptions
 	WriteOptions       *gorocksdb.WriteOptions
 	TransactionOptions *gorocksdb.TransactionOptions
+	shouldRollback     bool
 }
 
 /*Commit - delegates the commit call to underlying connection */
 func (c *Connection) Commit() error {
-	return c.Conn.Commit()
+	c.Lock()
+	defer c.Unlock()
+	err := c.Conn.Commit()
+	c.shouldRollback = err != nil
+	return err
 }
 
 /*CreateDB - create a database */
@@ -89,7 +96,7 @@ func GetTransaction(db *gorocksdb.TransactionDB) *Connection {
 	to := gorocksdb.NewDefaultTransactionOptions()
 
 	t := db.TransactionBegin(wo, to, nil)
-	conn := &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to}
+	conn := &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to, shouldRollback: true}
 	return conn
 }
 
@@ -215,9 +222,12 @@ func Close(ctx context.Context) {
 		con.ReadOptions.Destroy()
 		con.WriteOptions.Destroy()
 		con.TransactionOptions.Destroy()
-		if err := con.Conn.Rollback(); err != nil {
-			logging.Logger.Warn("rollback failed", zap.Error(err))
-		} // commit is expected to be done by the caller of the get connection
+		if con.shouldRollback {
+			if err := con.Conn.Rollback(); err != nil {
+				logging.Logger.Error("rollback failed", zap.Error(err))
+			} // commit is expected to be done by the caller of the get connection
+		}
+
 		con.Conn.Destroy()
 	}
 }

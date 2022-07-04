@@ -7,6 +7,7 @@ import (
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStorageAllocation_validate(t *testing.T) {
@@ -113,4 +114,63 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	// accept all
 	list[1].Capacity, list[1].Allocated = 330, 100
 	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
+}
+
+func TestVerifyClientID(t *testing.T) {
+	type input struct {
+		name     string
+		clientID string
+		pk       string
+		wantErr  bool
+	}
+
+	tests := []input{
+		{
+			name:     "Client id verification ok #1",
+			clientID: "7c7a336dc27306b76044e9492402e840768a8abb4347a2c5eef0afdf26d0350f",
+			pk: "563351287055d5d1b37cc36ce2c46e5a7c9ccc7325db44df01ef63713bd53013a673" +
+				"4b2ebb76f97366ad42a1f06abeef4376f67a37814b5a5aa64584e882a112",
+		},
+		{
+			name:     "Client id verification ok #2",
+			clientID: "f07d2f9551cfc4d2e45411106732127e7d4f3ee5b068bb8a511f7d6d288a5dba",
+			pk: "a05f35f954e7a96e36c6ea970225c98561434da80c2c7e2a35a213fa7a38310c" +
+				"53df6f04284e30a54b99e6090d7f892b869e3e166e0194cc5d4779ac2cab5810",
+		},
+		{
+			name:     "Client id verification ok #3",
+			clientID: "5b3ac53beeb2a6e678395683fb7fa04ffb94104c3829207364badfb632134dd7",
+			pk: "ff9a3ce40caceacbd937be3318d0cb1599781d11e4f202050c15646332395401" +
+				"2946f0287c181ec3068a6611f0db40bd6f95b02679d3933c9a10c26a355a238a",
+		},
+		{
+			name:    "Invalid public key",
+			pk:      "invalid public key",
+			wantErr: true,
+		},
+		{
+			name:     "Invalid client id",
+			clientID: "5b3ac53beeb2a6e678395683fb7fa04ffb94104c3829207364badfb632134dd7",
+			pk: "a05f35f954e7a96e36c6ea970225c98561434da80c2c7e2a35a213fa7a38310c" +
+				"53df6f04284e30a54b99e6090d7f892b869e3e166e0194cc5d4779ac2cab5810",
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+			rm := ReadMarker{
+				ClientID:        test.clientID,
+				ClientPublicKey: test.pk,
+			}
+
+			err := rm.VerifyClientID()
+			if test.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
