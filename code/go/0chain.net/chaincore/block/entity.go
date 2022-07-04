@@ -993,6 +993,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	logging.Logger.Info("compute state successful",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
+		zap.String("block ptr", fmt.Sprintf("%p", b)),
 		zap.Int("block_size", len(b.Txns)),
 		zap.Int("changes", b.ClientState.GetChangeCount()),
 		zap.String("begin_client_state", util.ToHex(beginStateRoot)),
