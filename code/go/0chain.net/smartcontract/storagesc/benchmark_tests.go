@@ -522,10 +522,15 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: data.Now,
-				ClientID:     getMockBlobberId(0),
+				ClientID:     viper.GetString(bk.StorageOwner),
 				ToClientID:   ADDRESS,
 			},
-			input: []byte{},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&providerRequest{
+					ID: getMockBlobberId(0),
+				})
+				return bytes
+			}(),
 		},
 		{
 			name:     "storage.kill-validator",
@@ -535,10 +540,15 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: data.Now,
-				ClientID:     getMockValidatorId(0),
+				ClientID:     viper.GetString(bk.StorageOwner),
 				ToClientID:   ADDRESS,
 			},
-			input: []byte{},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&providerRequest{
+					ID: getMockValidatorId(0),
+				})
+				return bytes
+			}(),
 		},
 		// add_curator
 		{

@@ -495,7 +495,8 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
 	}
-
+	logging.Logger.Error("piers getBlobbersForRequest",
+		zap.Any("blobber ids", blobberIDs))
 	if len(blobberIDs) < numberOfBlobbers {
 		return nil, errors.New("not enough blobbers to honor the allocation")
 	}

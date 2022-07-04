@@ -46,6 +46,17 @@ func (ssc *StorageSmartContract) shutDownValidator(
 	if err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 	}
+
+	validatorPartitions, err := getValidatorsList(balances)
+	if err != nil {
+		return "", common.NewError("kill_validator_failed",
+			"failed to get validator list."+err.Error())
+	}
+	if err := validatorPartitions.RemoveItem(balances, validator.PartitionPosition, validator.ID); err != nil {
+		return "", common.NewError("kill_validator_failed",
+			"failed to remove validator."+err.Error())
+	}
+
 	if _, err = balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())

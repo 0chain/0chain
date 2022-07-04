@@ -224,6 +224,7 @@ type ValidationNode struct {
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	PartitionPosition int                `json:"partition_position"`
 }
 
 func (sn *ValidationNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {

@@ -67,7 +67,8 @@ func partitionsChallengeReadyBlobbersRemove(state state.StateContextI,
 
 func init() {
 	regInitPartsFunc(func(state state.StateContextI) error {
-		_, err := partitions.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
+		_, err := partitions.CreateIfNotExists(
+			state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize, nil)
 		return err
 	})
 }

@@ -7,7 +7,7 @@ simulation:
   nun_active_sharders: 20
   num_allocations: 300
   num_blobbers: 100
-  num_validators: 10
+  num_validators: 100
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
   num_blobbers_per_Allocation: 4 # ideally make this even
@@ -28,10 +28,7 @@ options:
   verbose: true
   test_suites:
     - "storage_rest"
-    - "miner_rest"
-    - "faucet_rest"
-    - "vesting_rest"
-    - "zcnscbridge_rest"
+    - "storage"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
@@ -178,5 +175,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: true
+  show_output: false
 

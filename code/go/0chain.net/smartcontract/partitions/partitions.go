@@ -22,14 +22,19 @@ type PartitionItem interface {
 // CreateIfNotExists creates a partition if not exist
 // It's a common patten to call this to create partitions on
 // top-level partitions when project start
-func CreateIfNotExists(state state.StateContextI, name string, partitionSize int) (*Partitions, error) {
-	rs := randomSelector{}
-	err := state.GetTrieNode(name, &rs)
+func CreateIfNotExists(
+	state state.StateContextI,
+	name string,
+	partitionSize int,
+	callback ChangePartitionCallback,
+) (*Partitions, error) {
+	rs := &randomSelector{}
+	err := state.GetTrieNode(name, rs)
 	switch err {
 	case nil:
-		return &Partitions{rs: &rs}, nil
+		return &Partitions{rs: rs}, nil
 	case util.ErrValueNotPresent:
-		rs, err := newRandomSelector(name, partitionSize, nil)
+		rs, err = newRandomSelector(name, partitionSize, callback)
 		if err != nil {
 			return nil, err
 		}

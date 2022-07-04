@@ -1,11 +1,12 @@
 package storagesc
 
 import (
+	"encoding/json"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"encoding/json"
 )
 
 type providerRequest struct {
@@ -24,10 +25,10 @@ func (ssc *StorageSmartContract) killBlobber(
 	var err error
 	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewError("update_settings",
+		return "", common.NewError("kill_blobber_failed",
 			"can't get config: "+err.Error())
 	}
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+	if err := smartcontractinterface.AuthorizeWithOwner("kill_blobber_failed", func() bool {
 		return conf.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
@@ -45,10 +46,10 @@ func (ssc *StorageSmartContract) killBlobber(
 	}
 	blobber.Kill()
 	if err = emitUpdateBlobber(blobber, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
+		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
+		return "", common.NewError("kill_blobber_failed",
 			"can't save blobber: "+err.Error())
 	}
 	return "", nil
@@ -62,10 +63,10 @@ func (ssc *StorageSmartContract) killValidator(
 	var err error
 	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewError("update_settings",
+		return "", common.NewError("kill_validator_failed",
 			"can't get config: "+err.Error())
 	}
-	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+	if err := smartcontractinterface.AuthorizeWithOwner("kill_validator_failed", func() bool {
 		return conf.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
@@ -73,7 +74,7 @@ func (ssc *StorageSmartContract) killValidator(
 
 	var req providerRequest
 	if err := req.decode(input); err != nil {
-		return "", common.NewError("kill_blobber_failed", err.Error())
+		return "", common.NewError("kill_validator_failed", err.Error())
 	}
 
 	var validator = &ValidationNode{
@@ -81,7 +82,7 @@ func (ssc *StorageSmartContract) killValidator(
 	}
 
 	if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
+		return "", common.NewError("kill_validator_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 	validator.Kill()
@@ -89,8 +90,19 @@ func (ssc *StorageSmartContract) killValidator(
 	if err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 	}
+
+	validatorPartitions, err := getValidatorsList(balances)
+	if err != nil {
+		return "", common.NewError("kill_validator_failed",
+			"failed to get validator list."+err.Error())
+	}
+	if err := validatorPartitions.RemoveItem(balances, validator.PartitionPosition, validator.ID); err != nil {
+		return "", common.NewError("kill_validator_failed",
+			"failed to remove validator."+err.Error())
+	}
+
 	if _, err = balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
+		return "", common.NewError("kill_validator_failed",
 			"can't save blobber: "+err.Error())
 	}
 	return "", nil

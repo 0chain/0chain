@@ -174,7 +174,7 @@ func AddMockChallenges(
 	allocationChall := make([]AllocationChallenges, numAllocations)
 
 	challengeReadyBlobbersPart, err := partitions.CreateIfNotExists(balances,
-		ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
+		ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -540,7 +540,8 @@ func AddMockValidators(
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 
-	valParts, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+	valParts, err := partitions.CreateIfNotExists(
+		balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validatorCallback)
 	if err != nil {
 		panic(err)
 	}

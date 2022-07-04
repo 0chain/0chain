@@ -73,7 +73,9 @@ func TestAddChallenge(t *testing.T) {
 		challengeReadyParts, err := partitions.CreateIfNotExists(
 			balances,
 			ALL_CHALLENGE_READY_BLOBBERS_KEY,
-			allChallengeReadyBlobbersPartitionSize)
+			allChallengeReadyBlobbersPartitionSize,
+			nil,
+		)
 		require.NoError(t, err)
 
 		var blobberMap = make(map[string]*BlobberAllocation)
