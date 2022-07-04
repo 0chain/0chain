@@ -75,19 +75,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			case TypeStats:
 				err = edb.addStat(event)
 			case TypeError:
-
-				msg, ok := fromEvent[string](event.Data)
-				if ok {
-					err = edb.addError(Error{
-						TransactionID: event.TxHash,
-						Error:         *msg,
-					})
-				} else {
-					err = edb.addError(Error{
-						TransactionID: event.TxHash,
-						Error:         fmt.Sprint(event.Data),
-					})
-				}
+				err = edb.addError(Error{
+					TransactionID: event.TxHash,
+					Error:         fmt.Sprintf("%v", event.Data),
+				})
 
 			default:
 			}
