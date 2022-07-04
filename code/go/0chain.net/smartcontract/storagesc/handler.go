@@ -90,7 +90,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
-		rest.MakeEndpoint(storage+"/get_rounds_mint_total", srh.getRoundsTotalMint),
+		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
 	}
 }
 
