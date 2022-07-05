@@ -211,13 +211,11 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]byte, error) {
-	termsByte, err := sa.marshalTerms()
-	if err != nil {
-		return nil, err
-	}
+func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.DbUpdates {
 
-	return json.Marshal(&dbs.DbUpdates{
+	termsByte, _ := sa.marshalTerms() //err always is nil
+
+	return &dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
 			"allocation_name":           sa.Name,
@@ -245,7 +243,7 @@ func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]by
 			"time_unit":                 int64(sa.TimeUnit),
 			"write_pool":                sa.WritePool,
 		},
-	})
+	}
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
@@ -254,12 +252,7 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 		return err
 	}
 
-	data, err := json.Marshal(alloc)
-	if err != nil {
-		return fmt.Errorf("error marshalling allocation: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
 }

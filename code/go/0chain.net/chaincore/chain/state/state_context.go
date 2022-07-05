@@ -94,7 +94,7 @@ type StateContextI interface {
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
-	EmitEvent(event.EventType, event.EventTag, string, string)
+	EmitEvent(event.EventType, event.EventTag, string, interface{})
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
@@ -190,6 +190,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
+
 	return nil
 }
 
@@ -207,6 +208,7 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
+
 	return nil
 }
 
@@ -224,7 +226,7 @@ func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
 }
 
-//GetTransfers - get all the transfers
+//GetSignedTransfers - get all the signed transfers
 func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 	return sc.signedTransfers
 }
@@ -234,7 +236,7 @@ func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
-func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
+func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	sc.events = append(sc.events, event.Event{
@@ -331,7 +333,7 @@ func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error)
 	return s.Balance, nil
 }
 
-//GetClientBalance - get the balance of the client
+//GetClientNonce - get the nonce of the client
 func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {

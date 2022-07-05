@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,12 +13,14 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
 )
 
@@ -717,6 +720,23 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		ToClientID:   storageScId,
 		CreationDate: creationDate,
 	}
+	access := config.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := event.NewEventDb(access)
+	if err != nil {
+		return
+	}
+	defer eventDb.Close()
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
 			nil,
@@ -727,7 +747,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 			nil,
 			nil,
 			nil,
-			nil,
+			eventDb,
 		),
 		clientBalance: txn.Value,
 		store:         make(map[string]util.MPTSerializable),

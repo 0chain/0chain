@@ -114,15 +114,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Events emission
-
-	ev, err := authorizer.ToEvent()
-	if err != nil {
-		msg := fmt.Sprintf("error marshalling authorizer(authorizerID: %v) to event, err: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("emitting event", zap.Error(err))
-		return "", err
-	}
-	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(ev))
+	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
 
 	return string(input), nil
 }
@@ -360,15 +352,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	ev, err := authorizer.ToEvent()
-	if err != nil {
-		msg := fmt.Sprintf("error marshalling authorizer (authorizerID: %v) to event, err: %v", authorizer.ID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("emitting event", zap.Error(err))
-		return "", err
-	}
-
-	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, string(ev))
+	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent())
 
 	return string(authorizer.Encode()), nil
 }

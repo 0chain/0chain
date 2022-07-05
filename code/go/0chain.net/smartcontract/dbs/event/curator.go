@@ -3,14 +3,17 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"gorm.io/gorm"
 )
 
 type Curator struct {
 	gorm.Model
-	CuratorID    string     `json:"curator_id" gorm:"uniqueIndex"`
-	AllocationID string     `json:"allocation_id"` // Foreign Key
-	Allocation   Allocation `json:"-" gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	CuratorID    string `json:"curator_id" gorm:"uniqueIndex"`
+	AllocationID string `json:"allocation_id"` // Foreign Key
+	//ref
+	Allocation Allocation `json:"-" gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User       User       `json:"-" gorm:"foreignKey:CuratorID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (edb *EventDb) overwriteCurator(c Curator) error {
