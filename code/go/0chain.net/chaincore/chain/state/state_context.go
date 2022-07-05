@@ -94,7 +94,7 @@ type StateContextI interface {
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
-	EmitEvent(event.EventType, event.EventTag, string, string)
+	EmitEvent(event.EventType, event.EventTag, string, interface{})
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
@@ -236,7 +236,7 @@ func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
-func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
+func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	sc.events = append(sc.events, event.Event{
