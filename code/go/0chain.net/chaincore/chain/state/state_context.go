@@ -190,6 +190,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
+
 	return nil
 }
 
@@ -207,6 +208,7 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
+
 	return nil
 }
 
@@ -224,7 +226,7 @@ func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
 }
 
-//GetTransfers - get all the transfers
+//GetSignedTransfers - get all the signed transfers
 func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 	return sc.signedTransfers
 }
@@ -331,7 +333,7 @@ func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error)
 	return s.Balance, nil
 }
 
-//GetClientBalance - get the balance of the client
+//GetClientNonce - get the nonce of the client
 func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
