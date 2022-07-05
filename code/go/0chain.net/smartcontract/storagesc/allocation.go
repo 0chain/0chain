@@ -1651,6 +1651,14 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewErrorf("fini_alloc_failed",
 				"blobber %s and %s don't match", b.ID, d.BlobberID)
 		}
+		if b.IsKilled {
+			err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"removing allocation from blobber challenge partition "+b.ID+": "+err.Error())
+			}
+			continue
+		}
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 			cpBalance, err := cp.Balance.Float64()
@@ -1661,7 +1669,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-
 			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",

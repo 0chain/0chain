@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -67,6 +68,16 @@ func (ssc *StorageSmartContract) killBlobber(
 			"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
 	}
 
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(blobber.ID, balances); err != nil {
+		return "", common.NewError("update_validator_settings_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+	sp.IsDead = true
+	if err = sp.save(ssc.ID, blobber.ID, balances); err != nil {
+		return "", fmt.Errorf("saving stake pool: %v", err)
+	}
+
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
 		return "", common.NewError("kill_blobber_failed",
 			"can't save blobber: "+err.Error())
@@ -118,6 +129,16 @@ func (ssc *StorageSmartContract) killValidator(
 	if err := validatorPartitions.RemoveItem(balances, validator.PartitionPosition, validator.ID); err != nil {
 		return "", common.NewError("kill_validator_failed",
 			"failed to remove validator."+err.Error())
+	}
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(validator.ID, balances); err != nil {
+		return "", common.NewError("update_validator_settings_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+	sp.IsDead = true
+	if err = sp.save(ssc.ID, validator.ID, balances); err != nil {
+		return "", fmt.Errorf("saving stake pool: %v", err)
 	}
 
 	if _, err = balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {

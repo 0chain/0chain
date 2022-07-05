@@ -1927,9 +1927,9 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 16
+	// map header, size 17
 	// string "Provider"
-	o = append(o, 0xde, 0x0, 0x10, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0xde, 0x0, 0x11, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	o, err = z.Provider.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Provider")
@@ -1986,6 +1986,22 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.StakePoolSettings.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "StakePoolSettings")
+		return
+	}
+	// string "LastRewardPartition"
+	o = append(o, 0xb3, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e)
+	// map header, size 3
+	// string "Index"
+	o = append(o, 0x83, 0xa5, 0x49, 0x6e, 0x64, 0x65, 0x78)
+	o = msgp.AppendInt(o, z.LastRewardPartition.Index)
+	// string "StartRound"
+	o = append(o, 0xaa, 0x53, 0x74, 0x61, 0x72, 0x74, 0x52, 0x6f, 0x75, 0x6e, 0x64)
+	o = msgp.AppendInt64(o, z.LastRewardPartition.StartRound)
+	// string "Timestamp"
+	o = append(o, 0xa9, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70)
+	o, err = z.LastRewardPartition.Timestamp.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "LastRewardPartition", "Timestamp")
 		return
 	}
 	// string "RewardPartition"
@@ -2145,15 +2161,56 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "StakePoolSettings")
 				return
 			}
-		case "RewardPartition":
+		case "LastRewardPartition":
 			var zb0003 uint32
 			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "RewardPartition")
+				err = msgp.WrapError(err, "LastRewardPartition")
 				return
 			}
 			for zb0003 > 0 {
 				zb0003--
+				field, bts, err = msgp.ReadMapKeyZC(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "LastRewardPartition")
+					return
+				}
+				switch msgp.UnsafeString(field) {
+				case "Index":
+					z.LastRewardPartition.Index, bts, err = msgp.ReadIntBytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "LastRewardPartition", "Index")
+						return
+					}
+				case "StartRound":
+					z.LastRewardPartition.StartRound, bts, err = msgp.ReadInt64Bytes(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "LastRewardPartition", "StartRound")
+						return
+					}
+				case "Timestamp":
+					bts, err = z.LastRewardPartition.Timestamp.UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "LastRewardPartition", "Timestamp")
+						return
+					}
+				default:
+					bts, err = msgp.Skip(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "LastRewardPartition")
+						return
+					}
+				}
+			}
+		case "RewardPartition":
+			var zb0004 uint32
+			zb0004, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "RewardPartition")
+				return
+			}
+			for zb0004 > 0 {
+				zb0004--
 				field, bts, err = msgp.ReadMapKeyZC(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "RewardPartition")
@@ -2206,7 +2263,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 3 + 9 + z.Provider.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 13 + msgp.Int64Size + 9 + msgp.Float64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
+	s = 3 + 9 + z.Provider.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 13 + msgp.Int64Size + 9 + msgp.Float64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 20 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.LastRewardPartition.Timestamp.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
 	return
 }
 
