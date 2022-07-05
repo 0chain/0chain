@@ -1,11 +1,13 @@
 package sharder
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -76,9 +78,54 @@ func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+type wrappedResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	response   bytes.Buffer
+}
+
+func newWrappedResponseWriter(w http.ResponseWriter) *wrappedResponseWriter {
+	return &wrappedResponseWriter{
+		ResponseWriter: w,
+		statusCode:     http.StatusOK,
+		response:       bytes.Buffer{},
+	}
+}
+
+func (lrw *wrappedResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+func (lrw *wrappedResponseWriter) Write(buff []byte) (int, error) {
+	retVal, err := lrw.ResponseWriter.Write(buff)
+	if lrw.statusCode >= 400 {
+		lrw.response.Write(buff)
+	}
+	return retVal, err
+}
+
+func elapsedHandler(handler func(http.ResponseWriter, *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lrw := newWrappedResponseWriter(w)
+		start := time.Now()
+		handler(lrw, r)
+
+		if lrw.statusCode != http.StatusTooManyRequests {
+			N2n.Debug("API",
+				zap.String("src", r.RemoteAddr),
+				zap.Int("status", lrw.statusCode),
+				zap.String("method", r.Method),
+				zap.String("url", r.URL.Path),
+				zap.Duration("time", time.Since(start)),
+				zap.String("rsp", lrw.response.String()))
+		}
+	}
+}
+
 func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
 	for pattern, handler := range handlers {
-		http.HandleFunc(pattern, handler)
+		http.HandleFunc(pattern, elapsedHandler(handler))
 	}
 }
 

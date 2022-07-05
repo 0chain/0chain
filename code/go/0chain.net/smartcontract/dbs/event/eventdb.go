@@ -39,6 +39,7 @@ func (edb *EventDb) AutoMigrate() error {
 	if err := edb.Store.Get().AutoMigrate(
 		&Event{},
 		&Blobber{},
+		&User{},
 		&WriteMarker{},
 		&Transaction{},
 		&Validator{},

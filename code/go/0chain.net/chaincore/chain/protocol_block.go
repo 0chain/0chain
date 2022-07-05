@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/currency"
-
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/dbs/event"
-
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -83,8 +81,7 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 		return err
 	}
 
-	_, _, err := c.createRoundIfNotExist(ctx, b)
-	return err
+	return nil
 }
 
 // VerifyNotarization - verify that the notarization is correct.
@@ -343,7 +340,22 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.String("hash", fb.Hash))
 		return
 	}
+
+	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
+	deadNodesCount, err := c.stateDB.RecordDeadNodes(deletedNode)
+	if err != nil {
+		logging.Logger.Error("finalize block - record dead nodes failed",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
+			zap.Error(err))
+		return
+	}
+
+	if deadNodesCount >= c.MaxDeadNodesCount() {
+		go c.StartPruneClientState()
+	}
+
 	if err := c.updateFeeStats(fb); err != nil {
 		logging.Logger.Error("finalize block - update fee stats failed",
 			zap.Int64("round", fb.Round),
@@ -382,9 +394,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		go func(events []event.Event) {
-			c.GetEventDb().AddEvents(ctx, events)
-		}(fb.Events)
+		c.GetEventDb().AddEvents(ctx, fb.Events)
 		fb.Events = nil
 	}
 

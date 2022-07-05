@@ -125,13 +125,13 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	data, _ := json.Marshal(dbs.DbUpdates{
+	data := dbs.DbUpdates{
 		Id: blobber.ID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, string(data))
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, data)
 
 	return
 }
@@ -327,6 +327,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"malformed request: missing read_marker")
 	}
 
+	if err = commitRead.ReadMarker.VerifyClientID(); err != nil {
+		return "", common.NewError("commit_blobber_read", err.Error())
+	}
+
 	var (
 		lastCommittedRM = &ReadConnection{}
 		lastKnownCtr    int64
@@ -394,15 +398,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	commitRead.ReadMarker.ReadSize = sizeRead
 
-	// if 3rd party pays
-	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
-	if err != nil {
-		return "", common.NewError("commit_blobber_read", err.Error())
-	}
-
 	// move tokens from read pool to blobber
 	var rp *readPool
-	if rp, err = sc.getReadPool(alloc.Owner, balances); err != nil {
+	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
@@ -735,12 +733,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	updates, err := alloc.marshalUpdates(balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"emitting allocation event: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 
 	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {
@@ -847,13 +840,13 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	data, _ := json.Marshal(dbs.DbUpdates{
+	data := dbs.DbUpdates{
 		Id: t.ClientID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
 
 	// update the list
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {

@@ -511,6 +511,15 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
+
+	if err = c.emitUserEvent(sctx, stateToUser(fromClient, fs)); err != nil {
+		return common.NewError("transfer_amount", "could not emit event")
+	}
+
+	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts)); err != nil {
+		return common.NewError("transfer_amount", "could not emit event")
+	}
+
 	return nil
 }
 
@@ -569,6 +578,11 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return common.NewError("mint_amount - insert", err.Error())
 	}
+
+	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts)); err != nil {
+		return common.NewError("mint_amount", "could not emit event")
+	}
+
 	return nil
 }
 
@@ -609,6 +623,11 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		return err
 	}
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
+
+	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s)); err != nil {
+		return common.NewError("increment_nonce", "could not emit event")
+	}
+
 	return nil
 }
 
@@ -663,4 +682,33 @@ func isValid(err error) bool {
 		return true
 	}
 	return false
+}
+
+func userToState(u *event.User) *state.State {
+	return &state.State{
+		TxnHash: u.TxnHash,
+		Balance: u.Balance,
+		Round:   u.Round,
+		Nonce:   u.Nonce,
+	}
+}
+
+func stateToUser(clientID string, s *state.State) *event.User {
+	return &event.User{
+		UserID:  clientID,
+		TxnHash: s.TxnHash,
+		Balance: s.Balance,
+		Round:   s.Round,
+		Nonce:   s.Nonce,
+	}
+}
+
+func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
+	if c.GetEventDb() == nil {
+		return nil
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, "", usr)
+
+	return nil
 }

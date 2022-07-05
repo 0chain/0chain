@@ -1,12 +1,8 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
 	"gorm.io/gorm"
 )
@@ -25,21 +21,12 @@ func readMarkerToReadMarkerTable(rm *ReadMarker) *event.ReadMarker {
 		Signature:    rm.Signature,
 	}
 
-	if rm.AuthTicket != nil {
-		readMarker.AuthTicket = encryption.Hash(rm.AuthTicket.getHashData())
-	}
-
 	return readMarker
 }
 
 func emitAddOrOverwriteReadMarker(rm *ReadMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
 
-	data, err := json.Marshal(readMarkerToReadMarkerTable(rm))
-	if err != nil {
-		return fmt.Errorf("failed to marshal readmarker: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddReadMarker, t.Hash, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddReadMarker, t.Hash, readMarkerToReadMarkerTable(rm))
 
 	return nil
 }
