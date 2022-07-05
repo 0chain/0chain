@@ -60,7 +60,7 @@ func (sp *StakePool) LockPool(
 		DelegateID:   txn.ClientID,
 		RoundCreated: balances.GetBlock().Round,
 		LockPeriod:   lockPeriod,
-		LockAt:       time.Now(),
+		LockedAt:     time.Now(),
 	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
