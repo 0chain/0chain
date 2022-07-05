@@ -1,9 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/provider"
 
@@ -69,13 +66,13 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 
 func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 	data := &event.Validator{
-		ValidatorID:    vn.ID,
-		BaseUrl:        vn.BaseURL,
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		ValidatorID:     vn.ID,
+		BaseUrl:         vn.BaseURL,
+		DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
+		MinStake:        vn.StakePoolSettings.MinStake,
+		MaxStake:        vn.StakePoolSettings.MaxStake,
+		NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
+		ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
 		LastHealthCheck: int64(vn.LastHealthCheck),
 		IsShutDown:      vn.IsShutDown,
 		IsKilled:        vn.IsKilled,

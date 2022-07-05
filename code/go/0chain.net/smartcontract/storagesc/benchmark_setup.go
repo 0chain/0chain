@@ -174,7 +174,7 @@ func AddMockChallenges(
 	allocationChall := make([]AllocationChallenges, numAllocations)
 
 	challengeReadyBlobbersPart, err := partitions.CreateIfNotExists(balances,
-		ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize, nil)
+		ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -541,7 +541,7 @@ func AddMockValidators(
 	}.ID
 
 	valParts, err := partitions.CreateIfNotExists(
-		balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validatorCallback)
+		balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
 	if err != nil {
 		panic(err)
 	}

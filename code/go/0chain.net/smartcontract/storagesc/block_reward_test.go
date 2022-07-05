@@ -161,7 +161,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil)
 
-	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize, nil)
+	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
 		panic(err)
 	}
@@ -282,7 +282,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	defer clean()
 
 	_, err := partitions.CreateIfNotExists(
-		state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize, nil)
+		state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	require.NoError(t, err)
 
 	p, err := partitionsChallengeReadyBlobbers(state)

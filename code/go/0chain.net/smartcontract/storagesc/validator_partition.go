@@ -10,7 +10,12 @@ import (
 const allValidatorsPartitionSize = 50
 
 func getValidatorsList(state state.StateContextI) (*partitions.Partitions, error) {
-	return partitions.GetPartitions(state, ALL_VALIDATORS_KEY)
+	validators, err := partitions.GetPartitions(state, ALL_VALIDATORS_KEY)
+	if err != nil {
+		return nil, err
+	}
+	validators.SetCallback(validatorCallback)
+	return validators, nil
 }
 
 type ValidationPartitionNode struct {
@@ -39,7 +44,7 @@ func validatorCallback(id string, data []byte, toPartition, _ int, sCtx state.St
 
 func init() {
 	regInitPartsFunc(func(state state.StateContextI) error {
-		_, err := partitions.CreateIfNotExists(state, ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validatorCallback)
+		_, err := partitions.CreateIfNotExists(state, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
 		return err
 	})
 }

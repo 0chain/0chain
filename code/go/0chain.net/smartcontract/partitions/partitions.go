@@ -26,7 +26,6 @@ func CreateIfNotExists(
 	state state.StateContextI,
 	name string,
 	partitionSize int,
-	callback ChangePartitionCallback,
 ) (*Partitions, error) {
 	rs := &randomSelector{}
 	err := state.GetTrieNode(name, rs)
@@ -34,7 +33,7 @@ func CreateIfNotExists(
 	case nil:
 		return &Partitions{rs: rs}, nil
 	case util.ErrValueNotPresent:
-		rs, err = newRandomSelector(name, partitionSize, callback)
+		rs, err = newRandomSelector(name, partitionSize)
 		if err != nil {
 			return nil, err
 		}
@@ -105,6 +104,10 @@ func (p *Partitions) RemoveItem(state state.StateContextI, partIndex int, id str
 // of index - 1.
 func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, v interface{}) error {
 	return p.rs.GetRandomItems(state, r, v)
+}
+
+func (p *Partitions) SetCallback(f ChangePartitionCallback) {
+	p.rs.SetCallback(f)
 }
 
 type ChangePartitionCallback = func(string, []byte, int, int, state.StateContextI) error

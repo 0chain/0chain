@@ -23,7 +23,7 @@ func (z *BlobberAllocationNode) GetID() string {
 
 func partitionsBlobberAllocations(blobberID string, balances state.StateContextI) (*partitions.Partitions, error) {
 	return partitions.CreateIfNotExists(
-		balances, getBlobberAllocationsKey(blobberID), blobberAllocationPartitionSize, nil)
+		balances, getBlobberAllocationsKey(blobberID), blobberAllocationPartitionSize)
 }
 
 func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, allocID string) (

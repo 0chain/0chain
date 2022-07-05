@@ -74,7 +74,6 @@ func TestAddChallenge(t *testing.T) {
 			balances,
 			ALL_CHALLENGE_READY_BLOBBERS_KEY,
 			allChallengeReadyBlobbersPartitionSize,
-			nil,
 		)
 		require.NoError(t, err)
 
