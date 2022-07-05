@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"testing"
 
-	"0chain.net/chaincore/chain"
-
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/multisigsc"
@@ -169,7 +167,6 @@ func TestGetSmartContract(t *testing.T) {
 			}
 			require.EqualValues(t, tt.name, got.GetName())
 			require.EqualValues(t, tt.address, got.GetAddress())
-			require.EqualValues(t, tt.restpoints, len(chain.GetFunctionNames(tt.address)))
 		})
 	}
 }

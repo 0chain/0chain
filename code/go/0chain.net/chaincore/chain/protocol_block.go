@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -366,32 +365,32 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
 
-	if node.Self.IsSharder() {
-		total := int64(0)
-		for _, mint := range c.GetStateContextI().GetMints() {
-			total += int64(mint.Amount)
-		}
+	// if node.Self.IsSharder() {
+	// 	total := int64(0)
+	// 	for _, mint := range c.GetStateContextI().GetMints() {
+	// 		total += int64(mint.Amount)
+	// 	}
 
-		mint := event.Mint{
-			BlockHash: fb.Hash,
-			Round:     fb.Round,
-			Amount:    total,
-		}
-		data, _err := json.Marshal(mint)
-		if _err != nil {
-			logging.Logger.Error("Failed to marshal mint")
-			return
-		}
+	// 	mint := event.Mint{
+	// 		BlockHash: fb.Hash,
+	// 		Round:     fb.Round,
+	// 		Amount:    total,
+	// 	}
+	// 	data, _err := json.Marshal(mint)
+	// 	if _err != nil {
+	// 		logging.Logger.Error("Failed to marshal mint")
+	// 		return
+	// 	}
 
-		fb.Events = append(fb.Events, event.Event{
-			BlockNumber: fb.Round,
-			TxHash:      fb.Hash,
-			Type:        int(event.TypeStats),
-			Tag:         int(event.TagAddMint),
-			Index:       fb.Hash,
-			Data:        string(data),
-		})
-	}
+	// 	fb.Events = append(fb.Events, event.Event{
+	// 		BlockNumber: fb.Round,
+	// 		TxHash:      fb.Hash,
+	// 		Type:        int(event.TypeStats),
+	// 		Tag:         int(event.TagAddMint),
+	// 		Index:       fb.Hash,
+	// 		Data:        string(data),
+	// 	})
+	// }
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		c.GetEventDb().AddEvents(ctx, fb.Events)

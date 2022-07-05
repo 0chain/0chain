@@ -1,7 +1,6 @@
 package state
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -205,11 +204,6 @@ func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
 func (sc *StateContext) AddMint(m *state.Mint) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	data, err := json.Marshal(m)
-	if err != nil {
-		return fmt.Errorf("marshalling mint: %v", err)
-	}
-	sc.EmitEvent(event.TypeStats, event.TagAddMint, m.Minter, string(data))
 	if !sc.isApprovedMinter(m) {
 		return state.ErrInvalidMint
 	}

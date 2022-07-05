@@ -359,7 +359,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return
 		}
 	}
+	totalMint := currency.Coin(0)
 	for _, mint := range sctx.GetMints() {
+		logging.Logger.Debug("minting...",
+			zap.Any("transaction", txn.Hash),
+			zap.String("to clientID", mint.ToClientID),
+			zap.Uint64("mint amount", uint64(mint.Amount)))
+
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
@@ -367,6 +373,28 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("to clientID", mint.ToClientID))
 			return
 		}
+		totalMint, err = currency.AddCoin(totalMint, mint.Amount)
+		if err != nil {
+			logging.Logger.Error("error in adding mint amounts", zap.Any("error", err),
+				zap.Any("transaction", txn.Hash),
+				zap.String("to clientID", mint.ToClientID),
+				zap.Uint64("total mint", uint64(totalMint)),
+				zap.Uint64("mint amount", uint64(mint.Amount)))
+			return
+		}
+	}
+
+	if totalMint > 0 {
+		data, _err := json.Marshal(event.Mint{
+			BlockHash: b.Hash,
+			Amount:    int64(totalMint),
+			Round:     b.Round,
+		})
+		if _err != nil {
+			logging.Logger.Error("Failed to marshal mint")
+			return
+		}
+		sctx.EmitEvent(event.TypeStats, event.TagAddMint, b.Hash, string(data))
 	}
 
 	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
