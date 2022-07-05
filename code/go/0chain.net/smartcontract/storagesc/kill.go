@@ -48,6 +48,25 @@ func (ssc *StorageSmartContract) killBlobber(
 	if err = emitUpdateBlobber(blobber, balances); err != nil {
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
+
+	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+	if err != nil {
+		return "", common.NewError("kill_blobber_failed",
+			"cannot get all blobbers list: "+err.Error())
+	}
+	err = activePassedBlobberRewardPart.RemoveItem(balances, blobber.LastRewardPartition.Index, blobber.ID)
+
+	parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"cannot fetch ongoing partition: %v", err)
+	}
+	err = parts.RemoveItem(balances, blobber.RewardPartition.Index, blobber.ID)
+	if err != nil {
+		return "", common.NewError("kill_blobber_failed",
+			"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
+	}
+
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
 		return "", common.NewError("kill_blobber_failed",
 			"can't save blobber: "+err.Error())

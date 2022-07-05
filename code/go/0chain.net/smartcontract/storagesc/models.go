@@ -377,9 +377,10 @@ type StorageNode struct {
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
-	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
-	Information       Info                    `json:"info"`
+	StakePoolSettings   stakepool.Settings      `json:"stake_pool_settings"`
+	LastRewardPartition RewardPartitionLocation `json:"last_reward_partition"`
+	RewardPartition     RewardPartitionLocation `json:"reward_partition"`
+	Information         Info                    `json:"info"`
 }
 
 func (sn *StorageNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {

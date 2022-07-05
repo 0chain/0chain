@@ -27,7 +27,6 @@ func (vn *ValidationPartitionNode) GetID() string {
 	return vn.Id
 }
 
-// err = rs.Callback(replace.ID, replace.Data, len(rs.Partitions)-1, index, state)
 func validatorCallback(id string, data []byte, toPartition, _ int, sCtx state.StateContextI) error {
 	replace := &ValidationNode{
 		ID: id,
