@@ -706,7 +706,7 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 		const maxBlobbersSelect = 5
 
 		var challengeBlobber ChallengeReadyBlobber
-		var maxUsedCap uint64
+		var maxWeight uint64
 
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
@@ -719,8 +719,8 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 		}
 
 		for _, bc := range blobbersSelected {
-			if bc.UsedCapacity > maxUsedCap {
-				maxUsedCap = bc.UsedCapacity
+			if bc.Weight > maxWeight {
+				maxWeight = bc.Weight
 				challengeBlobber = bc
 			}
 		}
