@@ -30,9 +30,6 @@ type WriteMarker struct {
 	LookupHash  string `json:"lookup_hash" gorm:"index:idx_wlookup,priority:1"`
 	Name        string `json:"name" gorm:"index:idx_wname,priority:1;idx_walloc_file,priority:1"`
 	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
-
-	//ref
-	User User `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {

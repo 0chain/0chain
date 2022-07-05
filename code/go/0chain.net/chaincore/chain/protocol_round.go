@@ -126,8 +126,8 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 	return fb
 }
 
-// FinalizeRoundImpl - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
-// that extend from a single block in that round.
+/*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
+that extend from a single block in that round. */
 func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
@@ -136,8 +136,10 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if !r.SetFinalizing() {
 		logging.Logger.Debug("finalize_round: already finalizing",
 			zap.Int64("round", r.GetRoundNumber()))
+		if node.Self.Type == node.NodeTypeSharder {
+			return
+		}
 	}
-
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
@@ -349,7 +351,12 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				frchain[len(frchain)-1-idx] = fb
 			}
 
-			//_, _ = c.createRoundIfNotExist(ctx, fb)
+			_, _, err := c.createRoundIfNotExist(ctx, fb)
+			if err != nil {
+				logging.Logger.Error("create round for finalize block failed",
+					zap.Int64("round", fb.Round),
+					zap.String("hash", fb.Hash))
+			}
 
 			logging.Logger.Info("finalize round",
 				zap.Int64("round", fb.Round),
@@ -382,13 +389,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 							zap.Error(err))
 						return
 					}
-
-					du := time.Since(ts)
 					logging.Logger.Info("finalize round - finalize block success",
 						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash),
-						zap.Duration("duration", du))
+						zap.String("block", fb.Hash))
 
+					du := time.Since(ts)
 					if du > 3*time.Second {
 						logging.Logger.Debug("finalize round slow",
 							zap.Int64("round", roundNumber),
@@ -457,10 +462,10 @@ type finalizeBlockWithReply struct {
 	resultC chan error
 }
 
-func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block) {
+func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block, error) {
 	if r := c.GetRound(b.Round); r != nil {
-		b, r = c.AddNotarizedBlockToRound(r, b)
-		return r, b
+		_, r = c.AddNotarizedBlockToRound(r, b)
+		return r, b, nil
 	}
 
 	// create the round if it does not exist
@@ -469,7 +474,7 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 
 	// Add the round if chain does not have it
 	r = c.AddRound(r)
-	return r, b
+	return r, b, nil
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.

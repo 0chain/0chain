@@ -210,7 +210,6 @@ func TestState_Decode(t *testing.T) {
 				Balance:      tt.fields.Balance,
 				Nonce:        tt.fields.Nonce,
 			}
-
 			if err := s.Decode(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}

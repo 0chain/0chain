@@ -225,7 +225,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
-	bl.lfb, _ = bl.r.AddNotarizedBlock(bl.lfb)
+	_, _ = bl.r.AddNotarizedBlock(bl.lfb)
 
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
@@ -346,27 +346,13 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 		// Don't check the state. It can be missing if the state had synced.
 		// But it works fine anyway.
 
-		if !sc.HasClientStateStored(lfb.ClientStateHash) {
-			Logger.Warn("load_lfb, missing corresponding state",
-				zap.Int64("round", r.Number),
-				zap.String("block_hash", r.BlockHash))
-			// we can't use this block, because of missing or malformed state
-			continue
-		}
-
-		// check if lfb has full state
-		if !sc.ValidateState(lfb) {
-			Logger.Warn("load_lfb, lfb state missing nodes",
-				zap.Int64("round", r.Number),
-				zap.String("block_hash", r.BlockHash))
-			// go back 50 rounds if
-			if lfb.Round > 50 {
-				for i := 0; i < 50; i++ {
-					iter.Prev()
-				}
-			}
-			continue
-		}
+		// if !sc.HasClientStateStored(lfb.ClientStateHash) {
+		// 	Logger.Warn("load_lfb, missing corresponding state",
+		// 		zap.Int64("round", r.Number),
+		// 		zap.String("block_hash", r.BlockHash))
+		// 	// we can't use this block, because of missing or malformed state
+		// 	continue
+		// }
 
 		return // got it
 	}
@@ -482,26 +468,4 @@ func (sc *Chain) SaveMagicBlockHandler(ctx context.Context,
 // SaveMagicBlock function.
 func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 	return chain.MagicBlockSaveFunc(sc.SaveMagicBlockHandler)
-}
-
-func (sc *Chain) ValidateState(b *block.Block) bool {
-	if err := sc.InitBlockState(b); err != nil {
-		Logger.Warn("load_lfb, init block state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return false
-	}
-
-	missing, err := b.ClientState.HasMissingNodes(context.Background())
-	if err != nil {
-		Logger.Warn("load_lfb, find missing nodes failed",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-		return false
-	}
-
-	if missing {
-		Logger.Warn("load_lfb, lfb has missing nodes",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return false
-	}
-
-	return true
 }

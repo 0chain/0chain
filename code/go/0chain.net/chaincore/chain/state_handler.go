@@ -139,19 +139,21 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	return retObj, nil
 }
 
-// GetBalanceHandler - get the balance of a client
+/*GetBalanceHandler - get the balance of a client */
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
-	if c.GetEventDb() == nil {
-		return nil, common.NewError("get_balance_error", "event database not enabled")
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, common.ErrTemporaryFailure
 	}
-
-	user, err := c.GetEventDb().GetUser(clientID)
+	state, err := c.GetState(lfb, clientID)
 	if err != nil {
 		return nil, err
 	}
-
-	return userToState(user), nil
+	if err := state.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return state, nil
 }
 
 func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {

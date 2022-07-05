@@ -125,9 +125,11 @@ func (cc *ChangeCollector) GetChanges() []*NodeChange {
 func (cc *ChangeCollector) GetDeletes() []Node {
 	cc.mutex.RLock()
 	defer cc.mutex.RUnlock()
-	deletes := make([]Node, 0, len(cc.Deletes))
+	deletes := make([]Node, len(cc.Deletes))
+	idx := 0
 	for _, v := range cc.Deletes {
-		deletes = append(deletes, v)
+		deletes[idx] = v
+		idx++
 	}
 	return deletes
 }

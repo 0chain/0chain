@@ -41,7 +41,7 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, er
 	return 0, nil
 }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
-func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}) {
+func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		Type:        int(eventType),

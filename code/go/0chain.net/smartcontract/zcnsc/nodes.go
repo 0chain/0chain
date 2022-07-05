@@ -322,19 +322,29 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) ToEvent() *event.Authorizer {
+func (an *AuthorizerNode) ToEvent() ([]byte, error) {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
 	}
-	return &event.Authorizer{
+	data, err := json.Marshal(&event.Authorizer{
 		Model:        gorm.Model{},
 		Fee:          an.Config.Fee,
 		AuthorizerID: an.ID,
 		URL:          an.URL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshalling authorizer event: %v", err)
 	}
+
+	return data, nil
 }
 
-func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
+func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
+	ev := &event.Authorizer{}
+	err := json.Unmarshal(buf, ev)
+	if err != nil {
+		return nil, err
+	}
 
 	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
 }

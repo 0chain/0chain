@@ -4,10 +4,13 @@ import (
 	"context"
 	"time"
 
+	"0chain.net/chaincore/node"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/remeh/sizedwaitgroup"
 	"go.uber.org/zap"
 )
 
@@ -64,54 +67,122 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	}
 
-	logging.Logger.Info("prune client state",
+	logging.Logger.Info("prune client state - new version",
 		zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("latest_finalized_round", lfb.Round),
 		zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 
+	var newVersion = util.Sequence(bs.Round)
+
+	if c.pruneStats != nil && c.pruneStats.Version == newVersion &&
+		c.pruneStats.MissingNodes == 0 {
+		return // already done with pruning this
+	}
+
+	var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion, bs.ClientStateHash)
+
 	var (
-		newVersion = util.Sequence(bs.Round)
-		pctx       = util.WithPruneStats(ctx)
-		ps         = util.GetPruneStats(pctx)
+		pctx = util.WithPruneStats(ctx)
+		ps   = util.GetPruneStats(pctx)
 	)
 
-	ps.Stage = util.PruneStateDelete
+	ps.Stage = util.PruneStateUpdate
 	c.pruneStats = ps
+
+	var (
+		t  = time.Now()
+		wg = sizedwaitgroup.New(2)
+
+		missingKeys []util.Key
+	)
+
+	var missingNodesHandler = func(ctx context.Context, path util.Path,
+		key util.Key) error {
+
+		missingKeys = append(missingKeys, key)
+		if len(missingKeys) == 1000 {
+			ps.Stage = util.PruneStateSynch
+			wg.Add()
+			go func(nodes []util.Key) {
+				c.GetStateNodes(ctx, nodes)
+				wg.Done()
+			}(missingKeys[:])
+			missingKeys = nil
+		}
+		return nil
+	}
+
+	var (
+		stage = ps.Stage
+		err   = mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
+	)
+	wg.Wait()
+	ps.Stage = stage
+
+	var d1 = time.Since(t)
+	ps.UpdateTime = d1
+	StatePruneUpdateTimer.Update(d1)
+	node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
+
+	if err != nil {
+		logging.Logger.Error("prune client state (update version)",
+			zap.Int64("current_round", c.GetCurrentRound()),
+			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
+			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+			zap.Any("prune_stats", ps), zap.Error(err))
+
+		if ps.MissingNodes > 0 {
+			if len(missingKeys) > 0 {
+				c.GetStateNodes(ctx, missingKeys[:])
+			}
+		}
+		ps.Stage = util.PruneStateAbandoned
+		return
+	} else {
+		logging.Logger.Info("prune client state (update version)",
+			zap.Int64("current_round", c.GetCurrentRound()),
+			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
+			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+			zap.Any("prune_stats", ps))
+	}
 
 	if lfb.Round-int64(c.PruneStateBelowCount()) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
 		return
 	}
 
-	var t = time.Now()
-	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
+	var t1 = time.Now()
+	ps.Stage = util.PruneStateDelete
+	err = c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
-		logging.Logger.Error("prune client state error", zap.Error(err))
+		logging.Logger.Info("prune client state error", zap.Error(err))
 	}
 	ps.Stage = util.PruneStateCommplete
 
-	var d = time.Since(t)
-	ps.DeleteTime = d
-	StatePruneDeleteTimer.Update(d)
+	var d2 = time.Since(t1)
+	ps.DeleteTime = d2
+	StatePruneDeleteTimer.Update(d2)
 
 	var (
 		logf   = logging.Logger.Info
 		logMsg = "prune client state stats"
 	)
-
-	if d > time.Second {
+	if d1 > time.Second || d2 > time.Second {
 		logf = logging.Logger.Error
 		logMsg = logMsg + " - slow"
 	}
+
+	ps = util.GetPruneStats(pctx)
 
 	logf(logMsg, zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
 		zap.Int64("prune_deleted", ps.Deleted),
 		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps),
-		zap.Duration("prune_below_version_after", d))
+		zap.Duration("update_version_after", d1),
+		zap.Duration("prune_below_version_after", d2))
 
 	/*
 		if stateOut != nil {

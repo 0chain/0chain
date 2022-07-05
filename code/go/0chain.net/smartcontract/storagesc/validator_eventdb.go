@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
 
@@ -53,7 +56,7 @@ func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode
 }
 
 func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
-	data := &dbs.DbUpdates{
+	data, err := json.Marshal(&dbs.DbUpdates{
 		Id: vn.ID,
 		Updates: map[string]interface{}{
 			"base_url":        vn.BaseURL,
@@ -63,14 +66,16 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 			"num_delegates":   vn.StakePoolSettings.MaxNumDelegates,
 			"service_charge":  vn.StakePoolSettings.ServiceChargeRatio,
 		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling update: %v", err)
 	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, string(data))
 	return nil
 }
 
 func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
-	data := &event.Validator{
+	data, err := json.Marshal(&event.Validator{
 		ValidatorID:    vn.ID,
 		BaseUrl:        vn.BaseURL,
 		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
@@ -78,8 +83,10 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 		MaxStake:       vn.StakePoolSettings.MaxStake,
 		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling validator: %v", err)
 	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, string(data))
 	return nil
 }

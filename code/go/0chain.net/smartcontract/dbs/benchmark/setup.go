@@ -119,22 +119,6 @@ func AddMockBlocks(
 	}
 }
 
-func AddMockUsers(
-	clients []string,
-	eventDb *event.EventDb,
-) {
-	if !viper.GetBool(benchmark.EventDbEnabled) {
-		return
-	}
-	for _, client := range clients {
-		user := event.User{
-			UserID:  client,
-			Balance: 100,
-		}
-		_ = eventDb.Store.Get().Create(&user)
-	}
-}
-
 func GetMockBlockHash(blockNumber int64) string {
 	return encryption.Hash("block" + strconv.FormatInt(blockNumber, 10))
 }

@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
 
@@ -10,7 +13,7 @@ import (
 func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
-	data := &event.Blobber{
+	data, err := json.Marshal(&event.Blobber{
 		BlobberID:        sn.ID,
 		BaseURL:          sn.BaseURL,
 		Latitude:         sn.Geolocation.Latitude,
@@ -40,14 +43,16 @@ func emitAddOrOverwriteBlobber(
 		WebsiteUrl:  sn.Information.WebsiteUrl,
 		Description: sn.Information.Description,
 		LogoUrl:     sn.Information.LogoUrl,
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling blobber: %v", err)
 	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, string(data))
 	return nil
 }
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
-	data := &dbs.DbUpdates{
+	data, err := json.Marshal(&dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"base_url":           sn.BaseURL,
@@ -67,8 +72,10 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"service_charge":     sn.StakePoolSettings.ServiceChargeRatio,
 			"saved_data":         sn.SavedData,
 		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling update: %v", err)
 	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, string(data))
 	return nil
 }

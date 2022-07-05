@@ -355,11 +355,6 @@ func (fn *FullNode) GetHash() string {
 /*GetHashBytes - implement interface */
 func (fn *FullNode) GetHashBytes() []byte {
 	buf := bytes.NewBuffer(nil)
-	if err := binary.Write(buf, binary.LittleEndian, fn.GetOrigin()); err != nil {
-		// TODO: return error
-		logging.Logger.Error("full node GetHashBytes failed", zap.Error(err))
-		return nil
-	}
 	fn.encode(buf)
 	return encryption.RawHash(buf.Bytes())
 }
@@ -536,11 +531,6 @@ func (en *ExtensionNode) GetHash() string {
 /*GetHashBytes - implement interface */
 func (en *ExtensionNode) GetHashBytes() []byte {
 	buf := bytes.NewBuffer(nil)
-	if err := binary.Write(buf, binary.LittleEndian, en.GetOrigin()); err != nil {
-		// TODO: return error
-		logging.Logger.Error("full node GetHashBytes failed", zap.Error(err))
-		return nil
-	}
 	en.encode(buf)
 	return encryption.RawHash(buf.Bytes())
 }

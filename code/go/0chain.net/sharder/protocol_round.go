@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -22,7 +21,7 @@ var ErrNoPreviousBlock = errors.New("previous block does not exist")
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	b *block.Block) error {
 
-	b, _ = r.AddNotarizedBlock(b)
+	_, _ = r.AddNotarizedBlock(b)
 
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()
@@ -39,8 +38,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	}
 
 	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-		return fmt.Errorf("previous block state is not computed, round: %d, hash: %s, ptr: %p, state status: %d",
-			pb.Round, pb.Hash, pb, pb.GetStateStatus())
+		return errors.New("previous block state is not computed")
 	}
 
 	errC := make(chan error)

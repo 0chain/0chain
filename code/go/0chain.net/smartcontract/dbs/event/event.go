@@ -12,12 +12,12 @@ import (
 
 type Event struct {
 	gorm.Model
-	BlockNumber int64       `json:"block_number" gorm:"index:idx_event"`
-	TxHash      string      `json:"tx_hash" gorm:"index:idx_event"`
-	Type        int         `json:"type" gorm:"index:idx_event"`
-	Tag         int         `json:"tag" gorm:"index:idx_event"`
-	Index       string      `json:"index" gorm:"index:idx_event"`
-	Data        interface{} `json:"data" gorm:"-"`
+	BlockNumber int64  `json:"block_number" gorm:"index:idx_event"`
+	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
+	Type        int    `json:"type" gorm:"index:idx_event"`
+	Tag         int    `json:"tag" gorm:"index:idx_event"`
+	Index       string `json:"index" gorm:"index:idx_event"`
+	Data        string `json:"data"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -132,11 +132,6 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Allocation{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&User{})
 	if err != nil {
 		return err
 	}

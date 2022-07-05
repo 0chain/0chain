@@ -551,6 +551,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		return
 	}
 
+	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(mr, b) {
 		finish(false)

@@ -421,9 +421,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
-		_, b = c.createRoundIfNotExist(ctx, b)
 		b.SetBlockNotarized()
-
 		return b, nil
 	}
 
@@ -550,7 +548,6 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 			err = c.VerifyBlockNotarization(ctx, nb)
 			switch err {
 			case nil:
-				_, nb = c.createRoundIfNotExist(ctx, nb)
 			case context.Canceled, context.DeadlineExceeded:
 				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
 					zap.Int64("round", nb.Round), zap.String("block", hash),

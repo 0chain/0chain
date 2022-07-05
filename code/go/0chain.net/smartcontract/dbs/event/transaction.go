@@ -26,7 +26,6 @@ type Transaction struct {
 	OutputHash        string
 	Status            int
 
-	//ref
 	ReadMarkers []ReadMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 

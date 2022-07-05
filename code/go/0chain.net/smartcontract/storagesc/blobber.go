@@ -125,13 +125,13 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	data := dbs.DbUpdates{
+	data, _ := json.Marshal(dbs.DbUpdates{
 		Id: blobber.ID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, data)
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, string(data))
 
 	return
 }
@@ -721,7 +721,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"emitting allocation event: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {
@@ -828,13 +833,13 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	data := dbs.DbUpdates{
+	data, _ := json.Marshal(dbs.DbUpdates{
 		Id: t.ClientID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, string(data))
 
 	// update the list
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {

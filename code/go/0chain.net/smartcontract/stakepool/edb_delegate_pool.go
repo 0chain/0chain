@@ -1,6 +1,8 @@
 package stakepool
 
 import (
+	"encoding/json"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -23,7 +25,7 @@ func (dp DelegatePool) emitNew(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
-	data := &event.DelegatePool{
+	data, err := json.Marshal(&event.DelegatePool{
 		Balance:      dp.Balance,
 		PoolID:       poolId,
 		ProviderType: int(providerType),
@@ -32,13 +34,15 @@ func (dp DelegatePool) emitNew(
 
 		Status:       int(dp.Status),
 		RoundCreated: balances.GetBlock().Round,
+	})
+	if err != nil {
+		return err
 	}
-
 	balances.EmitEvent(
 		event.TypeStats,
 		event.TagAddOrOverwriteDelegatePool,
 		providerId,
-		data,
+		string(data),
 	)
 	return nil
 }
@@ -46,19 +50,15 @@ func (dp DelegatePool) emitNew(
 func (dpu DelegatePoolUpdate) emitUpdate(
 	balances cstate.StateContextI,
 ) error {
-
+	data, err := json.Marshal(&dpu)
+	if err != nil {
+		return err
+	}
 	balances.EmitEvent(
 		event.TypeStats,
 		event.TagUpdateDelegatePool,
 		dpu.PoolId,
-		delegatePoolUpdateToDbsDelegatePoolUpdate(dpu),
+		string(data),
 	)
 	return nil
-}
-
-func delegatePoolUpdateToDbsDelegatePoolUpdate(dpu DelegatePoolUpdate) dbs.DelegatePoolUpdate {
-	return dbs.DelegatePoolUpdate{
-		DelegatePoolId: dpu.DelegatePoolId,
-		Updates:        dpu.Updates,
-	}
 }

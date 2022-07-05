@@ -1,7 +1,9 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -57,20 +59,25 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 }
 
 func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) error {
-
-	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
+	data, err := json.Marshal(storageChallengeToChallengeTable(ch))
+	if err != nil {
+		return fmt.Errorf("marshalling challenge: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, string(data))
 	return nil
 }
 
 func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) error {
-	data := &dbs.DbUpdates{
+	data, err := json.Marshal(&dbs.DbUpdates{
 		Id: chID,
 		Updates: map[string]interface{}{
 			"responded": responded,
 		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling update: %v", err)
 	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, data)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, string(data))
 	return nil
 }
 

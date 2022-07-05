@@ -57,6 +57,139 @@ func TestPNodeDB_Iterate(t *testing.T) {
 	}
 }
 
+func TestPNodeDB_PruneBelowVersion_Iterator_Err(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		dataDir  string
+		ro       *gorocksdb.ReadOptions
+		to       *gorocksdb.TransactionOptions
+		version  int64
+		versions []int64
+	}
+	type args struct {
+		ctx     context.Context
+		version Sequence
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test_PNodeDB_PruneBelowVersion_OK",
+			args: args{
+				ctx:     context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{}),
+				version: 1,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			db, cleanUp := newPNodeDB(t)
+			defer cleanUp()
+			wo := gorocksdb.NewDefaultWriteOptions()
+			for i := 0; i < 257; i++ {
+				r := rand.Int()
+				err := db.db.Put(wo, []byte(strconv.Itoa(r)), []byte{NodeTypeValueNode})
+				require.NoError(t, err)
+			}
+			wo.DisableWAL(true)
+			wo.SetSync(true)
+			fo := gorocksdb.NewDefaultFlushOptions()
+			ctx := context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{})
+			pndb := &PNodeDB{
+				dataDir:  tt.fields.dataDir,
+				db:       db.db,
+				ro:       tt.fields.ro,
+				wo:       wo,
+				to:       tt.fields.to,
+				fo:       fo,
+				version:  tt.fields.version,
+				versions: tt.fields.versions,
+			}
+			if err := pndb.PruneBelowVersion(ctx, tt.args.version); (err != nil) != tt.wantErr {
+				t.Errorf("PruneBelowVersion() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestPNodeDB_PruneBelowVersion_Multi_Delete_Err(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		dataDir  string
+		ro       *gorocksdb.ReadOptions
+		to       *gorocksdb.TransactionOptions
+		version  int64
+		versions []int64
+	}
+	type args struct {
+		ctx     context.Context
+		version Sequence
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test_PNodeDB_PruneBelowVersion_OK",
+			args: args{
+				ctx:     context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{}),
+				version: 1,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			db, cleanUp := newPNodeDB(t)
+			defer cleanUp()
+
+			wo := gorocksdb.NewDefaultWriteOptions()
+			for i := 0; i < 257; i++ {
+				r := rand.Int()
+				err := db.db.Put(wo, []byte(strconv.Itoa(r)), []byte{NodeTypeValueNode})
+				require.NoError(t, err)
+			}
+
+			n := NewValueNode()
+			err := db.db.Put(wo, []byte("key"), n.Encode())
+			require.NoError(t, err)
+
+			wo.DisableWAL(true)
+			wo.SetSync(true)
+
+			fo := gorocksdb.NewDefaultFlushOptions()
+
+			pndb := &PNodeDB{
+				dataDir:  tt.fields.dataDir,
+				db:       db.db,
+				ro:       tt.fields.ro,
+				wo:       wo,
+				to:       tt.fields.to,
+				fo:       fo,
+				version:  tt.fields.version,
+				versions: tt.fields.versions,
+			}
+			if err := pndb.PruneBelowVersion(tt.args.ctx, tt.args.version); (err != nil) != tt.wantErr {
+				t.Errorf("PruneBelowVersion() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestPNodeDB_GetDBVersions(t *testing.T) {
 	t.Parallel()
 
