@@ -404,7 +404,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			conf.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Blobber, spr.BlobberID, spenum.Active, balances)
+	err = sp.LockPool(t, spenum.Blobber, spr.BlobberID, spenum.Active, spr.LockPeriod, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool digging error: %v", err)
