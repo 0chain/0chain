@@ -536,13 +536,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	updates, err := alloc.marshalUpdates(balances)
-	if err != nil {
-		return common.NewErrorf("commit_move_tokens",
-			"emitting allocation event: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
