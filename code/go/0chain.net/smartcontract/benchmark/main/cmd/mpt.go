@@ -269,6 +269,11 @@ func setUpMpt(
 
 	// used as foreign key
 	timer = time.Now()
+	ebk.AddMockUsers(clients, eventDb)
+	log.Println("added mock users\t", time.Since(timer))
+
+	// used as foreign key
+	timer = time.Now()
 	ebk.AddMockBlocks(miners, eventDb)
 	log.Println("added mock blocks\t", time.Since(timer))
 

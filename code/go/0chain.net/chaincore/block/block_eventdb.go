@@ -1,7 +1,6 @@
 package block
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"0chain.net/core/util"
@@ -31,10 +30,6 @@ func blockToBlockEvent(block *Block) *event.Block {
 }
 
 func CreateBlockEvent(block *Block) (error, event.Event) {
-	data, err := json.Marshal(blockToBlockEvent(block))
-	if err != nil {
-		return fmt.Errorf("error marshalling block: %v", err), event.Event{}
-	}
 
 	return nil, event.Event{
 		BlockNumber: block.Round,
@@ -42,6 +37,6 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 		Type:        int(event.TypeStats),
 		Tag:         int(event.TagAddBlock),
 		Index:       block.Hash,
-		Data:        string(data),
+		Data:        blockToBlockEvent(block),
 	}
 }

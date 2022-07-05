@@ -64,6 +64,10 @@ func ToHex(buf []byte) string {
 	return hex.EncodeToString(buf)
 }
 
+func fromHex(s string) ([]byte, error) {
+	return hex.DecodeString(s)
+}
+
 /*ToUpperHex - converts a byte array to hex encoding with upper case */
 func ToUpperHex(buf []byte) string {
 	return strings.ToUpper(hex.EncodeToString(buf))

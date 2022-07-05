@@ -389,7 +389,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
-	tick := time.Duration(c.PruneStateBelowCount()) * time.Second
+	tick := 30 * time.Second
 	timer := time.NewTimer(time.Second)
 	Logger.Debug("PruneClientStateWorker start")
 	defer func() {
@@ -397,15 +397,25 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	}()
 
 	for {
-		<-timer.C
-		Logger.Debug("Do prune client state worker")
-		c.pruneClientState(ctx)
-		if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
-			timer = time.NewTimer(time.Second)
-		} else {
-			timer = time.NewTimer(tick)
+		select {
+		case <-timer.C:
+			Logger.Debug("Do prune client state worker")
+			c.pruneClientState(ctx)
+			if c.pruneStats == nil {
+				timer = time.NewTimer(time.Second)
+			} else {
+				timer = time.NewTimer(tick)
+			}
+		case <-c.pruneClientStateC:
+			timer.Reset(0)
+		case <-ctx.Done():
+			return
 		}
 	}
+}
+
+func (c *Chain) StartPruneClientState() {
+	c.pruneClientStateC <- struct{}{}
 }
 
 // SyncLFBStateWorker is a worker for syncing state of latest finalized round block.

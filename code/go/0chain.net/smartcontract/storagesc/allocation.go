@@ -1624,13 +1624,13 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
 
-		data, _ := json.Marshal(dbs.DbUpdates{
+		data := dbs.DbUpdates{
 			Id: d.BlobberID,
 			Updates: map[string]interface{}{
 				"total_stake": int64(sps[i].stake()),
 			},
-		})
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, string(data))
+		}
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, data)
 
 		// update the blobber
 		b.Allocated -= d.Size
