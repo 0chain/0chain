@@ -54,6 +54,7 @@ type NodeDB interface {
 	MultiPutNode(keys []Key, nodes []Node) error
 	MultiDeleteNode(keys []Key) error
 
+	RecordDeadNodes([]Node) (int, error)
 	PruneBelowVersion(ctx context.Context, version Sequence) error
 }
 
@@ -208,6 +209,10 @@ func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequenc
 		}
 		return nil
 	})
+}
+
+func (mndb *MemoryNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
+	return 0, nil
 }
 
 // unsafe
@@ -516,9 +521,12 @@ func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
 	return size
 }
 
+func (lndb *LevelNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
+	return 0, nil
+}
+
 // PruneBelowVersion - implement interface.
 func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	// TODO: Why not implemented?
 	return nil
 }
 

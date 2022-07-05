@@ -1,9 +1,6 @@
 package minersc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -83,24 +80,14 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(sharderNodeToSharderTable(sn))
-	if err != nil {
-		return fmt.Errorf("marshalling sharder: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
 
 	return nil
 }
 
 func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(sharderNodeToSharderTable(sn))
-	if err != nil {
-		return fmt.Errorf("marshalling sharder: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
 
 	return nil
 }
@@ -135,11 +122,7 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 		dbUpdates.Updates["active"] = sn.Status == node.NodeStatusActive
 	}
 
-	data, err := json.Marshal(dbUpdates)
-	if err != nil {
-		return fmt.Errorf("marshalling update: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateSharder, sn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateSharder, sn.ID, dbUpdates)
 	return nil
 }
 

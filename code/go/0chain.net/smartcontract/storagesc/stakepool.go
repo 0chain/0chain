@@ -415,13 +415,13 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	data, _ := json.Marshal(dbs.DbUpdates{
+	data := dbs.DbUpdates{
 		Id: spr.BlobberID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
 
 	return
 }
@@ -457,13 +457,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		data, _ := json.Marshal(dbs.DbUpdates{
+		data := dbs.DbUpdates{
 			Id: spr.BlobberID,
 			Updates: map[string]interface{}{
 				"total_stake": int64(sp.stake()),
 			},
-		})
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
+		}
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
@@ -477,13 +477,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
-	data, _ := json.Marshal(dbs.DbUpdates{
+	data := dbs.DbUpdates{
 		Id: spr.BlobberID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, string(data))
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

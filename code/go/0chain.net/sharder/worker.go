@@ -121,6 +121,13 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			cr := sc.GetCurrentRound()
 			lfb := sc.GetLatestFinalizedBlock()
 			if b.Round > lfb.Round+aheadN {
+
+				// trigger sync process to pull the latest blocks when
+				// current round is > lfb.Round + aheadN to break the stuck if any.
+				if !syncing {
+					syncBlocksTimer.Reset(0)
+				}
+
 				// avoid the skipping logs when syncing blocks
 				if b.Round <= lfb.Round+2*aheadN {
 					logging.Logger.Debug("process block skip",
@@ -128,12 +135,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 						zap.Int64("current round", cr),
 						zap.Int64("lfb", lfb.Round),
 						zap.Bool("syncing", syncing))
-				}
-
-				// trigger sync process to pull the latest blocks when
-				// current round is > lfb.Round + aheadN to break the stuck if any.
-				if !syncing {
-					syncBlocksTimer.Reset(0)
+					go func() {
+						// sleep for a while to avoid pushing back too often
+						time.Sleep(100 * time.Millisecond)
+						sc.blockChannel <- b
+					}()
 				}
 
 				continue
@@ -172,9 +178,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			lfbTk := sc.GetLatestLFBTicket(ctx)
+			lfb = sc.GetLatestFinalizedBlock()
 			logging.Logger.Debug("process block successfully",
 				zap.Int64("round", b.Round),
-				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
+				zap.Int64("lfb round", lfb.Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
 			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {

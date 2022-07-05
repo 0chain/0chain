@@ -274,6 +274,10 @@ func BenchmarkRestTests(
 				Endpoint: srh.getValidator,
 			},
 			{
+				FuncName: "validators",
+				Endpoint: srh.validators,
+			},
+			{
 				FuncName: "alloc_written_size",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),

@@ -26,6 +26,8 @@ type ReadMarker struct {
 	PayerID       string  `json:"payer_id"`
 	AuthTicket    string  `json:"auth_ticket" gorm:"index:idx_rauth_alloc,priority:1"`   //used in readmarkers
 	BlockNumber   int64   `json:"block_number" gorm:"index:idx_ralloc_block,priority:2"` //used in alloc_read_size
+	//ref
+	User User `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {

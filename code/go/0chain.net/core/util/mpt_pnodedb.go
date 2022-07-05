@@ -3,6 +3,8 @@ package util
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,6 +35,7 @@ const (
 
 var (
 	PNodeDBCompression = gorocksdb.LZ4Compression
+	deadNodesKey       = []byte("dead_nodes")
 )
 
 var sstType = SSTTypeBlockBasedTable
@@ -97,6 +100,102 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	return err
 }
 
+type deadNodes struct {
+	Nodes map[string]Sequence `json:"nodes"`
+}
+
+func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
+	data, err := pndb.db.Get(pndb.ro, deadNodesKey)
+	if err != nil {
+		return nil, err
+	}
+
+	defer data.Free()
+	buf := data.Data()
+
+	dn := deadNodes{Nodes: make(map[string]Sequence)}
+	if len(buf) > 0 {
+		if err := json.Unmarshal(buf, &dn); err != nil {
+			return nil, err
+		}
+	}
+	return &dn, nil
+}
+
+func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes) error {
+	// save back the dead nodes
+	d, err := json.Marshal(dn)
+	if err != nil {
+		return err
+	}
+
+	return pndb.db.Put(pndb.wo, deadNodesKey, d)
+}
+
+func (pndb *PNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
+	dn, err := pndb.getDeadNodes()
+	if err != nil {
+		return 0, err
+	}
+
+	for _, n := range nodes {
+		dn.Nodes[n.GetHash()] = n.GetVersion()
+	}
+
+	if err := pndb.saveDeadNodes(dn); err != nil {
+		return 0, err
+	}
+
+	return len(dn.Nodes), nil
+}
+
+func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
+	var (
+		ps    = GetPruneStats(ctx)
+		count int64
+	)
+
+	dn, err := pndb.getDeadNodes()
+	if err != nil {
+		return err
+	}
+
+	keys := make([]Key, 0, len(dn.Nodes))
+	for k, v := range dn.Nodes {
+		if v < version {
+			key, err := fromHex(k)
+			if err != nil {
+				return fmt.Errorf("decode node hash key failed: %v", err)
+			}
+
+			keys = append(keys, key)
+			count++
+		}
+	}
+
+	// delete nodes
+	if err := pndb.MultiDeleteNode(keys); err != nil {
+		return err
+	}
+
+	// update dead nodes
+	for _, k := range keys {
+		delete(dn.Nodes, ToHex(k))
+	}
+
+	if err := pndb.saveDeadNodes(dn); err != nil {
+		return err
+	}
+
+	pndb.Flush()
+
+	if ps != nil {
+		ps.Deleted = count
+	}
+
+	return nil
+}
+
 /*DeleteNode - implement interface */
 func (pndb *PNodeDB) DeleteNode(key Key) error {
 	err := pndb.db.Delete(pndb.wo, key)
@@ -134,7 +233,7 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	}
 	err := pndb.db.Write(pndb.wo, wb)
 	if err != nil {
-		logging.Logger.Debug("pnode save nodes failed",
+		logging.Logger.Error("pnode save nodes failed",
 			zap.Int64("round", pndb.version),
 			zap.Any("duration", ts),
 			zap.Error(err))
@@ -163,6 +262,9 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 		key := it.Key()
 		value := it.Value()
 		kdata := key.Data()
+		if bytes.Equal(kdata, deadNodesKey) {
+			continue
+		}
 		vdata := value.Data()
 		node, err := CreateNode(bytes.NewReader(vdata))
 		if err != nil {
@@ -190,57 +292,62 @@ func (pndb *PNodeDB) Flush() {
 }
 
 /*PruneBelowVersion - prune the state below the given origin */
-func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	ps := GetPruneStats(ctx)
-	var total int64
-	var count int64
-	var leaves int64
-	batch := make([]Key, 0, BatchSize)
-	handler := func(ctx context.Context, key Key, node Node) error {
-		total++
-		if node.GetVersion() >= version {
-			if _, ok := node.(*LeafNode); ok {
-				leaves++
-			}
-			return nil
-		}
-		count++
-		tkey := make([]byte, len(key))
-		copy(tkey, key)
-		batch = append(batch, tkey)
-		if len(batch) == BatchSize {
-			err := pndb.MultiDeleteNode(batch)
-			batch = batch[:0]
-			if err != nil {
-				Logger.Error("prune below origin - error deleting node",
-					zap.String("key", ToHex(key)),
-					zap.Any("old_version", node.GetVersion()),
-					zap.Any("new_version", version),
-					zap.Error(err))
-				return err
-			}
-		}
-		return nil
-	}
-	err := pndb.Iterate(ctx, handler)
-	if err != nil {
-		return err
-	}
-	if len(batch) > 0 {
-		err := pndb.MultiDeleteNode(batch)
-		if err != nil {
-			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
-			return err
-		}
-	}
-	pndb.Flush()
-	if ps != nil {
-		ps.Total = total
-		ps.Leaves = leaves
-		ps.Deleted = count
-	}
-	return err
-}
+//func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
+//	ps := GetPruneStats(ctx)
+//	var total int64
+//	var count int64
+//	var leaves int64
+//	batch := make([]Key, 0, BatchSize)
+//	keys := make([]string, 0, BatchSize)
+//	handler := func(ctx context.Context, key Key, node Node) error {
+//		total++
+//		if node.GetVersion() >= version {
+//			if _, ok := node.(*LeafNode); ok {
+//				leaves++
+//			}
+//			return nil
+//		}
+//		count++
+//		tkey := make([]byte, len(key))
+//		copy(tkey, key)
+//		batch = append(batch, tkey)
+//		keys = append(keys, ToHex(tkey))
+//		if len(batch) == BatchSize {
+//			logging.Logger.Debug("prune batch keys", zap.Strings("keys", keys))
+//			err := pndb.MultiDeleteNode(batch)
+//			batch = batch[:0]
+//			keys = keys[:0]
+//			if err != nil {
+//				Logger.Error("prune below origin - error deleting node",
+//					zap.String("key", ToHex(key)),
+//					zap.Any("old_version", node.GetVersion()),
+//					zap.Any("new_version", version),
+//					zap.Error(err))
+//				return err
+//			}
+//		}
+//		return nil
+//	}
+//	err := pndb.Iterate(ctx, handler)
+//	if err != nil {
+//		return err
+//	}
+//	if len(batch) > 0 {
+//		logging.Logger.Debug("prune batch keys", zap.Strings("keys", keys))
+//		err := pndb.MultiDeleteNode(batch)
+//		if err != nil {
+//			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
+//			return err
+//		}
+//	}
+//	pndb.Flush()
+//	if ps != nil {
+//		ps.Total = total
+//		ps.Leaves = leaves
+//		ps.Deleted = count
+//	}
+//	return err
+//}
 
 /*Size - count number of keys in the db */
 func (pndb *PNodeDB) Size(ctx context.Context) int64 {

@@ -47,6 +47,8 @@ type Allocation struct {
 	SuccessfulChallenges     int64         `json:"successful_challenges"`
 	FailedChallenges         int64         `json:"failed_challenges"`
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
+	//ref
+	User User `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 type AllocationTerm struct {
