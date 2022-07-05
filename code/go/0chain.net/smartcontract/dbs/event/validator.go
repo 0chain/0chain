@@ -5,9 +5,11 @@ import (
 
 	"0chain.net/chaincore/currency"
 
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model Validator
@@ -56,6 +58,16 @@ func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 func (edb *EventDb) addValidator(vn Validator) error {
 	result := edb.Store.Get().Create(&vn)
 	return result.Error
+}
+
+func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
+	var validators []Validator
+	result := edb.Store.Get().Model(&Validator{}).Offset(pg.Offset).Limit(pg.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc: pg.IsDescending,
+	}).Find(&validators)
+
+	return validators, result.Error
 }
 
 func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats, error) {
