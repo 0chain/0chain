@@ -32,7 +32,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"unexpected DB error: %v", err)
 	}
 
-	logging.Logger.Info("addToDelegatePool: The new miner/sharder info",
+	logging.Logger.Info("addToDelegatePool: The miner/sharder info",
 		zap.String("base URL", mn.N2NHost),
 		zap.String("ID", mn.ID),
 		zap.String("pkey", mn.PublicKey),
