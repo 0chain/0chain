@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/currency"
 
@@ -30,8 +31,9 @@ type unlockResponse struct {
 }
 
 type stakePoolRequest struct {
-	PoolID       string `json:"pool_id,omitempty"`
-	AuthorizerID string `json:"authorizer_id,omitempty"`
+	PoolID       string        `json:"pool_id,omitempty"`
+	AuthorizerID string        `json:"authorizer_id,omitempty"`
+	LockPeriod   time.Duration `json:"lock_period"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
@@ -226,7 +228,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
+	err = sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, spr.LockPeriod, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "stake pool digging error: %v", err)
 	}

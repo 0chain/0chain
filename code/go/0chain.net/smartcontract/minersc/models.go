@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"0chain.net/chaincore/currency"
 
@@ -766,8 +767,9 @@ type delegatePoolStat struct {
 }
 
 type deletePool struct {
-	MinerID string `json:"id"`
-	PoolID  string `json:"pool_id"`
+	MinerID    string        `json:"id"`
+	PoolID     string        `json:"pool_id"`
+	LockPeriod time.Duration `json:"lock_period"`
 }
 
 func (dp *deletePool) Encode() []byte {

@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *DelegatePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 5
+	// map header, size 7
 	// string "Balance"
-	o = append(o, 0x85, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
+	o = append(o, 0x87, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
 	o, err = z.Balance.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Balance")
@@ -37,6 +37,12 @@ func (z *DelegatePool) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "DelegateID"
 	o = append(o, 0xaa, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x49, 0x44)
 	o = msgp.AppendString(o, z.DelegateID)
+	// string "LockPeriod"
+	o = append(o, 0xaa, 0x4c, 0x6f, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
+	o = msgp.AppendDuration(o, z.LockPeriod)
+	// string "LockedAt"
+	o = append(o, 0xa8, 0x4c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x41, 0x74)
+	o = msgp.AppendTime(o, z.LockedAt)
 	return
 }
 
@@ -88,6 +94,18 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "DelegateID")
 				return
 			}
+		case "LockPeriod":
+			z.LockPeriod, bts, err = msgp.ReadDurationBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LockPeriod")
+				return
+			}
+		case "LockedAt":
+			z.LockedAt, bts, err = msgp.ReadTimeBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LockedAt")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -102,7 +120,7 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DelegatePool) Msgsize() (s int) {
-	s = 1 + 8 + z.Balance.Msgsize() + 7 + z.Reward.Msgsize() + 7 + z.Status.Msgsize() + 13 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.DelegateID)
+	s = 1 + 8 + z.Balance.Msgsize() + 7 + z.Reward.Msgsize() + 7 + z.Status.Msgsize() + 13 + msgp.Int64Size + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 11 + msgp.DurationSize + 9 + msgp.TimeSize
 	return
 }
 
