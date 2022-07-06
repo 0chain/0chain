@@ -1,9 +1,10 @@
 package event
 
 import (
+	"fmt"
+
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/util"
-	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -53,17 +54,27 @@ func (edb *EventDb) addOrOverwriteUser(u User) error {
 	return result.Error
 }
 
+func (edb *EventDb) GetUserFromId(userId string) (User, error) {
+	user := User{}
+	return user, edb.Store.Get().Model(&User{}).Where(User{UserID: userId}).Scan(&user).Error
+
+}
+
+func (edb *EventDb) CreateUser(usr *User) error {
+	return edb.Store.Get().Create(usr).Error
+}
+
 func (u *User) exists(edb *EventDb) (bool, error) {
 	var user User
 	err := edb.Store.Get().Model(&User{}).
 		Where("user_id = ?", u.UserID).
 		Take(&user).Error
 
-	if err!= nil {
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return false, nil
 		}
-		return false, fmt.Errorf("failed to check user's existence %v," +
+		return false, fmt.Errorf("failed to check user's existence %v,"+
 			" error %v", user, err)
 	}
 

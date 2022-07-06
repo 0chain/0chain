@@ -13,7 +13,7 @@ import (
 type Block struct {
 	gorm.Model
 
-	Hash                  string    `json:"hash"`
+	Hash                  string    `json:"hash" gorm:"uniqueIndex:idx_bhash"`
 	Version               string    `json:"version"`
 	CreationDate          int64     `json:"creation_date" gorm:"index:idx_bcreation_date"`
 	Round                 int64     `json:"round" gorm:"index:idx_bround"`
@@ -53,6 +53,12 @@ func (edb *EventDb) GetBlockByDate(date string) (Block, error) {
 			Desc:   true,
 		},
 	).Scan(&block).Error
+}
+
+func (edb *EventDb) GetBlocksByRound(round string) (Block, error) {
+	block := Block{}
+	res := edb.Store.Get().Table("blocks").Where("round = ?", round).Scan(&block)
+	return block, res.Error
 }
 
 func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
