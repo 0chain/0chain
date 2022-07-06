@@ -4,8 +4,10 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
@@ -29,6 +31,18 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
 	}
+
+	logging.Logger.Info("addToDelegatePool: The new miner/sharder info",
+		zap.String("base URL", mn.N2NHost),
+		zap.String("ID", mn.ID),
+		zap.String("pkey", mn.PublicKey),
+		zap.Any("mscID", msc.ID),
+		zap.String("delegate_wallet", mn.Settings.DelegateWallet),
+		zap.Float64("service_charge", mn.Settings.ServiceChargeRatio),
+		zap.Int("number_of_delegates", mn.Settings.MaxNumDelegates),
+		zap.Int64("min_stake", int64(mn.Settings.MinStake)),
+		zap.Int64("max_stake", int64(mn.Settings.MaxStake)),
+	)
 
 	if mn.Delete {
 		return "", common.NewError("delegate_pool_add",
