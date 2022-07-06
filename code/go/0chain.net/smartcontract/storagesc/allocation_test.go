@@ -1119,7 +1119,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg7 = "allocation_creation_failed: " +
 			"can't get blobber's stake pool: value not present"
 		errMsg8 = "allocation_creation_failed: " +
-			"not enough tokens to honor the min lock demand (0 < 270)"
+			"client balance check failed: no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
 			"client balance check failed: no tokens to lock"
 	)
