@@ -64,8 +64,9 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	}
 
+	cr := c.GetCurrentRound()
 	logging.Logger.Info("prune client state",
-		zap.Int64("current_round", c.GetCurrentRound()),
+		zap.Int64("current_round", cr),
 		zap.Int64("latest_finalized_round", lfb.Round),
 		zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
@@ -86,7 +87,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 
 	var t = time.Now()
-	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
+	err := c.stateDB.(*util.PNodeDB).PruneBelowVersionV(pctx, newVersion, cr)
 	if err != nil {
 		logging.Logger.Error("prune client state error", zap.Error(err))
 	}

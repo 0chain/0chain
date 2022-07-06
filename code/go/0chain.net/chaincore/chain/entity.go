@@ -1762,5 +1762,5 @@ func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string
 
 // MaxDeadNodesCount represents the max allowed dead nodes number in state db
 func (c *Chain) MaxDeadNodesCount() int {
-	return 10000
+	return 5000
 }

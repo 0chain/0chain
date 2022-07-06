@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -341,7 +342,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
-	deadNodesCount, err := c.stateDB.RecordDeadNodes(deletedNode)
+	deadNodesCount, err := c.stateDB.(*util.PNodeDB).RecordDeadNodesWithVersion(deletedNode, fb.Round)
 	if err != nil {
 		logging.Logger.Error("finalize block - record dead nodes failed",
 			zap.Int64("round", fb.Round),
