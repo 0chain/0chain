@@ -69,18 +69,18 @@ func (tb *testBalances) GetBlockSharders(*block.Block) []string {
 }
 
 // stubs
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI                             { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction                       { return nil }
-func (tb *testBalances) Validate() error                                                { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                                        { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error                             { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer                                { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)                     {}
-func (tb *testBalances) GetEventDB() *event.EventDb                                     { return nil }
-func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, interface{}) {}
-func (tb *testBalances) EmitError(error)                                                {}
-func (tb *testBalances) GetEvents() []event.Event                                       { return nil }
-func (tb *testBalances) GetLatestFinalizedBlock() *block.Block                          { return nil }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
+func (tb *testBalances) Validate() error                                           { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                                   { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error                        { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer                           { return nil }
+func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)                {}
+func (tb *testBalances) GetEventDB() *event.EventDb                                { return nil }
+func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (tb *testBalances) EmitError(error)                                           {}
+func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
+func (tb *testBalances) GetLatestFinalizedBlock() *block.Block                     { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }

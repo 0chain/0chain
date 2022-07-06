@@ -899,13 +899,17 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			}
 		}
 
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
+		if err != nil {
+			return fmt.Errorf("marshalling transactions in block: %v", err)
+		}
 		b.Events = append(b.Events, event.Event{
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
 			Type:        int(event.TypeStats),
 			Tag:         int(event.TagAddTransaction),
 			Index:       txn.Hash,
-			Data:        transactionNodeToEventTransaction(txn, b.Hash),
+			Data:        string(data),
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn)

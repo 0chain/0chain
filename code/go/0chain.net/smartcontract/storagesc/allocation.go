@@ -733,7 +733,12 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't save allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_closing_failed",
+			"saving allocation in db: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	return string(alloc.Encode()), nil // closing
 }
@@ -758,7 +763,11 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 	return
 }
 
@@ -1485,7 +1494,12 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"saving allocation to db: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	return "canceled", nil
 }
@@ -1561,7 +1575,12 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"saving allocation to db: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	return "finalized", nil
 }
@@ -1687,13 +1706,13 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
 
-		data := dbs.DbUpdates{
+		data, _ := json.Marshal(dbs.DbUpdates{
 			Id: d.BlobberID,
 			Updates: map[string]interface{}{
 				"total_stake": int64(sps[i].stake()),
 			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, data)
+		})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, string(data))
 
 		// update the blobber
 		b.Allocated -= d.Size
@@ -1808,7 +1827,12 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"saving new allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("curator_transfer_allocation_failed",
+			"saving new allocation to db: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil

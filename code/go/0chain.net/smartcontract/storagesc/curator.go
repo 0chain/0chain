@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"go.uber.org/zap"
 
@@ -74,7 +75,12 @@ func (sc *StorageSmartContract) removeCurator(
 		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("remove_curator_failed",
+			"saving allocation in db: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 	return "", nil
 }
 
@@ -119,7 +125,12 @@ func (sc *StorageSmartContract) addCurator(
 		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	updates, err := alloc.marshalUpdates(balances)
+	if err != nil {
+		return "", common.NewErrorf("add_curator_failed",
+			"saving allocation in db: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
 	return "", nil
 }
@@ -141,7 +152,10 @@ func curatorToCuratorEvent(ci *curatorInput) *event.Curator {
 }
 
 func emitCuratorEvent(ci *curatorInput, balances chainstate.StateContextI, eventTag event.EventTag) error {
-
-	balances.EmitEvent(event.TypeStats, eventTag, ci.AllocationId, curatorToCuratorEvent(ci))
+	data, err := json.Marshal(curatorToCuratorEvent(ci))
+	if err != nil {
+		return fmt.Errorf("failed to marshal curator: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, eventTag, ci.AllocationId, string(data))
 	return nil
 }

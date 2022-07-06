@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"encoding/json"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -89,13 +91,13 @@ func (ssc *StorageSmartContract) collectReward(
 			"cannot save config: %v", err)
 	}
 
-	data := dbs.DbUpdates{
+	data, _ := json.Marshal(dbs.DbUpdates{
 		Id: providerID,
 		Updates: map[string]interface{}{
 			"total_stake": int64(sp.stake()),
 		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
+	})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, string(data))
 
 	err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
 	if err != nil {

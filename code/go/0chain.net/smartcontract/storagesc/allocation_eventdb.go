@@ -212,11 +212,13 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.DbUpdates {
+func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]byte, error) {
+	termsByte, err := sa.marshalTerms()
+	if err != nil {
+		return nil, err
+	}
 
-	termsByte, _ := sa.marshalTerms() //err always is nil
-
-	return &dbs.DbUpdates{
+	return json.Marshal(&dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
 			"allocation_name":           sa.Name,
@@ -243,7 +245,7 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.
 			"moved_to_validators":       sa.MovedToValidators,
 			"time_unit":                 int64(sa.TimeUnit),
 		},
-	}
+	})
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
@@ -252,7 +254,12 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 		return err
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
+	data, err := json.Marshal(alloc)
+	if err != nil {
+		return fmt.Errorf("error marshalling allocation: %v", err)
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, string(data))
 
 	return nil
 }
