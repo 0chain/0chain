@@ -1,8 +1,8 @@
 enable:
-  #- "attack round transfer"
+  - "attack round transfer"
   - "resend past messages"
-  #- "restart"
-  #- "attack fetching"
+  - "restart"
+  - "attack fetching"
 sets:
   - name: "attack round transfer"
     tests:
@@ -55,7 +55,7 @@ tests:
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 70
-- make_test_case_check:
+      - make_test_case_check:
           wait_time: 5m
       - save_logs: {}
 
@@ -65,13 +65,12 @@ tests:
       - cleanup_bc: { }
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_first_generator_test_case:
-          test_report:
-            round: 50
+          round: 50
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 70      
       - make_test_case_check:
-          wait_time: 5m
+          wait_time: 1m
       - save_logs: { }
 
   - name: "send different blocks from all generators"
@@ -80,13 +79,12 @@ tests:
       - cleanup_bc: { }
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_all_generators_test_case:
-          test_report:
-            round: 50
+          round: 50
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 70    
       - make_test_case_check:
-          wait_time: 5m
+          wait_time: 2m
       - save_logs: { }
 
   - name: "breaking single block"

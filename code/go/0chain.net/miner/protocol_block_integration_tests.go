@@ -82,14 +82,14 @@ func hasDST(pb, b []*transaction.Transaction) (has bool) {
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.updateFinalizedBlock(ctx, b)
 
-	if isTestingOnUpdateFinalizedBlock(b.Round) {
+	if mc.isTestingOnUpdateFinalizedBlock(b.Round) {
 		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
 }
 
-func isTestingOnUpdateFinalizedBlock(round int64) bool {
+func (mc *Chain) isTestingOnUpdateFinalizedBlock(round int64) bool {
 	s := crpc.Client().State()
 	var isTestingFunc func(round int64, generator bool, typeRank int) bool
 	switch {
@@ -122,6 +122,12 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 
 	case s.FBRequestor != nil:
 		isTestingFunc = s.FBRequestor.IsTesting
+
+	case s.SendDifferentBlocksFromFirstGenerator != nil:
+		isTestingFunc = s.SendDifferentBlocksFromFirstGenerator.IsTesting
+
+	case s.SendDifferentBlocksFromAllGenerators != nil:
+		isTestingFunc = s.SendDifferentBlocksFromAllGenerators.IsTesting
 
 	default:
 		return false
