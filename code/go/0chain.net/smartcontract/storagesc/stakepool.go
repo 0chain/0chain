@@ -387,7 +387,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"invalid request: %v", err)
 	}
 
-	if spr.LockPeriod < conf.StakePool.MinLockPeriod {
+	// 0 never expires
+	if spr.LockPeriod != 0 && spr.LockPeriod < conf.StakePool.MinLockPeriod {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too short period to lock")
 	}
