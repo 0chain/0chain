@@ -205,10 +205,6 @@ func deleteNode(
 		}
 	}
 
-	if err = deleteNode.save(balances); err != nil {
-		return nil, fmt.Errorf("saving node %v", err.Error())
-	}
-
 	return deleteNode, nil
 }
 

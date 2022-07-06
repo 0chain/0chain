@@ -33,6 +33,8 @@ type Sharder struct {
 	MinStake          currency.Coin
 	MaxStake          currency.Coin
 	LastHealthCheck   common.Timestamp
+	IsKilled          bool
+	IsShutDown        bool
 	Rewards           currency.Coin
 	TotalReward       currency.Coin
 	Fees              currency.Coin
@@ -154,6 +156,8 @@ func (edb *EventDb) overwriteSharder(sharder Sharder) error {
 			"min_stake":           sharder.MinStake,
 			"max_stake":           sharder.MaxStake,
 			"last_health_check":   sharder.LastHealthCheck,
+			"is_killed":           sharder.IsKilled,
+			"is_shut_down":        sharder.IsShutDown,
 			"rewards":             sharder.Rewards,
 			"fees":                sharder.Fees,
 			"active":              sharder.Active,
@@ -216,6 +220,8 @@ type SharderQuery struct {
 	MinStake          null.Int
 	MaxStake          null.Int
 	LastHealthCheck   null.Int
+	IsKilled          null.Bool
+	IsShutDown        null.Bool
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool

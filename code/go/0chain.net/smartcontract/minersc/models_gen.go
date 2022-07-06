@@ -801,8 +801,15 @@ func (z *PhaseNode) Msgsize() (s int) {
 func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 14
+	// string "Provider"
+	o = append(o, 0x8e, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o, err = z.Provider.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Provider")
+		return
+	}
 	// string "ID"
-	o = append(o, 0x8e, 0xa2, 0x49, 0x44)
+	o = append(o, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "N2NHost"
 	o = append(o, 0xa7, 0x4e, 0x32, 0x4e, 0x48, 0x6f, 0x73, 0x74)
@@ -847,13 +854,6 @@ func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "NodeType"
 	o = append(o, 0xa8, 0x4e, 0x6f, 0x64, 0x65, 0x54, 0x79, 0x70, 0x65)
 	o = msgp.AppendInt(o, int(z.NodeType))
-	// string "LastHealthCheck"
-	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
-	o, err = z.LastHealthCheck.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "LastHealthCheck")
-		return
-	}
 	// string "LastSettingUpdateRound"
 	o = append(o, 0xb6, 0x4c, 0x61, 0x73, 0x74, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x6f, 0x75, 0x6e, 0x64)
 	o = msgp.AppendInt64(o, z.LastSettingUpdateRound)
@@ -878,6 +878,12 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
+		case "Provider":
+			bts, err = z.Provider.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Provider")
+				return
+			}
 		case "ID":
 			z.ID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -983,12 +989,6 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 				z.NodeType = NodeType(zb0003)
 			}
-		case "LastHealthCheck":
-			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "LastHealthCheck")
-				return
-			}
 		case "LastSettingUpdateRound":
 			z.LastSettingUpdateRound, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
@@ -1009,7 +1009,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
+	s = 1 + 9 + z.Provider.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 23 + msgp.Int64Size
 	return
 }
 

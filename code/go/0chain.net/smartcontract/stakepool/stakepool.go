@@ -32,6 +32,7 @@ type StakePool struct {
 	Reward   currency.Coin            `json:"rewards"`
 	Settings Settings                 `json:"settings"`
 	Minter   cstate.ApprovedMinter    `json:"minter"`
+	IsDead   bool                     `json:"is_dead"`
 }
 
 type Settings struct {
@@ -187,6 +188,9 @@ func (sp *StakePool) DistributeRewards(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) (err error) {
+	if sp.IsDead {
+		return nil
+	}
 	if value == 0 {
 		return nil // nothing to move
 	}

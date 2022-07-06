@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -19,6 +21,11 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
+		Provider: provider.Provider{
+			LastHealthCheck: edbSharder.LastHealthCheck,
+			IsKilled:        edbSharder.IsKilled,
+			IsShutDown:      edbSharder.IsShutDown,
+		},
 		ID:          edbSharder.SharderID,
 		N2NHost:     edbSharder.N2NHost,
 		Host:        edbSharder.Host,
@@ -29,8 +36,6 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		BuildTag:    edbSharder.BuildTag,
 		TotalStaked: edbSharder.TotalStaked,
 		Delete:      edbSharder.Delete,
-
-		LastHealthCheck: edbSharder.LastHealthCheck,
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbSharder.Latitude,
 			Longitude: edbSharder.Longitude,
@@ -43,6 +48,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards,
+			IsDead: edbSharder.IsKilled,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbSharder.DelegateWallet,
 				ServiceChargeRatio: edbSharder.ServiceCharge,
@@ -56,7 +62,6 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 }
 
 func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
-
 	return event.Sharder{
 		SharderID:         sn.ID,
 		N2NHost:           sn.N2NHost,
@@ -74,6 +79,8 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		MinStake:          sn.Settings.MinStake,
 		MaxStake:          sn.Settings.MaxStake,
 		LastHealthCheck:   sn.LastHealthCheck,
+		IsKilled:          sn.IsKilled,
+		IsShutDown:        sn.IsShutDown,
 		Rewards:           sn.Reward,
 		Active:            sn.Status == node.NodeStatusActive,
 		Longitude:         sn.Geolocation.Longitude,
@@ -125,6 +132,8 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"min_stake":           sn.Settings.MinStake,
 			"max_stake":           sn.Settings.MaxStake,
 			"last_health_check":   sn.LastHealthCheck,
+			"is_killed":           sn.IsKilled,
+			"is_shut_down":        sn.IsShutDown,
 			"longitude":           sn.SimpleNode.Geolocation.Longitude,
 			"latitude":            sn.SimpleNode.Geolocation.Latitude,
 			"rewards":             sn.Reward,

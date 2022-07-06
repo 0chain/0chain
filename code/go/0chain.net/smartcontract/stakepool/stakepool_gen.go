@@ -205,9 +205,9 @@ func (z *Settings) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 5
 	// string "Pools"
-	o = append(o, 0x84, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
+	o = append(o, 0x85, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Pools)))
 	keys_za0001 := make([]string, 0, len(z.Pools))
 	for k := range z.Pools {
@@ -248,6 +248,9 @@ func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Minter")
 		return
 	}
+	// string "IsDead"
+	o = append(o, 0xa6, 0x49, 0x73, 0x44, 0x65, 0x61, 0x64)
+	o = msgp.AppendBool(o, z.IsDead)
 	return
 }
 
@@ -328,6 +331,12 @@ func (z *StakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Minter")
 				return
 			}
+		case "IsDead":
+			z.IsDead, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "IsDead")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -354,6 +363,6 @@ func (z *StakePool) Msgsize() (s int) {
 			}
 		}
 	}
-	s += 7 + z.Reward.Msgsize() + 9 + z.Settings.Msgsize() + 7 + z.Minter.Msgsize()
+	s += 7 + z.Reward.Msgsize() + 9 + z.Settings.Msgsize() + 7 + z.Minter.Msgsize() + 7 + msgp.BoolSize
 	return
 }

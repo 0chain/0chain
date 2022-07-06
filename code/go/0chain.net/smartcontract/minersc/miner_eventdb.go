@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -19,6 +21,11 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
+		Provider: provider.Provider{
+			LastHealthCheck: edbMiner.LastHealthCheck,
+			IsKilled:        edbMiner.IsKilled,
+			IsShutDown:      edbMiner.IsShutDown,
+		},
 		ID:          edbMiner.MinerID,
 		N2NHost:     edbMiner.N2NHost,
 		Host:        edbMiner.Host,
@@ -33,15 +40,15 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 			Latitude:  edbMiner.Latitude,
 			Longitude: edbMiner.Longitude,
 		},
-		NodeType:        NodeTypeMiner,
-		LastHealthCheck: edbMiner.LastHealthCheck,
-		Status:          status,
+		NodeType: NodeTypeMiner,
+		Status:   status,
 	}
 
 	return MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbMiner.Rewards,
+			IsDead: edbMiner.IsKilled,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
 				ServiceChargeRatio: edbMiner.ServiceCharge,
@@ -72,6 +79,8 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		MinStake:          mn.Settings.MinStake,
 		MaxStake:          mn.Settings.MaxStake,
 		LastHealthCheck:   mn.LastHealthCheck,
+		IsKilled:          mn.IsKilled,
+		IsShutDown:        mn.IsShutDown,
 		Rewards:           mn.Reward,
 		Active:            mn.Status == node.NodeStatusActive,
 		Longitude:         mn.Geolocation.Longitude,
@@ -129,6 +138,8 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"min_stake":           mn.Settings.MinStake,
 			"max_stake":           mn.Settings.MaxStake,
 			"last_health_check":   mn.LastHealthCheck,
+			"is_killed":           mn.IsKilled,
+			"is_shut_down":        mn.IsShutDown,
 			"longitude":           mn.SimpleNode.Geolocation.Longitude,
 			"latitude":            mn.SimpleNode.Geolocation.Latitude,
 			"rewards":             mn.Reward,

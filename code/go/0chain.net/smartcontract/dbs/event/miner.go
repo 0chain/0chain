@@ -32,6 +32,8 @@ type Miner struct {
 	MinStake          currency.Coin
 	MaxStake          currency.Coin
 	LastHealthCheck   common.Timestamp
+	IsKilled          bool
+	IsShutDown        bool
 	Rewards           currency.Coin
 	TotalReward       currency.Coin
 	Fees              currency.Coin
@@ -88,6 +90,8 @@ type MinerQuery struct {
 	MinStake          null.Int
 	MaxStake          null.Int
 	LastHealthCheck   null.Int
+	IsKilled          null.Bool
+	IsShutDown        null.Bool
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool
@@ -197,6 +201,8 @@ func (edb *EventDb) overwriteMiner(miner Miner) error {
 			"min_stake":           miner.MinStake,
 			"max_stake":           miner.MaxStake,
 			"last_health_check":   miner.LastHealthCheck,
+			"is_killed":           miner.IsKilled,
+			"is_shut_down":        miner.IsShutDown,
 			"rewards":             miner.Rewards,
 			"fees":                miner.Fees,
 			"active":              miner.Active,

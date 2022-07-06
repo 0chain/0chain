@@ -41,6 +41,11 @@ func (msc *MinerSmartContract) killMiner(
 		return "", common.NewError("kill-miner", err.Error())
 	}
 
+	mn.IsDead = true
+	if err := mn.save(balances); err != nil {
+		return "", common.NewError("kill-miner", "saving miner: "+err.Error())
+	}
+
 	return "", err
 }
 
@@ -62,6 +67,11 @@ func (msc *MinerSmartContract) killSharder(
 	sn.IsKilled = true
 	if err := deleteSharder(sn, gn, balances); err != nil {
 		return "", common.NewError("kill-sharder", err.Error())
+	}
+
+	sn.IsDead = true
+	if err := sn.save(balances); err != nil {
+		return "", common.NewError("kill-miner", "saving miner: "+err.Error())
 	}
 
 	return "", err
