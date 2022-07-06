@@ -1,6 +1,7 @@
 package event
 
 import (
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -17,8 +18,9 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:         db,
-		eventsChannel: make(chan events, 100),
+		Store:           db,
+		eventsChannel:   make(chan events, 100),
+		roundEventsChan: make(chan events, 10),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 
@@ -30,7 +32,11 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
-	eventsChannel chan events
+	eventsChannel      chan events
+	roundEventsChan    chan events
+	currentRound       int64
+	currentRoundEvents []Event
+	currentGuard       sync.Mutex
 }
 
 type events []Event
@@ -55,8 +61,22 @@ func (edb *EventDb) AutoMigrate() error {
 		&Reward{},
 		&Authorizer{},
 		&Challenge{},
+		&Snapshot{},
 	); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (edb *EventDb) copyToRoundChan(event Event) {
+	edb.currentGuard.Lock()
+	defer edb.currentGuard.Unlock()
+	if edb.currentRound == event.Round {
+		edb.currentRoundEvents = append(edb.currentRoundEvents, event)
+		return
+	}
+
+	go func() {
+		edb.roundEventsChan <- edb.currentRoundEvents
+	}()
 }

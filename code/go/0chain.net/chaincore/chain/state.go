@@ -513,11 +513,11 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 
-	if err = c.emitUserEvent(sctx, stateToUser(fromClient, fs)); err != nil {
+	if err = c.emitUserEvent(sctx, stateToUser(fromClient, fs, event.Send, amount)); err != nil {
 		return common.NewError("transfer_amount", "could not emit event")
 	}
 
-	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts)); err != nil {
+	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts, event.Receive, amount)); err != nil {
 		return common.NewError("transfer_amount", "could not emit event")
 	}
 
@@ -580,7 +580,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return common.NewError("mint_amount - insert", err.Error())
 	}
 
-	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts)); err != nil {
+	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts, event.Mint, amount)); err != nil {
 		return common.NewError("mint_amount", "could not emit event")
 	}
 
@@ -625,7 +625,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	}
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
 
-	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s)); err != nil {
+	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, event.Nonce, 0)); err != nil {
 		return common.NewError("increment_nonce", "could not emit event")
 	}
 
@@ -694,13 +694,15 @@ func userToState(u *event.User) *state.State {
 	}
 }
 
-func stateToUser(clientID string, s *state.State) *event.User {
+func stateToUser(clientID string, s *state.State, changeType event.ChangeType, change currency.Coin) *event.User {
 	return &event.User{
-		UserID:  clientID,
-		TxnHash: s.TxnHash,
-		Balance: s.Balance,
-		Round:   s.Round,
-		Nonce:   s.Nonce,
+		UserID:     clientID,
+		ChangeType: changeType,
+		Change:     change,
+		TxnHash:    s.TxnHash,
+		Balance:    s.Balance,
+		Round:      s.Round,
+		Nonce:      s.Nonce,
 	}
 }
 

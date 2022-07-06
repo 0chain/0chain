@@ -57,6 +57,7 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
+	TagAddMint
 	NumberOfTags
 )
 
@@ -69,7 +70,7 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
-		edb.addEvents(ctx, events)
+		edb.AddEvents(ctx, events)
 		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
@@ -94,7 +95,20 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
+func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
+	for {
+		select {
+		case e := <-edb.roundEventsChan:
+			edb.updateSnapshot(e)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func (edb *EventDb) addStat(event Event) error {
+	edb.copyToRoundChan(event)
+
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddOrOverwriteBlobber:

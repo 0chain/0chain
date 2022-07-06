@@ -402,6 +402,13 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getFreeAllocationBlobbers,
 			},
+			{
+				FuncName: "total-mint",
+				Params: map[string]string{
+					"from": "0",
+				},
+				Endpoint: srh.getRoundsTotalMint,
+			},
 		},
 		ADDRESS,
 		srh,
