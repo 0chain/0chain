@@ -899,17 +899,13 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			}
 		}
 
-		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.Hash))
-		if err != nil {
-			return fmt.Errorf("marshalling transactions in block: %v", err)
-		}
 		b.Events = append(b.Events, event.Event{
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
 			Type:        int(event.TypeStats),
 			Tag:         int(event.TagAddTransaction),
 			Index:       txn.Hash,
-			Data:        string(data),
+			Data:        transactionNodeToEventTransaction(txn, b.Hash),
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn)
@@ -993,6 +989,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	logging.Logger.Info("compute state successful",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
+		zap.String("block ptr", fmt.Sprintf("%p", b)),
 		zap.Int("block_size", len(b.Txns)),
 		zap.Int("changes", b.ClientState.GetChangeCount()),
 		zap.String("begin_client_state", util.ToHex(beginStateRoot)),

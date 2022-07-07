@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/threshold/bls"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -58,7 +59,9 @@ func newClient(balance currency.Coin, balances chainstate.StateContextI) (
 	client.scheme = scheme
 
 	client.pk = scheme.GetPublicKey()
-	client.id = encryption.Hash(client.pk)
+	pub := bls.PublicKey{}
+	pub.DeserializeHexStr(client.pk)
+	client.id = encryption.Hash(pub.Serialize())
 
 	balances.(*testBalances).balances[client.id] = balance
 	return

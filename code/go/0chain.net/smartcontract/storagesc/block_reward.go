@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -210,13 +209,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
-		data, _ := json.Marshal(dbs.DbUpdates{
+		data := dbs.DbUpdates{
 			Id: qualifyingBlobberIds[i],
 			Updates: map[string]interface{}{
 				"total_stake": int64(qsp.stake()),
 			},
-		})
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], string(data))
+		}
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
 
 	}
 

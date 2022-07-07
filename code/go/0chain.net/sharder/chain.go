@@ -7,15 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/cache"
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/logging"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/logging"
 	"0chain.net/sharder/blockstore"
 
 	"github.com/0chain/gorocksdb"
@@ -191,7 +192,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		Logger.Warn("load_lfb -- can't initialize stored block state",
+		Logger.Info("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
 		// return common.NewErrorf("load_lfb",
 		//	"can't init block state: %v", err) // fatal
@@ -224,7 +225,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
-	_, _ = bl.r.AddNotarizedBlock(bl.lfb)
+	bl.lfb, _ = bl.r.AddNotarizedBlock(bl.lfb)
 
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
@@ -353,11 +354,17 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 			continue
 		}
 
-		// check if we can load config from the lfb, otherwise choose previous one
-		if lfb.Round > 0 && !sc.HasConfig(lfb) {
-			Logger.Warn("load_lfb, missing config",
+		// check if lfb has full state
+		if !sc.ValidateState(lfb) {
+			Logger.Warn("load_lfb, lfb state missing nodes",
 				zap.Int64("round", r.Number),
 				zap.String("block_hash", r.BlockHash))
+			// go back 50 rounds if
+			if lfb.Round > 50 {
+				for i := 0; i < 50; i++ {
+					iter.Prev()
+				}
+			}
 			continue
 		}
 
@@ -477,15 +484,22 @@ func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 	return chain.MagicBlockSaveFunc(sc.SaveMagicBlockHandler)
 }
 
-func (sc *Chain) HasConfig(b *block.Block) bool {
+func (sc *Chain) ValidateState(b *block.Block) bool {
 	if err := sc.InitBlockState(b); err != nil {
 		Logger.Warn("load_lfb, init block state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return false
 	}
 
-	_, err := chain.GetConfigMap(b.ClientState)
+	missing, err := b.ClientState.HasMissingNodes(context.Background())
 	if err != nil {
-		Logger.Warn("load_lfb, can not load config from lfb", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		Logger.Warn("load_lfb, find missing nodes failed",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return false
+	}
+
+	if missing {
+		Logger.Warn("load_lfb, lfb has missing nodes",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return false
 	}
 

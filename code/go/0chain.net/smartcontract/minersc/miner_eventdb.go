@@ -92,12 +92,7 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
 	logging.Logger.Info("emitting add miner event")
 
-	data, err := json.Marshal(minerNodeToMinerTable(mn))
-	if err != nil {
-		return fmt.Errorf("marshalling miner: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
 
 	return nil
 }
@@ -106,12 +101,7 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 
 	logging.Logger.Info("emitting add or overwrite miner event")
 
-	data, err := json.Marshal(minerNodeToMinerTable(mn))
-	if err != nil {
-		return fmt.Errorf("marshalling miner: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
 
 	return nil
 }
@@ -150,11 +140,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 		dbUpdates.Updates["active"] = mn.Status == node.NodeStatusActive
 	}
 
-	data, err := json.Marshal(dbUpdates)
-	if err != nil {
-		return fmt.Errorf("marshalling update: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbUpdates)
 	return nil
 }
 

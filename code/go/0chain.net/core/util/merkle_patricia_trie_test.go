@@ -108,7 +108,7 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 		t.Fatal(err)
 	}
 	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
-	exp := "ae6a645401f35411371b9d498fa13c663909a7f6463b42a7f2a060db3ef0196b"
+	exp := "43f393ebef7ac274d78a30f827dddbb65a5ae480c03592007eb4fbb20812e15c"
 	if iteratedHash != exp {
 		t.Fatalf("calculated sequence mismatch: %v, %v",
 			iteratedHash, exp)
@@ -154,7 +154,11 @@ func TestMerkeTreePruning(t *testing.T) {
 			doStateValInsert(t, mpt2, "133458", 1000000000+i)
 		}
 		roots = append(roots, mpt2.GetRoot())
-		require.NoError(t, mpt2.SaveChanges(context.TODO(), mpt.GetNodeDB(), false))
+		deletedNodes := mpt2.GetDeletes()
+		_, err := pndb.RecordDeadNodes(deletedNodes)
+		require.NoError(t, err)
+
+		require.NoError(t, mpt2.SaveChanges(context.TODO(), pndb, false))
 		origin++
 	}
 
@@ -163,28 +167,19 @@ func TestMerkeTreePruning(t *testing.T) {
 	root := roots[len(roots)-numStates]
 	mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), root)
 
-	checkIterationHash(t, mpt, "84b88172c473aa0350b2841269ff8e58c81fb72f5c8ce877e8c130b7092fddc5")
+	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
 
 	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
-	missingNodeHandler := func(ctx context.Context, path Path, key Key) error {
-		return nil
-	}
-	err := mpt.UpdateVersion(context.TODO(), newOrigin, missingNodeHandler)
-	if err != nil {
-		t.Error("error updating origin:", err)
-	}
-
-	// mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), mpt.GetRoot())
-	checkIterationHash(t, mpt, "84b88172c473aa0350b2841269ff8e58c81fb72f5c8ce877e8c130b7092fddc5")
-	err = pndb.PruneBelowVersion(context.TODO(), newOrigin)
+	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
+	err := pndb.PruneBelowVersion(context.TODO(), newOrigin)
 	if err != nil {
 		t.Error("error pruning origin:", err)
 	}
 
 	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
-	checkIterationHash(t, mpt, "84b88172c473aa0350b2841269ff8e58c81fb72f5c8ce877e8c130b7092fddc5")
+	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
 }
 
 func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value int64) {
@@ -417,13 +412,13 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 		t.Fatal(err)
 	}
 	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
-	exp := "7ea96443c31290349e030f572c55c73153dc6822d4b1419391df530db0360ac5"
+	exp := "65e7006c095e39e614065d80fd5f58f91c809a0324062c71233930e2650bcc28"
 	if iteratedHash != exp {
 		t.Fatalf("calculated sequence mismatch: %v, %v",
 			iteratedHash, exp)
 	}
 	rootHash := ToHex(mpt2.root)
-	exp = "1d113cf8005c4ab38a7ca31d8cc345fe3875c259eb54ed1bd9b031f2565e8015"
+	exp = "ab0d18d651160ef469878958ee9b909e4a47c68342aaf2b7863a5681e7b249a5"
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, exp)
@@ -448,7 +443,7 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2", "22", "2234"})
 	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347", "23"})
 	rootHash = ToHex(mpt2.root)
-	exp = "3624e73be093af74c884eea162070ff5eabcbad4a0fb605d8208cada970117a9"
+	exp = "ae732ce5605e0d240c2989c0f41a9c586c051975aa0b013422fd9cdc10cc2dab"
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, exp)
@@ -463,7 +458,7 @@ func TestMPTRepetitiveInsert(t *testing.T) {
 
 	doStrValInsert(t, mpt2, "223456", "22345")
 	doStrValInsert(t, mpt2, "223467", "22346")
-	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.root))
+	assert.Equal(t, "eeb5fd1ccfafbe5b7ebf9368370fd2a6b1d2e076f686be78bba3f2b7144d8e07", ToHex(mpt2.root))
 	checkValues(t, mpt2, []string{"22345", "22346"})
 	mpt2.ChangeCollector.GetChanges()
 
@@ -471,7 +466,7 @@ func TestMPTRepetitiveInsert(t *testing.T) {
 	checkValues(t, mpt2, []string{"22345", "22347"})
 	doStrValInsert(t, mpt2, "223467", "22346")
 	checkValues(t, mpt2, []string{"22345", "22346"})
-	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.root))
+	assert.Equal(t, "eeb5fd1ccfafbe5b7ebf9368370fd2a6b1d2e076f686be78bba3f2b7144d8e07", ToHex(mpt2.root))
 }
 
 func TestMPT_MultipleConcurrentInserts(t *testing.T) {
@@ -490,9 +485,9 @@ func TestMPT_MultipleConcurrentInserts(t *testing.T) {
 		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
 		require.NoError(t, err)
 	}
-	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	checkIterationHash(t, mpt, "6e7eabd0548a424b78bf2c4393a15c42e42fac1287be0e3723dcb31e720b53ec")
 	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0), mpt.GetRoot())
-	checkIterationHash(t, mpt2, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	checkIterationHash(t, mpt2, "6e7eabd0548a424b78bf2c4393a15c42e42fac1287be0e3723dcb31e720b53ec")
 	wg := &sync.WaitGroup{}
 	for i := 0; i < numGoRoutines; i++ {
 		wg.Add(1)
@@ -505,10 +500,10 @@ func TestMPT_MultipleConcurrentInserts(t *testing.T) {
 		}(mpt2, i)
 	}
 	wg.Wait()
-	checkIterationHash(t, mpt2, "3f056cecd45427bc466681a2fe01594a70a50161c66708aec400970f799ef935")
-	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	checkIterationHash(t, mpt2, "54877a4aac07cc1afd1c544ec8a5d3e3d79403c1b66297d9801635639fb96c26")
+	checkIterationHash(t, mpt, "6e7eabd0548a424b78bf2c4393a15c42e42fac1287be0e3723dcb31e720b53ec")
 	require.NoError(t, mpt.MergeMPTChanges(mpt2))
-	checkIterationHash(t, mpt, "3f056cecd45427bc466681a2fe01594a70a50161c66708aec400970f799ef935")
+	checkIterationHash(t, mpt, "54877a4aac07cc1afd1c544ec8a5d3e3d79403c1b66297d9801635639fb96c26")
 }
 
 func TestMPTDelete(t *testing.T) {
@@ -586,7 +581,7 @@ func TestMPTUniverse(t *testing.T) {
 	doStrValInsert(t, mpt2, "01", "hello")
 
 	rootHash := hex.EncodeToString(mpt2.root)
-	exp := "2f2ad6f1c18ee4808abde751e08dd2129109338a7866e522b9c5b7796f62f5fc"
+	exp := "b4cf23e66a77f362b7753435cb67e30e37f8cdf15e193bf7c84ec48c27e232c3"
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, exp)
@@ -598,27 +593,16 @@ func TestMPTUniverse(t *testing.T) {
 		t.Fatal(err)
 	}
 	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
-	exp = "d76edb5b0e5cda8625c81593fd2bccaede906f35610a3e6de2809a862514f30b"
+	exp = "c7880b96f968c6d5b423de5e294a8a045d4173b9bfe3446ab2fffc156ea06533"
 	if iteratedHash != exp {
 		t.Fatalf("calculated sequence mismatch: %v, %v",
 			iteratedHash, exp)
 	}
-
-	key, err := hex.DecodeString("14e6f2fd08c3ba3bc816d16d6af63965e5d82eb7db22761d67b8d63a4e21f1f4")
+	//fmt.Println(rootHash)
+	//
+	key, err := hex.DecodeString(rootHash)
 	if err != nil {
 		t.Fatal(err)
-	}
-	sponge = sha3.New256()
-	err = mpt2.IterateFrom(context.TODO(), key, iterSpongeHandler(sponge),
-		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
-	if err != nil {
-		t.Fatal(err)
-	}
-	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
-	exp = "74869fa61802795b687cdfc2f4a34c71d522444022fad9250d6f19e030ce3fce"
-	if iteratedHash != exp {
-		t.Fatalf("calculated sequence mismatch: %v, %v",
-			iteratedHash, exp)
 	}
 	// collect values
 	valuesSponge := valuesSponge{make([]string, 0, 16)}
@@ -627,11 +611,8 @@ func TestMPTUniverse(t *testing.T) {
 		t.Fatal(err)
 	}
 	values := strings.Join(valuesSponge.values, ",")
-	// starting with "12345", should miss "hello" and "world"
-	expValues := "sun,mercury,green earth and ham,moon,mars,phobos,venus,jupiter,europa,saturn,uranus,neptune,dwarf planet,proxima centauri"
-	if values != expValues {
-		t.Fatalf("Actual values %v differ from expected %v", values, expValues)
-	}
+	expValues := "hello,world,sun,mercury,green earth and ham,moon,mars,phobos,venus,jupiter,europa,saturn,uranus,neptune,dwarf planet,proxima centauri"
+	require.Equal(t, expValues, values)
 }
 
 func TestMPTInsertEthereumExample(t *testing.T) {
@@ -644,7 +625,7 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 	doStrValInsert(t, mpt2, "646f67", "puppy")
 	doStrValInsert(t, mpt2, "646f6765", "coin")
 	rootHash := ToHex(mpt2.root)
-	exp := "720a6fff8f2b30647b94a2d801cd1baedcb7e8648a293697550720dcb42405be"
+	exp := "08a9172ec78ee7405e5fd8fb7be7898c6cfe57c5f0cdbe6180109dc9b9afe459"
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, exp)
@@ -657,14 +638,14 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 		t.Fatal(err)
 	}
 	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
-	exp = "b1d2d3eae3fb008eb00a456ad63a6e446355f6ebf279fcd261d1ab119c1aa325"
+	exp = "864ec1ef8fdbc2a0385b31c3910f0d63561d5a7f90b1595b1246f5998f54fb3b"
 	if iteratedHash != exp {
 		t.Fatalf("calculated sequence mismatch: %v, %v",
 			iteratedHash, exp)
 	}
 	doDelete(t, mpt2, "686f727365", nil)
 	rootHash = ToHex(mpt2.root)
-	exp = "720a6fff8f2b30647b94a2d801cd1baedcb7e8648a293697550720dcb42405be"
+	exp = "08a9172ec78ee7405e5fd8fb7be7898c6cfe57c5f0cdbe6180109dc9b9afe459"
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, exp)
@@ -675,7 +656,7 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 		t.Fatal(err)
 	}
 	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
-	exp = "21ccd3041d44d826c06332204d1a3e2c56114e4b831ac8521c1762695c545239"
+	exp = "f491725f0fb091592cddea28f33ba2ca2ca465b8b437b4d535bbe9114e906769"
 	if iteratedHash != exp {
 		t.Fatalf("calculated sequence mismatch: %v, %v",
 			iteratedHash, exp)
@@ -834,14 +815,14 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	doStrValInsert(t, mpt2, "1234590231", "saturn")
 	doStrValInsert(t, mpt2, "1234590241", "uranus")
 	rootHash := hex.EncodeToString(mpt2.root)
-	expWithVenus := "4af37dce8b6a8cd3e11b134231963b30eee6b95842f56ca2eab49a5cb0aa52bf"
+	expWithVenus := "9dce15353bd2b14ca9ac4845edcb4cdb874280d23725cec2426cec507e50034d"
 	if rootHash != expWithVenus {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, expWithVenus)
 	}
 	doDelete(t, mpt2, "1235", nil)
 	rootHash = hex.EncodeToString(mpt2.root)
-	expWithoutVenus := "500096406b887e6f1c7d13dd4ee9522b44da0a7581e120a9c845211586b70b2b"
+	expWithoutVenus := "2d76ab31e7ed52310ed734eaa9867be8a9173c98807a51f0d24cdd5c478c0f23"
 	if rootHash != expWithoutVenus {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, expWithoutVenus)
@@ -860,11 +841,11 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	}
 	doStrValInsert(t, mpt2, "1234590341", "neptune")
 	rootHash = hex.EncodeToString(mpt2.root)
-	exp := "107357c93cf035864ca972b38d4992d0f7529113bfdd7e15bb3d3db1843237cd"
+	exp := "44e2ec885f3951eb8f31b9ea11d1b906671b792537e33c04a7cc05fe7b82e720"
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v", rootHash, exp)
 	}
-	checkIterationHash(t, mpt2, "6a15c5ff1772339a49e4bca1cff7d3b38accb6ac15af37a6907024a4e2861391")
+	checkIterationHash(t, mpt2, "d46585b7e3366749c27ddf90622006b793e8c6ec21702a4c00dd512dd074895f")
 	// collect values
 	valuesSponge := valuesSponge{make([]string, 0, 16)}
 	err := mpt2.Iterate(context.TODO(), iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
@@ -2083,107 +2064,6 @@ func TestIsMPTValid(t *testing.T) {
 
 			if err := IsMPTValid(tt.args.mpt); (err != nil) != tt.wantErr {
 				t.Errorf("IsMPTValid() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
-	t.Parallel()
-
-	mpt := NewMerklePatriciaTrie(nil, 0, nil)
-	mnh := func(ctx context.Context, path Path, key Key) error {
-		return nil
-	}
-	root := []byte("root")
-
-	type fields struct {
-		mutex           *sync.RWMutex
-		Root            Key
-		db              NodeDB
-		ChangeCollector ChangeCollectorI
-		Version         Sequence
-	}
-	type args struct {
-		ctx               context.Context
-		version           Sequence
-		missingNodeHander MPTMissingNodeHandler
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Test_MerklePatriciaTrie_UpdateVersion_Nil_Node_ERR",
-			fields: fields{
-				mutex: &sync.RWMutex{},
-				Root:  root,
-				db: func() NodeDB {
-					db := NewMemoryNodeDB()
-					n := NewFullNode(&SecureSerializableValue{Buffer: []byte("data")})
-					err := db.PutNode(n.GetHashBytes(), n)
-					require.NoError(t, err)
-
-					return db
-				}(),
-				ChangeCollector: mpt.ChangeCollector,
-				Version:         mpt.Version,
-			},
-			args: args{
-				ctx:               context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{}),
-				version:           0,
-				missingNodeHander: mnh,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Test_MerklePatriciaTrie_UpdateVersion_ERR",
-			fields: fields{
-				mutex: &sync.RWMutex{},
-				Root:  root,
-				db: func() NodeDB {
-					db := NewMemoryNodeDB()
-
-					n := NewExtensionNode([]byte("root"), []byte("key"))
-					n.NodeKey = []byte(strconv.Itoa(0))
-					err := db.PutNode(root, n)
-					require.NoError(t, err)
-
-					for i := 0; i < BatchSize+1; i++ {
-						n := NewExtensionNode([]byte("root"), []byte("key"))
-						n.NodeKey = []byte(strconv.Itoa(i + 1))
-						err := db.PutNode([]byte(strconv.Itoa(i)), n)
-						require.NoError(t, err)
-					}
-
-					return db
-				}(),
-				ChangeCollector: mpt.ChangeCollector,
-				Version:         mpt.Version,
-			},
-			args: args{
-				ctx:               context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{}),
-				version:           1,
-				missingNodeHander: mnh,
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-
-			mpt := &MerklePatriciaTrie{
-				mutex:           tt.fields.mutex,
-				root:            tt.fields.Root,
-				db:              tt.fields.db,
-				ChangeCollector: tt.fields.ChangeCollector,
-				Version:         tt.fields.Version,
-			}
-			if err := mpt.UpdateVersion(tt.args.ctx, tt.args.version, tt.args.missingNodeHander); (err != nil) != tt.wantErr {
-				t.Errorf("UpdateVersion() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

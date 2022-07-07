@@ -236,6 +236,14 @@ func (mpt *MerklePatriciaTrie) GetChanges() (Key, []*NodeChange, []Node, Key) {
 	return mpt.root, mpt.ChangeCollector.GetChanges(), mpt.ChangeCollector.GetDeletes(), mpt.ChangeCollector.GetStartRoot()
 }
 
+func (mpt *MerklePatriciaTrie) GetDeletes() []Node {
+	var nodes []Node
+	mpt.mutex.RLock()
+	nodes = mpt.ChangeCollector.GetDeletes()
+	mpt.mutex.RUnlock()
+	return nodes
+}
+
 /*GetChangeCount - implement interface */
 func (mpt *MerklePatriciaTrie) GetChangeCount() int {
 	mpt.mutex.RLock()
@@ -889,13 +897,13 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 	}
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
-		_, _ = fmt.Fprintf(w, "L:%v (prefix:%v path:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Prefix), string(nodeImpl.Path), node.GetOrigin())
+		_, _ = fmt.Fprintf(w, "L:%v (prefix:%v path:%v, origin:%v, version:%v)\n", ToHex(key), string(nodeImpl.Prefix), string(nodeImpl.Path), node.GetOrigin(), node.GetVersion())
 	case *ExtensionNode:
-		_, _ = fmt.Fprintf(w, "E:%v (path:%v,child:%v, origin:%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin())
+		_, _ = fmt.Fprintf(w, "E:%v (path:%v,child:%v, origin:%v, version:%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin(), node.GetVersion())
 		_ = mpt.pp(w, nodeImpl.NodeKey, depth+2, true)
 	case *FullNode:
 		_, _ = w.Write([]byte("F:"))
-		_, _ = fmt.Fprintf(w, "%v (,origin:%v)", ToHex(key), node.GetOrigin())
+		_, _ = fmt.Fprintf(w, "%v (,origin:%v, version:%v)", ToHex(key), node.GetOrigin(), node.GetVersion())
 		_, _ = w.Write([]byte("\n"))
 		for idx, cnode := range nodeImpl.Children {
 			if cnode == nil {
@@ -992,6 +1000,36 @@ func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []
 	Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
 
 	return paths, keys, nil
+}
+
+// HasMissingNodes returns immediately when a missing node is detected
+func (mpt *MerklePatriciaTrie) HasMissingNodes(ctx context.Context) (bool, error) {
+	paths := make([]Path, 0, BatchSize)
+	keys := make([]Key, 0, BatchSize)
+	handler := func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			paths = append(paths, path)
+			keys = append(keys, key)
+			return ErrMissingNodes
+		}
+		return nil
+	}
+
+	st := time.Now()
+	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	switch err {
+	case nil:
+		Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+		// full state
+		return false, nil
+	case ErrMissingNodes, ErrNodeNotFound, ErrIteratingChildNodes:
+		// find missing nodes
+		Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+		return true, nil
+	default:
+		Logger.Error("Find missing node with unexpected err", zap.Error(err))
+		return false, err
+	}
 }
 
 /*IsMPTValid - checks if the merkle tree is in valid state or not */
