@@ -1,9 +1,6 @@
 package minersc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/smartcontract/stakepool"
