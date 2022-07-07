@@ -81,7 +81,7 @@ func setupColdWorker(ctx context.Context) {
 						logging.Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not delete meta record from unmoved block bucket. Error: %v", bwr.Hash, newColdPath, err))
 					}
 
-					if err := bwr.addOrUpdate(); err != nil {
+					if err := bwr.save(); err != nil {
 						logging.Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not update meta record. Error: %v", bwr.Hash, newColdPath, err))
 					}
 

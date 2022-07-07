@@ -46,10 +46,10 @@ func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
 	return gorocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }
 
-func OpenDB(
+func OpenDBWithColumnFamilies(
 	dir string,
-	cfs []string,
-	cfsOpts []*gorocksdb.Options,
+	cfs []string, // columnFamilies
+	cfsOpts []*gorocksdb.Options, // columnFamilies options
 	cacheSize uint64,
 	isCreate bool,
 ) (*gorocksdb.DB, gorocksdb.ColumnFamilyHandles, error) {

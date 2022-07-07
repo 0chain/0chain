@@ -100,12 +100,23 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 		panic(errors.New("Storage Type is a required field"))
 	}
 
+	/*
+		Mode can be one of "start" and "restart".
+		"start" mode will clean the paths before starting.
+		"restart" mode will not clean, but start from where it left.
+		"restart" mode might be required when sharder needs to modify config
+		or sharder crashed in the middle.
+	*/
 	mode := sViper.GetString("mode")
 	if mode == "" {
 		mode = "start"
 	}
 
-	initBWR(sViper.Sub("rocks"), mode, workDir)
+	bwrCacheSize, err := getUint64ValueFromYamlConfig(sViper.Get("rocks.cache_size"))
+	if err != nil {
+		panic(err)
+	}
+	initBlockWhereRecord(bwrCacheSize, mode, workDir)
 
 	store := new(blockStore)
 	switch Tiering(storageType) {
@@ -131,7 +142,7 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 				Tiering:   DiskTier,
 				BlockPath: blockPath,
 			}
-			err = bwr.addOrUpdate()
+			err = bwr.save()
 			if err != nil {
 				os.Remove(blockPath)
 				return err
@@ -180,7 +191,7 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 				Tiering:   DiskTier,
 				BlockPath: blockPath,
 			}
-			err = bwr.addOrUpdate()
+			err = bwr.save()
 			if err != nil {
 				os.Remove(blockPath)
 				return err
@@ -218,7 +229,7 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 				Tiering:   DiskTier,
 				BlockPath: blockPath,
 			}
-			err = bwr.addOrUpdate()
+			err = bwr.save()
 			if err != nil {
 				os.Remove(blockPath)
 				return err
@@ -284,7 +295,7 @@ func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
 				Tiering:   DiskTier,
 				BlockPath: blockPath,
 			}
-			err = bwr.addOrUpdate()
+			err = bwr.save()
 			if err != nil {
 				os.Remove(blockPath)
 				return err

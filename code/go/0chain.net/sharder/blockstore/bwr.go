@@ -2,6 +2,7 @@ package blockstore
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,30 +25,33 @@ const (
 )
 
 const (
-	BWRCF = "bwr" // bwr column family
-	UBRCF = "ubr" // ubr column family
-	BMR   = "bmr" // block meta record
+	// bwr(block where record) column family
+	BWRCF = "bwr"
+	// ubr(unmoved block record) column family
+	UBRCF = "ubr"
+	// block meta record
+	BMR = "bmr"
 )
 
 var bmrDB *gorocksdb.DB
-var bwrHandle *gorocksdb.ColumnFamilyHandle
-var ubrHandle *gorocksdb.ColumnFamilyHandle
+var bwrHandle *gorocksdb.ColumnFamilyHandle // column family handle for block where record
+var ubrHandle *gorocksdb.ColumnFamilyHandle // column family handle for unmoved block record
 
 type blockWhereRecord struct {
 	Hash    string    `json:"-"`
 	Tiering WhichTier `json:"tr"`
 	//For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName"
-	BlockPath string `json:"vp,omitempty"`
+	BlockPath string `json:"bp,omitempty"`
 	ColdPath  string `json:"cp,omitempty"`
 }
 
-func (bwr *blockWhereRecord) addOrUpdate() error {
+func (bwr *blockWhereRecord) save() error {
 	data, err := json.Marshal(bwr)
 	if err != nil {
 		return err
 	}
 	wo := gorocksdb.NewDefaultWriteOptions()
-	err = bmrDB.PutCF(gorocksdb.NewDefaultWriteOptions(), bwrHandle, []byte(bwr.Hash), data)
+	err = bmrDB.PutCF(wo, bwrHandle, []byte(bwr.Hash), data)
 	wo.Destroy()
 	return err
 }
@@ -79,17 +83,25 @@ type unmovedBlockRecord struct {
 }
 
 func (ubr *unmovedBlockRecord) Add() error {
-	k := strconv.FormatInt(int64(ubr.CreatedAt), 10)
+	buf := bytes.NewBuffer(nil)
+	if err := binary.Write(buf, binary.LittleEndian, ubr.CreatedAt); err != nil {
+		return err
+	}
+	key := buf.Bytes()
 	wo := gorocksdb.NewDefaultWriteOptions()
-	err := bmrDB.PutCF(gorocksdb.NewDefaultWriteOptions(), ubrHandle, []byte(k), []byte(ubr.Hash))
+	err := bmrDB.PutCF(gorocksdb.NewDefaultWriteOptions(), ubrHandle, key, []byte(ubr.Hash))
 	wo.Destroy()
 	return err
 }
 
 func (ubr *unmovedBlockRecord) Delete() error {
-	k := strconv.FormatInt(int64(ubr.CreatedAt), 10)
+	buf := bytes.NewBuffer(nil)
+	if err := binary.Write(buf, binary.LittleEndian, ubr.CreatedAt); err != nil {
+		return err
+	}
+	key := buf.Bytes()
 	wo := gorocksdb.NewDefaultWriteOptions()
-	err := bmrDB.DeleteCF(wo, ubrHandle, []byte(k))
+	err := bmrDB.DeleteCF(wo, ubrHandle, key)
 	wo.Destroy()
 	return err
 }
@@ -107,7 +119,10 @@ func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
 
 		it := bmrDB.NewIteratorCF(ro, ubrHandle)
 		defer it.Close()
-		for it.SeekToFirst(); it.Valid() && bytes.Compare(it.Key().Data(), maxPrefix) != 1; it.Next() {
+		for it.SeekToFirst(); it.Valid() &&
+			bytes.Compare(it.Key().Data(), maxPrefix) != 1; // Key should not be greater than maxPrefix
+		it.Next() {
+
 			keyS := it.Key()
 			valueS := it.Value()
 
@@ -123,11 +138,7 @@ func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
 	return ch
 }
 
-func initBWR(viper *viper.Viper, mode, workDir string) {
-	if viper == nil {
-		panic("bwr config not provided")
-	}
-
+func initBlockWhereRecord(cacheSize uint64, mode, workDir string) {
 	dbPath := filepath.Join(workDir, "data/rocksdb", BMR)
 	cacheSize, err := getUint64ValueFromYamlConfig(viper.GetString("cache_size"))
 	if err != nil {
@@ -150,7 +161,7 @@ func initBWR(viper *viper.Viper, mode, workDir string) {
 		}
 
 		var cfHs gorocksdb.ColumnFamilyHandles
-		bmrDB, cfHs, err = ememorystore.OpenDB(dbPath, cfs, cfsOpts, cacheSize, false)
+		bmrDB, cfHs, err = ememorystore.OpenDBWithColumnFamilies(dbPath, cfs, cfsOpts, cacheSize, false)
 		if err != nil {
 			panic(fmt.Errorf("error while opening rocksdb. Path: %s, error: %s", dbPath, err.Error()))
 		}
@@ -168,7 +179,7 @@ func initBWR(viper *viper.Viper, mode, workDir string) {
 			panic(err)
 		}
 
-		bmrDB, _, err = ememorystore.OpenDB(dbPath, nil, nil, cacheSize, true)
+		bmrDB, _, err = ememorystore.OpenDBWithColumnFamilies(dbPath, nil, nil, cacheSize, true)
 		if err != nil {
 			panic(err)
 		}

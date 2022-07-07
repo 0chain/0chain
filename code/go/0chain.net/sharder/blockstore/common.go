@@ -33,47 +33,47 @@ const (
 //Common errors
 var (
 	ErrInodesLimit = func(vPath string, inodesToMaintain uint64) error {
-		return fmt.Errorf("Volume %v has inodes lesser than inodes to maintain, %v", vPath, inodesToMaintain)
+		return fmt.Errorf("volume %v has inodes lesser than inodes to maintain, %v", vPath, inodesToMaintain)
 	}
 
 	ErrSizeLimit = func(vPath string, sizeToMaintain uint64) error {
-		return fmt.Errorf("Volume %v has size lesser than size to maintain, %vGB", vPath, sizeToMaintain)
+		return fmt.Errorf("volume %v has size lesser than size to maintain, %vGB", vPath, sizeToMaintain)
 	}
 
 	ErrAllowedSizeLimit = func(vPath string, allowedSizeLimit uint64) error {
-		return fmt.Errorf("Allowed size limit, %v, for volume %v reached.", allowedSizeLimit, vPath)
+		return fmt.Errorf("allowed size limit, %v, for volume %v reached.", allowedSizeLimit, vPath)
 	}
 
 	ErrAllowedCountLimit = func(vPath string, allowedCountLimit uint64) error {
-		return fmt.Errorf("Allowed block number limit, %v, for volume %v reached.", allowedCountLimit, vPath)
+		return fmt.Errorf("allowed block number limit, %v, for volume %v reached.", allowedCountLimit, vPath)
 	}
 
 	ErrVolumeFull = func(volPath string) error {
-		return fmt.Errorf("Volume %v is full.", volPath)
+		return fmt.Errorf("volume %v is full.", volPath)
 	}
 
 	ErrSelectDir = func(volPath string, err error) string {
-		return fmt.Sprintf("Error while selecting dir; volume path: %v, err: %v", volPath, err)
+		return fmt.Sprintf("error while selecting dir; volume path: %v, err: %v", volPath, err)
 	}
 
 	ErrStrategyNotSupported = func(strategy string) error {
-		return fmt.Errorf("Strategy %v is not supported", strategy)
+		return fmt.Errorf("strategy %v is not supported", strategy)
 	}
 
 	ErrStorageTypeNotSupported = func(storageType string) error {
-		return fmt.Errorf("Storage type %v is not supported", storageType)
+		return fmt.Errorf("storage type %v is not supported", storageType)
 	}
 
 	ErrCacheWritePolicyNotSupported = func(writePolicy string) error {
-		return fmt.Errorf("Cache write policy %v is not supported", writePolicy)
+		return fmt.Errorf("cache write policy %v is not supported", writePolicy)
 	}
 
-	ErrFiftyPercent                = errors.New("At least 50%% volumes must be able to store blocks")
-	ErrCacheStorageConfNotProvided = errors.New("Storage type includes cache but cache config not provided")
-	ErrDiskStorageConfNotProvided  = errors.New("Storage type includes disk tier but disk config not provided")
-	ErrColdStorageConfNotProvided  = errors.New("Storage type includes cold tier but cold tier config not provided")
-	ErrUnableToSelectVolume        = errors.New("Unable to select any available volume")
-	ErrUnableToSelectColdStorage   = errors.New("Unable to select any available cold storage")
+	ErrFiftyPercent                = errors.New("at least 50%% volumes must be able to store blocks")
+	ErrCacheStorageConfNotProvided = errors.New("storage type includes cache but cache config not provided")
+	ErrDiskStorageConfNotProvided  = errors.New("storage type includes disk tier but disk config not provided")
+	ErrColdStorageConfNotProvided  = errors.New("storage type includes cold tier but cold tier config not provided")
+	ErrUnableToSelectVolume        = errors.New("unable to select any available volume")
+	ErrUnableToSelectColdStorage   = errors.New("unable to select any available cold storage")
 )
 
 func countFiles(dirPath string) (count int, err error) {
@@ -116,6 +116,7 @@ func getCurIndexes(fPath string) (curKInd, curDirInd int, err error) {
 	if f, err = os.Open(fPath); err != nil {
 		return
 	}
+	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	if !scanner.Scan() {
@@ -156,6 +157,7 @@ func updateCurIndexes(fPath string, curKInd, curDirInd int) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v", curKInd, curDirInd)))
 
@@ -190,6 +192,7 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 			if err != nil {
 				continue
 			}
+			defer f.Close()
 
 			for {
 				dirEntries, err := f.ReadDir(1000)
@@ -269,7 +272,7 @@ func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 		}
 
 	}
-	return 0, fmt.Errorf("Type unsupported: %T", v)
+	return 0, fmt.Errorf("type unsupported: %T", v)
 }
 
 // Converts integer and string representation of number to int.
@@ -311,7 +314,7 @@ func getintValueFromYamlConfig(v interface{}) (int, error) {
 			return 0, fmt.Errorf("could not convert %s to int", vStr)
 		}
 	}
-	return 0, fmt.Errorf("Type unsupported: %T", v)
+	return 0, fmt.Errorf("type unsupported: %T", v)
 }
 
 func getVolumePathFromBlockPath(bPath string) string {

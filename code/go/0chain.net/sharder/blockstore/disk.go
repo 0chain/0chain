@@ -389,7 +389,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 
 	switch strategy {
 	default:
-		panic(fmt.Errorf("Strategy %v is not supported", strategy))
+		panic(fmt.Sprintf("strategy %v is not supported", strategy))
 	case Random:
 		f = func(volumes []*volume, prevInd int) {
 			dTier.Mu.Lock()
