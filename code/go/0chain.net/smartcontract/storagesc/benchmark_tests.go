@@ -121,6 +121,14 @@ func BenchmarkTests(
 		return ssc.newAllocationRequest(t, r, b, timings)
 	}
 
+	newCommitBlobberConnectionF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.commitBlobberConnection(t, r, b, timings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -151,7 +159,7 @@ func BenchmarkTests(
 		},
 		{
 			name:     "commit_connection",
-			endpoint: ssc.commitBlobberConnection,
+			endpoint: newCommitBlobberConnectionF,
 			txn: &transaction.Transaction{
 				ClientID:     getMockBlobberId(0),
 				ToClientID:   ADDRESS,
