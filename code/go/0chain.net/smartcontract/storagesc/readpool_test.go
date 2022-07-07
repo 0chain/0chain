@@ -1,13 +1,13 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"testing"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 //
@@ -33,16 +33,13 @@ func requireErrMsg(t *testing.T, err error, msg string) {
 
 func Test_lockRequest_decode(t *testing.T) {
 	var lre, lrd lockRequest
-	lre.Duration = time.Second * 60
 	lre.AllocationID = "alloc_hex"
-	lre.BlobberID = "blobber_hex"
 	require.NoError(t, lrd.decode(mustEncode(t, &lre)))
 	assert.EqualValues(t, lre, lrd)
 }
 
 func Test_unlockRequest_decode(t *testing.T) {
 	var ure, urd unlockRequest
-	ure.PoolID = "pool_hex"
 	require.NoError(t, urd.decode(mustEncode(t, ure)))
 	assert.EqualValues(t, ure, urd)
 }

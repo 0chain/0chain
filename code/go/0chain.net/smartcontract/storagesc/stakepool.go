@@ -172,7 +172,6 @@ func (sp *stakePool) slash(
 	alloc *StorageAllocation,
 	blobID string,
 	until common.Timestamp,
-	wp *writePool,
 	offer, slash currency.Coin,
 	balances chainstate.StateContextI,
 ) (move currency.Coin, err error) {
@@ -182,18 +181,6 @@ func (sp *stakePool) slash(
 
 	if slash > offer {
 		slash = offer // can't move the offer left
-	}
-
-	// the move is total movements, but it should be divided by all
-	// related stake holders, that can loose some tokens due to
-	// division error;
-	var ap = wp.allocPool(alloc.ID, until)
-	if ap == nil {
-		ap = new(allocationPool)
-		ap.AllocationID = alloc.ID
-		ap.ExpireAt = 0
-		alloc.addWritePoolOwner(alloc.Owner)
-		wp.Pools.add(ap)
 	}
 
 	// offer ratio of entire stake; we are slashing only part of the offer
@@ -206,27 +193,20 @@ func (sp *stakePool) slash(
 		if dpSlash == 0 {
 			continue
 		}
-		dp.Balance -= dpSlash
-		ap.Balance += dpSlash
-
+		var err error
+		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
+		if err != nil {
+			return 0, err
+		}
+		alloc.WritePool, err = currency.AddCoin(alloc.WritePool, dpSlash)
+		if err != nil {
+			return 0, err
+		}
 		move += dpSlash
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
 		return 0, err
-	}
-
-	// move
-	if blobID != "" {
-		var bp, ok = ap.Blobbers.get(blobID)
-		if !ok {
-			ap.Blobbers.add(&blobberPool{
-				BlobberID: blobID,
-				Balance:   move,
-			})
-		} else {
-			bp.Balance += move
-		}
 	}
 
 	return

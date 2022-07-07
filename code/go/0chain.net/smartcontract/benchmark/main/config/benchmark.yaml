@@ -27,10 +27,16 @@ simulation:
 options:
   verbose: true
   test_suites:
+    - "storage"
     - "storage_rest"
+    - "miner"
     - "miner_rest"
+    - "faucet"
     - "faucet_rest"
+    - "vesting"
     - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
     - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
@@ -95,16 +101,14 @@ smart_contracts:
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
-    max_individual_free_allocation: 170
+    max_individual_free_allocation: 1700
     max_challenges_per_generation: 1
     max_blobbers_per_allocation: 40
     validators_per_challenge: 2
     readpool:
       min_lock: 0.3
-    writepool:
+    write_pool:
       min_lock: 0.1
-      min_lock_period: 2m
-      max_lock_period: 11000h
     stakepool:
       min_lock: 0.1
     free_allocation_settings:
@@ -122,6 +126,7 @@ smart_contracts:
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
+    max_pools_per_allocation: 10
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000

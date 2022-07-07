@@ -73,49 +73,6 @@ func (cp *challengePool) save(sscKey, allocationID string,
 	return
 }
 
-// moveToWritePool moves tokens back to write pool on data deleted
-func (cp *challengePool) moveToWritePool(
-	alloc *StorageAllocation,
-	blobID string,
-	until common.Timestamp,
-	wp *writePool,
-	value currency.Coin,
-) (err error) {
-
-	if value == 0 {
-		return // nothing to move
-	}
-
-	if cp.Balance < value {
-		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
-			cp.ID, cp.Balance, value)
-	}
-
-	var ap = wp.allocPool(alloc.ID, until)
-	if ap == nil {
-		ap = new(allocationPool)
-		ap.AllocationID = alloc.ID
-		ap.ExpireAt = 0
-		alloc.addWritePoolOwner(alloc.Owner)
-		wp.Pools.add(ap)
-	}
-
-	// move
-	if blobID != "" {
-		var bp, ok = ap.Blobbers.get(blobID)
-		if !ok {
-			ap.Blobbers.add(&blobberPool{
-				BlobberID: blobID,
-				Balance:   value,
-			})
-		} else {
-			bp.Balance += value
-		}
-	}
-	_, _, err = cp.TransferTo(ap, value, nil)
-	return
-}
-
 func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	validators []datastore.Key,
 	vSPs []*stakePool,
