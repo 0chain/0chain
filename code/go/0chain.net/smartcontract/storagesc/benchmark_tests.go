@@ -118,7 +118,7 @@ func BenchmarkTests(
 		r []byte,
 		b cstate.StateContextI,
 	) (string, error) {
-		return ssc.newAllocationRequest(t, r, b, timings)
+		return ssc.newAllocationRequest(t, r, b, nil)
 	}
 
 	newCommitBlobberConnectionF := func(
