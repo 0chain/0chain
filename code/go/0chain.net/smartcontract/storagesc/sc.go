@@ -183,7 +183,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		}
 
 	case "commit_connection":
-		resp, err = sc.commitBlobberConnection(t, input, balances)
+		resp, err = sc.commitBlobberConnection(t, input, balances, nil)
 		if err != nil {
 			return
 		}

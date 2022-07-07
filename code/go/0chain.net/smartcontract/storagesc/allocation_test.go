@@ -2121,7 +2121,7 @@ func Test_finalize_allocation(t *testing.T) {
 	var tx = newTransaction(b1.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	var resp string
-	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances, nil)
 	require.NoError(t, err)
 	require.NotZero(t, resp)
 

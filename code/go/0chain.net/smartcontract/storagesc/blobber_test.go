@@ -348,7 +348,7 @@ func Test_flow_reward(t *testing.T) {
 		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
+			balances, nil)
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
@@ -414,7 +414,7 @@ func Test_flow_reward(t *testing.T) {
 		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
+			balances, nil)
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
@@ -495,7 +495,7 @@ func Test_flow_reward(t *testing.T) {
 		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
+			balances, nil)
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
@@ -659,7 +659,7 @@ func Test_flow_penalty(t *testing.T) {
 		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
+			balances, nil)
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
@@ -864,7 +864,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-				balances)
+				balances, nil)
 			require.NoError(t, err)
 			require.NotZero(t, resp)
 		}
@@ -1089,7 +1089,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-				balances)
+				balances, nil)
 			require.NoError(t, err)
 			require.NotZero(t, resp)
 		}
