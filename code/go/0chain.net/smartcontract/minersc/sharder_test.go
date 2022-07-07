@@ -140,7 +140,7 @@ func TestDeleteSharder(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.msc.DeleteSharder(
+			_, err := args.msc.KillSharder(
 				&transaction.Transaction{},
 				args.inputData,
 				args.gn,
