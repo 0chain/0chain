@@ -19,7 +19,13 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    
+
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt-get update
+        sudo apt-get install make
+
     - name: Get Branch
       id: get_branch
       run: |
