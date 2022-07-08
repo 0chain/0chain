@@ -893,7 +893,7 @@ func (r *Runner) Run() (err error, success bool) {
 
 					report.e = time.Now()
 					r.report = append(r.report, report) // add to report
-					// r.stopAll()
+					r.stopAll()
 					r.resetWaiters()
 
 					log.Printf("[ERR] at the end of %d test case: %v", i, err)
