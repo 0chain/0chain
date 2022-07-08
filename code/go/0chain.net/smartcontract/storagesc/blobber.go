@@ -642,16 +642,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-
 	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	blobAlloc.Stats.NumWrites++
 
 	blobber.BytesWritten += commitConnection.WriteMarker.Size
+	blobber.SavedData += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
-
-	blobber.SavedData += commitConnection.WriteMarker.Size
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
