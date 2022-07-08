@@ -393,6 +393,14 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMinerHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
 	case CostSharderHealthCheck:
 		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostKillMiner:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostKillMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostKillSharder:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostKillSharder], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostShutDownMiner:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShutDownMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
+	case CostShutDownSharder:
+		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShutDownSharder], fmt.Sprintf("%s.", SettingName[Cost])))], nil
 	case CostContributeMpk:
 		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostContributeMpk], fmt.Sprintf("%s.", SettingName[Cost])))], nil
 	case CostShareSignsOrShares:

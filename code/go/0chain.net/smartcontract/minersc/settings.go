@@ -47,6 +47,10 @@ const (
 	CostDeleteMiner
 	CostMinerHealthCheck
 	CostSharderHealthCheck
+	CostKillMiner
+	CostKillSharder
+	CostShutDownMiner
+	CostShutDownSharder
 	CostContributeMpk
 	CostShareSignsOrShares
 	CostWait
@@ -90,6 +94,10 @@ var (
 		"cost.delete_miner",
 		"cost.miner_health_check",
 		"cost.sharder_health_check",
+		"kill_miner",
+		"kill_sharder",
+		"shut_down_miner",
+		"shut_down_sharder",
 		"cost.contributeMpk",
 		"cost.shareSignsOrShares",
 		"cost.wait",
@@ -136,6 +144,10 @@ var (
 		"cost.delete_miner":            {CostDeleteMiner, smartcontract.Cost},
 		"cost.miner_health_check":      {CostMinerHealthCheck, smartcontract.Cost},
 		"cost.sharder_health_check":    {CostSharderHealthCheck, smartcontract.Cost},
+		"cost.kill_miner":              {CostKillMiner, smartcontract.Cost},
+		"cost.kill_sharder":            {CostKillSharder, smartcontract.Cost},
+		"cost.shut_down_miner":         {CostShutDownMiner, smartcontract.Cost},
+		"cost.shut_down_sharder":       {CostShutDownSharder, smartcontract.Cost},
 		"cost.contributempk":           {CostContributeMpk, smartcontract.Cost},
 		"cost.sharesignsorshares":      {CostShareSignsOrShares, smartcontract.Cost},
 		"cost.wait":                    {CostWait, smartcontract.Cost},

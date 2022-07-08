@@ -3,6 +3,8 @@ package minersc
 import (
 	"encoding/json"
 
+	"0chain.net/core/logging"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -27,6 +29,7 @@ func (msc *MinerSmartContract) killMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
+	logging.Logger.Info("piers killMiner start")
 	var id killInput
 	if err := id.decode(input); err != nil {
 		return "", common.NewError("kill-miner", err.Error())

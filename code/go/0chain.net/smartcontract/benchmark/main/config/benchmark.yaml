@@ -27,20 +27,14 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "storage_rest"
-    - "storage"
-    - "miner_rest"
     - "miner"
-    - "faucet_rest"
-    - "vesting_rest"
-    - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
 
 dbs:
   events:
-    enabled: true
+    enabled: false
     name: events_db
     user: zchain_user
     password: zchian
