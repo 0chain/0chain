@@ -42,7 +42,7 @@ func (z *DelegatePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendDuration(o, z.LockPeriod)
 	// string "LockedAt"
 	o = append(o, 0xa8, 0x4c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x41, 0x74)
-	o = msgp.AppendTime(o, z.LockedAt)
+	o = msgp.AppendTime(o, z.StakedAt)
 	return
 }
 
@@ -101,7 +101,7 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "LockedAt":
-			z.LockedAt, bts, err = msgp.ReadTimeBytes(bts)
+			z.StakedAt, bts, err = msgp.ReadTimeBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "LockedAt")
 				return

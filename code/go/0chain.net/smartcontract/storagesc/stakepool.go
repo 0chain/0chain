@@ -387,12 +387,6 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"invalid request: %v", err)
 	}
 
-	// 0 never expires
-	if spr.LockPeriod != 0 && spr.LockPeriod < conf.StakePool.MinLockPeriod {
-		return "", common.NewError("stake_pool_lock_failed",
-			"too short period to lock")
-	}
-
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -405,7 +399,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			conf.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Blobber, spr.BlobberID, spenum.Active, spr.LockPeriod, balances)
+	err = sp.LockPool(t, spenum.Blobber, spr.BlobberID, spenum.Active, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool digging error: %v", err)

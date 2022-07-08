@@ -3,7 +3,6 @@ package stakepool
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"0chain.net/chaincore/currency"
 
@@ -46,7 +45,6 @@ func (sp *StakePool) LockPool(
 	providerType spenum.Provider,
 	providerId datastore.Key,
 	status spenum.PoolStatus,
-	lockPeriod time.Duration,
 	balances cstate.StateContextI,
 ) error {
 	if err := CheckClientBalance(txn, balances); err != nil {
@@ -59,8 +57,7 @@ func (sp *StakePool) LockPool(
 		Status:       status,
 		DelegateID:   txn.ClientID,
 		RoundCreated: balances.GetBlock().Round,
-		LockPeriod:   lockPeriod,
-		LockedAt:     time.Now(),
+		StakedAt:     txn.CreationDate,
 	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
