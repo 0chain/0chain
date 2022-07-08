@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"0chain.net/core/cache"
@@ -26,9 +27,21 @@ func SetClientSignatureScheme(scheme string) {
 }
 
 var cacher cache.Cache
+var redis_txns string
 
 func init() {
 	cacher = cache.NewLFUCache(10 * 1024)
+	redis_txns = os.Getenv("REDIS_TXNS")
+}
+
+
+func SetupClientDB(redisTxnsHost string, redisTxnsPort int) {
+	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
+		memorystore.AddPool("clientdb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
+	} else {
+		//inside docker
+		memorystore.AddPool("clientdb", memorystore.NewPool(redis_txns, 6479))
+	}
 }
 
 //go:generate msgp -io=false -tests=false -v
