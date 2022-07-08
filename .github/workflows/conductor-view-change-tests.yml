@@ -20,12 +20,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Install make
-      id: install_make
-      run: |
-        sudo apt-get update
-        sudo apt-get install make
-
     - name: Get Branch
       id: get_branch
       run: |
@@ -44,6 +38,12 @@ jobs:
     - name: Building Base Images
       run: |
         bash ./docker.local/bin/build.base.sh
+    
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt-get update
+        sudo apt-get install make
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
@@ -120,6 +120,12 @@ jobs:
       run: |
         bash ./docker.local/bin/build.base.sh
 
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt-get update
+        sudo apt-get install make
+
     - name: Build Miner Docker Image For Integration Test.
       run: |
         bash ./docker.local/bin/build.miners-integration-tests.sh
@@ -172,6 +178,12 @@ jobs:
     - name: Building Base Images
       run: |
         bash ./docker.local/bin/build.base.sh
+
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt-get update
+        sudo apt-get install make
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
@@ -226,6 +238,12 @@ jobs:
       run: |
         bash ./docker.local/bin/build.base.sh
 
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt-get update
+        sudo apt-get install make
+
     - name: Build Miner Docker Image For Integration Test.
       run: |
         bash ./docker.local/bin/build.miners-integration-tests.sh
@@ -279,6 +297,12 @@ jobs:
     - name: Building Base Images
       run: |
         bash ./docker.local/bin/build.base.sh
+
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt-get update
+        sudo apt-get install make
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
