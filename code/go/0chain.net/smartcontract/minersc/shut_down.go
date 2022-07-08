@@ -32,11 +32,11 @@ func (msc *MinerSmartContract) shutDownSharder(
 ) (string, error) {
 	sn, err := msc.getSharderNode(txn.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("kill-miner", err.Error())
+		return "", common.NewError("shut-down-sharder", err.Error())
 	}
 	sn.IsShutDown = true
 	if err := deleteSharder(sn, gn, balances); err != nil {
-		return "", common.NewError("kill-sharder", err.Error())
+		return "", common.NewError("shut-down-sharder", err.Error())
 	}
 
 	return "", err

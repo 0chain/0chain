@@ -18,18 +18,19 @@ import (
 func doesMinerExist(
 	pkey datastore.Key,
 	balances cstate.CommonStateContextI,
-) (bool, *MinerNode) {
+) (*MinerNode, bool, error) {
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 				zap.String("key", pkey))
+			return nil, false, nil
 		}
-		return false, nil
+		return nil, false, err
 	}
 
-	return true, mn
+	return mn, true, nil
 }
 
 // AddMiner Function to handle miner register
@@ -104,7 +105,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		allMap[n.GetKey()] = struct{}{}
 	}
 
-	var update bool
 	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
@@ -118,18 +118,16 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			return "", common.NewErrorf("add_miner",
 				"insert new miner: %v", err)
 		}
-
-		update = true
 	}
-	exists, mn := doesMinerExist(newMiner.GetKey(), balances)
+	mn, exists, err := doesMinerExist(newMiner.GetKey(), balances)
+	if err != nil {
+		return "", common.NewError("add_miner", "cannot get miner: "+err.Error())
+	}
 	if !exists {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}
-
 		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
-
-		update = true
 	} else {
 		if mn.IsShutDown {
 			return "", common.NewError("add_miner", "cannot add a shut-down miner")
@@ -137,9 +135,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		if mn.IsKilled {
 			return "", common.NewError("add_miner", "cannot add a killed miner")
 		}
-	}
-
-	if !update {
 		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
 	}
 

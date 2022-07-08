@@ -3,7 +3,7 @@ package minersc
 import (
 	"encoding/json"
 
-	"0chain.net/core/logging"
+	"0chain.net/chaincore/smartcontractinterface"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -24,12 +24,16 @@ func (ki *killInput) Encode() []byte {
 }
 
 func (msc *MinerSmartContract) killMiner(
-	_ *transaction.Transaction,
+	txn *transaction.Transaction,
 	input []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	logging.Logger.Info("piers killMiner start")
+	if err := smartcontractinterface.AuthorizeWithOwner("kill-miner", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
 	var id killInput
 	if err := id.decode(input); err != nil {
 		return "", common.NewError("kill-miner", err.Error())
@@ -53,19 +57,24 @@ func (msc *MinerSmartContract) killMiner(
 }
 
 func (msc *MinerSmartContract) killSharder(
-	_ *transaction.Transaction,
+	txn *transaction.Transaction,
 	input []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
+	if err := smartcontractinterface.AuthorizeWithOwner("kill_sharder", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
 	var id killInput
 	if err := id.decode(input); err != nil {
-		return "", common.NewError("kill-miner", err.Error())
+		return "", common.NewError("kill-sharder", err.Error())
 	}
 
 	sn, err := msc.getSharderNode(id.ID, balances)
 	if err != nil {
-		return "", common.NewError("kill-miner", err.Error())
+		return "", common.NewError("kill-sharder", err.Error())
 	}
 	sn.IsKilled = true
 	if err := deleteSharder(sn, gn, balances); err != nil {
@@ -74,7 +83,7 @@ func (msc *MinerSmartContract) killSharder(
 
 	sn.IsDead = true
 	if err := sn.save(balances); err != nil {
-		return "", common.NewError("kill-miner", "saving miner: "+err.Error())
+		return "", common.NewError("kill-sharder", "saving sharder: "+err.Error())
 	}
 
 	return "", err
