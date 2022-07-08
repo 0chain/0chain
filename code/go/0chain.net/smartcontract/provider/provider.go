@@ -12,7 +12,7 @@ import (
 type Status int
 
 const (
-	Active Status = iota
+	Active Status = iota + 1
 	Inactive
 	ShutDown
 	Killed
