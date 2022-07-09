@@ -98,7 +98,7 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	return err
 }
 
-func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
+func (pndb *PNodeDB) getDeadNodes(v int64) (*deadNodes, error) {
 	data, err := pndb.db.Get(pndb.ro, deadNodesKey)
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
 
 	dn := deadNodes{Nodes: make(map[string]int64)}
 	if len(buf) > 0 {
-		if err := dn.decode(buf); err != nil {
+		if err := dn.decode(buf, v); err != nil {
 			return nil, err
 		}
 	}
@@ -118,7 +118,7 @@ func (pndb *PNodeDB) getDeadNodes() (*deadNodes, error) {
 
 func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
 	// save back the dead nodes
-	d, err := dn.encode()
+	d, err := dn.encode(v)
 	if err != nil {
 		return err
 	}
