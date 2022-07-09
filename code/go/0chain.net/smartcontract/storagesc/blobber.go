@@ -642,26 +642,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-
 	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	blobAlloc.Stats.NumWrites++
 
 	blobber.BytesWritten += commitConnection.WriteMarker.Size
+	blobber.SavedData += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
-
-	// UpdateItem saved_data on storage node
-	var storageNode *StorageNode
-	if _, ok := alloc.BlobberAllocsMap[commitConnection.WriteMarker.BlobberID]; ok {
-		storageNode, err = sc.getBlobber(commitConnection.WriteMarker.BlobberID, balances)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"can't get blobber")
-		}
-	}
-
-	storageNode.SavedData += alloc.Stats.UsedSize
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
