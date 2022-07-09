@@ -65,6 +65,11 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
 	}
 
+	// checking delegate wallet differs
+	if params.StakePoolSettings.DelegateWallet == authorizerID {
+		return "", common.NewErrorf(code, "delegate wallet is already registered")
+	}
+
 	if authorizerID != params.StakePoolSettings.DelegateWallet {
 		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
 	}

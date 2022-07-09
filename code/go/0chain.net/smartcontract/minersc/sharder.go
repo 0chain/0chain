@@ -88,6 +88,11 @@ func (msc *MinerSmartContract) AddSharder(
 
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
+	// checking delegate wallet differs
+	if newSharder.ID == newSharder.Settings.DelegateWallet {
+		return "", common.NewErrorf("add_sharder", "this wallet is already registered")
+	}
+
 	if newSharder.Settings.DelegateWallet == "" {
 		newSharder.Settings.DelegateWallet = newSharder.ID
 	}
