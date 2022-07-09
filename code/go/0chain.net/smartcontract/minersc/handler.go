@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -658,8 +661,10 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		activeString = r.URL.Query().Get("active")
 	)
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	logging.Logger.Info("piers getMinerList start")
 	if err != nil {
 		common.Respond(w, r, nil, err)
+		logging.Logger.Info("piers getMinerList", zap.Error(err))
 		return
 	}
 
@@ -667,6 +672,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
+			logging.Logger.Info("piers getMinerList", zap.Error(err))
 			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid: "+err.Error()))
 			return
 		}
@@ -674,11 +680,13 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	}
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
+		logging.Logger.Info("piers getMinerList", zap.Error(err))
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 	miners, err := edb.GetMinersWithFiltersAndPagination(filter, pagination)
 	if err != nil {
+		logging.Logger.Info("piers getMinerList", zap.Error(err))
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return
 	}
@@ -686,6 +694,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	for i, miner := range miners {
 		minersArr[i] = minerTableToMinerNode(miner)
 	}
+	logging.Logger.Info("piers getMinerList finish", zap.Any("nodes", minersArr))
 	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": minersArr,
 	}, nil)

@@ -27,6 +27,7 @@ simulation:
 options:
   verbose: true
   test_suites:
+    - "miner_rest"
     - "miner"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
@@ -34,7 +35,7 @@ options:
 
 dbs:
   events:
-    enabled: false
+    enabled: true
     name: events_db
     user: zchain_user
     password: zchian

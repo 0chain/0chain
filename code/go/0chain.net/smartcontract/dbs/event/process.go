@@ -95,6 +95,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
+	logging.Logger.Info("piers addStat begin", zap.Any("event", event.Tag))
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddOrOverwriteBlobber:
@@ -183,12 +184,17 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.updateValidator(*updates)
 	case TagAddMiner:
+		logging.Logger.Info("piers TagAddMiner", zap.Any("event", event.Data))
 		miner, ok := fromEvent[Miner](event.Data)
-
+		logging.Logger.Info("piers TagAddMiner", zap.Any("miner", miner))
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addMiner(*miner)
+		err := edb.addMiner(*miner)
+		logging.Logger.Info("piers TagAddMiner error", zap.Error(err))
+		ms, err2 := edb.GetMiners()
+		logging.Logger.Info("piers TagAddMiner", zap.Any("miners", ms), zap.Error(err2))
+		return err
 	case TagAddOrOverwriteMiner:
 		miner, ok := fromEvent[Miner](event.Data)
 		if !ok {

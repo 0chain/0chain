@@ -49,7 +49,7 @@ func AddMockNodes(
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
 	}
-
+	const delegateReward = 0.3 * 1e10
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = GetMockNodeId(i, nodeType)
@@ -66,7 +66,7 @@ func AddMockNodes(
 			dId := (i + j) % numNodes
 			pool := stakepool.DelegatePool{
 				Balance:    100 * 1e10,
-				Reward:     0.3 * 1e10,
+				Reward:     delegateReward,
 				DelegateID: clients[dId],
 			}
 			if i < numActive {
@@ -86,6 +86,7 @@ func AddMockNodes(
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
+			const totalStake = 70 * 1e10
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
 					MinerID:           newNode.ID,
@@ -95,6 +96,8 @@ func AddMockNodes(
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
+					TotalStaked:       totalStake,
+					Rewards:           delegateReward * currency.Coin(numDelegates),
 				}
 				_ = eventDb.Store.Get().Create(&minerDb)
 			} else {
@@ -106,6 +109,8 @@ func AddMockNodes(
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
+					TotalStaked:       totalStake,
+					Rewards:           delegateReward * currency.Coin(numDelegates),
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}
