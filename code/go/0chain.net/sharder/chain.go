@@ -368,6 +368,15 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 			continue
 		}
 
+		lfnb, err := sc.GetNotarizedBlockFromSharders(context.TODO(), "", lfb.Round)
+		if err != nil || lfnb.Hash != lfb.Hash {
+			Logger.Warn("load_lfb, see different lfb",
+				zap.Int64("round", lfb.Round),
+				zap.String("local lfb", lfb.Hash),
+				zap.String("remote lfb", lfnb.Hash))
+			continue
+		}
+
 		return // got it
 	}
 
