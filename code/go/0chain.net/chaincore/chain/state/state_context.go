@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/core/common"
 
 	"0chain.net/chaincore/currency"
@@ -250,7 +247,6 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 		Index:       index,
 		Data:        data,
 	})
-	logging.Logger.Info("piers EmitEvent", zap.Int("tag", int(tag)))
 }
 
 func (sc *StateContext) EmitError(err error) {

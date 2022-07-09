@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"0chain.net/smartcontract/provider"
-	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -87,11 +86,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 }
 
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
-
-	logging.Logger.Info("piers emitting add miner event", zap.Any("tag", event.TagAddMiner))
-
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
-
 	return nil
 }
 

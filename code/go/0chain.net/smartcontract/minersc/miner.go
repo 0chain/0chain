@@ -25,9 +25,9 @@ func doesMinerExist(
 		if err != util.ErrValueNotPresent {
 			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 				zap.String("key", pkey))
-			return nil, false, nil
+			return nil, false, err
 		}
-		return nil, false, err
+		return nil, false, nil
 	}
 
 	return mn, true, nil
