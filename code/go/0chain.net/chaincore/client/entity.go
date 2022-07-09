@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
+	"path/filepath"
 	"time"
 
 	"0chain.net/core/cache"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
@@ -27,21 +28,18 @@ func SetClientSignatureScheme(scheme string) {
 }
 
 var cacher cache.Cache
-var redis_txns string
 
 func init() {
 	cacher = cache.NewLFUCache(10 * 1024)
-	redis_txns = os.Getenv("REDIS_TXNS")
 }
 
-
-func SetupClientDB(redisTxnsHost string, redisTxnsPort int) {
-	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
-		memorystore.AddPool("clientdb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
-	} else {
-		//inside docker
-		memorystore.AddPool("clientdb", memorystore.NewPool(redis_txns, 6479))
+// SetupClientDB sets up client DB
+func SetupClientDB(workdir string) {
+	db, err := ememorystore.CreateDB(filepath.Join(workdir, "data/rocksdb/client"))
+	if err != nil {
+		panic(err)
 	}
+	ememorystore.AddPool("dkgsummarydb", db)
 }
 
 //go:generate msgp -io=false -tests=false -v
