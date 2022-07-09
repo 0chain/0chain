@@ -5,11 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"0chain.net/core/cache"
-	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
@@ -34,12 +32,8 @@ func init() {
 }
 
 // SetupClientDB sets up client DB
-func SetupClientDB(workdir string) {
-	db, err := ememorystore.CreateDB(filepath.Join(workdir, "data/rocksdb/client"))
-	if err != nil {
-		panic(err)
-	}
-	ememorystore.AddPool("dkgsummarydb", db)
+func SetupClientDB() {
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 }
 
 //go:generate msgp -io=false -tests=false -v
